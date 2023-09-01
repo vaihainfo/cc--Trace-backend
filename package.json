@@ -5,8 +5,8 @@
   "main": "/src/app.ts",
   "scripts": {
     "watch": "tsc --watch",
-    "dev": "nodemon src/app.ts",
-    "start": "nodemon dist/app.js",
+    "dev": "npx sequelize db:migrate && nodemon src/app.ts",
+    "start": "npx sequelize db:migrate && nodemon dist/app.js",
     "build": "rm -Rf dist/ && tsc"
   },
   "author": "",
