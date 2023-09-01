@@ -502,12 +502,6 @@ const uploadTransactionBulk = async (req: Request, res: Response) => {
           data: { farmerName: data.farmerName ? data.farmerName : '', farmerCode: data.farmerCode ? data.farmerCode : ''},
           message: "village cannot be empty",
         });
-      } else if (!data.program) {
-        fail.push({
-          success: false,
-          data: { farmerName: data.farmerName ? data.farmerName : '', farmerCode: data.farmerCode ? data.farmerCode : ''},
-          message: "Program cannot be empty",
-        });
       } else if (!data.farmerName) {
         fail.push({
           success: false,
