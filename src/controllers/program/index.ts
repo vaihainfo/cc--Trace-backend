@@ -1,0 +1,122 @@
+import { Request, Response } from "express";
+import { Sequelize, Op } from "sequelize";
+
+import Program from "../../models/program.model";
+
+
+const createProgram = async (req: Request, res: Response) => {
+    try {
+        const data = {
+            program_name: req.body.programName,
+            program_status: true
+        };
+        const program = await Program.create(data);
+        res.sendSuccess(res, program);
+    } catch (error) {
+        return res.sendError(res, "ERR_INTERNAL_SERVER_ERROR");
+    }
+}
+
+const createPrograms = async (req: Request, res: Response) => {
+    try {
+        // create multiple crops at the time
+        const data = req.body.programName.map((obj: string) => {
+            return { program_name: obj, program_status: true }
+        })
+        const program = await Program.bulkCreate(data);
+        res.sendSuccess(res, program);
+    } catch (error) {
+        return res.sendError(res, "ERR_INTERNAL_SERVER_ERROR");
+    }
+}
+
+const fetchProgramPagination = async (req: Request, res: Response) => {
+    const searchTerm = req.query.search || '';
+    const sortOrder = req.query.sort || 'asc';
+    const page = Number(req.query.page) || 1;
+    const limit = Number(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+    try {
+        //fetch data with pagination
+        if (req.query.pagination === "true") {
+            const { count, rows } = await Program.findAndCountAll({
+                where: {
+                    program_name: { [Op.iLike]: `%${searchTerm}%` },
+                },
+                order: [
+                    ['program_name', sortOrder], // Sort the results based on the 'username' field and the specified order
+                ],
+                offset: offset,
+                limit: limit
+            });
+            return res.sendPaginationSuccess(res, rows, count);
+        } else {
+            const program = await Program.findAll({
+                where: {
+                    program_name: { [Op.iLike]: `%${searchTerm}%` },
+                },
+                order: [
+                    ['program_name', sortOrder], // Sort the results based on the 'username' field and the specified order
+                ],
+            });
+            return res.sendSuccess(res, program);
+        }
+
+    } catch (error) {
+        return res.sendError(res, "ERR_INTERNAL_SERVER_ERROR");
+    }
+}
+
+
+const updateProgram = async (req: Request, res: Response) => {
+    try {
+        const program = await Program.update({
+            program_name: req.body.programName
+        }, {
+            where: {
+                id: req.body.id
+            }
+        });
+        res.sendSuccess(res, { program });
+    } catch (error: any) {
+        return res.sendError(res, error.message);
+    }
+}
+
+const updateProgramStatus = async (req: Request, res: Response) => {
+    try {
+        const program = await Program.update({
+            program_status: req.body.status
+        }, {
+            where: {
+                id: req.body.id
+            }
+        });
+        res.sendSuccess(res, { program });
+    } catch (error: any) {
+        return res.sendError(res, error.message);
+    }
+}
+
+const deleteProgram = async (req: Request, res: Response) => {
+    try {
+        const program = await Program.destroy({
+            where: {
+                id: req.body.id
+            }
+        });
+        res.sendSuccess(res, { program });
+    } catch (error: any) {
+        return res.sendError(res, error.message);
+    }
+}
+
+
+export {
+    createProgram,
+    createPrograms,
+    fetchProgramPagination,
+    updateProgram,
+    updateProgramStatus,
+    deleteProgram
+};

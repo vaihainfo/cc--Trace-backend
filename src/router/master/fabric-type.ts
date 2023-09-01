@@ -1,0 +1,22 @@
+import {
+    fetchFebricTypePagination,
+    createFabricType,
+    createFabricTypes,
+    updateFebricType,
+    updateFebricTypeStatus,
+    deleteFebricType
+} from "../../controllers/fabric-type";
+
+import { Router } from "express";
+const router = Router();
+
+// Fabric Type Routes
+router.get('/', fetchFebricTypePagination);
+router.post('/', createFabricType);
+router.post('/multiple', createFabricTypes);
+router.put('/', updateFebricType);
+router.put('/status', updateFebricTypeStatus);
+router.delete('/', deleteFebricType);
+
+
+export default router;

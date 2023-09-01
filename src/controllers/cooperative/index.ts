@@ -1,0 +1,122 @@
+import { Request, Response } from "express";
+import { Sequelize, Op } from "sequelize";
+import Cooperative from "../../models/cooperative.model";
+
+
+const createCooperative = async (req: Request, res: Response) => {
+    try {
+        const data = {
+            name: req.body.name,
+            address: req.body.address,
+            country: req.body.country,
+            contact_person: req.body.contactPerson,
+            mobile: req.body.mobile,
+            email: req.body.email,
+            status: true
+        };
+        const cooperative = await Cooperative.create(data);
+        res.sendSuccess(res, cooperative);
+    } catch (error) {
+        return res.sendError(res, "ERR_INTERNAL_SERVER_ERROR");
+    }
+}
+
+const fetchCooperativePagination = async (req: Request, res: Response) => {
+    const searchTerm = req.query.search || '';
+    const sortOrder = req.query.sort || 'asc';
+    const page = Number(req.query.page) || 1;
+    const limit = Number(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+    const whereCondition: any = {}
+    try {
+        if (searchTerm) {
+            whereCondition[Op.or] = [
+                { name: { [Op.iLike]: `%${searchTerm}%` } }, // Search by name 
+                { address: { [Op.iLike]: `%${searchTerm}%` } }, // Search by address
+                { country: { [Op.iLike]: `%${searchTerm}%` } }, // Search by contry
+                { contact_person: { [Op.iLike]: `%${searchTerm}%` } },// Search by contact person
+                { mobile: { [Op.iLike]: `%${searchTerm}%` } },// Search by mobile
+                { email: { [Op.iLike]: `%${searchTerm}%` } }// Search by email
+            ];
+        }
+        //fetch data with pagination
+        if (req.query.pagination === "true") {
+            const { count, rows } = await Cooperative.findAndCountAll({
+                where: whereCondition,
+                order: [
+                    ['name', sortOrder], // Sort the results based on the 'name' field and the specified order
+                ],
+                offset: offset,
+                limit: limit
+            });
+            return res.sendPaginationSuccess(res, rows, count);
+        } else {
+            const cooperative = await Cooperative.findAll({
+                where: whereCondition,
+                order: [
+                    ['name', sortOrder], // Sort the results based on the 'name' field and the specified order
+                ],
+            });
+            return res.sendSuccess(res, cooperative);
+        }
+    } catch (error) {
+        return res.sendError(res, "ERR_INTERNAL_SERVER_ERROR");
+    }
+}
+
+const updateCooperative = async (req: Request, res: Response) => {
+    try {
+        const cooperative = await Cooperative.update({
+            name: req.body.name,
+            address: req.body.address,
+            country: req.body.country,
+            contact_person: req.body.contactPerson,
+            mobile: req.body.mobile,
+            email: req.body.email,
+        }, {
+            where: {
+                id: req.body.id
+            }
+        });
+        res.sendSuccess(res, cooperative);
+    } catch (error: any) {
+        return res.sendError(res, error.message);
+    }
+}
+
+const updateCooperativeStatus = async (req: Request, res: Response) => {
+    try {
+        const cooperative = await Cooperative.update({
+            status: req.body.status
+        }, {
+            where: {
+                id: req.body.id
+            }
+        });
+        res.sendSuccess(res, cooperative);
+    } catch (error: any) {
+        return res.sendError(res, error.message);
+    }
+}
+
+const deleteCooperative = async (req: Request, res: Response) => {
+    try {
+        const cooperative = await Cooperative.destroy({
+            where: {
+                id: req.body.id
+            }
+        });
+        res.sendSuccess(res, { cooperative });
+    } catch (error: any) {
+        return res.sendError(res, error.message);
+    }
+}
+
+
+export {
+    createCooperative,
+    fetchCooperativePagination,
+    updateCooperative,
+    updateCooperativeStatus,
+    deleteCooperative
+};

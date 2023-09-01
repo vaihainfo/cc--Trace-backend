@@ -1,0 +1,209 @@
+import { Request, Response } from "express";
+import { Sequelize, Op } from "sequelize";
+import Ginner from "../../../models/ginner.model";
+import User from "../../../models/user.model";
+import hash from "../../../util/hash";
+import Country from "../../../models/country.model";
+import State from "../../../models/state.model";
+
+const createGinner = async (req: Request, res: Response) => {
+    try {
+        let userIds = [];
+        for await (let user of req.body.userData) {
+            const userData = {
+                firstname: user.firstname,
+                lastname: user.lastname,
+                position: user.position,
+                email: user.email,
+                mobile: user.mobile,
+                password: await hash.generate(user.password),
+                status: user.status,
+                username: user.username,
+                role: user.role
+            };
+            const result = await User.create(userData);
+            userIds.push(result.id);
+        }
+        const data = {
+            name: req.body.name,
+            short_name: req.body.shortName,
+            address: req.body.address,
+            country_id: req.body.countryId,
+            state_id: req.body.stateId,
+            program_id: req.body.programIds,
+            latitude: req.body.latitude,
+            longitude: req.body.latitude,
+            website: req.body.website,
+            contact_person: req.body.contactPerson,
+            outturn_range_from: req.body.outturnRangeFrom,
+            outturn_range_to: req.body.outturnRangeTo,
+            bale_weight_from: req.body.baleWeightFrom,
+            bale_weight_to: req.body.baleWeightTo,
+            unit_cert: req.body.unitCert,
+            company_info: req.body.companyInfo,
+            org_logo: req.body.logo,
+            org_photo: req.body.photo,
+            certs: req.body.certs,
+            brand: req.body.brand,
+            mobile: req.body.mobile,
+            landline: req.body.landline,
+            email: req.body.email,
+            gin_type: req.body.ginType,
+            ginnerUser_id: userIds
+        }
+        const result = await Ginner.create(data);
+        res.sendSuccess(res, result);
+    } catch (error) {
+        console.log(error);
+        return res.sendError(res, "ERR_INTERNAL_SERVER_ERROR");
+    }
+}
+
+const fetchGinnerPagination = async (req: Request, res: Response) => {
+    const searchTerm = req.query.search || '';
+    const sortOrder = req.query.sort || 'asc';
+    const page = Number(req.query.page) || 1;
+    const limit = Number(req.query.limit) || 10;
+    const countryId = req.query.countryId;
+    const stateId = req.query.stateId;
+    const offset = (page - 1) * limit;
+    const whereCondition: any = {}
+    try {
+        if (searchTerm) {
+            whereCondition[Op.or] = [
+                { name: { [Op.iLike]: `%${searchTerm}%` } }, // Search by name 
+                { address: { [Op.iLike]: `%${searchTerm}%` } }, // Search by address
+                { website: { [Op.iLike]: `%${searchTerm}%` } }, // Search by address
+                { contact_person: { [Op.iLike]: `%${searchTerm}%` } }, // Search by address
+                { email: { [Op.iLike]: `%${searchTerm}%` } }, // Search by email
+                { mobile: { [Op.iLike]: `%${searchTerm}%` } },// Search by mobile
+                { landline: { [Op.iLike]: `%${searchTerm}%` } }// Search by landline
+            ];
+        }
+        if (countryId) {
+            whereCondition.country_id = countryId
+        }
+        if (stateId) {
+            whereCondition.state_id = stateId
+        }
+        //fetch data with pagination
+        if (req.query.pagination === "true") {
+            const { count, rows } = await Ginner.findAndCountAll({
+                where: whereCondition,
+                order: [
+                    ['name', sortOrder], // Sort the results based on the 'name' field and the specified order
+                ],
+                include: [
+                    {
+                        model: Country, as: 'country'
+                    },
+                    {
+                        model: State, as: 'state'
+                    },
+                ],
+                offset: offset,
+                limit: limit
+            });
+            return res.sendPaginationSuccess(res, rows, count);
+        } else {
+            const result = await Ginner.findAll({
+                where: whereCondition,
+                include: [
+                    {
+                        model: Country, as: 'country'
+                    },
+                    {
+                        model: State, as: 'state'
+
+                    },
+                ],
+                order: [
+                    ['name', sortOrder], // Sort the results based on the 'name' field and the specified order
+                ]
+            });
+            return res.sendSuccess(res, result);
+        }
+    } catch (error) {
+        console.log(error);
+        return res.sendError(res, "ERR_INTERNAL_SERVER_ERROR");
+    }
+}
+
+
+const updateGinner = async (req: Request, res: Response) => {
+    try {
+        let userIds = [];
+        for await (let user of req.body.userData) {
+            const userData = {
+                firstname: user.firstname,
+                lastname: user.lastname,
+                position: user.position,
+                mobile: user.mobile,
+                password: user.password ? await hash.generate(user.password) : undefined,
+                status: user.status,
+                role: user.role
+            };
+            if (user.id) {
+                const result = await User.update(userData, { where: { id: user.id } });
+                userIds.push(user.id);
+            } else {
+                const result = await User.create({ ...userData, username: user.username, email: user.email });
+                userIds.push(result.id);
+            }
+        }
+        const data = {
+            name: req.body.name,
+            short_name: req.body.shortName,
+            address: req.body.address,
+            country_id: req.body.countryId,
+            state_id: req.body.stateId,
+            program_id: req.body.programIds,
+            latitude: req.body.latitude,
+            longitude: req.body.latitude,
+            website: req.body.website,
+            contact_person: req.body.contactPerson,
+            outturn_range_from: req.body.outturnRangeFrom,
+            outturn_range_to: req.body.outturnRangeTo,
+            bale_weight_from: req.body.baleWeightFrom,
+            bale_weight_to: req.body.baleWeightTo,
+            unit_cert: req.body.unitCert,
+            company_info: req.body.companyInfo,
+            org_logo: req.body.logo,
+            org_photo: req.body.photo,
+            certs: req.body.certs,
+            brand: req.body.brand,
+            mobile: req.body.mobile,
+            landline: req.body.landline,
+            email: req.body.email,
+            gin_type: req.body.ginType,
+            ginnerUser_id: userIds
+        }
+        const result = await Ginner.update(data, { where: { id: req.body.id } });
+        res.sendSuccess(res, result);
+    } catch (error) {
+        console.log(error);
+        return res.sendError(res, "ERR_INTERNAL_SERVER_ERROR");
+    }
+}
+
+
+const deleteGinner = async (req: Request, res: Response) => {
+    try {
+        const ginner = await Ginner.destroy({
+            where: {
+                id: req.body.id
+            }
+        });
+        res.sendSuccess(res, { ginner });
+    } catch (error: any) {
+        return res.sendError(res, error.message);
+    }
+}
+
+
+export {
+    createGinner,
+    fetchGinnerPagination,
+    updateGinner,
+    deleteGinner
+};
