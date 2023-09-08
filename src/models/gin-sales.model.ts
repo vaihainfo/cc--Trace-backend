@@ -1,9 +1,11 @@
-import { DataTypes  } from 'sequelize';
-import db  from '../util/dbConn';
+import { DataTypes } from 'sequelize';
+import db from '../util/dbConn';
 
 import Ginner from './ginner.model';
+import Season from './season.model';
+import Program from './program.model';
 
-const GinSales = db.define('gin_sales',{
+const GinSales = db.define('gin_sales', {
   id: {
     type: DataTypes.INTEGER,
     autoIncrement: true,
@@ -92,11 +94,66 @@ const GinSales = db.define('gin_sales',{
   status: {
     type: DataTypes.STRING
   },
+  qr: {
+    type: DataTypes.STRING
+  },
+  weight_loss: {
+    type: DataTypes.INTEGER
+  },
+  transporter_name: {
+    type: DataTypes.STRING
+  },
+  vehicle_no: {
+    type: DataTypes.STRING
+  },
+  lrbl_no: {
+    type: DataTypes.STRING
+  },
+  place_of_supply: {
+    type: DataTypes.STRING
+  },
+  gst_number: {
+    type: DataTypes.STRING
+  },
+  gst_percentage: {
+    type: DataTypes.STRING
+  },
+  gross_weight: {
+    type: DataTypes.STRING
+  },
+  tare_weight: {
+    type: DataTypes.STRING
+  },
+  less_weight: {
+    type: DataTypes.STRING
+  },
+  sample: {
+    type: DataTypes.STRING
+  },
+  accept_date: {
+    type: DataTypes.DATE
+  },
+  press_no: {
+    type: DataTypes.STRING
+  },
+  reel_lot_no: {
+    type: DataTypes.STRING
+  }
 });
 
 GinSales.belongsTo(Ginner, {
   foreignKey: "ginner_id",
   as: "ginner",
+});
+
+GinSales.belongsTo(Season, {
+  foreignKey: "season_id",
+  as: "season",
+});
+
+GinSales.belongsTo(Program, {
+  foreignKey: "program_id",
+  as: "program",
 });
 
 GinSales.sync();

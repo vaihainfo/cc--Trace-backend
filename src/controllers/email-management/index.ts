@@ -13,6 +13,7 @@ const createEmailTemplate = async (req: Request, res: Response) => {
     const data = {
       template_name: req.body.templateName,
       file_name: req.body.fileName,
+      mail_type: req.body.mailType
     };
 
     const emailTemplate = await EmailTemplate.create(data);
@@ -82,7 +83,6 @@ const getEmailJobs = async (req: Request, res: Response) => {
       const { count, rows } = await EmailManagement.findAndCountAll(
         queryOptions
       );
-      console.log(rows);
 
       const emailJobPromises = rows.map(async (row: any) => {
         const userCategories = await UserRole.findAll({
@@ -123,6 +123,45 @@ const getEmailJobs = async (req: Request, res: Response) => {
     return res.sendError(res, "EMAIL_TEMPLATE_NOT_CREATED");
   }
 };
+
+const updateEmailJob = async (req: Request, res: Response) => {
+  try {
+    const data = {
+      template_id: req.body.templateId,
+      mail_type: req.body.mailType,
+      user_categories: req.body.userGroup,
+      brand_ids: req.body.brandIds,
+      program_ids: req.body.programIds,
+      country_ids: req.body.countryIds,
+      user_ids: req.body.userIds,
+    };
+
+    const emailJob = await EmailManagement.update(data, {
+      where: {
+        id: req.body.id
+      }
+    });
+    res.sendSuccess(res, emailJob);
+  } catch (error) {
+    console.log(error);
+    return res.sendError(res, "EMAIL_TEMPLATE_NOT_CREATED");
+  }
+};
+
+const deleteEmailJob = async (req: Request, res: Response) => {
+  try {
+    const emailJob = await EmailManagement.destroy({
+      where: {
+        id: req.body.id
+      }
+    });
+    res.sendSuccess(res, emailJob);
+  } catch (error) {
+    console.log(error);
+    return res.sendError(res, "EMAIL_TEMPLATE_NOT_CREATED");
+  }
+};
+
 
 const getEmailJobById = async (req: Request, res: Response) => {
   try {
@@ -196,4 +235,6 @@ export {
   getEmailTemplateByID,
   createEmailJob,
   createEmailTemplate,
+  updateEmailJob,
+  deleteEmailJob
 };

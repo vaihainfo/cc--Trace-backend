@@ -1,7 +1,7 @@
 /** Import .env */
 import dotenv from "dotenv";
 // dotenv.config({ path: '.env.local' });
-dotenv.config({ path: `.env.${process.env.NODE_ENV || "local"}` });
+dotenv.config({ path: `.env.${process.env.NODE_ENV || "development"}` });
 
 console.log(process.env.NODE_ENV);
 
@@ -50,7 +50,9 @@ import ticketingRouter from "./router/ticketing";
 import reportRouter from './router/reports/reports';
 import uploadDataBaseRouter from "./router/services/upload-databases";
 import emailManagementRouter from "./router/settings/email-management";
-
+import garmentSalesRouter from "./router/garment";
+import qualityParameterRouter from "./router/quality-parameter";
+import ginnerProcessRouter from "./router/ginner";
 import errorMiddleware from "./middleware/error";
 import setInterface from "./middleware/interface";
 
@@ -125,9 +127,9 @@ app.use("/linen", linenRouter);
 app.use("/procurement", procurementRouter);
 app.use("/reports", reportRouter);
 app.use("/email", emailManagementRouter);
-
-
-
+app.use("/garment-sales", garmentSalesRouter);
+app.use("/ginner-process", ginnerProcessRouter);
+app.use("/quality-parameter", qualityParameterRouter);
 
 app.use(errorMiddleware);
 

@@ -1,9 +1,11 @@
-import { DataTypes  } from 'sequelize';
-import db  from '../util/dbConn';
+import { DataTypes } from 'sequelize';
+import db from '../util/dbConn';
 
 import Ginner from './ginner.model';
+import Season from './season.model';
+import Program from './program.model';
 
-const GinProcess = db.define('gin_process',{
+const GinProcess = db.define('gin_process', {
   id: {
     type: DataTypes.INTEGER,
     autoIncrement: true,
@@ -66,7 +68,21 @@ const GinProcess = db.define('gin_process',{
   color_grade: {
     type: DataTypes.STRING
   },
+  qr: {
+    type: DataTypes.STRING
+  }
 });
+
+GinProcess.belongsTo(Season, {
+  foreignKey: "season_id",
+  as: "season",
+});
+
+GinProcess.belongsTo(Program, {
+  foreignKey: "program_id",
+  as: "program",
+});
+
 
 GinProcess.belongsTo(Ginner, {
   foreignKey: "ginner_id",

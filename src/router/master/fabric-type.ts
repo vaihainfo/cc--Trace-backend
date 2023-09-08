@@ -8,7 +8,10 @@ import {
 } from "../../controllers/fabric-type";
 
 import { Router } from "express";
+import accessControl from "../../middleware/access-control";
 const router = Router();
+
+router.use(accessControl)
 
 // Fabric Type Routes
 router.get('/', fetchFebricTypePagination);

@@ -36,6 +36,7 @@ const createValidationFarmer = async (req: Request, res: Response) => {
         const result = await ValidationFarmer.create(data);
         res.sendSuccess(res, result);
     } catch (error) {
+        console.log(error)
         return res.sendError(res, "ERR_INTERNAL_SERVER_ERROR");
     }
 }
@@ -108,6 +109,50 @@ const fetchValidationFarmerPagination = async (req: Request, res: Response) => {
     }
 }
 
+const fetchValidationFarmer = async (req: Request, res: Response) => {
+
+    const { id } = req.query
+
+    const whereCondition: any = {}
+    try {
+
+        if (id) {
+            whereCondition.id = id
+        }
+
+
+        let include = [
+            {
+                model: FarmGroup, as: 'farmGroup',
+                attributes: ['id', 'name', 'status']
+            },
+            {
+                model: ICS, as: 'ics',
+                attributes: ['id', 'ics_name', 'ics_status']
+            },
+            {
+                model: Brand, as: 'brand',
+                attributes: ['id', 'brand_name', 'address']
+            },
+            {
+                model: Farmer, as: 'farmer',
+                attributes: ['id', 'firstName', 'lastName', "code"]
+            }
+        ]
+
+        //fetch data with pagination
+
+        const data = await ValidationFarmer.findOne({
+            where: whereCondition,
+            include: include,
+        });
+        return res.sendSuccess(res, data);
+
+
+    } catch (error: any) {
+        return res.sendError(res, error.message);
+    }
+}
 
 
 const deleteValidationFarmer = async (req: Request, res: Response) => {
@@ -127,5 +172,6 @@ const deleteValidationFarmer = async (req: Request, res: Response) => {
 export {
     createValidationFarmer,
     fetchValidationFarmerPagination,
+    fetchValidationFarmer,
     deleteValidationFarmer
 };

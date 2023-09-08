@@ -12,7 +12,7 @@ const createTrader = async (req: Request, res: Response) => {
         for await (let user of req.body.userData) {
             const userData = {
                 firstname: user.firstname,
-                lastname: user.lastname,
+                lastname: user.lastname ? user.lastname : ' ',
                 position: user.position,
                 email: user.email,
                 mobile: user.mobile,
@@ -53,14 +53,43 @@ const createTrader = async (req: Request, res: Response) => {
         return res.sendError(res, "ERR_INTERNAL_SERVER_ERROR");
     }
 }
+const fetchTrader = async (req: Request, res: Response) => {
+    try {
+        const result = await Trader.findOne({
+            where: {
+                id: req.query.id
+            },
+            include: [
+                {
+                    model: Country, as: 'country'
+                },
+                {
+                    model: State, as: 'state'
+                },
+            ]
+        });
+        let userData = [];
+        if (result) {
+            for await (let user of result.traderUser_id) {
+                let us = await User.findOne({ where: { id: user } });
+                userData.push(us)
+            }
+        }
+        return res.sendSuccess(res, result ? { ...result.dataValues, userData } : null);
+
+    } catch (error) {
+        return res.sendError(res, "ERR_INTERNAL_SERVER_ERROR");
+    }
+}
 
 const fetchTraderPagination = async (req: Request, res: Response) => {
     const searchTerm = req.query.search || '';
     const sortOrder = req.query.sort || 'asc';
     const page = Number(req.query.page) || 1;
     const limit = Number(req.query.limit) || 10;
-    const countryId = req.query.countryId;
-    const stateId = req.query.stateId;
+    const countryId: any = req.query.countryId;
+    const brandId: any = req.query.brandId;
+    const stateId: any = req.query.stateId;
     const offset = (page - 1) * limit;
     const whereCondition: any = {}
     try {
@@ -75,10 +104,19 @@ const fetchTraderPagination = async (req: Request, res: Response) => {
             ];
         }
         if (countryId) {
-            whereCondition.country_id = countryId
+            const idArray: number[] = countryId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition.country_id = { [Op.in]: idArray };
         }
         if (stateId) {
-            whereCondition.state_id = stateId
+            const idArray: number[] = stateId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition.state_id = { [Op.in]: idArray };
+        }
+        if (brandId) {
+            whereCondition.brand = { [Op.contains]: [brandId] }
         }
         //fetch data with pagination
         if (req.query.pagination === "true") {
@@ -191,6 +229,7 @@ const deleteTrader = async (req: Request, res: Response) => {
 export {
     createTrader,
     fetchTraderPagination,
+    fetchTrader,
     updateTrader,
     deleteTrader
 };  

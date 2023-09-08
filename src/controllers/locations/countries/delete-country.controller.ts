@@ -18,7 +18,7 @@ const deleteCountry = async (req: Request, res: Response) =>{
           console.log('country deleted', country);
           res.sendSuccess(res, { country });
       } catch (error) {
-        return res.sendError(res, "ERR_INTERNAL_SERVER_ERROR");
+        return res.sendError(res, "ERR_NOT_ABLE_TO_DELETE_COUNTRY");
       }
 }
 

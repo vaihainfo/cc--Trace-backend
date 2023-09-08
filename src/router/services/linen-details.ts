@@ -1,12 +1,15 @@
 
 
-import { createLinenDetails, fetchlinenDetails } from "../../controllers/linen-details";
+import { createLinenDetails, exportLinenTransactions, fetchSumOfWeightBylinen, fetchlinenDetails } from "../../controllers/linen-details";
 import { Router } from "express";
 const router = Router();
 
 // Farmer & farm Routes
 router.get('/get-linens', fetchlinenDetails);
-router.post('/set-linens', createLinenDetails);
+router.get('/get-total-weight-linens', fetchSumOfWeightBylinen);
+router.post('/upload-bulk-linens', createLinenDetails);
+router.get('/export-bulk-linens', exportLinenTransactions);
+
 // router.put('/', updateFarmer);
 // router.delete('/', deleteFarmer);
 // router.get('/farm', fetchFarmPagination);

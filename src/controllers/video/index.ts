@@ -27,6 +27,7 @@ const fetchVideoNamePagination = async (req: Request, res: Response) => {
     const page = Number(req.query.page) || 1;
     const limit = Number(req.query.limit) || 10;
     const offset = (page - 1) * limit;
+    const brandId = req.query.brandId;
     const whereCondition: any = {}
     try {
         if (searchTerm) {
@@ -35,6 +36,10 @@ const fetchVideoNamePagination = async (req: Request, res: Response) => {
                 { title: { [Op.iLike]: `%${searchTerm}%` } }, // Search by Video title
                 { description: { [Op.iLike]: `%${searchTerm}%` } }, // Search by Video description
             ];
+        }
+
+        if (brandId) {
+            whereCondition.brand = { [Op.contains]: [brandId] }
         }
 
         //fetch data with pagination

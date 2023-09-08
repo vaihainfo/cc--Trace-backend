@@ -28,11 +28,11 @@ const createScopeCert = async (req: Request, res: Response) => {
     }
 }
 
-
 const fetchScopeCertPagination = async (req: Request, res: Response) => {
     const searchTerm = req.query.search || '';
     const page = Number(req.query.page) || 1;
     const limit = Number(req.query.limit) || 10;
+    const { brandId, farmGroupId, countryId, stateId, icsId }: any = req.query
     const offset = (page - 1) * limit;
     const whereCondition: any = {}
     try {
@@ -45,20 +45,36 @@ const fetchScopeCertPagination = async (req: Request, res: Response) => {
                 { '$ics.ics_name$': { [Op.iLike]: `%${searchTerm}%` } }, // Search by Ics name
             ];
         }
-        if (req.query.countryId) {
-            whereCondition.country_id = req.query.countryId;
+        if (brandId) {
+            const idArray: number[] = brandId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition.brand_id = { [Op.in]: idArray };
         }
-        if (req.query.stateId) {
-            whereCondition.state_id = req.query.stateId;
+
+        if (farmGroupId) {
+            const idArray: number[] = farmGroupId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition.farmGroup_id = { [Op.in]: idArray };
         }
-        if (req.query.brandId) {
-            whereCondition.brand_id = req.query.brandId;
+        if (countryId) {
+            const idArray: number[] = countryId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition.country_id = { [Op.in]: idArray };
         }
-        if (req.query.farmGroupId) {
-            whereCondition.farmGroup_id = req.query.farmGroupId;
+        if (stateId) {
+            const idArray: number[] = countryId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition.state_id = { [Op.in]: idArray };
         }
-        if (req.query.icsId) {
-            whereCondition.ics_id = req.query.icsId;
+        if (icsId) {
+            const idArray: string[] = icsId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition.ics_id = { [Op.in]: idArray };
         }
         let include = [
             {
@@ -157,8 +173,6 @@ const updateScopeCert = async (req: Request, res: Response) => {
         return res.sendError(res, "ERR_INTERNAL_SERVER_ERROR");
     }
 }
-
-
 
 const deleteScopeCert = async (req: Request, res: Response) => {
     try {

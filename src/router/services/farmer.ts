@@ -9,6 +9,7 @@ import {
   countFarmWithProgram,
   exportFarmer,
   fetchFarmer,
+  fetchFarm,
   generateQrCodeVillage,
   exportQrCode
 } from "../../controllers/farmer-registration";
@@ -26,6 +27,7 @@ router.get("/export", exportFarmer);
 router.get("/generate", generateQrCodeVillage);
 router.get("/export-qr", exportQrCode);
 router.get("/farm", fetchFarmPagination);
+router.get("/farm/get-farm", fetchFarm);
 router.post("/farm", createFarmerFarm);
 router.put("/farm", updateFarmerFarm);
 router.get("/farm/count", countFarmWithProgram);

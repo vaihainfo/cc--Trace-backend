@@ -134,7 +134,8 @@ const fetchTransactions = async (req: Request, res: Response) => {
         { "$state.state_name$": { [Op.iLike]: `%${searchTerm}%` } },
         { "$village.village_name$": { [Op.iLike]: `%${searchTerm}%` } },
         { "$district.district_name$": { [Op.iLike]: `%${searchTerm}%` } },
-        { "$farmer.firstname$": { [Op.iLike]: `%${searchTerm}%` } },
+        // { "$farmer.firstName$": { [Op.iLike]: `%${searchTerm}%` } },
+        { farmer_name: { [Op.iLike]: `%${searchTerm}%` } },
         { "$program.program_name$": { [Op.iLike]: `%${searchTerm}%` } },
         { "$ginner.name$": { [Op.iLike]: `%${searchTerm}%` } },
       ];
@@ -183,6 +184,10 @@ const fetchTransactions = async (req: Request, res: Response) => {
           model: CropGrade,
           as: "grade",
         },
+        {
+          model: Season,
+          as: "season",
+        },
       ],
     };
 
@@ -212,7 +217,7 @@ const fetchTransactions = async (req: Request, res: Response) => {
       return res.sendPaginationSuccess(res, rows, count);
     } else {
       // fetch without filters
-      const transaction = await Transaction.findAll({});
+      const transaction = await Transaction.findAll(queryOptions);
       return res.sendSuccess(res, transaction);
     }
   } catch (error) {
@@ -272,6 +277,10 @@ const fetchTransactionById = async (req: Request, res: Response) => {
         {
           model: CropGrade,
           as: "grade",
+        },
+        {
+          model: Season,
+          as: "season",
         },
       ],
     };
@@ -391,60 +400,6 @@ const deleteBulkTransactions = async (req: Request, res: Response) => {
 const fetchAvailableCotton = async (req: Request, res: Response) => {
   try {
 
-    let queryOptions: any = {
-      where: {id: req.params.id},
-      include: [
-        {
-          model: Village,
-          as: "village",
-        },
-        {
-          model: Block,
-          as: "block",
-        },
-        {
-          model: District,
-          as: "district",
-        },
-        {
-          model: State,
-          as: "state",
-        },
-        {
-          model: Country,
-          as: "country",
-        },
-        {
-          model: Farmer,
-          as: "farmer",
-          include: [
-            {
-              model: FarmGroup,
-          as: "farmGroup",
-            }
-          ]
-        },
-        {
-          model: Program,
-          as: "program",
-        },
-        {
-          model: Brand,
-          as: "brand",
-        },
-        {
-          model: Ginner,
-          as: "ginner",
-        },
-        {
-          model: CropGrade,
-          as: "grade",
-        },
-      ],
-    };
-
-      const transaction = await Transaction.findOne(queryOptions);
-      return res.sendSuccess(res, transaction);
   } catch (error) {
     console.log(error);
     return res.sendError(res, "NOT_ABLE_TO_FETCH");
@@ -456,8 +411,7 @@ const uploadTransactionBulk = async (req: Request, res: Response) => {
     let fail = [];
     let pass = [];
     for await (const data of req.body.transaction) {
-      console.log(data);
-
+      
       if (!data.season) {
         fail.push({
           success: false,
@@ -502,7 +456,7 @@ const uploadTransactionBulk = async (req: Request, res: Response) => {
           data: { farmerName: data.farmerName ? data.farmerName : '', farmerCode: data.farmerCode ? data.farmerCode : ''},
           message: "village cannot be empty",
         });
-      } else if (!data.farmerName) {
+      }  else if (!data.farmerName) {
         fail.push({
           success: false,
           data: { farmerName: data.farmerName ? data.farmerName : '', farmerCode: data.farmerCode ? data.farmerCode : ''},

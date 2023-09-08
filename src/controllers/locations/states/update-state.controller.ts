@@ -14,7 +14,7 @@ const updateState = async (req: Request, res: Response) =>{
           return res.sendSuccess(res, { state });
       } catch (error) {
         console.log(error)
-        return res.sendError(res, "ERR_INTERNAL_SERVER_ERROR");
+        return res.sendError(res, "ERR_NOT_ABLE_TO_UPDATE_STATE");
       }
 }
 

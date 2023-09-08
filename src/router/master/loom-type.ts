@@ -1,3 +1,4 @@
+import accessControl from "../../middleware/access-control";
 import {
     fetchLoomTypePagination,
     createLoomType,
@@ -9,6 +10,8 @@ import {
 
 import { Router } from "express";
 const router = Router();
+
+router.use(accessControl)
 
 // Loom Type Routes
 router.get('/', fetchLoomTypePagination);

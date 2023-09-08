@@ -17,7 +17,7 @@ const deleteBlock = async (req: Request, res: Response) =>{
           console.log('block deleted', block);
           res.sendSuccess(res, { block });
       } catch (error) {
-        return res.sendError(res, "ERR_INTERNAL_SERVER_ERROR");
+        return res.sendError(res, "ERR_NOT_ABLE_TO_DELETE_BLOCKS");
       }
 }
 

@@ -8,7 +8,10 @@ import {
 } from "../../controllers/cotton-mix";
 
 import { Router } from "express";
+import accessControl from "../../middleware/access-control";
 const router = Router();
+
+router.use(accessControl)
 
 // Cottonmix Routes
 router.get('/', fetchCottonMixPagination);

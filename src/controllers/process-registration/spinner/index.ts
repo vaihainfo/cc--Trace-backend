@@ -13,7 +13,7 @@ const createSpinner = async (req: Request, res: Response) => {
         for await (let user of req.body.userData) {
             const userData = {
                 firstname: user.firstname,
-                lastname: user.lastname,
+                lastname: user.lastname ? user.lastname : ' ',
                 position: user.position,
                 email: user.email,
                 mobile: user.mobile,
@@ -64,8 +64,9 @@ const fetchSpinnerPagination = async (req: Request, res: Response) => {
     const sortOrder = req.query.sort || 'asc';
     const page = Number(req.query.page) || 1;
     const limit = Number(req.query.limit) || 10;
-    const countryId = req.query.countryId;
-    const stateId = req.query.stateId;
+    const countryId: any = req.query.countryId;
+    const stateId: any = req.query.stateId;
+    const brandId: any = req.query.brandId;
     const offset = (page - 1) * limit;
     const whereCondition: any = {}
     try {
@@ -79,10 +80,19 @@ const fetchSpinnerPagination = async (req: Request, res: Response) => {
             ];
         }
         if (countryId) {
-            whereCondition.country_id = countryId
+            const idArray: number[] = countryId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition.country_id = { [Op.in]: idArray };
         }
         if (stateId) {
-            whereCondition.state_id = stateId
+            const idArray: number[] = stateId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition.state_id = { [Op.in]: idArray };
+        }
+        if (brandId) {
+            whereCondition.brand = { [Op.contains]: [brandId] }
         }
         //fetch data with pagination
         if (req.query.pagination === "true") {
@@ -122,6 +132,35 @@ const fetchSpinnerPagination = async (req: Request, res: Response) => {
         }
     } catch (error) {
         console.log(error);
+        return res.sendError(res, "ERR_INTERNAL_SERVER_ERROR");
+    }
+}
+
+const fetchSpinner = async (req: Request, res: Response) => {
+    try {
+        const result = await Spinner.findOne({
+            where: {
+                id: req.query.id
+            },
+            include: [
+                {
+                    model: Country, as: 'country'
+                },
+                {
+                    model: State, as: 'state'
+                },
+            ]
+        });
+        let userData = [];
+        if (result) {
+            for await (let user of result.spinnerUser_id) {
+                let us = await User.findOne({ where: { id: user } });
+                userData.push(us)
+            }
+        }
+        return res.sendSuccess(res, result ? { ...result.dataValues, userData } : null);
+
+    } catch (error) {
         return res.sendError(res, "ERR_INTERNAL_SERVER_ERROR");
     }
 }
@@ -177,7 +216,6 @@ const updateSpinner = async (req: Request, res: Response) => {
         const spinner = await Spinner.update(brandData, { where: { id: req.body.id } });
         res.sendSuccess(res, spinner);
     } catch (error) {
-        console.log(error);
         return res.sendError(res, "ERR_INTERNAL_SERVER_ERROR");
     }
 }
@@ -199,6 +237,7 @@ const deleteSpinner = async (req: Request, res: Response) => {
 export {
     createSpinner,
     fetchSpinnerPagination,
+    fetchSpinner,
     updateSpinner,
     deleteSpinner
 };

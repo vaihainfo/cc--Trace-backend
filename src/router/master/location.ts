@@ -28,7 +28,7 @@ import updateVillageStatus from "../../controllers/locations/villages/update-vil
 
 const router = Router();
 
-// router.use(accessControl)
+router.use(accessControl)
 
 router.get("/get-countries", fetchCountries);
 router.post("/set-country", setCountry);

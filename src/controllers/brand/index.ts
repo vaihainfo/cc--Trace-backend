@@ -57,9 +57,16 @@ const fetchBrandPagination = async (req: Request, res: Response) => {
     const sortOrder = req.query.sort || 'asc';
     const page = Number(req.query.page) || 1;
     const limit = Number(req.query.limit) || 10;
+    const programId: any = req.query.programId;
     const offset = (page - 1) * limit;
     const whereCondition: any = {}
     try {
+        if (programId) {
+            const idArray: number[] = programId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition.programs_id = { [Op.contains]: idArray };
+        }
         if (searchTerm) {
             whereCondition[Op.or] = [
                 { brand_name: { [Op.iLike]: `%${searchTerm}%` } }, // Search by name 
@@ -97,40 +104,41 @@ const fetchBrandPagination = async (req: Request, res: Response) => {
     }
 }
 
-const fetchBrandById= async (req: Request, res: Response) => {
+const fetchBrandById = async (req: Request, res: Response) => {
     try {
         //fetch data for single brand
-            const brand = await Brand.findOne({
-                where: {id: req.params.id},
-            });
+        const brand = await Brand.findOne({
+            where: { id: req.params.id },
+        });
 
-            const userData = await User.findAll({
-                  where: { id: brand.brandUser_id },
-                  attributes: {
-                    exclude: ["password", "createdAt", "updatedAt"]},
-                include:[
-                    {
-                        model: UserRole,
-          as: "user_role",
-                    }
-                ]
-                });
-        
-            const programs = await Program.findAll({
-                  where: { id: brand.programs_id },
-                });
-        
-            const countries = await Country.findAll({
-                  where: { id: brand.countries_id },
-                });
-        
-            const brandInfo = {
-                ...brand.dataValues,
-                userData,
-                programs,
-                countries,
-              };
-            return res.sendSuccess(res, brandInfo);
+        const userData = await User.findAll({
+            where: { id: brand.brandUser_id },
+            attributes: {
+                exclude: ["password", "createdAt", "updatedAt"]
+            },
+            include: [
+                {
+                    model: UserRole,
+                    as: "user_role",
+                }
+            ]
+        });
+
+        const programs = await Program.findAll({
+            where: { id: brand.programs_id },
+        });
+
+        const countries = await Country.findAll({
+            where: { id: brand.countries_id },
+        });
+
+        const brandInfo = {
+            ...brand.dataValues,
+            userData,
+            programs,
+            countries,
+        };
+        return res.sendSuccess(res, brandInfo);
     } catch (error) {
         console.log(error);
         return res.sendError(res, "NOT_ABLE_TO_FETCH_BRAND");

@@ -16,7 +16,7 @@ const setDistrict = async (req: Request, res: Response) =>{
           console.log('district created', district);
           res.sendSuccess(res, { district });
       } catch (error) {
-        return res.sendError(res, "ERR_INTERNAL_SERVER_ERROR");
+        return res.sendError(res, "ERR_NOT_ABLE_TO_UPDATE_DISTRICTS");
       }
 }
 

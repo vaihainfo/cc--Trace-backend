@@ -43,7 +43,7 @@ const fetchIcsNamePagination = async (req: Request, res: Response) => {
     const sortOrder = req.query.sort || 'asc';
     const page = Number(req.query.page) || 1;
     const limit = Number(req.query.limit) || 10;
-    const farmGroupId = req.query.farmGroupId || '';
+    const farmGroupId: any = req.query.farmGroupId || '';
     const offset = (page - 1) * limit;
     const whereCondition: any = {}
     try {
@@ -55,7 +55,10 @@ const fetchIcsNamePagination = async (req: Request, res: Response) => {
         }
 
         if (farmGroupId) {
-            whereCondition.farmGroup_id = farmGroupId;
+            const idArray: number[] = farmGroupId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition.farmGroup_id = { [Op.in]: idArray };
         }
         //fetch data with pagination
         if (req.query.pagination === 'true') {

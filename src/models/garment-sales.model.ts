@@ -1,10 +1,11 @@
-import { DataTypes  } from 'sequelize';
-import db  from '../util/dbConn';
+import { DataTypes } from 'sequelize';
+import db from '../util/dbConn';
 
 import Garment from './garment.model';
 import Embroidering from './embroidering.model';
+import Program from './program.model';
 
-const GarmentSales = db.define('garment_sales',{
+const GarmentSales = db.define('garment_sales', {
   id: {
     type: DataTypes.INTEGER,
     autoIncrement: true,
@@ -139,6 +140,11 @@ const GarmentSales = db.define('garment_sales',{
 GarmentSales.belongsTo(Garment, {
   foreignKey: "garment_id",
   as: "garment",
+});
+
+GarmentSales.belongsTo(Program, {
+  foreignKey: "program_id",
+  as: "program",
 });
 
 GarmentSales.belongsTo(Embroidering, {

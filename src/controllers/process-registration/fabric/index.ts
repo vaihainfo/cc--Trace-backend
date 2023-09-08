@@ -62,8 +62,8 @@ const fetchFabricPagination = async (req: Request, res: Response) => {
     const sortOrder = req.query.sort || 'asc';
     const page = Number(req.query.page) || 1;
     const limit = Number(req.query.limit) || 10;
-    const countryId = req.query.countryId;
-    const stateId = req.query.stateId;
+    const countryId: any = req.query.countryId;
+    const stateId: any = req.query.stateId;
     const offset = (page - 1) * limit;
     const whereCondition: any = {}
     try {
@@ -78,10 +78,16 @@ const fetchFabricPagination = async (req: Request, res: Response) => {
             ];
         }
         if (countryId) {
-            whereCondition.country_id = countryId
+            const idArray: number[] = countryId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition.country_id = { [Op.in]: idArray };
         }
         if (stateId) {
-            whereCondition.state_id = stateId
+            const idArray: number[] = stateId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition.state_id = { [Op.in]: idArray };
         }
         //fetch data with pagination
         if (req.query.pagination === "true") {
@@ -124,6 +130,30 @@ const fetchFabricPagination = async (req: Request, res: Response) => {
         return res.sendError(res, "ERR_INTERNAL_SERVER_ERROR");
     }
 }
+
+const fetchFabric = async (req: Request, res: Response) => {
+    try {
+        const result = await Fabric.findOne({
+            where: {
+                id: req.query.id
+            },
+            include: [
+                {
+                    model: Country, as: 'country'
+                },
+                {
+                    model: State, as: 'state'
+                },
+            ]
+        });
+        return res.sendSuccess(res, result);
+
+    } catch (error) {
+        console.log(error);
+        return res.sendError(res, "ERR_INTERNAL_SERVER_ERROR");
+    }
+}
+
 
 
 const updateFabric = async (req: Request, res: Response) => {
@@ -200,6 +230,7 @@ const deleteFabric = async (req: Request, res: Response) => {
 export {
     createFabric,
     fetchFabricPagination,
+    fetchFabric,
     updateFabric,
     deleteFabric
 };  

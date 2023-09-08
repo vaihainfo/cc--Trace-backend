@@ -35,6 +35,9 @@ import {
     updateCropGrade,
     updateCropGradeStatus
 } from "../../controllers/crop/crop-grade";
+import accessControl from "../../middleware/access-control";
+
+router.use(accessControl)
 
 // Crop Name Routes
 router.get('/crop-name', fetchCropsPagination);

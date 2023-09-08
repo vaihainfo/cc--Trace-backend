@@ -14,8 +14,8 @@ const register = async (req: Request, res: Response) =>{
           lastname: req.body.lastName || "",
           mobile: req.body.mobile || "",
           position: req.body.position || "",
-          // countries_web: req.body.countriesWeb || null,
-          countries_web: [1],
+          countries_web: req.body.countriesWeb || null,
+          // countries_web: [1],
 
           farm_group: req.body.farmGroups || null,
           access_level: req.body.accessLevel || null,

@@ -38,7 +38,7 @@ const fetchCountries = async (req: Request, res: Response) => {
     }
   } catch (error) {
     console.log(error);
-    return res.sendError(res, "ERR_INTERNAL_SERVER_ERROR");
+    return res.sendError(res, "ERR_NOT_ABLE_TO_GET_COUNTRIES");
   }
 };
 

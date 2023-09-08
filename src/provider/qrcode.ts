@@ -82,6 +82,29 @@ const getQrImageHtml = (src: any, name: any, code: any, village: any) => {
 `
 }
 
+
+const generateOnlyQrCode = async (qrData: any, fileName: string) => {
+    // Generate the QR code
+    return new Promise((resolve, reject) => {
+        try {
+            qr.toBuffer(qrData, { errorCorrectionLevel: 'H' }, async (err, buffer) => {
+                if (err) {
+                    console.error('Error generating QR code:', err);
+                    return;
+                }
+                const qrImagePath: string = path.join('./upload', fileName); // Path to save the QR code image
+                fs.writeFileSync(qrImagePath, buffer);
+                resolve(qrImagePath);
+            })
+        } catch (error) {
+            reject(error)
+        }
+
+    })
+
+}
+
 export {
+    generateOnlyQrCode,
     generateQrCode
 }

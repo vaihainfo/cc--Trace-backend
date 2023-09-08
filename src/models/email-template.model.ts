@@ -1,7 +1,7 @@
-import { DataTypes  } from 'sequelize';
-import db  from '../util/dbConn';
+import { DataTypes } from 'sequelize';
+import db from '../util/dbConn';
 
-const EmailTemplate = db.define('email_templates',{
+const EmailTemplate = db.define('email_templates', {
   id: {
     type: DataTypes.INTEGER,
     autoIncrement: true,
@@ -15,6 +15,9 @@ const EmailTemplate = db.define('email_templates',{
   file_name: {
     type: DataTypes.STRING
   },
+  mail_type: {
+    type: DataTypes.ARRAY(DataTypes.STRING)
+  }
 });
 
 EmailTemplate.associate = (models: any) => {

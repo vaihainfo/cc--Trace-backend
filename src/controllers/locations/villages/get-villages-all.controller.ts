@@ -123,7 +123,7 @@ const fetchVillages = async (req: Request, res: Response) => {
       return res.sendSuccess(res, villages);
     }
   } catch (error) {
-    return res.status(500).json(error);
+    return res.status(400).json(error);
   }
 };
 

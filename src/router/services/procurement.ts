@@ -11,7 +11,7 @@ router.put('/update-transaction', updateTransaction);
 router.delete('/delete-transaction', deleteTransaction);
 router.delete('/delete-bulk-transactions', deleteBulkTransactions);
 router.post('/upload-transactions', uploadTransactionBulk);
-router.post('/export-bulk-transactions', exportProcurement);
+router.get('/export-bulk-transactions', exportProcurement);
 
 
 export default router;  

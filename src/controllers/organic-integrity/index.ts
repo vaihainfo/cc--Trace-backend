@@ -36,7 +36,7 @@ const fetchOrganicIntegrityPagination = async (req: Request, res: Response) => {
     const searchTerm = req.query.search || '';
     const page = Number(req.query.page) || 1;
     const limit = Number(req.query.limit) || 10;
-    const { brandId, farmGroupId, icsId } = req.query;
+    const { brandId, farmGroupId, icsId }: any = req.query;
     const offset = (page - 1) * limit;
     const whereCondition: any = {}
     try {
@@ -51,13 +51,22 @@ const fetchOrganicIntegrityPagination = async (req: Request, res: Response) => {
             ];
         }
         if (brandId) {
-            whereCondition.brand_id = brandId;
+            const idArray: number[] = brandId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition.brand_id = { [Op.in]: idArray };
         }
         if (farmGroupId) {
-            whereCondition.farmGroup_id = farmGroupId;
+            const idArray: number[] = farmGroupId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition.farmGroup_id = { [Op.in]: idArray };
         }
         if (icsId) {
-            whereCondition.ics_id = icsId;
+            const idArray: number[] = icsId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition.ics_id = { [Op.in]: idArray };
         }
         let include = [
             {
@@ -155,7 +164,6 @@ const updateOrganicIntegrity = async (req: Request, res: Response) => {
         return res.sendError(res, error.message);
     }
 }
-
 
 const deleteOrganicIntegrity = async (req: Request, res: Response) => {
     try {
