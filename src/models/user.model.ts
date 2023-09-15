@@ -32,7 +32,7 @@ const User = db.define('users',{
     allowNull: false
   },
   farm_group: {
-    type: DataTypes.STRING,
+    type: DataTypes.ARRAY(DataTypes.INTEGER),
   },
   role: {
     type: DataTypes.INTEGER,
