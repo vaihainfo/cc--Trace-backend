@@ -81,7 +81,9 @@ const fetchFarmerPagination = async (req: Request, res: Response) => {
   const sortOrder = req.query.sort || "asc";
   const page = Number(req.query.page) || 1;
   const limit = Number(req.query.limit) || 10;
-  const { brandId, programId, icsId, farmGroupId, countryId, stateId, villageId, cert }: any = req.query;
+  const programId: string = req.query.programId as string;
+  const brandId: string = req.query.brandId as string;
+  const { icsId, farmGroupId, countryId, stateId, villageId, cert }: any = req.query;
   const offset = (page - 1) * limit;
   const whereCondition: any = {};
   try {
@@ -101,10 +103,10 @@ const fetchFarmerPagination = async (req: Request, res: Response) => {
       const idArray: number[] = brandId
         .split(",")
         .map((id: any) => parseInt(id, 10));
-      whereCondition["$farmer.brand_id$"] = { [Op.in]: idArray };
-    }
-    if (programId) {
-      const idArray: number[] = programId
+        whereCondition["$farmer.brand_id$"] = { [Op.in]: idArray };
+      }
+      if (programId) {
+        const idArray: number[] = programId
         .split(",")
         .map((id: any) => parseInt(id, 10));
       whereCondition["$farmer.program_id$"] = { [Op.in]: idArray };
@@ -122,7 +124,7 @@ const fetchFarmerPagination = async (req: Request, res: Response) => {
       whereCondition["$farmer.country_id$"] = { [Op.in]: idArray };
     }
     if (stateId) {
-      const idArray: number[] = countryId
+      const idArray: number[] = stateId
         .split(",")
         .map((id: any) => parseInt(id, 10));
       whereCondition["$farmer.state_id$"] = { [Op.in]: idArray };
@@ -265,6 +267,7 @@ const fetchFarmerPagination = async (req: Request, res: Response) => {
       return res.sendSuccess(res, farmGroup);
     }
   } catch (error: any) {
+    console.log(error)
     return res.sendError(res, error.message);
   }
 };
