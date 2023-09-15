@@ -8,6 +8,10 @@ import {
     exportGinnerSales,
     fetchGinSaleBale
 } from "../../controllers/ginner";
+import {
+
+    createSpinnerProcess,
+} from "../../controllers/spinner";
 
 import { Router } from "express";
 const router = Router();
@@ -22,5 +26,5 @@ router.get('/sales', fetchGinSalesPagination);
 router.put('/sales', updateGinnerSales);
 router.get('/sales/export', exportGinnerSales);
 router.get('/sales/bale', fetchGinSaleBale);
-
+router.post('/sales/spinner', createSpinnerProcess);
 export default router;

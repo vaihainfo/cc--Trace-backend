@@ -1,7 +1,7 @@
-import { DataTypes  } from 'sequelize';
-import db  from '../util/dbConn';
+import { DataTypes } from 'sequelize';
+import db from '../util/dbConn';
 
-const UnitType = db.define('unit_types',{
+const UnitType = db.define('unit_types', {
   id: {
     type: DataTypes.INTEGER,
     autoIncrement: true,

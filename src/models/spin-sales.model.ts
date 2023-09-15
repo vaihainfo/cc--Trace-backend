@@ -1,9 +1,11 @@
-import { DataTypes  } from 'sequelize';
-import db  from '../util/dbConn';
+import { DataTypes } from 'sequelize';
+import db from '../util/dbConn';
 
 import Spinner from './spinner.model';
+import Season from './season.model';
+import Program from './program.model';
 
-const SpinSales = db.define('spin_sales',{
+const SpinSales = db.define('spin_sales', {
   id: {
     type: DataTypes.INTEGER,
     autoIncrement: true,
@@ -114,11 +116,24 @@ const SpinSales = db.define('spin_sales',{
   status: {
     type: DataTypes.STRING
   },
+  qr: {
+    type: DataTypes.STRING
+  }
 });
 
 SpinSales.belongsTo(Spinner, {
   foreignKey: "spinner_id",
   as: "spinner",
+});
+
+SpinSales.belongsTo(Season, {
+  foreignKey: "season_id",
+  as: "season",
+});
+
+SpinSales.belongsTo(Program, {
+  foreignKey: "program_id",
+  as: "program",
 });
 
 SpinSales.sync();

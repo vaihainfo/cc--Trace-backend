@@ -8,10 +8,7 @@ import {
 } from "../../controllers/ics-name";
 
 import { Router } from "express";
-import accessControl from "../../middleware/access-control";
 const router = Router();
-
-router.use(accessControl)
 
 // ICS name Routes
 router.get('/', fetchIcsNamePagination);

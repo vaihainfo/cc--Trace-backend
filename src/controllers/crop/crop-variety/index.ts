@@ -22,11 +22,18 @@ const createCropVariety = async (req: Request, res: Response) => {
 const createCropVarieties = async (req: Request, res: Response) => {
     try {
         // create multiple crop type at the time
-        const data = req.body.cropVariety.map((obj: string) => {
-            return { cropVariety: obj, cropType_id: req.body.cropTypeId, cropVariety_status: true }
-        })
-        const cropVariety = await CropVariety.bulkCreate(data);
-        res.sendSuccess(res, cropVariety);
+        let pass = [];
+        let fail = [];
+        for await (const cropVariety of req.body.cropVariety) {
+            let cropvariety = await CropVariety.findOne({ where: { cropVariety: { [Op.iLike]: cropVariety }, cropType_id: req.body.cropTypeId } })
+            if (cropvariety) {
+                fail.push({ data: cropvariety });
+            } else {
+                const cropsVariety = await CropVariety.create({ cropVariety: cropVariety, cropType_id: req.body.cropTypeId, cropVariety_status: true });
+                pass.push({ data: cropsVariety });
+            }
+        }
+        res.sendSuccess(res, { pass, fail });
     } catch (error) {
         return res.sendError(res, "ERR_INTERNAL_SERVER_ERROR");
     }
@@ -116,6 +123,10 @@ const fetchCropVarietyPagination = async (req: Request, res: Response) => {
 
 const updateCropVariety = async (req: Request, res: Response) => {
     try {
+        let result = await CropVariety.findOne({ where: { cropType_id: req.body.cropTypeId, cropVariety: { [Op.iLike]: req.body.cropVariety }, id: { [Op.ne]: req.body.id } } })
+        if (result) {
+            return res.sendError(res, "ALREADY_EXITS");
+        }
         const cropVariety = await CropVariety.update({
             cropType_id: req.body.cropTypeId,
             cropVariety: req.body.cropVariety

@@ -1,10 +1,13 @@
-import { DataTypes  } from 'sequelize';
-import db  from '../util/dbConn';
+import { DataTypes } from 'sequelize';
+import db from '../util/dbConn';
 
 import Spinner from './spinner.model';
 import Dyeing from './dyeing.model';
+import Program from './program.model';
+import Season from './season.model';
+import YarnCount from './yarn-count.model';
 
-const SpinProcess = db.define('spin_process',{
+const SpinProcess = db.define('spin_process', {
   id: {
     type: DataTypes.INTEGER,
     autoIncrement: true,
@@ -31,13 +34,13 @@ const SpinProcess = db.define('spin_process',{
     type: DataTypes.INTEGER
   },
   other_mix: {
-    type: DataTypes.DOUBLE
+    type: DataTypes.BOOLEAN
   },
   cottonmix_type: {
-    type: DataTypes.INTEGER
+    type: DataTypes.ARRAY(DataTypes.INTEGER)
   },
   cottonmix_qty: {
-    type: DataTypes.INTEGER
+    type: DataTypes.ARRAY(DataTypes.INTEGER)
   },
   yarn_type: {
     allowNull: false,
@@ -96,6 +99,34 @@ const SpinProcess = db.define('spin_process',{
     type: DataTypes.INTEGER,
     references: { model: 'dyeings', key: 'id' },
   },
+  accept_date: {
+    type: DataTypes.DATE,
+  },
+  tot_box_user: {
+    type: DataTypes.INTEGER
+  },
+  display_order: {
+    type: DataTypes.INTEGER
+  },
+  qr: {
+    type: DataTypes.STRING
+  }
+});
+
+
+SpinProcess.belongsTo(Season, {
+  foreignKey: "season_id",
+  as: "season",
+});
+
+SpinProcess.belongsTo(YarnCount, {
+  foreignKey: "yarn_count",
+  as: "yarncount",
+});
+
+SpinProcess.belongsTo(Program, {
+  foreignKey: "program_id",
+  as: "program",
 });
 
 SpinProcess.belongsTo(Spinner, {

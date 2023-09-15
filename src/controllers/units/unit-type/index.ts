@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { Sequelize, Op } from "sequelize";
 
 import UnitType from "../../../models/unit-type.model";
+import UnitSubType from "../../../models/unit-subtype.model";
 
 
 const createUnitType = async (req: Request, res: Response) => {
@@ -19,12 +20,19 @@ const createUnitType = async (req: Request, res: Response) => {
 
 const createUnitTypes = async (req: Request, res: Response) => {
     try {
-        // create multiple crops at the time
-        const data = req.body.unitType.map((obj: string) => {
-            return { unitType: obj, unitType_status: true }
-        })
-        const unitTypes = await UnitType.bulkCreate(data);
-        res.sendSuccess(res, unitTypes);
+        // create multiple Unit Type at the time
+        let pass = [];
+        let fail = [];
+        for await (const obj of req.body.unitType) {
+            let unit = await UnitType.findOne({ where: { unitType: { [Op.iLike]: obj }, } })
+            if (unit) {
+                fail.push({ data: unit });
+            } else {
+                const unit = await UnitType.create({ unitType: obj, unitType_status: true });
+                pass.push({ data: unit });
+            }
+        }
+        res.sendSuccess(res, { pass, fail });
     } catch (error) {
         return res.sendError(res, "ERR_INTERNAL_SERVER_ERROR");
     }
@@ -70,6 +78,14 @@ const fetchUnitTypePagination = async (req: Request, res: Response) => {
 
 const updateUnitType = async (req: Request, res: Response) => {
     try {
+        let result = await UnitType.findOne({
+            where: {
+                unitType: { [Op.iLike]: req.body.unitType }, id: { [Op.ne]: req.body.id }
+            }
+        })
+        if (result) {
+            return res.sendError(res, "ALREADY_EXITS");
+        }
         const unitType = await UnitType.update({ unitType: req.body.unitType }, {
             where: {
                 id: req.body.id
@@ -96,6 +112,10 @@ const updateUnitTypeStatus = async (req: Request, res: Response) => {
 
 const deleteUnitType = async (req: Request, res: Response) => {
     try {
+        let count = await UnitSubType.count({ where: { unitType_id: req.body.id } });
+        if (count > 0) {
+            return res.sendError(res, 'Can not delete beacause Unit Type is assosiated to another table');
+        }
         const unitType = await UnitType.destroy({
             where: {
                 id: req.body.id

@@ -13,7 +13,7 @@ const router = Router();
 router.get('/', fetchTicketTracker);
 router.post('/', createTicketTracker);
 router.put('/', updateTicketTrackerStatus);
-router.put('/status', fetchTicketTrackerStatus);
+router.get('/status', fetchTicketTrackerStatus);
 router.get('/count', countTicketTracker);
 
 export default router;  

@@ -7,10 +7,7 @@ import {
 } from "../../controllers/cooperative";
 
 import { Router } from "express";
-import accessControl from "../../middleware/access-control";
 const router = Router();
-
-router.use(accessControl)
 
 // Cooperative Routes
 router.get('/', fetchCooperativePagination);

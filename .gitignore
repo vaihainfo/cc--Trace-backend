@@ -13,6 +13,8 @@ dist
 .vscode-test
 .vscode/
 
+/upload/*
+
 # dotenv environment variables file
 .env
 .env*.local

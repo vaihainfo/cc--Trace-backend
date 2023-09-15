@@ -25,10 +25,7 @@ import {
 } from "../../controllers/units/unit-type";
 
 import { Router } from "express";
-import accessControl from "../../middleware/access-control";
 const router = Router();
-
-router.use(accessControl)
 
 // Unit Type Routes
 router.get('/unit-type', fetchUnitTypePagination);

@@ -9,8 +9,8 @@ const getOrganicIntegrityReport = async (req: Request, res: Response) => {
   const searchTerm = req.query.search || "";
   const sortOrder = req.query.sort || "asc";
   //   const sortField = req.query.sortBy || '';
-  const page = Number(req.query.page) || 2;
-  const limit = Number(req.query.limit) || 3;
+  const page = Number(req.query.page) || 1;
+  const limit = Number(req.query.limit) || 10;
   const offset = (page - 1) * limit;
 
   const farmGroupId: string = req.query.farmGroupId as string;

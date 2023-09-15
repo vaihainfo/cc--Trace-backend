@@ -23,7 +23,7 @@ const createTicketTracker = async (req: Request, res: Response) => {
         const training = await TicketTracker.create(data);
         let dataa = await TicketTrackerStatus.create({
             status: 'Pending',
-            comment: req.body.comment,
+            comment: req.body.comments,
             user_id: req.body.userId,
             ticket_id: training.id
         })
@@ -123,9 +123,12 @@ const updateTicketTrackerStatus = async (req: Request, res: Response) => {
 const fetchTicketTrackerStatus = async (req: Request, res: Response) => {
 
     try {
-
         const training = await TicketTrackerStatus.findAll({
-            where: { ticket_id: req.query.ticketId }
+            where: { ticket_id: req.query.ticketId },
+            include: [{
+                model: TicketTracker,
+                as: 'ticket'
+            }]
         });
         return res.sendSuccess(res, training);
 

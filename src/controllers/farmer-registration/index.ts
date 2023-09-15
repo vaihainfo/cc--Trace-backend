@@ -6,8 +6,6 @@ import * as path from "path";
 import Brand from "../../models/brand.model";
 import FarmGroup from "../../models/farm-group.model";
 import Farmer from "../../models/farmer.model";
-import FarmerAgriArea from "../../models/farmer-agri-area.model";
-import FarmerCottonArea from "../../models/farmer-cotton-area.model";
 import Farm from "../../models/farm.model";
 import Program from "../../models/program.model";
 import Season from "../../models/season.model";
@@ -19,28 +17,38 @@ import Block from "../../models/block.model";
 import { generateQrCode } from "../../provider/qrcode";
 import archiver from 'archiver';
 import ICS from "../../models/ics.model";
+
 //create farmer
 const createFarmer = async (req: Request, res: Response) => {
   try {
+    let result = await Farmer.findOne({ where: { code: req.body.code } })
+    if (result) {
+      return res.sendError(res, "FARMER_CODE_ALREADY_EXIST");
+    }
     const data = {
-      program_id: req.body.programId,
-      brand_id: req.body.brandId,
-      farmGroup_id: req.body.farmGroupId,
+      program_id: Number(req.body.programId),
+      brand_id: Number(req.body.brandId),
+      farmGroup_id: Number(req.body.farmGroupId),
       firstName: req.body.firstName,
       lastName: req.body.lastName,
       code: req.body.code,
-      country_id: req.body.countryId,
-      state_id: req.body.stateId,
-      district_id: req.body.districtId,
-      block_id: req.body.blockId,
-      village_id: req.body.villageId,
+      country_id: Number(req.body.countryId),
+      state_id: Number(req.body.stateId),
+      district_id: Number(req.body.districtId),
+      block_id: Number(req.body.blockId),
+      village_id: Number(req.body.villageId),
       joining_date: req.body.joiningDate,
-      ics_id: req.body.icsId,
+      ics_id: Number(req.body.icsId),
       tracenet_id: req.body.tracenetId,
-      cert_status: req.body.certStatus
+      cert_status: req.body.certStatus,
+      agri_total_area: req.body.agriTotalArea,
+      agri_estimated_yeld: req.body.agriEstimatedYield,
+      agri_estimated_prod: req.body.agriEstimatedProd,
+      cotton_total_area: req.body.cottonTotalArea,
+      total_estimated_cotton: req.body.totalEstimatedCotton
     };
     const farmer = await Farmer.create(data);
-    let village = await Village.findOne({ where: { id: req.body.villageId } })
+    let village = await Village.findOne({ where: { id: Number(req.body.villageId) } })
     let uniqueFilename = `qrcode_${Date.now()}.png`;
     let name = farmer.firstName + " " + farmer.lastName
     let aa = await generateQrCode(`Farmer Code : ${farmer.code}  Farmer Id: ${farmer.id}`,
@@ -50,7 +58,18 @@ const createFarmer = async (req: Request, res: Response) => {
         id: farmer.id
       }
     });
-    res.sendSuccess(res, { farmer });
+    const farmData = {
+      farmer_id: farmer.id,
+      program_id: Number(req.body.programId),
+      season_id: Number(req.body.seasonId),
+      agri_total_area: req.body.agriTotalArea,
+      agri_estimated_yeld: req.body.agriEstimatedYield,
+      agri_estimated_prod: req.body.agriEstimatedProd,
+      cotton_total_area: req.body.cottonTotalArea,
+      total_estimated_cotton: req.body.totalEstimatedCotton
+    };
+    const farm = await Farm.create(farmData);
+    res.sendSuccess(res, { farmer, farm });
   } catch (error) {
     return res.sendError(res, "ERR_INTERNAL_SERVER_ERROR");
   }
@@ -68,13 +87,13 @@ const fetchFarmerPagination = async (req: Request, res: Response) => {
   try {
     if (searchTerm) {
       whereCondition[Op.or] = [
-        { firstName: { [Op.iLike]: `%${searchTerm}%` } }, // Search by crop Type
-        { code: { [Op.iLike]: `%${searchTerm}%` } }, // Search by crop Type
-        { '$program.program_name$': { [Op.iLike]: `%${searchTerm}%` } }, // Search by crop Type
-        { '$country.county_name$': { [Op.iLike]: `%${searchTerm}%` } }, // Search by crop Type
-        { '$village.village_name$': { [Op.iLike]: `%${searchTerm}%` } }, // Search by crop Type
-        { '$brand.brand_name$': { [Op.iLike]: `%${searchTerm}%` } }, // Search by crop Type
-        { cert_status: { [Op.iLike]: `%${searchTerm}%` } }, // Search by crop Type
+        { '$farmer.firstName$': { [Op.iLike]: `%${searchTerm}%` } }, // Search by first name
+        { '$farmer.code$': { [Op.iLike]: `%${searchTerm}%` } }, // Search by code
+        { '$farmer.program.program_name$': { [Op.iLike]: `%${searchTerm}%` } }, // Search by program
+        { '$farmer.country.county_name$': { [Op.iLike]: `%${searchTerm}%` } }, // Search by country
+        { '$farmer.village.village_name$': { [Op.iLike]: `%${searchTerm}%` } }, // Search by village
+        { '$farmer.brand.brand_name$': { [Op.iLike]: `%${searchTerm}%` } }, // Search by brand
+        { '$farmer.cert_status$': { [Op.iLike]: `%${searchTerm}%` } }, // Search by cert status
       ];
     }
 
@@ -82,122 +101,166 @@ const fetchFarmerPagination = async (req: Request, res: Response) => {
       const idArray: number[] = brandId
         .split(",")
         .map((id: any) => parseInt(id, 10));
-      whereCondition.brand_id = { [Op.in]: idArray };
+      whereCondition["$farmer.brand_id$"] = { [Op.in]: idArray };
     }
     if (programId) {
       const idArray: number[] = programId
         .split(",")
         .map((id: any) => parseInt(id, 10));
-      whereCondition.program_id = { [Op.in]: idArray };
+      whereCondition["$farmer.program_id$"] = { [Op.in]: idArray };
     }
     if (farmGroupId) {
       const idArray: number[] = farmGroupId
         .split(",")
         .map((id: any) => parseInt(id, 10));
-      whereCondition.farmGroup_id = { [Op.in]: idArray };
+      whereCondition["$farmer.farmGroup_id$"] = { [Op.in]: idArray };
     }
     if (countryId) {
       const idArray: number[] = countryId
         .split(",")
         .map((id: any) => parseInt(id, 10));
-      whereCondition.country_id = { [Op.in]: idArray };
+      whereCondition["$farmer.country_id$"] = { [Op.in]: idArray };
     }
     if (stateId) {
       const idArray: number[] = countryId
         .split(",")
         .map((id: any) => parseInt(id, 10));
-      whereCondition.state_id = { [Op.in]: idArray };
+      whereCondition["$farmer.state_id$"] = { [Op.in]: idArray };
     }
     if (villageId) {
       const idArray: number[] = villageId
         .split(",")
         .map((id: any) => parseInt(id, 10));
-      whereCondition.village_id = { [Op.in]: idArray };
+      whereCondition["$farmer.village_id$"] = { [Op.in]: idArray };
     }
 
     if (cert) {
       const idArray: string[] = cert
         .split(",")
         .map((id: any) => id);
-      whereCondition.cert_status = { [Op.in]: idArray };
+      whereCondition["$farmer.cert_status$"] = { [Op.in]: idArray };
     }
 
     if (icsId) {
       const idArray: string[] = icsId
         .split(",")
         .map((id: any) => parseInt(id, 10));
-      whereCondition.ics_id = { [Op.in]: idArray };
+      whereCondition["$farmer.ics_id$"] = { [Op.in]: idArray };
     }
 
     let include = [
       {
-        model: Program,
-        as: "program",
+        model: Farmer,
+        as: "farmer",
+        include: [
+          {
+            model: Program,
+            as: "program",
+          },
+          {
+            model: Brand,
+            as: "brand",
+          },
+          {
+            model: FarmGroup,
+            as: "farmGroup",
+          },
+          {
+            model: Country,
+            as: "country",
+          },
+          {
+            model: Village,
+            as: "village",
+          },
+          {
+            model: State,
+            as: "state",
+          },
+          {
+            model: District,
+            as: "district",
+          },
+          {
+            model: Block,
+            as: "block",
+          }
+        ]
       },
       {
-        model: Brand,
-        as: "brand",
-      },
-      {
-        model: FarmGroup,
-        as: "farmGroup",
-      },
-      {
-        model: Country,
-        as: "country",
-      },
-      {
-        model: Village,
-        as: "village",
-      },
-      {
-        model: State,
-        as: "state",
-      },
-      {
-        model: District,
-        as: "district",
-      },
-      {
-        model: Block,
-        as: "block",
-      },
+        model: Season,
+        as: "season"
+      }
+
     ];
+    let farmCount: any
+    if (brandId || countryId || programId) {
+      let whereCondition: any = {};
+      let group: any
+      if (brandId) {
+        const idArray: number[] = brandId
+          .split(",")
+          .map((id: any) => parseInt(id, 10));
+        whereCondition["$farmer.brand_id$"] = { [Op.in]: idArray };
+        group = ["farmer.brand_id"]
+      }
+      if (countryId) {
+        const idArray: number[] = countryId
+          .split(",")
+          .map((id: any) => parseInt(id, 10));
+        whereCondition["$farmer.country_id$"] = { [Op.in]: idArray };
+        group = ["farmer.country_id"]
+      }
+      if (programId) {
+        const idArray: number[] = countryId
+          .split(",")
+          .map((id: any) => parseInt(id, 10));
+        whereCondition["$farmer.program_id$"] = { [Op.in]: idArray };
+        group = ["farmer.program_id"]
+      }
+      farmCount = await Farm.findAll({
+        where: whereCondition,
+        attributes: [
+          [
+            Sequelize.fn("SUM", Sequelize.col("farmer.agri_total_area")),
+            "totalArea",
+          ],
+          [
+            Sequelize.fn("COUNT", Sequelize.col("farmer.id")),
+            "totalFarmer",
+          ],
+          [
+            Sequelize.fn(
+              "SUM",
+              Sequelize.col("farmer.cotton_total_area")
+            ),
+            "totalCotton",
+          ],
+        ],
+        include: [
+          {
+            model: Farmer,
+            as: "farmer",
+            attributes: []
+          }
+        ],
+        group: group
+      });
+    }
 
     //fetch data with pagination
     if (req.query.pagination === "true") {
-      const { count, rows } = await Farmer.findAndCountAll({
+      const { count, rows } = await Farm.findAndCountAll({
         where: whereCondition,
         include: include,
         offset: offset,
         limit: limit,
       });
-      let data = [];
-      for await (const row of rows) {
-        const result = await Farm.findOne({
-          where: { farmer_id: row.id },
-          include: [
-            {
-              model: Season,
-              as: "season",
-            },
-            {
-              model: FarmerAgriArea,
-              as: "farmerAgriArea",
-            },
-            {
-              model: FarmerCottonArea,
-              as: "farmerCottonArea",
-            },
-          ],
-        });
-        data.push({ row, farm: result });
-      }
-      return res.sendPaginationSuccess(res, data, count);
+      return res.sendPaginationSuccess(res, { rows, farmCount: farmCount ? farmCount : [] }, count);
     } else {
-      const farmGroup = await Farmer.findAll({
+      const farmGroup = await Farm.findAll({
         where: whereCondition,
-        include: include,
+        include: include
       });
       return res.sendSuccess(res, farmGroup);
     }
@@ -248,10 +311,15 @@ const fetchFarmer = async (req: Request, res: Response) => {
     // const farmer= await Farmer.findByPk(req.query.id);
     const farmer = await Farmer.findOne({
       where: { id: req.query.id },
-      include: include,
+      include: include
     });
-
-    return res.sendSuccess(res, { farmer });
+    const farm = await Farm.findOne({
+      farmer_id: req.query.id,
+      order: [
+        ["id", 'asc'], // Sort the results based on the 'name' field and the specified order
+      ]
+    })
+    return res.sendSuccess(res, { ...farmer.dataValues, season_id: farm.season_id });
   } catch (error: any) {
     return res.sendError(res, error.message);
   }
@@ -259,22 +327,31 @@ const fetchFarmer = async (req: Request, res: Response) => {
 
 const updateFarmer = async (req: Request, res: Response) => {
   try {
+    let result = await Farmer.findOne({ where: { id: { [Op.ne]: req.body.id }, code: req.body.code } })
+    if (result) {
+      return res.sendError(res, "FARMER_CODE_ALREADY_EXIST");
+    }
     const data = {
-      program_id: req.body.programId,
-      brand_id: req.body.brandId,
-      farmGroup_id: req.body.farmGroupId,
+      program_id: Number(req.body.programId),
+      brand_id: Number(req.body.brandId),
+      farmGroup_id: Number(req.body.farmGroupId),
       firstName: req.body.firstName,
       lastName: req.body.lastName,
       code: req.body.code,
-      country_id: req.body.countryId,
-      state_id: req.body.stateId,
-      district_id: req.body.districtId,
-      block_id: req.body.blockId,
-      village_id: req.body.villageId,
+      country_id: Number(req.body.countryId),
+      state_id: Number(req.body.stateId),
+      district_id: Number(req.body.districtId),
+      block_id: Number(req.body.blockId),
+      village_id: Number(req.body.villageId),
       joining_date: req.body.joiningDate,
       ics_id: req.body.icsId,
       tracenet_id: req.body.tracenetId,
       cert_status: req.body.certStatus,
+      agri_total_area: req.body.agriTotalArea,
+      agri_estimated_yeld: req.body.agriEstimatedYield,
+      agri_estimated_prod: req.body.agriEstimatedProd,
+      cotton_total_area: req.body.cottonTotalArea,
+      total_estimated_cotton: req.body.totalEstimatedCotton
     };
     const farmer = await Farmer.update(data, {
       where: {
@@ -291,7 +368,7 @@ const updateFarmer = async (req: Request, res: Response) => {
 
 const deleteFarmer = async (req: Request, res: Response) => {
   try {
-    const farmer = await Farmer.destroy({
+    const farmer = await Farm.destroy({
       where: {
         id: req.body.id,
       },
@@ -304,68 +381,36 @@ const deleteFarmer = async (req: Request, res: Response) => {
 
 const createFarmerFarm = async (req: Request, res: Response) => {
   try {
-    const farmerAgriArea = await FarmerAgriArea.create({
-      farmer_id: req.body.farmerId,
-      agri_total_area: req.body.agriTotalArea,
-      agri_estimated_yeld: req.body.agriEstimatedYield,
-      agri_estimated_prod: req.body.agriEstimatedProd,
-    });
-    const farmerCottonArea = await FarmerCottonArea.create({
-      farmer_id: req.body.farmerId,
-      cotton_total_area: req.body.cottonTotalArea,
-      total_estimated_cotton: req.body.totalEstimatedCotton
-    });
-
     const data = {
       farmer_id: req.body.farmerId,
       program_id: req.body.programId,
       season_id: req.body.seasonId,
-      cotton_id: farmerCottonArea.id,
-      agri_id: farmerAgriArea.id,
-      agri_total_area: String(req.body.agriTotalArea),
-      cotton_total_area: String(req.body.cottonTotalArea),
+      agri_total_area: req.body.agriTotalArea,
+      agri_estimated_yeld: req.body.agriEstimatedYield,
+      agri_estimated_prod: req.body.agriEstimatedProd,
+      cotton_total_area: req.body.cottonTotalArea,
+      total_estimated_cotton: req.body.totalEstimatedCotton
     };
     const farm = await Farm.create(data);
     res.sendSuccess(res, { farm });
   } catch (error) {
+    console.log(error)
     return res.sendError(res, "ERR_INTERNAL_SERVER_ERROR");
   }
 };
 
 const updateFarmerFarm = async (req: Request, res: Response) => {
   try {
-    const farmerAgriArea = await FarmerAgriArea.update(
-      {
-        agri_total_area: req.body.agriTotalArea,
-        agri_estimated_yeld: req.body.agriEstimatedYield,
-        agri_estimated_prod: req.body.agriEstimatedProd
-      },
-      {
-        where: {
-          farmer_id: req.body.farmerId,
-        },
-      }
-    );
-    const farmerCottonArea = await FarmerCottonArea.update(
-      {
-        cotton_total_area: req.body.cottonTotalArea,
-        total_estimated_cotton: req.body.totalEstimatedCotton,
-      },
-      {
-        where: {
-          farmer_id: req.body.farmerId,
-        },
-      }
-    );
 
     const data = {
       farmer_id: req.body.farmerId,
       program_id: req.body.programId,
       season_id: req.body.seasonId,
-      cotton_id: farmerCottonArea.id,
-      agri_id: farmerAgriArea.id,
       agri_total_area: req.body.agriTotalArea,
+      agri_estimated_yeld: req.body.agriEstimatedYield,
+      agri_estimated_prod: req.body.agriEstimatedProd,
       cotton_total_area: req.body.cottonTotalArea,
+      total_estimated_cotton: req.body.totalEstimatedCotton
     };
     const farm = await Farm.update(data, {
       where: {
@@ -409,15 +454,7 @@ const fetchFarmPagination = async (req: Request, res: Response) => {
       {
         model: Season,
         as: "season",
-      },
-      {
-        model: FarmerAgriArea,
-        as: "farmerAgriArea",
-      },
-      {
-        model: FarmerCottonArea,
-        as: "farmerCottonArea",
-      },
+      }
     ];
     //fetch data with pagination
     if (req.query.pagination === "true") {
@@ -444,7 +481,6 @@ const fetchFarmPagination = async (req: Request, res: Response) => {
 //fetching the farm details from farmer
 const fetchFarm = async (req: Request, res: Response) => {
   try {
-
     let include = [
       {
         model: Farmer,
@@ -457,15 +493,7 @@ const fetchFarm = async (req: Request, res: Response) => {
       {
         model: Season,
         as: "season",
-      },
-      {
-        model: FarmerAgriArea,
-        as: "farmerAgriArea",
-      },
-      {
-        model: FarmerCottonArea,
-        as: "farmerCottonArea",
-      },
+      }
     ];
     //fetch data with pagination
     const farm = await Farm.findOne({
@@ -491,17 +519,17 @@ const countFarmWithProgram = async (req: Request, res: Response) => {
       where: whereCondition,
       attributes: [
         [
-          Sequelize.fn("SUM", Sequelize.col("farmerAgriArea.agri_total_area")),
+          Sequelize.fn("SUM", Sequelize.col("farmer.agri_total_area")),
           "totalArea",
         ],
         [
-          Sequelize.fn("COUNT", Sequelize.col("farmerAgriArea.id")),
+          Sequelize.fn("COUNT", Sequelize.col("farmer.id")),
           "totalFarmer",
         ],
         [
           Sequelize.fn(
             "SUM",
-            Sequelize.col("farmerCottonArea.cotton_total_area")
+            Sequelize.col("farmer.cotton_total_area")
           ),
           "totalCotton",
         ],
@@ -513,20 +541,10 @@ const countFarmWithProgram = async (req: Request, res: Response) => {
           attributes: ["id", "program_name", "program_status"],
         },
         {
-          model: FarmerAgriArea,
-          as: "farmerAgriArea",
-          attributes: [],
-        },
-        {
           model: Farmer,
           as: "farmer",
           attributes: [],
-        },
-        {
-          model: FarmerCottonArea,
-          as: "farmerCottonArea",
-          attributes: [],
-        },
+        }
       ],
       group: ["program.id"],
     });
@@ -548,92 +566,85 @@ const exportFarmer = async (req: Request, res: Response) => {
     const headerRow = worksheet.addRow([
       "Sr No.", "Farmer Name", "Farmer Code",
       "Country", "State", "District", "Block", "Village",
-      "Season", "FarmGroup", "Brand", "Program", "Total Agriculture Area", "Estimated Yield (Kg/Ac)", "Total estimated Production",
+      "Season", "FarmGroup", "Brand", "Program", "Total Agriculture Area", "Estimated Yield (Kg/Ac)", "Total estimated Production", "Cotton Total Area",
       "Total EstimatedCotton", "Tracenet Id", "ICS Name", "Certification Status"
     ]);
     headerRow.font = { bold: true };
-    const farmer = await Farmer.findAll({
+    const farmer = await Farm.findAll({
       where: {},
       include: [
         {
-          model: Program,
-          as: "program",
+          model: Farmer,
+          as: "farmer",
+          include: [
+            {
+              model: Program,
+              as: "program",
+            },
+            {
+              model: Brand,
+              as: "brand",
+            },
+            {
+              model: FarmGroup,
+              as: "farmGroup",
+            },
+            {
+              model: Country,
+              as: "country",
+            },
+            {
+              model: Village,
+              as: "village",
+            },
+            {
+              model: State,
+              as: "state",
+            },
+            {
+              model: District,
+              as: "district",
+            },
+            {
+              model: Block,
+              as: "block",
+            }
+          ]
         },
         {
-          model: Brand,
-          as: "brand",
-        },
-        {
-          model: FarmGroup,
-          as: "farmGroup",
-        },
-        {
-          model: Country,
-          as: "country",
-        },
-        {
-          model: Village,
-          as: "village",
-        },
-        {
-          model: State,
-          as: "state",
-        },
-        {
-          model: District,
-          as: "district",
-        },
-        {
-          model: Block,
-          as: "block",
-        },
+          model: Season,
+          as: "season"
+        }
       ],
     });
 
     // Append data to worksheet
     for await (const [index, item] of farmer.entries()) {
-      const result = await Farm.findOne({
-        where: { farmer_id: item.id },
-        include: [
-          {
-            model: Season,
-            as: "season",
-          },
-          {
-            model: FarmerAgriArea,
-            as: "farmerAgriArea",
-          },
-          {
-            model: FarmerCottonArea,
-            as: "farmerCottonArea",
-          },
-        ],
-      });
       let ics: any
-      if (item.ics_id) {
-        ics = await ICS.findOne({ where: { id: item.ics_id } });
+      if (item.farmer.ics_id) {
+        ics = await ICS.findOne({ where: { id: item.farmer.ics_id } });
       }
       const rowValues = Object.values({
         index: index + 1,
-        farmerName: item.firstName + item.lastName,
-        fatherCode: item.code,
-        country: item.country.county_name,
-        state: item.state.state_name,
-        district: item.district.district_name,
-        block: item.block.block_name,
-        village: item.village.village_name,
-        season: result ? result.season.name : '',
-        farmGroup: item.farmGroup.name,
-        brand: item.brand.brand_name,
-        program: item.program.program_name,
-        agriTotalArea: result ? result.farmerAgriArea.agri_total_area : '',
-        agriEstimatedYield: result ? result.farmerAgriArea.agri_estimated_yeld : '',
-        agriEstimatedProd: result ? result.farmerAgriArea.agri_estimated_prod : '',
-        cottonTotalArea: result ? result.farmerCottonArea.cotton_total_area : '',
-        totalEstimatedCotton: result ? result.farmerCottonArea.total_estimated_cotton : '',
-        tracenetId: item.tracenet_id,
+        farmerName: item.farmer.firstName + item.farmer.lastName,
+        fatherCode: item.farmer.code,
+        country: item.farmer.country.county_name,
+        state: item.farmer.state.state_name,
+        district: item.farmer.district.district_name,
+        block: item.farmer.block.block_name,
+        village: item.farmer.village.village_name,
+        season: item.season ? item.season.name : '',
+        farmGroup: item.farmer.farmGroup.name,
+        brand: item.farmer.brand.brand_name,
+        program: item.farmer.program.program_name,
+        agriTotalArea: item ? item.agri_total_area : '',
+        agriEstimatedYield: item ? item.agri_estimated_yeld : '',
+        agriEstimatedProd: item ? item.agri_estimated_prod : '',
+        cottonTotalArea: item ? item.cotton_total_area : '',
+        totalEstimatedCotton: item ? item.total_estimated_cotton : '',
+        tracenetId: item.farmer.tracenet_id,
         iscName: ics ? ics.ics_name : '',
-        cert: item.certStatus ? item.certStatus : ''
+        cert: item.farmer.certStatus ? item.farmer.certStatus : ''
       });
       worksheet.addRow(rowValues);
     }
@@ -655,8 +666,8 @@ const exportFarmer = async (req: Request, res: Response) => {
       data: process.env.BASE_URL + "farmer.xlsx",
     });
   } catch (error: any) {
-    return res.sendError(res, error.message);
     console.error("Error appending data:", error);
+    return res.sendError(res, error.message);
   }
 };
 

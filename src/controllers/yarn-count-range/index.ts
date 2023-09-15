@@ -18,12 +18,19 @@ const createYarnCount = async (req: Request, res: Response) => {
 
 const createYarnCounts = async (req: Request, res: Response) => {
     try {
-        // create multiple Loom Type at the time
-        const data = req.body.yarnCountName.map((obj: string) => {
-            return { yarnCount_name: obj, yarnCount_status: true }
-        })
-        const yarnCounts = await YarnCount.bulkCreate(data);
-        res.sendSuccess(res, yarnCounts);
+        // create multiple Yarn Count at the time
+        let pass = [];
+        let fail = [];
+        for await (const obj of req.body.yarnCountName) {
+            let result = await YarnCount.findOne({ where: { yarnCount_name: { [Op.iLike]: obj } } })
+            if (result) {
+                fail.push({ data: result });
+            } else {
+                const result = await YarnCount.create({ yarnCount_name: obj, yarnCount_status: true });
+                pass.push({ data: result });
+            }
+        }
+        res.sendSuccess(res, { pass, fail });
     } catch (error) {
         return res.sendError(res, "ERR_INTERNAL_SERVER_ERROR");
     }
@@ -68,6 +75,14 @@ const fetchYarnCountPagination = async (req: Request, res: Response) => {
 
 const updateYarnCount = async (req: Request, res: Response) => {
     try {
+        let resul = await YarnCount.findOne({
+            where: {
+                yarnCount_name: { [Op.iLike]: req.body.yarnCountName }, id: { [Op.ne]: req.body.id }
+            }
+        })
+        if (resul) {
+            return res.sendError(res, "ALREADY_EXITS");
+        }
         const yarnCount = await YarnCount.update({
             yarnCount_name: req.body.yarnCountName
         }, {

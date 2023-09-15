@@ -5,6 +5,9 @@ import User from "../../../models/user.model";
 import hash from "../../../util/hash";
 import Country from "../../../models/country.model";
 import State from "../../../models/state.model";
+import Program from "../../../models/program.model";
+import UnitCertification from "../../../models/unit-certification.model";
+import Brand from "../../../models/brand.model";
 
 const createGinner = async (req: Request, res: Response) => {
     try {
@@ -156,13 +159,28 @@ const fetchGinner = async (req: Request, res: Response) => {
             ]
         });
         let userData = [];
+        let programs;
+        let unitCerts;
+        let brands;
         if (result) {
             for await (let user of result.ginnerUser_id) {
                 let us = await User.findOne({ where: { id: user } });
                 userData.push(us)
             }
+
+            programs = await Program.findAll({
+                where: { id: result.program_id },
+              });
+
+            unitCerts = await UnitCertification.findAll({
+                where: { id: result.unit_cert },
+              });
+
+            brands = await Brand.findAll({
+                where: { id: result.brand },
+              });
         }
-        return res.sendSuccess(res, result ? { ...result.dataValues, userData } : null);
+        return res.sendSuccess(res, result ? { ...result.dataValues, userData, programs, unitCerts, brands } : null);
 
     } catch (error) {
         console.log(error);

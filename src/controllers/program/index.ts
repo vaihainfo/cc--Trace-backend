@@ -19,12 +19,19 @@ const createProgram = async (req: Request, res: Response) => {
 
 const createPrograms = async (req: Request, res: Response) => {
     try {
-        // create multiple crops at the time
-        const data = req.body.programName.map((obj: string) => {
-            return { program_name: obj, program_status: true }
-        })
-        const program = await Program.bulkCreate(data);
-        res.sendSuccess(res, program);
+        // create multiple Program at the time
+        let pass = [];
+        let fail = [];
+        for await (const obj of req.body.programName) {
+            let result = await Program.findOne({ where: { program_name: { [Op.iLike]: obj } } })
+            if (result) {
+                fail.push({ data: result });
+            } else {
+                const result = await Program.create({ program_name: obj, program_status: true });
+                pass.push({ data: result });
+            }
+        }
+        res.sendSuccess(res, { pass, fail });
     } catch (error) {
         return res.sendError(res, "ERR_INTERNAL_SERVER_ERROR");
     }
@@ -70,6 +77,10 @@ const fetchProgramPagination = async (req: Request, res: Response) => {
 
 const updateProgram = async (req: Request, res: Response) => {
     try {
+        let result = await Program.findOne({ where: { program_name: { [Op.iLike]: req.body.programName }, id: { [Op.ne]: req.body.id } } })
+        if (result) {
+            return res.sendError(res, "ALREADY_EXITS");
+        }
         const program = await Program.update({
             program_name: req.body.programName
         }, {

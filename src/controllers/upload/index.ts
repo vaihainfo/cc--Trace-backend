@@ -73,6 +73,8 @@ function getContentType(ext: any) {
             return "image/jpeg";
         case ".png":
             return "image/png";
+        case ".zip":
+            return "application/zip";
         // Add more cases for other file types as needed
         default:
             return "application/octet-stream"; // Fallback to binary data

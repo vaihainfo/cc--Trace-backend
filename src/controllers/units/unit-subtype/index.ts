@@ -19,12 +19,19 @@ const createUnitSubType = async (req: Request, res: Response) => {
 
 const createUnitSubTypes = async (req: Request, res: Response) => {
     try {
-        // create multiple crop type at the time
-        const data = req.body.unitSubType.map((obj: string) => {
-            return { unitSubType: obj, unitType_id: req.body.unitTypeId, unitSubType_status: true }
-        })
-        const unitSubType = await UnitSubType.bulkCreate(data);
-        res.sendSuccess(res, unitSubType);
+        // create multiple unit subtype at the time
+        let pass = [];
+        let fail = [];
+        for await (const obj of req.body.unitSubType) {
+            let unitSub = await UnitSubType.findOne({ where: { unitSubType: { [Op.iLike]: obj }, unitType_id: req.body.unitTypeId } })
+            if (unitSub) {
+                fail.push({ data: unitSub });
+            } else {
+                const unitSub = await UnitSubType.create({ unitSubType: obj, unitType_id: req.body.unitTypeId, unitSubType_status: true });
+                pass.push({ data: unitSub });
+            }
+        }
+        res.sendSuccess(res, { pass, fail });
     } catch (error) {
         return res.sendError(res, "ERR_INTERNAL_SERVER_ERROR");
     }
@@ -87,6 +94,10 @@ const fetchUnitSubTypePagination = async (req: Request, res: Response) => {
 
 const updateUnitSubType = async (req: Request, res: Response) => {
     try {
+        let result = await UnitSubType.findOne({ where: { unitType_id: req.body.unitTypeId, unitSubType: { [Op.iLike]: req.body.unitSubType }, id: { [Op.ne]: req.body.id } } })
+        if (result) {
+            return res.sendError(res, "ALREADY_EXITS");
+        }
         const unitSubType = await UnitSubType.update({
             unitType_id: req.body.unitTypeId,
             unitSubType: req.body.unitSubType

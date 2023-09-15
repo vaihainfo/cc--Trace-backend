@@ -58,6 +58,11 @@ Country.associate = (models: any) => {
     as: 'country',
   });
 
+  Country.hasMany(models.Fabric, {
+    foreignKey: 'country_id',
+    as: 'country',
+  });
+
   Country.hasMany(models.ScopeCert, {
     foreignKey: 'country_id',
     as: 'country',

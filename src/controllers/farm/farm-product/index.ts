@@ -20,12 +20,19 @@ const createFarmProduct = async (req: Request, res: Response) => {
 
 const createFarmProducts = async (req: Request, res: Response) => {
     try {
-        // create multiple crop type at the time
-        const data = req.body.farmProduct.map((obj: string) => {
-            return { farmProduct: obj, farmItem_id: req.body.farmItemId, farmProduct_status: true }
-        })
-        const farmProducts = await FarmProduct.bulkCreate(data);
-        res.sendSuccess(res, farmProducts);
+        // create multiple Farm Product at the time
+        let pass = [];
+        let fail = [];
+        for await (const obj of req.body.farmProduct) {
+            let farmP = await FarmProduct.findOne({ where: { farmProduct: { [Op.iLike]: obj }, farmItem_id: req.body.farmItemId } })
+            if (farmP) {
+                fail.push({ data: farmP });
+            } else {
+                const farmsProduct = await FarmProduct.create({ farmProduct: obj, farmItem_id: req.body.farmItemId, farmProduct_status: true });
+                pass.push({ data: farmsProduct });
+            }
+        }
+        res.sendSuccess(res, { pass, fail });
     } catch (error) {
         return res.sendError(res, "ERR_INTERNAL_SERVER_ERROR");
     }
@@ -88,6 +95,15 @@ const fetchFarmProductPagination = async (req: Request, res: Response) => {
 
 const updateFarmProduct = async (req: Request, res: Response) => {
     try {
+        let result = await FarmProduct.findOne({
+            where: {
+                farmItem_id: req.body.farmItemId,
+                farmProduct: { [Op.iLike]: req.body.farmProduct }, id: { [Op.ne]: req.body.id }
+            }
+        })
+        if (result) {
+            return res.sendError(res, "ALREADY_EXITS");
+        }
         const farmProduct = await FarmProduct.update({
             farmItem_id: req.body.farmItemId,
             farmProduct: req.body.farmProduct

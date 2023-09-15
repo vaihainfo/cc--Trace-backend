@@ -82,7 +82,7 @@ const fetchTransactionsReport = async (req: Request, res: Response) => {
           { "$state.state_name$": { [Op.iLike]: `%${searchTerm}%` } },
           { "$village.village_name$": { [Op.iLike]: `%${searchTerm}%` } },
           { "$district.district_name$": { [Op.iLike]: `%${searchTerm}%` } },
-          { "$farmer.firstname$": { [Op.iLike]: `%${searchTerm}%` } },
+          { "$farmer.firstName$": { [Op.iLike]: `%${searchTerm}%` } },
           { "$program.program_name$": { [Op.iLike]: `%${searchTerm}%` } },
           { "$ginner.name$": { [Op.iLike]: `%${searchTerm}%` } },
         ];

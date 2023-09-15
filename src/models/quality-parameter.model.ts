@@ -3,6 +3,7 @@ import db from '../util/dbConn';
 import GinProcess from './gin-process.model';
 import Ginner from './ginner.model';
 import Spinner from './spinner.model';
+import SpinProcess from './spin-process.model';
 
 const QualityParameter = db.define('quality-parameters', {
   id: {

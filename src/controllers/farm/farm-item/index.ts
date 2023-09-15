@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { Sequelize, Op } from "sequelize";
 
 import FarmItem from "../../../models/farm-item.model";
+import FarmProduct from "../../../models/farm-product.model";
 
 
 const createFarm = async (req: Request, res: Response) => {
@@ -19,12 +20,19 @@ const createFarm = async (req: Request, res: Response) => {
 
 const createFarms = async (req: Request, res: Response) => {
     try {
-        // create multiple crops at the time
-        const data = req.body.farmItem.map((obj: string) => {
-            return { farmItem: obj, farmItem_status: true }
-        })
-        const farms = await FarmItem.bulkCreate(data);
-        res.sendSuccess(res, farms);
+        // create multiple Farm Items at the time
+        let pass = [];
+        let fail = [];
+        for await (const farmItem of req.body.farmItem) {
+            let farm = await FarmItem.findOne({ where: { farmItem: { [Op.iLike]: farmItem } } })
+            if (farm) {
+                fail.push({ data: farm });
+            } else {
+                const farms = await FarmItem.create({ farmItem: farmItem, farmItem_status: true });
+                pass.push({ data: farms });
+            }
+        }
+        res.sendSuccess(res, { pass, fail });
     } catch (error) {
         return res.sendError(res, "ERR_INTERNAL_SERVER_ERROR");
     }
@@ -70,6 +78,10 @@ const fetchFarmsPagination = async (req: Request, res: Response) => {
 
 const updateFarm = async (req: Request, res: Response) => {
     try {
+        let result = await FarmItem.findOne({ where: { farmItem: { [Op.iLike]: req.body.farmItem }, id: { [Op.ne]: req.body.id } } })
+        if (result) {
+            return res.sendError(res, "ALREADY_EXITS");
+        }
         const farm = await FarmItem.update({ farmItem: req.body.farmItem }, {
             where: {
                 id: req.body.id
@@ -96,6 +108,10 @@ const updateFarmStatus = async (req: Request, res: Response) => {
 
 const deleteFarm = async (req: Request, res: Response) => {
     try {
+        let count = await FarmProduct.count({ where: { farmItem_id: req.body.id } });
+        if (count > 0) {
+            return res.sendError(res, 'Can not delete beacause Farm Item is assosiated to another table');
+        }
         const farm = await FarmItem.destroy({
             where: {
                 id: req.body.id

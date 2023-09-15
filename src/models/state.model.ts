@@ -77,6 +77,12 @@ State.associate = (models: any) => {
     as: 'state',
   });
 
+  State.hasMany(models.Fabric, {
+    foreignKey: 'state_id',
+    as: 'state',
+  });
+
+
   State.hasMany(models.Transaction, {
     foreignKey: 'state_id',
     as: 'state',

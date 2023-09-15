@@ -5,11 +5,7 @@ import * as path from 'path';
 import Brand from "../../models/brand.model";
 import FarmGroup from "../../models/farm-group.model";
 import Farmer from "../../models/farmer.model";
-import FarmerAgriArea from "../../models/farmer-agri-area.model";
-import FarmerCottonArea from "../../models/farmer-cotton-area.model";
-import Farm from "../../models/farm.model";
 import Program from "../../models/program.model";
-import Season from "../../models/season.model";
 import Country from "../../models/country.model";
 import Village from "../../models/village.model";
 import State from "../../models/state.model";
@@ -34,48 +30,77 @@ const fetchFarmerReportPagination = async (req: Request, res: Response) => {
         blockId,
         villageId,
         type
-    } = req.query;
+    }: any = req.query;
     const offset = (page - 1) * limit;
     const whereCondition: any = {}
     try {
+
+        if (type === 'Organic') {
+            whereCondition['$program.program_name$'] = { [Op.iLike]: `%Organic%` };
+        } else {
+            whereCondition['$program.program_name$'] = { [Op.notILike]: `%Organic%` }
+        }
         if (searchTerm) {
             whereCondition[Op.or] = [
-                { name: { [Op.iLike]: `%${searchTerm}%` } }, // Search by crop Type 
+                { firstName: { [Op.iLike]: `%${searchTerm}%` } },
+                { lastName: { [Op.iLike]: `%${searchTerm}%` } },
+                { code: { [Op.iLike]: `%${searchTerm}%` } },
+                { '$country.county_name$': { [Op.iLike]: `%${searchTerm}%` } },
+                { '$block.block_name$': { [Op.iLike]: `%${searchTerm}%` } },
+                { '$district.district_name$': { [Op.iLike]: `%${searchTerm}%` } },
+                { '$state.state_name$': { [Op.iLike]: `%${searchTerm}%` } },
+                { '$village.village_name$': { [Op.iLike]: `%${searchTerm}%` } },
+                { cert_status: { [Op.iLike]: `%${searchTerm}%` } }
             ];
         }
-        if (type === 'Organic') {
-            whereCondition[Op.or] = [
-                { '$program.program_name$': { [Op.iLike]: `%Organic%` } }, // Search by crop Type 
-            ];
-        } else {
-            whereCondition[Op.or] = [
-                { '$program.program_name$': { [Op.notILike]: `%Organic%` } }, // Search by crop Type 
-            ];
-        }
-
         if (brandId) {
-            whereCondition.brand_id = brandId;
+            const idArray: number[] = brandId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+
+            whereCondition.brand_id = { [Op.in]: idArray };
         }
         if (icsId) {
-            whereCondition.ics_id = icsId;
+            const idArray: number[] = icsId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition.ics_id = { [Op.in]: idArray };
         }
         if (farmGroupId) {
-            whereCondition.farmGroup_id = farmGroupId;
+            const idArray: number[] = farmGroupId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition.farmGroup_id = { [Op.in]: idArray };
         }
         if (countryId) {
-            whereCondition.country_id = countryId;
+            const idArray: number[] = countryId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition.country_id = { [Op.in]: idArray };
         }
         if (stateId) {
-            whereCondition.state_id = stateId;
+            const idArray: number[] = stateId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition.state_id = { [Op.in]: idArray };
         }
         if (districtId) {
-            whereCondition.district_id = districtId;
+            const idArray: number[] = districtId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition.district_id = { [Op.in]: idArray };
         }
         if (blockId) {
-            whereCondition.block_id = blockId;
+            const idArray: number[] = blockId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition.block_id = { [Op.in]: idArray };
         }
         if (villageId) {
-            whereCondition.village_id = villageId;
+            const idArray: number[] = villageId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition.village_id = { [Op.in]: idArray };
         }
 
         let include = [
@@ -104,32 +129,14 @@ const fetchFarmerReportPagination = async (req: Request, res: Response) => {
                 model: Block, as: 'block'
             }
         ]
-
         //fetch data with pagination
         const { count, rows } = await Farmer.findAndCountAll({
             where: whereCondition,
             include: include,
             offset: offset,
             limit: limit
-        });
-        let data = []
-        for await (const row of rows) {
-            const result = await Farm.findOne({
-                where: { farmer_id: row.id }, include: [
-                    {
-                        model: Season, as: 'season'
-                    },
-                    {
-                        model: FarmerAgriArea, as: 'farmerAgriArea'
-                    },
-                    {
-                        model: FarmerCottonArea, as: 'farmerCottonArea'
-                    }
-                ]
-            });
-            data.push({ row, farm: result })
-        }
-        return res.sendPaginationSuccess(res, data, count);
+        })
+        return res.sendPaginationSuccess(res, rows, count);
 
     } catch (error: any) {
         return res.sendError(res, error.message);
@@ -210,19 +217,6 @@ const exportNonOrganicFarmerReport = async (req: Request, res: Response) => {
         }
         // Append data to worksheet
         for await (const [index, item] of farmer.entries()) {
-            const result = await Farm.findOne({
-                where: { farmer_id: item.id }, include: [
-                    {
-                        model: Season, as: 'season'
-                    },
-                    {
-                        model: FarmerAgriArea, as: 'farmerAgriArea'
-                    },
-                    {
-                        model: FarmerCottonArea, as: 'farmerCottonArea'
-                    }
-                ]
-            });
 
             const rowValues = Object.values({
                 index: (index + 1),
@@ -235,9 +229,9 @@ const exportNonOrganicFarmerReport = async (req: Request, res: Response) => {
                 country: item.country.county_name,
                 brand: item.brand.brand_name,
                 program: item.program.program_name,
-                totalArea: result ? result.agri_total_area : '',
-                cottonArea: result ? result.farmerCottonArea.cotton_total_area : '',
-                totalEstimatedCotton: result ? result.farmerCottonArea.total_estimated_cotton : '',
+                totalArea: item ? item.agri_total_area : '',
+                cottonArea: item ? item.cotton_total_area : '',
+                totalEstimatedCotton: item ? item.total_estimated_cotton : '',
             });
             worksheet.addRow(rowValues);
         }
@@ -336,26 +330,13 @@ const exportOrganicFarmerReport = async (req: Request, res: Response) => {
                 include: include
             });
         }
+
         // Append data to worksheet
         for await (const [index, item] of farmer.entries()) {
             const ics = await ICS.findOne({ where: { id: item.ics_id } });
-            const result = await Farm.findOne({
-                where: { farmer_id: item.id }, include: [
-                    {
-                        model: Season, as: 'season'
-                    },
-                    {
-                        model: FarmerAgriArea, as: 'farmerAgriArea'
-                    },
-                    {
-                        model: FarmerCottonArea, as: 'farmerCottonArea'
-                    }
-                ]
-            });
-
             const rowValues = Object.values({
                 index: (index + 1),
-                farmerName: item.firstName + item.middleName + item.lastName,
+                farmerName: item.firstName + " " + item.lastName,
                 farmGroup: item.farmGroup.name,
                 tranid: item.tracenet_id,
                 village: item.village.village_name,
@@ -364,9 +345,9 @@ const exportOrganicFarmerReport = async (req: Request, res: Response) => {
                 state: item.state.state_name,
                 country: item.country.county_name,
                 brand: item.brand.brand_name,
-                totalArea: result ? result.agri_total_area : '',
-                cottonArea: result ? result.farmerCottonArea.cotton_total_area : '',
-                totalEstimatedCotton: result ? result.farmerCottonArea.total_estimated_cotton : '',
+                totalArea: item ? item.agri_total_area : '',
+                cottonArea: item ? item.cotton_total_area : '',
+                totalEstimatedCotton: item ? item.total_estimated_cotton : '',
                 icsName: ics ? ics.ics_name : '',
                 icsStatus: item.cert_status ? item.cert_status : '',
             });

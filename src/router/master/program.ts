@@ -8,10 +8,7 @@ import {
 } from "../../controllers/program";
 
 import { Router } from "express";
-import accessControl from "../../middleware/access-control";
 const router = Router();
-
-router.use(accessControl)
 
 // Department Routes
 router.get('/', fetchProgramPagination);

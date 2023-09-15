@@ -7,8 +7,6 @@ import MenuList from "../../../models/menu-list.model";
 
 const createUserRole = async (req: Request, res: Response) => {
     try {
-        console.log(req.body)
-
         const data = {
             userCategory_id: req.body.categoryId,
             user_role: req.body.userRole,
@@ -16,7 +14,6 @@ const createUserRole = async (req: Request, res: Response) => {
         };
         const role = await UserRole.create(data);
         if(role){
-            console.log(role)
             const menuData = req.body.privileges.map((obj: any) => {
                 return {
                   userRole_id: role.id,
@@ -119,7 +116,7 @@ const getUserRole = async (req: Request, res: Response) => {
           return res.sendSuccess(res, {role,menuList,privileges});
     }catch (error) {
         console.log(error)
-        return res.sendError(res, "ERR_INTERNAL_SERVER_ERROR");
+        return res.sendError(res, "ERR_NOT_ABLE_TO_GET_ROLE");
       }
 }
 
@@ -187,7 +184,7 @@ const updateUserRole = async (req: Request, res: Response) => {
             return res.sendSuccess(res, updatedRole);
       }catch (error) {
           console.log(error)
-          return res.sendError(res, "ERR_INTERNAL_SERVER_ERROR");
+          return res.sendError(res, "ERR_ROLE_NOT_UPDATED");
         }
   }
 

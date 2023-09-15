@@ -5,6 +5,10 @@ import Cooperative from "../../models/cooperative.model";
 
 const createCooperative = async (req: Request, res: Response) => {
     try {
+        let result = await Cooperative.findOne({ where: { name: { [Op.iLike]: req.body.name } } })
+        if (result) {
+            return res.sendError(res, "Cooperative Name already exist");
+        }
         const data = {
             name: req.body.name,
             address: req.body.address,
@@ -66,6 +70,10 @@ const fetchCooperativePagination = async (req: Request, res: Response) => {
 
 const updateCooperative = async (req: Request, res: Response) => {
     try {
+        let result = await Cooperative.findOne({ where: { name: { [Op.iLike]: req.body.name }, id: { [Op.ne]: req.body.id } } })
+        if (result) {
+            return res.sendError(res, "ALREADY_EXITS");
+        }
         const cooperative = await Cooperative.update({
             name: req.body.name,
             address: req.body.address,

@@ -8,10 +8,7 @@ import {
 } from "../../controllers/farm-group";
 
 import { Router } from "express";
-import accessControl from "../../middleware/access-control";
 const router = Router();
-
-router.use(accessControl)
 
 // Farm Group Routes
 router.get('/', fetchFarmGroupPagination);

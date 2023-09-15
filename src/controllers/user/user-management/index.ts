@@ -23,8 +23,8 @@ const createUser = async (req: Request, res: Response) => {
     lastname: req.body.lastName || "",
     mobile: req.body.mobile || "",
     position: req.body.position || "",
-    // countries_web: req.body.countriesWeb || null,
-    countries_web: [1],
+    countries_web: req.body.countriesWeb || null,
+    // countries_web: [1],
     farm_group: req.body.farmGroups || null,
     access_level: req.body.accessLevel || null,
     role: req.body.role !== undefined ? Number(req.body.role) : null,
@@ -46,7 +46,7 @@ const createUser = async (req: Request, res: Response) => {
     return res.sendSuccess(res, user, 200);
   } catch (error) {
     console.log(error)
-    res.sendError(res, "ERR_AUTH_USERNAME_OR_EMAIL_ALREADY_EXIST");
+    res.sendError(res, "ERR_NOT_ABLE_TO_CREATE_USER");
   }
 }
 
@@ -70,7 +70,7 @@ const fetchUsers = async (req: Request, res: Response) => {
       { mobile: { [Op.iLike]: `%${search}%` } }, // Search by country name
     ];
   }
-
+  whereCondition.isManagementUser = true;
   let queryOptions: any = {
     where: whereCondition,
   };
@@ -115,7 +115,6 @@ const fetchUser = async (req: Request, res: Response) => {
 
 const updateUser = async (req: Request, res: Response) => {
   const userExist = await User.findByPk(req.body.id);
-  console.log(userExist)
 
   if (!userExist) {
     return res.sendError(res, "ERR_USER_NOT_EXIST");
@@ -128,8 +127,8 @@ const updateUser = async (req: Request, res: Response) => {
     firstname: req.body.firstName || "",
     lastname: req.body.lastName || "",
     mobile: req.body.mobile || "",
-    // countries_web: req.body.countriesWeb || null,
-    countries_web: [1],
+    countries_web: req.body.countriesWeb || null,
+    // countries_web: [1],
     farm_group: req.body.farmGroups || null,
     access_level: req.body.accessLevel || null,
     role: req.body.role !== undefined ? Number(req.body.role) : null,

@@ -5,6 +5,10 @@ import Linen from "../../models/linen.model";
 
 const createLinen = async (req: Request, res: Response) => {
     try {
+        let result = await Linen.findOne({ where: { name: { [Op.iLike]: req.body.name }, variety: { [Op.iLike]: req.body.variety } } })
+        if (result) {
+            return res.sendError(res, "ALREADY_EXITS");
+        }
         const data = {
             name: req.body.name,
             variety: req.body.variety,
@@ -60,6 +64,10 @@ const fetchLinenPagination = async (req: Request, res: Response) => {
 
 const updateLinen = async (req: Request, res: Response) => {
     try {
+        let result = await Linen.findOne({ where: { name: { [Op.iLike]: req.body.name }, variety: { [Op.iLike]: req.body.variety }, id: { [Op.ne]: req.body.id } } })
+        if (result) {
+            return res.sendError(res, "ALREADY_EXITS");
+        }
         const linen = await Linen.update({
             name: req.body.name,
             variety: req.body.variety

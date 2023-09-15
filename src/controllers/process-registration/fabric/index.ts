@@ -5,13 +5,15 @@ import User from "../../../models/user.model";
 import hash from "../../../util/hash";
 import Country from "../../../models/country.model";
 import State from "../../../models/state.model";
+import UserRole from "../../../models/user-role.model";
 
 const createFabric = async (req: Request, res: Response) => {
     try {
         let userIds = [];
         for await (let user of req.body.userData) {
             const userData = {
-                firstname: user.name,
+                firstname: user.firstname,
+                lastname: user.lastname ? user.lastname : ' ',
                 position: user.position,
                 email: user.email,
                 mobile: user.mobile,
@@ -53,7 +55,7 @@ const createFabric = async (req: Request, res: Response) => {
         res.sendSuccess(res, fabric);
     } catch (error) {
         console.log(error);
-        return res.sendError(res, "ERR_INTERNAL_SERVER_ERROR");
+        return res.sendError(res, "NOT_ABLE_TO_CREATE_FABRIC");
     }
 }
 
@@ -127,7 +129,7 @@ const fetchFabricPagination = async (req: Request, res: Response) => {
         }
     } catch (error) {
         console.log(error);
-        return res.sendError(res, "ERR_INTERNAL_SERVER_ERROR");
+        return res.sendError(res, "NOT_ABLE_TO_GET_FABRIC");
     }
 }
 
@@ -146,14 +148,35 @@ const fetchFabric = async (req: Request, res: Response) => {
                 },
             ]
         });
-        return res.sendSuccess(res, result);
+
+        if(!result){
+        return res.sendError(res, "FABRIC_NOT_EXISTS");
+        }
+
+        const userData = await User.findAll({
+            where: { id: result.fabricUser_id },
+            attributes: {
+                exclude: ["password", "createdAt", "updatedAt"]
+            },
+            include: [
+                {
+                    model: UserRole,
+                    as: "user_role",
+                }
+            ]
+        });
+
+        const fabricInfo = {
+            ...result.dataValues,
+            userData
+          };
+          return res.sendSuccess(res, fabricInfo);
 
     } catch (error) {
         console.log(error);
-        return res.sendError(res, "ERR_INTERNAL_SERVER_ERROR");
+        return res.sendError(res, "NOT_ABLE_TO_GET_FABRIC");
     }
 }
-
 
 
 const updateFabric = async (req: Request, res: Response) => {
@@ -161,8 +184,9 @@ const updateFabric = async (req: Request, res: Response) => {
         let userIds = [];
         for await (let user of req.body.userData) {
             const userData = {
-                firstname: user.name,
+                firstname: user.firstname,
                 username: user.username,
+                lastname: user.lastname ? user.lastname : ' ',
                 email: user.email,
                 position: user.position,
                 mobile: user.mobile,
@@ -208,7 +232,7 @@ const updateFabric = async (req: Request, res: Response) => {
         res.sendSuccess(res, fabric);
     } catch (error) {
         console.log(error);
-        return res.sendError(res, "ERR_INTERNAL_SERVER_ERROR");
+        return res.sendError(res, "NOT_ABLE_TO_UPDATE_FABRIC");
     }
 }
 

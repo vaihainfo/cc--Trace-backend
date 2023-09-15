@@ -53,6 +53,7 @@ import emailManagementRouter from "./router/settings/email-management";
 import garmentSalesRouter from "./router/garment";
 import qualityParameterRouter from "./router/quality-parameter";
 import ginnerProcessRouter from "./router/ginner";
+import spinnerProcessRouter from "./router/spinner";
 import errorMiddleware from "./middleware/error";
 import setInterface from "./middleware/interface";
 
@@ -129,6 +130,7 @@ app.use("/reports", reportRouter);
 app.use("/email", emailManagementRouter);
 app.use("/garment-sales", garmentSalesRouter);
 app.use("/ginner-process", ginnerProcessRouter);
+app.use("/spinner-process", spinnerProcessRouter);
 app.use("/quality-parameter", qualityParameterRouter);
 
 app.use(errorMiddleware);

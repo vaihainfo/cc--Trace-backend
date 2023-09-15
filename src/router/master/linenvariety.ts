@@ -7,10 +7,7 @@ import {
 } from "../../controllers/linenvariety";
 
 import { Router } from "express";
-import accessControl from "../../middleware/access-control";
 const router = Router();
-
-router.use(accessControl)
 
 // Linen Routes
 router.get('/', fetchLinenPagination);

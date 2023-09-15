@@ -19,12 +19,19 @@ const createFabricType = async (req: Request, res: Response) => {
 
 const createFabricTypes = async (req: Request, res: Response) => {
     try {
-        // create multiple crops at the time
-        const data = req.body.fabricTypeName.map((obj: string) => {
-            return { fabricType_name: obj, fabricType_status: true }
-        })
-        const fabricTypes = await FabricType.bulkCreate(data);
-        res.sendSuccess(res, fabricTypes);
+        // create multiple Fabric Type at the time
+        let pass = [];
+        let fail = [];
+        for await (const obj of req.body.fabricTypeName) {
+            let result = await FabricType.findOne({ where: { fabricType_name: obj } })
+            if (result) {
+                fail.push({ data: result });
+            } else {
+                const result = await FabricType.create({ fabricType_name: obj, fabricType_status: true });
+                pass.push({ data: result });
+            }
+        }
+        res.sendSuccess(res, { pass, fail });
     } catch (error) {
         return res.sendError(res, "ERR_INTERNAL_SERVER_ERROR");
     }
@@ -70,6 +77,10 @@ const fetchFebricTypePagination = async (req: Request, res: Response) => {
 
 const updateFebricType = async (req: Request, res: Response) => {
     try {
+        let result = await FabricType.findOne({ where: { fabricType_name: { [Op.iLike]: req.body.fabricTypeName }, id: { [Op.ne]: req.body.id } } })
+        if (result) {
+            return res.sendError(res, "ALREADY_EXITS");
+        }
         const fabricType = await FabricType.update({
             fabricType_name: req.body.fabricTypeName
         }, {

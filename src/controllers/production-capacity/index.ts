@@ -18,12 +18,19 @@ const createProdCapacity = async (req: Request, res: Response) => {
 
 const createProdCapacities = async (req: Request, res: Response) => {
     try {
-        // create multiple Loom Type at the time
-        const data = req.body.name.map((obj: string) => {
-            return { name: obj, status: true }
-        })
-        const prodCapacity = await ProdCapacity.bulkCreate(data);
-        res.sendSuccess(res, prodCapacity);
+        // create multiple Production capacity at the time
+        let pass = [];
+        let fail = [];
+        for await (const obj of req.body.name) {
+            let result = await ProdCapacity.findOne({ where: { name: { [Op.iLike]: obj } } })
+            if (result) {
+                fail.push({ data: result });
+            } else {
+                const result = await ProdCapacity.create({ name: obj, status: true });
+                pass.push({ data: result });
+            }
+        }
+        res.sendSuccess(res, { pass, fail });
     } catch (error) {
         return res.sendError(res, "ERR_INTERNAL_SERVER_ERROR");
     }
@@ -68,6 +75,10 @@ const fetchProdCapacityPagination = async (req: Request, res: Response) => {
 
 const updateProdCapacity = async (req: Request, res: Response) => {
     try {
+        let result = await ProdCapacity.findOne({ where: { name: { [Op.iLike]: req.body.name }, id: { [Op.ne]: req.body.id } } })
+        if (result) {
+            return res.sendError(res, "ALREADY_EXITS");
+        }
         const prodCapacity = await ProdCapacity.update({
             name: req.body.name
         }, {

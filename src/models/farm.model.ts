@@ -3,8 +3,6 @@ import db from '../util/dbConn';
 import Farmer from './farmer.model';
 import Program from './program.model';
 import Season from './season.model';
-import FarmerAgriArea from './farmer-agri-area.model';
-import FarmerCottonArea from './farmer-cotton-area.model';
 
 const Farm = db.define('farms', {
     id: {
@@ -34,27 +32,20 @@ const Farm = db.define('farms', {
         onDelete: 'CASCADE',
         type: DataTypes.INTEGER
     },
-    agri_id: {
-        allowNull: false,
-        foreignKey: true,
-        references: { model: 'farmer_agri_areas', key: 'id' },
-        onDelete: 'CASCADE',
-        type: DataTypes.INTEGER
-    },
-    cotton_id: {
-        allowNull: false,
-        foreignKey: true,
-        references: { model: 'farmer_cotton_areas', key: 'id' },
-        onDelete: 'CASCADE',
-        type: DataTypes.INTEGER
-    },
     agri_total_area: {
-        allowNull: false,
-        type: DataTypes.STRING
+        type: DataTypes.DECIMAL
+    },
+    agri_estimated_yeld: {
+        type: DataTypes.DECIMAL
+    },
+    agri_estimated_prod: {
+        type: DataTypes.DECIMAL
     },
     cotton_total_area: {
-        allowNull: false,
-        type: DataTypes.STRING
+        type: DataTypes.DECIMAL
+    },
+    total_estimated_cotton: {
+        type: DataTypes.DECIMAL
     }
 });
 
@@ -73,14 +64,5 @@ Farm.belongsTo(Season, {
     as: "season",
 })
 
-Farm.belongsTo(FarmerAgriArea, {
-    foreignKey: "agri_id",
-    as: "farmerAgriArea",
-})
-
-Farm.belongsTo(FarmerCottonArea, {
-    foreignKey: "cotton_id",
-    as: "farmerCottonArea",
-})
 
 export default Farm;

@@ -121,7 +121,7 @@ const fetchTrainings = async (req: Request, res: Response) => {
 
 const fetchTraining = async (req: Request, res: Response) => {
     try {
-            const training = await ProcessorTraining.findByPk(req.body.id, {
+            const training = await ProcessorTraining.findByPk(req.query.id, {
                 include: [
                     {
                         model: Brand,

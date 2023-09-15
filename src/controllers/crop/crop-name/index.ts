@@ -21,11 +21,18 @@ const createCrop = async (req: Request, res: Response) => {
 const createCrops = async (req: Request, res: Response) => {
     try {
         // create multiple crops at the time
-        const data = req.body.cropsName.map((obj: string) => {
-            return { crop_name: obj, crop_status: true }
-        })
-        const crops = await Crop.bulkCreate(data);
-        res.sendSuccess(res, crops);
+        let pass = [];
+        let fail = [];
+        for await (const crop of req.body.cropsName) {
+            let cop = await Crop.findOne({ where: { crop_name: { [Op.iLike]: crop } } })
+            if (cop) {
+                fail.push({ data: cop });
+            } else {
+                const crops = await Crop.create({ crop_name: crop, crop_status: true });
+                pass.push({ data: crops });
+            }
+        }
+        res.sendSuccess(res, { pass, fail });
     } catch (error) {
         return res.sendError(res, "ERR_INTERNAL_SERVER_ERROR");
     }
@@ -93,6 +100,10 @@ const fetchCropsPagination = async (req: Request, res: Response) => {
 
 const updateCrop = async (req: Request, res: Response) => {
     try {
+        let cro = await Crop.findOne({ where: { crop_name: { [Op.iLike]: req.body.cropName }, id: { [Op.ne]: req.body.id } } })
+        if (cro) {
+            return res.sendError(res, "ALREADY_EXITS");
+        }
         const crop = await Crop.update({ crop_name: req.body.cropName }, {
             where: {
                 id: req.body.id

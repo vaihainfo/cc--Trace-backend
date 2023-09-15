@@ -19,11 +19,18 @@ const createLoomType = async (req: Request, res: Response) => {
 const createLoomTypes = async (req: Request, res: Response) => {
     try {
         // create multiple Loom Type at the time
-        const data = req.body.name.map((obj: string) => {
-            return { name: obj, status: true }
-        })
-        const loom = await LoomType.bulkCreate(data);
-        res.sendSuccess(res, loom);
+        let pass = [];
+        let fail = [];
+        for await (const obj of req.body.name) {
+            let result = await LoomType.findOne({ where: { name: { [Op.iLike]: obj } } })
+            if (result) {
+                fail.push({ data: result });
+            } else {
+                const result = await LoomType.create({ name: obj, status: true });
+                pass.push({ data: result });
+            }
+        }
+        res.sendSuccess(res, { pass, fail });
     } catch (error) {
         return res.sendError(res, "ERR_INTERNAL_SERVER_ERROR");
     }
@@ -70,6 +77,10 @@ const fetchLoomTypePagination = async (req: Request, res: Response) => {
 
 const updateLoomType = async (req: Request, res: Response) => {
     try {
+        let result = await LoomType.findOne({ where: { name: { [Op.iLike]: req.body.name }, id: { [Op.ne]: req.body.id } } })
+        if (result) {
+            return res.sendError(res, "ALREADY_EXITS");
+        }
         const loomType = await LoomType.update({
             name: req.body.name
         }, {

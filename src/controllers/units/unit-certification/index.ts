@@ -20,16 +20,23 @@ const createUnitCertification = async (req: Request, res: Response) => {
 
 const createUnitCertifications = async (req: Request, res: Response) => {
     try {
-        // create multiple crops at the time
-        const data = req.body.certification.map((obj: any) => {
-            return {
-                certification_name: obj.certificationName,
-                certification_logo: obj.certificationLogo,
-                certification_status: true
+        // create multiple Unit certifications at the time
+        let pass = [];
+        let fail = [];
+        for await (const obj of req.body.certification) {
+            let unitCert = await UnitCertification.findOne({ where: { certification_name: { [Op.iLike]: obj.certificationName } } })
+            if (unitCert) {
+                fail.push({ data: unitCert });
+            } else {
+                const unitCert = await UnitCertification.create({
+                    certification_name: obj.certificationName,
+                    certification_logo: obj.certificationLogo,
+                    certification_status: true
+                });
+                pass.push({ data: unitCert });
             }
-        });
-        const unitCertification = await UnitCertification.bulkCreate(data);
-        res.sendSuccess(res, unitCertification);
+        }
+        res.sendSuccess(res, { pass, fail });
     } catch (error) {
         return res.sendError(res, "ERR_INTERNAL_SERVER_ERROR");
     }
@@ -74,6 +81,10 @@ const fetchUnitCertificationPagination = async (req: Request, res: Response) => 
 
 const updateUnitCertification = async (req: Request, res: Response) => {
     try {
+        let result = await UnitCertification.findOne({ where: { certification_name: { [Op.iLike]: req.body.certificationName }, id: { [Op.ne]: req.body.id } } })
+        if (result) {
+            return res.sendError(res, "ALREADY_EXITS");
+        }
         const unitCertification = await UnitCertification.update({
             certification_name: req.body.certificationName,
             certification_logo: req.body.certificationLogo

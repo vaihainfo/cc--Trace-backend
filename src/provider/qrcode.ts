@@ -2,18 +2,29 @@ import * as qr from 'qrcode';
 import * as fs from 'fs';
 import * as path from 'path';
 import puppeteer from 'puppeteer';
+import crypto from 'crypto';
+const algorithm = 'aes-256-cbc';
+const key = crypto.randomBytes(32);
+const iv = crypto.randomBytes(16);
+
+const encrypt = (text: any) => {
+    let cipher = crypto.createCipheriv('aes-256-cbc', Buffer.from(key), iv);
+    let encrypted = cipher.update(text);
+    encrypted = Buffer.concat([encrypted, cipher.final()]);
+    return encrypted.toString('hex');
+}
 
 const generateQrCode = async (qrData: any, farmerName: string, fileName: any, farmerCode: any, village: any) => {
     // Generate the QR code
     return new Promise((resolve, reject) => {
         try {
-            qr.toBuffer(qrData, { errorCorrectionLevel: 'H' }, async (err, buffer) => {
+            let data = encrypt(qrData);
+            qr.toBuffer(data, { errorCorrectionLevel: 'H' }, async (err, buffer) => {
                 if (err) {
                     console.error('Error generating QR code:', err);
                     return;
                 }
                 const qrBufferAsDataUrl = `data:image/png;base64,${buffer.toString('base64')}`;
-
 
                 const qrImagePath: string = path.join('./upload', fileName); // Path to save the QR code image
                 let html = getQrImageHtml(qrBufferAsDataUrl, farmerName, farmerCode, village);
@@ -24,16 +35,14 @@ const generateQrCode = async (qrData: any, farmerName: string, fileName: any, fa
         } catch (error) {
             reject(error)
         }
-
     })
-
 }
 
 const generateCanvasFromHTML = async (htmlContent: string, outputPath: string) => {
     try {
         const browser = await puppeteer.launch({ headless: true });
         const page = await browser.newPage();
-        await page.setViewport({ width: 380, height: 520 }); // Adjust the values as needed
+        await page.setViewport({ width: 374, height: 520 }); // Adjust the values as needed
         await page.setContent(htmlContent);
 
         const content: any = await page.$("body");

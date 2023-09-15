@@ -73,7 +73,7 @@ const fetchTransactions = async (req: Request, res: Response) => {
   const page = Number(req.query.page) || 1;
   const limit = Number(req.query.limit) || 10;
   const offset = (page - 1) * limit;
-
+  const status: string = req.query.status as string;
   const countryId: string = req.query.countryId as string;
   const brandId: string = req.query.brandId as string;
   const farmGroupId: string = req.query.farmGroupId as string;
@@ -122,6 +122,9 @@ const fetchTransactions = async (req: Request, res: Response) => {
         .split(",")
         .map((id) => parseInt(id, 10));
       whereCondition.mapped_ginner = { [Op.in]: idArray };
+    }
+    if (status) {
+      whereCondition.status = status;
     }
 
     // apply search
@@ -230,7 +233,7 @@ const fetchTransactionById = async (req: Request, res: Response) => {
   try {
 
     let queryOptions: any = {
-      where: {id: req.params.id},
+      where: { id: req.params.id },
       include: [
         {
           model: Village,
@@ -258,7 +261,7 @@ const fetchTransactionById = async (req: Request, res: Response) => {
           include: [
             {
               model: FarmGroup,
-          as: "farmGroup",
+              as: "farmGroup",
             }
           ]
         },
@@ -285,30 +288,30 @@ const fetchTransactionById = async (req: Request, res: Response) => {
       ],
     };
 
-      const data = await Transaction.findOne(queryOptions);
-      const farm = await Farm.findOne({
-        where: { farmer_id: data.farmer_id },
-        include: [
-          {
-            model: Season,
-            as: "season",
-          },
-          {
-            model: FarmerAgriArea,
-            as: "farmerAgriArea",
-          },
-          {
-            model: FarmerCottonArea,
-            as: "farmerCottonArea",
-          },
-        ],
-      });
+    const data = await Transaction.findOne(queryOptions);
+    const farm = await Farm.findOne({
+      where: { farmer_id: data.farmer_id },
+      include: [
+        {
+          model: Season,
+          as: "season",
+        },
+        {
+          model: FarmerAgriArea,
+          as: "farmerAgriArea",
+        },
+        {
+          model: FarmerCottonArea,
+          as: "farmerCottonArea",
+        },
+      ],
+    });
 
-      const transaction: any = {
-        ...data.dataValues,
-        farm
-      }
-      return res.sendSuccess(res, transaction);
+    const transaction: any = {
+      ...data.dataValues,
+      farm
+    }
+    return res.sendSuccess(res, transaction);
   } catch (error) {
     console.log(error);
     return res.sendError(res, "NOT_ABLE_TO_FETCH");
@@ -366,6 +369,27 @@ const updateTransaction = async (req: Request, res: Response) => {
   }
 };
 
+const updateTransactionStatus = async (req: Request, res: Response) => {
+  try {
+    if (req.body.status !== 'Rejected' || req.body.status !== 'Accepted') {
+      return res.sendError(res, "INVALID_STATUS");
+    }
+    const data: any = {
+      status: req.body.status
+    };
+
+    const transaction = await Transaction.update(data, {
+      where: {
+        id: req.body.id,
+      },
+    });
+    res.sendSuccess(res, transaction);
+  } catch (error) {
+    console.log(error);
+    return res.sendError(res, "NOT_ABLE_TO_UPDATE");
+  }
+};
+
 const deleteTransaction = async (req: Request, res: Response) => {
   try {
     const transaction = await Transaction.destroy({
@@ -391,7 +415,7 @@ const deleteBulkTransactions = async (req: Request, res: Response) => {
         },
       },
     });
-    res.sendSuccess(res,  transaction );
+    res.sendSuccess(res, transaction);
   } catch (error) {
     return res.sendError(res, "NOT_ABLE_TO_DELETE");
   }
@@ -411,79 +435,79 @@ const uploadTransactionBulk = async (req: Request, res: Response) => {
     let fail = [];
     let pass = [];
     for await (const data of req.body.transaction) {
-      
+
       if (!data.season) {
         fail.push({
           success: false,
-          data: { farmerName: data.farmerName ? data.farmerName : '', farmerCode: data.farmerCode ? data.farmerCode : ''},
+          data: { farmerName: data.farmerName ? data.farmerName : '', farmerCode: data.farmerCode ? data.farmerCode : '' },
           message: "Season cannot be empty",
         });
       } else if (!data.date) {
         fail.push({
           success: false,
-          data: { farmerName: data.farmerName ? data.farmerName : '', farmerCode: data.farmerCode ? data.farmerCode : ''},
+          data: { farmerName: data.farmerName ? data.farmerName : '', farmerCode: data.farmerCode ? data.farmerCode : '' },
           message: "Date cannot be empty",
         });
       } else if (!data.country) {
         fail.push({
           success: false,
-          data: { farmerName: data.farmerName ? data.farmerName : '', farmerCode: data.farmerCode ? data.farmerCode : ''},
+          data: { farmerName: data.farmerName ? data.farmerName : '', farmerCode: data.farmerCode ? data.farmerCode : '' },
           message: "Country cannot be empty",
         });
       } else if (!data.state) {
         fail.push({
           success: false,
-          data: { farmerName: data.farmerName ? data.farmerName : '', farmerCode: data.farmerCode ? data.farmerCode : ''},
+          data: { farmerName: data.farmerName ? data.farmerName : '', farmerCode: data.farmerCode ? data.farmerCode : '' },
           message: "state cannot be empty",
         });
       }
       else if (!data.district) {
         fail.push({
           success: false,
-          data: { farmerName: data.farmerName ? data.farmerName : '', farmerCode: data.farmerCode ? data.farmerCode : ''},
+          data: { farmerName: data.farmerName ? data.farmerName : '', farmerCode: data.farmerCode ? data.farmerCode : '' },
           message: "district cannot be empty",
         });
       }
       else if (!data.block) {
         fail.push({
           success: false,
-          data: { farmerName: data.farmerName ? data.farmerName : '', farmerCode: data.farmerCode ? data.farmerCode : ''},
+          data: { farmerName: data.farmerName ? data.farmerName : '', farmerCode: data.farmerCode ? data.farmerCode : '' },
           message: "block cannot be empty",
         });
-      }else if (!data.village) {
+      } else if (!data.village) {
         fail.push({
           success: false,
-          data: { farmerName: data.farmerName ? data.farmerName : '', farmerCode: data.farmerCode ? data.farmerCode : ''},
+          data: { farmerName: data.farmerName ? data.farmerName : '', farmerCode: data.farmerCode ? data.farmerCode : '' },
           message: "village cannot be empty",
         });
-      }  else if (!data.farmerName) {
+      } else if (!data.farmerName) {
         fail.push({
           success: false,
-          data: { farmerName: data.farmerName ? data.farmerName : '', farmerCode: data.farmerCode ? data.farmerCode : ''},
+          data: { farmerName: data.farmerName ? data.farmerName : '', farmerCode: data.farmerCode ? data.farmerCode : '' },
           message: "Farmer Name cannot be empty",
         });
-      }  else if (!data.rate) {
+      } else if (!data.rate) {
         fail.push({
           success: false,
-          data: { farmerName: data.farmerName ? data.farmerName : '', farmerCode: data.farmerCode ? data.farmerCode : ''},
+          data: { farmerName: data.farmerName ? data.farmerName : '', farmerCode: data.farmerCode ? data.farmerCode : '' },
           message: "rate cannot be empty",
         });
       } else if (!data.qtyPurchased) {
         fail.push({
           success: false,
-          data: { farmerName: data.farmerName ? data.farmerName : '', farmerCode: data.farmerCode ? data.farmerCode : ''},
+          data: { farmerName: data.farmerName ? data.farmerName : '', farmerCode: data.farmerCode ? data.farmerCode : '' },
           message: "Qty Purchased cannot be empty",
         });
       } else if (!data.grade) {
         fail.push({
           success: false,
-          data: { farmerName: data.farmerName ? data.farmerName : '', farmerCode: data.farmerCode ? data.farmerCode : ''},
+          data: { farmerName: data.farmerName ? data.farmerName : '', farmerCode: data.farmerCode ? data.farmerCode : '' },
           message: "grade cannot be empty",
         });
       } else if (!data.ginner) {
         fail.push({
           success: false,
-          data: { farmerName: data.farmerName ? data.farmerName : '', farmerCode: data.farmerCode ? data.farmerCode : ''},
+          data: { farmerName: data.farmerName ? data.farmerName : '', farmerCode: data.farmerCode ? data.farmerCode : '' },
           message: "Ginner cannot be empty",
         });
       } else {
@@ -507,7 +531,7 @@ const uploadTransactionBulk = async (req: Request, res: Response) => {
           if (!season) {
             fail.push({
               success: false,
-              data: { farmerName: data.farmerName ? data.farmerName : '', farmerCode: data.farmerCode ? data.farmerCode : ''},
+              data: { farmerName: data.farmerName ? data.farmerName : '', farmerCode: data.farmerCode ? data.farmerCode : '' },
               message: "Season not found",
             });
           }
@@ -521,7 +545,7 @@ const uploadTransactionBulk = async (req: Request, res: Response) => {
           if (!ginner) {
             fail.push({
               success: false,
-              data: { farmerName: data.farmerName ? data.farmerName : '', farmerCode: data.farmerCode ? data.farmerCode : ''},
+              data: { farmerName: data.farmerName ? data.farmerName : '', farmerCode: data.farmerCode ? data.farmerCode : '' },
               message: "Ginner not found",
             });
           }
@@ -536,7 +560,7 @@ const uploadTransactionBulk = async (req: Request, res: Response) => {
           if (!country) {
             fail.push({
               success: false,
-              data: { farmerName: data.farmerName ? data.farmerName : '', farmerCode: data.farmerCode ? data.farmerCode : ''},
+              data: { farmerName: data.farmerName ? data.farmerName : '', farmerCode: data.farmerCode ? data.farmerCode : '' },
               message: "Country not found",
             });
           }
@@ -551,7 +575,7 @@ const uploadTransactionBulk = async (req: Request, res: Response) => {
           if (!state) {
             fail.push({
               success: false,
-              data: { farmerName: data.farmerName ? data.farmerName : '', farmerCode: data.farmerCode ? data.farmerCode : ''},
+              data: { farmerName: data.farmerName ? data.farmerName : '', farmerCode: data.farmerCode ? data.farmerCode : '' },
               message: "State not found",
             });
           }
@@ -566,7 +590,7 @@ const uploadTransactionBulk = async (req: Request, res: Response) => {
           if (!district) {
             fail.push({
               success: false,
-              data: { farmerName: data.farmerName ? data.farmerName : '', farmerCode: data.farmerCode ? data.farmerCode : ''},
+              data: { farmerName: data.farmerName ? data.farmerName : '', farmerCode: data.farmerCode ? data.farmerCode : '' },
               message: "District not found",
             });
           }
@@ -582,7 +606,7 @@ const uploadTransactionBulk = async (req: Request, res: Response) => {
           if (!block) {
             fail.push({
               success: false,
-              data: { farmerName: data.farmerName ? data.farmerName : '', farmerCode: data.farmerCode ? data.farmerCode : ''},
+              data: { farmerName: data.farmerName ? data.farmerName : '', farmerCode: data.farmerCode ? data.farmerCode : '' },
               message: "Block not found",
             });
           }
@@ -598,7 +622,7 @@ const uploadTransactionBulk = async (req: Request, res: Response) => {
           if (!village) {
             fail.push({
               success: false,
-              data: { farmerName: data.farmerName ? data.farmerName : '', farmerCode: data.farmerCode ? data.farmerCode : ''},
+              data: { farmerName: data.farmerName ? data.farmerName : '', farmerCode: data.farmerCode ? data.farmerCode : '' },
               message: "Village not found",
             });
           }
@@ -614,7 +638,7 @@ const uploadTransactionBulk = async (req: Request, res: Response) => {
           if (!farmer) {
             fail.push({
               success: false,
-              data: { farmerName: data.farmerName ? data.farmerName : '', farmerCode: data.farmerCode ? data.farmerCode : ''},
+              data: { farmerName: data.farmerName ? data.farmerName : '', farmerCode: data.farmerCode ? data.farmerCode : '' },
               message: "farmer not found",
             });
           }
@@ -630,7 +654,7 @@ const uploadTransactionBulk = async (req: Request, res: Response) => {
           if (!grade) {
             fail.push({
               success: false,
-              data: { farmerName: data.farmerName ? data.farmerName : '', farmerCode: data.farmerCode ? data.farmerCode : ''},
+              data: { farmerName: data.farmerName ? data.farmerName : '', farmerCode: data.farmerCode ? data.farmerCode : '' },
               message: "grade not found",
             });
           }
@@ -686,7 +710,7 @@ const uploadTransactionBulk = async (req: Request, res: Response) => {
   }
 };
 
-//Export the Farmer details through excel file
+//Export the export details through excel file
 const exportProcurement = async (req: Request, res: Response) => {
   const excelFilePath = path.join("./upload", "procurement.xlsx");
 
@@ -803,6 +827,88 @@ const exportProcurement = async (req: Request, res: Response) => {
   }
 };
 
+//Export the export details through excel file
+const exportGinnerProcurement = async (req: Request, res: Response) => {
+  const excelFilePath = path.join("./upload", "ginner-procurement.xlsx");
+
+  try {
+    if (req.query.ginnerId) {
+      return res.sendError(res, 'PLEASE_SEND_GINNER_ID')
+    }
+    // Create the excel workbook file
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet("Sheet1");
+
+    // Set bold font for header row
+    const headerRow = worksheet.addRow([
+      "Sr No.",
+      "Date",
+      "Farmer Code",
+      "Farmer Name",
+      "Village",
+      "Quantity",
+      "Program",
+      "Vehicle Information",
+    ]);
+    headerRow.font = { bold: true };
+    const transaction = await Transaction.findAll({
+      where: { ginner_id: req.query.ginnerId, status: 'Accepted' },
+      include: [
+        {
+          model: Village,
+          as: "village",
+        },
+        {
+          model: Farmer,
+          as: "farmer",
+        },
+        {
+          model: Program,
+          as: "program",
+        },
+        {
+          model: Ginner,
+          as: "ginner",
+        }
+      ],
+    });
+
+    // Append data to worksheet
+    for await (const [index, item] of transaction.entries()) {
+      const rowValues = Object.values({
+        index: index + 1,
+        date: item.date.toISOString().substring(0, 10),
+        farmerCode: item.farmer_code ? item.farmer_code : '',
+        farmerName: item.farmer_name ? item.farmer_name : '',
+        village: item.village ? item.village.village_name : '',
+        qtyPurchased: item.qty_purchased,
+        program: item.program.program_name,
+        vehicle: item.vehicle ? item.vehicle : '',
+      });
+      worksheet.addRow(rowValues);
+    }
+    // Auto-adjust column widths based on content
+    // worksheet.columns.forEach((column: any) => {
+    //     let maxCellLength = 0;
+    //     column.eachCell({ includeEmpty: true }, (cell: any) => {
+    //         const cellLength = (cell.value ? cell.value.toString() : '').length;
+    //         maxCellLength = Math.max(maxCellLength, cellLength);
+    //     });
+    //     column.width = Math.min(30, maxCellLength + 2); // Limit width to 30 characters
+    // });
+
+    // Save the workbook
+    await workbook.xlsx.writeFile(excelFilePath);
+    res.status(200).send({
+      success: true,
+      messgage: "File successfully Generated",
+      data: process.env.BASE_URL + "procurement.xlsx",
+    });
+  } catch (error) {
+    console.error("Error appending data:", error);
+  }
+};
+
 export {
   createTransaction,
   fetchTransactions,
@@ -811,5 +917,7 @@ export {
   deleteTransaction,
   deleteBulkTransactions,
   exportProcurement,
-  fetchTransactionById
+  fetchTransactionById,
+  updateTransactionStatus,
+  exportGinnerProcurement
 };

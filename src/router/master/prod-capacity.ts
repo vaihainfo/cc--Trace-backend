@@ -8,10 +8,7 @@ import {
 } from "../../controllers/production-capacity";
 
 import { Router } from "express";
-import accessControl from "../../middleware/access-control";
 const router = Router();
-
-router.use(accessControl)
 
 // Production Capacity Routes
 router.get('/', fetchProdCapacityPagination);

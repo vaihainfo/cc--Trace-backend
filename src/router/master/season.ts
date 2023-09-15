@@ -7,10 +7,8 @@ import {
 } from "../../controllers/season";
 
 import { Router } from "express";
-import accessControl from "../../middleware/access-control";
 const router = Router();
 
-router.use(accessControl)
 // Season Routes
 router.get('/', fetchSeasonPagination);
 router.post('/', createSeason);

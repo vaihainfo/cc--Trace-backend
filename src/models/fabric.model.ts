@@ -1,5 +1,7 @@
 import { DataTypes  } from 'sequelize';
 import db  from '../util/dbConn';
+import Country from './country.model';
+import State from './state.model';
 
 const Fabric = db.define('fabrics',{
   id: {
@@ -89,6 +91,16 @@ const Fabric = db.define('fabrics',{
     allowNull: false,
     type: DataTypes.ARRAY(DataTypes.INTEGER)
   },
+});
+
+Fabric.belongsTo(Country, {
+  foreignKey: "country_id",
+  as: "country",
+});
+
+Fabric.belongsTo(State, {
+  foreignKey: "state_id",
+  as: "state",
 });
 
 

@@ -1,5 +1,6 @@
 import { DataTypes } from 'sequelize';
 import db from '../util/dbConn';
+import TicketTracker from './ticket-tracker.model';
 
 const TicketTrackerStatus = db.define('ticket_tracker_status', {
     id: {
@@ -23,5 +24,12 @@ const TicketTrackerStatus = db.define('ticket_tracker_status', {
 });
 
 TicketTrackerStatus.sync();
+
+TicketTrackerStatus.belongsTo(TicketTracker, {
+    foreignKey: "ticket_id",
+    as: "ticket",
+});
+
+
 
 export default TicketTrackerStatus;

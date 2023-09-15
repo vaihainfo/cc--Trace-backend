@@ -22,17 +22,25 @@ const createIcsName = async (req: Request, res: Response) => {
 const createIcsNames = async (req: Request, res: Response) => {
     try {
         // create multiple ics 
-        const data = req.body.ics.map((obj: any) => {
-            return {
-                farmGroup_id: req.body.farmGroupId,
-                ics_name: obj.icsName,
-                ics_latitude: obj.icsLatitude,
-                ics_longitude: obj.icsLongitude,
-                ics_status: true
+        let pass = [];
+        let fail = [];
+        for await (const obj of req.body.ics) {
+            let result = await ICS.findOne({ where: { farmGroup_id: req.body.farmGroupId, ics_name: { [Op.iLike]: obj.icsName } } })
+            if (result) {
+                fail.push({ data: result });
+            } else {
+                const result = await ICS.create({
+                    farmGroup_id: req.body.farmGroupId,
+                    ics_name: obj.icsName,
+                    ics_latitude: obj.icsLatitude,
+                    ics_longitude: obj.icsLongitude,
+                    ics_status: true
+                });
+                pass.push({ data: result });
             }
-        })
-        const result = await ICS.bulkCreate(data);
-        res.sendSuccess(res, result);
+        }
+        res.sendSuccess(res, { pass, fail });
+
     } catch (error) {
         return res.sendError(res, "ERR_INTERNAL_SERVER_ERROR");
     }
@@ -97,6 +105,15 @@ const fetchIcsNamePagination = async (req: Request, res: Response) => {
 
 const updateIcsName = async (req: Request, res: Response) => {
     try {
+        let resul = await ICS.findOne({
+            where: {
+                farmGroup_id: req.body.formGroupId,
+                ics_name: { [Op.iLike]: req.body.icsName }, id: { [Op.ne]: req.body.id }
+            }
+        })
+        if (resul) {
+            return res.sendError(res, "ALREADY_EXITS");
+        }
         const result = await ICS.update({
             farmGroup_id: req.body.formGroupId,
             ics_name: req.body.icsName,

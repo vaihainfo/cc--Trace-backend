@@ -15,10 +15,9 @@ import {
     updateFarmStatus
 } from "../../controllers/farm/farm-item";
 import { Router } from "express";
-import accessControl from "../../middleware/access-control";
 const router = Router();
 
-router.use(accessControl)
+
 
 // Farm Item Routes
 router.get('/farm-item', fetchFarmsPagination);

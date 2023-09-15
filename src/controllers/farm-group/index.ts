@@ -19,12 +19,19 @@ const createFarmGroup = async (req: Request, res: Response) => {
 
 const createFarmGroups = async (req: Request, res: Response) => {
   try {
-    // create multiple crop type at the time
-    const data = req.body.name.map((obj: string) => {
-      return { name: obj, brand_id: req.body.brandId, status: true };
-    });
-    const result = await FarmGroup.bulkCreate(data);
-    res.sendSuccess(res, result);
+    // create multiple Farm Group at the time
+    let pass = [];
+    let fail = [];
+    for await (const obj of req.body.name) {
+      let result = await FarmGroup.findOne({ where: { name: { [Op.iLike]: obj }, brand_id: req.body.brandId } })
+      if (result) {
+        fail.push({ data: result });
+      } else {
+        const result = await FarmGroup.create({ name: obj, brand_id: req.body.brandId, status: true });
+        pass.push({ data: result });
+      }
+    }
+    res.sendSuccess(res, { pass, fail });
   } catch (error) {
     return res.sendError(res, "ERR_INTERNAL_SERVER_ERROR");
   }
@@ -93,6 +100,10 @@ const fetchFarmGroupPagination = async (req: Request, res: Response) => {
 
 const updateFarmGroup = async (req: Request, res: Response) => {
   try {
+    let result = await FarmGroup.findOne({ where: { brand_id: req.body.brandId, name: { [Op.iLike]: req.body.name }, id: { [Op.ne]: req.body.id } } })
+    if (result) {
+      return res.sendError(res, "ALREADY_EXITS");
+    }
     const farmGroup = await FarmGroup.update(
       {
         brand_id: req.body.brandId,

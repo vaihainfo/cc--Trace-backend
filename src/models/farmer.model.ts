@@ -91,7 +91,7 @@ const Farmer = db.define("farmers", {
     type: DataTypes.INTEGER,
   },
   tracenet_id: {
-    type: DataTypes.INTEGER,
+    type: DataTypes.STRING,
   },
   cert_status: {
     type: DataTypes.STRING,
@@ -101,6 +101,21 @@ const Farmer = db.define("farmers", {
     defaultValue: "",
     allowNull: true
   },
+  agri_total_area: {
+    type: DataTypes.DECIMAL
+  },
+  agri_estimated_yeld: {
+    type: DataTypes.DECIMAL
+  },
+  agri_estimated_prod: {
+    type: DataTypes.DECIMAL
+  },
+  cotton_total_area: {
+    type: DataTypes.DECIMAL
+  },
+  total_estimated_cotton: {
+    type: DataTypes.DECIMAL
+  }
 });
 
 Farmer.belongsTo(Program, {

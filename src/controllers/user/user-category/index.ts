@@ -10,7 +10,7 @@ const createUserCategory = async (req: Request, res: Response) => {
         const category = await UserCategory.create(data);
         res.sendSuccess(res, category);
     } catch (error) {
-        return res.sendError(res, "ERR_INTERNAL_SERVER_ERROR");
+        return res.sendError(res, "ERR_NOT_ABLE_TO_CREATE_CATEGORY");
     }
 }
 
@@ -23,7 +23,7 @@ const getUserCategories = async (req: Request, res: Response) => {
         if(sortOrder !== ''){
             whereCondition = {
                 order: [
-                    ['category_name', sortOrder], // Sort the results based on the 'username' field and the specified order
+                    ['id', 'ASC'], // Sort the results based on the 'username' field and the specified order
                   ],
             }
         }
@@ -33,7 +33,7 @@ const getUserCategories = async (req: Request, res: Response) => {
           return res.sendSuccess(res,  categories );
       } catch (error) {
         console.log(error)
-        return res.sendError(res, "ERR_INTERNAL_SERVER_ERROR");
+        return res.sendError(res, "ERR_NOT_ABLE_TO_GET_CATEGORY");
       }
 }
 

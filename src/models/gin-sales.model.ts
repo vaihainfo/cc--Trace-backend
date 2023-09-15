@@ -138,6 +138,9 @@ const GinSales = db.define('gin_sales', {
   },
   reel_lot_no: {
     type: DataTypes.STRING
+  },
+  qty_stock: {
+    type: DataTypes.DOUBLE
   }
 });
 

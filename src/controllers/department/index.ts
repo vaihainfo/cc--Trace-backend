@@ -19,12 +19,19 @@ const createDepartment = async (req: Request, res: Response) => {
 
 const createDepartments = async (req: Request, res: Response) => {
     try {
-        // create multiple crops at the time
-        const data = req.body.deptName.map((obj: string) => {
-            return { dept_name: obj, dept_status: true }
-        })
-        const department = await Department.bulkCreate(data);
-        res.sendSuccess(res, department);
+        // create multiple Department at the time
+        let pass = [];
+        let fail = [];
+        for await (const obj of req.body.deptName) {
+            let result = await Department.findOne({ where: { dept_name: { [Op.iLike]: obj } } })
+            if (result) {
+                fail.push({ data: result });
+            } else {
+                const result = await Department.create({ dept_name: obj, dept_status: true });
+                pass.push({ data: result });
+            }
+        }
+        res.sendSuccess(res, { pass, fail });
     } catch (error) {
         return res.sendError(res, "ERR_INTERNAL_SERVER_ERROR");
     }
@@ -70,6 +77,10 @@ const fetchDepartmentPagination = async (req: Request, res: Response) => {
 
 const updateDepartment = async (req: Request, res: Response) => {
     try {
+        let result = await Department.findOne({ where: { dept_name: { [Op.iLike]: req.body.deptName }, id: { [Op.ne]: req.body.id } } })
+        if (result) {
+            return res.sendError(res, "ALREADY_EXITS");
+        }
         const department = await Department.update({
             dept_name: req.body.deptName
         }, {
@@ -85,6 +96,7 @@ const updateDepartment = async (req: Request, res: Response) => {
 
 const updateDepartmentStatus = async (req: Request, res: Response) => {
     try {
+
         const department = await Department.update({ dept_status: req.body.status }, {
             where: {
                 id: req.body.id

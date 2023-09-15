@@ -11,7 +11,7 @@ const createMenuItem = async (req: Request, res: Response) => {
         const menuList = await MenuList.create(data);
         res.sendSuccess(res, menuList);
     } catch (error) {
-        return res.sendError(res, "ERR_INTERNAL_SERVER_ERROR");
+        return res.sendError(res, "ERR_MENU_NOT_CREATED");
     }
 }
 
@@ -27,7 +27,7 @@ const getMenuList = async (req: Request, res: Response) => {
           return res.sendSuccess(res, menuList);
       } catch (error) {
         console.log(error)
-        return res.sendError(res, "ERR_INTERNAL_SERVER_ERROR");
+        return res.sendError(res, "ERR_MENU_NOT_FETCHED");
       }
 }
 

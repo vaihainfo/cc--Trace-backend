@@ -16,8 +16,6 @@ import District from "../../models/district.model";
 import Block from "../../models/block.model";
 import Farmer from "../../models/farmer.model";
 import ICS from "../../models/ics.model";
-import FarmerAgriArea from "../../models/farmer-agri-area.model";
-import FarmerCottonArea from "../../models/farmer-cotton-area.model";
 import Farm from "../../models/farm.model";
 import { generateQrCode } from "../../provider/qrcode";
 
@@ -498,7 +496,6 @@ const uploadFarmer = async (req: Request, res: Response) => {
             }
         }
 
-
         for await (const data of req.body.farmers) {
             if (!data.dateOfJoining) {
                 fail.push({
@@ -590,6 +587,7 @@ const uploadFarmer = async (req: Request, res: Response) => {
                         if (data.state) {
                             state = await State.findOne({
                                 where: {
+                                    country_id: country.id,
                                     state_name: data.state
                                 }
                             });
@@ -603,6 +601,7 @@ const uploadFarmer = async (req: Request, res: Response) => {
                                 if (data.district) {
                                     district = await District.findOne({
                                         where: {
+                                            state_id: state.id,
                                             district_name: data.district
                                         }
                                     });
@@ -618,6 +617,7 @@ const uploadFarmer = async (req: Request, res: Response) => {
                                         if (data.block) {
                                             block = await Block.findOne({
                                                 where: {
+                                                    district_id: district.id,
                                                     block_name: data.block
                                                 }
                                             });
@@ -632,6 +632,7 @@ const uploadFarmer = async (req: Request, res: Response) => {
                                                 if (data.village) {
                                                     village = await Village.findOne({
                                                         where: {
+                                                            block_id: block.id,
                                                             village_name: data.village
                                                         }
                                                     });
@@ -679,7 +680,6 @@ const uploadFarmer = async (req: Request, res: Response) => {
                             message: "Farmer with same farmer code is already exists"
                         })
                     } else {
-
                         const farmerdata = {
                             program_id: program.id,
                             brand_id: brand.id,
@@ -695,30 +695,24 @@ const uploadFarmer = async (req: Request, res: Response) => {
                             joining_date: new Date(data.dateOfJoining).toISOString(),
                             ics_id: ics ? ics.id : null,
                             tracenet_id: data.tracenetId ? data.tracenetId : null,
-                            cert_status: data.certStatus ? data.certStatus : null
-                        };
-                        const farmer = await Farmer.create(farmerdata);
-
-                        const farmerAgriArea = await FarmerAgriArea.create({
-                            farmer_id: farmer.id,
+                            cert_status: data.certStatus ? data.certStatus : null,
+                            cotton_total_area: data.cottonTotalArea ? data.cottonTotalArea : 0.0,
+                            total_estimated_cotton: data.totalEstimatedCotton ? data.totalEstimatedCotton : 0.0,
                             agri_total_area: data.agriTotalArea ? data.agriTotalArea : 0.0,
                             agri_estimated_yeld: data.agriEstimatedYield ? data.agriEstimatedYield : 0.0,
                             agri_estimated_prod: data.agriEstimatedProd ? data.agriEstimatedProd : 0.0
-                        })
-                        const farmerCottonArea = await FarmerCottonArea.create({
-                            farmer_id: farmer.id,
-                            cotton_total_area: data.cottonTotalArea ? data.cottonTotalArea : 0.0,
-                            total_estimated_cotton: data.totalEstimatedCotton ? data.totalEstimatedCotton : 0.0,
-                        })
+                        };
+                        const farmer = await Farmer.create(farmerdata);
 
                         const farmData = {
                             farmer_id: farmer.id,
                             program_id: program.id,
                             season_id: season.id,
-                            cotton_id: farmerCottonArea.id,
-                            agri_id: farmerAgriArea.id,
-                            agri_total_area: String(data.agriTotalArea ? data.agriTotalArea : 0.0),
-                            cotton_total_area: String(data.cottonTotalArea ? data.cottonTotalArea : 0.0)
+                            agri_total_area: data.agriTotalArea ? data.agriTotalArea : 0.0,
+                            agri_estimated_yeld: data.agriEstimatedYield ? data.agriEstimatedYield : 0.0,
+                            agri_estimated_prod: data.agriEstimatedProd ? data.agriEstimatedProd : 0.0,
+                            cotton_total_area: data.cottonTotalArea ? data.cottonTotalArea : 0.0,
+                            total_estimated_cotton: data.totalEstimatedCotton ? data.totalEstimatedCotton : 0.0
                         };
                         const farm = await Farm.create(farmData);
                         let uniqueFilename = `qrcode_${Date.now()}.png`;
@@ -745,6 +739,7 @@ const uploadFarmer = async (req: Request, res: Response) => {
         return res.sendError(res, "ERR_INTERNAL_SERVER_ERROR");
     }
 }
+
 export {
     uploadGinnerOrder,
     uploadStyleMark,

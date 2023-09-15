@@ -5,6 +5,10 @@ import User from "../../../models/user.model";
 import hash from "../../../util/hash";
 import Country from "../../../models/country.model";
 import State from "../../../models/state.model";
+import Program from "../../../models/program.model";
+import UnitCertification from "../../../models/unit-certification.model";
+import Brand from "../../../models/brand.model";
+import YarnCount from "../../../models/yarn-count.model";
 
 
 const createSpinner = async (req: Request, res: Response) => {
@@ -152,13 +156,31 @@ const fetchSpinner = async (req: Request, res: Response) => {
             ]
         });
         let userData = [];
+        let programs;
+        let unitCerts;
+        let brands;
+        let yarnCount;
         if (result) {
             for await (let user of result.spinnerUser_id) {
                 let us = await User.findOne({ where: { id: user } });
                 userData.push(us)
             }
+            programs = await Program.findAll({
+                where: { id: result.program_id },
+            });
+
+            unitCerts = await UnitCertification.findAll({
+                where: { id: result.unit_cert },
+            });
+
+            brands = await Brand.findAll({
+                where: { id: result.brand },
+            });
+            yarnCount = await YarnCount.findAll({
+                where: { id: JSON.parse(result.yarn_count_range) },
+            });
         }
-        return res.sendSuccess(res, result ? { ...result.dataValues, userData } : null);
+        return res.sendSuccess(res, result ? { ...result.dataValues, userData, programs, unitCerts, brands, yarnCount } : null);
 
     } catch (error) {
         return res.sendError(res, "ERR_INTERNAL_SERVER_ERROR");

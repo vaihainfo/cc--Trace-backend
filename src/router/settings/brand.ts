@@ -3,7 +3,8 @@ import {
     fetchBrandPagination,
     deleteBrand,
     fetchBrandById,
-    updateBrand
+    updateBrand,
+    findUser
 } from "../../controllers/brand";
 
 import { Router } from "express";
@@ -15,6 +16,6 @@ router.get('/:id', fetchBrandById);
 router.post('/', createBrand);
 router.put('/', updateBrand);
 router.delete('/', deleteBrand);
-
+router.post('/user', findUser);
 
 export default router;  

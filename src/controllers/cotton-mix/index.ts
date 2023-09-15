@@ -18,15 +18,22 @@ const createCottonMix = async (req: Request, res: Response) => {
 
 const createCottonMixes = async (req: Request, res: Response) => {
     try {
-        // create multiple Loom Type at the time
-        const data = req.body.cottonMixName.map((obj: string) => {
-            return {
-                cottonMix_name: obj,
-                cottonMix_status: true
+        // create multiple CottonMix/Blend at the time
+        let pass = [];
+        let fail = [];
+        for await (const obj of req.body.cottonMixName) {
+            let result = await CottonMix.findOne({ where: { cottonMix_name: { [Op.iLike]: obj } } })
+            if (result) {
+                fail.push({ data: result });
+            } else {
+                const result = await CottonMix.create({
+                    cottonMix_name: obj,
+                    cottonMix_status: true
+                });
+                pass.push({ data: result });
             }
-        })
-        const cottonMixs = await CottonMix.bulkCreate(data);
-        res.sendSuccess(res, cottonMixs);
+        }
+        res.sendSuccess(res, { pass, fail });
     } catch (error) {
         return res.sendError(res, "ERR_INTERNAL_SERVER_ERROR");
     }
@@ -71,6 +78,10 @@ const fetchCottonMixPagination = async (req: Request, res: Response) => {
 
 const updateCottonMix = async (req: Request, res: Response) => {
     try {
+        let result = await CottonMix.findOne({ where: { cottonMix_name: { [Op.iLike]: req.body.cottonMixName }, id: { [Op.ne]: req.body.id } } })
+        if (result) {
+            return res.sendError(res, "ALREADY_EXITS");
+        }
         const cottonMix = await CottonMix.update({
             cottonMix_name: req.body.cottonMixName
         }, {

@@ -8,10 +8,7 @@ import {
 } from "../../controllers/yarn-count-range";
 
 import { Router } from "express";
-import accessControl from "../../middleware/access-control";
 const router = Router();
-
-router.use(accessControl)
 
 // Yarn Count Routes
 router.get('/', fetchYarnCountPagination);
