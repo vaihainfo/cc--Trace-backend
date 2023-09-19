@@ -214,7 +214,7 @@ const fetchFarmerPagination = async (req: Request, res: Response) => {
         group = ["farmer.country_id"]
       }
       if (programId) {
-        const idArray: number[] = countryId
+        const idArray: number[] = programId
           .split(",")
           .map((id: any) => parseInt(id, 10));
         whereCondition["$farmer.program_id$"] = { [Op.in]: idArray };
