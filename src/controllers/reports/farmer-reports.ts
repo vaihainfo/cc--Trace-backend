@@ -47,6 +47,7 @@ const fetchFarmerReportPagination = async (req: Request, res: Response) => {
                 { code: { [Op.iLike]: `%${searchTerm}%` } },
                 { '$country.county_name$': { [Op.iLike]: `%${searchTerm}%` } },
                 { '$block.block_name$': { [Op.iLike]: `%${searchTerm}%` } },
+                { '$farmGroup.name$': { [Op.iLike]: `%${searchTerm}%` } },
                 { '$district.district_name$': { [Op.iLike]: `%${searchTerm}%` } },
                 { '$state.state_name$': { [Op.iLike]: `%${searchTerm}%` } },
                 { '$village.village_name$': { [Op.iLike]: `%${searchTerm}%` } },
@@ -149,6 +150,7 @@ const exportNonOrganicFarmerReport = async (req: Request, res: Response) => {
     const excelFilePath = path.join('./upload', 'farmer-non-organic-report.xlsx');
 
     try {
+
         const page = Number(req.query.page) || 1;
         const limit = Number(req.query.limit) || 10;
         const offset = (page - 1) * limit;
@@ -170,10 +172,83 @@ const exportNonOrganicFarmerReport = async (req: Request, res: Response) => {
             'Cotton Area', 'Total Estimated Production',
         ]);
         headerRow.font = { bold: true };
+        const searchTerm = req.query.search || '';
+        const {
+            brandId,
+            icsId,
+            farmGroupId,
+            countryId,
+            stateId,
+            districtId,
+            blockId,
+            villageId,
+            type
+        }: any = req.query;
+        whereCondition['$program.program_name$'] = { [Op.notILike]: `%Organic%` };
 
-        whereCondition[Op.or] = [
-            { '$program.program_name$': { [Op.notILike]: `%Organic%` } } //Organic Based  program
-        ];
+        if (searchTerm) {
+            whereCondition[Op.or] = [
+                { firstName: { [Op.iLike]: `%${searchTerm}%` } },
+                { lastName: { [Op.iLike]: `%${searchTerm}%` } },
+                { code: { [Op.iLike]: `%${searchTerm}%` } },
+                { '$country.county_name$': { [Op.iLike]: `%${searchTerm}%` } },
+                { '$block.block_name$': { [Op.iLike]: `%${searchTerm}%` } },
+                { '$farmGroup.name$': { [Op.iLike]: `%${searchTerm}%` } },
+                { '$district.district_name$': { [Op.iLike]: `%${searchTerm}%` } },
+                { '$state.state_name$': { [Op.iLike]: `%${searchTerm}%` } },
+                { '$village.village_name$': { [Op.iLike]: `%${searchTerm}%` } },
+                { cert_status: { [Op.iLike]: `%${searchTerm}%` } }
+            ];
+        }
+        if (brandId) {
+            const idArray: number[] = brandId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+
+            whereCondition.brand_id = { [Op.in]: idArray };
+        }
+        if (farmGroupId) {
+            const idArray: number[] = farmGroupId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition.farmGroup_id = { [Op.in]: idArray };
+        }
+        if (countryId) {
+            const idArray: number[] = countryId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition.country_id = { [Op.in]: idArray };
+        }
+        if (stateId) {
+            const idArray: number[] = stateId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition.state_id = { [Op.in]: idArray };
+        }
+        if (districtId) {
+            const idArray: number[] = districtId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition.district_id = { [Op.in]: idArray };
+        }
+        if (blockId) {
+            const idArray: number[] = blockId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition.block_id = { [Op.in]: idArray };
+        }
+        if (villageId) {
+            const idArray: number[] = villageId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition.village_id = { [Op.in]: idArray };
+        }
+        if (icsId) {
+            const idArray: number[] = icsId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition.ics_id = { [Op.in]: idArray };
+        }
         let farmer: any
         let include = [
             {
@@ -284,10 +359,77 @@ const exportOrganicFarmerReport = async (req: Request, res: Response) => {
 
         ]);
         headerRow.font = { bold: true };
+        const searchTerm = req.query.search || '';
+        const {
+            brandId,
+            icsId,
+            farmGroupId,
+            countryId,
+            stateId,
+            districtId,
+            blockId,
+            villageId,
+            type
+        }: any = req.query;
+        whereCondition['$program.program_name$'] = { [Op.iLike]: `%Organic%` };
 
-        whereCondition[Op.or] = [
-            { '$program.program_name$': { [Op.iLike]: `%Organic%` } }
-        ];
+        if (searchTerm) {
+            whereCondition[Op.or] = [
+                { firstName: { [Op.iLike]: `%${searchTerm}%` } },
+                { lastName: { [Op.iLike]: `%${searchTerm}%` } },
+                { code: { [Op.iLike]: `%${searchTerm}%` } },
+                { '$country.county_name$': { [Op.iLike]: `%${searchTerm}%` } },
+                { '$block.block_name$': { [Op.iLike]: `%${searchTerm}%` } },
+                { '$farmGroup.name$': { [Op.iLike]: `%${searchTerm}%` } },
+                { '$district.district_name$': { [Op.iLike]: `%${searchTerm}%` } },
+                { '$state.state_name$': { [Op.iLike]: `%${searchTerm}%` } },
+                { '$village.village_name$': { [Op.iLike]: `%${searchTerm}%` } },
+                { cert_status: { [Op.iLike]: `%${searchTerm}%` } }
+            ];
+        }
+        if (brandId) {
+            const idArray: number[] = brandId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+
+            whereCondition.brand_id = { [Op.in]: idArray };
+        }
+        if (farmGroupId) {
+            const idArray: number[] = farmGroupId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition.farmGroup_id = { [Op.in]: idArray };
+        }
+        if (countryId) {
+            const idArray: number[] = countryId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition.country_id = { [Op.in]: idArray };
+        }
+        if (stateId) {
+            const idArray: number[] = stateId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition.state_id = { [Op.in]: idArray };
+        }
+        if (districtId) {
+            const idArray: number[] = districtId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition.district_id = { [Op.in]: idArray };
+        }
+        if (blockId) {
+            const idArray: number[] = blockId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition.block_id = { [Op.in]: idArray };
+        }
+        if (villageId) {
+            const idArray: number[] = villageId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition.village_id = { [Op.in]: idArray };
+        }
 
         let farmer: any
         let include = [
