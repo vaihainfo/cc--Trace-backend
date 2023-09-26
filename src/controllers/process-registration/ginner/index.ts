@@ -8,6 +8,7 @@ import State from "../../../models/state.model";
 import Program from "../../../models/program.model";
 import UnitCertification from "../../../models/unit-certification.model";
 import Brand from "../../../models/brand.model";
+import UserRole from "../../../models/user-role.model";
 
 const createGinner = async (req: Request, res: Response) => {
     try {
@@ -164,21 +165,31 @@ const fetchGinner = async (req: Request, res: Response) => {
         let brands;
         if (result) {
             for await (let user of result.ginnerUser_id) {
-                let us = await User.findOne({ where: { id: user } });
+                let us = await User.findOne({
+                    where: { id: user }, attributes: {
+                        exclude: ["password", "createdAt", "updatedAt"]
+                    },
+                    include: [
+                        {
+                            model: UserRole,
+                            as: "user_role",
+                        }
+                    ]
+                });
                 userData.push(us)
             }
 
             programs = await Program.findAll({
                 where: { id: result.program_id },
-              });
+            });
 
             unitCerts = await UnitCertification.findAll({
                 where: { id: result.unit_cert },
-              });
+            });
 
             brands = await Brand.findAll({
                 where: { id: result.brand },
-              });
+            });
         }
         return res.sendSuccess(res, result ? { ...result.dataValues, userData, programs, unitCerts, brands } : null);
 
@@ -259,11 +270,34 @@ const deleteGinner = async (req: Request, res: Response) => {
     }
 }
 
+const checkGinner = async (req: Request, res: Response) => {
+    try {
+        let whereCondition = {};
+        if (req.body.id) {
+            whereCondition = {
+                name: { [Op.iLike]: req.body.name },
+                id: { [Op.ne]: req.body.id }
+            }
+        } else {
+            whereCondition = {
+                name: { [Op.iLike]: req.body.name },
+            }
+        }
+        const result = await Ginner.findOne({
+            where: whereCondition
+        });
+        res.sendSuccess(res, result ? { exist: true } : { exist: false });
+    } catch (error: any) {
+        return res.sendError(res, error.message);
+    }
+}
+
 
 export {
     createGinner,
     fetchGinnerPagination,
     fetchGinner,
     updateGinner,
-    deleteGinner
+    deleteGinner,
+    checkGinner
 };

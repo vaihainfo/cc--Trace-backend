@@ -4,7 +4,8 @@ import {
     deleteBrand,
     fetchBrandById,
     updateBrand,
-    findUser
+    findUser,
+    checkBrand
 } from "../../controllers/brand";
 
 import { Router } from "express";
@@ -17,5 +18,5 @@ router.post('/', createBrand);
 router.put('/', updateBrand);
 router.delete('/', deleteBrand);
 router.post('/user', findUser);
-
+router.post('/check-brand', checkBrand);
 export default router;  

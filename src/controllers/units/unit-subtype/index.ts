@@ -40,11 +40,12 @@ const createUnitSubTypes = async (req: Request, res: Response) => {
 
 const fetchUnitSubTypePagination = async (req: Request, res: Response) => {
     const searchTerm = req.query.search || '';
-    const sortOrder = req.query.sort || 'asc';
+    const sortOrder = req.query.sort || 'desc';
     const page = Number(req.query.page) || 1;
     const limit = Number(req.query.limit) || 10;
     const unitTypeId = req.query.unitTypeId;
     const offset = (page - 1) * limit;
+    const status = req.query.status || '';
     const whereCondition: any = {}
     try {
         if (searchTerm) {
@@ -57,6 +58,10 @@ const fetchUnitSubTypePagination = async (req: Request, res: Response) => {
         if (unitTypeId) {
             whereCondition.unitType_id = unitTypeId;
         }
+
+        if (status === 'true') {
+            whereCondition.unitSubType_status = true
+        }
         //fetch data with pagination
         if (req.query.pagination === 'true') {
             const { count, rows } = await UnitSubType.findAndCountAll({
@@ -66,7 +71,7 @@ const fetchUnitSubTypePagination = async (req: Request, res: Response) => {
                         model: UnitType, as: 'unitType'
                     }],
                 order: [
-                    ['unitSubType', sortOrder], // Sort the results based on the 'cropType_name' field and the specified order
+                    ['id', sortOrder], // Sort the results based on the 'cropType_name' field and the specified order
                 ],
                 offset: offset,
                 limit: limit
@@ -80,7 +85,7 @@ const fetchUnitSubTypePagination = async (req: Request, res: Response) => {
                         model: UnitType, as: 'unitType'
                     }],
                 order: [
-                    ['unitSubType', sortOrder], // Sort the results based on the 'username' field and the specified order
+                    ['id', sortOrder], // Sort the results based on the 'username' field and the specified order
                 ],
             });
             return res.sendSuccess(res, unitSubTypes);

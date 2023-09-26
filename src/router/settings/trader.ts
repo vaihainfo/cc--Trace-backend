@@ -3,7 +3,8 @@ import {
     updateTrader,
     deleteTrader,
     fetchTraderPagination,
-    fetchTrader
+    fetchTrader,
+    checkTrader
 } from "../../controllers/process-registration/trader";
 
 import { Router } from "express";
@@ -15,6 +16,6 @@ router.get('/get-trader', fetchTrader);
 router.post('/', createTrader);
 router.put('/', updateTrader);
 router.delete('/', deleteTrader);
-
+router.post('/check-trader', checkTrader);
 
 export default router;  

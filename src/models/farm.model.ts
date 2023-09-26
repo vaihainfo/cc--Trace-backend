@@ -46,6 +46,10 @@ const Farm = db.define('farms', {
     },
     total_estimated_cotton: {
         type: DataTypes.DECIMAL
+    },
+    cotton_transacted: {
+        type: DataTypes.DECIMAL,
+        defaultValue: 0
     }
 });
 

@@ -48,11 +48,12 @@ const createIcsNames = async (req: Request, res: Response) => {
 
 const fetchIcsNamePagination = async (req: Request, res: Response) => {
     const searchTerm = req.query.search || '';
-    const sortOrder = req.query.sort || 'asc';
+    const sortOrder = req.query.sort || 'desc';
     const page = Number(req.query.page) || 1;
     const limit = Number(req.query.limit) || 10;
     const farmGroupId: any = req.query.farmGroupId || '';
     const offset = (page - 1) * limit;
+    const status = req.query.status || '';
     const whereCondition: any = {}
     try {
         if (searchTerm) {
@@ -60,6 +61,9 @@ const fetchIcsNamePagination = async (req: Request, res: Response) => {
                 { ics_name: { [Op.iLike]: `%${searchTerm}%` } }, // Search by ics name
                 { "$farmGroup.name$": { [Op.iLike]: `%${searchTerm}%` } }, // Search by crop Type  
             ];
+        }
+        if (status === 'true') {
+            whereCondition.ics_status = true
         }
 
         if (farmGroupId) {
@@ -77,7 +81,7 @@ const fetchIcsNamePagination = async (req: Request, res: Response) => {
                         model: FarmGroup, as: 'farmGroup'
                     }],
                 order: [
-                    ['ics_name', sortOrder], // Sort the results based on the 'ics name' field and the specified order
+                    ['id', sortOrder], // Sort the results based on the 'ics name' field and the specified order
                 ],
                 offset: offset,
                 limit: limit
@@ -91,7 +95,7 @@ const fetchIcsNamePagination = async (req: Request, res: Response) => {
                         model: FarmGroup, as: 'farmGroup'
                     }],
                 order: [
-                    ['ics_name', sortOrder], // Sort the results based on the 'name' field and the specified order
+                    ['id', sortOrder], // Sort the results based on the 'name' field and the specified order
                 ],
             });
             return res.sendSuccess(res, result);

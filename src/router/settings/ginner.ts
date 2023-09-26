@@ -3,7 +3,8 @@ import {
     fetchGinnerPagination,
     updateGinner,
     deleteGinner,
-    fetchGinner
+    fetchGinner,
+    checkGinner
 } from "../../controllers/process-registration/ginner";
 
 import { Router } from "express";
@@ -15,6 +16,7 @@ router.get('/get-ginner', fetchGinner);
 router.post('/', createGinner);
 router.put('/', updateGinner);
 router.delete('/', deleteGinner);
+router.post('/check-ginner', checkGinner);
 
 
 export default router;  

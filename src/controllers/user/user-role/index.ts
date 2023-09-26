@@ -133,7 +133,7 @@ const getUserRole = async (req: Request, res: Response) => {
     } catch (error) {
         console.log(error)
         return res.sendError(res, "ERR_NOT_ABLE_TO_GET_ROLE");
-      }
+    }
 }
 
 const updateUserRole = async (req: Request, res: Response) => {
@@ -146,14 +146,13 @@ const updateUserRole = async (req: Request, res: Response) => {
         }
         const roleId = req.body.id;
         const updatedData = {
-            brand_id: req.body.brandId,
+            brand_id: req.body.brandId ? req.body.brandId : undefined,
             user_role: req.body.userRole
         };
 
-        const privilegesToUpdate = [];
-        const privilegesToInsert = [];
 
-        for (const privilege of req.body.privileges) {
+
+        for await (const privilege of req.body.privileges) {
             const existingPrivilege = await UserPrivilege.findOne({
                 where: {
                     userRole_id: roleId,
@@ -162,8 +161,7 @@ const updateUserRole = async (req: Request, res: Response) => {
             });
 
             if (existingPrivilege) {
-                privilegesToUpdate.push({
-                    id: existingPrivilege.id,
+                let update = await UserPrivilege.update({
                     userRole_id: roleId,
                     menu_id: privilege.menuId,
                     create_privilege: privilege.create,
@@ -171,9 +169,9 @@ const updateUserRole = async (req: Request, res: Response) => {
                     edit_privilege: privilege.edit,
                     delete_privilege: privilege.delete,
                     status: existingPrivilege.status
-                });
+                }, { where: { id: existingPrivilege.id } })
             } else {
-                privilegesToInsert.push({
+                let create = await UserPrivilege.create({
                     userRole_id: roleId,
                     menu_id: privilege.menuId,
                     create_privilege: privilege.create,
@@ -181,31 +179,24 @@ const updateUserRole = async (req: Request, res: Response) => {
                     edit_privilege: privilege.edit,
                     delete_privilege: privilege.delete,
                     status: true
-                });
+                })
             }
         }
-
-        const [rowsUpdated, [updatedRole]] = await Promise.all([
+        const rowsUpdated = await
             UserRole.update(updatedData, {
                 where: { id: roleId },
                 returning: true,
-            }),
-            UserPrivilege.bulkCreate(privilegesToUpdate, {
-                updateOnDuplicate: ['create_privilege', 'view_privilege', 'edit_privilege', 'delete_privilege'],
-            }),
-            UserPrivilege.bulkCreate(privilegesToInsert),
-        ]);
-
+            })
         if (rowsUpdated === 0) {
             return res.sendError(res, "ERR_ROLE_NOT_FOUND");
         }
 
-            return res.sendSuccess(res, updatedRole);
-      }catch (error) {
-          console.log(error)
-          return res.sendError(res, "ERR_ROLE_NOT_UPDATED");
-        }
-  }
+        return res.sendSuccess(res, rowsUpdated);
+    } catch (error) {
+        console.log(error)
+        return res.sendError(res, "ERR_ROLE_NOT_UPDATED");
+    }
+}
 
 
 const deleteUserRole = async (req: Request, res: Response) => {

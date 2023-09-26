@@ -9,6 +9,7 @@ import Program from "../../../models/program.model";
 import UnitCertification from "../../../models/unit-certification.model";
 import Brand from "../../../models/brand.model";
 import YarnCount from "../../../models/yarn-count.model";
+import UserRole from "../../../models/user-role.model";
 
 
 const createSpinner = async (req: Request, res: Response) => {
@@ -162,7 +163,17 @@ const fetchSpinner = async (req: Request, res: Response) => {
         let yarnCount;
         if (result) {
             for await (let user of result.spinnerUser_id) {
-                let us = await User.findOne({ where: { id: user } });
+                let us = await User.findOne({
+                    where: { id: user }, attributes: {
+                        exclude: ["password", "createdAt", "updatedAt"]
+                    },
+                    include: [
+                        {
+                            model: UserRole,
+                            as: "user_role",
+                        }
+                    ]
+                });
                 userData.push(us)
             }
             programs = await Program.findAll({
@@ -255,11 +266,34 @@ const deleteSpinner = async (req: Request, res: Response) => {
     }
 }
 
+const checkSpinner = async (req: Request, res: Response) => {
+    try {
+        let whereCondition = {};
+        if (req.body.id) {
+            whereCondition = {
+                name: { [Op.iLike]: req.body.name },
+                id: { [Op.ne]: req.body.id }
+            }
+        } else {
+            whereCondition = {
+                name: { [Op.iLike]: req.body.name },
+            }
+        }
+        const result = await Spinner.findOne({
+            where: whereCondition
+        });
+        res.sendSuccess(res, result ? { exist: true } : { exist: false });
+    } catch (error: any) {
+        return res.sendError(res, error.message);
+    }
+}
+
 
 export {
     createSpinner,
     fetchSpinnerPagination,
     fetchSpinner,
     updateSpinner,
-    deleteSpinner
+    deleteSpinner,
+    checkSpinner
 };

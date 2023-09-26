@@ -3,7 +3,8 @@ import {
     fetchSpinnerPagination,
     updateSpinner,
     deleteSpinner,
-    fetchSpinner
+    fetchSpinner,
+    checkSpinner
 } from "../../controllers/process-registration/spinner";
 
 import { Router } from "express";
@@ -15,6 +16,6 @@ router.get('/get-spinner', fetchSpinner);
 router.post('/', createSpinner);
 router.put('/', updateSpinner);
 router.delete('/', deleteSpinner);
-
+router.post('/check-spinner', checkSpinner);
 
 export default router;  

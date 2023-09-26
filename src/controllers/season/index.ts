@@ -6,6 +6,10 @@ import Season from "../../models/season.model";
 
 const createSeason = async (req: Request, res: Response) => {
     try {
+        let result = await Season.findOne({ where: { name: { [Op.iLike]: req.body.name } } });
+        if (result) {
+            return res.sendError(res, "Should not allow the duplicate entries");
+        }
         const data = {
             name: req.body.name,
             from: req.body.from,
@@ -60,6 +64,10 @@ const fetchSeasonPagination = async (req: Request, res: Response) => {
 
 const updateSeason = async (req: Request, res: Response) => {
     try {
+        let result = await Season.findOne({ where: { name: { [Op.iLike]: req.body.name }, id: { [Op.ne]: req.body.id } } });
+        if (result) {
+            return res.sendError(res, "Should not allow the duplicate entries");
+        }
         const season = await Season.update({
             name: req.body.name,
             from: req.body.from,

@@ -3,7 +3,8 @@ import {
     fetchGarmentPagination,
     updateGarment,
     deleteGarment,
-    fetchGarment
+    fetchGarment,
+    checkGarment
 } from "../../controllers/process-registration/garment";
 
 import { Router } from "express";
@@ -15,6 +16,7 @@ router.post('/', createGarment);
 router.get('/get-garment', fetchGarment);
 router.put('/', updateGarment);
 router.delete('/', deleteGarment);
+router.post('/check-garment', checkGarment);
 
 
 export default router;  

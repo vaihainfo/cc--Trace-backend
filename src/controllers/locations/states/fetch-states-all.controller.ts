@@ -5,7 +5,7 @@ import Country from "../../../models/country.model";
 import State from "../../../models/state.model";
 
 const fetchStates = async (req: Request, res: Response) => {
-  const { search } = req.query;
+  const { search, status } = req.query;
   const sortOrder = req.query.sort || "desc";
   const countryId: string = req.query.countryId as string;
   //   const sortField = req.query.sortBy || '';
@@ -31,6 +31,9 @@ const fetchStates = async (req: Request, res: Response) => {
         { state_name: { [Op.iLike]: `%${search}%` } }, // Search by state name
         { "$country.county_name$": { [Op.iLike]: `%${search}%` } }, // Search by country name
       ];
+    }
+    if (status === 'true') {
+      whereCondition.state_status = true;
     }
 
     let queryOptions: any = {

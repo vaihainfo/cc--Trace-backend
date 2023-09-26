@@ -1,10 +1,14 @@
-import { DataTypes  } from 'sequelize';
-import db  from '../util/dbConn';
+import { DataTypes } from 'sequelize';
+import db from '../util/dbConn';
 
 import Weaver from './weaver.model';
 import Dyeing from './dyeing.model';
+import FabricType from './fabric-type.model';
+import Garment from './garment.model';
+import Season from './season.model';
+import Program from './program.model';
 
-const WeaverSales = db.define('weaver_sales',{
+const WeaverSales = db.define('weaver_sales', {
   id: {
     type: DataTypes.INTEGER,
     autoIncrement: true,
@@ -61,10 +65,10 @@ const WeaverSales = db.define('weaver_sales',{
     type: DataTypes.STRING
   },
   weft_cottonmix_type: {
-    type: DataTypes.STRING
+    type: DataTypes.ARRAY(DataTypes.INTEGER)
   },
   weft_cottonmix_qty: {
-    type: DataTypes.STRING
+    type: DataTypes.ARRAY(DataTypes.DOUBLE)
   },
   weft_yarn_qty: {
     type: DataTypes.DOUBLE
@@ -143,6 +147,15 @@ const WeaverSales = db.define('weaver_sales',{
     type: DataTypes.INTEGER,
     references: { model: 'dyeings', key: 'id' },
   },
+  qr: {
+    type: DataTypes.STRING
+  },
+  no_of_bales: {
+    type: DataTypes.DOUBLE
+  },
+  accept_date: {
+    type: DataTypes.DATE
+  }
 });
 
 WeaverSales.belongsTo(Weaver, {
@@ -150,9 +163,29 @@ WeaverSales.belongsTo(Weaver, {
   as: "weaver",
 });
 
+WeaverSales.belongsTo(Garment, {
+  foreignKey: "buyer_id",
+  as: "buyer",
+});
+
+WeaverSales.belongsTo(FabricType, {
+  foreignKey: "fabric_type",
+  as: "fabric",
+});
+
 WeaverSales.belongsTo(Dyeing, {
   foreignKey: "dyeing_id",
   as: "dyeing",
+});
+
+WeaverSales.belongsTo(Season, {
+  foreignKey: "season_id",
+  as: "season",
+});
+
+WeaverSales.belongsTo(Program, {
+  foreignKey: "program_id",
+  as: "program",
 });
 
 WeaverSales.sync();

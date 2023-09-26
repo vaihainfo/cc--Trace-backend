@@ -238,6 +238,29 @@ const deleteBrand = async (req: Request, res: Response) => {
     }
 };
 
+const checkBrand = async (req: Request, res: Response) => {
+    try {
+        let whereCondition = {};
+        if (req.body.id) {
+            whereCondition = {
+                brand_name: { [Op.iLike]: req.body.name },
+                id: { [Op.ne]: req.body.id }
+            }
+        } else {
+            whereCondition = {
+                brand_name: { [Op.iLike]: req.body.name },
+            }
+        }
+
+        const brand = await Brand.findOne({
+            where: whereCondition
+        });
+        res.sendSuccess(res, brand ? { exist: true } : { exist: false });
+    } catch (error: any) {
+        return res.sendError(res, error.message);
+    }
+}
+
 export {
     findUser,
     createBrand,
@@ -245,4 +268,5 @@ export {
     deleteBrand,
     fetchBrandById,
     updateBrand,
+    checkBrand
 };

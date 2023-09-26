@@ -1,6 +1,7 @@
 import {
     createValidationFarmer,
     fetchValidationFarmerPagination,
+    fetchValidationFarmer,
     deleteValidationFarmer
 } from "../../controllers/validations-farmer";
 
@@ -18,7 +19,7 @@ const router = Router();
 router.get('/farmer', fetchValidationFarmerPagination);
 router.post('/farmer', createValidationFarmer);
 router.delete('/farmer', deleteValidationFarmer);
-
+router.get('/fetch-by-id', fetchValidationFarmer);
 // Project Premium Validation
 router.get('/project', fetchValidationProjectPagination);
 router.post('/project', createValidationProject);

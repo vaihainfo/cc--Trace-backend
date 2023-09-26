@@ -11,6 +11,11 @@ import * as path from "path";
 import Season from "../../models/season.model";
 import Program from "../../models/program.model";
 import BaleSelection from "../../models/bale-selection.model";
+import Transaction from "../../models/transaction.model";
+import Village from "../../models/village.model";
+import Farmer from "../../models/farmer.model";
+import State from "../../models/state.model";
+import Country from "../../models/country.model";
 
 //create Ginner Process
 const createGinnerProcess = async (req: Request, res: Response) => {
@@ -137,6 +142,90 @@ const fetchGinBale = async (req: Request, res: Response) => {
 
     } catch (error: any) {
         return res.sendError(res, error.message);
+    }
+};
+
+
+const chooseCotton = async (req: Request, res: Response) => {
+    try {
+        let ginnerid = req.query.ginnerId;
+        let programId = req.query.programId;
+        if (!ginnerid) {
+            return res.sendError(res, 'Need Ginner Id')
+        }
+        if (!programId) {
+            return res.sendError(res, 'Need Program Id')
+        }
+        let villageId: any = req.query.villageId
+        let whereCondition: any = {
+            status: 'Sold',
+            qty_stock: {
+                [Op.gt]: 0
+            },
+            mapped_ginner: ginnerid,
+            program_id: programId
+        };
+
+        if (villageId) {
+            const idArray: number[] = villageId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition.village_id = { [Op.in]: idArray };
+        }
+
+        const result = await Transaction.findAll({
+            attributes: [
+                [
+                    Sequelize.fn("SUM", Sequelize.col("qty_stock")),
+                    "qty_stock",
+                ],
+                [
+                    Sequelize.fn("SUM", Sequelize.col("qty_stock")),
+                    "qty_used",
+                ],
+                [Sequelize.col('village.id'), 'vlg_id'],
+            ],
+            include: [
+                { model: Village, as: 'village' },
+                { model: Program, as: 'program' },
+            ],
+            where: whereCondition,
+            group: ['village.id', 'program.id', 'transactions.id'],
+            order: [
+                ['id', 'DESC'],
+                [Sequelize.col('accept_date'), 'DESC']
+            ]
+        });
+        res.sendSuccess(res, result);
+    } catch (error: any) {
+        console.error("Error appending data:", error);
+        return res.sendError(res, error.message);
+    }
+
+}
+
+const updateTransactionStatus = async (req: Request, res: Response) => {
+    try {
+
+        let trans: any = []
+        for await (let obj of req.body.items) {
+            const data: any = {
+                status: obj.status,
+                accept_date: obj.status === 'Sold' ? new Date().toISOString() : null
+            };
+
+            const transaction = await Transaction.update(data, {
+                where: {
+                    id: obj.id,
+                },
+            });
+            trans.push(transaction)
+        }
+
+        res.sendSuccess(res, trans);
+    } catch (error) {
+        console.log(error);
+        return res.sendError(res, "NOT_ABLE_TO_UPDATE");
     }
 };
 
@@ -373,6 +462,147 @@ const fetchGinSaleBale = async (req: Request, res: Response) => {
     }
 };
 
+const dashboardGraphWithProgram = async (req: Request, res: Response) => {
+    try {
+        let whereCondition: any = {}
+        whereCondition.ginner_id = req.query.ginnerId;
+        whereCondition.status = 'Sold';
+
+        const trans = await Transaction.findAll({
+            where: {
+                mapped_ginner: req.query.ginnerId,
+                status: 'Sold'
+            },
+            attributes: [
+                [
+                    Sequelize.fn("SUM", Sequelize.literal("CAST(qty_purchased AS INTEGER)")),
+                    "totalPurchased",
+                ],
+                [
+                    Sequelize.fn(
+                        "SUM",
+                        Sequelize.col("qty_stock")
+                    ),
+                    "totalQuantity",
+                ],
+            ],
+            include: [
+                {
+                    model: Program,
+                    as: "program",
+                    attributes: ["id", "program_name", "program_status"],
+                }
+            ],
+            group: ["program.id"],
+        });
+        const gin = await GinSales.findAll({
+            where: whereCondition,
+            attributes: [
+                [
+                    Sequelize.fn("SUM", Sequelize.col("no_of_bales")),
+                    "totalBales",
+                ],
+                [
+                    Sequelize.fn(
+                        "SUM",
+                        Sequelize.col("qty_stock")
+                    ),
+                    "totalQuantity",
+                ],
+            ],
+            include: [
+                {
+                    model: Program,
+                    as: "program",
+                    attributes: ["id", "program_name", "program_status"],
+                }
+            ],
+            group: ["program.id"],
+        });
+        res.sendSuccess(res, { trans, gin });
+    } catch (error: any) {
+        return res.sendError(res, error.message);
+    }
+};
+
+const getReelBaleId = async (req: Request, res: Response) => {
+    try {
+        let whereCondition: any = {}
+        let ginnerId = req.query.ginnerId;
+        whereCondition.status = 'Sold';
+        let count = await GinProcess.findOne({
+            attributes: [
+                [Sequelize.fn('COUNT', Sequelize.col('gin_process.id')), 'balecount']
+            ],
+            include: [
+                {
+                    model: Program,
+                    attributes: [],
+                    as: 'program',
+                    where: { program_name: { [Op.iLike]: 'Reel' } },
+                }
+            ],
+            where: {
+                ginner_id: req.query.ginnerId,
+            },
+            group: ['gin_process.id']
+        })
+
+        const result = await Ginner.findOne({
+            attributes: [
+                [
+                    Sequelize.fn(
+                        'concat',
+                        'BL-REE',
+                        Sequelize.fn('upper', Sequelize.fn('left', Sequelize.col('country.county_name'), 2)),
+                        Sequelize.fn('upper', Sequelize.fn('left', Sequelize.col('state.state_name'), 2)),
+                        Sequelize.fn('upper', Sequelize.col('short_name'))
+                    ),
+                    'idprefix'
+                ]
+            ],
+            include: [
+                {
+                    model: State,
+                    as: 'state'
+                },
+                {
+                    model: Country,
+                    as: 'country'
+                }
+            ],
+            where: { id: ginnerId } // Assuming prscr_id is a variable with the desired ID
+        });
+        var baleid_prefix = result.dataValues.idprefix ? result.dataValues.idprefix : '';
+        var prcs_date = new Date().toLocaleDateString().replace(/\//g, '');
+        var bale_no = count ? (Number(count.dataValues.balecount) + 1) : 1;
+        var reelbale_id = baleid_prefix + prcs_date + '/' + String(bale_no);
+        res.sendSuccess(res, { id: reelbale_id });
+    } catch (error: any) {
+        return res.sendError(res, error.message);
+    }
+};
+
+const getProgram = async (req: Request, res: Response) => {
+    try {
+        if (!req.query.ginnerId) {
+            return res.sendError(res, 'Need Knitter Id');
+        }
+
+        let ginnerId = req.query.ginnerId;
+        let result = await Ginner.findOne({ where: { id: ginnerId } });
+
+        let data = await Program.findAll({
+            where: {
+                id: { [Op.in]: result.program_id }
+            }
+        });
+        res.sendSuccess(res, data);
+    } catch (error: any) {
+        return res.sendError(res, error.message);
+    }
+};
+
 export {
     createGinnerProcess,
     fetchGinProcessPagination,
@@ -381,5 +611,10 @@ export {
     fetchGinSalesPagination,
     exportGinnerSales,
     updateGinnerSales,
-    fetchGinSaleBale
+    fetchGinSaleBale,
+    chooseCotton,
+    updateTransactionStatus,
+    dashboardGraphWithProgram,
+    getReelBaleId,
+    getProgram
 }

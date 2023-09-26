@@ -41,11 +41,12 @@ const createFarmProducts = async (req: Request, res: Response) => {
 
 const fetchFarmProductPagination = async (req: Request, res: Response) => {
     const searchTerm = req.query.search || '';
-    const sortOrder = req.query.sort || 'asc';
+    const sortOrder = req.query.sort || 'desc';
     const page = Number(req.query.page) || 1;
     const limit = Number(req.query.limit) || 10;
     const farmItemId = req.query.farmItemId;
     const offset = (page - 1) * limit;
+    const status = req.query.status || '';
     const whereCondition: any = {}
     try {
         if (searchTerm) {
@@ -58,6 +59,10 @@ const fetchFarmProductPagination = async (req: Request, res: Response) => {
         if (farmItemId) {
             whereCondition.farmItem_id = farmItemId;
         }
+
+        if (status === 'true') {
+            whereCondition.farmProduct_status = true;
+        }
         //fetch data with pagination
         if (req.query.pagination === 'true') {
             const { count, rows } = await FarmProduct.findAndCountAll({
@@ -67,7 +72,7 @@ const fetchFarmProductPagination = async (req: Request, res: Response) => {
                         model: FarmItem, as: 'farmItem'
                     }],
                 order: [
-                    ['farmProduct', sortOrder], // Sort the results based on the 'cropType_name' field and the specified order
+                    ['id', sortOrder], // Sort the results based on the 'cropType_name' field and the specified order
                 ],
                 offset: offset,
                 limit: limit
@@ -81,7 +86,7 @@ const fetchFarmProductPagination = async (req: Request, res: Response) => {
                         model: FarmItem, as: 'farmItem'
                     }],
                 order: [
-                    ['farmProduct', sortOrder], // Sort the results based on the 'username' field and the specified order
+                    ['id', sortOrder], // Sort the results based on the 'username' field and the specified order
                 ],
             });
             return res.sendSuccess(res, farmProucts);

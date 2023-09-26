@@ -8,7 +8,7 @@ import Block from "../../../models/block.model";
 import Village from "../../../models/village.model";
 
 const fetchVillages = async (req: Request, res: Response) => {
-  const { search } = req.query;
+  const { search, status } = req.query;
 
   const sortOrder = req.query.sort || "desc";
   const countryId: string = req.query.countryId as string;
@@ -64,7 +64,9 @@ const fetchVillages = async (req: Request, res: Response) => {
         }, // Search by country name
       ];
     }
-
+    if (status === 'true') {
+      whereCondition.village_status = true;
+    }
     let queryOptions: any = {
       where: whereCondition,
       include: [
@@ -90,6 +92,7 @@ const fetchVillages = async (req: Request, res: Response) => {
     if (sortOrder === "asc" || sortOrder === "desc") {
       queryOptions.order = [["id", sortOrder]];
     }
+
     if (req.query.pagination === "true") {
       queryOptions.offset = offset;
       queryOptions.limit = limit;
@@ -118,7 +121,7 @@ const fetchVillages = async (req: Request, res: Response) => {
             ],
           },
         ],
-        order : [["id", 'DESC']]
+        order: [["id", 'DESC']]
       });
       return res.sendSuccess(res, villages);
     }

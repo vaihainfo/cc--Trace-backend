@@ -9,6 +9,7 @@ import * as fs from "fs";
 import * as path from "path";
 import GinProcess from "../../models/gin-process.model";
 import Season from "../../models/season.model";
+import Country from "../../models/country.model";
 
 //create Quality Parameter 
 const createQualityParameter = async (req: Request, res: Response) => {
@@ -50,18 +51,51 @@ const createQualityParameter = async (req: Request, res: Response) => {
 const fetchQualityParameterPagination = async (req: Request, res: Response) => {
     const page = Number(req.query.page) || 1;
     const limit = Number(req.query.limit) || 10;
-    const { spinnerId, ginnerId } = req.query
+    const { spinnerId, ginnerId, brandId, countryId, stateId, date }: any = req.query
     const offset = (page - 1) * limit;
     const whereCondition: any = {}
     try {
         if (spinnerId) {
-            whereCondition.spinner_id = spinnerId
+            const idArray: number[] = spinnerId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition.spinner_id = { [Op.in]: idArray };
         }
         if (ginnerId) {
-            whereCondition.ginner_id = ginnerId
+            const idArray: number[] = ginnerId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition.ginner_id = { [Op.in]: idArray };
+        }
+        if (brandId) {
+            const idArray: number[] = brandId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition[Op.or] = [{ ["$ginner.brand$"]: { [Op.contains]: idArray } },
+            { ["$spinner.brand$"]: { [Op.contains]: idArray } }];
         }
 
-
+        if (countryId) {
+            const idArray: number[] = countryId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition[Op.or] = [{ ["$ginner.country_id$"]: { [Op.in]: idArray } },
+            { ["$spinner.country_id$"]: { [Op.in]: idArray } }];
+        }
+        if (stateId) {
+            const idArray: number[] = stateId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition[Op.or] = [{ ["$ginner.state_id$"]: { [Op.in]: idArray } },
+            { ["$spinner.state_id$"]: { [Op.in]: idArray } }];
+        }
+        if (date) {
+            const startOfDay = new Date(date);
+            startOfDay.setUTCHours(0, 0, 0, 0);
+            const endOfDay = new Date(date);
+            endOfDay.setUTCHours(23, 59, 59, 999);
+            whereCondition.test_report = { [Op.between]: [startOfDay, endOfDay] }
+        }
         let include = [
             {
                 model: GinProcess, as: 'process'
@@ -71,9 +105,12 @@ const fetchQualityParameterPagination = async (req: Request, res: Response) => {
             },
             {
                 model: Spinner, as: 'spinner'
+            },
+            {
+                model: Spinner, as: 'sold'
             }
         ]
-
+        console.log(whereCondition);
         //fetch data with pagination
         if (req.query.pagination === 'true') {
             const { count, rows } = await QualityParameter.findAndCountAll({
@@ -300,10 +337,331 @@ const exportSingleQualityParameter = async (req: Request, res: Response) => {
     }
 };
 
+const reportParameter = async (req: Request, res: Response) => {
+    try {
+
+        // Get the current date
+        const currentDate = new Date();
+        const { seasonId, countryId, stateId, processId }: any = req.query
+        // Create an array to store the results for each month
+        const monthlyResults: any = [];
+        let parameter = req.query.filter || 'ginner';
+        let value = parameter === 'ginner' ?
+            { ginner_id: { [Op.not]: null } } : { spinner_id: { [Op.not]: null } };
+        let ids = []
+        if (seasonId) {
+            let whereCondition: any = {};
+            if (countryId) {
+                parameter === 'ginner' ? whereCondition['$ginner.country_id$'] = countryId
+                    : whereCondition['$spinner.country_id$'] = countryId
+            }
+            if (stateId) {
+                parameter === 'ginner' ? whereCondition['$ginner.state_id$'] = stateId
+                    : whereCondition['$spinner.state_id$'] = stateId
+            }
+            if (processId) {
+                parameter === 'ginner' ? whereCondition.ginner_id = processId
+                    : whereCondition.spinner_id = processId
+            }
+            let seasons = await QualityParameter.findAll({
+                where: { '$process.season_id$': seasonId, ...value, ...whereCondition }, include: [
+                    {
+                        model: GinProcess, as: 'process'
+                    },
+                    {
+                        model: Ginner, as: 'ginner'
+                    },
+                    {
+                        model: Spinner, as: 'spinner'
+                    }
+                ]
+            });
+            ids = seasons.map((season: any) => season.id);
+        }
+        // Loop through the last 12 months
+        for (let i = 0; i < 12; i++) {
+            // Calculate the start and end dates for the current month
+            const startDate = new Date(currentDate.getFullYear(), currentDate.getMonth() - i, 1);
+            const endDate = new Date(currentDate.getFullYear(), currentDate.getMonth() - i + 1, 0, 23, 59, 59);
+            // Perform the query for the current month
+            let result = await QualityParameter.findOne({
+                attributes: [
+                    [Sequelize.fn('SUM', Sequelize.col('sci')), 'total_sci'],
+                    [Sequelize.fn('SUM', Sequelize.col('moisture')), 'total_moisture'],
+                    [Sequelize.fn('SUM', Sequelize.col('mic')), 'total_mic'],
+                    [Sequelize.fn('SUM', Sequelize.col('mat')), 'total_mat'],
+                    [Sequelize.fn('SUM', Sequelize.col('uhml')), 'total_uhml'],
+                    [Sequelize.fn('SUM', Sequelize.col('ui')), 'total_ui'],
+                    [Sequelize.fn('SUM', Sequelize.col('sf')), 'total_sf'],
+                    [Sequelize.fn('SUM', Sequelize.col('str')), 'total_str'],
+                    [Sequelize.fn('SUM', Sequelize.col('elg')), 'total_elg'],
+                    [Sequelize.fn('SUM', Sequelize.col('rd')), 'total_rd'],
+                ],
+                where: {
+                    test_report: {
+                        [Op.between]: [startDate, endDate],
+                    },
+                    id: ids
+                }
+            })
+            const totalSCI = result ? result.getDataValue('total_sci') : 0;
+            const totalMoisture = result ? result.getDataValue('total_mic') : 0;
+            const totalMat = result ? result.getDataValue('total_mat') : 0;
+            const totaluhml = result ? result.getDataValue('total_uhml') : 0;
+            const totalUi = result ? result.getDataValue('total_ui') : 0;
+            const totalSf = result ? result.getDataValue('total_sf') : 0;
+            const totalElg = result ? result.getDataValue('total_elg') : 0;
+            const totalStr = result ? result.getDataValue('total_str') : 0;
+            const totalRd = result ? result.getDataValue('total_rd') : 0;
+
+            // Store the results for the current month
+            monthlyResults.push({
+                month: startDate.toLocaleString('default', { month: 'short' }),
+                totalSci: totalSCI ? totalSCI : 0,
+                totalMoisture: totalMoisture ? totalMoisture : 0,
+                totalMat: totalMat ? totalMat : 0,
+                totaluhml: totaluhml ? totaluhml : 0,
+                totalUi: totalUi ? totalUi : 0,
+                totalElg: totalElg ? totalElg : 0,
+                totalSf: totalSf ? totalSf : 0,
+                totalStr: totalStr ? totalStr : 0,
+                totalRd: totalRd ? totalRd : 0,
+            });
+        }
+        res.sendSuccess(res, monthlyResults);
+
+    }
+    catch (error: any) {
+        console.error("Error appending data:", error);
+        return res.sendError(res, error.message);
+    }
+}
+
+const reportCountryParameter = async (req: Request, res: Response) => {
+    try {
+
+        // Get the current date
+        const currentDate = new Date();
+
+        // Create an array to store the results for each month
+        let monthlyResults: any = [];
+        let result = [];
+        let parameter = req.query.filter || 'ginner';
+
+        let countries = await Country.findAll();
+
+        for await (const country of countries) {
+            let value = parameter === 'ginner' ?
+                { ginner_id: { [Op.not]: null }, '$ginner.country_id$': country.id } :
+                { spinner_id: { [Op.not]: null }, '$spinner.country_id$': country.id };
+            let group = parameter === 'ginner' ? [Sequelize.literal('ginner.country_id')] : [Sequelize.literal('spinner.country_id')]
+            // Loop through the last 12 months
+            for (let i = 0; i < 12; i++) {
+                // Calculate the start and end dates for the current month
+                const startDate = new Date(currentDate.getFullYear(), currentDate.getMonth() - i, 1);
+                const endDate = new Date(currentDate.getFullYear(), currentDate.getMonth() - i + 1, 0, 23, 59, 59);
+                // Perform the query for the current month
+                let result = await QualityParameter.findOne({
+                    attributes: [
+                        [Sequelize.fn('SUM', Sequelize.col('sci')), 'total_sci'],
+                        [Sequelize.fn('SUM', Sequelize.col('moisture')), 'total_moisture'],
+                        [Sequelize.fn('SUM', Sequelize.col('mic')), 'total_mic'],
+                        [Sequelize.fn('SUM', Sequelize.col('mat')), 'total_mat'],
+                        [Sequelize.fn('SUM', Sequelize.col('uhml')), 'total_uhml'],
+                        [Sequelize.fn('SUM', Sequelize.col('ui')), 'total_ui'],
+                        [Sequelize.fn('SUM', Sequelize.col('sf')), 'total_sf'],
+                        [Sequelize.fn('SUM', Sequelize.col('str')), 'total_str'],
+                        [Sequelize.fn('SUM', Sequelize.col('elg')), 'total_elg'],
+                        [Sequelize.fn('SUM', Sequelize.col('rd')), 'total_rd'],
+                    ],
+                    include: [
+                        {
+                            model: Ginner, as: 'ginner', attributes: []
+                        },
+                        {
+                            model: Spinner, as: 'spinner', attributes: []
+                        }
+                    ],
+                    where: {
+                        test_report: {
+                            [Op.between]: [startDate, endDate],
+                        },
+                        ...value
+                    },
+                    group: group
+                })
+                const totalSCI = result ? result.getDataValue('total_sci') : 0;
+                const totalMoisture = result ? result.getDataValue('total_mic') : 0;
+                const totalMat = result ? result.getDataValue('total_mat') : 0;
+                const totaluhml = result ? result.getDataValue('total_uhml') : 0;
+                const totalUi = result ? result.getDataValue('total_ui') : 0;
+                const totalSf = result ? result.getDataValue('total_sf') : 0;
+                const totalElg = result ? result.getDataValue('total_elg') : 0;
+                const totalStr = result ? result.getDataValue('total_str') : 0;
+                const totalRd = result ? result.getDataValue('total_rd') : 0;
+
+                // Store the results for the current month
+                monthlyResults.push({
+                    month: startDate.toLocaleString('default', { month: 'short' }),
+                    totalSci: totalSCI ? totalSCI : 0,
+                    totalMoisture: totalMoisture ? totalMoisture : 0,
+                    totalMat: totalMat ? totalMat : 0,
+                    totaluhml: totaluhml ? totaluhml : 0,
+                    totalUi: totalUi ? totalUi : 0,
+                    totalElg: totalElg ? totalElg : 0,
+                    totalSf: totalSf ? totalSf : 0,
+                    totalStr: totalStr ? totalStr : 0,
+                    totalRd: totalRd ? totalRd : 0,
+                });
+            }
+
+            result.push({ country: country, data: monthlyResults });
+            monthlyResults = [];
+        }
+
+        res.sendSuccess(res, result);
+
+    }
+    catch (error: any) {
+        console.error("Error appending data:", error);
+        return res.sendError(res, error.message);
+    }
+}
+
+const reportDashBoardParameter = async (req: Request, res: Response) => {
+    try {
+        const { seasonId, countryId }: any = req.query;
+        let ids = []
+        if (seasonId) {
+            let whereCondition: any = {};
+            if (countryId) {
+                whereCondition['$spinner.country_id$'] = countryId
+            }
+            let seasons = await QualityParameter.findAll({
+                where: { '$process.season_id$': seasonId, spinner_id: { [Op.not]: null }, ...whereCondition }, include: [
+                    {
+                        model: GinProcess, as: 'process'
+                    },
+                    {
+                        model: Ginner, as: 'ginner'
+                    },
+                    {
+                        model: Spinner, as: 'spinner'
+                    }
+                ]
+            });
+            ids = seasons.map((season: any) => season.id);
+        }
+
+        let spinner = await QualityParameter.findAll({
+            attributes: [
+                [Sequelize.fn('AVG', Sequelize.col('sci')), 'total_sci'],
+                [Sequelize.fn('AVG', Sequelize.col('moisture')), 'total_moisture'],
+                [Sequelize.fn('AVG', Sequelize.col('mic')), 'total_mic'],
+                [Sequelize.fn('AVG', Sequelize.col('mat')), 'total_mat'],
+                [Sequelize.fn('AVG', Sequelize.col('uhml')), 'total_uhml'],
+                [Sequelize.fn('AVG', Sequelize.col('ui')), 'total_ui'],
+                [Sequelize.fn('AVG', Sequelize.col('sf')), 'total_sf'],
+                [Sequelize.fn('AVG', Sequelize.col('str')), 'total_str'],
+                [Sequelize.fn('AVG', Sequelize.col('elg')), 'total_elg'],
+                [Sequelize.fn('AVG', Sequelize.col('rd')), 'total_rd'],
+            ],
+            where: {
+                id: ids,
+                spinner_id: { [Op.not]: null }
+            }
+        })
+        let id = []
+        if (seasonId) {
+            let whereCondition: any = {};
+            if (countryId) {
+                whereCondition['$ginner.country_id$'] = countryId
+            }
+            let seasons = await QualityParameter.findAll({
+                where: { '$process.season_id$': seasonId, ginner_id: { [Op.not]: null }, ...whereCondition }, include: [
+                    {
+                        model: GinProcess, as: 'process'
+                    },
+                    {
+                        model: Ginner, as: 'ginner'
+                    },
+                    {
+                        model: Spinner, as: 'spinner'
+                    }
+                ]
+            });
+            id = seasons.map((season: any) => season.id);
+        }
+        let ginner = await QualityParameter.findAll({
+            attributes: [
+                [Sequelize.fn('AVG', Sequelize.col('sci')), 'total_sci'],
+                [Sequelize.fn('AVG', Sequelize.col('moisture')), 'total_moisture'],
+                [Sequelize.fn('AVG', Sequelize.col('mic')), 'total_mic'],
+                [Sequelize.fn('AVG', Sequelize.col('mat')), 'total_mat'],
+                [Sequelize.fn('AVG', Sequelize.col('uhml')), 'total_uhml'],
+                [Sequelize.fn('AVG', Sequelize.col('ui')), 'total_ui'],
+                [Sequelize.fn('AVG', Sequelize.col('sf')), 'total_sf'],
+                [Sequelize.fn('AVG', Sequelize.col('str')), 'total_str'],
+                [Sequelize.fn('AVG', Sequelize.col('elg')), 'total_elg'],
+                [Sequelize.fn('AVG', Sequelize.col('rd')), 'total_rd'],
+            ],
+            where: {
+                id: id,
+                ginner_id: { [Op.not]: null }
+            }
+        })
+        let count = await QualityParameter.count({
+            where: {
+                '$process.season_id$': seasonId
+            },
+            include: [
+                {
+                    model: GinProcess, as: 'process'
+                },
+            ]
+        })
+
+        let abc = await QualityParameter.findAll({
+            attributes: [
+                [Sequelize.literal('ginner.country_id'), 'country_id'],
+                [Sequelize.fn('Count', Sequelize.col('quality-parameters.id')), 'number_of_test'],
+                [Sequelize.fn('Sum', Sequelize.col('process.no_of_bales')), 'number_of_bales']
+            ],
+            include: [
+                {
+                    model: GinProcess,
+                    as: 'process',
+                    attributes: []
+                },
+                {
+                    model: Ginner,
+                    as: 'ginner',
+                    attributes: []
+                }
+            ],
+            group: ['ginner.country_id'],
+            where: {
+                id: id,
+                ginner_id: { [Op.not]: null }
+            }
+        })
+        res.sendSuccess(res, { count, avgGinner: ginner, avgSpinner: spinner, volume: abc });
+    }
+    catch (error: any) {
+        console.error("Error appending data:", error);
+        return res.sendError(res, error.message);
+    }
+
+}
+
+
 export {
     createQualityParameter,
     fetchQualityParameterPagination,
     fetchQualityParameter,
     exportQualityParameter,
-    exportSingleQualityParameter
+    exportSingleQualityParameter,
+    reportCountryParameter,
+    reportParameter,
+    reportDashBoardParameter
 }

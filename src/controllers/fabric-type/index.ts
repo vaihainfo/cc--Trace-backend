@@ -39,19 +39,26 @@ const createFabricTypes = async (req: Request, res: Response) => {
 
 const fetchFebricTypePagination = async (req: Request, res: Response) => {
     const searchTerm = req.query.search || '';
-    const sortOrder = req.query.sort || 'asc';
+    const sortOrder = req.query.sort || 'desc';
     const page = Number(req.query.page) || 1;
     const limit = Number(req.query.limit) || 10;
     const offset = (page - 1) * limit;
+    const status = req.query.status || '';
+    const whereCondition: any = {};
     try {
+
+        if (status === 'true') {
+            whereCondition.fabricType_status = true;
+        }
+        if (searchTerm) {
+            whereCondition.fabricType_name = { [Op.iLike]: `%${searchTerm}%` }
+        }
         //fetch data with pagination
         if (req.query.pagination === "true") {
             const { count, rows } = await FabricType.findAndCountAll({
-                where: {
-                    fabricType_name: { [Op.iLike]: `%${searchTerm}%` },
-                },
+                where: whereCondition,
                 order: [
-                    ['fabricType_name', sortOrder], // Sort the results based on the 'username' field and the specified order
+                    ['id', sortOrder], // Sort the results based on the 'username' field and the specified order
                 ],
                 offset: offset,
                 limit: limit
@@ -59,11 +66,9 @@ const fetchFebricTypePagination = async (req: Request, res: Response) => {
             return res.sendPaginationSuccess(res, rows, count);
         } else {
             const febricType = await FabricType.findAll({
-                where: {
-                    fabricType_name: { [Op.iLike]: `%${searchTerm}%` },
-                },
+                where: whereCondition,
                 order: [
-                    ['fabricType_name', sortOrder], // Sort the results based on the 'username' field and the specified order
+                    ['id', sortOrder], // Sort the results based on the 'username' field and the specified order
                 ],
             });
             return res.sendSuccess(res, febricType);

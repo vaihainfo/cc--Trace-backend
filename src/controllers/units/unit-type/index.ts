@@ -34,25 +34,32 @@ const createUnitTypes = async (req: Request, res: Response) => {
         }
         res.sendSuccess(res, { pass, fail });
     } catch (error) {
-        return res.sendError(res, "ERR_INTERNAL_SERVER_ERROR");
+        return res.sendError(res, "ERR_NOT_ABLE_TO_CREATE_UNIT_TYPE");
     }
 }
 
 const fetchUnitTypePagination = async (req: Request, res: Response) => {
     const searchTerm = req.query.search || '';
-    const sortOrder = req.query.sort || 'asc';
+    const sortOrder = req.query.sort || 'desc';
     const page = Number(req.query.page) || 1;
     const limit = Number(req.query.limit) || 10;
     const offset = (page - 1) * limit;
+    const status = req.query.status || '';
+    const whereCondition: any = {};
     try {
+
+        if (status === 'true') {
+            whereCondition.unitType_status = true;
+        }
+        if (searchTerm) {
+            whereCondition.unitType = { [Op.iLike]: `%${searchTerm}%` }
+        }
         //fetch data with pagination
         if (req.query.pagination === "true") {
             const { count, rows } = await UnitType.findAndCountAll({
-                where: {
-                    unitType: { [Op.iLike]: `%${searchTerm}%` },
-                },
+                where: whereCondition,
                 order: [
-                    ['unitType', sortOrder], // Sort the results based on the 'username' field and the specified order
+                    ['id', sortOrder], // Sort the results based on the 'username' field and the specified order
                 ],
                 offset: offset,
                 limit: limit
@@ -60,18 +67,16 @@ const fetchUnitTypePagination = async (req: Request, res: Response) => {
             return res.sendPaginationSuccess(res, rows, count);
         } else {
             const unitTypes = await UnitType.findAll({
-                where: {
-                    unitType: { [Op.iLike]: `%${searchTerm}%` },
-                },
+                where: whereCondition,
                 order: [
-                    ['unitType', sortOrder], // Sort the results based on the 'username' field and the specified order
+                    ['id', sortOrder], // Sort the results based on the 'username' field and the specified order
                 ],
             });
             return res.sendSuccess(res, unitTypes);
         }
 
     } catch (error) {
-        return res.sendError(res, "ERR_INTERNAL_SERVER_ERROR");
+        return res.sendError(res, "ERR_NOT_ABLE_TO_GET_UNITTYPE");
     }
 }
 

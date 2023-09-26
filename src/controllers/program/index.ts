@@ -39,19 +39,25 @@ const createPrograms = async (req: Request, res: Response) => {
 
 const fetchProgramPagination = async (req: Request, res: Response) => {
     const searchTerm = req.query.search || '';
-    const sortOrder = req.query.sort || 'asc';
+    const sortOrder = req.query.sort || 'desc';
     const page = Number(req.query.page) || 1;
     const limit = Number(req.query.limit) || 10;
     const offset = (page - 1) * limit;
+    const status = req.query.status || '';
+    const whereCondition: any = {};
     try {
+        if (status === 'true') {
+            whereCondition.program_status = true;
+        }
+        if (searchTerm) {
+            whereCondition.program_name = { [Op.iLike]: `%${searchTerm}%` }
+        }
         //fetch data with pagination
         if (req.query.pagination === "true") {
             const { count, rows } = await Program.findAndCountAll({
-                where: {
-                    program_name: { [Op.iLike]: `%${searchTerm}%` },
-                },
+                where: whereCondition,
                 order: [
-                    ['program_name', sortOrder], // Sort the results based on the 'username' field and the specified order
+                    ['id', sortOrder], // Sort the results based on the 'username' field and the specified order
                 ],
                 offset: offset,
                 limit: limit
@@ -59,11 +65,9 @@ const fetchProgramPagination = async (req: Request, res: Response) => {
             return res.sendPaginationSuccess(res, rows, count);
         } else {
             const program = await Program.findAll({
-                where: {
-                    program_name: { [Op.iLike]: `%${searchTerm}%` },
-                },
+                where: whereCondition,
                 order: [
-                    ['program_name', sortOrder], // Sort the results based on the 'username' field and the specified order
+                    ['id', sortOrder], // Sort the results based on the 'username' field and the specified order
                 ],
             });
             return res.sendSuccess(res, program);

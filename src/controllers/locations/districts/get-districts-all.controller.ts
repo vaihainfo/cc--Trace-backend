@@ -6,7 +6,7 @@ import State from "../../../models/state.model";
 import District from "../../../models/district.model";
 
 const fetchDistricts = async (req: Request, res: Response) => {
-  const { search } = req.query;
+  const { search, status } = req.query;
   const sortOrder = req.query.sort || "desc";
   const countryId: string = req.query.countryId as string;
   const stateId: string = req.query.stateId as string;
@@ -28,6 +28,9 @@ const fetchDistricts = async (req: Request, res: Response) => {
         .map((id) => parseInt(id, 10));
       //multi select country filter
       whereCondition["$state.country.id$"] = { [Op.in]: idArray };
+    }
+    if (status === 'true') {
+      whereCondition.district_status = true;
     }
 
     if (search) {

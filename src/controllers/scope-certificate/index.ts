@@ -65,7 +65,7 @@ const fetchScopeCertPagination = async (req: Request, res: Response) => {
             whereCondition.country_id = { [Op.in]: idArray };
         }
         if (stateId) {
-            const idArray: number[] = countryId
+            const idArray: number[] = stateId
                 .split(",")
                 .map((id: any) => parseInt(id, 10));
             whereCondition.state_id = { [Op.in]: idArray };
