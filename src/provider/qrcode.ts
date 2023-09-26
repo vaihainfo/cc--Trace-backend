@@ -40,11 +40,7 @@ const generateQrCode = async (qrData: any, farmerName: string, fileName: any, fa
 
 const generateCanvasFromHTML = async (htmlContent: string, outputPath: string) => {
     try {
-<<<<<<< HEAD
         const browser = await puppeteer.launch({args: ['--no-sandbox'] });
-=======
-        const browser = await puppeteer.launch({ args: ['--no-sandbox'] });
->>>>>>> f4c4b14f0fb56fc9b57706072cb1c744e310601e
         const page = await browser.newPage();
         await page.setViewport({ width: 374, height: 520 }); // Adjust the values as needed
         await page.setContent(htmlContent);
