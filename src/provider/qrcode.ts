@@ -40,7 +40,11 @@ const generateQrCode = async (qrData: any, farmerName: string, fileName: any, fa
 
 const generateCanvasFromHTML = async (htmlContent: string, outputPath: string) => {
     try {
+<<<<<<< HEAD
         const browser = await puppeteer.launch({args: ['--no-sandbox'] });
+=======
+        const browser = await puppeteer.launch({ args: ['--no-sandbox'] });
+>>>>>>> f4c4b14f0fb56fc9b57706072cb1c744e310601e
         const page = await browser.newPage();
         await page.setViewport({ width: 374, height: 520 }); // Adjust the values as needed
         await page.setContent(htmlContent);
@@ -52,7 +56,6 @@ const generateCanvasFromHTML = async (htmlContent: string, outputPath: string) =
         await browser.close();
         // Write the buffer to the file
         fs.writeFileSync(outputPath, imageBuffer);
-        console.log('herer')
         return outputPath;
     } catch (error: any) {
         console.log(error.message);
@@ -70,7 +73,7 @@ const getQrImageHtml = (src: any, name: any, code: any, village: any) => {
     background-repeat: no-repeat;
     background: #0f265c;
     padding: 5px;" id='farmer_qr_code_down'>
- <div style="width: 100%;
+    <div style="width: 100%;
     background: #fff;
     display: flex;
     align-items: center;

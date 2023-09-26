@@ -1,10 +1,14 @@
-import { DataTypes  } from 'sequelize';
-import db  from '../util/dbConn';
+import { DataTypes } from 'sequelize';
+import db from '../util/dbConn';
 
 import Knitter from './knitter.model';
 import Dyeing from './dyeing.model';
+import Program from './program.model';
+import FabricType from './fabric-type.model';
+import Season from './season.model';
+import Garment from './garment.model';
 
-const KnitSales = db.define('knit_sales',{
+const KnitSales = db.define('knit_sales', {
   id: {
     type: DataTypes.INTEGER,
     autoIncrement: true,
@@ -89,10 +93,10 @@ const KnitSales = db.define('knit_sales',{
     type: DataTypes.STRING
   },
   cottonmix_type: {
-    type: DataTypes.STRING
+    type: DataTypes.ARRAY(DataTypes.INTEGER)
   },
   cottonmix_qty: {
-    type: DataTypes.STRING
+    type: DataTypes.ARRAY(DataTypes.DOUBLE)
   },
   invoice_no: {
     allowNull: false,
@@ -136,11 +140,37 @@ const KnitSales = db.define('knit_sales',{
   status: {
     type: DataTypes.STRING
   },
+  qr: {
+    type: DataTypes.STRING
+  },
+  blend_choose: {
+    type: DataTypes.BOOLEAN
+  }
 });
 
 KnitSales.belongsTo(Knitter, {
   foreignKey: "knitter_id",
   as: "knitter",
+});
+
+KnitSales.belongsTo(FabricType, {
+  foreignKey: "fabric_type",
+  as: "fabric",
+});
+
+KnitSales.belongsTo(Program, {
+  foreignKey: "program_id",
+  as: "program",
+});
+
+KnitSales.belongsTo(Season, {
+  foreignKey: "season_id",
+  as: "season",
+});
+
+KnitSales.belongsTo(Garment, {
+  foreignKey: "buyer_id",
+  as: "buyer",
 });
 
 KnitSales.belongsTo(Dyeing, {

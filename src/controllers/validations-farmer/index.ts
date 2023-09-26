@@ -152,6 +152,9 @@ const fetchValidationFarmer = async (req: Request, res: Response) => {
             {
                 model: Farmer, as: 'farmer',
                 attributes: ['id', 'firstName', 'lastName', "code"]
+            },
+            {
+                model: Season, as: 'season'
             }
         ]
 

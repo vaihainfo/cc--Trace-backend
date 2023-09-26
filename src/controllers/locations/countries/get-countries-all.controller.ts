@@ -5,6 +5,7 @@ import Country from "../../../models/country.model";
 
 const fetchCountries = async (req: Request, res: Response) => {
   const searchTerm = req.query.search || "";
+  const status = req.query.status || '';
   const sortOrder = req.query.sort || "desc";
   //   const sortField = req.query.sortBy || '';
   const page = Number(req.query.page) || 1;
@@ -15,8 +16,10 @@ const fetchCountries = async (req: Request, res: Response) => {
 
     let queryOptions: any = {
       where: { county_name: { [Op.iLike]: `%${searchTerm}%` } },
-    };
-
+    }
+    if (status === 'true') {
+      queryOptions = { where: { county_name: { [Op.iLike]: `%${searchTerm}%` }, country_status: true } }
+    }
     if (sortOrder === "asc" || sortOrder === "desc") {
       let sort = sortOrder === 'asc' ? 'ASC' : 'DESC';
       queryOptions.order = [["id", sort]];
@@ -29,11 +32,7 @@ const fetchCountries = async (req: Request, res: Response) => {
       const { count, rows } = await Country.findAndCountAll(queryOptions);
       return res.sendPaginationSuccess(res, rows, count);
     } else {
-      const countries = await Country.findAll({
-        where: {
-          county_name: { [Op.iLike]: `%${searchTerm}%` },
-        }
-      });
+      const countries = await Country.findAll(queryOptions);
       return res.sendSuccess(res, countries);
     }
   } catch (error) {

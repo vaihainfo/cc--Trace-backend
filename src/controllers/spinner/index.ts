@@ -34,6 +34,7 @@ const createSpinnerProcess = async (req: Request, res: Response) => {
                 net_yarn: req.body.processNetYarnQty,
             });
         }
+
         const data = {
             spinner_id: req.body.spinnerId,
             program_id: req.body.programId,
@@ -67,6 +68,9 @@ const createSpinnerProcess = async (req: Request, res: Response) => {
                 id: spin.id
             }
         });
+        for await (let obj of req.body.chooseLint) {
+            let update = await GinSales.update({ qty_stock: obj.totalQty - obj.qtyUsed }, { where: { id: obj.id } })
+        }
         res.sendSuccess(res, { spin });
     } catch (error: any) {
         console.log(error);
@@ -317,7 +321,7 @@ const createSpinnerSales = async (req: Request, res: Response) => {
             invoice_file: req.body.invoiceFile,
             delivery_notes: req.body.deliveryNotes,
             qty_stock: req.body.totalQty,
-            status: 'To be Submitted',
+            status: 'Pending for QR scanning',
             qr: uniqueFilename
         };
         const spinSales = await SpinSales.create(data);
@@ -490,7 +494,7 @@ const fetchSpinSalesDashBoard = async (req: Request, res: Response) => {
     const searchTerm = req.query.search || "";
     const page = Number(req.query.page) || 1;
     const limit = Number(req.query.limit) || 10;
-    const { ginnerId, status, programId, spinnerId }: any = req.query;
+    const { ginnerId, status, filter, programId, spinnerId }: any = req.query;
     const offset = (page - 1) * limit;
     const whereCondition: any = {};
     try {
@@ -511,6 +515,9 @@ const fetchSpinSalesDashBoard = async (req: Request, res: Response) => {
                 .split(",")
                 .map((id: any) => parseInt(id, 10));
             whereCondition.ginner_id = { [Op.contains]: idArray };
+        }
+        if (filter === 'Quantity') {
+            whereCondition.qty_stock = { [Op.gt]: 0 }
         }
         if (programId) {
             const idArray: number[] = programId
@@ -567,13 +574,16 @@ const fetchSpinSalesDashBoard = async (req: Request, res: Response) => {
 //update spinner transactions to accept and reject
 const updateStatusSales = async (req: Request, res: Response) => {
     try {
-        const data = {
-            status: req.body.status,
-            qty_stock: req.body.qtyStock
-        };
-        const ginSales = await GinSales.update(data, { where: { id: req.body.id } });
-
-        res.sendSuccess(res, { ginSales });
+        let update = []
+        for (const obj of req.body.items) {
+            const data = {
+                status: obj.status,
+                qty_stock: obj.qtyStock
+            };
+            let result = await GinSales.update(data, { where: { id: obj.id } });
+            update.push(result);
+        }
+        res.sendSuccess(res, { update });
     } catch (error: any) {
         return res.sendError(res, error.meessage);
     }
@@ -689,6 +699,25 @@ const exportSpinnerTransaction = async (req: Request, res: Response) => {
     }
 };
 
+const getProgram = async (req: Request, res: Response) => {
+    try {
+        if (!req.query.spinnerId) {
+            return res.sendError(res, 'Need Spinner Id');
+        }
+
+        let spinnerId = req.query.spinnerId;
+        let spinner = await Spinner.findOne({ where: { id: spinnerId } });
+
+        let data = await Program.findAll({
+            where: {
+                id: { [Op.in]: spinner.program_id }
+            }
+        });
+        res.sendSuccess(res, data);
+    } catch (error: any) {
+        return res.sendError(res, error.message);
+    }
+};
 
 
 export {

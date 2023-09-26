@@ -68,6 +68,11 @@ const QualityParameter = db.define('quality-parameters', {
   },
 });
 
+QualityParameter.belongsTo(Spinner, {
+  foreignKey: "sold_to",
+  as: "sold",
+});
+
 QualityParameter.belongsTo(GinProcess, {
   foreignKey: "process_id",
   as: "process",

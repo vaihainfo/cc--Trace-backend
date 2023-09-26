@@ -133,7 +133,7 @@ const getUserRole = async (req: Request, res: Response) => {
     } catch (error) {
         console.log(error)
         return res.sendError(res, "ERR_NOT_ABLE_TO_GET_ROLE");
-      }
+    }
 }
 
 const updateUserRole = async (req: Request, res: Response) => {
@@ -150,7 +150,12 @@ const updateUserRole = async (req: Request, res: Response) => {
             user_role: req.body.userRole
         };
 
+<<<<<<< HEAD
         
+=======
+
+
+>>>>>>> f4c4b14f0fb56fc9b57706072cb1c744e310601e
         for await (const privilege of req.body.privileges) {
             const existingPrivilege = await UserPrivilege.findOne({
                 where: {
@@ -188,19 +193,31 @@ const updateUserRole = async (req: Request, res: Response) => {
                 where: { id: roleId },
                 returning: true,
             })
+<<<<<<< HEAD
 
 
 
+=======
+>>>>>>> f4c4b14f0fb56fc9b57706072cb1c744e310601e
         if (rowsUpdated === 0) {
             return res.sendError(res, "ERR_ROLE_NOT_FOUND");
         }
 
+<<<<<<< HEAD
          return res.sendSuccess(res, rowsUpdated);
       }catch (error) {
           console.log(error)
           return res.sendError(res, "ERR_ROLE_NOT_UPDATED");
         }
   }
+=======
+        return res.sendSuccess(res, rowsUpdated);
+    } catch (error) {
+        console.log(error)
+        return res.sendError(res, "ERR_ROLE_NOT_UPDATED");
+    }
+}
+>>>>>>> f4c4b14f0fb56fc9b57706072cb1c744e310601e
 
 
 const deleteUserRole = async (req: Request, res: Response) => {

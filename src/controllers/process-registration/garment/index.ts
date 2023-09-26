@@ -5,6 +5,7 @@ import User from "../../../models/user.model";
 import hash from "../../../util/hash";
 import Country from "../../../models/country.model";
 import State from "../../../models/state.model";
+import UserRole from "../../../models/user-role.model";
 
 const createGarment = async (req: Request, res: Response) => {
     try {
@@ -154,7 +155,17 @@ const fetchGarment = async (req: Request, res: Response) => {
         let userData = [];
         if (result) {
             for await (let user of result.garmentUser_id) {
-                let us = await User.findOne({ where: { id: user } });
+                let us = await User.findOne({
+                    where: { id: user }, attributes: {
+                        exclude: ["password", "createdAt", "updatedAt"]
+                    },
+                    include: [
+                        {
+                            model: UserRole,
+                            as: "user_role",
+                        }
+                    ]
+                });
                 userData.push(us)
             }
         }
@@ -237,11 +248,33 @@ const deleteGarment = async (req: Request, res: Response) => {
     }
 }
 
+const checkGarment = async (req: Request, res: Response) => {
+    try {
+        let whereCondition = {};
+        if (req.body.id) {
+            whereCondition = {
+                name: { [Op.iLike]: req.body.name },
+                id: { [Op.ne]: req.body.id }
+            }
+        } else {
+            whereCondition = {
+                name: { [Op.iLike]: req.body.name },
+            }
+        }
+        const result = await Garment.findOne({
+            where: whereCondition
+        });
+        res.sendSuccess(res, result ? { exist: true } : { exist: false });
+    } catch (error: any) {
+        return res.sendError(res, error.message);
+    }
+}
 
 export {
     createGarment,
     fetchGarmentPagination,
     fetchGarment,
     updateGarment,
-    deleteGarment
+    deleteGarment,
+    checkGarment
 };  

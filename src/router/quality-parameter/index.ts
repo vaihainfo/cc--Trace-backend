@@ -3,7 +3,10 @@ import {
     fetchQualityParameterPagination,
     fetchQualityParameter,
     exportQualityParameter,
-    exportSingleQualityParameter
+    exportSingleQualityParameter,
+    reportParameter,
+    reportCountryParameter,
+    reportDashBoardParameter
 } from "../../controllers/quality-parameter";
 
 import { Router } from "express";
@@ -15,5 +18,8 @@ router.get('/', fetchQualityParameterPagination);
 router.get('/get-value', fetchQualityParameter);
 router.get('/export', exportQualityParameter);
 router.get('/export-single', exportSingleQualityParameter);
+router.get('/graph', reportParameter);
+router.get('/graph-country', reportCountryParameter);
+router.get('/graph-dashboard', reportDashBoardParameter);
 
 export default router;

@@ -27,9 +27,10 @@ const createCooperative = async (req: Request, res: Response) => {
 
 const fetchCooperativePagination = async (req: Request, res: Response) => {
     const searchTerm = req.query.search || '';
-    const sortOrder = req.query.sort || 'asc';
+    const sortOrder = req.query.sort || 'desc';
     const page = Number(req.query.page) || 1;
     const limit = Number(req.query.limit) || 10;
+    const status = req.query.status || '';
     const offset = (page - 1) * limit;
     const whereCondition: any = {}
     try {
@@ -43,12 +44,15 @@ const fetchCooperativePagination = async (req: Request, res: Response) => {
                 { email: { [Op.iLike]: `%${searchTerm}%` } }// Search by email
             ];
         }
+        if (status === 'true') {
+            whereCondition.status = true
+        }
         //fetch data with pagination
         if (req.query.pagination === "true") {
             const { count, rows } = await Cooperative.findAndCountAll({
                 where: whereCondition,
                 order: [
-                    ['name', sortOrder], // Sort the results based on the 'name' field and the specified order
+                    ['id', sortOrder], // Sort the results based on the 'name' field and the specified order
                 ],
                 offset: offset,
                 limit: limit
@@ -58,7 +62,7 @@ const fetchCooperativePagination = async (req: Request, res: Response) => {
             const cooperative = await Cooperative.findAll({
                 where: whereCondition,
                 order: [
-                    ['name', sortOrder], // Sort the results based on the 'name' field and the specified order
+                    ['id', sortOrder], // Sort the results based on the 'name' field and the specified order
                 ],
             });
             return res.sendSuccess(res, cooperative);

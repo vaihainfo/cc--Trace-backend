@@ -7,7 +7,7 @@ import District from "../../../models/district.model";
 import Block from "../../../models/block.model";
 
 const fetchBlocks = async (req: Request, res: Response) => {
-  const { search } = req.query;
+  const { search, status } = req.query;
 
   const sortOrder = req.query.sort || "";
   //   const sortField = req.query.sortBy || '';
@@ -49,6 +49,10 @@ const fetchBlocks = async (req: Request, res: Response) => {
           "$district.state.country.county_name$": { [Op.iLike]: `%${search}%` },
         }, // Search by country name
       ];
+    }
+
+    if (status === 'true') {
+      whereCondition.block_status = true;
     }
 
     let queryOptions: any = {

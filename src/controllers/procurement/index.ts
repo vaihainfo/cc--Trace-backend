@@ -27,11 +27,13 @@ const createTransaction = async (req: Request, res: Response) => {
       block_id: req.body.blockId,
       village_id: req.body.villageId,
       farmer_id: req.body.farmerId,
+      farm_id: req.body.farmId,
       farmer_name: req.body.farmerName,
       brand_id: req.body.brandId,
       farmer_code: req.body.farmerCode,
       season_id: req.body.season,
       qty_purchased: req.body.qtyPurchased,
+      qty_stock: req.body.qtyPurchased,
       rate: req.body.rate,
       grade_id: req.body.grade,
       program_id: req.body.program,
@@ -42,7 +44,16 @@ const createTransaction = async (req: Request, res: Response) => {
       proof: req.body.proof,
       status: "Pending",
     };
+    let farm;
+    if (req.body.farmId) {
+      farm = await Farm.findByPk(req.body.farmId);
+      if (!farm) {
+        return res.sendError(res, "Farm is not present");
+      }
+      data.estimated_cotton = farm.total_estimated_cotton;
+      data.available_cotton = farm.total_estimated_cotton - (farm.cotton_transacted || 0);
 
+    }
     if (req.body.districtId) {
       const district = await District.findByPk(req.body.districtId, {
         include: [
@@ -59,6 +70,9 @@ const createTransaction = async (req: Request, res: Response) => {
     }
 
     const transaction = await Transaction.create(data);
+    let s = await Farm.update({
+      cotton_transacted: (farm.cotton_transacted || 0) + req.body.qtyPurchased
+    }, { where: { id: req.body.farmId } });
     res.sendSuccess(res, transaction);
   } catch (error) {
     console.log(error);
@@ -191,6 +205,10 @@ const fetchTransactions = async (req: Request, res: Response) => {
           model: Season,
           as: "season",
         },
+        {
+          model: Farm,
+          as: "farm",
+        },
       ],
     };
 
@@ -285,6 +303,10 @@ const fetchTransactionById = async (req: Request, res: Response) => {
           model: Season,
           as: "season",
         },
+        {
+          model: Farm,
+          as: "farm",
+        },
       ],
     };
 
@@ -369,26 +391,7 @@ const updateTransaction = async (req: Request, res: Response) => {
   }
 };
 
-const updateTransactionStatus = async (req: Request, res: Response) => {
-  try {
-    if (req.body.status !== 'Rejected' || req.body.status !== 'Accepted') {
-      return res.sendError(res, "INVALID_STATUS");
-    }
-    const data: any = {
-      status: req.body.status
-    };
 
-    const transaction = await Transaction.update(data, {
-      where: {
-        id: req.body.id,
-      },
-    });
-    res.sendSuccess(res, transaction);
-  } catch (error) {
-    console.log(error);
-    return res.sendError(res, "NOT_ABLE_TO_UPDATE");
-  }
-};
 
 const deleteTransaction = async (req: Request, res: Response) => {
   try {
@@ -518,10 +521,10 @@ const uploadTransactionBulk = async (req: Request, res: Response) => {
         let grade;
         let state;
         let block;
-        let district;
+        let district: any;
         let farmer;
         let village;
-
+        let farm: any
         if (data.season) {
           season = await Season.findOne({
             where: {
@@ -534,129 +537,139 @@ const uploadTransactionBulk = async (req: Request, res: Response) => {
               data: { farmerName: data.farmerName ? data.farmerName : '', farmerCode: data.farmerCode ? data.farmerCode : '' },
               message: "Season not found",
             });
-          }
-        }
-        if (data.ginner) {
-          ginner = await Ginner.findOne({
-            where: {
-              name: data.ginner,
-            },
-          });
-          if (!ginner) {
-            fail.push({
-              success: false,
-              data: { farmerName: data.farmerName ? data.farmerName : '', farmerCode: data.farmerCode ? data.farmerCode : '' },
-              message: "Ginner not found",
+          } else if (data.ginner) {
+            ginner = await Ginner.findOne({
+              where: {
+                name: data.ginner,
+              },
             });
-          }
-        }
-        if (data.country) {
-          country = await Country.findOne({
-            where: {
-              county_name: data.country,
-            },
-          });
+            if (!ginner) {
+              fail.push({
+                success: false,
+                data: { farmerName: data.farmerName ? data.farmerName : '', farmerCode: data.farmerCode ? data.farmerCode : '' },
+                message: "Ginner not found",
+              });
+            } else if (data.country) {
+              country = await Country.findOne({
+                where: {
+                  county_name: { [Op.iLike]: data.country },
+                },
+              });
 
-          if (!country) {
-            fail.push({
-              success: false,
-              data: { farmerName: data.farmerName ? data.farmerName : '', farmerCode: data.farmerCode ? data.farmerCode : '' },
-              message: "Country not found",
-            });
-          }
-        }
-        if (data.state) {
-          state = await State.findOne({
-            where: {
-              state_name: data.state,
-            },
-          });
+              if (!country) {
+                fail.push({
+                  success: false,
+                  data: { farmerName: data.farmerName ? data.farmerName : '', farmerCode: data.farmerCode ? data.farmerCode : '' },
+                  message: "Country not found",
+                });
+              } else {
+                if (data.state) {
+                  state = await State.findOne({
+                    where: {
+                      country_id: country.id,
+                      state_name: { [Op.iLike]: data.state },
+                    },
+                  });
+                  if (!state) {
+                    fail.push({
+                      success: false,
+                      data: { farmerName: data.farmerName ? data.farmerName : '', farmerCode: data.farmerCode ? data.farmerCode : '' },
+                      message: "State not found",
+                    });
+                  } else {
+                    if (data.district) {
+                      district = await District.findOne({
+                        where: {
+                          state_id: state.id,
+                          district_name: { [Op.iLike]: data.district },
+                        },
+                      });
 
-          if (!state) {
-            fail.push({
-              success: false,
-              data: { farmerName: data.farmerName ? data.farmerName : '', farmerCode: data.farmerCode ? data.farmerCode : '' },
-              message: "State not found",
-            });
-          }
-        }
-        if (data.district) {
-          district = await District.findOne({
-            where: {
-              district_name: data.district,
-            },
-          });
+                      if (!district) {
+                        fail.push({
+                          success: false,
+                          data: { farmerName: data.farmerName ? data.farmerName : '', farmerCode: data.farmerCode ? data.farmerCode : '' },
+                          message: "District not found",
+                        });
+                      } else {
+                        if (data.block) {
+                          block = await Block.findOne({
+                            where: {
+                              district_id: district.id,
+                              block_name: { [Op.iLike]: data.block },
+                            },
+                          });
 
-          if (!district) {
-            fail.push({
-              success: false,
-              data: { farmerName: data.farmerName ? data.farmerName : '', farmerCode: data.farmerCode ? data.farmerCode : '' },
-              message: "District not found",
-            });
-          }
-        }
+                          if (!block) {
+                            fail.push({
+                              success: false,
+                              data: { farmerName: data.farmerName ? data.farmerName : '', farmerCode: data.farmerCode ? data.farmerCode : '' },
+                              message: "Block not found",
+                            });
+                          } else {
+                            if (data.village) {
+                              village = await Village.findOne({
+                                where: {
+                                  block_id: block.id,
+                                  village_name: { [Op.iLike]: data.village },
+                                },
+                              });
 
-        if (data.block) {
-          block = await Block.findOne({
-            where: {
-              block_name: data.block,
-            },
-          });
+                              if (!village) {
+                                fail.push({
+                                  success: false,
+                                  data: { farmerName: data.farmerName ? data.farmerName : '', farmerCode: data.farmerCode ? data.farmerCode : '' },
+                                  message: "Village not found",
+                                });
+                              } else if (data.farmerCode) {
+                                farmer = await Farmer.findOne({
+                                  where: {
+                                    village_id: village.id,
+                                    code: data.farmerCode,
+                                  },
+                                });
 
-          if (!block) {
-            fail.push({
-              success: false,
-              data: { farmerName: data.farmerName ? data.farmerName : '', farmerCode: data.farmerCode ? data.farmerCode : '' },
-              message: "Block not found",
-            });
-          }
-        }
+                                if (!farmer) {
+                                  fail.push({
+                                    success: false,
+                                    data: { farmerName: data.farmerName ? data.farmerName : '', farmerCode: data.farmerCode ? data.farmerCode : '' },
+                                    message: "farmer not found",
+                                  });
+                                } else if (data.grade) {
+                                  grade = await CropGrade.findOne({
+                                    where: {
+                                      cropGrade: { [Op.iLike]: data.grade },
+                                    },
+                                  });
+                                  if (!grade) {
+                                    fail.push({
+                                      success: false,
+                                      data: { farmerName: data.farmerName ? data.farmerName : '', farmerCode: data.farmerCode ? data.farmerCode : '' },
+                                      message: "grade not found",
+                                    });
+                                  } else {
+                                    console.log(farmer.id, season.id)
+                                    farm = await Farm.findOne({ where: { farmer_id: farmer.id, season_id: season.id } });
+                                    if (!farm) {
+                                      fail.push({
+                                        success: false,
+                                        data: { farmerName: data.farmerName ? data.farmerName : '', farmerCode: data.farmerCode ? data.farmerCode : '' },
+                                        message: "Farm data does not exist",
+                                      });
 
-        if (data.village) {
-          village = await Village.findOne({
-            where: {
-              village_name: data.village,
-            },
-          });
-
-          if (!village) {
-            fail.push({
-              success: false,
-              data: { farmerName: data.farmerName ? data.farmerName : '', farmerCode: data.farmerCode ? data.farmerCode : '' },
-              message: "Village not found",
-            });
-          }
-        }
-
-        if (data.farmerName) {
-          farmer = await Farmer.findOne({
-            where: {
-              firstName: data.farmerName,
-            },
-          });
-
-          if (!farmer) {
-            fail.push({
-              success: false,
-              data: { farmerName: data.farmerName ? data.farmerName : '', farmerCode: data.farmerCode ? data.farmerCode : '' },
-              message: "farmer not found",
-            });
-          }
-        }
-
-        if (data.grade) {
-          grade = await CropGrade.findOne({
-            where: {
-              cropGrade: data.grade,
-            },
-          });
-
-          if (!grade) {
-            fail.push({
-              success: false,
-              data: { farmerName: data.farmerName ? data.farmerName : '', farmerCode: data.farmerCode ? data.farmerCode : '' },
-              message: "grade not found",
-            });
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
           }
         }
 
@@ -669,9 +682,10 @@ const uploadTransactionBulk = async (req: Request, res: Response) => {
           country &&
           district &&
           ginner &&
-          season
+          season &&
+          farm
         ) {
-          const transactionData = {
+          let transactionData: any = {
             date: new Date(data.date).toISOString(),
             country_id: country.id,
             state_id: state.id,
@@ -679,11 +693,13 @@ const uploadTransactionBulk = async (req: Request, res: Response) => {
             block_id: block.id,
             village_id: village.id,
             farmer_id: farmer.id,
+            farm_id: farm.id,
             farmer_name: farmer.firstName,
             brand_id: farmer.brand_id ? farmer.brand_id : null,
             farmer_code: data.farmerCode,
             season_id: season.id,
             qty_purchased: data.qtyPurchased,
+            qty_stock: data.qtyPurchased,
             rate: data.rate,
             grade_id: grade.id,
             program_id: farmer?.program_id,
@@ -694,7 +710,18 @@ const uploadTransactionBulk = async (req: Request, res: Response) => {
             proof: data.proof ? data.proof : "",
             status: 'Pending',
           };
+          let available_cotton = farm.total_estimated_cotton - farm.cotton_transacted;
+          transactionData.estimated_cotton = farm.total_estimated_cotton;
+          transactionData.available_cotton = available_cotton;
+          if (data.qtyPurchased > available_cotton) {
+            transactionData.qty_purchased = available_cotton;
+            transactionData.qty_stock = available_cotton;
+            transactionData.total_amount = available_cotton * data.rate;
+          }
           const result = await Transaction.create(transactionData);
+          let s = await Farm.update({
+            cotton_transacted: (farm.cotton_transacted || 0) + transactionData.qtyPurchased
+          }, { where: { id: farm.id } });
           pass.push({
             success: true,
             data: result,
@@ -705,7 +732,6 @@ const uploadTransactionBulk = async (req: Request, res: Response) => {
     }
     res.sendSuccess(res, { pass, fail });
   } catch (error) {
-    console.log(error);
     return res.sendError(res, "ERR_INTERNAL_SERVER_ERROR");
   }
 };
@@ -715,6 +741,67 @@ const exportProcurement = async (req: Request, res: Response) => {
   const excelFilePath = path.join("./upload", "procurement.xlsx");
 
   try {
+    const searchTerm = req.query.search || "";
+    let whereCondition: any = {};
+    const { status, countryId, brandId, farmGroupId, seasonId, programId, ginnerId }: any = req.query;
+    if (countryId) {
+      const idArray: number[] = countryId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.country_id = { [Op.in]: idArray };
+    }
+    if (brandId) {
+      const idArray: number[] = brandId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.brand_id = { [Op.in]: idArray };
+    }
+    if (farmGroupId) {
+      const idArray: number[] = farmGroupId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition["$farmer.farmGroup_id$"] = { [Op.in]: idArray };
+    }
+    if (seasonId) {
+      const idArray: number[] = seasonId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.season_id = { [Op.in]: idArray };
+    }
+
+    if (programId) {
+      const idArray: number[] = programId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.program_id = { [Op.in]: idArray };
+    }
+
+    if (ginnerId) {
+      const idArray: number[] = ginnerId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.mapped_ginner = { [Op.in]: idArray };
+    }
+    if (status) {
+      whereCondition.status = status;
+    }
+
+    // apply search
+    if (searchTerm) {
+      whereCondition[Op.or] = [
+        { farmer_code: { [Op.iLike]: `%${searchTerm}%` } },
+        { total_amount: { [Op.iLike]: `%${searchTerm}%` } },
+        { "$block.block_name$": { [Op.iLike]: `%${searchTerm}%` } },
+        { "$country.county_name$": { [Op.iLike]: `%${searchTerm}%` } },
+        { "$state.state_name$": { [Op.iLike]: `%${searchTerm}%` } },
+        { "$village.village_name$": { [Op.iLike]: `%${searchTerm}%` } },
+        { "$district.district_name$": { [Op.iLike]: `%${searchTerm}%` } },
+        // { "$farmer.firstName$": { [Op.iLike]: `%${searchTerm}%` } },
+        { farmer_name: { [Op.iLike]: `%${searchTerm}%` } },
+        { "$program.program_name$": { [Op.iLike]: `%${searchTerm}%` } },
+        { "$ginner.name$": { [Op.iLike]: `%${searchTerm}%` } },
+      ];
+    }
     // Create the excel workbook file
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet("Sheet1");
@@ -737,7 +824,7 @@ const exportProcurement = async (req: Request, res: Response) => {
     ]);
     headerRow.font = { bold: true };
     const transaction = await Transaction.findAll({
-      where: {},
+      where: whereCondition,
       include: [
         {
           model: Village,
@@ -918,6 +1005,5 @@ export {
   deleteBulkTransactions,
   exportProcurement,
   fetchTransactionById,
-  updateTransactionStatus,
   exportGinnerProcurement
 };

@@ -72,7 +72,8 @@ const createCropTypes = async (req: Request, res: Response) => {
 
 const fetchCropTypePagination = async (req: Request, res: Response) => {
     const searchTerm = req.query.search || '';
-    const sortOrder = req.query.sort || 'asc';
+    const status = req.query.status || '';
+    const sortOrder = req.query.sort || 'desc';
     const page = Number(req.query.page) || 1;
     const limit = Number(req.query.limit) || 10;
     const cropId = req.query.cropId;
@@ -89,6 +90,9 @@ const fetchCropTypePagination = async (req: Request, res: Response) => {
         if (cropId) {
             whereCondition.crop_id = cropId;
         }
+        if (status === 'true') {
+            whereCondition.cropType_status = true
+        }
         //fetch data with pagination
         if (req.query.pagination === 'true') {
             const { count, rows } = await CropType.findAndCountAll({
@@ -98,7 +102,7 @@ const fetchCropTypePagination = async (req: Request, res: Response) => {
                         model: Crop, as: 'crop'
                     }],
                 order: [
-                    ['cropType_name', sortOrder], // Sort the results based on the 'cropType_name' field and the specified order
+                    ['id', sortOrder], // Sort the results based on the 'cropType_name' field and the specified order
                 ],
                 offset: offset,
                 limit: limit
@@ -112,7 +116,7 @@ const fetchCropTypePagination = async (req: Request, res: Response) => {
                         model: Crop, as: 'crop'
                     }],
                 order: [
-                    ['cropType_name', sortOrder], // Sort the results based on the 'username' field and the specified order
+                    ['id', sortOrder], // Sort the results based on the 'username' field and the specified order
                 ],
             });
             return res.sendSuccess(res, cropType);

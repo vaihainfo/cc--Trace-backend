@@ -135,6 +135,12 @@ const GarmentSales = db.define('garment_sales', {
   status: {
     type: DataTypes.STRING
   },
+  accept_date: {
+    type: DataTypes.DATE
+  },
+  qr: {
+    type: DataTypes.STRING
+  }
 });
 
 GarmentSales.belongsTo(Garment, {

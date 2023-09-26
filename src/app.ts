@@ -54,6 +54,9 @@ import garmentSalesRouter from "./router/garment";
 import qualityParameterRouter from "./router/quality-parameter";
 import ginnerProcessRouter from "./router/ginner";
 import spinnerProcessRouter from "./router/spinner";
+import weaverProcessRouter from "./router/weaver";
+import knitterProcessRouter from "./router/knitter";
+import supplyChainRouter from "./router/supply-chain";
 import errorMiddleware from "./middleware/error";
 import setInterface from "./middleware/interface";
 
@@ -131,6 +134,9 @@ app.use("/email", emailManagementRouter);
 app.use("/garment-sales", garmentSalesRouter);
 app.use("/ginner-process", ginnerProcessRouter);
 app.use("/spinner-process", spinnerProcessRouter);
+app.use("/weaver-process", weaverProcessRouter);
+app.use("/knitter-process", knitterProcessRouter);
+app.use("/supply-chain", supplyChainRouter);
 app.use("/quality-parameter", qualityParameterRouter);
 
 app.use(errorMiddleware);

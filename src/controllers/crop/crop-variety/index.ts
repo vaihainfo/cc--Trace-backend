@@ -66,8 +66,9 @@ const createCropVarieties = async (req: Request, res: Response) => {
 // }
 
 const fetchCropVarietyPagination = async (req: Request, res: Response) => {
+    const status = req.query.status || '';
     const searchTerm = req.query.search || '';
-    const sortOrder = req.query.sort || 'asc';
+    const sortOrder = req.query.sort || 'desc';
     const page = Number(req.query.page) || 1;
     const limit = Number(req.query.limit) || 10;
     const cropTypeId = req.query.cropTypeId;
@@ -85,6 +86,10 @@ const fetchCropVarietyPagination = async (req: Request, res: Response) => {
             whereCondition.cropType_id = cropTypeId;
         }
 
+        if (status === 'true') {
+            whereCondition.cropVariety_status = true
+        }
+
         if (req.query.pagination === "true") {
             //fetch data with pagination
             const { count, rows } = await CropVariety.findAndCountAll({
@@ -94,7 +99,7 @@ const fetchCropVarietyPagination = async (req: Request, res: Response) => {
                         model: CropType, as: 'cropType', include: [{ model: Crop, as: 'crop', }]
                     }],
                 order: [
-                    ['cropVariety', sortOrder], // Sort the results based on the 'username' field and the specified order
+                    ['id', sortOrder], // Sort the results based on the 'username' field and the specified order
                 ],
                 offset: offset,
                 limit: limit
@@ -108,7 +113,7 @@ const fetchCropVarietyPagination = async (req: Request, res: Response) => {
                         model: CropType, as: 'cropType', include: [{ model: Crop, as: 'crop', }]
                     }],
                 order: [
-                    ['cropVariety', sortOrder], // Sort the results based on the 'username' field and the specified order
+                    ['id', sortOrder], // Sort the results based on the 'username' field and the specified order
                 ],
             });
             return res.sendSuccess(res, cropVariety);

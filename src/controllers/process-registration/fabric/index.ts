@@ -149,8 +149,8 @@ const fetchFabric = async (req: Request, res: Response) => {
             ]
         });
 
-        if(!result){
-        return res.sendError(res, "FABRIC_NOT_EXISTS");
+        if (!result) {
+            return res.sendError(res, "FABRIC_NOT_EXISTS");
         }
 
         const userData = await User.findAll({
@@ -169,8 +169,8 @@ const fetchFabric = async (req: Request, res: Response) => {
         const fabricInfo = {
             ...result.dataValues,
             userData
-          };
-          return res.sendSuccess(res, fabricInfo);
+        };
+        return res.sendSuccess(res, fabricInfo);
 
     } catch (error) {
         console.log(error);
@@ -250,11 +250,34 @@ const deleteFabric = async (req: Request, res: Response) => {
     }
 }
 
+const checkFabric = async (req: Request, res: Response) => {
+    try {
+        let whereCondition = {};
+        if (req.body.id) {
+            whereCondition = {
+                name: { [Op.iLike]: req.body.name },
+                id: { [Op.ne]: req.body.id }
+            }
+        } else {
+            whereCondition = {
+                name: { [Op.iLike]: req.body.name },
+            }
+        }
+        const result = await Fabric.findOne({
+            where: whereCondition
+        });
+        res.sendSuccess(res, result ? { exist: true } : { exist: false });
+    } catch (error: any) {
+        return res.sendError(res, error.message);
+    }
+}
+
 
 export {
     createFabric,
     fetchFabricPagination,
     fetchFabric,
     updateFabric,
-    deleteFabric
+    deleteFabric,
+    checkFabric
 };  

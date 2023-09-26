@@ -1,5 +1,5 @@
-import { DataTypes  } from 'sequelize';
-import db  from '../util/dbConn';
+import { DataTypes } from 'sequelize';
+import db from '../util/dbConn';
 
 import Country from './country.model';
 import State from './state.model';
@@ -12,8 +12,9 @@ import Program from './program.model';
 import Brand from './brand.model';
 import Season from './season.model';
 import Ginner from './ginner.model';
+import Farm from './farm.model';
 
-const Transaction = db.define('transactions',{
+const Transaction = db.define('transactions', {
   id: {
     type: DataTypes.INTEGER,
     autoIncrement: true,
@@ -127,6 +128,21 @@ const Transaction = db.define('transactions',{
     allowNull: false,
     type: DataTypes.STRING
   },
+  accept_date: {
+    type: DataTypes.DATE
+  },
+  farm_id: {
+    type: DataTypes.INTEGER
+  },
+  estimated_cotton: {
+    type: DataTypes.DOUBLE
+  },
+  available_cotton: {
+    type: DataTypes.DOUBLE
+  },
+  qty_stock: {
+    type: DataTypes.DOUBLE
+  },
 });
 
 Transaction.belongsTo(Country, {
@@ -182,6 +198,11 @@ Transaction.belongsTo(Season, {
 Transaction.belongsTo(Ginner, {
   foreignKey: "mapped_ginner",
   as: "ginner",
+});
+
+Transaction.belongsTo(Farm, {
+  foreignKey: "farm_id",
+  as: "farm",
 });
 
 Transaction.sync();

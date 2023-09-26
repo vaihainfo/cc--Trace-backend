@@ -44,15 +44,22 @@ const fetchFarmsPagination = async (req: Request, res: Response) => {
     const page = Number(req.query.page) || 1;
     const limit = Number(req.query.limit) || 10;
     const offset = (page - 1) * limit;
+    const status = req.query.status || '';
+    const whereCondition: any = {};
     try {
+
+        if (status === 'true') {
+            whereCondition.farmItem_status = true;
+        }
+        if (searchTerm) {
+            whereCondition.farmItem = { [Op.iLike]: `%${searchTerm}%` }
+        }
         //fetch data with pagination
         if (req.query.pagination === "true") {
             const { count, rows } = await FarmItem.findAndCountAll({
-                where: {
-                    farmItem: { [Op.iLike]: `%${searchTerm}%` },
-                },
+                where: whereCondition,
                 order: [
-                    ['farmItem', sortOrder], // Sort the results based on the 'username' field and the specified order
+                    ['id', sortOrder], // Sort the results based on the 'username' field and the specified order
                 ],
                 offset: offset,
                 limit: limit
@@ -60,11 +67,9 @@ const fetchFarmsPagination = async (req: Request, res: Response) => {
             return res.sendPaginationSuccess(res, rows, count);
         } else {
             const farms = await FarmItem.findAll({
-                where: {
-                    farmItem: { [Op.iLike]: `%${searchTerm}%` },
-                },
+                where: whereCondition,
                 order: [
-                    ['farmItem', sortOrder], // Sort the results based on the 'username' field and the specified order
+                    ['id', sortOrder], // Sort the results based on the 'username' field and the specified order
                 ],
             });
             return res.sendSuccess(res, farms);

@@ -3,7 +3,8 @@ import {
     fetchWeaverPagination,
     updateWeaver,
     deleteWeaver,
-    fetchWeaver
+    fetchWeaver,
+    checkWeaver
 } from "../../controllers/process-registration/weaver";
 
 import { Router } from "express";
@@ -15,6 +16,6 @@ router.get('/get-weaver', fetchWeaver);
 router.post('/', createWeaver);
 router.put('/', updateWeaver);
 router.delete('/', deleteWeaver);
-
+router.post('/check-weaver', checkWeaver);
 
 export default router;  

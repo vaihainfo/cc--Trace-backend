@@ -44,6 +44,7 @@ const fetchFarmGroupPagination = async (req: Request, res: Response) => {
   const limit = Number(req.query.limit) || 10;
   const brandId = req.query.brandId as string;
   const offset = (page - 1) * limit;
+  const status = req.query.status || '';
   const whereCondition: any = {};
   try {
     if (searchTerm) {
@@ -51,7 +52,9 @@ const fetchFarmGroupPagination = async (req: Request, res: Response) => {
         { name: { [Op.iLike]: `%${searchTerm}%` } }, // Search by crop Type
       ];
     }
-
+    if (status === 'true') {
+      whereCondition.status = true;
+    }
     if (brandId) {
       const idArray: number[] = brandId
         .split(",")
