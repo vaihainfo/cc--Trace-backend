@@ -28,6 +28,7 @@ const fetchVideoNamePagination = async (req: Request, res: Response) => {
     const limit = Number(req.query.limit) || 10;
     const offset = (page - 1) * limit;
     const brandId = req.query.brandId;
+    const processor = req.query.processor;
     const whereCondition: any = {}
     try {
         if (searchTerm) {
@@ -40,6 +41,10 @@ const fetchVideoNamePagination = async (req: Request, res: Response) => {
 
         if (brandId) {
             whereCondition.brand = { [Op.contains]: [brandId] }
+        }
+
+        if (processor) {
+            whereCondition.processor = { [Op.iLike]: processor }
         }
 
         //fetch data with pagination

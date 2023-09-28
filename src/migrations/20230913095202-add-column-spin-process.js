@@ -10,26 +10,26 @@ module.exports = {
      * await queryInterface.createTable('users', { id: Sequelize.INTEGER });
      */
     await Promise.all([
-      queryInterface.removeColumn('spin_process', 'cottonmix_type'),
-      queryInterface.removeColumn('spin_process', 'cottonmix_qty')
+      queryInterface.removeColumn('spin_processes', 'cottonmix_type'),
+      queryInterface.removeColumn('spin_processes', 'cottonmix_qty')
     ])
     return await Promise.all([
-      queryInterface.addColumn('spin_process', 'cottonmix_type', {
+      queryInterface.addColumn('spin_processes', 'cottonmix_type', {
         type: Sequelize.ARRAY(Sequelize.INTEGER)
       }),
-      queryInterface.addColumn('spin_process', 'cottonmix_qty', {
+      queryInterface.addColumn('spin_processes', 'cottonmix_qty', {
         type: Sequelize.ARRAY(Sequelize.INTEGER)
       }),
-      queryInterface.addColumn('spin_process', 'accept_date', {
+      queryInterface.addColumn('spin_processes', 'accept_date', {
         type: Sequelize.DATE
       }),
-      queryInterface.addColumn('spin_process', 'tot_box_user', {
+      queryInterface.addColumn('spin_processes', 'tot_box_user', {
         type: Sequelize.INTEGER
       }),
-      queryInterface.addColumn('spin_process', 'display_order', {
+      queryInterface.addColumn('spin_processes', 'display_order', {
         type: Sequelize.INTEGER
       }),
-      queryInterface.addColumn('spin_process', 'qr', {
+      queryInterface.addColumn('spin_processes', 'qr', {
         type: Sequelize.STRING
       }),
 
@@ -44,10 +44,10 @@ module.exports = {
      * await queryInterface.dropTable('users');
      */
     return await Promise.all([
-      queryInterface.removeColumn('spin_process', 'accept_date'),
-      queryInterface.removeColumn('spin_process', 'tot_box_user'),
-      queryInterface.removeColumn('spin_process', 'display_order'),
-      queryInterface.removeColumn('spin_process', 'qr')
+      queryInterface.removeColumn('spin_processes', 'accept_date'),
+      queryInterface.removeColumn('spin_processes', 'tot_box_user'),
+      queryInterface.removeColumn('spin_processes', 'display_order'),
+      queryInterface.removeColumn('spin_processes', 'qr')
     ])
   }
 };

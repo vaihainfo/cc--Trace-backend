@@ -7,7 +7,7 @@ import Program from './program.model';
 import Season from './season.model';
 import YarnCount from './yarn-count.model';
 
-const SpinProcess = db.define('spin_process', {
+const SpinProcess = db.define('spin_processes', {
   id: {
     type: DataTypes.INTEGER,
     autoIncrement: true,

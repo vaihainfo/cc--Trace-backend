@@ -9,9 +9,8 @@ module.exports = {
      * Example:
      * await queryInterface.createTable('users', { id: Sequelize.INTEGER });
      */
-    await queryInterface.removeColumn('spin_processes', 'other_mix')
-    await queryInterface.addColumn('spin_processes', 'other_mix', {
-      type: Sequelize.BOOLEAN
+    return queryInterface.addColumn('process_training_process_statuses', 'subject', {
+      type: Sequelize.STRING
     })
   },
 
@@ -22,5 +21,6 @@ module.exports = {
      * Example:
      * await queryInterface.dropTable('users');
      */
+    return queryInterface.removeColumn('process_training_process_statuses', 'subject')
   }
 };

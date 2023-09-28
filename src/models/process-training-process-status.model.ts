@@ -42,6 +42,9 @@ const ProcessTrainingProcessStatus = db.define('process_training_process_statuse
   feedback: {
     type: DataTypes.STRING,
   },
+  subject: {
+    type: DataTypes.STRING
+  }
 });
 
 ProcessTrainingProcessStatus.belongsTo(Spinner, {

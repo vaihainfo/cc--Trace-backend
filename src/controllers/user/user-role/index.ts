@@ -5,6 +5,7 @@ import UserPrivilege from "../../../models/userprivilege.model";
 import UserCategory from "../../../models/user-category.model";
 import MenuList from "../../../models/menu-list.model";
 import Brand from "../../../models/brand.model";
+import User from "../../../models/user.model";
 
 //create user role
 const createUserRole = async (req: Request, res: Response) => {
@@ -22,7 +23,8 @@ const createUserRole = async (req: Request, res: Response) => {
             status: true
         };
         const role = await UserRole.create(data);
-        if(role){
+        if (role) {
+
             const menuData = req.body.privileges?.map((obj: any) => {
                 return {
                     userRole_id: role.id,
@@ -34,12 +36,42 @@ const createUserRole = async (req: Request, res: Response) => {
                     status: true,
                 };
             })
-            const privileges = await UserPrivilege.bulkCreate(menuData);
+            let privileges
+            if (menuData.length > 0) {
+                privileges = await UserPrivilege.bulkCreate(menuData);
+            }
+
+            if (req.body.brandId) {
+                let brand = await Brand.findByPk(req.body.brandId);
+                for await (let user of brand.dataValues.brandUser_id) {
+                    let update = await User.update({ role: role.id }, { where: { id: user } })
+                }
+            }
+
             res.sendSuccess(res, { role, privileges });
         }
-    } catch (error) {
+    } catch (error: any) {
         console.log(error)
         return res.sendError(res, "ERR_NOT_ABLE_TO_CREATE_ROLE");
+    }
+}
+
+const checkRoleExists = async (req: Request, res: Response) => {
+    try {
+        let whereCondition = {}
+        if (req.body.roleId) {
+            whereCondition = { user_role: { [Op.iLike]: req.body.userRole }, id: { [Op.ne]: req.body.roleId } }
+        } else {
+            whereCondition = { user_role: { [Op.iLike]: req.body.userRole } }
+        }
+
+        let role = await UserRole.findOne({ where: whereCondition })
+
+        return res.sendSuccess(res, role ? { exist: true } : { exist: false })
+
+    } catch (error) {
+        console.log(error)
+        return res.sendError(res, "ERR_NOT_ABLE_TO_CHECk_ROLE");
     }
 }
 
@@ -66,7 +98,7 @@ const getUserRoles = async (req: Request, res: Response) => {
                 {
                     model: UserCategory,
                     as: 'userCategory'
-                },{
+                }, {
                     model: Brand,
                     as: 'brand',
                     attributes: ['id', 'brand_name'],
@@ -150,7 +182,8 @@ const updateUserRole = async (req: Request, res: Response) => {
             user_role: req.body.userRole
         };
 
-        
+
+
         for await (const privilege of req.body.privileges) {
             const existingPrivilege = await UserPrivilege.findOne({
                 where: {
@@ -158,8 +191,6 @@ const updateUserRole = async (req: Request, res: Response) => {
                     menu_id: privilege.menuId,
                 },
             });
-
-            console.log(existingPrivilege)
 
             if (existingPrivilege) {
                 let update = await UserPrivilege.update({
@@ -188,20 +219,30 @@ const updateUserRole = async (req: Request, res: Response) => {
                 where: { id: roleId },
                 returning: true,
             })
+        if (req.body.brandId) {
+            let brand = await Brand.findByPk(req.body.brandId);
+            for await (let user of brand.dataValues.brandUser_id) {
+                let update = await User.update({ role: roleId }, { where: { id: user } })
+            }
+        }
         if (rowsUpdated === 0) {
             return res.sendError(res, "ERR_ROLE_NOT_FOUND");
         }
 
-         return res.sendSuccess(res, rowsUpdated);
-      }catch (error) {
-          console.log(error)
-          return res.sendError(res, "ERR_ROLE_NOT_UPDATED");
-        }
-  }
+        return res.sendSuccess(res, rowsUpdated);
+    } catch (error) {
+        console.log(error)
+        return res.sendError(res, "ERR_ROLE_NOT_UPDATED");
+    }
+}
 
 
 const deleteUserRole = async (req: Request, res: Response) => {
     try {
+        let count = await User.count({ where: { role: req.body.id } })
+        if (count > 0) {
+            return res.sendError(res, 'Not possible to delete this role since some users are associated to this role.')
+        }
         const userRole = await UserRole.destroy({
             where: {
                 id: req.body.id
@@ -214,4 +255,4 @@ const deleteUserRole = async (req: Request, res: Response) => {
 }
 
 
-export { createUserRole, getUserRoles, getUserRole, updateUserRole, deleteUserRole }
+export { createUserRole, getUserRoles, getUserRole, updateUserRole, deleteUserRole, checkRoleExists }

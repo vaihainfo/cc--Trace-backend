@@ -56,6 +56,7 @@ import ginnerProcessRouter from "./router/ginner";
 import spinnerProcessRouter from "./router/spinner";
 import weaverProcessRouter from "./router/weaver";
 import knitterProcessRouter from "./router/knitter";
+import traderProcessRouter from "./router/trader";
 import supplyChainRouter from "./router/supply-chain";
 import errorMiddleware from "./middleware/error";
 import setInterface from "./middleware/interface";
@@ -138,6 +139,7 @@ app.use("/weaver-process", weaverProcessRouter);
 app.use("/knitter-process", knitterProcessRouter);
 app.use("/supply-chain", supplyChainRouter);
 app.use("/quality-parameter", qualityParameterRouter);
+app.use("/trader-process", traderProcessRouter);
 
 app.use(errorMiddleware);
 

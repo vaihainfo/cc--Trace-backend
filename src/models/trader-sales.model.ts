@@ -1,25 +1,23 @@
 import { DataTypes } from 'sequelize';
 import db from '../util/dbConn';
-
-import Garment from './garment.model';
+import Trader from './trader.model';
+import Brand from './brand.model';
 import Embroidering from './embroidering.model';
-import Program from './program.model';
 import Season from './season.model';
 import Department from './department.model';
-import Brand from './brand.model';
-import Trader from './trader.model';
+import Program from './program.model';
 
-const GarmentSales = db.define('garment_sales', {
+const TraderSales = db.define('trader_sales', {
   id: {
-    type: DataTypes.INTEGER,
-    autoIncrement: true,
     allowNull: false,
-    primaryKey: true
+    autoIncrement: true,
+    primaryKey: true,
+    type: DataTypes.INTEGER
   },
-  garment_id: {
+  trader_id: {
     type: DataTypes.INTEGER,
     foreignKey: true,
-    references: { model: 'garments', key: 'id' },
+    references: { model: 'traders', key: 'id' },
     onDelete: 'CASCADE',
     allowNull: false,
   },
@@ -36,7 +34,6 @@ const GarmentSales = db.define('garment_sales', {
     type: DataTypes.INTEGER
   },
   department_id: {
-    allowNull: false,
     type: DataTypes.INTEGER
   },
   order_ref: {
@@ -49,7 +46,7 @@ const GarmentSales = db.define('garment_sales', {
   buyer_id: {
     type: DataTypes.INTEGER
   },
-  trader_id: {
+  processor_id: {
     type: DataTypes.INTEGER
   },
   processor_name: {
@@ -65,29 +62,9 @@ const GarmentSales = db.define('garment_sales', {
     type: DataTypes.DOUBLE
   },
   total_fabric_length: {
-    allowNull: false,
     type: DataTypes.DOUBLE
   },
-  transaction_via_trader: {
-    allowNull: false,
-    type: DataTypes.BOOLEAN
-  },
-  transaction_agent: {
-    type: DataTypes.STRING
-  },
-  garment_type: {
-    allowNull: false,
-    type: DataTypes.STRING
-  },
-  style_mark_no: {
-    allowNull: false,
-    type: DataTypes.STRING
-  },
-  garment_size: {
-    allowNull: false,
-    type: DataTypes.STRING
-  },
-  color: {
+  batch_lot_no: {
     type: DataTypes.STRING
   },
   no_of_pieces: {
@@ -125,11 +102,13 @@ const GarmentSales = db.define('garment_sales', {
   delivery_notes: {
     type: DataTypes.STRING
   },
+  total_qty: {
+    type: DataTypes.DOUBLE
+  },
   qty_stock: {
     type: DataTypes.DOUBLE
   },
   embroidering_required: {
-    allowNull: false,
     type: DataTypes.BOOLEAN
   },
   embroidering_id: {
@@ -139,50 +118,48 @@ const GarmentSales = db.define('garment_sales', {
   status: {
     type: DataTypes.STRING
   },
-  accept_date: {
-    type: DataTypes.DATE
-  },
   qr: {
-    type: DataTypes.STRING
+    type: DataTypes.STRING,
+  },
+  accept_date: {
+    type: DataTypes.DATE,
   }
 });
 
-GarmentSales.belongsTo(Garment, {
-  foreignKey: "garment_id",
-  as: "garment",
-});
 
-GarmentSales.belongsTo(Program, {
+TraderSales.belongsTo(Program, {
   foreignKey: "program_id",
   as: "program",
 });
 
-GarmentSales.belongsTo(Department, {
+TraderSales.belongsTo(Department, {
   foreignKey: "department_id",
   as: "department",
 });
 
-GarmentSales.belongsTo(Season, {
+TraderSales.belongsTo(Season, {
   foreignKey: "season_id",
   as: "season",
 });
 
-GarmentSales.belongsTo(Embroidering, {
+TraderSales.belongsTo(Embroidering, {
   foreignKey: "embroidering_id",
   as: "embroidering",
 });
 
-GarmentSales.belongsTo(Trader, {
+TraderSales.belongsTo(Trader, {
   foreignKey: "trader_id",
   as: "trader",
 });
 
 
-GarmentSales.belongsTo(Brand, {
+TraderSales.belongsTo(Brand, {
   foreignKey: "buyer_id",
   as: "buyer",
 });
 
-GarmentSales.sync();
+TraderSales.sync();
 
-export default GarmentSales;
+export default TraderSales;
+
+

@@ -1,7 +1,7 @@
 import { Router } from "express";
-import {createUserCategory, getUserCategories} from "../../controllers/user/user-category";
+import { createUserCategory, getUserCategories } from "../../controllers/user/user-category";
 import { createMenuItem, getMenuList } from "../../controllers/user/user-menu";
-import { createUserRole, deleteUserRole, getUserRole, getUserRoles, updateUserRole } from "../../controllers/user/user-role";
+import { checkRoleExists, createUserRole, deleteUserRole, getUserRole, getUserRoles, updateUserRole } from "../../controllers/user/user-role";
 import accessControl from "../../middleware/access-control";
 import { getUserInfo } from "../../controllers/user/user-details";
 import { createUser, deleteUser, fetchUser, fetchUsers, updateUser } from "../../controllers/user/user-management";
@@ -19,6 +19,7 @@ router.get("/get-user-roles", getUserRoles);
 router.get("/get-user-role", getUserRole);
 router.put("/update-user-role", updateUserRole);
 router.delete("/delete-user-role", deleteUserRole);
+router.post("/check-role", checkRoleExists);
 
 router.post("/create-user", createUser);
 router.get("/get-users", fetchUsers);

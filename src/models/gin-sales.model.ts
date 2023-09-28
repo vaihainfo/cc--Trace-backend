@@ -4,6 +4,7 @@ import db from '../util/dbConn';
 import Ginner from './ginner.model';
 import Season from './season.model';
 import Program from './program.model';
+import Spinner from './spinner.model';
 
 const GinSales = db.define('gin_sales', {
   id: {
@@ -147,6 +148,11 @@ const GinSales = db.define('gin_sales', {
 GinSales.belongsTo(Ginner, {
   foreignKey: "ginner_id",
   as: "ginner",
+});
+
+GinSales.belongsTo(Spinner, {
+  foreignKey: "buyer",
+  as: "buyerdata",
 });
 
 GinSales.belongsTo(Season, {

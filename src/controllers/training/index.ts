@@ -265,6 +265,7 @@ const deleteTraining = async (req: Request, res: Response) => {
                 id: req.body.id
             }
         });
+        const result = await ProcessTrainingProcessStatus.destroy({ where: { process_training_id: req.body.id } });
         res.sendSuccess(res, { training });
     } catch (error: any) {
         return res.sendError(res, error.message);
@@ -291,6 +292,7 @@ const fecthTrainingStatus = async (req: Request, res: Response) => {
                 { '$process-training.state.state_name$': { [Op.iLike]: `%${searchTerm}%` } },
                 { '$process-training.venue$': { [Op.iLike]: `%${searchTerm}%` } },
                 { '$process-training.brand.brand_name$': { [Op.iLike]: `%${searchTerm}%` } },
+                { '$process-training.training_mode$': { [Op.iLike]: `%${searchTerm}%` } },
             ];
         }
         const training = await ProcessTrainingProcessStatus.findAll({
@@ -472,7 +474,8 @@ const updateTrainingProcessStatus = async (req: Request, res: Response) => {
         }
         if (req.body.feedback) {
             body = {
-                feedback: req.body.feedback
+                feedback: req.body.feedback,
+                subject: req.body.subject
             }
         }
         const training = await ProcessTrainingProcessStatus.update(body, {

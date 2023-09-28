@@ -15,6 +15,8 @@ import Knitter from "../../models/knitter.model";
 import Garment from "../../models/garment.model";
 import { generateOnlyQrCode } from "../../provider/qrcode";
 import Embroidering from "../../models/embroidering.model";
+import Season from "../../models/season.model";
+import Department from "../../models/department.model";
 
 const fetchBrandQrGarmentSalesPagination = async (req: Request, res: Response) => {
     const searchTerm = req.query.search || '';
@@ -258,15 +260,17 @@ const updateTransactionStatus = async (req: Request, res: Response) => {
 const getProgram = async (req: Request, res: Response) => {
     try {
         if (!req.query.garmentId) {
-            return res.sendError(res, 'Need Knitter Id');
+            return res.sendError(res, 'Need Garment Id');
         }
 
         let garmentId = req.query.garmentId;
         let result = await Garment.findOne({ where: { id: garmentId } });
-
+        if (!result) {
+            return res.sendError(res, 'Garment not found');
+        }
         let data = await Program.findAll({
             where: {
-                id: { [Op.in]: result.program_id }
+                id: result.program_id
             }
         });
         res.sendSuccess(res, data);
@@ -327,210 +331,268 @@ const createGarmentSales = async (req: Request, res: Response) => {
             qty_stock: req.body.totalFabricLength,
             embroidering_required: req.body.embroideringRequired,
             embroidering_id: embroidering ? embroidering.id : null,
-            status: 'Pending for QR scanning',
+            status: req.body.buyerId ? 'Sold' : 'Pending',
             qr: uniqueFilename
         };
         const garmentSales = await GarmentSales.create(data);
         res.sendSuccess(res, garmentSales);
     } catch (error: any) {
+        console.log(error.message);
         return res.sendError(res, error.meessage);
     }
 }
 
 //fetch Garment Sales with filters
-// const fetchGarmentSalesPagination = async (req: Request, res: Response) => {
-//     const searchTerm = req.query.search || "";
-//     const page = Number(req.query.page) || 1;
-//     const limit = Number(req.query.limit) || 10;
-//     const { knitterId, seasonId, programId } = req.query;
-//     const offset = (page - 1) * limit;
-//     const whereCondition: any = {};
-//     try {
-//         if (searchTerm) {
-//             whereCondition[Op.or] = [
-//                 { order_ref: { [Op.iLike]: `%${searchTerm}%` } }, // Search by order ref
-//                 { '$season.name$': { [Op.iLike]: `%${searchTerm}%` } },
-//                 { batch_lot_no: { [Op.iLike]: `%${searchTerm}%` } },
-//                 { fabric_length: { [Op.eq]: searchTerm } },
-//                 { invoice_no: { [Op.iLike]: `%${searchTerm}%` } },
-//                 { '$fabric.fabricType_name$': { [Op.iLike]: `%${searchTerm}%` } },
-//                 { fabric_gsm: { [Op.iLike]: `%${searchTerm}%` } },
-//                 { '$program.program_name$': { [Op.iLike]: `%${searchTerm}%` } },
-//                 { vehicle_no: { [Op.iLike]: `%${searchTerm}%` } },
-//                 { transaction_agent: { [Op.iLike]: `%${searchTerm}%` } },
-//             ];
-//         }
-//         if (knitterId) {
-//             whereCondition.knitter_id = knitterId;
-//         }
-//         if (seasonId) {
-//             whereCondition.season_id = seasonId;
-//         }
-//         if (programId) {
-//             whereCondition.program_id = programId;
-//         }
+const fetchGarmentSalesPagination = async (req: Request, res: Response) => {
+    const searchTerm = req.query.search || "";
+    const page = Number(req.query.page) || 1;
+    const limit = Number(req.query.limit) || 10;
+    const { garmentId, seasonId, programId } = req.query;
+    const offset = (page - 1) * limit;
+    const whereCondition: any = {};
+    try {
+        if (searchTerm) {
+            whereCondition[Op.or] = [
+                { order_ref: { [Op.iLike]: `%${searchTerm}%` } }, // Search by order ref
+                { '$season.name$': { [Op.iLike]: `%${searchTerm}%` } },
+                { invoice_no: { [Op.iLike]: `%${searchTerm}%` } },
+                { style_mark_no: { [Op.iLike]: `%${searchTerm}%` } },
+                { '$program.program_name$': { [Op.iLike]: `%${searchTerm}%` } },
+                { '$buyer.brand_name$': { [Op.iLike]: `%${searchTerm}%` } },
+                { transaction_agent: { [Op.iLike]: `%${searchTerm}%` } },
+                { garment_type: { [Op.iLike]: `%${searchTerm}%` } },
+                { garment_size: { [Op.iLike]: `%${searchTerm}%` } },
+                { color: { [Op.iLike]: `%${searchTerm}%` } },
+            ];
+        }
+        if (garmentId) {
+            whereCondition.garment_id = garmentId;
+        }
+        if (seasonId) {
+            whereCondition.season_id = seasonId;
+        }
+        if (programId) {
+            whereCondition.program_id = programId;
+        }
 
-//         let include = [
-//             {
-//                 model: Knitter,
-//                 as: "knitter",
-//                 attributes: ['id', 'name', 'address']
-//             },
-//             {
-//                 model: Season,
-//                 as: "season",
-//             },
-//             {
-//                 model: Program,
-//                 as: "program",
-//             },
-//             {
-//                 model: Dyeing,
-//                 as: "dyeing",
-//             },
-//             {
-//                 model: FabricType,
-//                 as: "fabric",
-//             },
-//             {
-//                 model: Garment,
-//                 as: "buyer",
-//                 attributes: ['id', 'name', 'address']
-//             }
-//         ];
-//         //fetch data with pagination
-//         if (req.query.pagination === "true") {
-//             const { count, rows } = await KnitSales.findAndCountAll({
-//                 where: whereCondition,
-//                 include: include,
-//                 order: [
-//                     [
-//                         'id', 'asc'
-//                     ]
-//                 ],
-//                 offset: offset,
-//                 limit: limit,
-//             });
-//             return res.sendPaginationSuccess(res, rows, count);
-//         } else {
-//             const gin = await KnitSales.findAll({
-//                 where: whereCondition,
-//                 include: include,
-//                 order: [
-//                     [
-//                         'id', 'asc'
-//                     ]
-//                 ]
-//             });
-//             return res.sendSuccess(res, gin);
-//         }
-//     } catch (error: any) {
-//         return res.sendError(res, error.message);
-//     }
-// };
+        let include = [
+            {
+                model: Garment,
+                as: "garment",
+                attributes: ['id', 'name', 'address']
+            },
+            {
+                model: Season,
+                as: "season",
+            },
+            {
+                model: Program,
+                as: "program",
+            },
+            {
+                model: Embroidering,
+                as: "embroidering",
+            },
+            {
+                model: Department,
+                as: "department",
+            },
+            {
+                model: Brand,
+                as: "buyer",
+                attributes: ['id', 'brand_name', 'address']
+            }
+        ];
+        //fetch data with pagination
+        if (req.query.pagination === "true") {
+            const { count, rows } = await GarmentSales.findAndCountAll({
+                where: whereCondition,
+                include: include,
+                order: [
+                    [
+                        'id', 'desc'
+                    ]
+                ],
+                offset: offset,
+                limit: limit,
+            });
+            return res.sendPaginationSuccess(res, rows, count);
+        } else {
+            const gin = await GarmentSales.findAll({
+                where: whereCondition,
+                include: include,
+                order: [
+                    [
+                        'id', 'desc'
+                    ]
+                ]
+            });
+            return res.sendSuccess(res, gin);
+        }
+    } catch (error: any) {
+        return res.sendError(res, error.message);
+    }
+};
 
-// const exportGarmentSale = async (req: Request, res: Response) => {
-//     const excelFilePath = path.join("./upload", "knitter-sale.xlsx");
+const exportGarmentSale = async (req: Request, res: Response) => {
+    const excelFilePath = path.join("./upload", "garment-sale.xlsx");
 
-//     try {
-//         const whereCondition: any = {};
-//         const searchTerm = req.query.search || "";
-//         if (searchTerm) {
-//             whereCondition[Op.or] = [
-//                 { order_ref: { [Op.iLike]: `%${searchTerm}%` } }, // Search by order ref
-//                 { '$season.name$': { [Op.iLike]: `%${searchTerm}%` } },
-//                 { batch_lot_no: { [Op.iLike]: `%${searchTerm}%` } },
-//                 { fabric_length: { [Op.eq]: searchTerm } },
-//                 { invoice_no: { [Op.iLike]: `%${searchTerm}%` } },
-//                 { '$fabric.fabricType_name$': { [Op.iLike]: `%${searchTerm}%` } },
-//                 { fabric_gsm: { [Op.iLike]: `%${searchTerm}%` } },
-//                 { '$program.program_name$': { [Op.iLike]: `%${searchTerm}%` } },
-//                 { vehicle_no: { [Op.iLike]: `%${searchTerm}%` } },
-//                 { transaction_agent: { [Op.iLike]: `%${searchTerm}%` } },
-//             ];
-//         }
-//         whereCondition.knitter_id = req.query.knitterId
-//         // Create the excel workbook file
-//         const workbook = new ExcelJS.Workbook();
-//         const worksheet = workbook.addWorksheet("Sheet1");
-//         worksheet.mergeCells('A1:M1');
-//         const mergedCell = worksheet.getCell('A1');
-//         mergedCell.value = 'CottonConnect | Process/Sale';
-//         mergedCell.font = { bold: true };
-//         mergedCell.alignment = { horizontal: 'center', vertical: 'middle' };
-//         // Set bold font for header row
-//         const headerRow = worksheet.addRow([
-//             "Sr No.", "Date", "Season", "Sold To", "Order Reference",
-//             "Invoice No", "Finished Batch/Lot No",
-//             "Job details from garment", "Knit Fabric Type", "Finished Fabric Length in Mts", "Finished Fabric GSM", "Finished Fabric Net Weight (Kgs)",
-//             "Transcation via trader"
-//         ]);
-//         headerRow.font = { bold: true };
-//         let include = [
+    try {
+        const whereCondition: any = {};
+        const searchTerm = req.query.search || "";
+        if (searchTerm) {
+            whereCondition[Op.or] = [
+                { order_ref: { [Op.iLike]: `%${searchTerm}%` } }, // Search by order ref
+                { '$season.name$': { [Op.iLike]: `%${searchTerm}%` } },
+                { invoice_no: { [Op.iLike]: `%${searchTerm}%` } },
+                { style_mark_no: { [Op.iLike]: `%${searchTerm}%` } },
+                { '$program.program_name$': { [Op.iLike]: `%${searchTerm}%` } },
+                { '$buyer.brand_name$': { [Op.iLike]: `%${searchTerm}%` } },
+                { transaction_agent: { [Op.iLike]: `%${searchTerm}%` } },
+                { garment_type: { [Op.iLike]: `%${searchTerm}%` } },
+                { garment_size: { [Op.iLike]: `%${searchTerm}%` } },
+                { color: { [Op.iLike]: `%${searchTerm}%` } },
+            ];
+        }
+        whereCondition.garment_id = req.query.garmentId
+        // Create the excel workbook file
+        const workbook = new ExcelJS.Workbook();
+        const worksheet = workbook.addWorksheet("Sheet1");
+        worksheet.mergeCells('A1:L1');
+        const mergedCell = worksheet.getCell('A1');
+        mergedCell.value = 'CottonConnect | Process/Sale';
+        mergedCell.font = { bold: true };
+        mergedCell.alignment = { horizontal: 'center', vertical: 'middle' };
+        // Set bold font for header row
+        const headerRow = worksheet.addRow([
+            "Sr No.", "Date", "Season", "Brand/Retailer Name", "Order Reference",
+            "Invoice No", "Style/Mark No",
+            "Garment/ Product Type", "Garment/ Product Size", "Color", "No of pieces", "No of Boxes"
+        ]);
+        headerRow.font = { bold: true };
+        let include = [
+            {
+                model: Garment,
+                as: "garment",
+                attributes: ['id', 'name', 'address']
+            },
+            {
+                model: Season,
+                as: "season",
+            },
+            {
+                model: Program,
+                as: "program",
+            },
+            {
+                model: Embroidering,
+                as: "embroidering",
+            },
+            {
+                model: Department,
+                as: "department",
+            },
+            {
+                model: Brand,
+                as: "buyer",
+                attributes: ['id', 'brand_name', 'address']
+            }
+        ];
+        const garment = await GarmentSales.findAll({
+            where: whereCondition,
+            include: include
+        });
+        // Append data to worksheet
+        for await (const [index, item] of garment.entries()) {
 
-//             {
-//                 model: Season,
-//                 as: "season",
-//             },
-//             {
-//                 model: FabricType,
-//                 as: "fabric",
-//             },
-//             {
-//                 model: Garment,
-//                 as: "buyer",
-//                 attributes: ['id', 'name', 'address']
-//             }
-//         ];;
-//         const weaver = await KnitSales.findAll({
-//             where: whereCondition,
-//             include: include
-//         });
-//         // Append data to worksheet
-//         for await (const [index, item] of weaver.entries()) {
+            const rowValues = Object.values({
+                index: index + 1,
+                date: item.date ? item.date : '',
+                season: item.season ? item.season.name : '',
+                buyer: item.buyer ? item.buyer.brand_name : item.processor_name,
+                order: item.order_ref ? item.order_ref : '',
+                invoice: item.invoice_no ? item.invoice_no : '',
+                mark: item.style_mark_no ? item.style_mark_no : '',
+                garment: item.garment_type ? item.garment_type : '',
+                garment_size: item.garment_size ? item.garment_size : '',
+                color: item.color ? item.color : '',
+                no_of_pieces: item.no_of_pieces ? item.no_of_pieces : '',
+                no_of_boxes: item.no_of_boxes ? item.no_of_boxes : '',
+            });
+            worksheet.addRow(rowValues);
+        }
+        // Auto-adjust column widths based on content
+        worksheet.columns.forEach((column: any) => {
+            let maxCellLength = 0;
+            column.eachCell({ includeEmpty: true }, (cell: any) => {
+                const cellLength = (cell.value ? cell.value.toString() : '').length;
+                maxCellLength = Math.max(maxCellLength, cellLength);
+            });
+            column.width = Math.min(24, maxCellLength + 2); // Limit width to 30 characters
+        });
 
-//             const rowValues = Object.values({
-//                 index: index + 1,
-//                 date: item.date ? item.date : '',
-//                 season: item.season ? item.season.name : '',
-//                 buyer: item.buyer ? item.buyer.name : item.processor_name,
-//                 order: item.order_ref ? item.order_ref : '',
-//                 invoice: item.invoice_no ? item.invoice_no : '',
-//                 lotNo: item.batch_lot_no ? item.batch_lot_no : '',
-//                 garment: item.job_details_garment ? item.job_details_garment : '',
-//                 fabrictype: item.fabric ? item.fabric.fabricType_name : '',
-//                 length: item.fabric_length ? item.fabric_length : '',
-//                 fabric_gsm: item.fabric_gsm ? item.fabric_gsm : '',
-//                 fabric_weight: item.fabric_weight ? item.fabric_weight : '',
-//                 transaction_via_trader: item.transaction_via_trader ? 'Yes' : 'No'
-//             });
-//             worksheet.addRow(rowValues);
-//         }
-//         // Auto-adjust column widths based on content
-//         worksheet.columns.forEach((column: any) => {
-//             let maxCellLength = 0;
-//             column.eachCell({ includeEmpty: true }, (cell: any) => {
-//                 const cellLength = (cell.value ? cell.value.toString() : '').length;
-//                 maxCellLength = Math.max(maxCellLength, cellLength);
-//             });
-//             column.width = Math.min(14, maxCellLength + 2); // Limit width to 30 characters
-//         });
+        // Save the workbook
+        await workbook.xlsx.writeFile(excelFilePath);
+        res.status(200).send({
+            success: true,
+            messgage: "File successfully Generated",
+            data: process.env.BASE_URL + "garment-sale.xlsx",
+        });
+    } catch (error: any) {
+        console.error("Error appending data:", error);
+        return res.sendError(res, error.message);
 
-//         // Save the workbook
-//         await workbook.xlsx.writeFile(excelFilePath);
-//         res.status(200).send({
-//             success: true,
-//             messgage: "File successfully Generated",
-//             data: process.env.BASE_URL + "knitter-sale.xlsx",
-//         });
-//     } catch (error: any) {
-//         console.error("Error appending data:", error);
-//         return res.sendError(res, error.message);
-
-//     }
-// };
+    }
+};
 
 
+const getEmbroidering = async (req: Request, res: Response) => {
+    try {
+        let data = await Embroidering.findOne({ where: { id: req.query.id } });
+        return res.sendSuccess(res, data);
+    } catch (error: any) {
+        console.error("Error appending data:", error);
+        return res.sendError(res, error.message);
+
+    }
+};
+
+const dashboardGraph = async (req: Request, res: Response) => {
+    try {
+        if (!req.query.garmentId) {
+            return res.sendError(res, 'Need Garment Id');
+        }
+        let result = await Garment.findOne({ where: { id: req.query.garmentId } });
+        let program = await Program.findAll({
+            where: {
+                id: result.program_id
+            }
+        });
+        let resulting: any = [];
+        for await (let obj of program) {
+            let data = await GarmentSales.findAll({
+                where: {
+                    program_id: obj.id,
+                    garment_id: req.query.garmentId
+                },
+                attributes: [
+                    ["garment_type", "garmentType"],
+                    [
+                        Sequelize.fn("SUM", Sequelize.col("total_fabric_length")),
+                        "total"
+                    ]
+                ],
+                group: ["garment_type"]
+            });
+            resulting.push({ graphData: data, program: obj })
+        }
+
+        return res.sendSuccess(res, resulting);
+    } catch (error: any) {
+        console.error("Error appending data:", error);
+        return res.sendError(res, error.message);
+    }
+};
 
 
 export {
@@ -541,5 +603,8 @@ export {
     updateTransactionStatus,
     getProgram,
     createGarmentSales,
-    // fetchGarmentSalesPagination
+    fetchGarmentSalesPagination,
+    exportGarmentSale,
+    getEmbroidering,
+    dashboardGraph
 }
