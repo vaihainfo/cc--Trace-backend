@@ -13,9 +13,9 @@
         }
     },
     "schemes": [
-        "http"
+        "https"
     ],
-    "host": "https://api.newtracebale.com",
+    "host": "api.newtracebale.com",
     "basePath": "/",
     "paths": {
         "/auth/signin": {
