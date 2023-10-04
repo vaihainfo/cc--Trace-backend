@@ -12,7 +12,8 @@ import {
     dashboardGraphWithProgram,
     getReelBaleId,
     fetchGinSale,
-    getProgram
+    getProgram,
+    updateGinSaleBale
 } from "../../controllers/ginner";
 import {
 
@@ -34,11 +35,13 @@ router.get('/sales/get-gin-sale', fetchGinSale);
 router.put('/sales', updateGinnerSales);
 router.get('/sales/export', exportGinnerSales);
 router.get('/sales/bale', fetchGinSaleBale);
-router.post('/sales/spinner', createSpinnerProcess);
+// router.post('/sales/spinner', createSpinnerProcess);
 router.put('/update-status-transaction', updateTransactionStatus);
 router.get('/dashboard', dashboardGraphWithProgram);
 router.get('/reel', getReelBaleId);
 router.get('/get-program', getProgram);
+router.put('/sales/update-bale', updateGinSaleBale);
+
 
 
 export default router;

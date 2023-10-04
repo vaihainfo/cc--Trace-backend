@@ -9,7 +9,29 @@ import {
     fetchGinSalesPagination,
     exportGinnerProcess,
     exportGinnerSales,
-    fetchSpinnerBalePagination
+    fetchSpinnerBalePagination,
+    exportPendingSpinnerBale,
+    exportSpinnerBale,
+    exportSpinnerYarnProcess,
+    fetchSpinnerYarnProcessPagination,
+    fetchSpinSalesPagination,
+    exportSpinnerSale,
+    fetchKnitterYarnPagination,
+    exportKnitterYarn,
+    fetchKnitterSalesPagination,
+    exportKnitterSale,
+    fetchWeaverYarnPagination,
+    exportWeaverYarn,
+    fetchWeaverSalesPagination,
+    exportWeaverSale,
+    fetchQrCodeTrackPagination,
+    exportQrCodeTrack,
+    fetchSpinnerSummaryPagination,
+    exportSpinnerSummary,
+    fetchGinnerSummaryPagination,
+    exportGinnerSummary,
+    fetchGarmentSalesPagination,
+    exportGarmentSales
 } from "../../controllers/reports";
 const router = Router();
 
@@ -31,5 +53,27 @@ router.get('/get-gin-sales-report', fetchGinSalesPagination);
 router.get('/export-pending-sales-report', exportPendingGinnerSales);
 router.get('/export-gin-sales-report', exportGinnerSales);
 router.get('/get-spinner-bale-report', fetchSpinnerBalePagination);
+router.get('/export-spinner-pending-bale-report', exportPendingSpinnerBale);
+router.get('/export-spinner-bale-report', exportSpinnerBale);
+router.get('/get-spinner-yarn-report', fetchSpinnerYarnProcessPagination);
+router.get('/export-spinner-yarn-report', exportSpinnerYarnProcess);
+router.get('/get-spinner-yarn-sales-report', fetchSpinSalesPagination);
+router.get('/export-spinner-yarn-sales-report', exportSpinnerSale);
+router.get('/get-knitter-yarn-report', fetchKnitterYarnPagination);
+router.get('/export-knitter-yarn-report', exportKnitterYarn);
+router.get('/get-knitter-sales-report', fetchKnitterSalesPagination);
+router.get('/export-knitter-sales-report', exportKnitterSale);
+router.get('/get-weaver-yarn-report', fetchWeaverYarnPagination);
+router.get('/export-weaver-yarn-report', exportWeaverYarn);
+router.get('/get-weaver-sales-report', fetchWeaverSalesPagination);
+router.get('/export-weaver-sales-report', exportWeaverSale);
+router.get('/get-Qr-track-report', fetchQrCodeTrackPagination);
+router.get('/export-Qr-trackreport', exportQrCodeTrack);
+router.get('/get-spinnner-summary-report', fetchSpinnerSummaryPagination);
+router.get('/export-spinner-summary-report', exportSpinnerSummary);
+router.get('/get-ginner-summary-report', fetchGinnerSummaryPagination);
+router.get('/export-ginner-summary-report', exportGinnerSummary);
+router.get('/get-garment-sales-report', fetchGarmentSalesPagination);
+router.get('/export-garment-sales-report', exportGarmentSales);
 
 export default router;  

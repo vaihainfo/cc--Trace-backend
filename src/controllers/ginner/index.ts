@@ -445,7 +445,6 @@ const createGinnerSales = async (req: Request, res: Response) => {
     }
 }
 
-
 //update Ginner Sale
 const updateGinnerSales = async (req: Request, res: Response) => {
     try {
@@ -588,11 +587,38 @@ const fetchGinSaleBale = async (req: Request, res: Response) => {
                 },
                 {
                     model: GinSales,
-                    as: "sales"
+                    as: "sales",
+                    include: [{
+                        model: Ginner,
+                        as: "ginner",
+                        attributes: ["id", "name", "address"]
+                    }],
                 }
             ],
         });
         return res.sendSuccess(res, gin);
+
+    } catch (error: any) {
+        return res.sendError(res, error.message);
+    }
+};
+
+const updateGinSaleBale = async (req: Request, res: Response) => {
+    try {
+        //fetch data with process id
+        let gins: any = []
+        for await (let obj of req.body.printData) {
+            const gin = await BaleSelection.update({
+                print: obj.print
+            }, {
+                where: {
+                    id: obj.id
+                }
+            });
+            gins.push(gin)
+        }
+
+        return res.sendSuccess(res, gins);
 
     } catch (error: any) {
         return res.sendError(res, error.message);
@@ -756,5 +782,6 @@ export {
     updateTransactionStatus,
     dashboardGraphWithProgram,
     getReelBaleId,
-    getProgram
+    getProgram,
+    updateGinSaleBale
 }

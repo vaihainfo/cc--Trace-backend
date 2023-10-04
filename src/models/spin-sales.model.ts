@@ -4,6 +4,8 @@ import db from '../util/dbConn';
 import Spinner from './spinner.model';
 import Season from './season.model';
 import Program from './program.model';
+import Knitter from './knitter.model';
+import Weaver from './weaver.model';
 
 const SpinSales = db.define('spin_sales', {
   id: {
@@ -118,6 +120,9 @@ const SpinSales = db.define('spin_sales', {
   },
   qr: {
     type: DataTypes.STRING
+  },
+  knitter_id: {
+    type: DataTypes.INTEGER
   }
 });
 
@@ -134,6 +139,16 @@ SpinSales.belongsTo(Season, {
 SpinSales.belongsTo(Program, {
   foreignKey: "program_id",
   as: "program",
+});
+
+SpinSales.belongsTo(Knitter, {
+  foreignKey: "knitter_id",
+  as: "knitter",
+});
+
+SpinSales.belongsTo(Weaver, {
+  foreignKey: "buyer_id",
+  as: "weaver",
 });
 
 SpinSales.sync();

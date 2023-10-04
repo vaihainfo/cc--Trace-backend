@@ -4,8 +4,8 @@
   "description": "",
   "main": "/src/app.ts",
   "scripts": {
-    "watch": "tsc --watch",
-    "dev": "npx sequelize db:migrate && nodemon src/app.ts",
+    "watch": "cp -r src/swagger/ dist/ && tsc --watch",
+    "dev": "npx sequelize db:migrate && nodemon src/app.ts ",
     "start": "npx sequelize db:migrate && nodemon dist/app.js",
     "build": "rm -Rf dist/ && tsc"
   },
@@ -28,6 +28,7 @@
     "puppeteer": "^21.1.1",
     "qrcode": "^1.5.3",
     "sequelize": "^6.32.1",
+    "swagger-ui-express": "^5.0.0",
     "typescript": "^5.1.6"
   },
   "devDependencies": {

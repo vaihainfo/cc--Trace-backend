@@ -18,6 +18,8 @@ import CottonMix from "../../models/cotton-mix.model";
 import SpinSales from "../../models/spin-sales.model";
 import Ginner from "../../models/ginner.model";
 import GinSales from "../../models/gin-sales.model";
+import Knitter from "../../models/knitter.model";
+import Weaver from "../../models/weaver.model";
 
 //create Spinner Process
 const createSpinnerProcess = async (req: Request, res: Response) => {
@@ -50,6 +52,7 @@ const createSpinnerProcess = async (req: Request, res: Response) => {
             yarn_realisation: req.body.yarnRealisation,
             net_yarn_qty: req.body.netYarnQty,
             comber_noil: req.body.comber_noil,
+            comber_noil_stock: req.body.comber_noil,
             no_of_boxes: req.body.noOfBox,
             batch_lot_no: req.body.batchLotNo,
             reel_lot_no: abc,
@@ -70,6 +73,11 @@ const createSpinnerProcess = async (req: Request, res: Response) => {
         });
         for await (let obj of req.body.chooseLint) {
             let update = await GinSales.update({ qty_stock: obj.totalQty - obj.qtyUsed }, { where: { id: obj.id } })
+        }
+        if (req.body.chooseComberNoil && req.body.chooseComberNoil.length > 0) {
+            for await (let obj of req.body.chooseComberNoil) {
+                let update = await SpinProcess.update({ comber_noil_stock: obj.totalQty - obj.qtyUsed }, { where: { id: obj.id } })
+            }
         }
         res.sendSuccess(res, { spin });
     } catch (error: any) {
@@ -101,23 +109,37 @@ const fetchSpinnerProcessPagination = async (req: Request, res: Response) => {
     const searchTerm = req.query.search || "";
     const page = Number(req.query.page) || 1;
     const limit = Number(req.query.limit) || 10;
-    const { spinnerId, seasonId, programId } = req.query;
+    const { spinnerId, seasonId, programId }: any = req.query;
     const offset = (page - 1) * limit;
     const whereCondition: any = {};
     try {
         if (searchTerm) {
             whereCondition[Op.or] = [
-                { name: { [Op.iLike]: `%${searchTerm}%` } }, // Search by crop Type
-            ];
+                { '$spinner.name$': { [Op.iLike]: `%${searchTerm}%` } },
+                { '$season.name$': { [Op.iLike]: `%${searchTerm}%` } },
+                { '$program.program_name$': { [Op.iLike]: `%${searchTerm}%` } },
+                { yarn_type: { [Op.iLike]: `%${searchTerm}%` } },
+                { reel_lot_no: { [Op.iLike]: `%${searchTerm}%` } },
+                { batch_lot_no: { [Op.iLike]: `%${searchTerm}%` } },
+                { box_id: { [Op.iLike]: `%${searchTerm}%` } },
+                { '$yarncount.yarnCount_name$': { [Op.iLike]: `%${searchTerm}%` } },
+            ]
         }
         if (spinnerId) {
             whereCondition.spinner_id = spinnerId;
         }
         if (seasonId) {
-            whereCondition.season_id = seasonId;
+            const idArray: number[] = seasonId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition.season_id = { [Op.in]: idArray };
         }
+
         if (programId) {
-            whereCondition.program_id = programId;
+            const idArray: number[] = programId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition.program_id = { [Op.in]: idArray };
         }
 
         let include = [
@@ -173,6 +195,69 @@ const fetchSpinnerProcessPagination = async (req: Request, res: Response) => {
     }
 };
 
+
+const fetchComberNoilPagination = async (req: Request, res: Response) => {
+    const searchTerm = req.query.search || "";
+    const page = Number(req.query.page) || 1;
+    const limit = Number(req.query.limit) || 10;
+    const { spinnerId, programId }: any = req.query;
+    const offset = (page - 1) * limit;
+    const whereCondition: any = {};
+    try {
+        if (searchTerm) {
+            whereCondition[Op.or] = [
+                { batch_lot_no: { [Op.iLike]: `%${searchTerm}%` } }
+            ]
+        }
+        if (spinnerId) {
+            whereCondition.spinner_id = spinnerId;
+        }
+
+        if (programId) {
+            const idArray: number[] = programId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition.program_id = { [Op.in]: idArray };
+        }
+        whereCondition.comber_noil_stock = { [Op.gt]: 0 }
+        let include = [
+            {
+                model: Program,
+                as: "program",
+            }
+        ];
+        //fetch data with pagination
+        if (req.query.pagination === "true") {
+            const { count, rows } = await SpinProcess.findAndCountAll({
+                attributes: ['id', 'batch_lot_no', 'comber_noil_stock', 'comber_noil', 'program_id'],
+                where: whereCondition,
+                include: include,
+                order: [
+                    [
+                        'comber_noil_stock', 'desc'
+                    ]
+                ],
+                offset: offset,
+                limit: limit,
+            });
+            return res.sendPaginationSuccess(res, rows, count);
+        } else {
+            const gin = await SpinProcess.findAll({
+                attributes: ['id', 'batch_lot_no', 'comber_noil_stock', 'comber_noil', 'program_id'],
+                where: whereCondition,
+                include: include,
+                order: [
+                    [
+                        'comber_noil_stock', 'desc'
+                    ]
+                ]
+            });
+            return res.sendSuccess(res, gin);
+        }
+    } catch (error: any) {
+        return res.sendError(res, error.message);
+    }
+};
 const updateSpinnerProcess = async (req: Request, res: Response) => {
     try {
         const spin = await SpinProcess.update({
@@ -287,6 +372,8 @@ const exportSpinnerProcess = async (req: Request, res: Response) => {
     }
 };
 
+
+
 //create Spinner Sale
 const createSpinnerSales = async (req: Request, res: Response) => {
     try {
@@ -300,6 +387,7 @@ const createSpinnerSales = async (req: Request, res: Response) => {
             order_ref: req.body.orderRef,
             buyer_type: req.body.buyerType,
             buyer_id: req.body.buyerId,
+            knitter_id: req.body.knitterId,
             processor_name: req.body.processorName,
             processor_address: req.body.processorAddress,
             total_qty: req.body.totalQty,
@@ -337,23 +425,37 @@ const fetchSpinSalesPagination = async (req: Request, res: Response) => {
     const searchTerm = req.query.search || "";
     const page = Number(req.query.page) || 1;
     const limit = Number(req.query.limit) || 10;
-    const { spinnerId, seasonId, programId } = req.query;
+    const { spinnerId, seasonId, programId }: any = req.query;
     const offset = (page - 1) * limit;
     const whereCondition: any = {};
     try {
         if (searchTerm) {
             whereCondition[Op.or] = [
-                { order_ref: { [Op.iLike]: `%${searchTerm}%` } }, // Search by crop Type
+                { order_ref: { [Op.iLike]: `%${searchTerm}%` } },
+                { invoice_no: { [Op.iLike]: `%${searchTerm}%` } },
+                { reel_lot_no: { [Op.iLike]: `%${searchTerm}%` } },
+                { yarn_type: { [Op.iLike]: `%${searchTerm}%` } },
+                { '$weaver.name$': { [Op.iLike]: `%${searchTerm}%` } },
+                { '$knitter.name$': { [Op.iLike]: `%${searchTerm}%` } },
+                { '$season.name$': { [Op.iLike]: `%${searchTerm}%` } },
+                { '$program.program_name$': { [Op.iLike]: `%${searchTerm}%` } },
             ];
         }
         if (spinnerId) {
             whereCondition.spinner_id = spinnerId;
         }
         if (seasonId) {
-            whereCondition.season_id = seasonId;
+            const idArray: number[] = seasonId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition.season_id = { [Op.in]: idArray };
         }
+
         if (programId) {
-            whereCondition.program_id = programId;
+            const idArray: number[] = programId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition.program_id = { [Op.in]: idArray };
         }
 
         let include = [
@@ -368,6 +470,14 @@ const fetchSpinSalesPagination = async (req: Request, res: Response) => {
             {
                 model: Program,
                 as: "program",
+            },
+            {
+                model: Weaver,
+                as: "weaver",
+            },
+            {
+                model: Knitter,
+                as: "knitter",
             }
         ];
         //fetch data with pagination
@@ -404,7 +514,41 @@ const fetchSpinSalesPagination = async (req: Request, res: Response) => {
 const exportSpinnerSale = async (req: Request, res: Response) => {
     const excelFilePath = path.join("./upload", "spinner-sale.xlsx");
 
+    const searchTerm = req.query.search || "";
+    const page = Number(req.query.page) || 1;
+    const limit = Number(req.query.limit) || 10;
+    const { spinnerId, seasonId, programId }: any = req.query;
+    const offset = (page - 1) * limit;
+    const whereCondition: any = {};
     try {
+        if (searchTerm) {
+            whereCondition[Op.or] = [
+                { order_ref: { [Op.iLike]: `%${searchTerm}%` } },
+                { invoice_no: { [Op.iLike]: `%${searchTerm}%` } },
+                { reel_lot_no: { [Op.iLike]: `%${searchTerm}%` } },
+                { yarn_type: { [Op.iLike]: `%${searchTerm}%` } },
+                { '$weaver.name$': { [Op.iLike]: `%${searchTerm}%` } },
+                { '$knitter.name$': { [Op.iLike]: `%${searchTerm}%` } },
+                { '$season.name$': { [Op.iLike]: `%${searchTerm}%` } },
+                { '$program.program_name$': { [Op.iLike]: `%${searchTerm}%` } },
+            ];
+        }
+        if (spinnerId) {
+            whereCondition.spinner_id = spinnerId;
+        }
+        if (seasonId) {
+            const idArray: number[] = seasonId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition.season_id = { [Op.in]: idArray };
+        }
+
+        if (programId) {
+            const idArray: number[] = programId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition.program_id = { [Op.in]: idArray };
+        }
         // Create the excel workbook file
         const workbook = new ExcelJS.Workbook();
         const worksheet = workbook.addWorksheet("Sheet1");
@@ -433,10 +577,18 @@ const exportSpinnerSale = async (req: Request, res: Response) => {
             {
                 model: Program,
                 as: "program",
+            },
+            {
+                model: Weaver,
+                as: "weaver",
+            },
+            {
+                model: Knitter,
+                as: "knitter",
             }
         ];
         const gin = await SpinSales.findAll({
-            where: { spinner_id: req.query.spinnerId },
+            where: whereCondition,
             include: include
         });
         // Append data to worksheet
@@ -619,7 +771,33 @@ const countCottonBaleWithProgram = async (req: Request, res: Response) => {
             ],
             group: ["program.id"],
         });
-        res.sendSuccess(res, gin);
+        const spinSale = await SpinSales.findAll({
+            where: {
+                spinner_id: req.query.spinnerId,
+            },
+            attributes: [
+                [
+                    Sequelize.fn("SUM", Sequelize.col("total_qty")),
+                    "totalQuantity",
+                ],
+                [
+                    Sequelize.fn(
+                        "SUM",
+                        Sequelize.col("qty_stock")
+                    ),
+                    "totalQuantityStock",
+                ],
+            ],
+            include: [
+                {
+                    model: Program,
+                    as: "program",
+                    attributes: ["id", "program_name", "program_status"],
+                }
+            ],
+            group: ["program.id"],
+        });
+        res.sendSuccess(res, { gin, spinSale });
     } catch (error: any) {
         return res.sendError(res, error.message);
     }
@@ -731,5 +909,7 @@ export {
     fetchSpinSalesDashBoard,
     updateStatusSales,
     countCottonBaleWithProgram,
-    exportSpinnerTransaction
+    exportSpinnerTransaction,
+    getProgram,
+    fetchComberNoilPagination
 }

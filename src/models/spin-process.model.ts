@@ -110,7 +110,10 @@ const SpinProcess = db.define('spin_processes', {
   },
   qr: {
     type: DataTypes.STRING
-  }
+  },
+  comber_noil_stock: {
+    type: DataTypes.DOUBLE
+  },
 });
 
 

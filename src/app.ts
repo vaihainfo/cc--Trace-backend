@@ -8,7 +8,10 @@ console.log(process.env.NODE_ENV);
 import express, { Request, Response } from "express";
 import sequelize from "./util/dbConn";
 import cors from "cors";
-
+const fs = require("fs");
+const swaggerUi = require("swagger-ui-express");
+const swaggerDocument = require("./swagger/swagger.json");
+const customCss = fs.readFileSync((process.cwd() + "/src/swagger/swagger.css"), "utf8");
 import authRouter from './router/auth';
 import locationRouter from './router/master/location';
 import cropRouter from './router/master/crop';
@@ -140,6 +143,7 @@ app.use("/knitter-process", knitterProcessRouter);
 app.use("/supply-chain", supplyChainRouter);
 app.use("/quality-parameter", qualityParameterRouter);
 app.use("/trader-process", traderProcessRouter);
+app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument, { customCss }));
 
 app.use(errorMiddleware);
 
