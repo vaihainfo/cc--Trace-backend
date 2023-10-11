@@ -197,6 +197,129 @@ const fetchGinProcessPagination = async (req: Request, res: Response) => {
     }
 };
 
+const chooseBale = async (req: Request, res: Response) => {
+    const searchTerm = req.query.search || "";
+    const { ginnerId, seasonId, programId }: any = req.query;
+    const whereCondition: any = {};
+    try {
+        if (searchTerm) {
+            whereCondition[Op.or] = [
+                { "$season.name$": { [Op.iLike]: `%${searchTerm}%` } },
+                { lot_no: { [Op.iLike]: `%${searchTerm}%` } },
+                { reel_lot_no: { [Op.iLike]: `%${searchTerm}%` } },
+                { press_no: { [Op.iLike]: `%${searchTerm}%` } },
+            ];
+
+        }
+        if (!ginnerId) {
+            return res.sendError(res, 'Ginner Id is required')
+        }
+        if (!programId) {
+            return res.sendError(res, 'Program Id is required')
+        }
+        if (ginnerId) {
+            whereCondition.ginner_id = ginnerId;
+        }
+        if (programId) {
+            const idArray: number[] = programId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition.program_id = { [Op.in]: idArray };
+        }
+
+        let include = [
+            {
+                model: Ginner,
+                as: "ginner",
+            },
+            {
+                model: Season,
+                as: "season",
+            },
+            {
+                model: Program,
+                as: "program",
+            }
+        ];
+        //fetch data with pagination
+
+        let result = await GinProcess.findAll({
+            where: whereCondition,
+            include: include,
+            order: [['id', 'DESC']]
+        });
+        const id_array = result.map((item: any) => item.id);
+        const bales_list = [];
+        for await (const id of id_array) {
+            const lot_details = await GinBale.findAll({
+                attributes: [
+                    [sequelize.fn('SUM', Sequelize.literal('CAST("gin-bales"."weight" AS INTEGER)')), 'weight'],
+                    // Add other attributes here...
+                ],
+                include: [
+                    {
+                        model: GinProcess,
+                        as: 'ginprocess',
+                        attributes: ['id', 'lot_no', 'date', 'press_no', 'reel_lot_no'],
+                        where: { id: id },
+                    },
+                ],
+                group: ['ginprocess.id', 'ginprocess.lot_no'],
+            });
+            if (lot_details.length > 0) {
+                const bales = await GinBale.findAll({
+                    where: {
+                        process_id: id,
+                        sold_status: false
+                    },
+                });
+
+                if (bales.length > 0) {
+                    lot_details[0].dataValues.bales = bales;
+                    bales_list.push(lot_details[0]);
+                }
+            }
+        }
+        return res.sendSuccess(res, bales_list);
+
+    } catch (error: any) {
+        return res.sendError(res, error.message);
+    }
+};
+
+const deleteGinnerProcess = async (req: Request, res: Response) => {
+    try {
+        let ids = await BaleSelection.count({ where: { '$bale.process_id$': req.body.id }, include: [{ model: GinBale, as: "bale" }] })
+        if (ids > 0) {
+            return res.sendError(res, 'Unable to delete this process since some bales of this process was sold');
+        } else {
+            let cotton = await CottonSelection.findAll({ where: { process_id: req.body.id } });
+            for await (let cs of cotton) {
+                await Transaction.update({
+                    qty_stock: Sequelize.literal(`qty_stock + ${cs.dataValues.qty_used}`)
+                }, {
+                    where: {
+                        id: cs.dataValues.transaction_id,
+                    },
+                });
+            }
+            await CottonSelection.destroy({
+                where: {
+                    process_id: req.body.id
+                }
+            });
+            await GinProcess.destroy({
+                where: {
+                    id: req.body.id
+                }
+            });
+            return res.sendSuccess(res, { message: 'Successfully deleted this process' });
+        }
+    } catch (error) {
+
+    }
+}
+
 
 //fetch Ginner Bale 
 const fetchGinBale = async (req: Request, res: Response) => {
@@ -402,7 +525,6 @@ const exportGinnerSales = async (req: Request, res: Response) => {
     }
 };
 
-
 //create Ginner Sale
 const createGinnerSales = async (req: Request, res: Response) => {
     try {
@@ -437,6 +559,7 @@ const createGinnerSales = async (req: Request, res: Response) => {
                 bale_id: bale
             }
             const bales = await BaleSelection.create(baleData);
+            const ginbaleSatus = await GinBale.update({ status: true }, { where: { id: bale } });
         }
         res.sendSuccess(res, { ginSales });
     } catch (error: any) {
@@ -481,7 +604,15 @@ const fetchGinSalesPagination = async (req: Request, res: Response) => {
     try {
         if (searchTerm) {
             whereCondition[Op.or] = [
-                { name: { [Op.iLike]: `%${searchTerm}%` } }, // Search by crop Type
+                { '$season.name$': { [Op.iLike]: `%${searchTerm}%` } }, // Search by crop Type
+                { lot_no: { [Op.iLike]: `%${searchTerm}%` } },
+                { invoice_no: { [Op.iLike]: `%${searchTerm}%` } },
+                { press_no: { [Op.iLike]: `%${searchTerm}%` } },
+                { reel_lot_no: { [Op.iLike]: `%${searchTerm}%` } },
+                { '$buyerdata.name$': { [Op.iLike]: `%${searchTerm}%` } },
+                { rate: { [Op.iLike]: `%${searchTerm}%` } },
+                { '$program.program_name$': { [Op.iLike]: `%${searchTerm}%` } },
+
             ];
         }
         if (ginnerId) {
@@ -540,6 +671,39 @@ const fetchGinSalesPagination = async (req: Request, res: Response) => {
     }
 };
 
+const deleteGinSales = async (req: Request, res: Response) => {
+    try {
+
+        const res1 = await GinBale.update(
+            { sold_status: false },
+            {
+                where: {
+                    id: {
+                        [Op.in]: sequelize.literal(
+                            `(SELECT bale_id FROM bale_selections WHERE sales_id = ${req.body.id})`
+                        ),
+                    },
+                },
+            }
+        );
+
+        const res2 = await BaleSelection.destroy({
+            where: {
+                sales_id: req.body.id,
+            },
+        });
+
+        const res3 = await GinSales.destroy({
+            where: {
+                id: req.body.id,
+            },
+        });
+        return res.sendSuccess(res, { message: 'Successfully deleted this process' });
+
+    } catch (error: any) {
+        return res.sendError(res, error.meessage);
+    }
+}
 
 const fetchGinSale = async (req: Request, res: Response) => {
     const whereCondition: any = { id: req.query.id };
@@ -557,6 +721,10 @@ const fetchGinSale = async (req: Request, res: Response) => {
             {
                 model: Program,
                 as: "program",
+            },
+            {
+                model: Spinner,
+                as: "buyerdata",
             }
         ];
         //fetch data with pagination
@@ -574,12 +742,27 @@ const fetchGinSale = async (req: Request, res: Response) => {
 
 //fetch Ginner Bale 
 const fetchGinSaleBale = async (req: Request, res: Response) => {
+    const searchTerm = req.query.search || "";
+    const page = Number(req.query.page) || 1;
+    const limit = Number(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+    const whereCondition: any = {};
     try {
+        if (searchTerm) {
+            whereCondition[Op.or] = [
+                { '$bale.bale_no$': { [Op.iLike]: `%${searchTerm}%` } },
+                { '$bale.weight$': { [Op.iLike]: `%${searchTerm}%` } },
+                { '$bale.staple$': { [Op.iLike]: `%${searchTerm}%` } },
+                { '$bale.mic$': { [Op.iLike]: `%${searchTerm}%` } },
+                { '$bale.strength$': { [Op.iLike]: `%${searchTerm}%` } },
+                { '$bale.trash$': { [Op.iLike]: `%${searchTerm}%` } },
+                { '$bale.color_grade$': { [Op.iLike]: `%${searchTerm}%` } },
+            ];
+        }
+        whereCondition.sales_id = req.query.saleId
         //fetch data with process id
-        const gin = await BaleSelection.findAll({
-            where: {
-                sales_id: req.query.saleId
-            },
+        const { count, rows } = await BaleSelection.findAndCountAll({
+            where: whereCondition,
             include: [
                 {
                     model: GinBale,
@@ -595,8 +778,10 @@ const fetchGinSaleBale = async (req: Request, res: Response) => {
                     }],
                 }
             ],
+            offset: offset,
+            limit: limit
         });
-        return res.sendSuccess(res, gin);
+        return res.sendPaginationSuccess(res, rows, count);
 
     } catch (error: any) {
         return res.sendError(res, error.message);
@@ -783,5 +968,8 @@ export {
     dashboardGraphWithProgram,
     getReelBaleId,
     getProgram,
-    updateGinSaleBale
+    updateGinSaleBale,
+    chooseBale,
+    deleteGinnerProcess,
+    deleteGinSales
 }

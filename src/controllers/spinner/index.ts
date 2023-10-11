@@ -20,6 +20,8 @@ import Ginner from "../../models/ginner.model";
 import GinSales from "../../models/gin-sales.model";
 import Knitter from "../../models/knitter.model";
 import Weaver from "../../models/weaver.model";
+import LintSelections from "../../models/lint-seletions.model";
+import SpinProcessYarnSelection from "../../models/spin-process-yarn-seletions.model";
 
 //create Spinner Process
 const createSpinnerProcess = async (req: Request, res: Response) => {
@@ -61,6 +63,7 @@ const createSpinnerProcess = async (req: Request, res: Response) => {
             dyeing_required: req.body.dyeingRequired,
             qty_stock: req.body.netYarnQty,
             dyeing_id: dyeing ? dyeing.id : null,
+            tot_box_user: req.body.noOfBox,
             status: 'Pending'
         };
         const spin = await SpinProcess.create(data);
@@ -72,7 +75,8 @@ const createSpinnerProcess = async (req: Request, res: Response) => {
             }
         });
         for await (let obj of req.body.chooseLint) {
-            let update = await GinSales.update({ qty_stock: obj.totalQty - obj.qtyUsed }, { where: { id: obj.id } })
+            let update = await GinSales.update({ qty_stock: obj.totalQty - obj.qtyUsed }, { where: { id: obj.id } });
+            let create = await LintSelections.create({ qty_used: obj.qtyUsed, process_id: spin.id, lint_id: obj.id })
         }
         if (req.body.chooseComberNoil && req.body.chooseComberNoil.length > 0) {
             for await (let obj of req.body.chooseComberNoil) {
@@ -171,7 +175,7 @@ const fetchSpinnerProcessPagination = async (req: Request, res: Response) => {
                 include: include,
                 order: [
                     [
-                        'id', 'asc'
+                        'id', 'desc'
                     ]
                 ],
                 offset: offset,
@@ -184,7 +188,7 @@ const fetchSpinnerProcessPagination = async (req: Request, res: Response) => {
                 include: include,
                 order: [
                     [
-                        'id', 'asc'
+                        'id', 'desc'
                     ]
                 ]
             });
@@ -195,6 +199,51 @@ const fetchSpinnerProcessPagination = async (req: Request, res: Response) => {
     }
 };
 
+const deleteSpinnerProcess = async (req: Request, res: Response) => {
+    try {
+        let count = await SpinProcessYarnSelection.count({ where: { spin_process_id: req.body.id } })
+        if (count > 0) {
+            res.sendError(res, 'Unable to delete this process since some lint of this process was sold')
+        } else {
+            // Retrieve data
+            const lintSelections = await LintSelections.findAll({
+                attributes: ['id', 'process_id', 'lint_id', 'qty_used'],
+                where: {
+                    process_id: req.body.id,
+                },
+            });
+
+            // Loop through lintSelections
+            for await (const lint of lintSelections) {
+                await GinSales.update(
+                    { qty_stock: Sequelize.literal(`qty_stock + ${lint.qty_used}`) },
+                    {
+                        where: {
+                            id: lint.lint_id,
+                        },
+                    }
+                );
+            }
+
+            // Delete rows
+            const res1 = await LintSelections.destroy({
+                where: {
+                    process_id: req.body.id
+                },
+            });
+
+            const res3 = await SpinProcess.destroy({
+                where: {
+                    id: req.body.id,
+                },
+
+            });
+            return res.sendSuccess(res, { message: 'Successfully deleted this process' });
+        }
+    } catch (error: any) {
+        return res.sendError(res, error.message);
+    }
+}
 
 const fetchComberNoilPagination = async (req: Request, res: Response) => {
     const searchTerm = req.query.search || "";
@@ -276,7 +325,41 @@ const updateSpinnerProcess = async (req: Request, res: Response) => {
 const exportSpinnerProcess = async (req: Request, res: Response) => {
     const excelFilePath = path.join("./upload", "spinner-process.xlsx");
 
+    const searchTerm = req.query.search || "";
+    const page = Number(req.query.page) || 1;
+    const limit = Number(req.query.limit) || 10;
+    const { spinnerId, seasonId, programId }: any = req.query;
+    const offset = (page - 1) * limit;
+    const whereCondition: any = {};
     try {
+        if (searchTerm) {
+            whereCondition[Op.or] = [
+                { '$spinner.name$': { [Op.iLike]: `%${searchTerm}%` } },
+                { '$season.name$': { [Op.iLike]: `%${searchTerm}%` } },
+                { '$program.program_name$': { [Op.iLike]: `%${searchTerm}%` } },
+                { yarn_type: { [Op.iLike]: `%${searchTerm}%` } },
+                { reel_lot_no: { [Op.iLike]: `%${searchTerm}%` } },
+                { batch_lot_no: { [Op.iLike]: `%${searchTerm}%` } },
+                { box_id: { [Op.iLike]: `%${searchTerm}%` } },
+                { '$yarncount.yarnCount_name$': { [Op.iLike]: `%${searchTerm}%` } },
+            ]
+        }
+        if (spinnerId) {
+            whereCondition.spinner_id = spinnerId;
+        }
+        if (seasonId) {
+            const idArray: number[] = seasonId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition.season_id = { [Op.in]: idArray };
+        }
+
+        if (programId) {
+            const idArray: number[] = programId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition.program_id = { [Op.in]: idArray };
+        }
         // Create the excel workbook file
         const workbook = new ExcelJS.Workbook();
         const worksheet = workbook.addWorksheet("Sheet1");
@@ -315,7 +398,7 @@ const exportSpinnerProcess = async (req: Request, res: Response) => {
             }
         ];
         const gin = await SpinProcess.findAll({
-            where: { spinner_id: req.query.spinnerId },
+            where: whereCondition,
             include: include
         });
         // Append data to worksheet
@@ -372,7 +455,54 @@ const exportSpinnerProcess = async (req: Request, res: Response) => {
     }
 };
 
+const chooseYarnProcess = async (req: Request, res: Response) => {
+    const { spinnerId, programId }: any = req.query;
 
+    const whereCondition: any = {};
+    try {
+        if (spinnerId) {
+            whereCondition.spinner_id = spinnerId;
+        }
+
+        if (programId) {
+            whereCondition.program_id = programId;
+        }
+
+        let include = [
+            {
+                model: Spinner,
+                as: "spinner",
+                attributes: ["id", "name"]
+            },
+            {
+                model: Program,
+                as: "program",
+            },
+            {
+                model: YarnCount,
+                as: "yarncount",
+                attributes: ['id', 'yarnCount_name']
+            }
+        ];
+        whereCondition.qty_stock = { [Op.gt]: 0 }
+        //fetch data with pagination
+
+        const gin = await SpinProcess.findAll({
+            where: whereCondition,
+            include: include,
+            attributes: ['id', 'yarn_type', 'no_of_boxes', 'reel_lot_no', 'batch_lot_no', 'qty_stock', 'tot_box_user'],
+            order: [
+                [
+                    'id', 'desc'
+                ]
+            ]
+        });
+        return res.sendSuccess(res, gin);
+
+    } catch (error: any) {
+        return res.sendError(res, error.message);
+    }
+};
 
 //create Spinner Sale
 const createSpinnerSales = async (req: Request, res: Response) => {
@@ -412,7 +542,14 @@ const createSpinnerSales = async (req: Request, res: Response) => {
             status: 'Pending for QR scanning',
             qr: uniqueFilename
         };
+
         const spinSales = await SpinSales.create(data);
+        if (req.body.chooseYarn && req.body.chooseYarn.length > 0) {
+            for await (let obj of req.body.chooseYarn) {
+                let update = await SpinProcess.update({ qty_stock: obj.totalQty - obj.qtyUsed, tot_box_user: obj.totalBoxes - obj.totalBoxesUsed }, { where: { id: obj.id } });
+                await SpinProcessYarnSelection.create({ spin_process_id: obj.id, sales_id: spinSales.id, no_of_box: obj.totalBoxesUsed, qty_used: obj.qtyUsed })
+            }
+        }
         res.sendSuccess(res, { spinSales });
     } catch (error: any) {
         console.error(error)
@@ -640,6 +777,48 @@ const exportSpinnerSale = async (req: Request, res: Response) => {
     }
 };
 
+const deleteSpinnerSales = async (req: Request, res: Response) => {
+    try {
+        if (!req.body.id) {
+            return res.sendError(res, 'Need Sales Id');
+        }
+        let yarn_selections = await SpinProcessYarnSelection.findAll({
+            attributes: ['id', 'spin_process_id', 'sales_id', 'no_of_box', 'qty_used'],
+            where: {
+                sales_id: req.body.id
+            }
+        })
+        yarn_selections.forEach((yarn: any) => {
+            SpinProcess.update(
+                {
+                    qty_stock: sequelize.literal(`qty_stock + ${yarn.qty_used}`),
+                    tot_box_user: sequelize.literal(`tot_box_user - ${yarn.no_of_box}`)
+                },
+                {
+                    where: {
+                        id: yarn.spin_process_id
+                    }
+                }
+            );
+        });
+
+        SpinSales.destroy({
+            where: {
+                id: req.body.id
+            }
+        });
+
+        SpinProcessYarnSelection.destroy({
+            where: {
+                sales_id: req.body.id
+            }
+        });
+        return res.sendSuccess(res, { message: 'Successfully deleted this process' });
+
+    } catch (error: any) {
+        return res.sendError(res, error.message);
+    }
+}
 
 //fetch Spinner transaction with filters
 const fetchSpinSalesDashBoard = async (req: Request, res: Response) => {
@@ -666,7 +845,7 @@ const fetchSpinSalesDashBoard = async (req: Request, res: Response) => {
             const idArray: number[] = ginnerId
                 .split(",")
                 .map((id: any) => parseInt(id, 10));
-            whereCondition.ginner_id = { [Op.contains]: idArray };
+            whereCondition.ginner_id = { [Op.in]: idArray };
         }
         if (filter === 'Quantity') {
             whereCondition.qty_stock = { [Op.gt]: 0 }
@@ -675,7 +854,7 @@ const fetchSpinSalesDashBoard = async (req: Request, res: Response) => {
             const idArray: number[] = programId
                 .split(",")
                 .map((id: any) => parseInt(id, 10));
-            whereCondition.program_id = { [Op.contains]: idArray };
+            whereCondition.program_id = { [Op.in]: idArray };
         }
 
         let include = [
@@ -740,6 +919,7 @@ const updateStatusSales = async (req: Request, res: Response) => {
         return res.sendError(res, error.meessage);
     }
 }
+
 
 //count the number of bales and total quantity stock With Program
 const countCottonBaleWithProgram = async (req: Request, res: Response) => {
@@ -897,6 +1077,34 @@ const getProgram = async (req: Request, res: Response) => {
     }
 };
 
+const getYarnCount = async (req: Request, res: Response) => {
+    try {
+        if (!req.query.spinnerId) {
+            return res.sendError(res, 'Need Spinner Id');
+        }
+
+        let spinnerId = req.query.spinnerId;
+        let spinner = await Spinner.findOne({ where: { id: spinnerId } });
+        let idArray: number[] = spinner.yarn_count_range
+            .split(",")
+            .map((id: any) => parseInt(id, 10));
+
+        if (idArray.length > 0) {
+            let data = await YarnCount.findAll({
+                where: {
+                    id: { [Op.in]: idArray }
+                }
+            });
+            res.sendSuccess(res, data);
+        } else {
+            res.sendSuccess(res, []);
+        }
+
+    } catch (error: any) {
+        return res.sendError(res, error.message);
+    }
+};
+
 
 export {
     createSpinnerProcess,
@@ -911,5 +1119,9 @@ export {
     countCottonBaleWithProgram,
     exportSpinnerTransaction,
     getProgram,
-    fetchComberNoilPagination
+    fetchComberNoilPagination,
+    chooseYarnProcess,
+    getYarnCount,
+    deleteSpinnerProcess,
+    deleteSpinnerSales
 }

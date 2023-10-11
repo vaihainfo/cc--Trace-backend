@@ -17,6 +17,7 @@ import { generateOnlyQrCode } from "../../provider/qrcode";
 import Embroidering from "../../models/embroidering.model";
 import Season from "../../models/season.model";
 import Department from "../../models/department.model";
+import FabricSelection from "../../models/fabric-selections.model";
 
 const fetchBrandQrGarmentSalesPagination = async (req: Request, res: Response) => {
     const searchTerm = req.query.search || '';
@@ -335,6 +336,19 @@ const createGarmentSales = async (req: Request, res: Response) => {
             qr: uniqueFilename
         };
         const garmentSales = await GarmentSales.create(data);
+        if (req.body.chooseFabric && req.body.chooseFabric.length > 0) {
+            for await (let obj of req.body.chooseFabric) {
+                if (obj.processor === 'knitter') {
+                    let update = await KnitSales.update({ qty_stock: obj.totalQty - obj.qtyUsed }, { where: { id: obj.id } });
+                } else {
+                    let update = await WeaverSales.update({ qty_stock: obj.totalQty - obj.qtyUsed }, { where: { id: obj.id } });
+                }
+                await FabricSelection.create({
+                    fabric_id: obj.id, processor: obj.processor, sales_id: garmentSales.id, qty_used: obj.qtyUsed
+                })
+            }
+        }
+
         res.sendSuccess(res, garmentSales);
     } catch (error: any) {
         console.log(error.message);

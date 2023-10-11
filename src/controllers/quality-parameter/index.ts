@@ -166,7 +166,7 @@ const exportQualityParameter = async (req: Request, res: Response) => {
 
     try {
         // Create the excel workbook file
-        const { spinnerId, ginnerId } = req.query
+        const { spinnerId, ginnerId, brandId, countryId }: any = req.query
         const workbook = new ExcelJS.Workbook();
         const worksheet = workbook.addWorksheet("Sheet1");
         worksheet.mergeCells('A1:U1');
@@ -188,6 +188,20 @@ const exportQualityParameter = async (req: Request, res: Response) => {
         }
         if (ginnerId) {
             whereCondition.ginner_id = ginnerId
+        }
+        if (brandId) {
+            const idArray: number[] = brandId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition[Op.or] = [{ ["$ginner.brand$"]: { [Op.contains]: idArray } },
+            { ["$spinner.brand$"]: { [Op.contains]: idArray } }];
+        }
+        if (countryId) {
+            const idArray: number[] = countryId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition[Op.or] = [{ ["$ginner.country_id$"]: { [Op.in]: idArray } },
+            { ["$spinner.country_id$"]: { [Op.in]: idArray } }];
         }
         let include = [
             {

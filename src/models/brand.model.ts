@@ -1,7 +1,7 @@
-import { DataTypes  } from 'sequelize';
-import db  from '../util/dbConn';
+import { DataTypes } from 'sequelize';
+import db from '../util/dbConn';
 
-const Brand = db.define('brands',{
+const Brand = db.define('brands', {
   id: {
     type: DataTypes.INTEGER,
     autoIncrement: true,
@@ -53,6 +53,10 @@ const Brand = db.define('brands',{
     allowNull: false,
     type: DataTypes.ARRAY(DataTypes.INTEGER)
   },
+  entity_limit: {
+    type: DataTypes.DOUBLE,
+    defaultValue: 0
+  }
 });
 
 Brand.associate = (models: any) => {

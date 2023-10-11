@@ -38,6 +38,10 @@ const GinBale = db.define('gin-bales', {
   qr: {
     type: DataTypes.STRING
   },
+  sold_status: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false
+  }
 });
 
 GinBale.belongsTo(GinProcess, {

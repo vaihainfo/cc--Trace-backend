@@ -14,6 +14,8 @@ import KnitSales from "../../models/knit-sales.model";
 import FabricType from "../../models/fabric-type.model";
 import Garment from "../../models/garment.model";
 import Knitter from "../../models/knitter.model";
+import YarnCount from "../../models/yarn-count.model";
+import KnitYarnSelection from "../../models/knit-yarn-seletions.model";
 
 //create knitter Sale
 const createKnitterrSales = async (req: Request, res: Response) => {
@@ -70,9 +72,56 @@ const createKnitterrSales = async (req: Request, res: Response) => {
             qr: uniqueFilename
         };
         const kniSale = await KnitSales.create(data);
+        if (req.body.chooseYarn && req.body.chooseYarn.length > 0) {
+            for await (let obj of req.body.chooseYarn) {
+                let update = await SpinSales.update({ qty_stock: obj.totalQty - obj.qtyUsed }, { where: { id: obj.id } });
+                await KnitYarnSelection.create({ yarn_id: obj.id, sales_id: kniSale.id, qty_used: obj.qtyUsed })
+            }
+        }
         res.sendSuccess(res, { kniSale });
     } catch (error: any) {
         return res.sendError(res, error.meessage);
+    }
+}
+
+const deleteKnitterSales = async (req: Request, res: Response) => {
+    try {
+        if (!req.body.id) {
+            return res.sendError(res, 'Need Sales Id');
+        }
+        let yarn_selections = await KnitYarnSelection.findAll({
+            where: {
+                sales_id: req.body.id
+            }
+        })
+        yarn_selections.forEach((yarn: any) => {
+            SpinSales.update(
+                {
+                    qty_stock: sequelize.literal(`qty_stock + ${yarn.qty_used}`)
+                },
+                {
+                    where: {
+                        id: yarn.yarn_id
+                    }
+                }
+            );
+        });
+
+        KnitSales.destroy({
+            where: {
+                id: req.body.id
+            }
+        });
+
+        KnitYarnSelection.destroy({
+            where: {
+                sales_id: req.body.id
+            }
+        });
+        return res.sendSuccess(res, { message: 'Successfully deleted this process' });
+
+    } catch (error: any) {
+        return res.sendError(res, error.message);
     }
 }
 
@@ -269,13 +318,12 @@ const exportKnitterSale = async (req: Request, res: Response) => {
     }
 };
 
-
 //fetch knitter transaction with filters
 const fetchKnitterDashBoard = async (req: Request, res: Response) => {
     const searchTerm = req.query.search || "";
     const page = Number(req.query.page) || 1;
     const limit = Number(req.query.limit) || 10;
-    const { knitterId, status, filter, programId, spinnerId }: any = req.query;
+    const { knitterId, status, filter, programId, spinnerId, invoice, lotNo, yarnCount, yarnType }: any = req.query;
     const offset = (page - 1) * limit;
     const whereCondition: any = {};
     try {
@@ -294,14 +342,14 @@ const fetchKnitterDashBoard = async (req: Request, res: Response) => {
             ];
         }
         if (status === 'Pending' || status === 'Sold') {
-            whereCondition.buyer_id = knitterId
+            whereCondition.knitter_id = knitterId
             whereCondition.status = status === 'Pending' ? 'Pending for QR scanning' : 'Sold';
         }
         if (spinnerId) {
             const idArray: number[] = spinnerId
                 .split(",")
                 .map((id: any) => parseInt(id, 10));
-            whereCondition.spinner_id = { [Op.contains]: idArray };
+            whereCondition.spinner_id = { [Op.in]: idArray };
         }
         if (filter === 'Quantity') {
             whereCondition.qty_stock = { [Op.gt]: 0 }
@@ -311,6 +359,31 @@ const fetchKnitterDashBoard = async (req: Request, res: Response) => {
                 .split(",")
                 .map((id: any) => parseInt(id, 10));
             whereCondition.program_id = { [Op.in]: idArray };
+        }
+
+        if (invoice) {
+            const idArray: any[] = invoice
+                .split(",")
+                .map((id: any) => id);
+            whereCondition.invoice_no = { [Op.in]: idArray };
+        }
+        if (lotNo) {
+            const idArray: any[] = lotNo
+                .split(",")
+                .map((id: any) => id);
+            whereCondition.batch_lot_no = { [Op.in]: idArray };
+        }
+        if (yarnCount) {
+            const idArray: number[] = yarnCount
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition.yarn_count = { [Op.in]: idArray };
+        }
+        if (yarnType) {
+            const idArray: any[] = yarnType
+                .split(",")
+                .map((id: any) => id);
+            whereCondition.yarn_type = { [Op.in]: idArray };
         }
 
         let include = [
@@ -383,7 +456,7 @@ const countCottonBaleWithProgram = async (req: Request, res: Response) => {
             return res.sendError(res, 'Need knitter Id');
         }
         let whereCondition: any = {}
-        whereCondition.buyer_id = req.query.knitterId;
+        whereCondition.knitter_id = req.query.knitterId;
         whereCondition.status = 'Sold';
         const weaver = await SpinSales.findAll({
             where: whereCondition,
@@ -460,7 +533,101 @@ const getProgram = async (req: Request, res: Response) => {
     }
 };
 
+const getSpinnerAndProgram = async (req: Request, res: Response) => {
+    const { knitterId, status, filter, programId, spinnerId }: any = req.query;
+    const whereCondition: any = {};
+    try {
+        if (!knitterId) {
+            return res.sendError(res, 'Need Knitter Id ');
+        }
+        if (!status) {
+            return res.sendError(res, 'Need  status');
+        }
 
+        if (status === 'Pending' || status === 'Sold') {
+            whereCondition.knitter_id = knitterId
+            whereCondition.status = status === 'Pending' ? 'Pending for QR scanning' : 'Sold';
+        }
+
+        const spinner = await SpinSales.findAll({
+            attributes: ['spinner_id', 'spinner.name'],
+            where: whereCondition,
+            include: [
+                {
+                    model: Spinner,
+                    as: 'spinner',
+                    attributes: ['id', 'name']
+                }
+            ],
+            group: ['spinner_id', "spinner.id"]
+        });
+        const program = await SpinSales.findAll({
+            attributes: ['program_id', 'program.program_name'],
+            where: whereCondition,
+            include: [
+                {
+                    model: Program,
+                    as: 'program',
+                    attributes: ['id', 'program_name']
+                }
+            ],
+            group: ['program_id', "program.id"]
+        });
+        res.sendSuccess(res, { spinner, program });
+    } catch (error: any) {
+        return res.sendError(res, error.message);
+    }
+};
+
+const getInvoiceAndyarnType = async (req: Request, res: Response) => {
+    const { knitterId, status, spinnerId }: any = req.query;
+    const whereCondition: any = {};
+    try {
+        if (!knitterId) {
+            return res.sendError(res, 'Need Knitter Id ');
+        }
+        if (!status) {
+            return res.sendError(res, 'Need  status');
+        }
+
+        if (status === 'Pending' || status === 'Sold') {
+            whereCondition.knitter_id = knitterId
+            whereCondition.status = status === 'Pending' ? 'Pending for QR scanning' : 'Sold';
+        }
+        if (spinnerId) {
+            const idArray: number[] = spinnerId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition.spinner_id = { [Op.in]: idArray };
+        }
+
+        const invoice = await SpinSales.findAll({
+            attributes: ['invoice_no', 'batch_lot_no'],
+            where: whereCondition,
+            group: ['invoice_no', 'batch_lot_no']
+        });
+        const yarncount = await SpinSales.findAll({
+            attributes: ['yarn_count'],
+            where: whereCondition,
+            include: [
+                {
+                    model: YarnCount,
+                    as: 'yarncount',
+                    attributes: ['id', 'yarnCount_name']
+                }
+            ],
+            group: ['yarn_count', 'yarncount.id']
+        });
+        const yarn_type = await SpinSales.findAll({
+            attributes: ['yarn_type'],
+            where: whereCondition,
+            group: ['yarn_type']
+        });
+        res.sendSuccess(res, { invoice, yarn_type, yarncount });
+    } catch (error: any) {
+        return res.sendError(res, error.message);
+    }
+};
 export {
     createKnitterrSales,
     fetchKnitterSalesPagination,
@@ -468,5 +635,8 @@ export {
     countCottonBaleWithProgram,
     updateStatusKnitterSale,
     exportKnitterSale,
-    getProgram
+    getProgram,
+    getSpinnerAndProgram,
+    getInvoiceAndyarnType,
+    deleteKnitterSales
 }

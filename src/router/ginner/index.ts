@@ -13,12 +13,11 @@ import {
     getReelBaleId,
     fetchGinSale,
     getProgram,
-    updateGinSaleBale
+    updateGinSaleBale,
+    chooseBale,
+    deleteGinnerProcess
 } from "../../controllers/ginner";
-import {
 
-    createSpinnerProcess,
-} from "../../controllers/spinner";
 
 import { Router } from "express";
 const router = Router();
@@ -26,6 +25,7 @@ const router = Router();
 // Ginner Routes
 router.get('/', fetchGinProcessPagination);
 router.post('/', createGinnerProcess);
+router.delete('/', deleteGinnerProcess);
 router.get('/choose-cotton', chooseCotton);
 router.get('/fetch-bale', fetchGinBale);
 router.get('/', fetchGinProcessPagination);
@@ -41,6 +41,7 @@ router.get('/dashboard', dashboardGraphWithProgram);
 router.get('/reel', getReelBaleId);
 router.get('/get-program', getProgram);
 router.put('/sales/update-bale', updateGinSaleBale);
+router.get('/sales/choose-bale', chooseBale);
 
 
 

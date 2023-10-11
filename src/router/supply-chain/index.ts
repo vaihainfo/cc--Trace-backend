@@ -10,7 +10,7 @@ const router = Router();
 
 router.use(accessControl)
 
-router.get('/rating', fetchSupplyChainRating);
+router.post('/get-rating', fetchSupplyChainRating);
 router.post('/rating', createSupplyChainRating);
 router.put('/rating', updateSupplyChainRating);
 

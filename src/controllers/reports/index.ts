@@ -28,6 +28,7 @@ import GarmentSales from "../../models/garment-sales.model";
 import Brand from "../../models/brand.model";
 import Department from "../../models/department.model";
 import BaleSelection from "../../models/bale-selection.model";
+import Farm from "../../models/farm.model";
 
 const fetchBaleProcess = async (req: Request, res: Response) => {
     const searchTerm = req.query.search || "";
@@ -3797,10 +3798,10 @@ const fetchGarmentFabricPagination = async (req: Request, res: Response) => {
         let data: any = await sequelize.query(
             `SELECT "weaver_sales"."id", "weaver_sales"."weaver_id", "weaver_sales"."season_id", "weaver_sales"."date", "weaver_sales"."program_id", "weaver_sales"."order_ref", "weaver_sales"."buyer_id",  "weaver_sales"."transaction_via_trader", "weaver_sales"."transaction_agent", "weaver_sales"."fabric_type", "weaver_sales"."fabric_length", "weaver_sales"."fabric_gsm", "weaver_sales"."fabric_weight", "weaver_sales"."batch_lot_no", "weaver_sales"."job_details_garment","weaver_sales"."invoice_no", "weaver_sales"."vehicle_no","weaver_sales"."qty_stock", "weaver_sales"."qr", "program"."id" AS "program-id", "program"."program_name" AS "program_name", "fabric"."id" AS 
             "fabric_id", "fabric"."fabricType_name" AS "fabricType_name", "weaver"."id" AS "weaver-id", "weaver"."name" AS 
-            "weaver_name" FROM "weaver_sales" AS "weaver_sales" LEFT OUTER JOIN "programs" AS "program" ON "weaver_sales"."program_id" = "program"."id" LEFT OUTER JOIN "fabric_types" AS "fabric" ON "weaver_sales"."fabric_type" = "fabric"."id" LEFT OUTER JOIN "weavers" AS "weaver" ON "weaver_sales"."weaver_id" = "weaver"."id" 
+            "weaver_name", "garment"."name" as "garment_name" FROM "weaver_sales" AS "weaver_sales" LEFT OUTER JOIN "programs" AS "program" ON "weaver_sales"."program_id" = "program"."id" LEFT OUTER JOIN "fabric_types" AS "fabric" ON "weaver_sales"."fabric_type" = "fabric"."id" LEFT OUTER JOIN "weavers" AS "weaver" ON "weaver_sales"."weaver_id" = "weaver"."id" LEFT OUTER JOIN "garments" AS "garment" ON "weaver_sales"."buyer_id" = "garment"."id"
              UNION ALL 
-             SELECT "knit_sales"."id", "knit_sales"."knitter_id", "knit_sales"."season_id", "knit_sales"."date", "knit_sales"."program_id", "knit_sales"."order_ref", "knit_sales"."buyer_id", "knit_sales"."transaction_via_trader", "knit_sales"."transaction_agent", "knit_sales"."fabric_type", "knit_sales"."fabric_length", "knit_sales"."fabric_gsm", "knit_sales"."fabric_weight", "knit_sales"."batch_lot_no", "knit_sales"."job_details_garment", "knit_sales"."invoice_no", "knit_sales"."vehicle_no", "knit_sales"."qty_stock", "knit_sales"."qr", "program"."id" AS "program-id", "program"."program_name" AS "program_name", "fabric"."id" AS "fabric_id", "fabric"."fabricType_name" AS "fabricType_name", "knitter"."id" AS "knitter-id", "knitter"."name" AS "knitter_name" FROM "knit_sales" AS "knit_sales" 
-             LEFT OUTER JOIN "programs" AS "program" ON "knit_sales"."program_id" = "program"."id" LEFT OUTER JOIN "fabric_types" AS "fabric" ON "knit_sales"."fabric_type" = "fabric"."id" LEFT OUTER JOIN "knitters" AS "knitter" ON "knit_sales"."knitter_id" = "knitter"."id"
+             SELECT "knit_sales"."id", "knit_sales"."knitter_id", "knit_sales"."season_id", "knit_sales"."date", "knit_sales"."program_id", "knit_sales"."order_ref", "knit_sales"."buyer_id", "knit_sales"."transaction_via_trader", "knit_sales"."transaction_agent", "knit_sales"."fabric_type", "knit_sales"."fabric_length", "knit_sales"."fabric_gsm", "knit_sales"."fabric_weight", "knit_sales"."batch_lot_no", "knit_sales"."job_details_garment", "knit_sales"."invoice_no", "knit_sales"."vehicle_no", "knit_sales"."qty_stock", "knit_sales"."qr", "program"."id" AS "program-id", "program"."program_name" AS "program_name", "fabric"."id" AS "fabric_id", "fabric"."fabricType_name" AS "fabricType_name", "knitter"."id" AS "knitter-id", "knitter"."name" AS "knitter_name", "garment"."name" as "garment_name" FROM "knit_sales" AS "knit_sales" 
+             LEFT OUTER JOIN "programs" AS "program" ON "knit_sales"."program_id" = "program"."id" LEFT OUTER JOIN "fabric_types" AS "fabric" ON "knit_sales"."fabric_type" = "fabric"."id" LEFT OUTER JOIN "knitters" AS "knitter" ON "knit_sales"."knitter_id" = "knitter"."id" LEFT OUTER JOIN "garments" AS "garment" ON "knit_sales"."buyer_id" = "garment"."id"
              OFFSET ${offset} 
              LIMIT ${limit}`,
         )
@@ -3810,7 +3811,337 @@ const fetchGarmentFabricPagination = async (req: Request, res: Response) => {
         return res.sendError(res, error.message);
     }
 }
+const exportGarmentFabric = async (req: Request, res: Response) => {
+    const excelFilePath = path.join("./upload", "garment-fabric-report.xlsx");
+    try {
+        const whereCondition: any = {};
+        const searchTerm = req.query.search || "";
+        if (searchTerm) {
+            whereCondition[Op.or] = [
+                { '$garment.name$': { [Op.iLike]: `%${searchTerm}%` } },
+                { batch_lot_no: { [Op.iLike]: `%${searchTerm}%` } },
+                { bale_ids: { [Op.iLike]: `%${searchTerm}%` } },
+                { invoice_no: { [Op.iLike]: `%${searchTerm}%` } },
+                { '$fabric.fabricType_name$': { [Op.iLike]: `%${searchTerm}%` } }
+            ];
+        }
 
+
+        // Create the excel workbook file
+        const workbook = new ExcelJS.Workbook();
+        const worksheet = workbook.addWorksheet("Sheet1");
+        worksheet.mergeCells('A1:L1');
+        const mergedCell = worksheet.getCell('A1');
+        mergedCell.value = 'CottonConnect | Garment Fabric Sales Report';
+        mergedCell.font = { bold: true };
+        mergedCell.alignment = { horizontal: 'center', vertical: 'middle' };
+        // Set bold font for header row
+        // Set bold font for header row
+        const headerRow = worksheet.addRow([
+            "Sr No.", "Date", "Weave/Knit Uint", "Garment Processor Unit",
+            "Invoice Number", "Lot/Batch No",
+            "Fabirc Type", "No. of Bales/Rolls", "Bale/Roll Id", "Fabric in Mts", "Net Weight(Kgs)", "Qr code"
+        ]);
+        headerRow.font = { bold: true };
+        let include = [
+            {
+                model: Program,
+                as: 'program',
+            },
+            {
+                model: Garment,
+                as: 'buyer',
+            },
+            {
+                model: FabricType,
+                as: 'fabric',
+            }
+        ]
+        let result = await Promise.all([
+            WeaverSales.findAll({
+                where: whereCondition,
+                include: [...include, { model: Weaver, as: 'weaver', attributes: ['id', 'name'] }]
+            }),
+            KnitSales.findAll({
+                where: whereCondition,
+                include: [...include, { model: Knitter, as: 'knitter', attributes: ['id', 'name'] }]
+            })
+        ])
+        let abc = result.flat()
+        // Append data to worksheet
+        for await (const [index, item] of abc.entries()) {
+
+            const rowValues = Object.values({
+                index: index + 1,
+                date: item.date ? item.date : '',
+                buyer: item.weaver ? item.weaver.name : item.knitter.name,
+                garment_name: item.buyer ? item.buyer.name : '',
+                invoice: item.invoice_no ? item.invoice_no : '',
+                batch_lot_no: item.batch_lot_no ? item.batch_lot_no : '',
+                fabric: item.fabric ? item.fabric.fabricType_name : '',
+                no_of_pieces: item.no_of_pieces ? item.no_of_pieces : '',
+                bale_ids: item.bale_ids ? item.bale_ids : '',
+                fabric_length: item.fabric_length ? item.fabric_length : '',
+                fabric_weight: item.fabric_weight ? item.fabric_weight : '',
+                color: process.env.BASE_URL + item.qr ?? '',
+            });
+            worksheet.addRow(rowValues);
+        }
+        // Auto-adjust column widths based on content
+        worksheet.columns.forEach((column: any) => {
+            let maxCellLength = 0;
+            column.eachCell({ includeEmpty: true }, (cell: any) => {
+                const cellLength = (cell.value ? cell.value.toString() : '').length;
+                maxCellLength = Math.max(maxCellLength, cellLength);
+            });
+            column.width = Math.min(14, maxCellLength + 2); // Limit width to 30 characters
+        });
+
+        // Save the workbook
+        await workbook.xlsx.writeFile(excelFilePath);
+        res.status(200).send({
+            success: true,
+            messgage: "File successfully Generated",
+            data: process.env.BASE_URL + "garment-fabric-report.xlsx",
+        });
+    } catch (error: any) {
+        console.error("Error appending data:", error);
+        return res.sendError(res, error.message);
+
+    }
+};
+
+
+const fetchPscpPrecurement = async (req: Request, res: Response) => {
+    try {
+        let { seasonId }: any = req.query;
+        let whereCondition: any = {}
+        if (seasonId) {
+            const idArray: number[] = seasonId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition.season_id = { [Op.in]: idArray };
+        }
+
+        const result = await Farm.findAll({
+            attributes: [
+                [sequelize.col('season.id'), 'season_id'],
+                [sequelize.col('season.name'), 'season_name'],
+                [sequelize.fn('SUM', sequelize.col('total_estimated_cotton')), 'estimated_seed_cotton']
+            ],
+            include: [
+                {
+                    model: Season,
+                    as: 'season',
+                    attributes: []
+                }
+            ],
+            where: whereCondition,
+            group: ['season.id']
+        });
+        let data: any = [];
+        for await (const [index, item] of result.entries()) {
+
+            let obj: any = {}
+            let procurementrow = await Transaction.findOne({
+                attributes: [
+                    [sequelize.fn('COALESCE', sequelize.fn('SUM', Sequelize.literal("CAST(qty_purchased AS INTEGER)")), 0), 'procurement_seed_cotton'],
+                    [sequelize.fn('COALESCE', sequelize.fn('SUM', sequelize.col('qty_stock')), 0), 'total_qty_lint_produced']
+                ],
+                where: { season_id: item.season_id }
+            });
+            let processgin = await GinProcess.findOne({
+                attributes: [
+                    [sequelize.fn('COALESCE', sequelize.fn('SUM', sequelize.col('no_of_bales')), 0), 'no_of_bales']
+                ],
+                where: { season_id: item.season_id }
+            })
+            let ginbales = await GinBale.findOne({
+                attributes: [
+                    [sequelize.fn('COALESCE', sequelize.fn('SUM', Sequelize.literal('CAST("gin-bales"."weight" AS INTEGER)')), 0), 'total_qty']
+                ],
+                include: [
+                    {
+                        model: GinProcess,
+                        as: 'ginprocess',
+                        attributes: []
+                    }
+                ],
+                where: {
+                    '$ginprocess.season_id$': item.season_id
+                },
+                group: ["ginprocess.season_id"]
+            });
+            let processSale = await GinSales.findOne({
+                attributes: [
+                    [sequelize.fn('COALESCE', sequelize.fn('SUM', sequelize.col('no_of_bales')), 0), 'no_of_bales'],
+                    [sequelize.fn('COALESCE', sequelize.fn('SUM', sequelize.col('total_qty')), 0), 'total_qty']
+                ],
+                where: { season_id: item.season_id }
+            })
+
+            obj.estimated_seed_cotton = ((item?.dataValues.estimated_seed_cotton ?? 0) / 1000);
+            obj.estimated_lint = (((item?.dataValues.estimated_seed_cotton ?? 0) * 35 / 100) / 1000);
+            obj.procurement_seed_cotton = ((procurementrow?.dataValues?.procurement_seed_cotton ?? 0) / 1000);
+            obj.procurement = Math.round(((procurementrow?.dataValues['procurement_seed_cotton'] / (item?.dataValues.estimated_seed_cotton ?? 0)) * 100));
+            obj.procured_lint_cotton = (((procurementrow?.dataValues['procurement_seed_cotton'] ?? 0) * 35 / 100) / 1000);
+            obj.no_of_bales = processgin?.dataValues.no_of_bales ?? 0;
+            obj.total_qty_lint_produced = ginbales ? ((ginbales.dataValues.total_qty ?? 0) / 1000) : 0;
+            obj.sold_bales = processSale?.dataValues['no_of_bales'] ?? 0;
+            obj.average_weight = ((ginbales?.dataValues.total_qty ?? 0) / (obj.no_of_bales ?? 0));
+            obj.total_qty_sold_lint = ((processSale?.dataValues['total_qty'] ?? 0) / 1000);
+            obj.balace_stock = (obj.no_of_bales - obj.sold_bales) ?? 0;
+            obj.balance_lint_quantity = (obj.total_qty_lint_produced - obj.total_qty_sold_lint);
+
+            data.push({ season: item.dataValues.season_name, season_id: item.dataValues.season_id, ...obj });
+        }
+        return res.sendPaginationSuccess(res, data);
+    } catch (error: any) {
+        console.error("Error appending data:", error);
+        return res.sendError(res, error.message);
+    }
+}
+
+const exportPscpCottonProcurement = async (req: Request, res: Response) => {
+    const excelFilePath = path.join("./upload", "pscp-cotton-procurement.xlsx");
+
+    const searchTerm = req.query.search || "";
+    const { seasonId }: any = req.query;
+    const whereCondition: any = {};
+    try {
+
+        if (seasonId) {
+            const idArray: number[] = seasonId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition.season_id = { [Op.in]: idArray };
+        }
+        // Create the excel workbook file
+        const workbook = new ExcelJS.Workbook();
+        const worksheet = workbook.addWorksheet("Sheet1");
+        worksheet.mergeCells('A1:N1');
+        const mergedCell = worksheet.getCell('A1');
+        mergedCell.value = 'CottonConnect | PSCP Cotton Procurement Tracker';
+        mergedCell.font = { bold: true };
+        mergedCell.alignment = { horizontal: 'center', vertical: 'middle' };
+        // Set bold font for header row
+        const headerRow = worksheet.addRow([
+            "Sr No.", "Season", "Estimated seed cotton (in MT)", "Estimated Lint (in MT)",
+            "Procured Seed Cotton (in MT)", "Procurement %", "Procured Lint Cotton (in MT)", "No of Bales",
+            "Total Quantity of lint produced in (MT)", "Sold Bales", "Average Bale weight in Kgs", "Total Quantity of lint sold in (MT)", "Balance stock of bales",
+            "Balance Lint Quantity stock in MT"
+        ]);
+        headerRow.font = { bold: true };
+        const result = await Farm.findAll({
+            attributes: [
+                [sequelize.col('season.id'), 'season_id'],
+                [sequelize.col('season.name'), 'season_name'],
+                [sequelize.fn('SUM', sequelize.col('total_estimated_cotton')), 'estimated_seed_cotton']
+            ],
+            include: [
+                {
+                    model: Season,
+                    as: 'season',
+                    attributes: []
+                }
+            ],
+            where: whereCondition,
+            group: ['season.id']
+        });
+        // Append data to worksheet
+        for await (const [index, item] of result.entries()) {
+            let obj: any = {};
+            let procurementrow = await Transaction.findOne({
+                attributes: [
+                    [sequelize.fn('COALESCE', sequelize.fn('SUM', Sequelize.literal("CAST(qty_purchased AS INTEGER)")), 0), 'procurement_seed_cotton'],
+                    [sequelize.fn('COALESCE', sequelize.fn('SUM', sequelize.col('qty_stock')), 0), 'total_qty_lint_produced']
+                ],
+                where: { season_id: item.season_id }
+            });
+            let processgin = await GinProcess.findOne({
+                attributes: [
+                    [sequelize.fn('COALESCE', sequelize.fn('SUM', sequelize.col('no_of_bales')), 0), 'no_of_bales']
+                ],
+                where: { season_id: item.season_id }
+            })
+            let ginbales = await GinBale.findOne({
+                attributes: [
+                    [sequelize.fn('COALESCE', sequelize.fn('SUM', Sequelize.literal('CAST("gin-bales"."weight" AS INTEGER)')), 0), 'total_qty']
+                ],
+                include: [
+                    {
+                        model: GinProcess,
+                        as: 'ginprocess',
+                        attributes: []
+                    }
+                ],
+                where: {
+                    '$ginprocess.season_id$': item.season_id
+                },
+                group: ["ginprocess.season_id"]
+            });
+            let processSale = await GinSales.findOne({
+                attributes: [
+                    [sequelize.fn('COALESCE', sequelize.fn('SUM', sequelize.col('no_of_bales')), 0), 'no_of_bales'],
+                    [sequelize.fn('COALESCE', sequelize.fn('SUM', sequelize.col('total_qty')), 0), 'total_qty']
+                ],
+                where: { season_id: item.season_id }
+            })
+
+            obj.estimated_seed_cotton = ((item?.dataValues.estimated_seed_cotton ?? 0) / 1000);
+            obj.estimated_lint = (((item?.dataValues.estimated_seed_cotton ?? 0) * 35 / 100) / 1000);
+            obj.procurement_seed_cotton = ((procurementrow?.dataValues?.procurement_seed_cotton ?? 0) / 1000);
+            obj.procurement = Math.round(((procurementrow?.dataValues['procurement_seed_cotton'] / (item?.dataValues.estimated_seed_cotton ?? 0)) * 100));
+            obj.procured_lint_cotton = (((procurementrow?.dataValues['procurement_seed_cotton'] ?? 0) * 35 / 100) / 1000);
+            obj.no_of_bales = processgin?.dataValues.no_of_bales ?? 0;
+            obj.total_qty_lint_produced = ginbales ? ((ginbales.dataValues.total_qty ?? 0) / 1000) : 0;
+            obj.sold_bales = processSale?.dataValues['no_of_bales'] ?? 0;
+            obj.average_weight = ((ginbales?.dataValues.total_qty ?? 0) / (obj.no_of_bales ?? 0));
+            obj.total_qty_sold_lint = ((processSale?.dataValues['total_qty'] ?? 0) / 1000);
+            obj.balace_stock = (obj.no_of_bales - obj.sold_bales) ?? 0;
+            obj.balance_lint_quantity = (obj.total_qty_lint_produced - obj.total_qty_sold_lint);
+
+            const rowValues = Object.values({
+                index: index + 1,
+                name: item.dataValues.season_name ? item.dataValues.season_name : '',
+                estimated_seed_cotton: obj.estimated_seed_cotton,
+                estimated_lint: obj.estimated_lint,
+                procurement_seed_cotton: obj.procurement_seed_cotton,
+                procurement: obj.procurement,
+                procured_lint_cotton: obj.procured_lint_cotton,
+                no_of_bales: obj.no_of_bales,
+                total_qty_lint_produced: obj.total_qty_lint_produced,
+                sold_bales: obj.sold_bales,
+                average_weight: obj.average_weight ? obj.average_weight : 0,
+                total_qty_sold_lint: obj.total_qty_sold_lint ? obj.total_qty_sold_lint : 0,
+                balace_stock: obj.balace_stock,
+                balance_lint_quantity: obj.balance_lint_quantity
+            });
+            worksheet.addRow(rowValues);
+        }
+        // Auto-adjust column widths based on content
+        worksheet.columns.forEach((column: any) => {
+            let maxCellLength = 0;
+            column.eachCell({ includeEmpty: true }, (cell: any) => {
+                const cellLength = (cell.value ? cell.value.toString() : '').length;
+                maxCellLength = Math.max(maxCellLength, cellLength);
+            });
+            column.width = Math.min(24, maxCellLength + 2); // Limit width to 30 characters
+        });
+
+        // Save the workbook
+        await workbook.xlsx.writeFile(excelFilePath);
+        res.status(200).send({
+            success: true,
+            messgage: "File successfully Generated",
+            data: process.env.BASE_URL + "pscp-cotton-procurement.xlsx",
+        });
+    } catch (error: any) {
+        console.error("Error appending data:", error);
+        return res.sendError(res, error.message);
+
+    }
+};
 
 
 
@@ -3843,5 +4174,8 @@ export {
     exportGinnerSummary,
     fetchGarmentSalesPagination,
     exportGarmentSales,
-    fetchGarmentFabricPagination
+    fetchGarmentFabricPagination,
+    exportGarmentFabric,
+    fetchPscpPrecurement,
+    exportPscpCottonProcurement
 }

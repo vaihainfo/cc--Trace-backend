@@ -18,6 +18,7 @@ import FarmGroup from "../../models/farm-group.model";
 import Farm from "../../models/farm.model";
 import FarmerAgriArea from "../../models/farmer-agri-area.model";
 import FarmerCottonArea from "../../models/farmer-cotton-area.model";
+import sequelize from "../../util/dbConn";
 
 const createTransaction = async (req: Request, res: Response) => {
   try {
@@ -390,6 +391,101 @@ const updateTransaction = async (req: Request, res: Response) => {
     return res.sendError(res, "NOT_ABLE_TO_UPDATE");
   }
 };
+const allVillageCottonData = async (req: Request, res: Response) => {
+  try {
+    let userCondition = ''; // Define your user condition here
+    if (req.query.brandId) {
+      userCondition += `farmer.brand_id='${req.query.brandId}'`
+    }
+    const result = await sequelize.query(`
+    SELECT 
+      farmer.village_id, 
+        vg.village_name, 
+        ROUND(SUM(fr.total_estimated_cotton)) AS estimated_qty, 
+        ROUND(SUM(fr.cotton_transacted)) AS sold_qty, 
+        (ROUND(SUM(fr.total_estimated_cotton)) - ROUND(SUM(fr.cotton_transacted))) AS available_qty 
+    FROM ${Farm.getTableName()} fr 
+    JOIN ${Farmer.getTableName()} farmer ON fr.farmer_id = farmer.id 
+    JOIN ${Village.getTableName()} vg ON farmer.village_id = vg.id
+    ${userCondition ? `WHERE ${userCondition}` : ''} 
+    GROUP BY farmer.village_id, vg.village_name
+`, {
+      type: sequelize.QueryTypes.SELECT
+    });
+
+    res.sendSuccess(res, result)
+
+  } catch (error: any) {
+    return res.sendError(res, error.meessage);
+  }
+
+}
+
+const cottonData = async (req: Request, res: Response) => {
+  try {
+    if (req.query.villageId) {
+      const whereClause = { village_id: req.query.villageId };
+      const estimatedQty = await Farm.findOne({
+        attributes: [
+          [Sequelize.fn('SUM', Sequelize.col('farms.total_estimated_cotton')), 'estimated_qty']
+        ],
+        where: { '$farmer.village_id$': req.query.villageId },
+        include: [{
+          model: Farmer,
+          as: 'farmer',
+          attributes: []
+        }],
+        group: ['farmer.village_id']
+      });
+      const soldQty = await Transaction.findOne({
+        attributes: [
+          [sequelize.fn('COALESCE', sequelize.fn('SUM', Sequelize.literal("CAST(qty_purchased AS INTEGER)")), 0), 'qty']
+        ],
+        where: {
+          village_id: req.query.villageId,
+          program_id: { [Op.or]: [req.query.programId, 0] }
+        }
+      })
+      const availableQty = (estimatedQty?.dataValues?.estimated_qty ?? 0) - (soldQty?.dataValues?.qty ?? 0);
+
+      const villageName = await Village.findOne({ attributes: ['village_name'], where: { id: req.query.villageId } });
+      let abc = {
+        village_name: villageName.village_name,
+        estimated_qty: estimatedQty?.dataValues.estimated_qty || 0,
+        sold_qty: soldQty.dataValues.qty || 0,
+        available_qty: availableQty || 0
+      }
+      res.sendSuccess(res, abc)
+    }
+    if (req.query.ginnerId) {
+      let whereCondition: any = {
+        mapped_ginner: req.query.ginnerId
+      }
+      if (req.query.programId) {
+        whereCondition = {
+          mapped_ginner: req.query.ginnerId,
+          program_id: req.query.programId
+        }
+      }
+      const soldQty = await Transaction.findOne({
+        attributes: [
+          [sequelize.fn('COALESCE', sequelize.fn('SUM', Sequelize.literal("CAST(qty_purchased AS INTEGER)")), 0), 'qty']
+        ],
+        where: whereCondition
+      })
+      let qty = soldQty?.dataValues?.qty ?? 0
+      res.sendSuccess(res, { qty: qty })
+    }
+
+
+  } catch (error: any) {
+    console.log(error);
+    return res.sendError(res, error.meessage);
+  }
+
+}
+
+
 
 
 
@@ -424,14 +520,7 @@ const deleteBulkTransactions = async (req: Request, res: Response) => {
   }
 }
 
-const fetchAvailableCotton = async (req: Request, res: Response) => {
-  try {
 
-  } catch (error) {
-    console.log(error);
-    return res.sendError(res, "NOT_ABLE_TO_FETCH");
-  }
-};
 
 const uploadTransactionBulk = async (req: Request, res: Response) => {
   try {
@@ -1005,5 +1094,7 @@ export {
   deleteBulkTransactions,
   exportProcurement,
   fetchTransactionById,
-  exportGinnerProcurement
+  exportGinnerProcurement,
+  allVillageCottonData,
+  cottonData
 };
