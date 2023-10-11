@@ -77,13 +77,13 @@ const getQrImageHtml = (src: any, name: any, code: any, village: any) => {
     justify-content: center;
     padding: 15px 0;
     border-radius: 10px;">
-     <img src="https://staging.tracebale.com/dist/img/cotton_connect.png" class="mdl-qr-logo" style="width: 280px;"> <br>
+     <img src="https://api.newtracebale.com/file/1696838743827-cotton_connect.png" class="mdl-qr-logo" style="width: 280px;"> <br>
 
      <img src="${src}" alt="" id="qr-code-img" class="mdl-qr-img" style="width: 250px;">
      <div id='model-farmer-name' style="font-size: 30px;font-weight: 700; color: #081461; width: 80%; margin: 0 auto;text-align: center;">${name}</div>
      <div id='model-farmer-code' style="font-size: 20px;">${code}</div>
      <div id='model-farmer-village' style="font-size: 20px;">${village}</div>
-     <img src="https://staging.tracebale.com/dist/img/tracebale-logo.png" class="mdl-qr-logo-footer" style="padding-top: 10px;width: 220px;margin: 0 auto;">
+     <img src="https://api.newtracebale.com/file/1696838792397-tracebale-logo.png" class="mdl-qr-logo-footer" style="padding-top: 10px;width: 220px;margin: 0 auto;">
  </div>
 
 </div>

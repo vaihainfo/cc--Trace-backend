@@ -9,7 +9,7 @@ module.exports = {
      * Example:
      * await queryInterface.createTable('users', { id: Sequelize.INTEGER });
      */
-    await queryInterface.addColumn('spin_processes', 'comber_noil_stock', {
+    await queryInterface.addColumn('spin_process', 'comber_noil_stock', {
       type: Sequelize.DOUBLE
     })
   },
@@ -21,6 +21,6 @@ module.exports = {
      * Example:
      * await queryInterface.dropTable('users');
      */
-    await queryInterface.removeColumn('spin_processes', 'comber_noil_stock')
+    await queryInterface.removeColumn('spin_process', 'comber_noil_stock')
   }
 };
