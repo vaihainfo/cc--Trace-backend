@@ -31,7 +31,11 @@ import {
     fetchGinnerSummaryPagination,
     exportGinnerSummary,
     fetchGarmentSalesPagination,
-    exportGarmentSales
+    exportGarmentSales,
+    fetchGarmentFabricPagination,
+    exportGarmentFabric,
+    fetchPscpPrecurement,
+    exportPscpCottonProcurement
 } from "../../controllers/reports";
 const router = Router();
 
@@ -75,5 +79,9 @@ router.get('/get-ginner-summary-report', fetchGinnerSummaryPagination);
 router.get('/export-ginner-summary-report', exportGinnerSummary);
 router.get('/get-garment-sales-report', fetchGarmentSalesPagination);
 router.get('/export-garment-sales-report', exportGarmentSales);
+router.get('/get-garment-fabric-report', fetchGarmentFabricPagination);
+router.get('/export-garment-fabric-report', exportGarmentFabric);
+router.get('/get-pscp-precurement-report', fetchPscpPrecurement);
+router.get('/export-pscp-precurement-report', exportPscpCottonProcurement);
 
 export default router;  

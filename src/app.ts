@@ -61,6 +61,7 @@ import weaverProcessRouter from "./router/weaver";
 import knitterProcessRouter from "./router/knitter";
 import traderProcessRouter from "./router/trader";
 import supplyChainRouter from "./router/supply-chain";
+import brandProcessRouter from "./router/brand";
 import errorMiddleware from "./middleware/error";
 import setInterface from "./middleware/interface";
 
@@ -143,6 +144,7 @@ app.use("/knitter-process", knitterProcessRouter);
 app.use("/supply-chain", supplyChainRouter);
 app.use("/quality-parameter", qualityParameterRouter);
 app.use("/trader-process", traderProcessRouter);
+app.use("/brand-interface", brandProcessRouter);
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument, { customCss }));
 
 app.use(errorMiddleware);

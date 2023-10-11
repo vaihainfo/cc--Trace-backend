@@ -11,7 +11,11 @@ import {
     updateStatusSales,
     exportSpinnerTransaction,
     getProgram,
-    fetchComberNoilPagination
+    fetchComberNoilPagination,
+    chooseYarnProcess,
+    getYarnCount,
+    deleteSpinnerProcess,
+    deleteSpinnerSales
 } from "../../controllers/spinner";
 
 import { Router } from "express";
@@ -21,8 +25,10 @@ const router = Router();
 router.get('/', fetchSpinnerProcessPagination);
 router.post('/', createSpinnerProcess);
 router.put('/', updateSpinnerProcess);
+router.delete('/', deleteSpinnerProcess);
 router.get('/export', exportSpinnerProcess);
 router.get('/sales', fetchSpinSalesPagination);
+router.delete('/sales', deleteSpinnerSales);
 router.get('/comber-noil', fetchComberNoilPagination);
 router.post('/sales', createSpinnerSales);
 router.get('/sales/export', exportSpinnerSale);
@@ -31,4 +37,7 @@ router.put('/transaction', updateStatusSales);
 router.get('/transaction/count', countCottonBaleWithProgram);
 router.get('/transaction/export', exportSpinnerTransaction);
 router.get('/get-program', getProgram);
+router.get('/choose-yarn', chooseYarnProcess);
+router.get('/get-yarn', getYarnCount);
+
 export default router;

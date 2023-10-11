@@ -17,6 +17,8 @@ import Block from "../../models/block.model";
 import { generateQrCode } from "../../provider/qrcode";
 import archiver from 'archiver';
 import ICS from "../../models/ics.model";
+import Transaction from "../../models/transaction.model";
+import sequelize from "../../util/dbConn";
 
 //create farmer
 const createFarmer = async (req: Request, res: Response) => {
@@ -71,7 +73,7 @@ const createFarmer = async (req: Request, res: Response) => {
     const farm = await Farm.create(farmData);
     res.sendSuccess(res, { farmer, farm });
   } catch (error) {
-    return res.sendError(res, "ERR_INTERNAL_SERVER_ERROR");
+    return res.sendError(res, "ERR_NOT_ABLE_TO_CREATE_FARMER");
   }
 }
 
@@ -103,10 +105,10 @@ const fetchFarmerPagination = async (req: Request, res: Response) => {
       const idArray: number[] = brandId
         .split(",")
         .map((id: any) => parseInt(id, 10));
-        whereCondition["$farmer.brand_id$"] = { [Op.in]: idArray };
-      }
-      if (programId) {
-        const idArray: number[] = programId
+      whereCondition["$farmer.brand_id$"] = { [Op.in]: idArray };
+    }
+    if (programId) {
+      const idArray: number[] = programId
         .split(",")
         .map((id: any) => parseInt(id, 10));
       whereCondition["$farmer.program_id$"] = { [Op.in]: idArray };
@@ -398,7 +400,7 @@ const createFarmerFarm = async (req: Request, res: Response) => {
     res.sendSuccess(res, { farm });
   } catch (error) {
     console.log(error)
-    return res.sendError(res, "ERR_INTERNAL_SERVER_ERROR");
+    return res.sendError(res, "ERR_NOT_ABLE_TO_CREATE_FARM");
   }
 };
 
@@ -422,7 +424,7 @@ const updateFarmerFarm = async (req: Request, res: Response) => {
     });
     res.sendSuccess(res, { farm });
   } catch (error) {
-    return res.sendError(res, "ERR_INTERNAL_SERVER_ERROR");
+    return res.sendError(res, "ERR_NOT_ABLE_TO_UPDATE_FARM");
   }
 };
 
@@ -793,6 +795,49 @@ const exportQrCode = async (req: Request, res: Response) => {
   }
 }
 
+const dashboardGraph = async (req: Request, res: Response) => {
+  try {
+    let whereCondition: any = {};
+    if (req.query.seasonId) {
+      whereCondition.season_id = req.query.seasonId
+    }
+
+    const result = await Farm.findOne({
+      where: whereCondition,
+      attributes: [
+        [Sequelize.fn('COUNT', Sequelize.literal('DISTINCT farmer_id')), 'total_farmers'],
+        [Sequelize.fn('COALESCE', Sequelize.fn('SUM', Sequelize.col('farms.cotton_total_area')), 0), 'total_area'],
+        [Sequelize.fn('COALESCE', Sequelize.fn('SUM', Sequelize.col('farms.total_estimated_cotton')), 0), 'total_expected_yield']
+      ]
+    });
+    const trans = await Transaction.findOne({
+      attributes: [
+        [sequelize.fn('sum', Sequelize.literal("CAST(qty_purchased AS INTEGER)")), 'total_procured']
+      ],
+      where: {
+        ...whereCondition,
+        status: 'Sold'
+      }
+    })
+
+    const graph = await Farm.findAll({
+      attributes: [
+        [Sequelize.fn('COUNT', Sequelize.literal('DISTINCT farmer_id')), 'total_farmers'],
+        [Sequelize.fn('COALESCE', Sequelize.fn('SUM', Sequelize.col('farms.cotton_total_area')), 0), 'total_area'],
+        [Sequelize.fn('COALESCE', Sequelize.fn('SUM', Sequelize.col('farms.total_estimated_cotton')), 0), 'total_expected_yield']
+      ],
+      include: [{
+        model: Season,
+        as: 'season',
+        attributes: ['id', 'name']
+      }],
+      group: ['season.id']
+    });
+    res.sendSuccess(res, { ...result.dataValues, ...trans.dataValues, graph: graph });
+  } catch (error: any) {
+    return res.sendError(res, error.message);
+  }
+}
 export {
   createFarmer,
   fetchFarmerPagination,
@@ -806,5 +851,6 @@ export {
   exportFarmer,
   fetchFarmer,
   generateQrCodeVillage,
-  exportQrCode
+  exportQrCode,
+  dashboardGraph
 };

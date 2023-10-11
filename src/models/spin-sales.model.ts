@@ -6,6 +6,7 @@ import Season from './season.model';
 import Program from './program.model';
 import Knitter from './knitter.model';
 import Weaver from './weaver.model';
+import YarnCount from './yarn-count.model';
 
 const SpinSales = db.define('spin_sales', {
   id: {
@@ -134,6 +135,11 @@ SpinSales.belongsTo(Spinner, {
 SpinSales.belongsTo(Season, {
   foreignKey: "season_id",
   as: "season",
+});
+
+SpinSales.belongsTo(YarnCount, {
+  foreignKey: "yarn_count",
+  as: "yarncount",
 });
 
 SpinSales.belongsTo(Program, {

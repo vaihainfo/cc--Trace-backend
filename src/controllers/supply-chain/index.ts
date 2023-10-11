@@ -44,6 +44,8 @@ const updateSupplyChainRating = async (req: Request, res: Response) => {
             rated_by_type: req.body.ratedByType,
             user_id: req.body.userId,
             user_type: req.body.userType,
+            rating: req.body.rating,
+            description: req.body.description
         }, {
             where: {
                 id: req.body.id
