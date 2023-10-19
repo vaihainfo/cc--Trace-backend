@@ -69,7 +69,7 @@ import setInterface from "./middleware/interface";
 const app = express();
 
 
-app.use(express.json({ limit: '350mb' }));
+app.use(express.json({ limit: '2450mb' }));
 
 app.use(express.urlencoded({ extended: true }));
 
