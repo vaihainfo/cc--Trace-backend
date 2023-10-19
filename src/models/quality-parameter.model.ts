@@ -4,6 +4,7 @@ import GinProcess from './gin-process.model';
 import Ginner from './ginner.model';
 import Spinner from './spinner.model';
 import SpinProcess from './spin-process.model';
+import GinSales from './gin-sales.model';
 
 const QualityParameter = db.define('quality-parameters', {
   id: {
@@ -63,6 +64,15 @@ const QualityParameter = db.define('quality-parameters', {
   plusb: {
     type: DataTypes.DOUBLE
   },
+  sales_id: {
+    type: DataTypes.INTEGER
+  },
+  lot_no: {
+    type: DataTypes.STRING
+  },
+  reel_lot_no: {
+    type: DataTypes.STRING
+  },
   document: {
     type: DataTypes.ARRAY(DataTypes.STRING)
   },
@@ -86,7 +96,12 @@ QualityParameter.belongsTo(Ginner, {
 QualityParameter.belongsTo(Spinner, {
   foreignKey: "spinner_id",
   as: "spinner",
-})
+});
+
+QualityParameter.belongsTo(GinSales, {
+  foreignKey: "sales_id",
+  as: "sales",
+});
 
 QualityParameter.sync();
 

@@ -8,7 +8,8 @@ import {
     getProgram,
     getSpinnerAndProgram,
     getInvoiceAndyarnType,
-    deleteKnitterSales
+    deleteKnitterSales,
+    getGarments
 } from "../../controllers/knitter";
 
 import { Router } from "express";
@@ -24,5 +25,5 @@ router.get('/transaction/count', countCottonBaleWithProgram);
 router.get('/get-program', getProgram);
 router.get('/get-spinner-trans', getSpinnerAndProgram);
 router.get('/get-invoice-trans', getInvoiceAndyarnType);
-
+router.get('/get-garments', getGarments);
 export default router;

@@ -3,6 +3,7 @@ import db from '../util/dbConn';
 
 import Country from './country.model';
 import State from './state.model';
+import District from './district.model';
 
 const Spinner = db.define('spinners', {
   id: {
@@ -36,6 +37,9 @@ const Spinner = db.define('spinners', {
     references: { model: 'states', key: 'id' },
     onDelete: 'CASCADE',
     allowNull: false,
+  },
+  district_id: {
+    type: DataTypes.INTEGER
   },
   program_id: {
     allowNull: false,
@@ -100,6 +104,9 @@ const Spinner = db.define('spinners', {
     allowNull: false,
     type: DataTypes.ARRAY(DataTypes.INTEGER)
   },
+  registration_document: {
+    type: DataTypes.STRING
+  }
 });
 
 Spinner.belongsTo(Country, {
@@ -110,6 +117,10 @@ Spinner.belongsTo(Country, {
 Spinner.belongsTo(State, {
   foreignKey: "state_id",
   as: "state",
+});
+Spinner.belongsTo(District, {
+  foreignKey: "district_id",
+  as: "district",
 });
 
 Spinner.associate = (models: any) => {

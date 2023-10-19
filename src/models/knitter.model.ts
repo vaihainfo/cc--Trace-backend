@@ -1,10 +1,11 @@
-import { DataTypes  } from 'sequelize';
-import db  from '../util/dbConn';
+import { DataTypes } from 'sequelize';
+import db from '../util/dbConn';
 
 import Country from './country.model';
 import State from './state.model';
+import District from './district.model';
 
-const Knitter = db.define('knitters',{
+const Knitter = db.define('knitters', {
   id: {
     type: DataTypes.INTEGER,
     autoIncrement: true,
@@ -32,6 +33,9 @@ const Knitter = db.define('knitters',{
     references: { model: 'states', key: 'id' },
     onDelete: 'CASCADE',
     allowNull: false,
+  },
+  district_id: {
+    type: DataTypes.INTEGER
   },
   program_id: {
     allowNull: false,
@@ -109,6 +113,10 @@ Knitter.belongsTo(State, {
   as: "state",
 });
 
+Knitter.belongsTo(District, {
+  foreignKey: "district_id",
+  as: "district",
+});
 Knitter.associate = (models: any) => {
   Knitter.hasMany(models.KnitSales, {
     foreignKey: 'knitter_id',

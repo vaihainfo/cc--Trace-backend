@@ -103,7 +103,7 @@ const fetchBrandPagination = async (req: Request, res: Response) => {
             const idArray: number[] = programId
                 .split(",")
                 .map((id: any) => parseInt(id, 10));
-            whereCondition.programs_id = { [Op.contains]: idArray };
+            whereCondition.programs_id = { [Op.overlap]: idArray };
         }
         if (searchTerm) {
             whereCondition[Op.or] = [
@@ -340,7 +340,16 @@ const organicCottonOverview = async (req: Request, res: Response) => {
         let total_knit = await sumbrandknitterFabricSales(brandId, seasonId);
         let total_weave = await sumbrandWeaverFabricSales(brandId, seasonId);
         let total_garment = await sumbrandgarmentFabricSales(brandId, seasonId);
-        res.sendSuccess(res, { ...result?.dataValues, ...trans?.dataValues, total_knit, total_weave, total_lint, total_yarn, total_garment, graph: graph });
+        res.sendSuccess(res, {
+            total_farmers: result?.dataValues.total_farmers ? result?.dataValues.total_farmers : 0,
+            total_procured: trans?.dataValues.total_procured ? trans?.dataValues.total_procured : 0,
+            total_knit: total_knit ? total_knit : 0,
+            total_weave: total_weave ? total_weave : 0,
+            total_lint: total_lint ? total_lint : 0,
+            total_yarn: total_yarn ? total_yarn : 0,
+            total_garment: total_garment ? total_garment : 0,
+            graph: graph
+        });
     } catch (error: any) {
         return res.sendError(res, error.message);
     }
@@ -480,7 +489,6 @@ const sumbrandgarmentFabricSales = async (brandId: any, seasonId: any) => {
         console.log(error);
     }
 }
-
 //fetch brand transactions with filters
 const fetchBrandTransactionsPagination = async (req: Request, res: Response) => {
     const searchTerm = req.query.search || "";
@@ -569,6 +577,249 @@ const fetchBrandTransactionsPagination = async (req: Request, res: Response) => 
     }
 };
 
+const productionUpdate = async (req: Request, res: Response) => {
+    try {
+        let { seasonId, brandId, ginnerId, countryId, spinnerId, knitterId, weaverId, garmentId }: any = req.query;
+        let whereCondition: any = {};
+        if (!brandId) {
+            return res.sendError(res, 'NEED_BRAND_ID')
+        }
+        if (seasonId) {
+            const idArray: number[] = seasonId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition.season_id = { [Op.in]: idArray };
+        }
+
+        let ginnerWhere: any = {};
+        if (ginnerId) {
+            const idArray: number[] = ginnerId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            ginnerWhere.ginner_id = { [Op.in]: idArray };
+        }
+        if (countryId) {
+            const idArray: number[] = countryId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            ginnerWhere['$ginner.country_id$'] = { [Op.in]: idArray };
+        }
+        const ginnerList = await GinSales.findAll({
+            where: {
+                ...whereCondition,
+                ...ginnerWhere,
+                status: 'Sold',
+                '$ginner.brand$': { [Op.contains]: [Number(brandId)] }
+            },
+            attributes: [
+                [Sequelize.fn('COALESCE', Sequelize.fn('SUM', Sequelize.col('total_qty')), 0), 'cotton_qty'],
+                [Sequelize.literal('"ginner"."name"'), 'name'],
+                [sequelize.literal("'Spinner'"), 'type']
+            ],
+            include: [
+                {
+                    model: Ginner,
+                    as: 'ginner',
+                    attributes: ['id', 'name'],
+                },
+                {
+                    model: Season,
+                    as: 'season',
+                    attributes: ['id', 'name'],
+                },
+                {
+                    model: Program,
+                    as: 'program',
+                    attributes: [],
+                }
+            ],
+            group: ["ginner.id", 'season.id']
+        });
+        let spinnerWhere: any = {};
+        if (spinnerId) {
+            const idArray: number[] = spinnerId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            spinnerWhere.spinner_id = { [Op.in]: idArray };
+        }
+        if (countryId) {
+            const idArray: number[] = countryId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            spinnerWhere['$spinner.country_id$'] = { [Op.in]: idArray };
+        }
+        const spinnerList = await SpinSales.findAll({
+            where: {
+                ...whereCondition,
+                ...spinnerWhere,
+                status: 'Sold',
+                '$spinner.brand$': { [Op.contains]: [Number(brandId)] }
+            },
+            attributes: [
+
+                [Sequelize.fn('COALESCE', Sequelize.fn('SUM', Sequelize.col('total_qty')), 0), 'spin_qty'],
+                [Sequelize.literal('"spinner"."name"'), 'name'],
+                [sequelize.literal("'Spinner'"), 'type']
+            ],
+            include: [
+                {
+                    model: Spinner,
+                    as: 'spinner',
+                    attributes: ['id', 'name'],
+                },
+                {
+                    model: Season,
+                    as: 'season',
+                    attributes: ['id', 'name'],
+                },
+                {
+                    model: Program,
+                    as: 'program',
+                    attributes: [],
+                },
+            ],
+            group: ["spinner.id", 'season.id']
+        });
+        let knitterWhere: any = {};
+        if (knitterId) {
+            const idArray: number[] = knitterId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            knitterWhere.knitter_id = { [Op.in]: idArray };
+        }
+        if (countryId) {
+            const idArray: number[] = countryId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            knitterWhere['$knitter.country_id$'] = { [Op.in]: idArray };
+        }
+        const knitterList = await KnitSales.findAll({
+            attributes: [
+                [sequelize.fn('COALESCE', sequelize.fn('SUM', Sequelize.literal("CAST(fabric_length AS INTEGER)")), 0), 'knitter_qty'],
+                [Sequelize.literal('"knitter"."name"'), 'name'],
+                [sequelize.literal("'Knitter'"), 'type']
+            ],
+            include: [
+                {
+                    model: Knitter,
+                    as: 'knitter',
+                    attributes: ["id", 'name']
+                },
+                {
+                    model: Season,
+                    as: 'season',
+                    attributes: ['id', 'name'],
+                },
+                {
+                    model: Program,
+                    as: 'program',
+                    attributes: [],
+                }
+            ],
+            where: {
+                '$knitter.brand$': { [Op.contains]: [Number(brandId)] },
+                status: 'Sold',
+                ...whereCondition,
+                ...knitterWhere
+            },
+            group: ['knitter.id', 'season.id']
+        })
+        let weaverWhere: any = {};
+        if (weaverId) {
+            const idArray: number[] = weaverId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            weaverWhere.weaver_id = { [Op.in]: idArray };
+        }
+        if (countryId) {
+            const idArray: number[] = countryId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            weaverWhere['$weaver.country_id$'] = { [Op.in]: idArray };
+        }
+        const weaverList = await WeaverSales.findAll({
+            attributes: [
+                [sequelize.fn('COALESCE', sequelize.fn('SUM', Sequelize.literal("CAST(fabric_length AS INTEGER)")), 0), 'weaver_qty'],
+                [Sequelize.literal('"weaver"."name"'), 'name'],
+                [sequelize.literal("'Weaver'"), 'type']
+            ],
+            include: [
+                {
+                    model: Weaver,
+                    as: 'weaver',
+                    attributes: ["id", 'name']
+                },
+                {
+                    model: Season,
+                    as: 'season',
+                    attributes: ['id', 'name'],
+                },
+                {
+                    model: Program,
+                    as: 'program',
+                    attributes: [],
+                }
+            ],
+            where: {
+                '$weaver.brand$': { [Op.contains]: [Number(brandId)] },
+                status: 'Sold',
+                ...whereCondition,
+                ...weaverWhere
+            },
+            group: ['weaver.id', 'season.id']
+        })
+        let garmentWhere: any = {};
+        if (garmentId) {
+            const idArray: number[] = garmentId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            garmentWhere.garment_id = { [Op.in]: idArray };
+        }
+        if (countryId) {
+            const idArray: number[] = countryId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            garmentWhere['$garment.country_id$'] = { [Op.in]: idArray };
+        }
+        const garmentList = await GarmentSales.findAll({
+            attributes: [
+
+                [sequelize.fn('COALESCE', sequelize.fn('SUM', Sequelize.literal("no_of_pieces")), 0), 'garment_qty'],
+                [Sequelize.literal('"garment"."name"'), 'name'],
+                [sequelize.literal("'Garment'"), 'type']
+            ],
+            include: [
+                {
+                    model: Garment,
+                    as: 'garment',
+                    attributes: ["id", 'name']
+                },
+                {
+                    model: Season,
+                    as: 'season',
+                    attributes: ['id', 'name'],
+                },
+                {
+                    model: Program,
+                    as: 'program',
+                    attributes: []
+                }
+            ],
+            where: {
+                '$garment.brand$': { [Op.contains]: [Number(brandId)] },
+                status: 'Sold',
+                ...whereCondition,
+                ...garmentWhere
+            },
+            group: ['garment.id', 'season.id']
+        })
+        res.sendSuccess(res, [...ginnerList, ...spinnerList, ...knitterList, ...weaverList, ...garmentList])
+    } catch (error) {
+        console.log(error);
+    }
+}
+
+
 export {
     findUser,
     createBrand,
@@ -578,5 +829,6 @@ export {
     updateBrand,
     checkBrand,
     organicCottonOverview,
-    fetchBrandTransactionsPagination
+    fetchBrandTransactionsPagination,
+    productionUpdate
 };

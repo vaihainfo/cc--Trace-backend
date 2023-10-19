@@ -715,15 +715,15 @@ const uploadFarmer = async (req: Request, res: Response) => {
                             total_estimated_cotton: data.totalEstimatedCotton ? data.totalEstimatedCotton : 0.0
                         };
                         const farm = await Farm.create(farmData);
-                        let uniqueFilename = `qrcode_${Date.now()}.png`;
-                        let name = farmer.firstName + " " + farmer.lastName
-                        let data12 = await generateQrCode(`Farmer Code : ${farmer.code}  Farmer Id: ${farmer.id}`,
-                            name, uniqueFilename, farmer.code, village.village_name);
-                        const farmerP = await Farmer.update({ qrUrl: uniqueFilename }, {
-                            where: {
-                                id: farmer.id
-                            },
-                        });
+                        // let uniqueFilename = `qrcode_${Date.now()}.png`;
+                        // let name = farmer.firstName + " " + farmer.lastName
+                        // let data12 = await generateQrCode(`Farmer Code : ${farmer.code}  Farmer Id: ${farmer.id}`,
+                        //     name, uniqueFilename, farmer.code, village.village_name);
+                        // const farmerP = await Farmer.update({ qrUrl: uniqueFilename }, {
+                        //     where: {
+                        //         id: farmer.id
+                        //     },
+                        // });
                         pass.push({
                             success: true,
                             data: farmer,

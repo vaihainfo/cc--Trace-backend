@@ -3,11 +3,11 @@ import { checkFabric, createFabric, deleteFabric, fetchFabric, fetchFabricPagina
 import { Router } from "express";
 const router = Router();
 
-router.get('/get-fabrics', fetchFabricPagination);
+router.get('/', fetchFabricPagination);
 router.get('/get-fabric', fetchFabric);
-router.post('/set-fabric', createFabric);
-router.put('/update-fabric', updateFabric);
-router.delete('/delete-fabric', deleteFabric);
+router.post('/', createFabric);
+router.put('/', updateFabric);
+router.delete('/', deleteFabric);
 router.post('/check-fabric', checkFabric);
 
 export default router;  

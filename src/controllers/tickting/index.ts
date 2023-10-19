@@ -3,12 +3,25 @@ import { Sequelize, Op } from "sequelize";
 
 import TicketTracker from "../../models/ticket-tracker.model";
 import TicketTrackerStatus from "../../models/ticketing-status.model";
+import Spinner from "../../models/spinner.model";
 
 
 const createTicketTracker = async (req: Request, res: Response) => {
     try {
+        const lastTicket = await TicketTracker.findOne({
+            order: [['ticket_no', 'DESC']],
+            attributes: ['ticket_no'],
+        });
+
+        let nextTicketNo;
+        if (lastTicket) {
+            nextTicketNo = lastTicket.ticket_no + 1;
+        } else {
+            nextTicketNo = 1; // If there are no existing tickets
+        }
+
         const data = {
-            ticket_no: req.body.ticketNo,
+            ticket_no: nextTicketNo,
             date: new Date(),
             process_id: req.body.processorId,
             processor_name: req.body.processorName,
@@ -40,26 +53,50 @@ const fetchTicketTracker = async (req: Request, res: Response) => {
     const offset = (page - 1) * limit;
     const whereCondition: any = {}
 
-    const { status, processor, from, to, processSale, processorId } = req.query;
+    const { status, processor, from, to, processSale, processorId, brandId }: any = req.query;
 
     try {
         if (status) {
-            whereCondition.status = status;
+            const idArray: any[] = status
+                .split(",")
+                .map((id: any) => id);
+            whereCondition.status = { [Op.in]: idArray };
         }
+
         if (processor) {
-            whereCondition.processor_type = processor;
+            const idArray: any[] = processor
+                .split(",")
+                .map((id: any) => id);
+            whereCondition.processor_type = { [Op.in]: idArray };
         }
+
+        if (brandId) {
+            const idArray: number[] = brandId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            let spinner = await Spinner.findAll({ where: { brand: { [Op.overlap]: idArray } } });
+            const arry: number[] = spinner
+                .map((gin: any) => parseInt(gin.id, 10));
+            whereCondition.process_id = { [Op.in]: arry };
+        }
+
         if (processorId) {
-            whereCondition.process_id = processorId;
+            const idArray: number[] = processorId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition.process_id = { [Op.in]: idArray };
         }
+
         if (from && to) {
             whereCondition.date = {
                 [Op.between]: [from, to]
             }
         }
+
         if (processSale) {
             whereCondition.process_or_sales = processSale;
         }
+
 
         if (searchTerm) {
             whereCondition[Op.or] = [

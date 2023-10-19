@@ -15,7 +15,8 @@ import {
     getProgram,
     updateGinSaleBale,
     chooseBale,
-    deleteGinnerProcess
+    deleteGinnerProcess,
+    getSpinner
 } from "../../controllers/ginner";
 
 
@@ -42,7 +43,7 @@ router.get('/reel', getReelBaleId);
 router.get('/get-program', getProgram);
 router.put('/sales/update-bale', updateGinSaleBale);
 router.get('/sales/choose-bale', chooseBale);
-
+router.get('/get-spinner', getSpinner);
 
 
 export default router;

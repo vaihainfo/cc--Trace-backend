@@ -85,7 +85,7 @@ const fetchFarmerPagination = async (req: Request, res: Response) => {
   const limit = Number(req.query.limit) || 10;
   const programId: string = req.query.programId as string;
   const brandId: string = req.query.brandId as string;
-  const { icsId, farmGroupId, countryId, stateId, villageId, cert }: any = req.query;
+  const { icsId, farmGroupId, countryId, stateId, villageId, cert, seasonId }: any = req.query;
   const offset = (page - 1) * limit;
   const whereCondition: any = {};
   try {
@@ -150,6 +150,13 @@ const fetchFarmerPagination = async (req: Request, res: Response) => {
         .split(",")
         .map((id: any) => parseInt(id, 10));
       whereCondition["$farmer.ics_id$"] = { [Op.in]: idArray };
+    }
+
+    if (seasonId) {
+      const idArray: string[] = seasonId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.season_id = { [Op.in]: idArray };
     }
 
     let include = [
@@ -257,6 +264,7 @@ const fetchFarmerPagination = async (req: Request, res: Response) => {
       const { count, rows } = await Farm.findAndCountAll({
         where: whereCondition,
         include: include,
+        order: [['id', 'desc']],
         offset: offset,
         limit: limit,
       });
@@ -264,6 +272,7 @@ const fetchFarmerPagination = async (req: Request, res: Response) => {
     } else {
       const farmGroup = await Farm.findAll({
         where: whereCondition,
+        order: [['id', 'desc']],
         include: include
       });
       return res.sendSuccess(res, farmGroup);
@@ -349,7 +358,7 @@ const updateFarmer = async (req: Request, res: Response) => {
       block_id: Number(req.body.blockId),
       village_id: Number(req.body.villageId),
       joining_date: req.body.joiningDate,
-      ics_id: req.body.icsId,
+      ics_id: req.body.icsId ? req.body.icsId : null,
       tracenet_id: req.body.tracenetId,
       cert_status: req.body.certStatus,
       agri_total_area: req.body.agriTotalArea,
@@ -363,6 +372,16 @@ const updateFarmer = async (req: Request, res: Response) => {
         id: req.body.id,
       },
     });
+    if (req.body.farmId) {
+      let farmer = await Farm.update({
+        program_id: Number(req.body.programId),
+        agri_total_area: req.body.agriTotalArea,
+        agri_estimated_yeld: req.body.agriEstimatedYield,
+        agri_estimated_prod: req.body.agriEstimatedProd,
+        cotton_total_area: req.body.cottonTotalArea,
+        total_estimated_cotton: req.body.totalEstimatedCotton
+      }, { where: { id: req.body.farmId } })
+    }
 
     res.sendSuccess(res, { farmer });
   } catch (error: any) {
@@ -386,6 +405,10 @@ const deleteFarmer = async (req: Request, res: Response) => {
 
 const createFarmerFarm = async (req: Request, res: Response) => {
   try {
+    let result = await Farm.findOne({ where: { season_id: req.body.seasonId, farmer_id: { [Op.eq]: req.body.farmerId } } })
+    if (result) {
+      return res.sendError(res, 'Farm is already exist with same season');
+    }
     const data = {
       farmer_id: req.body.farmerId,
       program_id: req.body.programId,
@@ -406,7 +429,10 @@ const createFarmerFarm = async (req: Request, res: Response) => {
 
 const updateFarmerFarm = async (req: Request, res: Response) => {
   try {
-
+    let result = await Farm.findOne({ where: { season_id: req.body.seasonId, farmer_id: { [Op.eq]: req.body.farmerId }, id: { [Op.ne]: Number(req.body.id) } } })
+    if (result) {
+      return res.sendError(res, 'Farm is already exist with same season');
+    }
     const data = {
       farmer_id: req.body.farmerId,
       program_id: req.body.programId,
@@ -422,6 +448,7 @@ const updateFarmerFarm = async (req: Request, res: Response) => {
         id: req.body.id,
       },
     });
+
     res.sendSuccess(res, { farm });
   } catch (error) {
     return res.sendError(res, "ERR_NOT_ABLE_TO_UPDATE_FARM");
@@ -490,6 +517,40 @@ const fetchFarm = async (req: Request, res: Response) => {
       {
         model: Farmer,
         as: "farmer",
+        include: [
+          {
+            model: Program,
+            as: "program",
+          },
+          {
+            model: Brand,
+            as: "brand",
+          },
+          {
+            model: FarmGroup,
+            as: "farmGroup",
+          },
+          {
+            model: Country,
+            as: "country",
+          },
+          {
+            model: Village,
+            as: "village",
+          },
+          {
+            model: State,
+            as: "state",
+          },
+          {
+            model: District,
+            as: "district",
+          },
+          {
+            model: Block,
+            as: "block",
+          },
+        ]
       },
       {
         model: Program,

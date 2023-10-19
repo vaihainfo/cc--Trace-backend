@@ -53,7 +53,7 @@ const fetchBaleProcess = async (req: Request, res: Response) => {
             const idArray: number[] = brandId
                 .split(",")
                 .map((id: any) => parseInt(id, 10));
-            let ginner = await Ginner.findAll({ brand: { [Op.contains]: idArray } });
+            let ginner = await Ginner.findAll({ brand: { [Op.overlap]: idArray } });
             const arry: number[] = ginner
                 .map((gin: any) => parseInt(gin.id, 10));
             whereCondition.ginner_id = { [Op.in]: arry };
@@ -180,7 +180,7 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
             const idArray: number[] = brandId
                 .split(",")
                 .map((id: any) => parseInt(id, 10));
-            let ginner = await Ginner.findAll({ where: { brand: { [Op.contains]: idArray } } });
+            let ginner = await Ginner.findAll({ where: { brand: { [Op.overlap]: idArray } } });
             const arry: number[] = ginner
                 .map((gin: any) => parseInt(gin.id, 10));
             whereCondition.ginner_id = { [Op.in]: arry };
@@ -363,7 +363,7 @@ const fetchGinSalesPagination = async (req: Request, res: Response) => {
             const idArray: number[] = brandId
                 .split(",")
                 .map((id: any) => parseInt(id, 10));
-            let ginner = await Ginner.findAll({ where: { brand: { [Op.contains]: idArray } } });
+            let ginner = await Ginner.findAll({ where: { brand: { [Op.overlap]: idArray } } });
             const arry: number[] = ginner
                 .map((gin: any) => parseInt(gin.id, 10));
             whereCondition.ginner_id = { [Op.in]: arry };
@@ -463,7 +463,7 @@ const exportPendingGinnerSales = async (req: Request, res: Response) => {
             const idArray: number[] = brandId
                 .split(",")
                 .map((id: any) => parseInt(id, 10));
-            let ginner = await Ginner.findAll({ where: { brand: { [Op.contains]: idArray } } });
+            let ginner = await Ginner.findAll({ where: { brand: { [Op.overlap]: idArray } } });
             const arry: number[] = ginner
                 .map((gin: any) => parseInt(gin.id, 10));
             whereCondition.ginner_id = { [Op.in]: arry };
@@ -605,7 +605,7 @@ const exportGinnerSales = async (req: Request, res: Response) => {
             const idArray: number[] = brandId
                 .split(",")
                 .map((id: any) => parseInt(id, 10));
-            let ginner = await Ginner.findAll({ where: { brand: { [Op.contains]: idArray } } });
+            let ginner = await Ginner.findAll({ where: { brand: { [Op.overlap]: idArray } } });
             const arry: number[] = ginner
                 .map((gin: any) => parseInt(gin.id, 10));
             whereCondition.ginner_id = { [Op.in]: arry };
@@ -751,7 +751,7 @@ const fetchSpinnerBalePagination = async (req: Request, res: Response) => {
             const idArray: number[] = brandId
                 .split(",")
                 .map((id: any) => parseInt(id, 10));
-            let ginner = await Spinner.findAll({ where: { brand: { [Op.contains]: idArray } } });
+            let ginner = await Spinner.findAll({ where: { brand: { [Op.overlap]: idArray } } });
             const arry: number[] = ginner
                 .map((gin: any) => parseInt(gin.id, 10));
             whereCondition.buyer = { [Op.in]: arry };
@@ -859,7 +859,7 @@ const exportSpinnerBale = async (req: Request, res: Response) => {
             const idArray: number[] = brandId
                 .split(",")
                 .map((id: any) => parseInt(id, 10));
-            let ginner = await Spinner.findAll({ where: { brand: { [Op.contains]: idArray } } });
+            let ginner = await Spinner.findAll({ where: { brand: { [Op.overlap]: idArray } } });
             const arry: number[] = ginner
                 .map((gin: any) => parseInt(gin.id, 10));
             whereCondition.buyer = { [Op.in]: arry };
@@ -1007,7 +1007,7 @@ const exportPendingSpinnerBale = async (req: Request, res: Response) => {
             const idArray: number[] = brandId
                 .split(",")
                 .map((id: any) => parseInt(id, 10));
-            let ginner = await Spinner.findAll({ where: { brand: { [Op.contains]: idArray } } });
+            let ginner = await Spinner.findAll({ where: { brand: { [Op.overlap]: idArray } } });
             const arry: number[] = ginner
                 .map((gin: any) => parseInt(gin.id, 10));
             whereCondition.buyer = { [Op.in]: arry };
@@ -1168,7 +1168,7 @@ const fetchSpinnerYarnProcessPagination = async (req: Request, res: Response) =>
             const idArray: number[] = brandId
                 .split(",")
                 .map((id: any) => parseInt(id, 10));
-            let ginner = await Spinner.findAll({ where: { brand: { [Op.contains]: idArray } } });
+            let ginner = await Spinner.findAll({ where: { brand: { [Op.overlap]: idArray } } });
             const arry: number[] = ginner
                 .map((gin: any) => parseInt(gin.id, 10));
             whereCondition.spinner_id = { [Op.in]: arry };
@@ -1267,7 +1267,7 @@ const exportSpinnerYarnProcess = async (req: Request, res: Response) => {
             const idArray: number[] = brandId
                 .split(",")
                 .map((id: any) => parseInt(id, 10));
-            let ginner = await Spinner.findAll({ where: { brand: { [Op.contains]: idArray } } });
+            let ginner = await Spinner.findAll({ where: { brand: { [Op.overlap]: idArray } } });
             const arry: number[] = ginner
                 .map((gin: any) => parseInt(gin.id, 10));
             whereCondition.spinner_id = { [Op.in]: arry };
@@ -1426,7 +1426,7 @@ const fetchSpinSalesPagination = async (req: Request, res: Response) => {
             const idArray: number[] = brandId
                 .split(",")
                 .map((id: any) => parseInt(id, 10));
-            let ginner = await Spinner.findAll({ where: { brand: { [Op.contains]: idArray } } });
+            let ginner = await Spinner.findAll({ where: { brand: { [Op.overlap]: idArray } } });
             const arry: number[] = ginner
                 .map((gin: any) => parseInt(gin.id, 10));
             whereCondition.spinner_id = { [Op.in]: arry };
@@ -1535,7 +1535,7 @@ const exportSpinnerSale = async (req: Request, res: Response) => {
             const idArray: number[] = brandId
                 .split(",")
                 .map((id: any) => parseInt(id, 10));
-            let ginner = await Spinner.findAll({ where: { brand: { [Op.contains]: idArray } } });
+            let ginner = await Spinner.findAll({ where: { brand: { [Op.overlap]: idArray } } });
             const arry: number[] = ginner
                 .map((gin: any) => parseInt(gin.id, 10));
             whereCondition.spinner_id = { [Op.in]: arry };
@@ -1690,7 +1690,7 @@ const fetchKnitterYarnPagination = async (req: Request, res: Response) => {
             const idArray: number[] = brandId
                 .split(",")
                 .map((id: any) => parseInt(id, 10));
-            let knitter = await Knitter.findAll({ where: { brand: { [Op.contains]: idArray } } });
+            let knitter = await Knitter.findAll({ where: { brand: { [Op.overlap]: idArray } } });
             const arry: number[] = knitter
                 .map((gin: any) => parseInt(gin.id, 10));
             whereCondition.knitter_id = { [Op.in]: arry };
@@ -1796,7 +1796,7 @@ const exportKnitterYarn = async (req: Request, res: Response) => {
             const idArray: number[] = brandId
                 .split(",")
                 .map((id: any) => parseInt(id, 10));
-            let knitter = await Knitter.findAll({ where: { brand: { [Op.contains]: idArray } } });
+            let knitter = await Knitter.findAll({ where: { brand: { [Op.overlap]: idArray } } });
             const arry: number[] = knitter
                 .map((gin: any) => parseInt(gin.id, 10));
             whereCondition.knitter_id = { [Op.in]: arry };
@@ -1947,7 +1947,7 @@ const fetchKnitterSalesPagination = async (req: Request, res: Response) => {
             const idArray: number[] = brandId
                 .split(",")
                 .map((id: any) => parseInt(id, 10));
-            let knitter = await Knitter.findAll({ where: { brand: { [Op.contains]: idArray } } });
+            let knitter = await Knitter.findAll({ where: { brand: { [Op.overlap]: idArray } } });
             const arry: number[] = knitter
                 .map((gin: any) => parseInt(gin.id, 10));
             whereCondition.knitter_id = { [Op.in]: arry };
@@ -2052,7 +2052,7 @@ const exportKnitterSale = async (req: Request, res: Response) => {
             const idArray: number[] = brandId
                 .split(",")
                 .map((id: any) => parseInt(id, 10));
-            let knitter = await Knitter.findAll({ where: { brand: { [Op.contains]: idArray } } });
+            let knitter = await Knitter.findAll({ where: { brand: { [Op.overlap]: idArray } } });
             const arry: number[] = knitter
                 .map((gin: any) => parseInt(gin.id, 10));
             whereCondition.knitter_id = { [Op.in]: arry };
@@ -2191,7 +2191,7 @@ const fetchWeaverYarnPagination = async (req: Request, res: Response) => {
             const idArray: number[] = brandId
                 .split(",")
                 .map((id: any) => parseInt(id, 10));
-            let weaver = await Weaver.findAll({ where: { brand: { [Op.contains]: idArray } } });
+            let weaver = await Weaver.findAll({ where: { brand: { [Op.overlap]: idArray } } });
             const arry: number[] = weaver
                 .map((gin: any) => parseInt(gin.id, 10));
             whereCondition.buyer_id = { [Op.in]: arry };
@@ -2292,7 +2292,7 @@ const exportWeaverYarn = async (req: Request, res: Response) => {
             const idArray: number[] = brandId
                 .split(",")
                 .map((id: any) => parseInt(id, 10));
-            let weaver = await Weaver.findAll({ where: { brand: { [Op.contains]: idArray } } });
+            let weaver = await Weaver.findAll({ where: { brand: { [Op.overlap]: idArray } } });
             const arry: number[] = weaver
                 .map((gin: any) => parseInt(gin.id, 10));
             whereCondition.buyer_id = { [Op.in]: arry };
@@ -2440,7 +2440,7 @@ const fetchWeaverSalesPagination = async (req: Request, res: Response) => {
             const idArray: number[] = brandId
                 .split(",")
                 .map((id: any) => parseInt(id, 10));
-            let weaver = await Weaver.findAll({ where: { brand: { [Op.contains]: idArray } } });
+            let weaver = await Weaver.findAll({ where: { brand: { [Op.overlap]: idArray } } });
             const arry: number[] = weaver
                 .map((gin: any) => parseInt(gin.id, 10));
             whereCondition.weaver_id = { [Op.in]: arry };
@@ -2547,7 +2547,7 @@ const exportWeaverSale = async (req: Request, res: Response) => {
             const idArray: number[] = brandId
                 .split(",")
                 .map((id: any) => parseInt(id, 10));
-            let weaver = await Weaver.findAll({ where: { brand: { [Op.contains]: idArray } } });
+            let weaver = await Weaver.findAll({ where: { brand: { [Op.overlap]: idArray } } });
             const arry: number[] = weaver
                 .map((gin: any) => parseInt(gin.id, 10));
             whereCondition.weaver_id = { [Op.in]: arry };
@@ -2693,7 +2693,7 @@ const fetchGarmentSalesPagination = async (req: Request, res: Response) => {
             const idArray: number[] = brandId
                 .split(",")
                 .map((id: any) => parseInt(id, 10));
-            let weaver = await Garment.findAll({ where: { brand: { [Op.contains]: idArray } } });
+            let weaver = await Garment.findAll({ where: { brand: { [Op.overlap]: idArray } } });
             const arry: number[] = weaver
                 .map((gin: any) => parseInt(gin.id, 10));
             whereCondition.garment_id = { [Op.in]: arry };
@@ -2800,7 +2800,7 @@ const exportGarmentSales = async (req: Request, res: Response) => {
             const idArray: number[] = brandId
                 .split(",")
                 .map((id: any) => parseInt(id, 10));
-            let weaver = await Weaver.findAll({ where: { brand: { [Op.contains]: idArray } } });
+            let weaver = await Weaver.findAll({ where: { brand: { [Op.overlap]: idArray } } });
             const arry: number[] = weaver
                 .map((gin: any) => parseInt(gin.id, 10));
             whereCondition.weaver_id = { [Op.in]: arry };
@@ -2944,15 +2944,15 @@ const fetchQrCodeTrackPagination = async (req: Request, res: Response) => {
                 .map((id: any) => parseInt(id, 10));
             whereCondition.garment_id = { [Op.in]: idArray };
         }
-        // if (brandId) {
-        //     const idArray: number[] = brandId
-        //         .split(",")
-        //         .map((id: any) => parseInt(id, 10));
-        //     let weaver = await Weaver.findAll({ where: { brand: { [Op.contains]: idArray } } });
-        //     const arry: number[] = weaver
-        //         .map((gin: any) => parseInt(gin.id, 10));
-        //     whereCondition.weaver_id = { [Op.in]: arry };
-        // }
+        if (brandId) {
+            const idArray: number[] = brandId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            let garment = await Garment.findAll({ where: { brand: { [Op.overlap]: idArray } } });
+            const arry: number[] = garment
+                .map((gin: any) => parseInt(gin.id, 10));
+            whereCondition.garment_id = { [Op.in]: arry };
+        }
 
         // if (countryId) {
         //     const idArray: number[] = countryId
@@ -3140,7 +3140,7 @@ const fetchSpinnerSummaryPagination = async (req: Request, res: Response) => {
             const idArray: number[] = brandId
                 .split(",")
                 .map((id: any) => parseInt(id, 10));
-            whereCondition.brand = { [Op.contains]: idArray };
+            whereCondition.brand = { [Op.overlap]: idArray };
         }
 
         if (countryId) {
@@ -3156,7 +3156,7 @@ const fetchSpinnerSummaryPagination = async (req: Request, res: Response) => {
             const idArray: number[] = programId
                 .split(",")
                 .map((id: any) => parseInt(id, 10));
-            whereCondition.program_id = { [Op.contains]: idArray };
+            whereCondition.program_id = { [Op.in]: idArray };
         }
 
         let { count, rows } = await Spinner.findAndCountAll({ where: whereCondition, attributes: ["id", "name", "address"], offset: offset, limit: limit });
@@ -3262,7 +3262,7 @@ const exportSpinnerSummary = async (req: Request, res: Response) => {
             const idArray: number[] = brandId
                 .split(",")
                 .map((id: any) => parseInt(id, 10));
-            whereCondition.brand = { [Op.contains]: idArray };
+            whereCondition.brand = { [Op.overlap]: idArray };
         }
 
         if (countryId) {
@@ -3275,7 +3275,7 @@ const exportSpinnerSummary = async (req: Request, res: Response) => {
             const idArray: number[] = programId
                 .split(",")
                 .map((id: any) => parseInt(id, 10));
-            whereCondition.program_id = { [Op.contains]: idArray };
+            whereCondition.program_id = { [Op.in]: idArray };
         }
 
         // Create the excel workbook file
@@ -3429,7 +3429,7 @@ const fetchGinnerSummaryPagination = async (req: Request, res: Response) => {
             const idArray: number[] = brandId
                 .split(",")
                 .map((id: any) => parseInt(id, 10));
-            whereCondition.brand = { [Op.contains]: idArray };
+            whereCondition.brand = { [Op.overlap]: idArray };
         }
 
         if (countryId) {
@@ -3443,7 +3443,7 @@ const fetchGinnerSummaryPagination = async (req: Request, res: Response) => {
             const idArray: number[] = programId
                 .split(",")
                 .map((id: any) => parseInt(id, 10));
-            whereCondition.program_id = { [Op.contains]: idArray };
+            whereCondition.program_id = { [Op.in]: idArray };
         }
 
         let { count, rows } = await Ginner.findAndCountAll({ where: whereCondition, attributes: ["id", "name", "address"], offset: offset, limit: limit });
@@ -3599,7 +3599,7 @@ const exportGinnerSummary = async (req: Request, res: Response) => {
             const idArray: number[] = brandId
                 .split(",")
                 .map((id: any) => parseInt(id, 10));
-            whereCondition.brand = { [Op.contains]: idArray };
+            whereCondition.brand = { [Op.overlap]: idArray };
         }
 
         if (countryId) {
@@ -3612,7 +3612,7 @@ const exportGinnerSummary = async (req: Request, res: Response) => {
             const idArray: number[] = programId
                 .split(",")
                 .map((id: any) => parseInt(id, 10));
-            whereCondition.program_id = { [Op.contains]: idArray };
+            whereCondition.program_id = { [Op.in]: idArray };
         }
 
         // Create the excel workbook file
@@ -3810,7 +3810,8 @@ const fetchGarmentFabricPagination = async (req: Request, res: Response) => {
         console.error("Error appending data:", error);
         return res.sendError(res, error.message);
     }
-}
+};
+
 const exportGarmentFabric = async (req: Request, res: Response) => {
     const excelFilePath = path.join("./upload", "garment-fabric-report.xlsx");
     try {

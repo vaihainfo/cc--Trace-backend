@@ -150,6 +150,7 @@ const fetchSpinnerProcessPagination = async (req: Request, res: Response) => {
             {
                 model: Spinner,
                 as: "spinner",
+                attributes: ['id', 'name']
             },
             {
                 model: Season,
@@ -194,6 +195,52 @@ const fetchSpinnerProcessPagination = async (req: Request, res: Response) => {
             });
             return res.sendSuccess(res, gin);
         }
+    } catch (error: any) {
+        return res.sendError(res, error.message);
+    }
+};
+
+const fetchSpinnerProcess = async (req: Request, res: Response) => {
+
+    const whereCondition: any = {};
+    try {
+        whereCondition.id = req.query.id;
+        let include = [
+            {
+                model: Spinner,
+                as: "spinner",
+                attributes: ['id', 'name']
+            },
+            {
+                model: Season,
+                as: "season",
+            },
+            {
+                model: Dyeing,
+                as: "dyeing",
+            },
+            {
+                model: Program,
+                as: "program",
+            },
+            {
+                model: YarnCount,
+                as: "yarncount",
+            }
+        ];
+        //fetch data with pagination
+
+        const gin = await SpinProcess.findOne({
+            where: whereCondition,
+            include: include,
+            order: [
+                [
+                    'id', 'desc'
+                ]
+            ]
+        });
+        return res.sendSuccess(res, gin);
+
     } catch (error: any) {
         return res.sendError(res, error.message);
     }
@@ -1105,6 +1152,27 @@ const getYarnCount = async (req: Request, res: Response) => {
     }
 };
 
+const getKnitterWeaver = async (req: Request, res: Response) => {
+    let spinnerId = req.query.spinnerId;
+    if (!spinnerId) {
+        return res.sendError(res, 'Need spinner Id ');
+    }
+    let ress = await Spinner.findOne({ where: { id: spinnerId } });
+    if (!ress) {
+        return res.sendError(res, 'No Spinner Found ');
+    }
+    let result = await Promise.all([
+        Knitter.findAll({
+            attributes: ['id', 'name', [sequelize.literal("'kniter'"), 'type']],
+            where: { brand: { [Op.overlap]: ress.dataValues.brand } }
+        }),
+        Weaver.findAll({
+            attributes: ['id', 'name', [sequelize.literal("'weaver'"), 'type']],
+            where: { brand: { [Op.overlap]: ress.dataValues.brand } }
+        })
+    ])
+    res.sendSuccess(res, result.flat());
+}
 
 export {
     createSpinnerProcess,
@@ -1123,5 +1191,7 @@ export {
     chooseYarnProcess,
     getYarnCount,
     deleteSpinnerProcess,
-    deleteSpinnerSales
+    deleteSpinnerSales,
+    getKnitterWeaver,
+    fetchSpinnerProcess
 }
