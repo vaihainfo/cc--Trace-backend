@@ -9,6 +9,7 @@ import Program from "../../../models/program.model";
 import UnitCertification from "../../../models/unit-certification.model";
 import Brand from "../../../models/brand.model";
 import UserRole from "../../../models/user-role.model";
+import District from "../../../models/district.model";
 
 const createGinner = async (req: Request, res: Response) => {
     try {
@@ -19,21 +20,23 @@ const createGinner = async (req: Request, res: Response) => {
                 lastname: user.lastname ? user.lastname : ' ',
                 position: user.position,
                 email: user.email,
-                mobile: user.mobile,
                 password: await hash.generate(user.password),
                 status: user.status,
                 username: user.username,
-                role: user.role
+                process_role: user.process_role ? user.process_role : [],
+                mobile: user.mobile
             };
             const result = await User.create(userData);
             userIds.push(result.id);
         }
+
         const data = {
             name: req.body.name,
             short_name: req.body.shortName,
             address: req.body.address,
             country_id: req.body.countryId,
             state_id: req.body.stateId,
+            district_id: req.body.districtId,
             program_id: req.body.programIds,
             latitude: req.body.latitude,
             longitude: req.body.latitude,
@@ -53,6 +56,7 @@ const createGinner = async (req: Request, res: Response) => {
             landline: req.body.landline,
             email: req.body.email,
             gin_type: req.body.ginType,
+            registration_document: req.body.registrationDocument,
             ginnerUser_id: userIds
         }
         const result = await Ginner.create(data);
@@ -99,7 +103,10 @@ const fetchGinnerPagination = async (req: Request, res: Response) => {
             whereCondition.state_id = { [Op.in]: idArray };
         }
         if (brandId) {
-            whereCondition.brand = { [Op.contains]: [brandId] }
+            const idArray: number[] = brandId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition.brand = { [Op.overlap]: idArray }
         }
         //fetch data with pagination
         if (req.query.pagination === "true") {
@@ -114,6 +121,9 @@ const fetchGinnerPagination = async (req: Request, res: Response) => {
                     },
                     {
                         model: State, as: 'state'
+                    },
+                    {
+                        model: District, as: 'district'
                     },
                 ],
                 offset: offset,
@@ -130,6 +140,9 @@ const fetchGinnerPagination = async (req: Request, res: Response) => {
                     {
                         model: State, as: 'state'
 
+                    },
+                    {
+                        model: District, as: 'district'
                     },
                 ],
                 order: [
@@ -156,6 +169,9 @@ const fetchGinner = async (req: Request, res: Response) => {
                 },
                 {
                     model: State, as: 'state'
+                },
+                {
+                    model: District, as: 'district'
                 },
             ]
         });

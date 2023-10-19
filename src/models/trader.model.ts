@@ -1,10 +1,11 @@
-import { DataTypes  } from 'sequelize';
-import db  from '../util/dbConn';
+import { DataTypes } from 'sequelize';
+import db from '../util/dbConn';
 
 import Country from './country.model';
 import State from './state.model';
+import District from './district.model';
 
-const Trader = db.define('traders',{
+const Trader = db.define('traders', {
   id: {
     type: DataTypes.INTEGER,
     autoIncrement: true,
@@ -32,6 +33,9 @@ const Trader = db.define('traders',{
     references: { model: 'states', key: 'id' },
     onDelete: 'CASCADE',
     allowNull: false,
+  },
+  district_id: {
+    type: DataTypes.INTEGER
   },
   program_id: {
     allowNull: false,
@@ -86,6 +90,9 @@ const Trader = db.define('traders',{
     allowNull: false,
     type: DataTypes.ARRAY(DataTypes.INTEGER)
   },
+  registration_document: {
+    type: DataTypes.STRING
+  }
 });
 
 Trader.belongsTo(Country, {
@@ -96,6 +103,11 @@ Trader.belongsTo(Country, {
 Trader.belongsTo(State, {
   foreignKey: "state_id",
   as: "state",
+});
+
+Trader.belongsTo(District, {
+  foreignKey: "district_id",
+  as: "district",
 });
 
 Trader.sync();

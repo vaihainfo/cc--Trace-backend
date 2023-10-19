@@ -20,7 +20,7 @@ const createQualityParameter = async (req: Request, res: Response) => {
                 ginner_id: quality.ginnerId ? quality.ginnerId : undefined,
                 process_id: quality.processId,
                 spinner_id: quality.spinnerId ? quality.spinnerId : undefined,
-                sold_to: quality.soldId,
+                sold_to: quality.soldId ? quality.soldId : undefined,
                 test_report: quality.testReport,
                 lab_name: quality.labName ? quality.labName : undefined,
                 sci: quality.sci,
@@ -34,7 +34,10 @@ const createQualityParameter = async (req: Request, res: Response) => {
                 elg: quality.elg,
                 rd: quality.rd,
                 plusb: quality.plusb,
-                document: quality.document
+                document: quality.document,
+                sales_id: quality.salesId ? quality.salesId : null,
+                lot_no: quality.baleLotNo,
+                reel_lot_no: quality.reelLotNo
             };
             const quali = await QualityParameter.create(data);
             result.push(quali);
@@ -71,8 +74,8 @@ const fetchQualityParameterPagination = async (req: Request, res: Response) => {
             const idArray: number[] = brandId
                 .split(",")
                 .map((id: any) => parseInt(id, 10));
-            whereCondition[Op.or] = [{ ["$ginner.brand$"]: { [Op.contains]: idArray } },
-            { ["$spinner.brand$"]: { [Op.contains]: idArray } }];
+            whereCondition[Op.or] = [{ ["$ginner.brand$"]: { [Op.overlap]: idArray } },
+            { ["$spinner.brand$"]: { [Op.overlap]: idArray } }];
         }
 
         if (countryId) {
@@ -110,7 +113,6 @@ const fetchQualityParameterPagination = async (req: Request, res: Response) => {
                 model: Spinner, as: 'sold'
             }
         ]
-        console.log(whereCondition);
         //fetch data with pagination
         if (req.query.pagination === 'true') {
             const { count, rows } = await QualityParameter.findAndCountAll({
@@ -193,8 +195,8 @@ const exportQualityParameter = async (req: Request, res: Response) => {
             const idArray: number[] = brandId
                 .split(",")
                 .map((id: any) => parseInt(id, 10));
-            whereCondition[Op.or] = [{ ["$ginner.brand$"]: { [Op.contains]: idArray } },
-            { ["$spinner.brand$"]: { [Op.contains]: idArray } }];
+            whereCondition[Op.or] = [{ ["$ginner.brand$"]: { [Op.overlap]: idArray } },
+            { ["$spinner.brand$"]: { [Op.overlap]: idArray } }];
         }
         if (countryId) {
             const idArray: number[] = countryId
@@ -229,8 +231,8 @@ const exportQualityParameter = async (req: Request, res: Response) => {
                 no_of_bales: item.process ? item.process.no_of_bales : '',
                 processDate: item.process ? item.process.date : '',
                 date: item.test_report ? item.test_report : '',
-                lot_no: item.process ? item.process.lot_no : '',
-                reel_lot_no: item.process ? item.process.reel_lot_no : '',
+                lot_no: item.process ? item.process.lot_no : item.lot_no ? item.lot_no : '',
+                reel_lot_no: item.process ? item.process.reel_lot_no : item.reel_lot_no ? item.reel_lot_no : '',
                 buyer: item.sold_to ? item.sold_to : '',
                 lab_name: item.lab_name ? item.lab_name : '',
                 sci: item.sci ? item.sci : ' ',
@@ -309,8 +311,8 @@ const exportSingleQualityParameter = async (req: Request, res: Response) => {
         // Append data to worksheet
         const rowValues = Object.values({
             index: 1,
-            lot_no: item.process ? item.process.lot_no : '',
-            reel_lot_no: item.process ? item.process.reel_lot_no : '',
+            lot_no: item.process ? item.process.lot_no : item.lot_no ? item.lot_no : '',
+            reel_lot_no: item.process ? item.process.reel_lot_no : item.reel_lot_no ? item.reel_lot_no : '',
             lab_name: item.lab_name ? item.lab_name : '',
             date: item.test_report ? item.test_report : '',
             sci: item.sci ? item.sci : ' ',

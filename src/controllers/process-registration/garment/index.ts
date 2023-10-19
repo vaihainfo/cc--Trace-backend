@@ -6,6 +6,7 @@ import hash from "../../../util/hash";
 import Country from "../../../models/country.model";
 import State from "../../../models/state.model";
 import UserRole from "../../../models/user-role.model";
+import District from "../../../models/district.model";
 
 const createGarment = async (req: Request, res: Response) => {
     try {
@@ -16,11 +17,11 @@ const createGarment = async (req: Request, res: Response) => {
                 lastname: user.lastname ? user.lastname : ' ',
                 position: user.position,
                 email: user.email,
-                mobile: user.mobile,
                 password: await hash.generate(user.password),
                 status: user.status,
                 username: user.username,
-                role: user.role
+                process_role: user.process_role ? user.process_role : [],
+                mobile: user.mobile
             };
             const result = await User.create(userData);
             userIds.push(result.id);
@@ -30,16 +31,12 @@ const createGarment = async (req: Request, res: Response) => {
             address: req.body.address,
             country_id: req.body.countryId,
             state_id: req.body.stateId,
+            district_id: req.body.districtId,
             program_id: req.body.programIds,
             latitude: req.body.latitude,
             longitude: req.body.latitude,
             website: req.body.website,
             contact_person: req.body.contactPerson,
-            no_of_machines: req.body.noOfMachines,
-            fabric_type: req.body.fabricType,
-            prod_cap: req.body.prodCap,
-            loss_from: req.body.lossFrom,
-            loss_to: req.body.lossTo,
             unit_cert: req.body.unitCert,
             company_info: req.body.companyInfo,
             org_logo: req.body.logo,
@@ -48,8 +45,14 @@ const createGarment = async (req: Request, res: Response) => {
             brand: req.body.brand,
             mobile: req.body.mobile,
             landline: req.body.landline,
+            registration_document: req.body.registrationDocument,
             email: req.body.email,
-            garmentUser_id: userIds
+            garmentUser_id: userIds,
+            no_of_machines: req.body.noOfMachines,
+            fabric_type: req.body.fabricType,
+            prod_cap: req.body.prodCap,
+            loss_from: req.body.lossFrom,
+            loss_to: req.body.lossTo,
         }
         const garment = await Garment.create(data);
         res.sendSuccess(res, garment);
@@ -93,7 +96,10 @@ const fetchGarmentPagination = async (req: Request, res: Response) => {
             whereCondition.state_id = { [Op.in]: idArray };
         }
         if (brandId) {
-            whereCondition.brand = { [Op.contains]: [Number(brandId)] }
+            const idArray: number[] = brandId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition.brand = { [Op.overlap]: idArray }
         }
         //fetch data with pagination
         if (req.query.pagination === "true") {
@@ -109,6 +115,9 @@ const fetchGarmentPagination = async (req: Request, res: Response) => {
                     {
                         model: State, as: 'state'
                     },
+                    {
+                        model: District, as: 'district'
+                    },
                 ],
                 offset: offset,
                 limit: limit
@@ -123,6 +132,9 @@ const fetchGarmentPagination = async (req: Request, res: Response) => {
                     },
                     {
                         model: State, as: 'state'
+                    },
+                    {
+                        model: District, as: 'district'
                     },
                 ],
                 order: [
@@ -149,6 +161,9 @@ const fetchGarment = async (req: Request, res: Response) => {
                 },
                 {
                     model: State, as: 'state'
+                },
+                {
+                    model: District, as: 'district'
                 },
             ]
         });

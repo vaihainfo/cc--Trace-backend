@@ -1,9 +1,10 @@
-import { DataTypes  } from 'sequelize';
-import db  from '../util/dbConn';
+import { DataTypes } from 'sequelize';
+import db from '../util/dbConn';
 import Country from './country.model';
 import State from './state.model';
+import District from './district.model';
 
-const Fabric = db.define('fabrics',{
+const Fabric = db.define('fabrics', {
   id: {
     type: DataTypes.INTEGER,
     autoIncrement: true,
@@ -24,6 +25,9 @@ const Fabric = db.define('fabrics',{
   },
   state_id: {
     allowNull: false,
+    type: DataTypes.INTEGER
+  },
+  district_id: {
     type: DataTypes.INTEGER
   },
   program_id: {
@@ -47,8 +51,7 @@ const Fabric = db.define('fabrics',{
     type: DataTypes.STRING
   },
   fabric_processor_type: {
-    allowNull: false,
-    type: DataTypes.ARRAY(DataTypes.INTEGER)
+    type: DataTypes.ARRAY(DataTypes.STRING)
   },
   prod_capt: {
     type: DataTypes.ARRAY(DataTypes.INTEGER)
@@ -91,6 +94,9 @@ const Fabric = db.define('fabrics',{
     allowNull: false,
     type: DataTypes.ARRAY(DataTypes.INTEGER)
   },
+  registration_document: {
+    type: DataTypes.STRING
+  }
 });
 
 Fabric.belongsTo(Country, {
@@ -101,6 +107,10 @@ Fabric.belongsTo(Country, {
 Fabric.belongsTo(State, {
   foreignKey: "state_id",
   as: "state",
+});
+Fabric.belongsTo(District, {
+  foreignKey: "district_id",
+  as: "district",
 });
 
 

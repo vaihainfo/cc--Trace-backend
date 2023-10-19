@@ -34,6 +34,7 @@ import fileRouter from './router/upload';
 import brandRouter from './router/settings/brand';
 import spinnerRouter from './router/settings/spinner';
 import ginnerRouter from './router/settings/ginner';
+import newProcessorRouter from './router/settings/new-process';
 import knitterRouter from './router/settings/knitter';
 import weaverRouter from './router/settings/weaver';
 import garmentRouter from './router/settings/garment';
@@ -67,7 +68,9 @@ import setInterface from "./middleware/interface";
 
 const app = express();
 
-app.use(express.json());
+
+app.use(express.json({ limit: '350mb' }));
+
 app.use(express.urlencoded({ extended: true }));
 
 //check connection to database
@@ -117,6 +120,7 @@ app.use("/video", videoRouter);
 app.use("/file", fileRouter);
 app.use("/scope-certificate", scopeCertRouter);
 app.use("/brand", brandRouter);
+app.use("/new-processor", newProcessorRouter);
 app.use("/spinner", spinnerRouter);
 app.use("/ginner", ginnerRouter);
 app.use("/knitter", knitterRouter);

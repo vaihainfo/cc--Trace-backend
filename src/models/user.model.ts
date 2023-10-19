@@ -1,8 +1,8 @@
-import { DataTypes  } from 'sequelize';
-import db  from '../util/dbConn';
+import { DataTypes } from 'sequelize';
+import db from '../util/dbConn';
 import UserRole from './user-role.model';
 
-const User = db.define('users',{
+const User = db.define('users', {
   id: {
     type: DataTypes.INTEGER,
     autoIncrement: true,
@@ -91,6 +91,9 @@ const User = db.define('users',{
     allowNull: false,
     defaultValue: true,
     type: DataTypes.BOOLEAN
+  },
+  process_role: {
+    type: DataTypes.ARRAY(DataTypes.INTEGER),
   },
 });
 

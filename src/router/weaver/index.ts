@@ -9,6 +9,8 @@ import {
     getWeaverProgram,
     getSpinnerAndProgram,
     getInvoiceAndyarnType,
+    getWeaverDyeing,
+    getGarments
 } from "../../controllers/weaver";
 
 import { Router } from "express";
@@ -23,5 +25,8 @@ router.get('/transaction', fetchWeaverDashBoard);
 router.put('/transaction', updateStatusWeaverSale);
 router.get('/transaction/count', countCottonBaleWithProgram);
 router.get('/get-spinner-trans', getSpinnerAndProgram);
+router.get('/get-dyeing', getWeaverDyeing);
+router.get('/get-garments', getGarments);
 router.get('/get-invoice-trans', getInvoiceAndyarnType);
+
 export default router;

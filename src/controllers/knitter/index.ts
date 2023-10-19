@@ -335,10 +335,11 @@ const fetchKnitterDashBoard = async (req: Request, res: Response) => {
         }
         if (searchTerm) {
             whereCondition[Op.or] = [
-                { lot_no: { [Op.iLike]: `%${searchTerm}%` } }, // Search by 
+                { batch_lot_no: { [Op.iLike]: `%${searchTerm}%` } }, // Search by 
                 { invoice_no: { [Op.iLike]: `%${searchTerm}%` } }, // Search by
                 { '$program.program_name$': { [Op.iLike]: `%${searchTerm}%` } }, // Search by program
-                { '$season.name$': { [Op.iLike]: `%${searchTerm}%` } }, // Search by crop Type
+                { '$season.name$': { [Op.iLike]: `%${searchTerm}%` } },
+                { '$spinner.name$': { [Op.iLike]: `%${searchTerm}%` } }// Search by crop Type
             ];
         }
         if (status === 'Pending' || status === 'Sold') {
@@ -628,6 +629,23 @@ const getInvoiceAndyarnType = async (req: Request, res: Response) => {
         return res.sendError(res, error.message);
     }
 };
+
+const getGarments = async (req: Request, res: Response) => {
+    let knitterId = req.query.knitterId;
+    if (!knitterId) {
+        return res.sendError(res, 'Need Knitter Id ');
+    }
+    let ress = await Knitter.findOne({ where: { id: knitterId } });
+    if (!ress) {
+        return res.sendError(res, 'No Knitter Found ');
+    }
+    let garment = await Garment.findAll({
+        attributes: ['id', 'name'],
+        where: { brand: { [Op.overlap]: ress.dataValues.brand } }
+    })
+    res.sendSuccess(res, garment);
+}
+
 export {
     createKnitterrSales,
     fetchKnitterSalesPagination,
@@ -638,5 +656,6 @@ export {
     getProgram,
     getSpinnerAndProgram,
     getInvoiceAndyarnType,
-    deleteKnitterSales
+    deleteKnitterSales,
+    getGarments
 }

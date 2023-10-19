@@ -3,6 +3,7 @@ import db from '../util/dbConn';
 
 import Country from './country.model';
 import State from './state.model';
+import District from './district.model';
 
 const Ginner = db.define('ginners', {
   id: {
@@ -36,6 +37,9 @@ const Ginner = db.define('ginners', {
     references: { model: 'states', key: 'id' },
     onDelete: 'CASCADE',
     allowNull: false,
+  },
+  district_id: {
+    type: DataTypes.INTEGER
   },
   program_id: {
     allowNull: false,
@@ -105,6 +109,9 @@ const Ginner = db.define('ginners', {
     allowNull: false,
     type: DataTypes.ARRAY(DataTypes.INTEGER)
   },
+  registration_document: {
+    type: DataTypes.STRING
+  }
 });
 
 Ginner.belongsTo(Country, {
@@ -115,6 +122,11 @@ Ginner.belongsTo(Country, {
 Ginner.belongsTo(State, {
   foreignKey: "state_id",
   as: "state",
+});
+
+Ginner.belongsTo(District, {
+  foreignKey: "district_id",
+  as: "district",
 });
 
 Ginner.associate = (models: any) => {

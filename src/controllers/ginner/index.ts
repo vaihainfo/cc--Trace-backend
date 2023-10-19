@@ -559,7 +559,7 @@ const createGinnerSales = async (req: Request, res: Response) => {
                 bale_id: bale
             }
             const bales = await BaleSelection.create(baleData);
-            const ginbaleSatus = await GinBale.update({ status: true }, { where: { id: bale } });
+            const ginbaleSatus = await GinBale.update({ sold_status: true }, { where: { id: bale } });
         }
         res.sendSuccess(res, { ginSales });
     } catch (error: any) {
@@ -953,6 +953,22 @@ const getProgram = async (req: Request, res: Response) => {
     }
 };
 
+const getSpinner = async (req: Request, res: Response) => {
+    let ginnerId = req.query.ginnerId;
+    if (!ginnerId) {
+        return res.sendError(res, 'Need Ginner Id ');
+    }
+    let ginner = await Ginner.findOne({ where: { id: ginnerId } });
+    if (!ginner) {
+        return res.sendError(res, 'No Weaver Found ');
+    }
+    let result = await Spinner.findAll({
+        attributes: ['id', 'name'],
+        where: { brand: { [Op.overlap]: ginner.dataValues.brand } }
+    })
+    res.sendSuccess(res, result);
+}
+
 export {
     createGinnerProcess,
     fetchGinProcessPagination,
@@ -971,5 +987,6 @@ export {
     updateGinSaleBale,
     chooseBale,
     deleteGinnerProcess,
-    deleteGinSales
+    deleteGinSales,
+    getSpinner
 }

@@ -10,6 +10,7 @@ import UnitCertification from "../../../models/unit-certification.model";
 import Brand from "../../../models/brand.model";
 import YarnCount from "../../../models/yarn-count.model";
 import UserRole from "../../../models/user-role.model";
+import District from "../../../models/district.model";
 
 
 const createSpinner = async (req: Request, res: Response) => {
@@ -21,11 +22,11 @@ const createSpinner = async (req: Request, res: Response) => {
                 lastname: user.lastname ? user.lastname : ' ',
                 position: user.position,
                 email: user.email,
-                mobile: user.mobile,
                 password: await hash.generate(user.password),
                 status: user.status,
                 username: user.username,
-                role: user.role
+                process_role: user.process_role ? user.process_role : [],
+                mobile: user.mobile
             };
             const result = await User.create(userData);
             userIds.push(result.id);
@@ -36,14 +37,12 @@ const createSpinner = async (req: Request, res: Response) => {
             address: req.body.address,
             country_id: req.body.countryId,
             state_id: req.body.stateId,
+            district_id: req.body.districtId,
             program_id: req.body.programIds,
             latitude: req.body.latitude,
             longitude: req.body.latitude,
             website: req.body.website,
             contact_person: req.body.contactPerson,
-            yarn_count_range: req.body.yarnCountRange,
-            realisation_range_from: req.body.rangeFrom,
-            realisation_range_to: req.body.rangeTo,
             unit_cert: req.body.unitCert,
             company_info: req.body.companyInfo,
             org_logo: req.body.logo,
@@ -53,8 +52,12 @@ const createSpinner = async (req: Request, res: Response) => {
             mobile: req.body.mobile,
             landline: req.body.landline,
             email: req.body.email,
+            registration_document: req.body.registrationDocument,
+            yarn_count_range: req.body.yarnCountRange,
+            realisation_range_from: req.body.rangeFrom,
+            realisation_range_to: req.body.rangeTo,
             yarn_type: req.body.yarnType,
-            spinnerUser_id: userIds
+            spinnerUser_id: userIds,
         }
         const spinner = await Spinner.create(brandData);
         res.sendSuccess(res, spinner);
@@ -97,7 +100,10 @@ const fetchSpinnerPagination = async (req: Request, res: Response) => {
             whereCondition.state_id = { [Op.in]: idArray };
         }
         if (brandId) {
-            whereCondition.brand = { [Op.contains]: [brandId] }
+            const idArray: number[] = brandId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition.brand = { [Op.overlap]: idArray }
         }
         //fetch data with pagination
         if (req.query.pagination === "true") {
@@ -113,6 +119,9 @@ const fetchSpinnerPagination = async (req: Request, res: Response) => {
                     {
                         model: State, as: 'state'
                     },
+                    {
+                        model: District, as: 'district'
+                    },
                 ],
                 offset: offset,
                 limit: limit
@@ -127,6 +136,9 @@ const fetchSpinnerPagination = async (req: Request, res: Response) => {
                     },
                     {
                         model: State, as: 'state'
+                    },
+                    {
+                        model: District, as: 'district'
                     },
                 ],
                 order: [
@@ -153,6 +165,9 @@ const fetchSpinner = async (req: Request, res: Response) => {
                 },
                 {
                     model: State, as: 'state'
+                },
+                {
+                    model: District, as: 'district'
                 },
             ]
         });
@@ -187,9 +202,11 @@ const fetchSpinner = async (req: Request, res: Response) => {
             brands = await Brand.findAll({
                 where: { id: result.brand },
             });
-            yarnCount = await YarnCount.findAll({
-                where: { id: JSON.parse(result.yarn_count_range) },
-            });
+            if (result.yarn_count_range) {
+                yarnCount = await YarnCount.findAll({
+                    where: { id: JSON.parse(JSON.stringify(result.yarn_count_range)) },
+                });
+            }
         }
         return res.sendSuccess(res, result ? { ...result.dataValues, userData, programs, unitCerts, brands, yarnCount } : null);
 

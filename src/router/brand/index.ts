@@ -1,6 +1,7 @@
 import {
     organicCottonOverview,
-    fetchBrandTransactionsPagination
+    fetchBrandTransactionsPagination,
+    productionUpdate
 } from "../../controllers/brand";
 
 
@@ -10,6 +11,7 @@ const router = Router();
 // Ginner Routes
 router.get('/organic-cotton-overview', organicCottonOverview);
 router.get('/transactions', fetchBrandTransactionsPagination);
+router.get('/production-update', productionUpdate);
 
 
 

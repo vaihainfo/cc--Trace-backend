@@ -15,7 +15,9 @@ import {
     chooseYarnProcess,
     getYarnCount,
     deleteSpinnerProcess,
-    deleteSpinnerSales
+    deleteSpinnerSales,
+    getKnitterWeaver,
+    fetchSpinnerProcess
 } from "../../controllers/spinner";
 
 import { Router } from "express";
@@ -25,6 +27,7 @@ const router = Router();
 router.get('/', fetchSpinnerProcessPagination);
 router.post('/', createSpinnerProcess);
 router.put('/', updateSpinnerProcess);
+router.get('/get-process', fetchSpinnerProcess);
 router.delete('/', deleteSpinnerProcess);
 router.get('/export', exportSpinnerProcess);
 router.get('/sales', fetchSpinSalesPagination);
@@ -39,5 +42,6 @@ router.get('/transaction/export', exportSpinnerTransaction);
 router.get('/get-program', getProgram);
 router.get('/choose-yarn', chooseYarnProcess);
 router.get('/get-yarn', getYarnCount);
+router.get('/get-knitter-weaver', getKnitterWeaver);
 
 export default router;

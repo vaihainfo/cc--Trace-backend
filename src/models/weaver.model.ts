@@ -1,10 +1,11 @@
-import { DataTypes  } from 'sequelize';
-import db  from '../util/dbConn';
+import { DataTypes } from 'sequelize';
+import db from '../util/dbConn';
 
 import Country from './country.model';
 import State from './state.model';
+import District from './district.model';
 
-const Weaver = db.define('weavers',{
+const Weaver = db.define('weavers', {
   id: {
     type: DataTypes.INTEGER,
     autoIncrement: true,
@@ -32,6 +33,9 @@ const Weaver = db.define('weavers',{
     references: { model: 'states', key: 'id' },
     onDelete: 'CASCADE',
     allowNull: false,
+  },
+  district_id: {
+    type: DataTypes.INTEGER
   },
   program_id: {
     allowNull: false,
@@ -100,6 +104,9 @@ const Weaver = db.define('weavers',{
     allowNull: false,
     type: DataTypes.ARRAY(DataTypes.INTEGER)
   },
+  registration_document: {
+    type: DataTypes.STRING
+  }
 });
 
 Weaver.belongsTo(Country, {
@@ -110,6 +117,11 @@ Weaver.belongsTo(Country, {
 Weaver.belongsTo(State, {
   foreignKey: "state_id",
   as: "state",
+});
+
+Weaver.belongsTo(District, {
+  foreignKey: "district_id",
+  as: "district",
 });
 
 Weaver.associate = (models: any) => {

@@ -349,6 +349,21 @@ const deleteWeaverSales = async (req: Request, res: Response) => {
 }
 
 
+const getWeaverDyeing = async (req: Request, res: Response) => {
+    try {
+        if (!req.query.id) {
+            return res.sendError(res, 'Need Id');
+        }
+
+        let id = req.query.id;
+        let weaver = await Dyeing.findOne({ where: { id: id } });
+
+
+        res.sendSuccess(res, weaver);
+    } catch (error: any) {
+        return res.sendError(res, error.message);
+    }
+};
 //fetch Weaver transaction with filters
 const fetchWeaverDashBoard = async (req: Request, res: Response) => {
     const searchTerm = req.query.search || "";
@@ -659,6 +674,21 @@ const getInvoiceAndyarnType = async (req: Request, res: Response) => {
     }
 };
 
+const getGarments = async (req: Request, res: Response) => {
+    let weaverId = req.query.weaverId;
+    if (!weaverId) {
+        return res.sendError(res, 'Need Weaver Id ');
+    }
+    let weaver = await Weaver.findOne({ where: { id: weaverId } });
+    if (!weaver) {
+        return res.sendError(res, 'No Weaver Found ');
+    }
+    let garment = await Garment.findAll({
+        attributes: ['id', 'name'],
+        where: { brand: { [Op.overlap]: weaver.dataValues.brand } }
+    })
+    res.sendSuccess(res, garment);
+}
 
 export {
     createWeaverSales,
@@ -670,5 +700,7 @@ export {
     getWeaverProgram,
     getSpinnerAndProgram,
     getInvoiceAndyarnType,
-    deleteWeaverSales
+    deleteWeaverSales,
+    getWeaverDyeing,
+    getGarments
 }
