@@ -95,7 +95,7 @@ const fetchTransactions = async (req: Request, res: Response) => {
   const seasonId: string = req.query.seasonId as string;
   const programId: string = req.query.programId as string;
   const ginnerId: string = req.query.ginnerId as string;
-
+  const { endDate, startDate }: any = req.query;
   const whereCondition: any = {};
 
   try {
@@ -138,6 +138,15 @@ const fetchTransactions = async (req: Request, res: Response) => {
         .map((id) => parseInt(id, 10));
       whereCondition.mapped_ginner = { [Op.in]: idArray };
     }
+
+    if (startDate && endDate) {
+      const startOfDay = new Date(startDate);
+      startOfDay.setUTCHours(0, 0, 0, 0);
+      const endOfDay = new Date(endDate);
+      endOfDay.setUTCHours(23, 59, 59, 999);
+      whereCondition.test_report = { [Op.between]: [startOfDay, endOfDay] }
+    }
+
     if (status) {
       whereCondition.status = status;
     }
@@ -491,11 +500,32 @@ const cottonData = async (req: Request, res: Response) => {
 
 const deleteTransaction = async (req: Request, res: Response) => {
   try {
+    let trans = await Transaction.findOne({
+      where: {
+        id: req.body.id
+      }
+    })
+    if (!trans) {
+      return res.sendError(res, 'No transaction found')
+    }
+    // if (trans.dataValues.status !== 'Pending') {
+    //   return res.sendError(res, 'Transaction is not in pending state')
+    // }
+    // if (trans.dataValues.farm_id) {
+    //   let farm = await Farm.findOne({ where: { id: trans.dataValues.farm_id } })
+    //   let s = await Farm.update({
+    //     cotton_transacted: (farm.cotton_transacted || 0) + req.body.qtyPurchased
+    //   }, { where: { id: req.body.farmId } });
+    // }
+
+
     const transaction = await Transaction.destroy({
       where: {
         id: req.body.id,
       },
     });
+
+
     res.sendSuccess(res, { transaction });
   } catch (error) {
     return res.sendError(res, "NOT_ABLE_TO_DELETE");

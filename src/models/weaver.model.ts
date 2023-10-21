@@ -97,6 +97,9 @@ const Weaver = db.define('weavers', {
   email: {
     type: DataTypes.STRING
   },
+  short_name: {
+    type: DataTypes.STRING
+  },
   loom_type: {
     type: DataTypes.STRING
   },

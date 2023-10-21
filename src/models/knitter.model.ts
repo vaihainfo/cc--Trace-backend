@@ -16,6 +16,9 @@ const Knitter = db.define('knitters', {
     allowNull: false,
     type: DataTypes.STRING
   },
+  short_name: {
+    type: DataTypes.STRING
+  },
   address: {
     allowNull: false,
     type: DataTypes.STRING
@@ -101,6 +104,9 @@ const Knitter = db.define('knitters', {
     allowNull: false,
     type: DataTypes.ARRAY(DataTypes.INTEGER)
   },
+  registration_document: {
+    type: DataTypes.STRING
+  }
 });
 
 Knitter.belongsTo(Country, {

@@ -105,7 +105,10 @@ const Garment = db.define('garments', {
   },
   registration_document: {
     type: DataTypes.STRING
-  }
+  },
+  short_name: {
+    type: DataTypes.STRING
+  },
 });
 
 Garment.belongsTo(Country, {

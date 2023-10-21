@@ -92,6 +92,9 @@ const Trader = db.define('traders', {
   },
   registration_document: {
     type: DataTypes.STRING
+  },
+  short_name: {
+    type: DataTypes.STRING
   }
 });
 
