@@ -1,6 +1,7 @@
 import { DataTypes } from 'sequelize';
 import db from '../util/dbConn';
 import TicketTracker from './ticket-tracker.model';
+import User from './user.model';
 
 const TicketTrackerStatus = db.define('ticket_tracker_status', {
     id: {
@@ -29,6 +30,12 @@ TicketTrackerStatus.belongsTo(TicketTracker, {
     foreignKey: "ticket_id",
     as: "ticket",
 });
+
+TicketTrackerStatus.belongsTo(User, {
+    foreignKey: "user_id",
+    as: "user",
+});
+
 
 
 

@@ -1,7 +1,8 @@
 import {
     organicCottonOverview,
     fetchBrandTransactionsPagination,
-    productionUpdate
+    productionUpdate,
+    productTracebility
 } from "../../controllers/brand";
 
 
@@ -12,6 +13,7 @@ const router = Router();
 router.get('/organic-cotton-overview', organicCottonOverview);
 router.get('/transactions', fetchBrandTransactionsPagination);
 router.get('/production-update', productionUpdate);
+router.get('/product-tracebility', productTracebility);
 
 
 

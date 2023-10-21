@@ -275,7 +275,7 @@ const updateProcessor = async (req: Request, res: Response) => {
         for await (let user of req.body.userData) {
             const userData = {
                 firstname: user.firstname,
-                lastname: user.lastname,
+                lastname: user.lastname ? user.lastname : ' ',
                 position: user.position,
                 mobile: user.mobile,
                 password: user.password ? await hash.generate(user.password) : undefined,
@@ -370,7 +370,6 @@ const updateProcessor = async (req: Request, res: Response) => {
                 const result = await Knitter.create(obj);
                 mainData.push(result);
             }
-
         }
         if (req.body.processType.includes('Weaver')) {
             let obj = {
@@ -390,7 +389,6 @@ const updateProcessor = async (req: Request, res: Response) => {
                 const result = await Weaver.create(obj);
                 mainData.push(result);
             }
-
         }
         if (req.body.processType.includes('Trader')) {
             let obj = {
@@ -423,7 +421,6 @@ const updateProcessor = async (req: Request, res: Response) => {
                 const result = await Garment.create(obj);
                 mainData.push(result);
             }
-
         }
         if (req.body.processType.includes('Fabric')) {
             let obj = {
@@ -442,9 +439,120 @@ const updateProcessor = async (req: Request, res: Response) => {
                 const result = await Fabric.create(obj);
                 mainData.push(result);
             }
-
         }
+
+        if (req.body.deletedGinnerId) {
+            const result = await Ginner.update({ ginnerUser_id: [] }, { where: { id: req.body.deletedGinnerId } });
+        }
+        if (req.body.deletedSpinnerId) {
+            const result = await Spinner.update({ spinnerUser_id: [] }, { where: { id: req.body.deletedSpinnerId } });
+        }
+        if (req.body.deletedKnitterId) {
+            const result = await Knitter.update({ knitterUser_id: [] }, { where: { id: req.body.deletedKnitterId } });
+        }
+        if (req.body.deletedWeaverId) {
+            const result = await Weaver.update({ weaverUser_id: [] }, { where: { id: req.body.deletedWeaverId } });
+        }
+        if (req.body.deletedTraderId) {
+            const result = await Trader.update({ traderUser_id: [] }, { where: { id: req.body.deletedTraderId } });
+        }
+        if (req.body.deletedGarmentId) {
+            const result = await Garment.update({ garmentUser_id: [] }, { where: { id: req.body.deletedGarmentId } });
+        }
+        if (req.body.deletedFabricId) {
+            const result = await Fabric.update({ fabricUser_id: [] }, { where: { id: req.body.deletedFabricId } });
+        }
+
         res.sendSuccess(res, mainData);
+    } catch (error) {
+        console.log(error);
+        return res.sendError(res, "ERR_NOT_ABLE_UPDATE_PROCESSOR");
+    }
+}
+
+const checkProcessorName = async (req: Request, res: Response) => {
+    try {
+        let name = req.body.name
+        if (req.body.ginnerId) {
+            const result = await Ginner.findOne({ where: { name: { [Op.iLike]: name }, id: { [Op.ne]: req.body.ginnerId } } });
+            if (result) {
+                return res.sendSuccess(res, { exist: true })
+            }
+        } else {
+            const result = await Ginner.findOne({ where: { name: { [Op.iLike]: name } } });
+            if (result) {
+                return res.sendSuccess(res, { exist: true })
+            }
+        }
+        if (req.body.spinnerId) {
+            const result = await Spinner.findOne({ where: { name: { [Op.iLike]: name }, id: { [Op.ne]: req.body.spinnerId } } });
+
+            if (result) {
+                return res.sendSuccess(res, { exist: true })
+            }
+        } else {
+            const result = await Spinner.findOne({ where: { name: { [Op.iLike]: name } } });
+            if (result) {
+                return res.sendSuccess(res, { exist: true })
+            }
+        }
+        if (req.body.knitterId) {
+            const result = await Knitter.findOne({ where: { name: { [Op.iLike]: name }, id: { [Op.ne]: req.body.knitterId } } });
+            if (result) {
+                return res.sendSuccess(res, { exist: true })
+            }
+        } else {
+            const result = await Knitter.findOne({ where: { name: { [Op.iLike]: name } } });
+            if (result) {
+                return res.sendSuccess(res, { exist: true })
+            }
+        }
+        if (req.body.weaverId) {
+            const result = await Weaver.findOne({ where: { name: { [Op.iLike]: name }, id: { [Op.ne]: req.body.weaverId } } });
+            if (result) {
+                return res.sendSuccess(res, { exist: true })
+            }
+        } else {
+            const result = await Weaver.findOne({ where: { name: { [Op.iLike]: name } } });
+            if (result) {
+                return res.sendSuccess(res, { exist: true })
+            }
+        }
+        if (req.body.garmentId) {
+            const result = await Garment.findOne({ where: { name: { [Op.iLike]: name }, id: { [Op.ne]: req.body.garmentId } } });
+            if (result) {
+                return res.sendSuccess(res, { exist: true })
+            }
+        } else {
+            const result = await Garment.findOne({ where: { name: { [Op.iLike]: name } } });
+            if (result) {
+                return res.sendSuccess(res, { exist: true })
+            }
+        }
+        if (req.body.fabricId) {
+            const result = await Fabric.findOne({ where: { name: { [Op.iLike]: name }, id: { [Op.ne]: req.body.fabricId } } });
+            if (result) {
+                return res.sendSuccess(res, { exist: true })
+            }
+        } else {
+            const result = await Fabric.findOne({ where: { name: { [Op.iLike]: name } } });
+            if (result) {
+                return res.sendSuccess(res, { exist: true })
+            }
+        }
+        if (req.body.traderId) {
+            const result = await Trader.findOne({ where: { name: { [Op.iLike]: name }, id: { [Op.ne]: req.body.traderId } } });
+            if (result) {
+                return res.sendSuccess(res, { exist: true })
+            }
+        } else {
+            const result = await Trader.findOne({ where: { name: { [Op.iLike]: name } } });
+            if (result) {
+                return res.sendSuccess(res, { exist: true })
+            }
+        }
+
+        res.sendSuccess(res, { exist: false });
     } catch (error) {
         console.log(error);
         return res.sendError(res, "ERR_NOT_ABLE_UPDATE_PROCESSOR");
@@ -454,5 +562,6 @@ const updateProcessor = async (req: Request, res: Response) => {
 export {
     createProcessor,
     fetchAllProcessor,
-    updateProcessor
+    updateProcessor,
+    checkProcessorName
 }

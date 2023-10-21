@@ -21,6 +21,7 @@ import WeaverSales from "../../models/weaver-sales.model";
 import Weaver from "../../models/weaver.model";
 import GarmentSales from "../../models/garment-sales.model";
 import Garment from "../../models/garment.model";
+import FabricSelection from "../../models/fabric-selections.model";
 
 const createBrand = async (req: Request, res: Response) => {
     try {
@@ -819,6 +820,50 @@ const productionUpdate = async (req: Request, res: Response) => {
     }
 }
 
+const productTracebility = async (req: Request, res: Response) => {
+    try {
+        let { seasonId, brandId, styleMarkNo }: any = req.query;
+        let whereCondition: any = {};
+        if (!brandId) {
+            return res.sendError(res, 'NEED_BRAND_ID')
+        }
+        if (!styleMarkNo) {
+            return res.sendError(res, 'NEED_MARK_NO')
+        }
+
+        const garment_query = {
+            include: [
+                {
+                    model: Brand,
+                    as: 'buyer',
+                    attributes: ['id', 'brand_name'],
+                },
+                {
+                    model: Garment,
+                    as: 'garment',
+                    attributes: ['id', 'name', 'latitude', 'longitude']
+                }
+            ],
+            where: { style_mark_no: styleMarkNo, buyer_id: brandId },
+        };
+
+        let garments = await GarmentSales.findAll(garment_query);
+        for (let data of garments) {
+            // let fabric = FabricSelection.findAll({ where: { sales_id: data.dataValues.id } });
+            // let knitFabricIds = [];
+            // if(){
+
+            // }
+        }
+        res.sendSuccess(res, garments)
+    } catch (error) {
+        console.log(error);
+    }
+}
+
+
+
+
 
 export {
     findUser,
@@ -830,5 +875,6 @@ export {
     checkBrand,
     organicCottonOverview,
     fetchBrandTransactionsPagination,
-    productionUpdate
+    productionUpdate,
+    productTracebility
 };

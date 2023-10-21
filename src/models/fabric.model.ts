@@ -96,7 +96,10 @@ const Fabric = db.define('fabrics', {
   },
   registration_document: {
     type: DataTypes.STRING
-  }
+  },
+  short_name: {
+    type: DataTypes.STRING
+  },
 });
 
 Fabric.belongsTo(Country, {

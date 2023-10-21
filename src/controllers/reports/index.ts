@@ -2948,10 +2948,7 @@ const fetchQrCodeTrackPagination = async (req: Request, res: Response) => {
             const idArray: number[] = brandId
                 .split(",")
                 .map((id: any) => parseInt(id, 10));
-            let garment = await Garment.findAll({ where: { brand: { [Op.overlap]: idArray } } });
-            const arry: number[] = garment
-                .map((gin: any) => parseInt(gin.id, 10));
-            whereCondition.garment_id = { [Op.in]: arry };
+            whereCondition.buyer_id = { [Op.in]: idArray };
         }
 
         // if (countryId) {
@@ -3025,7 +3022,7 @@ const fetchQrCodeTrackPagination = async (req: Request, res: Response) => {
 
 const exportQrCodeTrack = async (req: Request, res: Response) => {
     const excelFilePath = path.join("./upload", "barcode-report.xlsx");
-
+    const { garmentId, seasonId, programId, brandId, countryId }: any = req.query;
     try {
         const whereCondition: any = {};
         const searchTerm = req.query.search || "";
@@ -3037,6 +3034,18 @@ const exportQrCodeTrack = async (req: Request, res: Response) => {
                 { '$buyer.brand_name$': { [Op.iLike]: `%${searchTerm}%` } },
                 { garment_type: { [Op.iLike]: `%${searchTerm}%` } },
             ];
+        }
+        if (garmentId) {
+            const idArray: number[] = garmentId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition.garment_id = { [Op.in]: idArray };
+        }
+        if (brandId) {
+            const idArray: number[] = brandId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition.buyer_id = { [Op.in]: idArray };
         }
         whereCondition.status = "Sold";
         // Create the excel workbook file
@@ -3114,7 +3123,7 @@ const exportQrCodeTrack = async (req: Request, res: Response) => {
     }
 };
 
-//fetch Qr Code Tracker with filters
+//fetch Spinner sales with filters
 const fetchSpinnerSummaryPagination = async (req: Request, res: Response) => {
     const searchTerm = req.query.search || "";
     const page = Number(req.query.page) || 1;
