@@ -44,6 +44,8 @@ const createTransaction = async (req: Request, res: Response) => {
       payment_method: req.body.paymentMethod,
       proof: req.body.proof,
       status: "Pending",
+      state_id: req.body.stateId,
+      country_id: req.body.countryId
     };
     let farm;
     if (req.body.farmId) {
@@ -54,20 +56,6 @@ const createTransaction = async (req: Request, res: Response) => {
       data.estimated_cotton = farm.total_estimated_cotton;
       data.available_cotton = farm.total_estimated_cotton - (farm.cotton_transacted || 0);
 
-    }
-    if (req.body.districtId) {
-      const district = await District.findByPk(req.body.districtId, {
-        include: [
-          {
-            model: State,
-            as: "state",
-            include: [{ model: Country, as: "country" }],
-          },
-        ],
-      });
-
-      data.state_id = district.state_id;
-      data.country_id = district.state.country_id;
     }
 
     const transaction = await Transaction.create(data);
@@ -95,6 +83,8 @@ const fetchTransactions = async (req: Request, res: Response) => {
   const seasonId: string = req.query.seasonId as string;
   const programId: string = req.query.programId as string;
   const ginnerId: string = req.query.ginnerId as string;
+  const farmerId: string = req.query.farmerId as string;
+  const villageId: string = req.query.villageId as string;
   const { endDate, startDate }: any = req.query;
   const whereCondition: any = {};
 
@@ -106,6 +96,14 @@ const fetchTransactions = async (req: Request, res: Response) => {
         .map((id) => parseInt(id, 10));
       whereCondition.country_id = { [Op.in]: idArray };
     }
+
+    if (villageId) {
+      const idArray: number[] = villageId
+        .split(",")
+        .map((id) => parseInt(id, 10));
+      whereCondition.village_id = { [Op.in]: idArray };
+    }
+
     if (brandId) {
       const idArray: number[] = brandId
         .split(",")
@@ -123,6 +121,13 @@ const fetchTransactions = async (req: Request, res: Response) => {
         .split(",")
         .map((id) => parseInt(id, 10));
       whereCondition.season_id = { [Op.in]: idArray };
+    }
+
+    if (farmerId) {
+      const idArray: number[] = farmerId
+        .split(",")
+        .map((id) => parseInt(id, 10));
+      whereCondition.farmer_id = { [Op.in]: idArray };
     }
 
     if (programId) {
@@ -144,7 +149,7 @@ const fetchTransactions = async (req: Request, res: Response) => {
       startOfDay.setUTCHours(0, 0, 0, 0);
       const endOfDay = new Date(endDate);
       endOfDay.setUTCHours(23, 59, 59, 999);
-      whereCondition.test_report = { [Op.between]: [startOfDay, endOfDay] }
+      whereCondition.date = { [Op.between]: [startOfDay, endOfDay] }
     }
 
     if (status) {
@@ -161,7 +166,6 @@ const fetchTransactions = async (req: Request, res: Response) => {
         { "$state.state_name$": { [Op.iLike]: `%${searchTerm}%` } },
         { "$village.village_name$": { [Op.iLike]: `%${searchTerm}%` } },
         { "$district.district_name$": { [Op.iLike]: `%${searchTerm}%` } },
-        // { "$farmer.firstName$": { [Op.iLike]: `%${searchTerm}%` } },
         { farmer_name: { [Op.iLike]: `%${searchTerm}%` } },
         { "$program.program_name$": { [Op.iLike]: `%${searchTerm}%` } },
         { "$ginner.name$": { [Op.iLike]: `%${searchTerm}%` } },
@@ -372,22 +376,9 @@ const updateTransaction = async (req: Request, res: Response) => {
       payment_method: req.body.paymentMethod,
       proof: req.body.proof,
       status: req.body.status,
+      state_id: req.body.stateId,
+      country_id: req.body.countryId
     };
-
-    if (req.body.districtId) {
-      const district = await District.findByPk(req.body.districtId, {
-        include: [
-          {
-            model: State,
-            as: "state",
-            include: [{ model: Country, as: "country" }],
-          },
-        ],
-      });
-
-      data.state_id = district.state_id;
-      data.country_id = district.state.country_id;
-    }
 
     const transaction = await Transaction.update(data, {
       where: {
@@ -404,7 +395,16 @@ const allVillageCottonData = async (req: Request, res: Response) => {
   try {
     let userCondition = ''; // Define your user condition here
     if (req.query.brandId) {
-      userCondition += `farmer.brand_id='${req.query.brandId}'`
+      userCondition += `farmer.brand_id='${req.query.brandId}' AND `;
+    }
+
+    if (req.query.search) {
+      userCondition += `vg.village_name LIKE '%${req.query.search}%' AND `;
+    }
+
+    // Remove the trailing 'AND' if it exists
+    if (userCondition.endsWith(' AND ')) {
+      userCondition = userCondition.slice(0, -5);
     }
     const result = await sequelize.query(`
     SELECT 
@@ -494,10 +494,6 @@ const cottonData = async (req: Request, res: Response) => {
 
 }
 
-
-
-
-
 const deleteTransaction = async (req: Request, res: Response) => {
   try {
     let trans = await Transaction.findOne({
@@ -508,23 +504,22 @@ const deleteTransaction = async (req: Request, res: Response) => {
     if (!trans) {
       return res.sendError(res, 'No transaction found')
     }
-    // if (trans.dataValues.status !== 'Pending') {
-    //   return res.sendError(res, 'Transaction is not in pending state')
-    // }
-    // if (trans.dataValues.farm_id) {
-    //   let farm = await Farm.findOne({ where: { id: trans.dataValues.farm_id } })
-    //   let s = await Farm.update({
-    //     cotton_transacted: (farm.cotton_transacted || 0) + req.body.qtyPurchased
-    //   }, { where: { id: req.body.farmId } });
-    // }
+    if (trans.dataValues.status !== 'Pending') {
+      return res.sendError(res, 'Transaction is not in pending state')
+    }
 
+    if (trans.dataValues.farm_id) {
+      let farm = await Farm.findOne({ where: { id: trans.dataValues.farm_id } })
+      let s = await Farm.update({
+        cotton_transacted: (Number(farm.cotton_transacted) || 0) + (Number(trans.dataValues.qty_purchased) || 0)
+      }, { where: { id: trans.dataValues.farm_id } });
+    }
 
     const transaction = await Transaction.destroy({
       where: {
         id: req.body.id,
       },
     });
-
 
     res.sendSuccess(res, { transaction });
   } catch (error) {
@@ -534,23 +529,41 @@ const deleteTransaction = async (req: Request, res: Response) => {
 
 const deleteBulkTransactions = async (req: Request, res: Response) => {
   try {
-
     const { fromId, toId } = req.body;
-
-    const transaction = await Transaction.destroy({
-      where: {
-        id: {
-          [Op.between]: [fromId, toId],
-        },
-      },
-    });
-    res.sendSuccess(res, transaction);
+    let fail: any = [];
+    let pass: any = [];
+    for (let i = fromId; i <= toId; i++) {
+      let trans = await Transaction.findOne({
+        where: {
+          id: i
+        }
+      })
+      if (!trans) {
+        fail.push({ id: i, message: 'No transaction found' })
+      } else {
+        if (trans.dataValues.status !== 'Pending') {
+          fail.push({ id: i, message: 'Transaction is not in pending state' })
+        } else {
+          if (trans.dataValues.farm_id) {
+            let farm = await Farm.findOne({ where: { id: trans.dataValues.farm_id } })
+            let s = await Farm.update({
+              cotton_transacted: (Number(farm.cotton_transacted) || 0) + (Number(trans.dataValues.qty_purchased) || 0)
+            }, { where: { id: trans.dataValues.farm_id } });
+          }
+          const transaction = await Transaction.destroy({
+            where: {
+              id: i,
+            }
+          });
+          pass.push({ id: i, message: 'Deleted successfully' })
+        }
+      }
+    }
+    res.sendSuccess(res, { pass, fail })
   } catch (error) {
     return res.sendError(res, "NOT_ABLE_TO_DELETE");
   }
 }
-
-
 
 const uploadTransactionBulk = async (req: Request, res: Response) => {
   try {
@@ -775,7 +788,15 @@ const uploadTransactionBulk = async (req: Request, res: Response) => {
                                         data: { farmerName: data.farmerName ? data.farmerName : '', farmerCode: data.farmerCode ? data.farmerCode : '' },
                                         message: "Farm data does not exist",
                                       });
-
+                                    }
+                                    let available_cotton = (Number(farm.total_estimated_cotton) || 0) - (Number(farm.cotton_transacted) || 0);
+                                    if (available_cotton < 1) {
+                                      fail.push({
+                                        success: false,
+                                        data: { farmerName: data.farmerName ? data.farmerName : '', farmerCode: data.farmerCode ? data.farmerCode : '' },
+                                        message: "This season used all the cotton",
+                                      });
+                                      farm = undefined;
                                     }
                                   }
                                 }
@@ -829,8 +850,8 @@ const uploadTransactionBulk = async (req: Request, res: Response) => {
             proof: data.proof ? data.proof : "",
             status: 'Pending',
           };
-          let available_cotton = farm.total_estimated_cotton - farm.cotton_transacted;
-          transactionData.estimated_cotton = farm.total_estimated_cotton;
+          let available_cotton = Number(farm.total_estimated_cotton) - Number(farm.cotton_transacted);
+          transactionData.estimated_cotton = Number(farm.total_estimated_cotton);
           transactionData.available_cotton = available_cotton;
           if (data.qtyPurchased > available_cotton) {
             transactionData.qty_purchased = available_cotton;
@@ -839,7 +860,7 @@ const uploadTransactionBulk = async (req: Request, res: Response) => {
           }
           const result = await Transaction.create(transactionData);
           let s = await Farm.update({
-            cotton_transacted: (farm.cotton_transacted || 0) + transactionData.qtyPurchased
+            cotton_transacted: (Number(farm.cotton_transacted) || 0) + (Number(transactionData.qty_purchased) || 0)
           }, { where: { id: farm.id } });
           pass.push({
             success: true,
@@ -862,7 +883,7 @@ const exportProcurement = async (req: Request, res: Response) => {
   try {
     const searchTerm = req.query.search || "";
     let whereCondition: any = {};
-    const { status, countryId, brandId, farmGroupId, seasonId, programId, ginnerId }: any = req.query;
+    const { status, countryId, brandId, farmGroupId, seasonId, programId, ginnerId, startDate, endDate }: any = req.query;
     if (countryId) {
       const idArray: number[] = countryId
         .split(",")
@@ -904,6 +925,13 @@ const exportProcurement = async (req: Request, res: Response) => {
     if (status) {
       whereCondition.status = status;
     }
+    if (startDate && endDate) {
+      const startOfDay = new Date(startDate);
+      startOfDay.setUTCHours(0, 0, 0, 0);
+      const endOfDay = new Date(endDate);
+      endOfDay.setUTCHours(23, 59, 59, 999);
+      whereCondition.date = { [Op.between]: [startOfDay, endOfDay] }
+    }
 
     // apply search
     if (searchTerm) {
@@ -915,7 +943,6 @@ const exportProcurement = async (req: Request, res: Response) => {
         { "$state.state_name$": { [Op.iLike]: `%${searchTerm}%` } },
         { "$village.village_name$": { [Op.iLike]: `%${searchTerm}%` } },
         { "$district.district_name$": { [Op.iLike]: `%${searchTerm}%` } },
-        // { "$farmer.firstName$": { [Op.iLike]: `%${searchTerm}%` } },
         { farmer_name: { [Op.iLike]: `%${searchTerm}%` } },
         { "$program.program_name$": { [Op.iLike]: `%${searchTerm}%` } },
         { "$ginner.name$": { [Op.iLike]: `%${searchTerm}%` } },

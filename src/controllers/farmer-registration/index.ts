@@ -638,52 +638,69 @@ const exportFarmer = async (req: Request, res: Response) => {
     headerRow.font = { bold: true };
     const farmer = await Farm.findAll({
       where: {},
+      attributes: [
+        'id',
+        'agri_total_area',
+        'agri_estimated_yeld',
+        'agri_estimated_prod',
+        'cotton_total_area',
+        'total_estimated_cotton'
+      ],
       include: [
         {
           model: Farmer,
           as: "farmer",
+          attributes: ['id', 'firstName', 'lastName', 'ics_id', 'code', 'tracenet_id', 'cert_status'],
           include: [
             {
               model: Program,
               as: "program",
+              attributes: ['id', 'program_name'],
             },
             {
               model: Brand,
               as: "brand",
+              attributes: ['id', 'brand_name'],
             },
             {
               model: FarmGroup,
               as: "farmGroup",
+              attributes: ['id', 'name'],
             },
             {
               model: Country,
               as: "country",
+              attributes: ['id', 'county_name'],
             },
             {
               model: Village,
               as: "village",
+              attributes: ['id', 'village_name'],
             },
             {
               model: State,
               as: "state",
+              attributes: ['id', 'state_name'],
             },
             {
               model: District,
               as: "district",
+              attributes: ['id', 'district_name'],
             },
             {
               model: Block,
               as: "block",
+              attributes: ['id', 'block_name'],
             }
           ]
         },
         {
           model: Season,
-          as: "season"
+          as: "season",
+          attributes: ['id', 'name'],
         }
       ],
     });
-
     // Append data to worksheet
     for await (const [index, item] of farmer.entries()) {
       let ics: any
@@ -710,7 +727,7 @@ const exportFarmer = async (req: Request, res: Response) => {
         totalEstimatedCotton: item ? item.total_estimated_cotton : '',
         tracenetId: item.farmer.tracenet_id,
         iscName: ics ? ics.ics_name : '',
-        cert: item.farmer.certStatus ? item.farmer.certStatus : ''
+        cert: item.farmer.cert_status ? item.farmer.cert_status : ''
       });
       worksheet.addRow(rowValues);
     }
@@ -899,6 +916,57 @@ const dashboardGraph = async (req: Request, res: Response) => {
     return res.sendError(res, error.message);
   }
 }
+
+
+const fetchFarmerPecurement = async (req: Request, res: Response) => {
+  const searchTerm = req.query.search || "";
+  const { icsId, farmGroupId, countryId, stateId, villageId, cert, seasonId }: any = req.query;
+
+  const whereCondition: any = {};
+  try {
+    if (searchTerm) {
+      whereCondition[Op.or] = [
+        { firstName: { [Op.iLike]: `%${searchTerm}%` } }, // Search by first name
+        { lastName: { [Op.iLike]: `%${searchTerm}%` } }, // Search by first name
+      ];
+    }
+
+    if (countryId) {
+      const idArray: number[] = countryId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.country_id = { [Op.in]: idArray };
+    }
+    if (stateId) {
+      const idArray: number[] = stateId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.state_id = { [Op.in]: idArray };
+    }
+    if (villageId) {
+      const idArray: number[] = villageId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.village_id = { [Op.in]: idArray };
+    }
+
+    const farmGroup = await Farmer.findAll({
+      where: whereCondition,
+      order: [['id', 'desc']],
+      include: [{
+        model: Brand,
+        as: 'brand',
+        attributes: ['id', 'brand_name']
+      }],
+      attributes: ['id', 'firstName', 'lastName', 'code', 'program_id', 'brand_id']
+    });
+    return res.sendSuccess(res, farmGroup);
+
+  } catch (error: any) {
+    console.log(error)
+    return res.sendError(res, error.message);
+  }
+};
 export {
   createFarmer,
   fetchFarmerPagination,
@@ -913,5 +981,6 @@ export {
   fetchFarmer,
   generateQrCodeVillage,
   exportQrCode,
-  dashboardGraph
+  dashboardGraph,
+  fetchFarmerPecurement
 };

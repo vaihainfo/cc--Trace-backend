@@ -12,7 +12,8 @@ import {
   fetchFarm,
   generateQrCodeVillage,
   exportQrCode,
-  dashboardGraph
+  dashboardGraph,
+  fetchFarmerPecurement
 } from "../../controllers/farmer-registration";
 
 import { Router } from "express";
@@ -33,4 +34,6 @@ router.post("/farm", createFarmerFarm);
 router.put("/farm", updateFarmerFarm);
 router.get("/farm/count", countFarmWithProgram);
 router.get("/dashboard", dashboardGraph);
+router.get("/farmer-precurement", fetchFarmerPecurement);
+
 export default router;

@@ -78,6 +78,9 @@ const fetchWeaverPagination = async (req: Request, res: Response) => {
             whereCondition[Op.or] = [
                 { name: { [Op.iLike]: `%${searchTerm}%` } }, // Search by name 
                 { address: { [Op.iLike]: `%${searchTerm}%` } }, // Search by address
+                { '$country.county_name$': { [Op.iLike]: `%${searchTerm}%` } }, // Search by country name
+                { '$state.state_name$': { [Op.iLike]: `%${searchTerm}%` } }, // Search by state name
+                { '$district.district_name$': { [Op.iLike]: `%${searchTerm}%` } }, // Search by district name 
                 { email: { [Op.iLike]: `%${searchTerm}%` } }, // Search by email
                 { website: { [Op.iLike]: `%${searchTerm}%` } }, // Search by website
                 { mobile: { [Op.iLike]: `%${searchTerm}%` } },// Search by mobile
