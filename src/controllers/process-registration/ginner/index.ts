@@ -75,6 +75,7 @@ const fetchGinnerPagination = async (req: Request, res: Response) => {
     const countryId: any = req.query.countryId as string;
     const brandId: any = req.query.brandId;
     const stateId: any = req.query.stateId as string;
+    const districtId: any = req.query.districtId as string;
     const offset = (page - 1) * limit;
     const whereCondition: any = {};
 
@@ -83,6 +84,9 @@ const fetchGinnerPagination = async (req: Request, res: Response) => {
             whereCondition[Op.or] = [
                 { name: { [Op.iLike]: `%${searchTerm}%` } }, // Search by name 
                 { address: { [Op.iLike]: `%${searchTerm}%` } }, // Search by address
+                { '$country.county_name$': { [Op.iLike]: `%${searchTerm}%` } }, // Search by country name
+                { '$state.state_name$': { [Op.iLike]: `%${searchTerm}%` } }, // Search by state name
+                { '$district.district_name$': { [Op.iLike]: `%${searchTerm}%` } }, // Search by district name 
                 { website: { [Op.iLike]: `%${searchTerm}%` } }, // Search by address
                 { contact_person: { [Op.iLike]: `%${searchTerm}%` } }, // Search by address
                 { email: { [Op.iLike]: `%${searchTerm}%` } }, // Search by email
@@ -101,6 +105,12 @@ const fetchGinnerPagination = async (req: Request, res: Response) => {
                 .split(",")
                 .map((id: any) => parseInt(id, 10));
             whereCondition.state_id = { [Op.in]: idArray };
+        }
+        if (districtId) {
+            const idArray: number[] = districtId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition.district_id = { [Op.in]: idArray };
         }
         if (brandId) {
             const idArray: number[] = brandId

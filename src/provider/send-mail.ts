@@ -28,4 +28,21 @@ const sendForgotEmail = (link: any, email: string) => {
     });
 }
 
-export { sendForgotEmail }
+const sendEmail = (html: any, email: any, subject: any, cc?: any, attachment?: any) => {
+    const message = {
+        from: process.env.SENDER_EMAIL_ADDRESS,
+        to: email,
+        subject: subject,
+        html: html,
+        cc: cc,
+        attachments: attachment
+    };
+
+    //send email
+    transporter.sendMail(message, function (err, info) {
+        if (err) { console.log(err) }
+        else { console.log('sent'); }
+    });
+}
+
+export { sendForgotEmail, sendEmail }

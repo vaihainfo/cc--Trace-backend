@@ -4,6 +4,7 @@ import { Sequelize, Op } from "sequelize";
 import TicketTracker from "../../models/ticket-tracker.model";
 import TicketTrackerStatus from "../../models/ticketing-status.model";
 import Spinner from "../../models/spinner.model";
+import User from "../../models/user.model";
 
 
 const createTicketTracker = async (req: Request, res: Response) => {
@@ -162,10 +163,17 @@ const fetchTicketTrackerStatus = async (req: Request, res: Response) => {
     try {
         const training = await TicketTrackerStatus.findAll({
             where: { ticket_id: req.query.ticketId },
-            include: [{
-                model: TicketTracker,
-                as: 'ticket'
-            }]
+            include: [
+                {
+                    model: TicketTracker,
+                    as: 'ticket'
+                },
+                {
+                    model: User,
+                    as: 'user'
+                }
+            ],
+
         });
         return res.sendSuccess(res, training);
 

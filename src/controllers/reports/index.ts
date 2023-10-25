@@ -1869,7 +1869,7 @@ const exportKnitterYarn = async (req: Request, res: Response) => {
                 attributes: ['id', 'name']
             }
         ];
-        const rows = await SpinSales.findAndCount({
+        const rows = await SpinSales.findAll({
             where: whereCondition,
             include: include,
         });
@@ -2769,7 +2769,7 @@ const fetchGarmentSalesPagination = async (req: Request, res: Response) => {
 
 const exportGarmentSales = async (req: Request, res: Response) => {
     const excelFilePath = path.join("./upload", "garment-sale-report.xlsx");
-    const { weaverId, seasonId, programId, brandId, countryId }: any = req.query;
+    const { garmentId, seasonId, programId, brandId, countryId }: any = req.query;
     try {
         const whereCondition: any = {};
         const searchTerm = req.query.search || "";
@@ -2790,30 +2790,30 @@ const exportGarmentSales = async (req: Request, res: Response) => {
                 { transaction_agent: { [Op.iLike]: `%${searchTerm}%` } },
             ];
         }
-        if (weaverId) {
-            const idArray: number[] = weaverId
+        if (garmentId) {
+            const idArray: number[] = garmentId
                 .split(",")
                 .map((id: any) => parseInt(id, 10));
-            whereCondition.weaver_id = { [Op.in]: idArray };
+            whereCondition.garment_id = { [Op.in]: idArray };
         }
         if (brandId) {
             const idArray: number[] = brandId
                 .split(",")
                 .map((id: any) => parseInt(id, 10));
-            let weaver = await Weaver.findAll({ where: { brand: { [Op.overlap]: idArray } } });
+            let weaver = await Garment.findAll({ where: { brand: { [Op.overlap]: idArray } } });
             const arry: number[] = weaver
                 .map((gin: any) => parseInt(gin.id, 10));
-            whereCondition.weaver_id = { [Op.in]: arry };
+            whereCondition.garment_id = { [Op.in]: arry };
         }
 
         if (countryId) {
             const idArray: number[] = countryId
                 .split(",")
                 .map((id: any) => parseInt(id, 10));
-            let weaver = await Weaver.findAll({ where: { country_id: { [Op.in]: idArray } } });
+            let weaver = await Garment.findAll({ where: { country_id: { [Op.in]: idArray } } });
             const arry: number[] = weaver
                 .map((gin: any) => parseInt(gin.id, 10));
-            whereCondition.weaver_id = { [Op.in]: arry };
+            whereCondition.garment_id = { [Op.in]: arry };
         }
 
         if (seasonId) {

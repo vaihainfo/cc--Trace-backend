@@ -34,9 +34,18 @@ const login = async (req: Request, res: Response) => {
         Fabric.findOne({ where: { fabricUser_id: { [Op.contains]: [user.dataValues.id] } } }),
         Brand.findOne({ where: { brandUser_id: { [Op.contains]: [user.dataValues.id] } } })
       ])
+      let processor = [];
+      spinner ? processor.push('Spinner') : "";
+      ginner ? processor.push('Ginner') : "";
+      weaver ? processor.push('Weaver') : "";
+      knitter ? processor.push('Knitter') : "";
+      garment ? processor.push('Garment') : "";
+      trader ? processor.push('Trader') : "";
+      fabric ? processor.push('Fabric') : "";
+      brand ? processor.push('Brand') : "";
       res.sendSuccess(res, {
         accessToken, user, isAgreementAgreed: user.isAgreementAgreed,
-        processor: spinner ? spinner : ginner ? ginner : weaver ? weaver : knitter ? knitter : garment ? garment : fabric ? fabric : brand ? brand : trader
+        spinner, ginner, weaver, knitter, garment, fabric, brand, trader, processor
       });
     }
   } catch (error) {

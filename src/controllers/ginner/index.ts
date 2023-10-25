@@ -960,7 +960,7 @@ const getSpinner = async (req: Request, res: Response) => {
     }
     let ginner = await Ginner.findOne({ where: { id: ginnerId } });
     if (!ginner) {
-        return res.sendError(res, 'No Weaver Found ');
+        return res.sendError(res, 'No Ginner Found ');
     }
     let result = await Spinner.findAll({
         attributes: ['id', 'name'],
