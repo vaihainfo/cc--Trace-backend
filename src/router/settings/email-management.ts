@@ -1,4 +1,3 @@
-import { sendOrganicFarmerReport } from "../../controllers/send-emails";
 import {
     createEmailJob,
     createEmailTemplate,
@@ -23,6 +22,5 @@ router.post('/set-email-template', createEmailTemplate);
 router.post('/set-email-job', createEmailJob);
 router.put('/update-email-job', updateEmailJob);
 router.delete('/delete-email-job', deleteEmailJob);
-router.get('/send-bale', sendOrganicFarmerReport);
 
 export default router;  
