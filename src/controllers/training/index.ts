@@ -35,63 +35,111 @@ const createTraining = async (req: Request, res: Response) => {
         };
         const training = await ProcessorTraining.create(data);
         if (req.body.processor === 'Ginner') {
-            let data = await Ginner.findAll({ where: { country_id: req.body.countryId, state_id: req.body.stateId } });
-            for await (let obj of data) {
+            if (req.body.processorName) {
                 let create = await ProcessTrainingProcessStatus.create({
-                    ginner_id: obj.id,
+                    ginner_id: Number(req.body.processorName),
                     process_training_id: training.id,
                     status: 'Pending'
                 })
+            } else {
+                let data = await Ginner.findAll({ where: { country_id: req.body.countryId, state_id: req.body.stateId } });
+                for await (let obj of data) {
+                    let create = await ProcessTrainingProcessStatus.create({
+                        ginner_id: obj.id,
+                        process_training_id: training.id,
+                        status: 'Pending'
+                    })
+                }
             }
         }
         if (req.body.processor === 'Spinner') {
-            let data = await Spinner.findAll({ where: { country_id: req.body.countryId, state_id: req.body.stateId } });
-            for await (let obj of data) {
+            if (req.body.processorName) {
                 let create = await ProcessTrainingProcessStatus.create({
-                    spinner_id: obj.id,
+                    spinner_id: Number(req.body.processorName),
                     process_training_id: training.id,
                     status: 'Pending'
                 })
+            } else {
+                let data = await Spinner.findAll({ where: { country_id: req.body.countryId, state_id: req.body.stateId } });
+                for await (let obj of data) {
+                    let create = await ProcessTrainingProcessStatus.create({
+                        spinner_id: obj.id,
+                        process_training_id: training.id,
+                        status: 'Pending'
+                    })
+                }
             }
         }
         if (req.body.processor === 'Trader') {
-            let data = await Trader.findAll({ where: { country_id: req.body.countryId, state_id: req.body.stateId } });
-            for await (let obj of data) {
+            if (req.body.processorName) {
                 let create = await ProcessTrainingProcessStatus.create({
-                    trader_id: obj.id,
+                    trader_id: Number(req.body.processorName),
                     process_training_id: training.id,
                     status: 'Pending'
                 })
+            } else {
+                let data = await Trader.findAll({ where: { country_id: req.body.countryId, state_id: req.body.stateId } });
+                for await (let obj of data) {
+                    let create = await ProcessTrainingProcessStatus.create({
+                        trader_id: obj.id,
+                        process_training_id: training.id,
+                        status: 'Pending'
+                    })
+                }
             }
         }
         if (req.body.processor === 'Knitter') {
-            let data = await Knitter.findAll({ where: { country_id: req.body.countryId, state_id: req.body.stateId } });
-            for await (let obj of data) {
+            if (req.body.processorName) {
                 let create = await ProcessTrainingProcessStatus.create({
-                    knitter_id: obj.id,
+                    knitter_id: Number(req.body.processorName),
                     process_training_id: training.id,
                     status: 'Pending'
                 })
+            } else {
+                let data = await Knitter.findAll({ where: { country_id: req.body.countryId, state_id: req.body.stateId } });
+                for await (let obj of data) {
+                    let create = await ProcessTrainingProcessStatus.create({
+                        knitter_id: obj.id,
+                        process_training_id: training.id,
+                        status: 'Pending'
+                    })
+                }
             }
         }
         if (req.body.processor === 'Weaver') {
-            let data = await Weaver.findAll({ where: { country_id: req.body.countryId, state_id: req.body.stateId } });
-            for await (let obj of data) {
+            if (req.body.processorName) {
                 let create = await ProcessTrainingProcessStatus.create({
-                    weaver_id: obj.id,
+                    weaver_id: Number(req.body.processorName),
                     process_training_id: training.id,
                     status: 'Pending'
                 })
+            } else {
+                let data = await Weaver.findAll({ where: { country_id: req.body.countryId, state_id: req.body.stateId } });
+                for await (let obj of data) {
+                    let create = await ProcessTrainingProcessStatus.create({
+                        weaver_id: obj.id,
+                        process_training_id: training.id,
+                        status: 'Pending'
+                    })
+                }
             }
         }
         if (req.body.processor === 'Garment') {
-            let data = await Garment.findAll({ where: { country_id: req.body.countryId, state_id: req.body.stateId } });
-            for await (let obj of data) {
+            if (req.body.processorName) {
                 let create = await ProcessTrainingProcessStatus.create({
-                    garment_id: obj.id,
+                    garment_id: Number(req.body.processorName),
                     process_training_id: training.id,
                     status: 'Pending'
                 })
+            } else {
+                let data = await Garment.findAll({ where: { country_id: req.body.countryId, state_id: req.body.stateId } });
+                for await (let obj of data) {
+                    let create = await ProcessTrainingProcessStatus.create({
+                        garment_id: obj.id,
+                        process_training_id: training.id,
+                        status: 'Pending'
+                    })
+                }
             }
         }
         res.sendSuccess(res, training);
@@ -103,7 +151,7 @@ const createTraining = async (req: Request, res: Response) => {
 
 const fetchTrainings = async (req: Request, res: Response) => {
     const searchTerm = req.query.search || '';
-    const sortOrder = req.query.sort || '';
+    const sortOrder = req.query.sort || 'desc';
     //   const sortField = req.query.sortBy || ''; 
     const page = Number(req.query.page) || 1;
     const limit = Number(req.query.limit) || 10;
@@ -148,7 +196,7 @@ const fetchTrainings = async (req: Request, res: Response) => {
             whereCondition[Op.or] = [
                 { venue: { [Op.iLike]: `%${searchTerm}%` } }, // Search by crop Type 
                 { training_mode: { [Op.iLike]: `%${searchTerm}%` } }, // Search by crop Type 
-                // { date: { [Op.iLike]: `%${searchTerm}%` } }, // Search by crop Type 
+                { training_type: { [Op.iLike]: `%${searchTerm}%` } }, // Search by crop Type 
                 // { start_time: { [Op.iLike]: `%${searchTerm}%` } }, // Search by crop Type 
                 // { end_time: { [Op.iLike]: `%${searchTerm}%` } }, // Search by crop Type 
                 { processor: { [Op.iLike]: `%${searchTerm}%` } }, // Search by crop Type 
@@ -179,7 +227,7 @@ const fetchTrainings = async (req: Request, res: Response) => {
             ],
         };
         if (sortOrder === 'asc' || sortOrder === 'desc') {
-            queryOptions.order = [['date', sortOrder]];
+            queryOptions.order = [['id', 'desc']];
         }
 
         if (req.query.pagination === 'true') {

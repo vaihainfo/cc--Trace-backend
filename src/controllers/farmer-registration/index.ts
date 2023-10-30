@@ -921,13 +921,16 @@ const dashboardGraph = async (req: Request, res: Response) => {
 const fetchFarmerPecurement = async (req: Request, res: Response) => {
   const searchTerm = req.query.search || "";
   const { icsId, farmGroupId, countryId, stateId, villageId, cert, seasonId }: any = req.query;
-
+  const page = Number(req.query.page) || 1;
+  const limit = Number(req.query.limit) || 10;
+  const offset = (page - 1) * limit;
   const whereCondition: any = {};
   try {
     if (searchTerm) {
       whereCondition[Op.or] = [
         { firstName: { [Op.iLike]: `%${searchTerm}%` } }, // Search by first name
-        { lastName: { [Op.iLike]: `%${searchTerm}%` } }, // Search by first name
+        { lastName: { [Op.iLike]: `%${searchTerm}%` } }, // Search by last name
+        { code: { [Op.iLike]: `%${searchTerm}%` } }, // Search by code
       ];
     }
 
@@ -949,18 +952,34 @@ const fetchFarmerPecurement = async (req: Request, res: Response) => {
         .map((id: any) => parseInt(id, 10));
       whereCondition.village_id = { [Op.in]: idArray };
     }
+    if (req.query.pagination === "true") {
+      const { count, rows } = await Farmer.findAndCountAll({
+        where: whereCondition,
+        order: [['id', 'desc']],
+        include: [{
+          model: Brand,
+          as: 'brand',
+          attributes: ['id', 'brand_name']
+        }],
+        attributes: ['id', 'firstName', 'lastName', 'code', 'program_id', 'brand_id'],
+        offset: offset,
+        limit: limit
+      });
+      return res.sendPaginationSuccess(res, rows, count);
+    } else {
+      const farmGroup = await Farmer.findAll({
+        where: whereCondition,
+        order: [['id', 'desc']],
+        include: [{
+          model: Brand,
+          as: 'brand',
+          attributes: ['id', 'brand_name']
+        }],
+        attributes: ['id', 'firstName', 'lastName', 'code', 'program_id', 'brand_id']
+      });
+      return res.sendSuccess(res, farmGroup);
+    }
 
-    const farmGroup = await Farmer.findAll({
-      where: whereCondition,
-      order: [['id', 'desc']],
-      include: [{
-        model: Brand,
-        as: 'brand',
-        attributes: ['id', 'brand_name']
-      }],
-      attributes: ['id', 'firstName', 'lastName', 'code', 'program_id', 'brand_id']
-    });
-    return res.sendSuccess(res, farmGroup);
 
   } catch (error: any) {
     console.log(error)

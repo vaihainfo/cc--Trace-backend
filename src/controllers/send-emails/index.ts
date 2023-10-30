@@ -30,6 +30,11 @@ import District from "../../models/district.model";
 import Block from "../../models/block.model";
 import Farmer from "../../models/farmer.model";
 import ICS from "../../models/ics.model";
+import Transaction from "../../models/transaction.model";
+import FarmGroup from "../../models/farm-group.model";
+import OrganicIntegrity from "../../models/organic-integrity.model";
+import Trader from "../../models/trader.model";
+import TicketTracker from "../../models/ticket-tracker.model";
 
 
 const sendGinnerBaleProcess = async () => {
@@ -345,6 +350,288 @@ const sendOrganicFarmerReport = async () => {
     }
 };
 
+const sendProcurementReport = async () => {
+    try {
+        let template = await EmailTemplate.findOne({ where: { template_name: { [Op.iLike]: 'Procurement Report' } } });
+        if (template) {
+            let adminEmail = await User.findAll({ where: { role: 1 }, attributes: ['email'] });
+            const emailJob = await EmailManagement.findOne({ where: { template_id: template.dataValues.id } });
+
+            if (emailJob) {
+                let emails = await User.findAll({ where: { id: { [Op.in]: emailJob.dataValues.user_ids } }, attributes: ['email'] });
+                emails = emails.map((obj: any) => obj.email);
+                adminEmail = adminEmail.map((obj: any) => obj.email)
+                let { path, count }: any = await procurementReport(emailJob.brand_ids, emailJob.mail_type, emailJob.program_ids, emailJob.country_ids, new Date());
+                let body_title = 'Procurement ';
+                let subject = 'Procurement Report ' + new Date().toLocaleDateString('en-GB');
+                let body = get_process_report_body(body_title, emailJob.mail_type === 'Daily' ? 'Day' : 'Week', emails, adminEmail);
+                if (count > 0) {
+                    sendEmail(body, emails, subject, adminEmail, [{ path: path, filename: 'Procurement.xlsx' }])
+                }
+            }
+        }
+    } catch (error) {
+        console.log(error);
+    }
+};
+
+const sendIntegrityReport = async () => {
+    try {
+        let template = await EmailTemplate.findOne({ where: { template_name: { [Op.iLike]: 'Procurement Report' } } });
+        if (template) {
+            let adminEmail = await User.findAll({ where: { role: 1 }, attributes: ['email'] });
+            const emailJob = await EmailManagement.findOne({ where: { template_id: template.dataValues.id } });
+            if (emailJob) {
+                let emails = await User.findAll({ where: { id: { [Op.in]: emailJob.dataValues.user_ids } }, attributes: ['email'] });
+                emails = emails.map((obj: any) => obj.email);
+                adminEmail = adminEmail.map((obj: any) => obj.email);
+                let { path, count }: any = await integrityReport(emailJob.brand_ids, emailJob.mail_type, emailJob.program_ids, emailJob.country_ids, new Date());
+                let body_title = 'Procurement ';
+                let subject = 'Procurement Report ' + new Date().toLocaleDateString('en-GB');
+                let body = get_process_report_body(body_title, emailJob.mail_type === 'Daily' ? 'Day' : 'Week', emails, adminEmail);
+                if (count > 0) {
+                    sendEmail(body, emails, subject, adminEmail, [{ path: path, filename: 'Integrity-report.xlsx' }])
+                }
+            }
+        }
+    } catch (error) {
+        console.log(error);
+    }
+};
+
+const send_gin_mail = async () => {
+    try {
+        let template = await EmailTemplate.findOne({ where: { template_name: { [Op.iLike]: 'Whenever gin sales happen' } } });
+        if (template) {
+            let sales = await GinSales.findOne({
+                where: { id: 3 }, include: [
+                    {
+                        model: Ginner,
+                        as: "ginner",
+                    },
+                    {
+                        model: Spinner,
+                        as: "buyerdata",
+                    }
+                ]
+            });
+            let adminEmail = await User.findAll({ where: { role: 1 }, attributes: ['email'] });
+            const emailJob = await is_email_job_available(template.dataValues.id, sales.dataValues.ginner.brand, [sales.dataValues.ginner.country_id], sales.dataValues.ginner.program_id);
+            if (emailJob) {
+                let emails = await User.findAll({ where: { id: { [Op.in]: emailJob.dataValues.user_ids } }, attributes: ['email'] });
+                emails = emails.map((obj: any) => obj.email);
+                adminEmail = adminEmail.map((obj: any) => obj.email);
+                let body = get_reminder_email_subject(sales.dataValues.ginner.name, new Date(sales.dataValues.date).toLocaleDateString('en-GB'), sales.dataValues.buyerdata.name, adminEmail, emails)
+                let subject = 'Please complete sales process'
+                if (sales.dataValues.status === 'To be Submitted') {
+                    console.log(sales.dataValues.ginner.email ? [sales.dataValues.ginner.email] : adminEmail)
+                    sendEmail(body, sales.dataValues.ginner.email ? [sales.dataValues.ginner.email] : adminEmail, subject, emails)
+                }
+            }
+        }
+    } catch (error) {
+        console.log(error);
+    }
+};
+
+const send_spin_mail = async () => {
+    try {
+        let template = await EmailTemplate.findOne({ where: { template_name: { [Op.iLike]: 'Whenever spin sales happen' } } });
+        if (template) {
+            let sales = await SpinSales.findOne({
+                where: { id: 1, status: 'Pending for QR scanning' }, include: [
+                    {
+                        model: Spinner,
+                        as: "spinner",
+                    },
+                    {
+                        model: Knitter,
+                        as: "knitter",
+                    },
+                    {
+                        model: Weaver,
+                        as: "weaver",
+                    },
+                    {
+                        model: Trader,
+                        as: "trader",
+                    }
+                ]
+            });
+            let buyer = sales.dataValues.knitter ? sales.dataValues.knitter : sales.dataValues.weaver ? sales.dataValues.weaver : sales.dataValues.trader
+            let adminEmail = await User.findAll({ where: { role: 1 }, attributes: ['email'] });
+            const emailJob = await is_email_job_available(template.dataValues.id, buyer.brand, [buyer.country_id], buyer.program_id);
+            if (emailJob) {
+                let emails = await User.findAll({ where: { id: { [Op.in]: emailJob.dataValues.user_ids } }, attributes: ['email'] });
+                emails = emails.map((obj: any) => obj.email);
+                adminEmail = adminEmail.map((obj: any) => obj.email);
+                let to = buyer.email ? [buyer.email] : adminEmail
+                let body = get_init_email_subject(buyer.name, sales.dataValues.spinner.name, sales.dataValues.total_qty, 'yarn', sales.dataValues.invoice_no, to, emails)
+                let subject = 'Acknowledge incoming transaction'
+                sendEmail(body, to, subject, emails)
+            }
+        }
+    } catch (error) {
+        console.log(error);
+    }
+};
+
+const send_weaver_mail = async () => {
+    try {
+        let template = await EmailTemplate.findOne({ where: { template_name: { [Op.iLike]: 'Whenever weaver sales happen' } } });
+        if (template) {
+            let sales = await WeaverSales.findOne({
+                where: { id: 3, status: 'Pending for QR scanning' }, include: [
+                    {
+                        model: Weaver,
+                        as: "weaver"
+                    },
+                    {
+                        model: FabricType,
+                        as: "fabric",
+                    },
+                    {
+                        model: Garment,
+                        as: "buyer",
+                    }
+                ]
+            });
+
+            let buyer = sales.dataValues.buyer;
+            console.log(buyer);
+            let adminEmail = await User.findAll({ where: { role: 1 }, attributes: ['email'] });
+            const emailJob = await is_email_job_available(template.dataValues.id, buyer.brand, [buyer.country_id], buyer.program_id);
+            if (emailJob) {
+                let emails = await User.findAll({ where: { id: { [Op.in]: emailJob.dataValues.user_ids } }, attributes: ['email'] });
+                emails = emails.map((obj: any) => obj.email);
+                adminEmail = adminEmail.map((obj: any) => obj.email);
+                let to = buyer.email ? [buyer.email] : adminEmail
+                let body = get_init_email_subject(buyer.name, sales.dataValues.weaver.name, sales.dataValues.total_yarn_qty, 'fabric', sales.dataValues.invoice_no, to, emails)
+                let subject = 'Acknowledge incoming transaction'
+                sendEmail(body, to, subject, emails)
+            }
+        }
+    } catch (error) {
+        console.log(error);
+    }
+};
+
+const send_knitter_mail = async () => {
+    try {
+        let template = await EmailTemplate.findOne({ where: { template_name: { [Op.iLike]: 'Whenever knitter sales happen' } } });
+        if (template) {
+            let sales = await KnitSales.findOne({
+                where: { id: 1, status: 'Pending for QR scanning' }, include: [
+                    {
+                        model: Knitter,
+                        as: "knitter",
+                    },
+                    {
+                        model: Garment,
+                        as: "buyer",
+                    }
+                ]
+            });
+
+            let buyer = sales.dataValues.buyer;
+            let adminEmail = await User.findAll({ where: { role: 1 }, attributes: ['email'] });
+            const emailJob = await is_email_job_available(template.dataValues.id, buyer.brand, [buyer.country_id], buyer.program_id);
+            if (emailJob) {
+                let emails = await User.findAll({ where: { id: { [Op.in]: emailJob.dataValues.user_ids } }, attributes: ['email'] });
+                emails = emails.map((obj: any) => obj.email);
+                adminEmail = adminEmail.map((obj: any) => obj.email);
+                let to = buyer.email ? [buyer.email] : adminEmail
+                let body = get_init_email_subject(buyer.name, sales.dataValues.knitter.name, sales.dataValues.total_yarn_qty, 'fabric', sales.dataValues.invoice_no, to, emails)
+                let subject = 'Acknowledge incoming transaction'
+                sendEmail(body, to, subject, emails)
+            }
+        }
+    } catch (error) {
+        console.log(error);
+    }
+};
+
+const send_garment_mail = async () => {
+    try {
+        let template = await EmailTemplate.findOne({ where: { template_name: { [Op.iLike]: 'Whenever garment sales happen' } } });
+        if (template) {
+            let sales = await GarmentSales.findOne({
+                where: { id: 1 }, include: [
+                    {
+                        model: Garment,
+                        as: "garment",
+                    },
+                    {
+                        model: Brand,
+                        as: "buyer"
+                    }
+                ]
+            });
+
+            let buyer = sales.dataValues.buyer;
+            let adminEmail = await User.findAll({ where: { role: 1 }, attributes: ['email'] });
+            const emailJob = await is_email_job_available(template.dataValues.id, [buyer.id], buyer.countries_id, buyer.programs_id);
+            if (emailJob) {
+                let emails = await User.findAll({ where: { id: { [Op.in]: emailJob.dataValues.user_ids } }, attributes: ['email'] });
+                emails = emails.map((obj: any) => obj.email);
+                adminEmail = adminEmail.map((obj: any) => obj.email);
+                let to = buyer.email ? [buyer.email] : adminEmail
+                let body = get_init_email_subject(buyer.brand_name, sales.dataValues.garment.name, sales.dataValues.no_of_pieces, 'finished product', sales.dataValues.invoice_no, to, emails)
+                let subject = 'Acknowledge incoming transaction'
+                sendEmail(body, to, subject, emails)
+            }
+        }
+    } catch (error) {
+        console.log(error);
+    }
+};
+const processAndSentTicketReminder = async () => {
+    let type = "Ticket Approval reminder Technical team - 7 days"
+    let template = await EmailTemplate.findOne({ where: { template_name: { [Op.iLike]: type } } });
+    if (template) {
+        let ticketEscalation = await TicketTracker.findOne({ where: { id: 4 } });
+        if (ticketEscalation) {
+            let pending = await getPendingTicket(type, ticketEscalation);
+
+            if (pending) {
+                const emailJob = await EmailManagement.findOne({ where: { template_id: template.dataValues.id } });
+                if (emailJob) {
+                    let users = await getUsers(type, emailJob)
+                    console.log(users)
+                    for (let user of users?.userDetails) {
+                        let body = generateEmailTemplate(user.name, ticketEscalation.dataValues.ticket_no, users?.day, [...users?.ccEmails, user.email]);
+                        let email = sendEmail(body, [...users?.ccEmails, user.email], 'Ticketing Reminder')
+                    }
+                }
+            }
+        }
+    }
+}
+
+
+const get_reminder_email_subject = (ginner: any, date: any, spinner: any, to: any, cc: any) => {
+    let body = `<html> <body> Hi ${ginner}, <br/><br/>${add_mail_id_to_email(to, cc)}
+			You have not completed the sale process saved on ${date} for  ${spinner}.<br/><br/> Kindly declare the sale at the earliest. <br/><br/> If you have any query, please contact noreply@cottonconnect.org ${add_admin_text(to)}
+			<br/><br/>
+		Thank you <br/>
+		TraceBale team <br/>
+		 </body> </html>`;
+    return body;
+}
+
+function add_admin_text(to: any) {
+    if (to.includes('selvin.lloyd@cottonconnect.org')) {
+        return ' <br/><br/> <p><span style="background-color:#f1c40f">Warning: The processor email id is missing in the system</span></p>';
+    } else
+        return '';
+}
+
+function get_init_email_subject(buyer: any, seller: any, qty: any, product: any, invoice: any, to: any, cc: any) {
+    let body = ` <html> <body> Hi ${buyer}, <br/><br/>  ${add_mail_id_to_email(to, cc)}
+		${seller} has sold ${qty} (Kgs/mts/no's) of ${product} vide Invoice no : ${invoice}. <br/><br/> Please accept through transaction Alert. <br/><br/> If you have any query, please contact noreply@cottonconnect.org ${add_admin_text(to)} </body> </html>`;
+    return body;
+}
+
 function get_process_report_body(processor_type: any, time: any, to: any, cc: any) {
     let body = `<html> <body> Hi, <br/><br/> ${add_mail_id_to_email(to, cc)}
 		Please find the process report of ${processor_type} for the current  time ${time}. <br/><br/>
@@ -358,6 +645,25 @@ const add_mail_id_to_email = (to: any, cc: any) => {
     return `<p><strong><span style="background-color:#bdc3c7">To:&nbsp;</span></strong><span style="background-color:#bdc3c7">${to.join(', ')}</span></p>
     <p><strong><span style="background-color:#bdc3c7">cc:&nbsp;</span></strong><span style="background-color:#bdc3c7">${cc.join(', ')}</span></p>
     <br/><br/>`;
+}
+
+const is_email_job_available = async (id: String, brand: any, country: any, program: any) => {
+    try {
+        let emailJob = await EmailManagement.findOne({
+            where:
+            {
+                template_id: id,
+                brand_ids: { [Op.overlap]: brand },
+                program_ids: { [Op.overlap]: program },
+                country_ids: { [Op.overlap]: country }
+            }
+        })
+
+        return emailJob
+    } catch (error) {
+        console.log(error);
+    }
+
 }
 
 const bale_process_report = async (brandId: any, type: any, programIds: any, countryIds: any, date: any) => {
@@ -1663,6 +1969,337 @@ const organicFarmerReport = async (brandId: any, type: any, programId: any, coun
     }
 }
 
-export {
-    sendOrganicFarmerReport
+const procurementReport = async (brandId: any, type: any, programId: any, countryId: any, date: any) => {
+    const excelFilePath = path.join("./upload", "Procurement.xlsx");
+
+    try {
+        let whereCondition: any = {};
+        if (countryId) {
+            whereCondition.country_id = { [Op.in]: countryId };
+        }
+        if (brandId) {
+            whereCondition.brand_id = { [Op.in]: brandId };
+        }
+
+        if (programId) {
+            whereCondition.program_id = { [Op.in]: programId };
+        }
+        //   if (startDate && endDate) {
+        //     const startOfDay = new Date(startDate);
+        //     startOfDay.setUTCHours(0, 0, 0, 0);
+        //     const endOfDay = new Date(endDate);
+        //     endOfDay.setUTCHours(23, 59, 59, 999);
+        //     whereCondition.date = { [Op.between]: [startOfDay, endOfDay] }
+        //   }
+
+        // apply search
+        // Create the excel workbook file
+        const workbook = new ExcelJS.Workbook();
+        const worksheet = workbook.addWorksheet("Sheet1");
+
+        // Set bold font for header row
+        const headerRow = worksheet.addRow([
+            "Sr No.",
+            "Date",
+            "Season",
+            "Farmer Name",
+            "Farmer Code",
+            "Transaction Id",
+            "Quantity Purchased",
+            "Price/Kg",
+            "Total Amount",
+            "Program",
+            "Country",
+            "Village",
+            "Ginner Name",
+        ]);
+        headerRow.font = { bold: true };
+        const transaction = await Transaction.findAll({
+            where: whereCondition,
+            include: [
+                {
+                    model: Village,
+                    as: "village",
+                },
+                {
+                    model: Season,
+                    as: "season",
+                },
+                {
+                    model: Block,
+                    as: "block",
+                },
+                {
+                    model: District,
+                    as: "district",
+                },
+                {
+                    model: State,
+                    as: "state",
+                },
+                {
+                    model: Country,
+                    as: "country",
+                },
+                {
+                    model: Farmer,
+                    as: "farmer",
+                },
+                {
+                    model: Program,
+                    as: "program",
+                },
+                {
+                    model: Ginner,
+                    as: "ginner",
+                }
+            ],
+        });
+
+        // Append data to worksheet
+        for await (const [index, item] of transaction.entries()) {
+            const rowValues = Object.values({
+                index: index + 1,
+                date: item.date.toISOString().substring(0, 10),
+                season: item.season.name,
+                farmerName: item.farmer_name,
+                farmerCode: item.farmer_code,
+                transactionId: item.id,
+                qtyPurchased: item.qty_purchased,
+                rate: item.rate,
+                totalAmount: item.total_amount,
+                program: item.program.program_name,
+                country: item.country.county_name,
+                village: item.village.village_name,
+                ginner: item?.ginner?.name
+            });
+            worksheet.addRow(rowValues);
+        }
+        // Auto-adjust column widths based on content
+        // worksheet.columns.forEach((column: any) => {
+        //     let maxCellLength = 0;
+        //     column.eachCell({ includeEmpty: true }, (cell: any) => {
+        //         const cellLength = (cell.value ? cell.value.toString() : '').length;
+        //         maxCellLength = Math.max(maxCellLength, cellLength);
+        //     });
+        //     column.width = Math.min(30, maxCellLength + 2); // Limit width to 30 characters
+        // });
+
+        // Save the workbook
+        await workbook.xlsx.writeFile(excelFilePath);
+        return { path: excelFilePath, count: transaction.length }
+    } catch (error) {
+        console.error("Error appending data:", error);
+    }
+};
+
+const integrityReport = async (brandId: any, type: any, programId: any, countryId: any, date: any) => {
+    const excelFilePath = path.join('./upload', 'Integrity-report.xlsx');
+    try {
+        const whereCondition: any = {};
+        // Create the excel workbook file
+        const workbook = new ExcelJS.Workbook();
+        const worksheet = workbook.addWorksheet('Sheet1');
+        //mergin the cells for first row
+        worksheet.mergeCells('A1:F1');
+        const mergedCell = worksheet.getCell('A1');
+        mergedCell.value = 'Cotton Connect | Integrity Report';
+        mergedCell.font = { bold: true };
+        mergedCell.alignment = { horizontal: 'center', vertical: 'middle' };
+
+        // Set bold font for header row
+        if (brandId) {
+            whereCondition.brand_id = { [Op.in]: brandId };
+        }
+
+        let include = [
+            {
+                model: FarmGroup, as: 'farmGroup'
+            },
+            {
+                model: Ginner, as: 'ginner'
+            },
+
+        ]
+        const headerRow = worksheet.addRow([
+            'S.No', 'Farm Group/Ginner', 'Test Stage', 'Positive', 'Negative', 'Integrity Percentage'
+        ]);
+        headerRow.font = { bold: true };
+        //fetch data with pagination
+        const rows = await OrganicIntegrity.findAll({
+            where: whereCondition,
+            include: include
+        });
+        // Append data to worksheet
+        for await (const [index, item] of rows.entries()) {
+            const rowValues = Object.values({
+                index: (index + 1),
+                farmerName: item.farmGroup ? item.farmGroup.name : item.ginner.name,
+                tranid: item.test_stage ? item.test_stage : '',
+                village: item.integrity_score ? 'Yes' : '',
+                villagea: item.integrity_score ? '' : 'Yes',
+                district: item.district?.district_name
+            });
+            worksheet.addRow(rowValues);
+        }
+        // // Auto-adjust column widths based on content
+        worksheet.columns.forEach((column: any) => {
+            let maxCellLength = 0;
+            column.eachCell({ includeEmpty: true }, (cell: any) => {
+                const cellLength = (cell.value ? cell.value.toString() : '').length;
+                maxCellLength = Math.max(maxCellLength, cellLength);
+            });
+            column.width = Math.min(15, maxCellLength + 2); // Limit width to 30 characters
+        });
+
+        // Save the workbook
+        await workbook.xlsx.writeFile(excelFilePath);
+        return { path: excelFilePath, count: rows.length }
+    } catch (error) {
+        console.error('Error appending data:', error);
+    }
+}
+
+
+const getPendingTicket = async (templateType: any, ticketEscalation: any) => {
+    let pending = false;
+    if (templateType === 'Ticket Approval reminder Admin/brand - 5 days' && ticketEscalation.dataValues.status === 'Pending') {
+        pending = true;
+    } else if (templateType === 'Ticket Approval reminder Technical team - 7 days' && ticketEscalation.dataValues.status === 'Approved') {
+        pending = true;
+    } else if (templateType === 'Ticket Approval reminder Technical team - 15 days' && ticketEscalation.dataValues.status === 'Approved') {
+        pending = true;
+    }
+    return pending
+}
+
+
+const getUsers = async (templateType: any, emailJob: any) => {
+    let userDetails: any = [];
+    let roleIds = null;
+    let countryIds = null;
+    let brandIds = null;
+    let day = null;
+    let ccEmails: any = [];
+
+    if (templateType === 'Ticket Approval reminder Admin/brand - 5 days') {
+        day = 5;
+        roleIds = [1, 2];
+        countryIds = emailJob.country_ids;
+    } else if (templateType == 'Ticket Approval reminder Technical team - 7 days') {
+        roleIds = [19];
+        countryIds = emailJob.country_ids;
+        brandIds = emailJob.brand_ids;
+        day = 7
+    } else if (templateType == 'Ticket Approval reminder Technical team - 15 days') {
+        roleIds = [18];
+        countryIds = emailJob.country_ids;
+        brandIds = emailJob.brand_ids;
+        day = 15;
+    }
+
+    const users = await User.findAll({
+        attributes: ['firstname', 'lastname', 'email'],
+        where: {
+            role: {
+                [Op.in]: roleIds,
+            },
+        },
+    });
+
+    users.forEach((user: any) => {
+        if (user.email) {
+            userDetails.push({
+                name: `${user.firstname} ${user.lastname}`,
+                email: user.email,
+            });
+        }
+    });
+
+    if (emailJob.dataValues.user_ids) {
+        const defaultUsers = await User.findAll({
+            attributes: ['email'],
+            where: {
+                id: {
+                    [Op.in]: emailJob.dataValues.user_ids,
+                },
+            },
+        });
+
+        defaultUsers.forEach((user: any) => {
+            if (user.email) {
+                ccEmails.push(user.email);
+            }
+        });
+    }
+
+    if (!day) {
+        return null;
+    }
+
+    return {
+        userDetails,
+        day,
+        ccEmails,
+    };
+};
+
+
+function generateEmailTemplate(name: any, ticketingId: any, day: any, emails: any) {
+    const body = `<!DOCTYPE html>
+        <html lang="en">
+            <head>
+                <meta charset="UTF-8">
+                <meta http-equiv="X-UA-Compatible" content="IE=edge">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>cotton_connect</title>
+                <style>
+                    * {
+                        font-family: "Source Sans Pro", Tahoma, Verdana, Segoe, sans-serif;
+                    }
+                    table {
+                        width: 100%;
+                    }
+                    table tr td {
+                        text-align: center;
+                    }
+                    table tr td p {
+                        text-align: justify;
+                        font-family: Arial, Helvetica Neue, Helvetica, sans-serif;
+                        font-size: 16px;
+                    }
+                    table tr td a {
+                        font-family: "Source Sans Pro", Tahoma, Verdana, Segoe, sans-serif;
+                        text-align: center;
+                    }
+                    table tr td h3 {
+                        color: #000000;
+                        font-size: 24px;
+                        font-family: Arial, Helvetica Neue, Helvetica, sans-serif;
+                        text-align: center;
+                    }
+                </style>
+            </head>
+            <body>
+                <table style="width: 600px;margin: 0 auto;">
+                    <tbody>
+                        <tr>
+                            <td>
+                                <img src="https://d15k2d11r6t6rl.cloudfront.net/public/users/Integrators/BeeProAgency/868741_852879/editor_images/cc-logo.png" alt="">
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <p>Hi ${name},</p>
+                                <p style="text-indent: 50px;">You have not reviewed the ticketing <b> (${ticketingId}) </b> since ${day} days.<br /><br /> Kindly review at the earliest. <br /><br /> If you have any query, please contact noreply@cottonconnect.org <br /><br /> <p>${emails}</p> </p>
+                                <p>Thank You</p>
+                                <p>Team Tracebale</p>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </body>
+        </html>`;
+
+    return body;
 }

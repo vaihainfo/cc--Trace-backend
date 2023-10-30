@@ -7,6 +7,7 @@ import Program from './program.model';
 import Knitter from './knitter.model';
 import Weaver from './weaver.model';
 import YarnCount from './yarn-count.model';
+import Trader from './trader.model';
 
 const SpinSales = db.define('spin_sales', {
   id: {
@@ -155,6 +156,11 @@ SpinSales.belongsTo(Knitter, {
 SpinSales.belongsTo(Weaver, {
   foreignKey: "buyer_id",
   as: "weaver",
+});
+
+SpinSales.belongsTo(Trader, {
+  foreignKey: "trader_id",
+  as: "trader",
 });
 
 SpinSales.sync();

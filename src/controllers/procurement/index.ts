@@ -22,6 +22,12 @@ import sequelize from "../../util/dbConn";
 
 const createTransaction = async (req: Request, res: Response) => {
   try {
+    if (Number(req.body.qtyPurchased) < 0) {
+      return res.sendError(res, 'QtyPurchased should be greater than 0')
+    }
+    if (Number(req.body.rate) < 0) {
+      return res.sendError(res, 'Rate should be greater than 0')
+    }
     const data: any = {
       date: req.body.date,
       district_id: req.body.districtId,
@@ -166,6 +172,7 @@ const fetchTransactions = async (req: Request, res: Response) => {
         { "$state.state_name$": { [Op.iLike]: `%${searchTerm}%` } },
         { "$village.village_name$": { [Op.iLike]: `%${searchTerm}%` } },
         { "$district.district_name$": { [Op.iLike]: `%${searchTerm}%` } },
+        { "$brand.brand_name$": { [Op.iLike]: `%${searchTerm}%` } },
         { farmer_name: { [Op.iLike]: `%${searchTerm}%` } },
         { "$program.program_name$": { [Op.iLike]: `%${searchTerm}%` } },
         { "$ginner.name$": { [Op.iLike]: `%${searchTerm}%` } },
@@ -178,22 +185,27 @@ const fetchTransactions = async (req: Request, res: Response) => {
         {
           model: Village,
           as: "village",
+          attributes: ['id', 'village_name']
         },
         {
           model: Block,
           as: "block",
+          attributes: ['id', 'block_name']
         },
         {
           model: District,
           as: "district",
+          attributes: ['id', 'district_name']
         },
         {
           model: State,
           as: "state",
+          attributes: ['id', 'state_name']
         },
         {
           model: Country,
           as: "country",
+          attributes: ['id', 'county_name']
         },
         {
           model: Farmer,
@@ -202,26 +214,31 @@ const fetchTransactions = async (req: Request, res: Response) => {
         {
           model: Program,
           as: "program",
+          attributes: ['id', 'program_name']
         },
         {
           model: Brand,
           as: "brand",
+          attributes: ['id', 'brand_name']
         },
         {
           model: Ginner,
           as: "ginner",
+          attributes: ['id', 'name', 'address']
         },
         {
           model: CropGrade,
           as: "grade",
+          attributes: ['id', 'cropGrade']
         },
         {
           model: Season,
           as: "season",
+          attributes: ['id', 'name']
         },
         {
           model: Farm,
-          as: "farm",
+          as: "farm"
         },
       ],
     };
@@ -391,6 +408,7 @@ const updateTransaction = async (req: Request, res: Response) => {
     return res.sendError(res, "NOT_ABLE_TO_UPDATE");
   }
 };
+
 const allVillageCottonData = async (req: Request, res: Response) => {
   try {
     let userCondition = ''; // Define your user condition here
@@ -399,7 +417,7 @@ const allVillageCottonData = async (req: Request, res: Response) => {
     }
 
     if (req.query.search) {
-      userCondition += `vg.village_name LIKE '%${req.query.search}%' AND `;
+      userCondition += `vg.village_name ILIKE '%${req.query.search}%' AND `;
     }
 
     // Remove the trailing 'AND' if it exists
@@ -780,7 +798,6 @@ const uploadTransactionBulk = async (req: Request, res: Response) => {
                                       message: "grade not found",
                                     });
                                   } else {
-                                    console.log(farmer.id, season.id)
                                     farm = await Farm.findOne({ where: { farmer_id: farmer.id, season_id: season.id } });
                                     if (!farm) {
                                       fail.push({
@@ -788,15 +805,34 @@ const uploadTransactionBulk = async (req: Request, res: Response) => {
                                         data: { farmerName: data.farmerName ? data.farmerName : '', farmerCode: data.farmerCode ? data.farmerCode : '' },
                                         message: "Farm data does not exist",
                                       });
-                                    }
-                                    let available_cotton = (Number(farm.total_estimated_cotton) || 0) - (Number(farm.cotton_transacted) || 0);
-                                    if (available_cotton < 1) {
-                                      fail.push({
-                                        success: false,
-                                        data: { farmerName: data.farmerName ? data.farmerName : '', farmerCode: data.farmerCode ? data.farmerCode : '' },
-                                        message: "This season used all the cotton",
-                                      });
-                                      farm = undefined;
+                                    } else {
+                                      let available_cotton = (Number(farm.total_estimated_cotton) || 0) - (Number(farm.cotton_transacted) || 0);
+                                      if (available_cotton < 1) {
+                                        fail.push({
+                                          success: false,
+                                          data: { farmerName: data.farmerName ? data.farmerName : '', farmerCode: data.farmerCode ? data.farmerCode : '' },
+                                          message: "This season used all the cotton",
+                                        });
+                                        farm = undefined;
+                                      } else {
+                                        if (Number(data.qtyPurchased) < 0) {
+                                          fail.push({
+                                            success: false,
+                                            data: { farmerName: data.farmerName ? data.farmerName : '', farmerCode: data.farmerCode ? data.farmerCode : '' },
+                                            message: "QtyPurchased should be greater than 0",
+                                          });
+                                          farm = undefined;
+                                        } else {
+                                          if (Number(data.rate) < 0) {
+                                            fail.push({
+                                              success: false,
+                                              data: { farmerName: data.farmerName ? data.farmerName : '', farmerCode: data.farmerCode ? data.farmerCode : '' },
+                                              message: "Rate should be greater than 0",
+                                            });
+                                            farm = undefined;
+                                          }
+                                        }
+                                      }
                                     }
                                   }
                                 }
@@ -1141,6 +1177,7 @@ const exportGinnerProcurement = async (req: Request, res: Response) => {
     console.error("Error appending data:", error);
   }
 };
+
 
 export {
   createTransaction,
