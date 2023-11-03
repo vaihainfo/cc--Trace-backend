@@ -467,8 +467,39 @@ const updateTransactionStatus = async (req: Request, res: Response) => {
 //Export the Ginner Sales details through excel file
 const exportGinnerSales = async (req: Request, res: Response) => {
     const excelFilePath = path.join("./upload", "lint-sale.xlsx");
-
+    const searchTerm = req.query.search || "";
+    const { ginnerId, seasonId, programId }: any = req.query;
+    const whereCondition: any = {};
     try {
+        if (searchTerm) {
+            whereCondition[Op.or] = [
+                { '$season.name$': { [Op.iLike]: `%${searchTerm}%` } }, // Search by crop Type
+                { lot_no: { [Op.iLike]: `%${searchTerm}%` } },
+                { invoice_no: { [Op.iLike]: `%${searchTerm}%` } },
+                { press_no: { [Op.iLike]: `%${searchTerm}%` } },
+                { reel_lot_no: { [Op.iLike]: `%${searchTerm}%` } },
+                { '$buyerdata.name$': { [Op.iLike]: `%${searchTerm}%` } },
+                { rate: { [Op.iLike]: `%${searchTerm}%` } },
+                { '$program.program_name$': { [Op.iLike]: `%${searchTerm}%` } },
+
+            ];
+        }
+        if (ginnerId) {
+            whereCondition.ginner_id = ginnerId;
+        }
+        if (seasonId) {
+            const idArray: number[] = seasonId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition.season_id = { [Op.in]: idArray };
+        }
+
+        if (programId) {
+            const idArray: number[] = programId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition.program_id = { [Op.in]: idArray };
+        }
         // Create the excel workbook file
         const workbook = new ExcelJS.Workbook();
         const worksheet = workbook.addWorksheet("Sheet1");
@@ -499,7 +530,7 @@ const exportGinnerSales = async (req: Request, res: Response) => {
             }
         ];
         const gin = await GinSales.findAll({
-            where: { ginner_id: req.query.ginnerId },
+            where: whereCondition,
             include: include,
         });
         // Append data to worksheet
