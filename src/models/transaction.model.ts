@@ -143,6 +143,9 @@ const Transaction = db.define('transactions', {
   qty_stock: {
     type: DataTypes.DOUBLE
   },
+  agent_id: {
+    type: DataTypes.INTEGER
+  }
 });
 
 Transaction.belongsTo(Country, {

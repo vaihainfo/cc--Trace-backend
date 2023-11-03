@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { Sequelize, Op } from "sequelize";
 import Video from "../../models/video.model";
+import Ginner from "../../models/ginner.model";
 
 const createVideoName = async (req: Request, res: Response) => {
     try {
@@ -27,7 +28,7 @@ const fetchVideoNamePagination = async (req: Request, res: Response) => {
     const page = Number(req.query.page) || 1;
     const limit = Number(req.query.limit) || 10;
     const offset = (page - 1) * limit;
-    const brandId = req.query.brandId;
+    const { brandId, ginnerId }: any = req.query;
     const processor = req.query.processor;
     const whereCondition: any = {}
     try {
@@ -45,6 +46,11 @@ const fetchVideoNamePagination = async (req: Request, res: Response) => {
 
         if (processor) {
             whereCondition.processor = { [Op.iLike]: processor }
+        }
+
+        if (ginnerId) {
+            let ginner = await Ginner.findOne({ where: { id: ginnerId } })
+            whereCondition.country = { [Op.overlap]: [ginner.country_id] }
         }
 
         //fetch data with pagination

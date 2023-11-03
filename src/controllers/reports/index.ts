@@ -29,6 +29,11 @@ import Brand from "../../models/brand.model";
 import Department from "../../models/department.model";
 import BaleSelection from "../../models/bale-selection.model";
 import Farm from "../../models/farm.model";
+import FabricSelection from "../../models/fabric-selections.model";
+import YarnSelection from "../../models/yarn-seletions.model";
+import KnitYarnSelection from "../../models/knit-yarn-seletions.model";
+import LintSelections from "../../models/lint-seletions.model";
+import SpinProcessYarnSelection from "../../models/spin-process-yarn-seletions.model";
 
 const fetchBaleProcess = async (req: Request, res: Response) => {
     const searchTerm = req.query.search || "";
@@ -4153,6 +4158,196 @@ const exportPscpCottonProcurement = async (req: Request, res: Response) => {
     }
 };
 
+const consolidatedTraceability = async (req: Request, res: Response) => {
+    const searchTerm = req.query.search || "";
+    const page = Number(req.query.page) || 1;
+    const limit = Number(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+    const whereCondition: any = {};
+    try {
+        if (searchTerm) {
+            whereCondition[Op.or] = [
+                { invoice_no: { [Op.iLike]: `%${searchTerm}%` } },
+                { style_mark_no: { [Op.iLike]: `%${searchTerm}%` } },
+                { '$program.program_name$': { [Op.iLike]: `%${searchTerm}%` } },
+                { '$buyer.brand_name$': { [Op.iLike]: `%${searchTerm}%` } },
+                { garment_type: { [Op.iLike]: `%${searchTerm}%` } },
+            ];
+        }
+        whereCondition.status = 'Sold';
+
+        let include = [
+            {
+                model: Brand,
+                as: "buyer",
+                attributes: ['id', 'brand_name', 'address']
+            },
+            {
+                model: Season,
+                as: "season",
+            },
+            {
+                model: Program,
+                as: "program",
+            },
+            {
+                model: Department,
+                as: "department",
+            },
+            {
+                model: Garment,
+                as: "garment",
+                attributes: ['id', 'name', 'address']
+            }
+        ];
+
+        //fetch data with pagination
+        const { count, rows } = await GarmentSales.findAndCountAll({
+            where: whereCondition,
+            include: include,
+            order: [
+                [
+                    'accept_date', 'asc'
+                ]
+            ],
+            offset: offset,
+            limit: limit,
+        });
+        for await (let [index, item] of rows.entries()) {
+            let fabric = await FabricSelection.findAll({
+                where: {
+                    sales_id: item.dataValues.id
+                },
+                attributes: ['id', 'fabric_id', 'processor']
+            })
+
+            let knit_fabric_ids = fabric.filter((obj: any) => obj.dataValues.processor === 'knitter').map((obj: any) => obj.dataValues.fabric_id);
+            let weaver_fabric_ids = fabric.filter((obj: any) => obj.dataValues.processor === 'weaver').map((obj: any) => obj.dataValues.fabric_id);
+            let knitSales: any = [];
+            let knit_yarn_ids: any
+            if (knit_fabric_ids.length > 0) {
+                knitSales = await KnitSales.findAll({
+                    include: [
+                        {
+                            model: Knitter,
+                            as: 'knitter',
+                            attributes: ['id', 'name'],
+                        },
+                        {
+                            model: FabricType,
+                            as: 'fabric',
+                            attributes: ['fabricType_name'],
+                        }
+                    ],
+                    where: {
+                        id: {
+                            [Op.in]: knit_fabric_ids
+                        }
+                    },
+                    raw: true // Return raw data
+                })
+                let knitYarn = KnitYarnSelection.findAll({
+                    where: {
+                        sales_id: knitSales.map((obj: any) => obj.id)
+                    },
+                    attributes: ['id', 'yarn_id']
+                })
+                knit_yarn_ids = knitYarn.map((obj: any) => obj.dataValues.yarn_id);
+
+            }
+            let weaverSales: any = [];
+            let weave_yarn_ids: any
+            if (weaver_fabric_ids.length > 0) {
+                weaverSales = await WeaverSales.findAll({
+                    include: [
+                        {
+                            model: Weaver,
+                            as: 'weaver',
+                            attributes: ['id', 'name'],
+                        },
+                        {
+                            model: FabricType,
+                            as: 'fabric',
+                            attributes: ['fabricType_name'],
+                        }
+                    ],
+                    where: {
+                        id: {
+                            [Op.in]: weaver_fabric_ids
+                        }
+                    },
+                    raw: true // Return raw data
+                })
+                let weaverYarn = await YarnSelection.findAll({
+                    where: {
+                        sales_id: weaverSales.map((obj: any) => obj.id)
+                    },
+                    attributes: ['id', 'yarn_id']
+                })
+                weave_yarn_ids = weaverYarn.map((obj: any) => obj.dataValues.yarn_id);
+            }
+            let spinSales;
+            let spnr_lint_ids: any
+            if (weave_yarn_ids.length > 0 || knit_yarn_ids.length > 0) {
+                spinSales = await SpinSales.findAll({
+                    include: [
+                        {
+                            model: Spinner,
+                            as: 'spinner',
+                            attributes: ['id', 'name'],
+                        },
+                        {
+                            model: YarnCount,
+                            as: 'yarncount',
+                            attributes: ['yarnCount_name'],
+                        }
+                    ],
+                    where: {
+                        id: {
+                            [Op.in]: [...weave_yarn_ids, knit_yarn_ids]
+                        }
+                    }
+                })
+                let spinSaleProcess = await SpinProcessYarnSelection.findAll({
+                    where: {
+                        sales_id: spinSales.map((obj: any) => obj.dataValues.id)
+                    },
+                    attributes: ['id', 'spin_process_id']
+                })
+                let spinProcess = await LintSelections.findAll({
+                    where: {
+                        process_id: spinSaleProcess.map((obj: any) => obj.dataValues.spin_process_id)
+                    },
+                    attributes: ['id', 'lint_id']
+                })
+                spnr_lint_ids = spinProcess.map((obj: any) => obj.dataValues.lint_id);
+            }
+            let ginSales
+            if (spnr_lint_ids.length > 0) {
+                ginSales = await GinSales.findAll({
+                    include: [
+                        {
+                            model: Ginner,
+                            as: 'ginner',
+                            attributes: ['id', 'name'],
+                        }
+                    ],
+                    where: {
+                        id: {
+                            [Op.in]: spnr_lint_ids
+                        }
+                    }
+                })
+            }
+
+        }
+
+        return res.sendPaginationSuccess(res, rows, count);
+
+    } catch (error: any) {
+        return res.sendError(res, error.message);
+    }
+}
 
 
 export {
@@ -4187,5 +4382,6 @@ export {
     fetchGarmentFabricPagination,
     exportGarmentFabric,
     fetchPscpPrecurement,
-    exportPscpCottonProcurement
+    exportPscpCottonProcurement,
+    consolidatedTraceability
 }

@@ -18,6 +18,8 @@ import Farmer from "../../models/farmer.model";
 import ICS from "../../models/ics.model";
 import Farm from "../../models/farm.model";
 import { generateQrCode } from "../../provider/qrcode";
+import ProcessorList from "../../models/processor-list.model";
+import Transaction from "../../models/transaction.model";
 
 const uploadGinnerOrder = async (req: Request, res: Response) => {
     try {
@@ -740,11 +742,122 @@ const uploadFarmer = async (req: Request, res: Response) => {
     }
 }
 
+const uploadProcessorList = async (req: Request, res: Response) => {
+    try {
+        let fail = [];
+        let pass = [];
+
+        for await (const data of req.body.processorData) {
+            if (!data.name) {
+                fail.push({
+                    success: false,
+                    message: "Name cannot be empty"
+                });
+            } else if (!data.address) {
+                fail.push({
+                    success: false,
+                    message: "Address cannot be empty"
+                });
+            } else {
+                let list = await ProcessorList.findOne({ where: { name: data.name } })
+
+                if (list) {
+                    fail.push({
+                        success: false,
+                        data: { name: data.name },
+                        message: "Processor Name Already exists"
+                    });
+                } else {
+                    const obj = {
+                        name: data.name,
+                        address: data.address,
+                        status: true
+                    };
+                    const result = await ProcessorList.create(obj);
+                    pass.push({
+                        success: true,
+                        data: result,
+                        message: "Processor Created"
+                    });
+                }
+
+            }
+        }
+        res.sendSuccess(res, { pass, fail });
+    } catch (error) {
+        console.log(error);
+        return res.sendError(res, "ERR_INTERNAL_SERVER_ERROR");
+    }
+}
+
+const uploadProcurementPrice = async (req: Request, res: Response) => {
+    try {
+        let fail = [];
+        let pass = [];
+
+        for await (const data of req.body.procurementPriceData) {
+            if (!data.transactionId) {
+                fail.push({
+                    success: false,
+                    data: { id: "" },
+                    message: "Transaction Id cannot be empty"
+                });
+            } else if (!data.oldPrice) {
+                fail.push({
+                    success: false,
+                    data: { id: data.transactionId },
+                    message: "Old Price cannot be empty"
+                });
+            } else if (!data.newPrice) {
+                fail.push({
+                    success: false,
+                    data: { id: data.transactionId },
+                    message: "New Price cannot be empty"
+                });
+            } else {
+                let list = await Transaction.findOne({ where: { id: data.transactionId } })
+
+                if (!list) {
+                    fail.push({
+                        success: false,
+                        data: { id: data.transactionId },
+                        message: "Transaction Id not available"
+                    });
+                } else if (list.dataValues.rate != data.oldPrice) {
+                    fail.push({
+                        success: false,
+                        data: { id: data.transactionId },
+                        message: "Old Price is mismatching"
+                    });
+                } else {
+                    const obj = {
+                        rate: data.newPrice,
+                        total_amount: data.newPrice * list.dataValues.qty_purchased
+                    };
+                    const result = await Transaction.update(obj, { where: { id: data.transactionId } });
+                    pass.push({
+                        success: true,
+                        data: result,
+                        message: "Transaction Updated"
+                    });
+                }
+
+            }
+        }
+        res.sendSuccess(res, { pass, fail });
+    } catch (error) {
+        console.log(error);
+        return res.sendError(res, "ERR_INTERNAL_SERVER_ERROR");
+    }
+}
+
 export {
     uploadGinnerOrder,
     uploadStyleMark,
     uploadGarmentType,
     uploadGinnerExpectedSeed,
     uploadVillage,
-    uploadFarmer
+    uploadFarmer,
+    uploadProcessorList,
+    uploadProcurementPrice
 }

@@ -99,7 +99,7 @@ const GinSales = db.define('gin_sales', {
     type: DataTypes.STRING
   },
   weight_loss: {
-    type: DataTypes.INTEGER
+    type: DataTypes.BOOLEAN
   },
   transporter_name: {
     type: DataTypes.STRING

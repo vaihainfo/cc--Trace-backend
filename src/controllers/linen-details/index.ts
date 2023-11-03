@@ -94,7 +94,8 @@ const createLinenDetails = async (req: Request, res: Response) => {
           },
           message: "Cooperative cannot be empty",
         });
-      } else if (!data.noOfBales) {
+      }
+      else if (!data.noOfBales) {
         fail.push({
           success: false,
           data: {
@@ -192,7 +193,7 @@ const createLinenDetails = async (req: Request, res: Response) => {
         if (data.season) {
           season = await Season.findOne({
             where: {
-              name: data.season,
+              name: { [Op.iLike]: data.season },
             },
           });
           if (!season) {
@@ -204,74 +205,74 @@ const createLinenDetails = async (req: Request, res: Response) => {
               },
               message: "Season not found",
             });
+          } else {
+            if (data.linenVariety) {
+              linenVariety = await Linen.findOne({
+                where: {
+                  name: { [Op.iLike]: data.linenVariety },
+                },
+              });
+              if (!linenVariety) {
+                fail.push({
+                  success: false,
+                  data: {
+                    farmerName: data.farmerName ? data.farmerName : "",
+                    farmerCode: data.farmerCode ? data.farmerCode : "",
+                  },
+                  message: "Linen Variety not found",
+                });
+              } else {
+                if (data.cooperativeName) {
+                  cooperative = await Cooperative.findOne({
+                    where: {
+                      name: { [Op.iLike]: data.cooperativeName },
+                    },
+                  });
+                  if (!cooperative) {
+                    fail.push({
+                      success: false,
+                      data: {
+                        farmerName: data.farmerName ? data.farmerName : "",
+                        farmerCode: data.farmerCode ? data.farmerCode : "",
+                      },
+                      message: "Cooperative Name not found",
+                    });
+                  }
+                }
+              }
+            }
           }
         }
 
-        if (data.linenVariety) {
-          linenVariety = await Linen.findOne({
-            where: {
-              name: data.linenVariety,
-            },
-          });
-          if (!linenVariety) {
-            fail.push({
-              success: false,
-              data: {
-                farmerName: data.farmerName ? data.farmerName : "",
-                farmerCode: data.farmerCode ? data.farmerCode : "",
-              },
-              message: "Linen Variety not found",
-            });
-          }
-        }
+        if (season && linenVariety && cooperative) {
+          const bulkData = {
+            harvest: data?.season,
+            season_id: season?.id,
+            farmer_no: data?.farmerNo,
+            farmer_name: data?.farmerName,
+            country: data?.country,
+            town: data?.town,
+            department: data?.farmerDepartment,
+            area: data?.area,
+            linen_variety: data?.linenVariety,
+            cooperative_name: data?.cooperativeName,
+            no_of_bales: data?.noOfBales,
+            farm_lot_no: data?.farmLotNo,
+            total_weight: data?.totalWeight,
+            scutch_date: data?.scutchDate ? new Date(data?.scutchDate).toISOString() : new Date().toISOString(),
+            scutching_lot_no: data?.scutchingLotNo,
+            bales_after_scutching: data?.balesAfterScutching,
+            weight_after_scutching: data?.weightAfterScutching,
+            shipment_date: data?.shipmentDate ? new Date(data?.shipmentDate).toISOString() : new Date().toISOString(),
+            shipment_details: data?.shipmentDetails,
+            shiped_to: data?.shipedTo,
+            qty_stock: data?.totalWeight,
+            program_id: data?.program || null,
+            status: true,
+          };
 
-        if (data.cooperativeName) {
-          cooperative = await Cooperative.findOne({
-            where: {
-              name: data.cooperativeName,
-            },
-          });
-          if (!cooperative) {
-            fail.push({
-              success: false,
-              data: {
-                farmerName: data.farmerName ? data.farmerName : "",
-                farmerCode: data.farmerCode ? data.farmerCode : "",
-              },
-              message: "Cooperative Name not found",
-            });
-          }
-        }
-
-        if(season && linenVariety && cooperative){
-        const bulkData = {
-          harvest: data?.season,
-          season_id: season?.id,
-          farmer_no: data?.farmerNo,
-          farmer_name: data?.farmerName,
-          country: data?.country,
-          town: data?.town,
-          department: data?.farmerDepartment,
-          area: data?.area,
-          linen_variety: data?.linenVariety,
-          cooperative_name: data?.cooperativeName,
-          no_of_bales: data?.noOfBales,
-          farm_lot_no: data?.farmLotNo,
-          total_weight: data?.totalWeight,
-          scutch_date: new Date(data?.scutchDate).toISOString(),
-          scutching_lot_no: data?.scutchingLotNo,
-          bales_after_scutching: data?.balesAfterScutching,
-          weight_after_scutching: data?.weightAfterScutching,
-          shipment_date: new Date(data?.shipmentDate).toISOString(),
-          shipment_details: data?.shipmentDetails,
-          shiped_to: data?.shipedTo,
-          qty_stock: data?.totalWeight,
-          program_id: data?.program || null,
-          status: true,
-        };
-
-        const linen = await LinenDetails.create(bulkData);
-        pass.push({
+          const linen = await LinenDetails.create(bulkData);
+          pass.push({
             success: true,
             data: linen,
             message: "Linen created",
@@ -294,36 +295,33 @@ const fetchlinenDetails = async (req: Request, res: Response) => {
   const limit = Number(req.query.limit) || 10;
   const offset = (page - 1) * limit;
   const whereCondition: any = {};
-  const seasonId: string = req.query.seasonId as string;
-  const cooperatives: string = req.query.cooperatives as string;
-  const country: string = req.query.countries as string;
-  const linenVariety: string = req.query.linenVarieties as string;
+  const { seasonId, cooperatives, country, linenVariety }: any = req.query;
 
   try {
     // apply filters
     if (seasonId) {
-        const idArray: number[] = seasonId
+      const idArray: number[] = seasonId
         .split(",")
-        .map((id) => parseInt(id, 10));
+        .map((id: any) => parseInt(id, 10));
       whereCondition.season_id = { [Op.in]: idArray };
     }
     if (country) {
-        const idArray: string[] = country
+      const idArray: string[] = country
         .split(",")
-        .map((id) => id.toString());
+        .map((id: any) => id.toString());
       whereCondition.country = { [Op.in]: idArray };
     }
     if (cooperatives) {
-        const idArray: string[] = cooperatives
+      const idArray: string[] = cooperatives
         .split(",")
-        .map((id) => id.toString());
+        .map((id: any) => id.toString());
       whereCondition.cooperative_name = { [Op.in]: idArray };
     }
     if (linenVariety) {
-        const idArray: string[] = linenVariety
+      const idArray: string[] = linenVariety
         .split(",")
-        .map((id) => id.toString());
-      whereCondition.linen_variety= { [Op.in]: idArray };;
+        .map((id: any) => id.toString());
+      whereCondition.linen_variety = { [Op.in]: idArray };;
     }
 
     // apply search
@@ -350,7 +348,7 @@ const fetchlinenDetails = async (req: Request, res: Response) => {
     };
 
     if (sortOrder === 'asc' || sortOrder === 'desc') {
-        queryOptions.order = [['id', 'DESC']];
+      queryOptions.order = [['id', 'DESC']];
     }
 
     // apply pagination
@@ -372,24 +370,69 @@ const fetchlinenDetails = async (req: Request, res: Response) => {
 
 //get total linen weight merged
 const fetchSumOfWeightBylinen = async (req: Request, res: Response) => {
-    try {
-      const sumOfWeight = await LinenDetails.findAll({
-        attributes: [
-          [Sequelize.fn("sum", Sequelize.cast(Sequelize.col("total_weight"), "decimal")), "total_weight"],
-        ],
-      });
-  
-      return res.sendSuccess(res, sumOfWeight);
-    } catch (error) {
-      console.log(error);
-      return res.sendError(res, "NOT_ABLE_TO_FETCH_SUM_BY_PROGRAM");
-    }
-  };
-
-  const exportLinenTransactions = async (req: Request, res: Response) => {
-    const excelFilePath = path.join("./upload", "procurement.xlsx");
-
   try {
+    const sumOfWeight = await LinenDetails.findAll({
+      attributes: [
+        [Sequelize.fn("sum", Sequelize.cast(Sequelize.col("total_weight"), "decimal")), "total_weight"],
+      ],
+    });
+
+    return res.sendSuccess(res, sumOfWeight);
+  } catch (error) {
+    console.log(error);
+    return res.sendError(res, "NOT_ABLE_TO_FETCH_SUM_BY_PROGRAM");
+  }
+};
+
+const exportLinenTransactions = async (req: Request, res: Response) => {
+  const excelFilePath = path.join("./upload", "procurement.xlsx");
+  const whereCondition: any = {};
+  const { seasonId, cooperatives, country, linenVariety }: any = req.query;
+  const searchTerm = req.query.search || "";
+  try {
+    if (seasonId) {
+      const idArray: number[] = seasonId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.season_id = { [Op.in]: idArray };
+    }
+    if (country) {
+      const idArray: string[] = country
+        .split(",")
+        .map((id: any) => id.toString());
+      whereCondition.country = { [Op.in]: idArray };
+    }
+    if (cooperatives) {
+      const idArray: string[] = cooperatives
+        .split(",")
+        .map((id: any) => id.toString());
+      whereCondition.cooperative_name = { [Op.in]: idArray };
+    }
+    if (linenVariety) {
+      const idArray: string[] = linenVariety
+        .split(",")
+        .map((id: any) => id.toString());
+      whereCondition.linen_variety = { [Op.in]: idArray };;
+    }
+
+    // apply search
+    if (searchTerm) {
+      whereCondition[Op.or] = [
+        { department: { [Op.iLike]: `%${searchTerm}%` } },
+        { cooperative_name: { [Op.iLike]: `%${searchTerm}%` } },
+        { harvest: { [Op.iLike]: `%${searchTerm}%` } },
+        { town: { [Op.iLike]: `%${searchTerm}%` } },
+        { country: { [Op.iLike]: `%${searchTerm}%` } },
+        { linen_variety: { [Op.iLike]: `%${searchTerm}%` } },
+        { farmer_name: { [Op.iLike]: `%${searchTerm}%` } },
+        { farmer_no: { [Op.iLike]: `%${searchTerm}%` } },
+        { farm_lot_no: { [Op.iLike]: `%${searchTerm}%` } },
+        { shipment_details: { [Op.iLike]: `%${searchTerm}%` } },
+        // { weight_after_scutching: { [Op.iLike]: `%${searchTerm}%` } },
+        { scutching_lot_no: { [Op.iLike]: `%${searchTerm}%` } },
+        { shiped_to: { [Op.iLike]: `%${searchTerm}%` } },
+      ];
+    }
     // Create the excel workbook file
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet("Sheet1");
@@ -420,6 +463,7 @@ const fetchSumOfWeightBylinen = async (req: Request, res: Response) => {
     ]);
     headerRow.font = { bold: true };
     const linen = await LinenDetails.findAll({
+      where: whereCondition
     });
 
     // Append data to worksheet
@@ -433,7 +477,7 @@ const fetchSumOfWeightBylinen = async (req: Request, res: Response) => {
         town: item.town,
         department: item.department,
         area: item.area,
-        linenVariety:item.linen_variety,
+        linenVariety: item.linen_variety,
         cooperativeName: item.cooperative_name,
         noOfBales: item.no_of_bales,
         farmLotNo: item.farm_lot_no,
@@ -449,15 +493,15 @@ const fetchSumOfWeightBylinen = async (req: Request, res: Response) => {
       });
       worksheet.addRow(rowValues);
     }
-    // Auto-adjust column widths based on content
-    // worksheet.columns.forEach((column: any) => {
-    //     let maxCellLength = 0;
-    //     column.eachCell({ includeEmpty: true }, (cell: any) => {
-    //         const cellLength = (cell.value ? cell.value.toString() : '').length;
-    //         maxCellLength = Math.max(maxCellLength, cellLength);
-    //     });
-    //     column.width = Math.min(30, maxCellLength + 2); // Limit width to 30 characters
-    // });
+    //Auto-adjust column widths based on content
+    worksheet.columns.forEach((column: any) => {
+      let maxCellLength = 0;
+      column.eachCell({ includeEmpty: true }, (cell: any) => {
+        const cellLength = (cell.value ? cell.value.toString() : '').length;
+        maxCellLength = Math.max(maxCellLength, cellLength);
+      });
+      column.width = Math.min(14, maxCellLength + 2); // Limit width to 30 characters
+    });
 
     // Save the workbook
     await workbook.xlsx.writeFile(excelFilePath);
@@ -469,7 +513,7 @@ const fetchSumOfWeightBylinen = async (req: Request, res: Response) => {
   } catch (error) {
     console.error("Error appending data:", error);
   }
-  };
+};
 
 export {
   createLinenDetails,
