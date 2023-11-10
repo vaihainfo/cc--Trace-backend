@@ -616,3 +616,4 @@ export {
     decrypt,
     generateGinSalesHtml
 }
+
