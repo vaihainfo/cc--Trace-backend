@@ -396,6 +396,11 @@ const fecthTrainingStatus = async (req: Request, res: Response) => {
                     attributes: ['id', 'name'],
                 }
             ],
+            order: [
+                [
+                    'id', 'desc'
+                ]
+            ]
         });
         res.sendSuccess(res, training);
     } catch (error: any) {
@@ -439,8 +444,9 @@ const fecthTrainingStatusSpecific = async (req: Request, res: Response) => {
         if (searchTerm) {
             whereCondition[Op.or] = [
                 { feedback: { [Op.iLike]: `%${searchTerm}%` } }, // Search by Feedback
+                { '$process-training.training_type$': { [Op.iLike]: `%${searchTerm}%` } }, // Search by training type
                 { status: { [Op.iLike]: `%${searchTerm}%` } }, // Search by Status 
-                { '$spinner.name$': { [Op.iLike]: `%${searchTerm}%` } }, // Search by crop name
+                { '$spinner.name$': { [Op.iLike]: `%${searchTerm}%` } }, // Search by spinner name
                 { '$ginner.name$': { [Op.iLike]: `%${searchTerm}%` } },
                 { '$weaver.name$': { [Op.iLike]: `%${searchTerm}%` } },
                 { '$garment.name$': { [Op.iLike]: `%${searchTerm}%` } },
@@ -505,6 +511,11 @@ const fecthTrainingStatusSpecific = async (req: Request, res: Response) => {
                     attributes: ['id', 'name'],
                 }
             ],
+            order: [
+                [
+                    'id', 'desc'
+                ]
+            ]
         });
         res.sendSuccess(res, training);
     } catch (error: any) {

@@ -4,7 +4,9 @@ import {
     uploadStyleMark,
     uploadGinnerExpectedSeed,
     uploadVillage,
-    uploadFarmer
+    uploadFarmer,
+    uploadProcessorList,
+    uploadProcurementPrice
 } from "../../controllers/upload-databases";
 
 import { Router } from "express";
@@ -17,4 +19,7 @@ router.post('/garment-type', uploadGarmentType);
 router.post('/ginner-expected', uploadGinnerExpectedSeed);
 router.post('/village', uploadVillage);
 router.post('/farmer', uploadFarmer);
+router.post('/processor-list', uploadProcessorList);
+router.post('/procurement-price', uploadProcurementPrice);
+
 export default router;  

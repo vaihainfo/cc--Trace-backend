@@ -65,7 +65,7 @@ import supplyChainRouter from "./router/supply-chain";
 import brandProcessRouter from "./router/brand";
 import errorMiddleware from "./middleware/error";
 import setInterface from "./middleware/interface";
-
+import qrApp from "./router/qr-app";
 const app = express();
 
 
@@ -149,6 +149,7 @@ app.use("/supply-chain", supplyChainRouter);
 app.use("/quality-parameter", qualityParameterRouter);
 app.use("/trader-process", traderProcessRouter);
 app.use("/brand-interface", brandProcessRouter);
+app.use("/qr-app", qrApp);
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument, { customCss }));
 
 app.use(errorMiddleware);

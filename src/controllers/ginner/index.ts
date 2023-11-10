@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import GinProcess from "../../models/gin-process.model";
 import { Sequelize, Op, where } from "sequelize";
-import { generateOnlyQrCode } from "../../provider/qrcode";
+import { encrypt, generateOnlyQrCode } from "../../provider/qrcode";
 import GinBale from "../../models/gin-bale.model";
 import Ginner from "../../models/ginner.model";
 import GinSales from "../../models/gin-sales.model";
@@ -18,6 +18,7 @@ import Country from "../../models/country.model";
 import Spinner from "../../models/spinner.model";
 import CottonSelection from "../../models/cotton-selection.model";
 import sequelize from "../../util/dbConn";
+import Farmer from "../../models/farmer.model";
 
 //create Ginner Process
 const createGinnerProcess = async (req: Request, res: Response) => {
@@ -42,15 +43,15 @@ const createGinnerProcess = async (req: Request, res: Response) => {
         };
         const ginprocess = await GinProcess.create(data);
         let uniqueFilename = `gin_procees_qrcode_${Date.now()}.png`;
-        let aa = await generateOnlyQrCode(`Test`, uniqueFilename);
+        let da = encrypt(`${ginprocess.id}`);
+        let aa = await generateOnlyQrCode(da, uniqueFilename);
         const gin = await GinProcess.update({ qr: uniqueFilename }, {
             where: {
                 id: ginprocess.id
             }
         });
         for await (const bale of req.body.bales) {
-            let uniqueFilename = `gin_bale_qrcode_${Date.now()}.png`;
-            let aa = await generateOnlyQrCode(`Test`, uniqueFilename);
+
             let baleData = {
                 process_id: ginprocess.id,
                 bale_no: bale.baleNo,
@@ -59,10 +60,17 @@ const createGinnerProcess = async (req: Request, res: Response) => {
                 mic: bale.mic,
                 strength: bale.strength,
                 trash: bale.trash,
-                color_grade: bale.colorGrade,
-                qr: uniqueFilename
+                color_grade: bale.colorGrade
             }
             const bales = await GinBale.create(baleData);
+            let uniqueFilename = `gin_bale_qrcode_${Date.now()}.png`;
+            let da = encrypt(`Ginner,Bale, ${bales.id}`);
+            let aa = await generateOnlyQrCode(da, uniqueFilename);
+            const gin = await GinBale.update({ qr: uniqueFilename }, {
+                where: {
+                    id: bales.id
+                }
+            });
         }
         for await (const cotton of req.body.chooseCotton) {
             let trans = await Transaction.findAll({ where: { mapped_ginner: req.body.ginnerId, status: 'Sold', village_id: cotton.vlg_id } });
@@ -144,6 +152,11 @@ const fetchGinProcessPagination = async (req: Request, res: Response) => {
                 include: include,
                 offset: offset,
                 limit: limit,
+                order: [
+                    [
+                        'id', 'desc'
+                    ]
+                ]
             });
             let sendData: any = [];
             for await (let row of rows) {
@@ -189,6 +202,11 @@ const fetchGinProcessPagination = async (req: Request, res: Response) => {
             const gin = await GinProcess.findAll({
                 where: whereCondition,
                 include: include,
+                order: [
+                    [
+                        'id', 'desc'
+                    ]
+                ]
             });
             return res.sendSuccess(res, gin);
         }
@@ -449,8 +467,39 @@ const updateTransactionStatus = async (req: Request, res: Response) => {
 //Export the Ginner Sales details through excel file
 const exportGinnerSales = async (req: Request, res: Response) => {
     const excelFilePath = path.join("./upload", "lint-sale.xlsx");
-
+    const searchTerm = req.query.search || "";
+    const { ginnerId, seasonId, programId }: any = req.query;
+    const whereCondition: any = {};
     try {
+        if (searchTerm) {
+            whereCondition[Op.or] = [
+                { '$season.name$': { [Op.iLike]: `%${searchTerm}%` } }, // Search by crop Type
+                { lot_no: { [Op.iLike]: `%${searchTerm}%` } },
+                { invoice_no: { [Op.iLike]: `%${searchTerm}%` } },
+                { press_no: { [Op.iLike]: `%${searchTerm}%` } },
+                { reel_lot_no: { [Op.iLike]: `%${searchTerm}%` } },
+                { '$buyerdata.name$': { [Op.iLike]: `%${searchTerm}%` } },
+                { rate: { [Op.iLike]: `%${searchTerm}%` } },
+                { '$program.program_name$': { [Op.iLike]: `%${searchTerm}%` } },
+
+            ];
+        }
+        if (ginnerId) {
+            whereCondition.ginner_id = ginnerId;
+        }
+        if (seasonId) {
+            const idArray: number[] = seasonId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition.season_id = { [Op.in]: idArray };
+        }
+
+        if (programId) {
+            const idArray: number[] = programId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition.program_id = { [Op.in]: idArray };
+        }
         // Create the excel workbook file
         const workbook = new ExcelJS.Workbook();
         const worksheet = workbook.addWorksheet("Sheet1");
@@ -481,7 +530,7 @@ const exportGinnerSales = async (req: Request, res: Response) => {
             }
         ];
         const gin = await GinSales.findAll({
-            where: { ginner_id: req.query.ginnerId },
+            where: whereCondition,
             include: include,
         });
         // Append data to worksheet
@@ -528,8 +577,6 @@ const exportGinnerSales = async (req: Request, res: Response) => {
 //create Ginner Sale
 const createGinnerSales = async (req: Request, res: Response) => {
     try {
-        let uniqueFilename = `gin_sales_qrcode_${Date.now()}.png`;
-        let aa = await generateOnlyQrCode(`Test`, uniqueFilename);
         const data = {
             ginner_id: req.body.ginnerId,
             program_id: req.body.programId,
@@ -549,10 +596,17 @@ const createGinnerSales = async (req: Request, res: Response) => {
             despatch_from: req.body.despatchFrom,
             press_no: req.body.pressNo,
             status: 'To be Submitted',
-            qty_stock: req.body.totalQty,
-            qr: uniqueFilename
+            qty_stock: req.body.totalQty
         };
         const ginSales = await GinSales.create(data);
+        let uniqueFilename = `gin_sales_qrcode_${Date.now()}.png`;
+        let da = encrypt("Ginner,Sale," + ginSales.id);
+        let aa = await generateOnlyQrCode(da, uniqueFilename);
+        const gin = await GinSales.update({ qr: uniqueFilename }, {
+            where: {
+                id: ginSales.id
+            }
+        });
         for await (const bale of req.body.bales) {
             let baleData = {
                 sales_id: ginSales.id,
@@ -585,7 +639,14 @@ const updateGinnerSales = async (req: Request, res: Response) => {
             lrbl_no: req.body.lrblNo
         };
         const ginSales = await GinSales.update(data, { where: { id: req.body.id } });
-
+        if (req.body.weightLoss) {
+            for await (let obj of req.body.lossData) {
+                let bale = await GinBale.findOne({ where: { '$ginprocess.lot_no$': String(obj.lotNo), bale_no: String(obj.baleNo) }, include: [{ model: GinProcess, as: 'ginprocess' }] });
+                if (bale) {
+                    GinBale.update({ weight: obj.newWeight }, { where: { id: bale.dataValues.id } })
+                }
+            }
+        }
         res.sendSuccess(res, { ginSales });
     } catch (error: any) {
         return res.sendError(res, error.meessage);
@@ -657,12 +718,22 @@ const fetchGinSalesPagination = async (req: Request, res: Response) => {
                 include: include,
                 offset: offset,
                 limit: limit,
+                order: [
+                    [
+                        'id', 'desc'
+                    ]
+                ]
             });
             return res.sendPaginationSuccess(res, rows, count);
         } else {
             const gin = await GinSales.findAll({
                 where: whereCondition,
                 include: include,
+                order: [
+                    [
+                        'id', 'desc'
+                    ]
+                ]
             });
             return res.sendSuccess(res, gin);
         }
@@ -813,61 +884,81 @@ const updateGinSaleBale = async (req: Request, res: Response) => {
 const dashboardGraphWithProgram = async (req: Request, res: Response) => {
     try {
         let whereCondition: any = {}
-        whereCondition.ginner_id = req.query.ginnerId;
-        whereCondition.status = 'Sold';
 
-        const trans = await Transaction.findAll({
+        let result = await Ginner.findOne({ where: { id: req.query.ginnerId } });
+        if (!result) {
+            res.sendError(res, 'No ginner found');
+        }
+        let data = await Program.findAll({
             where: {
-                mapped_ginner: req.query.ginnerId,
-                status: 'Sold'
+                id: { [Op.in]: result.program_id }
             },
-            attributes: [
-                [
-                    Sequelize.fn("SUM", Sequelize.literal("CAST(qty_purchased AS INTEGER)")),
-                    "totalPurchased",
-                ],
-                [
-                    Sequelize.fn(
-                        "SUM",
-                        Sequelize.col("qty_stock")
-                    ),
-                    "totalQuantity",
-                ],
-            ],
-            include: [
-                {
-                    model: Program,
-                    as: "program",
-                    attributes: ["id", "program_name", "program_status"],
-                }
-            ],
-            group: ["program.id"],
+            attributes: ["id", "program_name"],
         });
-        const gin = await GinSales.findAll({
-            where: whereCondition,
-            attributes: [
-                [
-                    Sequelize.fn("SUM", Sequelize.col("no_of_bales")),
-                    "totalBales",
+        let transaction: any = [];
+        let ginner: any = [];
+
+        for await (let obj of data) {
+            whereCondition.ginner_id = req.query.ginnerId;
+            whereCondition.status = 'Sold';
+            whereCondition.program_id = obj.id;
+            const trans = await Transaction.findOne({
+                where: {
+                    mapped_ginner: req.query.ginnerId,
+                    status: 'Sold',
+                    program_id: obj.id
+                },
+                attributes: [
+                    [
+                        Sequelize.fn("SUM", Sequelize.literal("CAST(qty_purchased AS INTEGER)")),
+                        "totalPurchased",
+                    ],
+                    [
+                        Sequelize.fn(
+                            "SUM",
+                            Sequelize.col("qty_stock")
+                        ),
+                        "totalQuantity",
+                    ],
                 ],
-                [
-                    Sequelize.fn(
-                        "SUM",
-                        Sequelize.col("qty_stock")
-                    ),
-                    "totalQuantity",
+                include: [
+                    {
+                        model: Program,
+                        as: "program",
+                        attributes: [],
+                    }
                 ],
-            ],
-            include: [
-                {
-                    model: Program,
-                    as: "program",
-                    attributes: ["id", "program_name", "program_status"],
-                }
-            ],
-            group: ["program.id"],
-        });
-        res.sendSuccess(res, { trans, gin });
+                group: ["program.id"],
+            });
+            transaction.push({ data: trans, program: obj })
+            const gin = await GinSales.findOne({
+                where: whereCondition,
+                attributes: [
+                    [
+                        Sequelize.fn("SUM", Sequelize.col("no_of_bales")),
+                        "totalBales",
+                    ],
+                    [
+                        Sequelize.fn(
+                            "SUM",
+                            Sequelize.col("qty_stock")
+                        ),
+                        "totalQuantity",
+                    ],
+                ],
+                include: [
+                    {
+                        model: Program,
+                        as: "program",
+                        attributes: [],
+                    }
+                ],
+                group: ["program.id"],
+            });
+            ginner.push({ data: gin, program: obj })
+        }
+
+        res.sendSuccess(res, { transaction, ginner });
     } catch (error: any) {
         return res.sendError(res, error.message);
     }
@@ -878,24 +969,21 @@ const getReelBaleId = async (req: Request, res: Response) => {
         let whereCondition: any = {}
         let ginnerId = req.query.ginnerId;
         whereCondition.status = 'Sold';
-        let count = await GinProcess.findOne({
-            attributes: [
-                [Sequelize.fn('COUNT', Sequelize.col('gin_process.id')), 'balecount']
-            ],
-            include: [
-                {
-                    model: Program,
-                    attributes: [],
-                    as: 'program',
-                    where: { program_name: { [Op.iLike]: 'Reel' } },
+        const baleCount = await GinBale.count({
+            distinct: true,
+            col: 'process_id',
+            include: [{
+                model: GinProcess,
+                as: 'ginprocess',
+                where: {
+                    ginner_id: req.query.ginnerId,
+                    program_id: req.query.programId
                 }
-            ],
+            }],
             where: {
-                ginner_id: req.query.ginnerId,
-            },
-            group: ['gin_process.id']
-        })
-
+                sold_status: false
+            }
+        });
         const result = await Ginner.findOne({
             attributes: [
                 [
@@ -923,7 +1011,7 @@ const getReelBaleId = async (req: Request, res: Response) => {
         });
         var baleid_prefix = result.dataValues.idprefix ? result.dataValues.idprefix : '';
         var prcs_date = new Date().toLocaleDateString().replace(/\//g, '');
-        var bale_no = count ? (Number(count.dataValues.balecount) + 1) : 1;
+        var bale_no = baleCount ? (Number(baleCount ?? 0) + 1) : 1;
         var reelbale_id = baleid_prefix + prcs_date + '/' + String(bale_no);
         res.sendSuccess(res, { id: reelbale_id });
     } catch (error: any) {
@@ -968,6 +1056,45 @@ const getSpinner = async (req: Request, res: Response) => {
     })
     res.sendSuccess(res, result);
 }
+const getVillageAndFarmer = async (req: Request, res: Response) => {
+    let ginnerId = req.query.ginnerId;
+    if (!ginnerId) {
+        return res.sendError(res, 'Need Ginner Id ');
+    }
+    let whereCondition = {
+        status: 'Sold',
+        mapped_ginner: ginnerId
+    }
+    const farmers = await Transaction.findAll({
+        include: [{
+            model: Farmer,
+            as: "farmer",
+            attributes: []
+        }],
+        attributes: [
+            [Sequelize.literal("farmer.id"), "id"],
+            [Sequelize.literal('"farmer"."firstName"'), "firstName"],
+            [Sequelize.literal('"farmer"."lastName"'), "lastName"],
+            [Sequelize.literal('"farmer"."code"'), "code"],
+        ],
+        where: whereCondition,
+        group: ['farmer_id', 'farmer.id']
+    })
+    const village = await Transaction.findAll({
+        include: [{
+            model: Village,
+            as: "village",
+            attributes: []
+        }],
+        attributes: [
+            [Sequelize.literal("village.id"), "id"],
+            [Sequelize.literal('"village"."village_name"'), "village_name"],
+        ],
+        where: whereCondition,
+        group: ['village_id', 'village.id']
+    })
+    res.sendSuccess(res, { farmers, village });
+}
 
 export {
     createGinnerProcess,
@@ -988,5 +1115,6 @@ export {
     chooseBale,
     deleteGinnerProcess,
     deleteGinSales,
-    getSpinner
+    getSpinner,
+    getVillageAndFarmer
 }

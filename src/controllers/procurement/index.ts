@@ -91,7 +91,7 @@ const fetchTransactions = async (req: Request, res: Response) => {
   const ginnerId: string = req.query.ginnerId as string;
   const farmerId: string = req.query.farmerId as string;
   const villageId: string = req.query.villageId as string;
-  const { endDate, startDate }: any = req.query;
+  const { endDate, startDate, transactionVia }: any = req.query;
   const whereCondition: any = {};
 
   try {
@@ -148,6 +148,14 @@ const fetchTransactions = async (req: Request, res: Response) => {
         .split(",")
         .map((id) => parseInt(id, 10));
       whereCondition.mapped_ginner = { [Op.in]: idArray };
+    }
+    if (transactionVia) {
+      if (transactionVia === 'web') {
+        whereCondition.agent_id = null
+      }
+      if (transactionVia === 'app') {
+        whereCondition.agent_id = { [Op.not]: null }
+      }
     }
 
     if (startDate && endDate) {
@@ -1098,12 +1106,52 @@ const exportProcurement = async (req: Request, res: Response) => {
 
 //Export the export details through excel file
 const exportGinnerProcurement = async (req: Request, res: Response) => {
-  const excelFilePath = path.join("./upload", "ginner-procurement.xlsx");
-
+  const excelFilePath = path.join("./upload", "Ginner_transactions.xlsx");
+  const { farmerId, programId, ginnerId, villageId }: any = req.query;
+  const whereCondition: any = {};
+  const searchTerm = req.query.search || "";
   try {
-    if (req.query.ginnerId) {
+    if (!ginnerId) {
       return res.sendError(res, 'PLEASE_SEND_GINNER_ID')
     }
+    if (farmerId) {
+      const idArray: number[] = farmerId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.farmer_id = { [Op.in]: idArray };
+    }
+
+    if (programId) {
+      const idArray: number[] = programId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.program_id = { [Op.in]: idArray };
+    }
+
+    if (ginnerId) {
+      const idArray: number[] = ginnerId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.mapped_ginner = { [Op.in]: idArray };
+    }
+    if (villageId) {
+      const idArray: number[] = villageId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.village_id = { [Op.in]: idArray };
+    }
+    if (searchTerm) {
+      whereCondition[Op.or] = [
+        { farmer_code: { [Op.iLike]: `%${searchTerm}%` } },
+        { total_amount: { [Op.iLike]: `%${searchTerm}%` } },
+        { "$village.village_name$": { [Op.iLike]: `%${searchTerm}%` } },
+        { farmer_name: { [Op.iLike]: `%${searchTerm}%` } },
+        { "$program.program_name$": { [Op.iLike]: `%${searchTerm}%` } },
+        { "$ginner.name$": { [Op.iLike]: `%${searchTerm}%` } },
+      ];
+    }
+
+    whereCondition.status = 'Sold';
     // Create the excel workbook file
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet("Sheet1");
@@ -1121,7 +1169,7 @@ const exportGinnerProcurement = async (req: Request, res: Response) => {
     ]);
     headerRow.font = { bold: true };
     const transaction = await Transaction.findAll({
-      where: { ginner_id: req.query.ginnerId, status: 'Accepted' },
+      where: whereCondition,
       include: [
         {
           model: Village,
@@ -1146,9 +1194,9 @@ const exportGinnerProcurement = async (req: Request, res: Response) => {
     for await (const [index, item] of transaction.entries()) {
       const rowValues = Object.values({
         index: index + 1,
-        date: item.date.toISOString().substring(0, 10),
+        date: item.date,
         farmerCode: item.farmer_code ? item.farmer_code : '',
-        farmerName: item.farmer_name ? item.farmer_name : '',
+        farmerName: item.farmer.firstName ? item.farmer.firstName + " " + item.farmer.lastName : '',
         village: item.village ? item.village.village_name : '',
         qtyPurchased: item.qty_purchased,
         program: item.program.program_name,
@@ -1157,21 +1205,21 @@ const exportGinnerProcurement = async (req: Request, res: Response) => {
       worksheet.addRow(rowValues);
     }
     // Auto-adjust column widths based on content
-    // worksheet.columns.forEach((column: any) => {
-    //     let maxCellLength = 0;
-    //     column.eachCell({ includeEmpty: true }, (cell: any) => {
-    //         const cellLength = (cell.value ? cell.value.toString() : '').length;
-    //         maxCellLength = Math.max(maxCellLength, cellLength);
-    //     });
-    //     column.width = Math.min(30, maxCellLength + 2); // Limit width to 30 characters
-    // });
+    worksheet.columns.forEach((column: any) => {
+      let maxCellLength = 0;
+      column.eachCell({ includeEmpty: true }, (cell: any) => {
+        const cellLength = (cell.value ? cell.value.toString() : '').length;
+        maxCellLength = Math.max(maxCellLength, cellLength);
+      });
+      column.width = Math.min(14, maxCellLength + 2); // Limit width to 30 characters
+    });
 
     // Save the workbook
     await workbook.xlsx.writeFile(excelFilePath);
     res.status(200).send({
       success: true,
       messgage: "File successfully Generated",
-      data: process.env.BASE_URL + "procurement.xlsx",
+      data: process.env.BASE_URL + "Ginner_transactions.xlsx",
     });
   } catch (error) {
     console.error("Error appending data:", error);

@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 
 import { Sequelize, Op, where } from "sequelize";
-import { generateOnlyQrCode } from "../../provider/qrcode";
+import { encrypt, generateOnlyQrCode } from "../../provider/qrcode";
 import * as ExcelJS from "exceljs";
 import * as fs from "fs";
 import * as path from "path";
@@ -68,7 +68,8 @@ const createSpinnerProcess = async (req: Request, res: Response) => {
         };
         const spin = await SpinProcess.create(data);
         let uniqueFilename = `spin_procees_qrcode_${Date.now()}.png`;
-        let aa = await generateOnlyQrCode(`Test`, uniqueFilename);
+        let da = encrypt(`Spinner,Process,${spin.id}`);
+        let aa = await generateOnlyQrCode(da, uniqueFilename);
         const gin = await SpinProcess.update({ qr: uniqueFilename }, {
             where: {
                 id: spin.id
@@ -103,9 +104,23 @@ const yarnId = async (id: any, date: any) => {
             raw: true
         }
     )
+    let spin = await SpinProcess.findOne({
+        attributes: [
+            [sequelize.fn('COUNT', sequelize.col('id')), 'balecount']
+        ],
+        include: [
+            {
+                model: Program,
+                where: { name: { [Op.iLike]: 'Reel' } }
+            }
+        ],
+        where: {
+            spinner_id: id
+        }
+    })
 
     let prcs_date = new Date(date).toLocaleDateString().replace(/\//g, '');
-    return a[0].idprefix + prcs_date + '/' + '21'
+    return a[0].idprefix + prcs_date + '/' + (((spin?.dataValues?.balecount) ?? 1) + 1)
 }
 
 //fetch Spinner Process with filters
@@ -524,6 +539,7 @@ const chooseYarnProcess = async (req: Request, res: Response) => {
             {
                 model: Program,
                 as: "program",
+                attributes: ["id", "program_name"]
             },
             {
                 model: YarnCount,
@@ -554,8 +570,7 @@ const chooseYarnProcess = async (req: Request, res: Response) => {
 //create Spinner Sale
 const createSpinnerSales = async (req: Request, res: Response) => {
     try {
-        let uniqueFilename = `spin_sales_qrcode_${Date.now()}.png`;
-        let aa = await generateOnlyQrCode(`Test`, uniqueFilename);
+
         const data = {
             spinner_id: req.body.spinnerId,
             program_id: req.body.programId,
@@ -586,11 +601,19 @@ const createSpinnerSales = async (req: Request, res: Response) => {
             invoice_file: req.body.invoiceFile,
             delivery_notes: req.body.deliveryNotes,
             qty_stock: req.body.totalQty,
-            status: 'Pending for QR scanning',
-            qr: uniqueFilename
+            status: 'Pending for QR scanning'
         };
 
         const spinSales = await SpinSales.create(data);
+        let uniqueFilename = `spin_sales_qrcode_${Date.now()}.png`;
+        let da = encrypt(`Spinner,Sale,${spinSales.id}`);
+        let aa = await generateOnlyQrCode(da, uniqueFilename);
+        const gin = await SpinSales.update({ qr: uniqueFilename }, {
+            where: {
+                id: spinSales.id
+            }
+        });
+
         if (req.body.chooseYarn && req.body.chooseYarn.length > 0) {
             for await (let obj of req.body.chooseYarn) {
                 let update = await SpinProcess.update({ qty_stock: obj.totalQty - obj.qtyUsed, tot_box_user: obj.totalBoxes - obj.totalBoxesUsed }, { where: { id: obj.id } });
@@ -1032,8 +1055,38 @@ const countCottonBaleWithProgram = async (req: Request, res: Response) => {
 
 const exportSpinnerTransaction = async (req: Request, res: Response) => {
     const excelFilePath = path.join("./upload", "Spinner_transaction_list.xlsx");
-
+    const searchTerm = req.query.search || "";
+    const page = Number(req.query.page) || 1;
+    const limit = Number(req.query.limit) || 10;
+    const { ginnerId, filter, programId, spinnerId }: any = req.query;
+    const offset = (page - 1) * limit;
+    const whereCondition: any = {};
     try {
+        if (searchTerm) {
+            whereCondition[Op.or] = [
+                { lot_no: { [Op.iLike]: `%${searchTerm}%` } }, // Search by 
+                { invoice_no: { [Op.iLike]: `%${searchTerm}%` } }, // Search by
+                { '$program.program_name$': { [Op.iLike]: `%${searchTerm}%` } }, // Search by program
+                { '$season.name$': { [Op.iLike]: `%${searchTerm}%` } }, // Search by crop Type
+            ];
+        }
+        whereCondition.buyer = spinnerId
+        whereCondition.status = 'Sold';
+        if (ginnerId) {
+            const idArray: number[] = ginnerId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition.ginner_id = { [Op.in]: idArray };
+        }
+        if (filter === 'Quantity') {
+            whereCondition.qty_stock = { [Op.gt]: 0 }
+        }
+        if (programId) {
+            const idArray: number[] = programId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition.program_id = { [Op.in]: idArray };
+        }
         // Create the excel workbook file
         const workbook = new ExcelJS.Workbook();
         const worksheet = workbook.addWorksheet("Sheet1");
@@ -1060,7 +1113,7 @@ const exportSpinnerTransaction = async (req: Request, res: Response) => {
             }
         ];
         const gin = await GinSales.findAll({
-            where: { buyer: req.query.spinnerId, status: 'Sold' },
+            where: whereCondition,
             include: include,
         });
         // Append data to worksheet
@@ -1174,6 +1227,31 @@ const getKnitterWeaver = async (req: Request, res: Response) => {
     res.sendSuccess(res, result.flat());
 }
 
+const getGinnerDashboard = async (req: Request, res: Response) => {
+    let spinnerId = req.query.spinnerId;
+    if (!spinnerId) {
+        return res.sendError(res, 'Need Spinner Id ');
+    }
+    let whereCondition = {
+        status: 'Sold',
+        buyer: spinnerId
+    }
+    const ginner = await GinSales.findAll({
+        include: [{
+            model: Ginner,
+            as: "ginner",
+            attributes: []
+        }],
+        attributes: [
+            [Sequelize.literal("ginner.id"), "id"],
+            [Sequelize.literal('"ginner"."name"'), "name"],
+        ],
+        where: whereCondition,
+        group: ['ginner_id', 'ginner.id']
+    })
+    res.sendSuccess(res, ginner);
+}
+
 export {
     createSpinnerProcess,
     fetchSpinnerProcessPagination,
@@ -1193,5 +1271,6 @@ export {
     deleteSpinnerProcess,
     deleteSpinnerSales,
     getKnitterWeaver,
-    fetchSpinnerProcess
+    fetchSpinnerProcess,
+    getGinnerDashboard
 }

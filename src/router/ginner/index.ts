@@ -1,3 +1,4 @@
+import { exportGinnerProcurement } from "../../controllers/procurement";
 import {
     fetchGinBale,
     fetchGinProcessPagination,
@@ -16,7 +17,8 @@ import {
     updateGinSaleBale,
     chooseBale,
     deleteGinnerProcess,
-    getSpinner
+    getSpinner,
+    getVillageAndFarmer
 } from "../../controllers/ginner";
 
 
@@ -44,6 +46,7 @@ router.get('/get-program', getProgram);
 router.put('/sales/update-bale', updateGinSaleBale);
 router.get('/sales/choose-bale', chooseBale);
 router.get('/get-spinner', getSpinner);
-
+router.get('/get-village-farmer', getVillageAndFarmer);
+router.get('/export-ginner-transactions', exportGinnerProcurement);
 
 export default router;

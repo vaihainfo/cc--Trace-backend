@@ -35,7 +35,8 @@ import {
     fetchGarmentFabricPagination,
     exportGarmentFabric,
     fetchPscpPrecurement,
-    exportPscpCottonProcurement
+    exportPscpCottonProcurement,
+    consolidatedTraceability
 } from "../../controllers/reports";
 const router = Router();
 
@@ -83,5 +84,5 @@ router.get('/get-garment-fabric-report', fetchGarmentFabricPagination);
 router.get('/export-garment-fabric-report', exportGarmentFabric);
 router.get('/get-pscp-precurement-report', fetchPscpPrecurement);
 router.get('/export-pscp-precurement-report', exportPscpCottonProcurement);
-
+router.get('/get-consolidated-report', consolidatedTraceability);
 export default router;  

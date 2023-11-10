@@ -114,5 +114,7 @@ const generateOnlyQrCode = async (qrData: any, fileName: string) => {
 
 export {
     generateOnlyQrCode,
-    generateQrCode
+    generateQrCode,
+    encrypt
 }
+

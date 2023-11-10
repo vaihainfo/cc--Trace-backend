@@ -6,7 +6,9 @@ import {
     exportSingleQualityParameter,
     reportParameter,
     reportCountryParameter,
-    reportDashBoardParameter
+    reportDashBoardParameter,
+    reportNationalQualityParameter,
+    reporProcessorWiseParameter
 } from "../../controllers/quality-parameter";
 
 import { Router } from "express";
@@ -21,5 +23,7 @@ router.get('/export-single', exportSingleQualityParameter);
 router.get('/graph', reportParameter);
 router.get('/graph-country', reportCountryParameter);
 router.get('/graph-dashboard', reportDashBoardParameter);
+router.get('/graph-national', reportNationalQualityParameter);
+router.get('/graph-processor', reporProcessorWiseParameter);
 
 export default router;

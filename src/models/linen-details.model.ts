@@ -1,7 +1,7 @@
-import { DataTypes  } from 'sequelize';
-import db  from '../util/dbConn';
+import { DataTypes } from 'sequelize';
+import db from '../util/dbConn';
 
-const LinenDetails = db.define('linen_details',{
+const LinenDetails = db.define('linen_details', {
   id: {
     type: DataTypes.INTEGER,
     autoIncrement: true,
