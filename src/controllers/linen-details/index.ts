@@ -384,6 +384,22 @@ const fetchSumOfWeightBylinen = async (req: Request, res: Response) => {
   }
 };
 
+const fetchCountry = async (req: Request, res: Response) => {
+  try {
+    const country = await LinenDetails.findAll({
+      attributes: [
+        [Sequelize.col("country"), "country"],
+      ],
+      group: ['country']
+    });
+
+    return res.sendSuccess(res, country);
+  } catch (error) {
+    console.log(error);
+    return res.sendError(res, "NOT_ABLE_TO_FETCH_SUM_BY_PROGRAM");
+  }
+};
+
 const exportLinenTransactions = async (req: Request, res: Response) => {
   const excelFilePath = path.join("./upload", "procurement.xlsx");
   const whereCondition: any = {};
@@ -519,7 +535,8 @@ export {
   createLinenDetails,
   fetchlinenDetails,
   fetchSumOfWeightBylinen,
-  exportLinenTransactions
+  exportLinenTransactions,
+  fetchCountry
   // updateLinen,
   // updateLinenStatus,
   // deleteLinen

@@ -7,7 +7,7 @@ import {
     exportWeaverSale,
     deleteWeaverSales,
     getWeaverProgram,
-    getSpinnerAndProgram,
+    getSpinnerTransaction,
     getInvoiceAndyarnType,
     getWeaverDyeing,
     getGarments
@@ -24,7 +24,7 @@ router.get('/export', exportWeaverSale);
 router.get('/transaction', fetchWeaverDashBoard);
 router.put('/transaction', updateStatusWeaverSale);
 router.get('/transaction/count', countCottonBaleWithProgram);
-router.get('/get-spinner-trans', getSpinnerAndProgram);
+router.get('/get-spinner-trans', getSpinnerTransaction);
 router.get('/get-dyeing', getWeaverDyeing);
 router.get('/get-garments', getGarments);
 router.get('/get-invoice-trans', getInvoiceAndyarnType);

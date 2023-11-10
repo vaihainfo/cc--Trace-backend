@@ -18,7 +18,9 @@ import {
     deleteSpinnerSales,
     getKnitterWeaver,
     fetchSpinnerProcess,
-    getGinnerDashboard
+    getGinnerDashboard,
+    chooseLint,
+    getSalesInvoice
 } from "../../controllers/spinner";
 
 import { Router } from "express";
@@ -45,5 +47,7 @@ router.get('/choose-yarn', chooseYarnProcess);
 router.get('/get-yarn', getYarnCount);
 router.get('/get-knitter-weaver', getKnitterWeaver);
 router.get('/get-filter-ginner', getGinnerDashboard);
+router.get('/choose-lint', chooseLint);
+router.get('/sales-invoice', getSalesInvoice);
 
 export default router;
