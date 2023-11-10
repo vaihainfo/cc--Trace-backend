@@ -17,6 +17,8 @@ import Season from "../../models/season.model";
 import Transaction from "../../models/transaction.model";
 import { generateTokens } from "../../util/auth";
 import hash from "../../util/hash";
+import sequelize from "../../util/dbConn";
+import { decrypt, encrypt } from "../../provider/qrcode";
 
 const getRegisteredDevices = async (req: Request, res: Response) => {
     try {
@@ -380,6 +382,159 @@ const fetchAgentTransactions = async (req: Request, res: Response) => {
         return res.sendError(res, "NOT_ABLE_TO_FETCH");
     }
 };
+const fetchQrDashboard = async (req: Request, res: Response) => {
+    const { villageId, programId, seasonId, brandId, countryId, stateId, blockId, districtId }: any = req.query;
+    const whereCondition: any = {};
+
+    try {
+        // apply filters
+        if (countryId) {
+            const idArray: number[] = countryId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition.country_id = { [Op.in]: idArray };
+        }
+
+        if (villageId) {
+            const idArray: number[] = villageId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition.village_id = { [Op.in]: idArray };
+        }
+
+        if (brandId) {
+            const idArray: number[] = brandId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition.brand_id = { [Op.in]: idArray };
+        }
+
+        if (seasonId) {
+            const idArray: number[] = seasonId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition.season_id = { [Op.in]: idArray };
+        }
+
+        if (programId) {
+            const idArray: number[] = programId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition.program_id = { [Op.in]: idArray };
+        }
+        let [data, qty_purchased, first, second, third, fourth, fifth]: any = await Promise.all([sequelize.query(
+            `SELECT sum(estimated_cotton) as estimatedCotton
+            FROM transactions 
+            INNER JOIN farmers ON transactions.farmer_id=farmers.id
+            INNER JOIN farms ON transactions.farm_id=farms.id`,
+        ),
+        sequelize.query(
+            `SELECT sum(CAST(qty_purchased AS INTEGER)) as seedCotton
+            FROM transactions 
+            INNER JOIN farmers ON transactions.farmer_id=farmers.id
+            INNER JOIN farms ON transactions.farm_id=farms.id
+            where transactions.agent_id IS NOT NULL`,
+        ),
+        sequelize.query(`SELECT count(*) as totalfarmer
+        FROM farmers
+        LEFT JOIN transactions  ON transactions.farmer_id=farmers.id
+        LEFT JOIN farms ON transactions.farm_id=farms.id`),
+        sequelize.query(`SELECT count(*) as second
+        FROM farmers
+        LEFT JOIN transactions ON transactions.farmer_id=farmers.id
+        LEFT JOIN farms ON transactions.farm_id=farms.id
+        where transactions.agent_id IS NOT NULL`),
+        sequelize.query(`SELECT COUNT(*) as third FROM (
+            SELECT transactions.district_id, transactions.block_id, transactions.village_id, transactions.program_id, transactions.farmer_id, COUNT(transactions.farmer_id), farmers.brand_id, farms.season_id 
+            FROM transactions
+            LEFT JOIN farmers ON transactions.farmer_id=farmers.id
+            LEFT JOIN farms ON transactions.farm_id=farms.id
+            where transactions.agent_id IS NOT NULL
+            group by transactions.district_id, transactions.block_id, transactions.village_id, transactions.program_id, transactions.farmer_id, farmers.brand_id, farms.season_id having COUNT(transactions.farmer_id)=1 ) AS DerivedTableAlias`),
+        sequelize.query(`SELECT COUNT(*) as fourth FROM (
+                SELECT transactions.district_id, transactions.block_id, transactions.village_id, transactions.program_id, transactions.farmer_id, COUNT(transactions.farmer_id), farmers.brand_id, farms.season_id 
+                FROM transactions
+                LEFT JOIN farmers ON transactions.farmer_id=farmers.id
+                LEFT JOIN farms ON transactions.farm_id=farms.id
+                where transactions.agent_id IS NOT NULL
+                group by transactions.district_id, transactions.block_id, transactions.village_id, transactions.program_id, transactions.farmer_id, farmers.brand_id, farms.season_id having COUNT(transactions.farmer_id)=2 ) AS DerivedTableAlias`),
+        sequelize.query(`SELECT COUNT(*) as fifth FROM (
+                    SELECT transactions.district_id, transactions.block_id, transactions.village_id, transactions.program_id, transactions.farmer_id, COUNT(transactions.farmer_id), farmers.brand_id, farms.season_id 
+                    FROM transactions
+                    LEFT JOIN farmers ON transactions.farmer_id=farmers.id
+                    LEFT JOIN farms ON transactions.farm_id=farms.id
+                    where transactions.agent_id IS NOT NULL
+                    group by transactions.district_id, transactions.block_id, transactions.village_id, transactions.program_id, transactions.farmer_id, farmers.brand_id, farms.season_id having COUNT(transactions.farmer_id)=3 ) AS DerivedTableAlias`)
+        ])
+
+        res.sendSuccess(res, {
+            ...data[0][0], ...qty_purchased[0][0],
+            ...first[0][0], ...second[0][0],
+            ...third[0][0], ...fourth[0][0],
+            ...fifth[0][0]
+        })
+
+    } catch (error) {
+        console.log(error);
+        return res.sendError(res, "NOT_ABLE_TO_FETCH");
+    }
+};
+
+const farmerByQrCode = async (req: Request, res: Response) => {
+    try {
+        if (!req.query.text) {
+            return res.sendError(res, "Need query text");
+        }
+        let data: any = decrypt(req.query.text);
+        let farmer = await Farmer.findOne({
+            where: { id: data },
+            include: [
+                {
+                    model: Program,
+                    as: "program",
+                    attributes: ["id", "program_name"],
+                },
+                {
+                    model: Brand,
+                    as: "brand",
+                    attributes: ["id", "brand_name", "address"],
+                },
+                {
+                    model: Country,
+                    as: "country",
+                    attributes: ["id", "county_name"],
+                },
+                {
+                    model: Village,
+                    as: "village",
+                    attributes: ["id", "village_name"],
+                },
+                {
+                    model: State,
+                    as: "state",
+                    attributes: ["id", "state_name"],
+                },
+                {
+                    model: District,
+                    as: "district",
+                    attributes: ["id", "district_name"],
+                },
+                {
+                    model: Block,
+                    as: "block",
+                    attributes: ["id", "block_name"]
+                }
+            ]
+        });
+        if (!farmer) {
+            return res.sendError(res, "NO_FARMER_FOUND");
+        }
+        let farm = await Farm.findAll({ where: { farmer_id: farmer.dataValues.id } })
+        return res.sendSuccess(res, { ...farmer.dataValues, farm });
+    } catch (error: any) {
+        return res.sendError(res, error.message);
+    }
+}
 
 export {
     getRegisteredDevices,
@@ -388,5 +543,7 @@ export {
     getUnRegisteredOne,
     fetchAgentTransactions,
     agentLogin,
-    profile
+    profile,
+    fetchQrDashboard,
+    farmerByQrCode
 }

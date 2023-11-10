@@ -13,7 +13,7 @@ const fetchValidationProjectReport = async (req: Request, res: Response) => {
 
   const farmGroupId: string = req.query.farmGroupId as string;
   const seasonId: string = req.query.farmGroupId as string;
-
+  const brandId: string = req.query.brandId as string;
   try {
     if (farmGroupId) {
       const idArray: number[] = farmGroupId
@@ -29,6 +29,13 @@ const fetchValidationProjectReport = async (req: Request, res: Response) => {
         .map((id) => parseInt(id, 10));
 
       whereCondition.farmGroup_id = { [Op.in]: idArray };
+    }
+    if (brandId) {
+      const idArray: number[] = brandId
+        .split(",")
+        .map((id) => parseInt(id, 10));
+
+      whereCondition.brand_id = { [Op.in]: idArray };
     }
 
     let include = [

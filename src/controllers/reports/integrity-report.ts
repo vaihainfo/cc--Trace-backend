@@ -4,6 +4,7 @@ import OrganicIntegrity from "../../models/organic-integrity.model";
 import FarmGroup from "../../models/farm-group.model";
 import ICS from "../../models/ics.model";
 import Brand from "../../models/brand.model";
+import Ginner from "../../models/ginner.model";
 
 const getOrganicIntegrityReport = async (req: Request, res: Response) => {
   const searchTerm = req.query.search || "";
@@ -14,7 +15,7 @@ const getOrganicIntegrityReport = async (req: Request, res: Response) => {
   const offset = (page - 1) * limit;
 
   const farmGroupId: string = req.query.farmGroupId as string;
-
+  const brandId: string = req.query.brandId as string;
   const whereCondition: any = {};
   try {
     if (farmGroupId) {
@@ -23,6 +24,12 @@ const getOrganicIntegrityReport = async (req: Request, res: Response) => {
         .map((id) => parseInt(id, 10));
 
       whereCondition.farmGroup_id = { [Op.in]: idArray };
+    }
+    if (brandId) {
+      const idArray: number[] = brandId
+        .split(",")
+        .map((id) => parseInt(id, 10));
+      whereCondition.brand_id = { [Op.in]: idArray };
     }
 
     // apply search
@@ -33,11 +40,13 @@ const getOrganicIntegrityReport = async (req: Request, res: Response) => {
       ];
     }
 
+
     const reports = await OrganicIntegrity.findAndCountAll({
       attributes: [
         "farmGroup_id",
         "test_stage",
         [Sequelize.col("farmGroup.name"), "farmGroup_name"],
+        [Sequelize.col("ginner.name"), "ginner_name"],
         [
           Sequelize.fn(
             "SUM",
@@ -63,9 +72,14 @@ const getOrganicIntegrityReport = async (req: Request, res: Response) => {
           as: "farmGroup",
           attributes: [],
         },
+        {
+          model: Ginner,
+          as: "ginner",
+          attributes: [],
+        },
       ],
       where: whereCondition,
-      group: ["farmGroup_id", "test_stage", Sequelize.col("farmGroup.name")],
+      group: ["farmGroup_id", "ginner.id", "test_stage", Sequelize.col("farmGroup.name")],
       order: [
         [
           Sequelize.col("farmGroup.name"),
@@ -73,12 +87,12 @@ const getOrganicIntegrityReport = async (req: Request, res: Response) => {
         ],
       ],
       limit: limit, // Number of records per page
-      offset: offset, 
+      offset: offset,
     });
 
     //return required fields
     const formattedReports = reports.rows.map((report: any) => {
-      const { farmGroup_id, test_stage, farmGroup_name, positives, negatives } =
+      const { farmGroup_id, test_stage, farmGroup_name, positives, negatives, ginner_name } =
         report.dataValues;
       const total = Number(positives) + Number(negatives);
 
@@ -91,6 +105,7 @@ const getOrganicIntegrityReport = async (req: Request, res: Response) => {
         test_stage,
         positives,
         negatives,
+        ginner_name,
         negativePercentage: negativePercentage.toFixed(2),
       };
     });

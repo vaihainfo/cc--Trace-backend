@@ -862,7 +862,30 @@ const productTracebility = async (req: Request, res: Response) => {
 }
 
 
+const getProgram = async (req: Request, res: Response) => {
+    const brandId: any = req.query.brandId;
+    const whereCondition: any = {};
+    try {
+        console.log(brandId, 'hererer');
+        if (brandId) {
+            const idArray: number[] = brandId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition.id = { [Op.in]: idArray };
+            let brand = await Brand.findAll({ where: whereCondition });
+            let programIds: any = []
+            brand.map((programId: any) => {
+                programIds = [...programIds, ...programId.dataValues.programs_id];
+            });
+            let program = await Program.findAll({ where: { id: programIds } })
+            res.sendSuccess(res, program)
+        } else {
+            res.sendSuccess(res, [])
+        }
+    } catch (error) {
 
+    }
+}
 
 
 export {
@@ -876,5 +899,6 @@ export {
     organicCottonOverview,
     fetchBrandTransactionsPagination,
     productionUpdate,
-    productTracebility
+    productTracebility,
+    getProgram
 };

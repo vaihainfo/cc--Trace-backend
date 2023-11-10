@@ -79,6 +79,7 @@ const fetchTicketTracker = async (req: Request, res: Response) => {
             const arry: number[] = spinner
                 .map((gin: any) => parseInt(gin.id, 10));
             whereCondition.process_id = { [Op.in]: arry };
+            // whereCondition.processor_type = 'spinner';
         }
 
         if (processorId) {

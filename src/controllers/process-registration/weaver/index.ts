@@ -110,7 +110,7 @@ const fetchWeaverPagination = async (req: Request, res: Response) => {
             const { count, rows } = await Weaver.findAndCountAll({
                 where: whereCondition,
                 order: [
-                    ['name', sortOrder], // Sort the results based on the 'name' field and the specified order
+                    ['id', 'desc'], // Sort the results based on the 'name' field and the specified order
                 ],
                 include: [
                     {
@@ -142,7 +142,7 @@ const fetchWeaverPagination = async (req: Request, res: Response) => {
                     },
                 ],
                 order: [
-                    ['name', sortOrder], // Sort the results based on the 'name' field and the specified order
+                    ['id', 'desc'], // Sort the results based on the 'name' field and the specified order
                 ]
             });
             return res.sendSuccess(res, result);

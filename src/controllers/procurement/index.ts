@@ -927,12 +927,18 @@ const exportProcurement = async (req: Request, res: Response) => {
   try {
     const searchTerm = req.query.search || "";
     let whereCondition: any = {};
-    const { status, countryId, brandId, farmGroupId, seasonId, programId, ginnerId, startDate, endDate }: any = req.query;
+    const { status, countryId, stateId, brandId, farmGroupId, seasonId, programId, ginnerId, startDate, endDate }: any = req.query;
     if (countryId) {
       const idArray: number[] = countryId
         .split(",")
         .map((id: any) => parseInt(id, 10));
       whereCondition.country_id = { [Op.in]: idArray };
+    }
+    if (stateId) {
+      const idArray: number[] = stateId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.state_id = { [Op.in]: idArray };
     }
     if (brandId) {
       const idArray: number[] = brandId
@@ -1014,83 +1020,78 @@ const exportProcurement = async (req: Request, res: Response) => {
     ]);
     headerRow.font = { bold: true };
     const transaction = await Transaction.findAll({
+      attributes: [
+        [Sequelize.col('date'), 'date'],
+        [Sequelize.col('"season"."name"'), 'seasons'],
+        [Sequelize.fn("concat", Sequelize.col('"farmer"."firstName"'), Sequelize.col('"farmer"."lastName"')), "farmerName"],
+        [Sequelize.col('"farmer"."code"'), 'farmerCode'],
+        [Sequelize.col('"transactions"."id"'), 'transactionId'],
+        [Sequelize.col('qty_purchased'), 'qtyPurchased'],
+        [Sequelize.col('rate'), 'rate'],
+        [Sequelize.col('total_amount'), 'totalAmount'],
+        [Sequelize.col('"program"."program_name"'), 'programs'],
+        [Sequelize.col('"country"."county_name"'), 'villages'],
+        [Sequelize.col('"village"."village_name"'), 'countries'],
+        [Sequelize.col('"ginner"."name"'), 'ginners'],
+      ],
       where: whereCondition,
       include: [
         {
           model: Village,
           as: "village",
+          attributes: []
         },
         {
           model: Season,
           as: "season",
-        },
-        {
-          model: Block,
-          as: "block",
-        },
-        {
-          model: District,
-          as: "district",
-        },
-        {
-          model: State,
-          as: "state",
+          attributes: []
         },
         {
           model: Country,
           as: "country",
+          attributes: []
         },
         {
           model: Farmer,
           as: "farmer",
+          attributes: []
         },
         {
           model: Program,
           as: "program",
+          attributes: []
         },
-        {
-          model: Brand,
-          as: "brand",
-        },
+
         {
           model: Ginner,
           as: "ginner",
-        },
-        {
-          model: CropGrade,
-          as: "grade",
+          attributes: []
         },
       ],
+      order: [
+        [
+          'id', 'desc'
+        ]
+      ]
     });
 
     // Append data to worksheet
     for await (const [index, item] of transaction.entries()) {
       const rowValues = Object.values({
         index: index + 1,
-        date: item.date.toISOString().substring(0, 10),
-        season: item.season.name,
-        farmerName: item.farmer_name,
-        farmerCode: item.farmer_code,
-        transactionId: item.id,
-        qtyPurchased: item.qty_purchased,
-        rate: item.rate,
-        totalAmount: item.total_amount,
-        program: item.program.program_name,
-        country: item.country.county_name,
-        village: item.village.village_name,
-        ginner: item?.ginner?.name
+        ...item.dataValues
       });
       worksheet.addRow(rowValues);
     }
     // Auto-adjust column widths based on content
-    // worksheet.columns.forEach((column: any) => {
-    //     let maxCellLength = 0;
-    //     column.eachCell({ includeEmpty: true }, (cell: any) => {
-    //         const cellLength = (cell.value ? cell.value.toString() : '').length;
-    //         maxCellLength = Math.max(maxCellLength, cellLength);
-    //     });
-    //     column.width = Math.min(30, maxCellLength + 2); // Limit width to 30 characters
-    // });
+    worksheet.columns.forEach((column: any) => {
+      let maxCellLength = 0;
+      column.eachCell({ includeEmpty: true }, (cell: any) => {
+        const cellLength = (cell.value ? cell.value.toString() : '').length;
+        maxCellLength = Math.max(maxCellLength, cellLength);
+      });
+      column.width = Math.min(20, maxCellLength + 2); // Limit width to 30 characters
+    });
 
     // Save the workbook
     await workbook.xlsx.writeFile(excelFilePath);
@@ -1169,23 +1170,36 @@ const exportGinnerProcurement = async (req: Request, res: Response) => {
     ]);
     headerRow.font = { bold: true };
     const transaction = await Transaction.findAll({
+      attributes: [
+        [Sequelize.col('date'), 'date'],
+        [Sequelize.col('"farmer"."code"'), 'farmerCode'],
+        [Sequelize.fn("concat", Sequelize.col('"farmer"."firstName"'), Sequelize.col('"farmer"."lastName"')), "farmerName"],
+        [Sequelize.col('"village"."village_name"'), 'villages'],
+        [Sequelize.col('qty_purchased'), 'qty_purchased'],
+        [Sequelize.col('"program"."program_name"'), 'programs'],
+        [Sequelize.col('vehicle'), 'vehicle'],
+      ],
       where: whereCondition,
       include: [
         {
           model: Village,
           as: "village",
+          attributes: [],
         },
         {
           model: Farmer,
           as: "farmer",
+          attributes: [],
         },
         {
           model: Program,
           as: "program",
+          attributes: [],
         },
         {
           model: Ginner,
           as: "ginner",
+          attributes: [],
         }
       ],
     });
@@ -1194,13 +1208,7 @@ const exportGinnerProcurement = async (req: Request, res: Response) => {
     for await (const [index, item] of transaction.entries()) {
       const rowValues = Object.values({
         index: index + 1,
-        date: item.date,
-        farmerCode: item.farmer_code ? item.farmer_code : '',
-        farmerName: item.farmer.firstName ? item.farmer.firstName + " " + item.farmer.lastName : '',
-        village: item.village ? item.village.village_name : '',
-        qtyPurchased: item.qty_purchased,
-        program: item.program.program_name,
-        vehicle: item.vehicle ? item.vehicle : '',
+        ...item.dataValues
       });
       worksheet.addRow(rowValues);
     }

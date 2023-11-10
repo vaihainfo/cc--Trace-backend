@@ -69,6 +69,7 @@ const fetchFabricPagination = async (req: Request, res: Response) => {
     const limit = Number(req.query.limit) || 10;
     const countryId: any = req.query.countryId;
     const stateId: any = req.query.stateId;
+    const brandId: any = req.query.brandId;
     const offset = (page - 1) * limit;
     const whereCondition: any = {}
     try {
@@ -96,6 +97,12 @@ const fetchFabricPagination = async (req: Request, res: Response) => {
                 .split(",")
                 .map((id: any) => parseInt(id, 10));
             whereCondition.state_id = { [Op.in]: idArray };
+        }
+        if (brandId) {
+            const idArray: number[] = brandId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition.brand = { [Op.overlap]: idArray }
         }
         //fetch data with pagination
         if (req.query.pagination === "true") {
@@ -134,7 +141,7 @@ const fetchFabricPagination = async (req: Request, res: Response) => {
                     },
                 ],
                 order: [
-                    ['name', sortOrder], // Sort the results based on the 'name' field and the specified order
+                    ['id', 'desc'], // Sort the results based on the 'name' field and the specified order
                 ]
             });
             return res.sendSuccess(res, result);

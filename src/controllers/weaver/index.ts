@@ -193,6 +193,9 @@ const exportWeaverSale = async (req: Request, res: Response) => {
     const excelFilePath = path.join("./upload", "weaver-sale.xlsx");
     const { weaverId, seasonId, programId }: any = req.query;
     try {
+        if (!weaverId) {
+            return res.sendError(res, "Need weaver Id")
+        }
         const whereCondition: any = {};
         const searchTerm = req.query.search || "";
         if (searchTerm) {
@@ -247,18 +250,36 @@ const exportWeaverSale = async (req: Request, res: Response) => {
             {
                 model: Season,
                 as: "season",
+                attributes: []
             },
             {
                 model: FabricType,
                 as: "fabric",
+                attributes: []
             },
             {
                 model: Garment,
                 as: "buyer",
-                attributes: ['id', 'name', 'address']
+                attributes: []
             }
         ];;
         const weaver = await WeaverSales.findAll({
+            attributes: [
+                [Sequelize.col('date'), 'date'],
+                [Sequelize.col('"season"."name"'), 'seasons'],
+                [Sequelize.col('"buyer"."name"'), 'buyers'],
+                [Sequelize.col('order_ref'), 'order_ref'],
+                [Sequelize.col('invoice_no'), 'invoice_no'],
+                [Sequelize.col('batch_lot_no'), 'batch_lot_no'],
+                [Sequelize.col('bale_ids'), 'bale_ids'],
+                [Sequelize.col('"fabric"."fabricType_name"'), 'fabrics'],
+                [Sequelize.col('fabric_contruction'), 'fabric_contruction'],
+                [Sequelize.col('fabric_length'), 'length'],
+                [Sequelize.col('fabric_gsm'), 'fabric_gsm'],
+                [Sequelize.col('fabric_weight'), 'fabric_weight'],
+                [Sequelize.col('fabric_weight'), 'fabric_weight'],
+                [Sequelize.col('transaction_via_trader'), 'transaction_via_trader'],
+            ],
             where: whereCondition,
             include: include
         });
@@ -267,18 +288,7 @@ const exportWeaverSale = async (req: Request, res: Response) => {
 
             const rowValues = Object.values({
                 index: index + 1,
-                date: item.date ? item.date : '',
-                season: item.season ? item.season.name : '',
-                buyer: item.buyer ? item.buyer.name : item.processor_name,
-                order: item.order_ref ? item.order_ref : '',
-                invoice: item.invoice_no ? item.invoice_no : '',
-                lotNo: item.batch_lot_no ? item.batch_lot_no : '',
-                boxId: item.bale_ids ? item.bale_ids : '',
-                fabrictype: item.fabric ? item.fabric.fabricType_name : '',
-                contruction: item.fabric_contruction ? item.fabric_contruction : '',
-                length: item.fabric_length ? item.fabric_length : '',
-                fabric_gsm: item.fabric_gsm ? item.fabric_gsm : '',
-                fabric_weight: item.fabric_weight ? item.fabric_weight : '',
+                ...item.dataValues,
                 transaction_via_trader: item.transaction_via_trader ? 'Yes' : 'No'
             });
             worksheet.addRow(rowValues);
@@ -348,7 +358,6 @@ const deleteWeaverSales = async (req: Request, res: Response) => {
     }
 }
 
-
 const getWeaverDyeing = async (req: Request, res: Response) => {
     try {
         if (!req.query.id) {
@@ -364,6 +373,7 @@ const getWeaverDyeing = async (req: Request, res: Response) => {
         return res.sendError(res, error.message);
     }
 };
+
 //fetch Weaver transaction with filters
 const fetchWeaverDashBoard = async (req: Request, res: Response) => {
     const searchTerm = req.query.search || "";
@@ -381,10 +391,11 @@ const fetchWeaverDashBoard = async (req: Request, res: Response) => {
         }
         if (searchTerm) {
             whereCondition[Op.or] = [
-                { batch_lot_no: { [Op.iLike]: `%${searchTerm}%` } }, // Search by 
-                { invoice_no: { [Op.iLike]: `%${searchTerm}%` } }, // Search by
+                { batch_lot_no: { [Op.iLike]: `%${searchTerm}%` } }, // Search by batch lot number
+                { invoice_no: { [Op.iLike]: `%${searchTerm}%` } }, // Search by invoice number
                 { '$program.program_name$': { [Op.iLike]: `%${searchTerm}%` } }, // Search by program
-                { '$season.name$': { [Op.iLike]: `%${searchTerm}%` } }, // Search by crop Type
+                { '$season.name$': { [Op.iLike]: `%${searchTerm}%` } }, // Search season name  
+                { '$spinner.name$': { [Op.iLike]: `%${searchTerm}%` } },// Search season spinner name  
             ];
         }
         if (status === 'Pending' || status === 'Sold') {
@@ -495,7 +506,7 @@ const updateStatusWeaverSale = async (req: Request, res: Response) => {
     }
 }
 
-//count the number of bales and total quantity stock With Program
+
 const countCottonBaleWithProgram = async (req: Request, res: Response) => {
     try {
         if (!req.query.weaverId) {
@@ -578,7 +589,7 @@ const getWeaverProgram = async (req: Request, res: Response) => {
     }
 };
 
-const getSpinnerAndProgram = async (req: Request, res: Response) => {
+const getSpinnerTransaction = async (req: Request, res: Response) => {
     const { weaverId, status, filter, programId, spinnerId }: any = req.query;
     const whereCondition: any = {};
     try {
@@ -594,6 +605,9 @@ const getSpinnerAndProgram = async (req: Request, res: Response) => {
             whereCondition.status = status === 'Pending' ? 'Pending for QR scanning' : 'Sold';
         }
 
+        if (filter === 'Quantity') {
+            whereCondition.qty_stock = { [Op.gt]: 0 }
+        }
         const spinner = await SpinSales.findAll({
             attributes: ['spinner_id', 'spinner.name'],
             where: whereCondition,
@@ -606,26 +620,15 @@ const getSpinnerAndProgram = async (req: Request, res: Response) => {
             ],
             group: ['spinner_id', "spinner.id"]
         });
-        const program = await SpinSales.findAll({
-            attributes: ['program_id', 'program.program_name'],
-            where: whereCondition,
-            include: [
-                {
-                    model: Program,
-                    as: 'program',
-                    attributes: ['id', 'program_name']
-                }
-            ],
-            group: ['program_id', "program.id"]
-        });
-        res.sendSuccess(res, { spinner, program });
+
+        res.sendSuccess(res, spinner);
     } catch (error: any) {
         return res.sendError(res, error.message);
     }
 };
 
 const getInvoiceAndyarnType = async (req: Request, res: Response) => {
-    const { weaverId, status, spinnerId }: any = req.query;
+    const { weaverId, status, spinnerId, filter }: any = req.query;
     const whereCondition: any = {};
     try {
         if (!weaverId) {
@@ -638,6 +641,9 @@ const getInvoiceAndyarnType = async (req: Request, res: Response) => {
         if (status === 'Pending' || status === 'Sold') {
             whereCondition.buyer_id = weaverId
             whereCondition.status = status === 'Pending' ? 'Pending for QR scanning' : 'Sold';
+        }
+        if (filter === 'Quantity') {
+            whereCondition.qty_stock = { [Op.gt]: 0 }
         }
         if (spinnerId) {
             const idArray: number[] = spinnerId
@@ -698,7 +704,7 @@ export {
     countCottonBaleWithProgram,
     exportWeaverSale,
     getWeaverProgram,
-    getSpinnerAndProgram,
+    getSpinnerTransaction,
     getInvoiceAndyarnType,
     deleteWeaverSales,
     getWeaverDyeing,
