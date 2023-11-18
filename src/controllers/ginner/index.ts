@@ -527,6 +527,10 @@ const exportGinnerSales = async (req: Request, res: Response) => {
             {
                 model: Program,
                 as: "program",
+            },
+            {
+                model: Spinner,
+                as: "buyerdata"
             }
         ];
         const gin = await GinSales.findAll({
@@ -541,7 +545,7 @@ const exportGinnerSales = async (req: Request, res: Response) => {
                 date: item.date ? item.date : '',
                 season: item.season ? item.season.name : '',
                 invoice: item.invoice_no ? item.invoice_no : '',
-                buyer: item.buyer ? item.buyer : '',
+                buyer: item.buyerdata ? item.buyerdata.name : '',
                 no_of_bales: item.no_of_bales ? item.no_of_bales : '',
                 lot_no: item.lot_no ? item.lot_no : '',
                 press_no: item.press_no ? item.press_no : '',
@@ -557,7 +561,7 @@ const exportGinnerSales = async (req: Request, res: Response) => {
                 const cellLength = (cell.value ? cell.value.toString() : '').length;
                 maxCellLength = Math.max(maxCellLength, cellLength);
             });
-            column.width = Math.min(40, maxCellLength + 2); // Limit width to 30 characters
+            column.width = Math.min(25, maxCellLength + 2); // Limit width to 30 characters
         });
 
         // Save the workbook
@@ -592,7 +596,7 @@ const createGinnerSales = async (req: Request, res: Response) => {
             transaction_agent: req.body.transactionAgent,
             candy_rate: req.body.candyRate,
             rate: req.body.rate,
-            reel_lot_no: req.body.reelLotNno,
+            reel_lot_no: req.body.reelLotNno ? req.body.reelLotNno : null,
             despatch_from: req.body.despatchFrom,
             press_no: req.body.pressNo,
             status: 'To be Submitted',
@@ -910,7 +914,7 @@ const dashboardGraphWithProgram = async (req: Request, res: Response) => {
                 },
                 attributes: [
                     [
-                        Sequelize.fn("SUM", Sequelize.literal("CAST(qty_purchased AS INTEGER)")),
+                        Sequelize.fn("SUM", Sequelize.literal("CAST(qty_purchased AS DOUBLE PRECISION)")),
                         "totalPurchased",
                     ],
                     [

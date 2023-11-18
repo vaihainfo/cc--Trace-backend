@@ -12,6 +12,7 @@ import Knitter from "../../../models/knitter.model";
 import Garment from "../../../models/garment.model";
 import Trader from "../../../models/trader.model";
 import Fabric from "../../../models/fabric.model";
+import { generateTokens } from "../../../util/auth";
 
 const getUserInfo = async (req: Request, res: Response) => {
     try {
@@ -22,7 +23,8 @@ const getUserInfo = async (req: Request, res: Response) => {
         );
 
 
-        const role = await UserRole.findByPk(authenticatedReq.user.role, {
+        let role;
+        role = await UserRole.findByPk(authenticatedReq.user.role, {
             include: [
                 {
                     model: UserCategory,
@@ -31,8 +33,20 @@ const getUserInfo = async (req: Request, res: Response) => {
                 },
             ],
         });
-
-        const menuList = await MenuList.findAll(
+        if (req.query.ginnerId) {
+            role = await UserRole.findOne({
+                where: { user_role: 'Ginner' },
+                include: [
+                    {
+                        model: UserCategory,
+                        as: 'userCategory',
+                        attributes: ['id', 'category_name'], // Include only the name attribute of the category
+                    },
+                ],
+            });
+            role = role.dataValues;
+        }
+        let menuList = await MenuList.findAll(
             {
                 where: {
                     categories_allowed: {
@@ -43,7 +57,7 @@ const getUserInfo = async (req: Request, res: Response) => {
             }
         );
 
-        const privileges = await UserPrivilege.findAll({
+        let privileges = await UserPrivilege.findAll({
             where: {
                 userRole_id: role.id,
             },
@@ -72,6 +86,9 @@ const getUserInfo = async (req: Request, res: Response) => {
         garment ? processor.push('Garment') : "";
         trader ? processor.push('Trader') : "";
         fabric ? processor.push('Fabric') : "";
+        if (req.query.ginnerId) {
+            ginner = await Ginner.findOne({ where: { id: req.query.ginnerId } })
+        }
         return res.sendSuccess(res, { user, role, menuList, privileges, spinner, ginner, weaver, knitter, garment, trader, fabric, processor });
     } catch (error) {
         console.log(error)
@@ -79,4 +96,25 @@ const getUserInfo = async (req: Request, res: Response) => {
     }
 }
 
-export { getUserInfo }
+const processorLoginAdmin = async (req: Request, res: Response) => {
+    try {
+        let userId: any
+        if (req.query.type === 'ginner') {
+            let ginner = await Ginner.findOne({ where: { id: req.query.ginnerId } });
+            userId = ginner.dataValues.ginnerUser_id
+        }
+        const user = await User.findOne({ where: { id: userId } });
+        if (!user) {
+            return res.sendError(res, "user not found");
+        }
+        if (user) {
+            var { accessToken } = await generateTokens(user.dataValues.id, user.dataValues.role);
+
+            return res.sendSuccess(res, { accessToken: accessToken, user: user.dataValues })
+        }
+    } catch (error) {
+        return res.sendError(res, "ERR_NOT_ABLE_TO_GET");
+    }
+}
+
+export { getUserInfo, processorLoginAdmin }

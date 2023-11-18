@@ -281,9 +281,9 @@ const exportQualityParameter = async (req: Request, res: Response) => {
             const rowValues = Object.values({
                 index: index + 1,
                 name: item.ginner ? item.ginner.name : item.spinner.name,
-                season: item.process ? item.process.season.name : item.sales.season.name,
-                no_of_bales: item.process ? item.process.no_of_bales : item.sales.no_of_bales ? item.sales.no_of_bales : '',
-                processDate: item.process ? item.process.date : item.sales.date,
+                season: item.process ? item.process?.season.name : item.sales?.season.name,
+                no_of_bales: item.process ? item.process?.no_of_bales : item.sales?.no_of_bales ? item.sales?.no_of_bales : '',
+                processDate: item.process ? item.process?.date : item.sales?.date,
                 date: item.test_report ? item.test_report : '',
                 lot_no: item.process ? item.process.lot_no : item.lot_no ? item.lot_no : '',
                 reel_lot_no: item.process ? item.process.reel_lot_no : item.reel_lot_no ? item.reel_lot_no : '',

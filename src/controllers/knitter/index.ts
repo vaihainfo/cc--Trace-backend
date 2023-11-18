@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { Sequelize, Op, where } from "sequelize";
-import { generateOnlyQrCode } from "../../provider/qrcode";
+import { encrypt, generateOnlyQrCode } from "../../provider/qrcode";
 import * as ExcelJS from "exceljs";
 import * as fs from "fs";
 import * as path from "path";
@@ -23,7 +23,7 @@ const createKnitterrSales = async (req: Request, res: Response) => {
         let dyeing
         if (req.body.dyeingRequired) {
             dyeing = await Dyeing.create({
-                processor_name: req.body.processorName,
+                processor_name: req.body.dyeingProcessorName,
                 dyeing_address: req.body.dyeingAddress,
                 process_name: req.body.processName,
                 yarn_delivered: req.body.yarnDelivered,
@@ -31,8 +31,7 @@ const createKnitterrSales = async (req: Request, res: Response) => {
                 net_yarn: req.body.processNetYarnQty,
             });
         }
-        let uniqueFilename = `knitter_sales_qrcode_${Date.now()}.png`;
-        let aa = await generateOnlyQrCode(`Test`, uniqueFilename);
+
         const data = {
             knitter_id: req.body.knitterId,
             program_id: req.body.programId,
@@ -61,17 +60,24 @@ const createKnitterrSales = async (req: Request, res: Response) => {
             bill_of_ladding: req.body.billOfLadding,
             transporter_name: req.body.transporterName,
             vehicle_no: req.body.vehicleNo,
-            tc_files: req.body.tcFiles,
+            tc_file: req.body.tcFiles,
             contract_file: req.body.contractFile,
             invoice_file: req.body.invoiceFile,
             delivery_notes: req.body.deliveryNotes,
-            qty_stock: req.body.totalYarnQty,
+            qty_stock: req.body.fabricWeight,
             dyeing_required: req.body.dyeingRequired,
             dyeing_id: dyeing ? dyeing.id : null,
-            status: 'Pending for QR scanning',
-            qr: uniqueFilename
+            status: 'Pending for QR scanning'
         };
         const kniSale = await KnitSales.create(data);
+        let uniqueFilename = `knitter_sales_qrcode_${Date.now()}.png`;
+        let da = encrypt(`Knitter,Sale,${kniSale.id}`);
+        let aa = await generateOnlyQrCode(da, uniqueFilename);
+        const gin = await KnitSales.update({ qr: uniqueFilename }, {
+            where: {
+                id: kniSale.id
+            }
+        });
         if (req.body.chooseYarn && req.body.chooseYarn.length > 0) {
             for await (let obj of req.body.chooseYarn) {
                 let update = await SpinSales.update({ qty_stock: obj.totalQty - obj.qtyUsed }, { where: { id: obj.id } });
@@ -212,6 +218,57 @@ const fetchKnitterSalesPagination = async (req: Request, res: Response) => {
             });
             return res.sendSuccess(res, gin);
         }
+    } catch (error: any) {
+        return res.sendError(res, error.message);
+    }
+};
+
+//fetch knitter Sale by id
+const fetchKnitterSale = async (req: Request, res: Response) => {
+    const { salesId } = req.query;
+    const whereCondition: any = {};
+    try {
+        if (!salesId) {
+            return res.sendError(res, "need sales id");
+        }
+        whereCondition.id = salesId;
+
+
+        let include = [
+            {
+                model: Knitter,
+                as: "knitter",
+                attributes: ['id', 'name', 'address']
+            },
+            {
+                model: Season,
+                as: "season",
+            },
+            {
+                model: Program,
+                as: "program",
+            },
+            {
+                model: Dyeing,
+                as: "dyeing",
+            },
+            {
+                model: FabricType,
+                as: "fabric",
+            },
+            {
+                model: Garment,
+                as: "buyer",
+                attributes: ['id', 'name', 'address']
+            }
+        ];
+        //fetch data with pagination
+        const rows = await KnitSales.findOne({
+            where: whereCondition,
+            include: include
+        });
+        return res.sendSuccess(res, rows);
+
     } catch (error: any) {
         return res.sendError(res, error.message);
     }
@@ -399,6 +456,10 @@ const fetchKnitterDashBoard = async (req: Request, res: Response) => {
             {
                 model: Program,
                 as: "program",
+            },
+            {
+                model: YarnCount,
+                as: "yarncount"
             }
         ];
         //fetch data with pagination
@@ -657,5 +718,6 @@ export {
     getSpinnerAndProgram,
     getInvoiceAndyarnType,
     deleteKnitterSales,
-    getGarments
+    getGarments,
+    fetchKnitterSale
 }

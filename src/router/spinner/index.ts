@@ -12,7 +12,6 @@ import {
     exportSpinnerTransaction,
     getProgram,
     fetchComberNoilPagination,
-    chooseYarnProcess,
     getYarnCount,
     deleteSpinnerProcess,
     deleteSpinnerSales,
@@ -20,7 +19,10 @@ import {
     fetchSpinnerProcess,
     getGinnerDashboard,
     chooseLint,
-    getSalesInvoice
+    getSalesInvoice,
+    chooseYarn,
+    getInvoiceAndReelLotNo,
+    getYarnReelLotNo
 } from "../../controllers/spinner";
 
 import { Router } from "express";
@@ -43,11 +45,13 @@ router.put('/transaction', updateStatusSales);
 router.get('/transaction/count', countCottonBaleWithProgram);
 router.get('/transaction/export', exportSpinnerTransaction);
 router.get('/get-program', getProgram);
-router.get('/choose-yarn', chooseYarnProcess);
 router.get('/get-yarn', getYarnCount);
 router.get('/get-knitter-weaver', getKnitterWeaver);
 router.get('/get-filter-ginner', getGinnerDashboard);
 router.get('/choose-lint', chooseLint);
+router.get('/choose-yarn', chooseYarn);
 router.get('/sales-invoice', getSalesInvoice);
+router.get('/lint-invoice', getInvoiceAndReelLotNo);
+router.get('/yarn-reel-lot', getYarnReelLotNo);
 
 export default router;

@@ -23,7 +23,7 @@ const forgotPassword = async (req: Request, res: Response) => {
                 }
             });
         }
-        const link = `${process.env.ADMIN_URL}?token=${resetToken}`;
+        const link = `${process.env.ADMIN_URL}/auth/reset-password?token=${resetToken}`;
 
         sendForgotEmail(link, user.email);
         return res.send({ success: true, message: 'Forgot password email has been send' });

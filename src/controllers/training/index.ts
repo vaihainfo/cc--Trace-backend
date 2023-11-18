@@ -456,6 +456,7 @@ const fecthTrainingStatusSpecific = async (req: Request, res: Response) => {
                 { '$process-training.state.state_name$': { [Op.iLike]: `%${searchTerm}%` } },
                 { '$process-training.venue$': { [Op.iLike]: `%${searchTerm}%` } },
                 { '$process-training.brand.brand_name$': { [Op.iLike]: `%${searchTerm}%` } },
+                { '$process-training.training_mode$': { [Op.iLike]: `%${searchTerm}%` } }, // Search by training type
             ];
         }
         const training = await ProcessTrainingProcessStatus.findAll({
@@ -581,6 +582,7 @@ const exportTrainingStatus = async (req: Request, res: Response) => {
                 { '$trader.name$': { [Op.iLike]: `%${searchTerm}%` } },
                 { '$process-training.country.county_name$': { [Op.iLike]: `%${searchTerm}%` } },
                 { '$process-training.state.state_name$': { [Op.iLike]: `%${searchTerm}%` } },
+                { '$process-training.training_mode$': { [Op.iLike]: `%${searchTerm}%` } }, // Search by training type
             ];
         }
         const training = await ProcessTrainingProcessStatus.findAll({

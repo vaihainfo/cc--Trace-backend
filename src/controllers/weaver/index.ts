@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { Sequelize, Op, where } from "sequelize";
-import { generateOnlyQrCode } from "../../provider/qrcode";
+import { encrypt, generateOnlyQrCode } from "../../provider/qrcode";
 import * as ExcelJS from "exceljs";
 import * as fs from "fs";
 import * as path from "path";
@@ -31,8 +31,7 @@ const createWeaverSales = async (req: Request, res: Response) => {
                 net_yarn: req.body.processNetYarnQty,
             });
         }
-        let uniqueFilename = `weaver_sales_qrcode_${Date.now()}.png`;
-        let aa = await generateOnlyQrCode(`Test`, uniqueFilename);
+
         const data = {
             weaver_id: req.body.weaverId,
             program_id: req.body.programId,
@@ -63,17 +62,24 @@ const createWeaverSales = async (req: Request, res: Response) => {
             no_of_bales: req.body.noOfBales,
             transporter_name: req.body.transporterName,
             vehicle_no: req.body.vehicleNo,
-            tc_files: req.body.tcFiles,
+            tc_file: req.body.tcFiles,
             contract_file: req.body.contractFile,
             invoice_file: req.body.invoiceFile,
             delivery_notes: req.body.deliveryNotes,
-            qty_stock: req.body.totalYarnQty,
+            qty_stock: req.body.fabricWeight,
             dyeing_required: req.body.dyeingRequired,
             dyeing_id: dyeing ? dyeing.id : null,
-            status: 'Pending for QR scanning',
-            qr: uniqueFilename
+            status: 'Pending for QR scanning'
         };
         const weaverSales = await WeaverSales.create(data);
+        let uniqueFilename = `weaver_sales_qrcode_${Date.now()}.png`;
+        let da = encrypt(`Weaver,Sale,${weaverSales.id}`);
+        let aa = await generateOnlyQrCode(da, uniqueFilename);
+        const gin = await WeaverSales.update({ qr: uniqueFilename }, {
+            where: {
+                id: weaverSales.id
+            }
+        });
         if (req.body.chooseYarn && req.body.chooseYarn.length > 0) {
             for await (let obj of req.body.chooseYarn) {
                 let update = await SpinSales.update({ qty_stock: obj.totalQty - obj.qtyUsed }, { where: { id: obj.id } });
@@ -512,58 +518,64 @@ const countCottonBaleWithProgram = async (req: Request, res: Response) => {
         if (!req.query.weaverId) {
             return res.sendError(res, 'Need Weaver Id');
         }
-        if (!req.query.programId) {
-            return res.sendError(res, 'Program Id');
-        }
-        let whereCondition: any = {}
-        whereCondition.buyer_id = req.query.weaverId;
-        whereCondition.status = 'Sold';
-        const weaver = await SpinSales.findAll({
-            where: whereCondition,
-            attributes: [
-                [
-                    Sequelize.fn("SUM", Sequelize.col("total_qty")),
-                    "totalQuantity",
-                ],
-                [
-                    Sequelize.fn(
-                        "SUM",
-                        Sequelize.col("qty_stock")
-                    ),
-                    "totalQuantityStock",
-                ],
-            ],
-            include: [
-                {
-                    model: Program,
-                    as: "program",
-                    attributes: ["id", "program_name", "program_status"],
-                }
-            ],
-            group: ["program.id"],
-        });
-
-        let data = await WeaverSales.findAll({
+        let result = await Weaver.findOne({ where: { id: req.query.weaverId } });
+        let program = await Program.findAll({
             where: {
-                weaver_id: req.query.weaverId,
-                program_id: req.query.programId
+                id: result.program_id
             },
-            attributes: [
-                [
-                    Sequelize.fn("SUM", Sequelize.col("fabric_length")),
-                    "total"
-                ]
-            ],
-            include: [
-                {
-                    model: FabricType,
-                    as: "fabric",
-                    attributes: ["id", "fabricType_name"],
-                }
-            ],
-            group: ["fabric.id"],
+            attributes: ['id', 'program_name']
         });
-        res.sendSuccess(res, { weaver, data });
+        let resulting: any = [];
+        for await (let obj of program) {
+            let whereCondition: any = {}
+            whereCondition.buyer_id = req.query.weaverId;
+            whereCondition.status = 'Sold';
+            const weaver = await SpinSales.findOne({
+                where: { ...whereCondition, program_id: obj.id },
+                attributes: [
+                    [
+                        Sequelize.fn("SUM", Sequelize.col("total_qty")),
+                        "totalQuantity",
+                    ],
+                    [
+                        Sequelize.fn(
+                            "SUM",
+                            Sequelize.col("qty_stock")
+                        ),
+                        "totalQuantityStock",
+                    ],
+                ],
+                group: ["program_id"],
+            });
+
+            let data = await WeaverSales.findAll({
+                where: {
+                    weaver_id: req.query.weaverId,
+                    program_id: obj.id
+                },
+                attributes: [
+                    [
+                        Sequelize.fn("SUM", Sequelize.col("fabric_length")),
+                        "total"
+                    ]
+                ],
+                include: [
+                    {
+                        model: FabricType,
+                        as: "fabric",
+                        attributes: ["id", "fabricType_name"],
+                    },
+                    {
+                        model: Program,
+                        as: "program",
+                        attributes: [],
+                    }
+                ],
+                group: ["fabric.id", "program_id"],
+            });
+            resulting.push({ program: obj, fabric: data, quantity: weaver })
+        }
+        res.sendSuccess(res, resulting);
     } catch (error: any) {
         return res.sendError(res, error.message);
     }
