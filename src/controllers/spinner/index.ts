@@ -24,6 +24,7 @@ import LintSelections from "../../models/lint-seletions.model";
 import SpinProcessYarnSelection from "../../models/spin-process-yarn-seletions.model";
 import BaleSelection from "../../models/bale-selection.model";
 import GinBale from "../../models/gin-bale.model";
+import ComberSelection from "../../models/comber-selection.model";
 
 //create Spinner Process
 const createSpinnerProcess = async (req: Request, res: Response) => {
@@ -88,6 +89,7 @@ const createSpinnerProcess = async (req: Request, res: Response) => {
         if (req.body.chooseComberNoil && req.body.chooseComberNoil.length > 0) {
             for await (let obj of req.body.chooseComberNoil) {
                 let update = await SpinProcess.update({ comber_noil_stock: obj.totalQty - obj.qtyUsed }, { where: { id: obj.id } })
+                let create = await ComberSelection.create({ qty_used: obj.qtyUsed, process_id: spin.id, yarn_id: obj.id })
             }
         }
         res.sendSuccess(res, { spin });
@@ -174,6 +176,7 @@ const fetchSpinnerProcessPagination = async (req: Request, res: Response) => {
             {
                 model: Season,
                 as: "season",
+                attributes: ['id', 'name']
             },
             {
                 model: Dyeing,
@@ -182,10 +185,12 @@ const fetchSpinnerProcessPagination = async (req: Request, res: Response) => {
             {
                 model: Program,
                 as: "program",
+                attributes: ['id', 'program_name']
             },
             {
                 model: YarnCount,
                 as: "yarncount",
+                attributes: ['id', 'yarnCount_name']
             }
         ];
         //fetch data with pagination
@@ -693,26 +698,32 @@ const fetchSpinSalesPagination = async (req: Request, res: Response) => {
             {
                 model: Spinner,
                 as: "spinner",
+                attributes: ['id', 'name']
             },
             {
                 model: Season,
                 as: "season",
+                attributes: ['id', 'name']
             },
             {
                 model: Program,
                 as: "program",
+                attributes: ['id', 'program_name']
             },
             {
                 model: YarnCount,
-                as: 'yarncount'
+                as: 'yarncount',
+                attributes: ['id', 'yarnCount_name']
             },
             {
                 model: Weaver,
                 as: "weaver",
+                attributes: ['id', 'name']
             },
             {
                 model: Knitter,
                 as: "knitter",
+                attributes: ['id', 'name']
             }
         ];
         //fetch data with pagination
@@ -722,7 +733,7 @@ const fetchSpinSalesPagination = async (req: Request, res: Response) => {
                 include: include,
                 order: [
                     [
-                        'id', 'asc'
+                        'id', 'desc'
                     ]
                 ],
                 offset: offset,
@@ -735,7 +746,7 @@ const fetchSpinSalesPagination = async (req: Request, res: Response) => {
                 include: include,
                 order: [
                     [
-                        'id', 'asc'
+                        'id', 'desc'
                     ]
                 ]
             });
@@ -846,7 +857,12 @@ const exportSpinnerSale = async (req: Request, res: Response) => {
         ];
         const gin = await SpinSales.findAll({
             where: whereCondition,
-            include: include
+            include: include,
+            order: [
+                [
+                    'id', 'desc'
+                ]
+            ]
         });
         // Append data to worksheet
         for await (const [index, item] of gin.entries()) {
@@ -1357,7 +1373,7 @@ const getGinnerDashboard = async (req: Request, res: Response) => {
 
 const chooseLint = async (req: Request, res: Response) => {
     const searchTerm = req.query.search || "";
-    const { spinnerId, ginnerId, programId }: any = req.query;
+    const { spinnerId, ginnerId, programId, reelLotNo, invoiceNo, seasonId }: any = req.query;
     const whereCondition: any = {};
     try {
         if (!spinnerId) {
@@ -1369,60 +1385,245 @@ const chooseLint = async (req: Request, res: Response) => {
         if (spinnerId) {
             whereCondition.buyer = spinnerId;
         }
+        if (seasonId) {
+            const idArray: number[] = seasonId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition.season_id = { [Op.in]: idArray };
+        }
+
         if (programId) {
             const idArray: number[] = programId
                 .split(",")
                 .map((id: any) => parseInt(id, 10));
             whereCondition.program_id = { [Op.in]: idArray };
         }
+
         if (ginnerId) {
             const idArray: number[] = ginnerId
                 .split(",")
                 .map((id: any) => parseInt(id, 10));
             whereCondition.ginner_id = { [Op.in]: idArray };
         }
+
+        if (reelLotNo) {
+            const idArray: any[] = reelLotNo
+                .split(",")
+                .map((id: any) => id);
+            whereCondition.reel_lot_no = { [Op.in]: idArray };
+        }
+
+        if (invoiceNo) {
+            const idArray: any[] = invoiceNo
+                .split(",")
+                .map((id: any) => id);
+            whereCondition.invoice_no = { [Op.in]: idArray };
+        }
+
         whereCondition.status = 'Sold';
+        whereCondition.qty_stock = { [Op.gt]: 0 }
         let include = [
             {
-                model: Ginner,
-                as: "ginner",
+                model: Season,
+                as: "season",
                 attributes: ['id', 'name']
-            },
-            {
-                model: Program,
-                as: "program",
-                attributes: ['id', 'program_name']
             }
         ];
-        //fetch data with pagination
 
+        //fetch data with pagination
         let result = await GinSales.findAll({
             where: whereCondition,
             include: include,
-            attributes: ['id', 'date', 'total_qty', 'no_of_bales', 'choosen_bale', 'lot_no', 'press_no', 'reel_lot_no', 'qty_stock', 'invoice_no'],
-            order: [['id', 'DESC']]
+            attributes: [
+                [Sequelize.fn('SUM', Sequelize.col('qty_stock')), 'available_lint']
+            ],
+            group: ["season.id", "season_id"]
         });
-
-        const bales_list = [];
-        for await (let obj of result) {
-            const lot_details = await BaleSelection.findAll({
-                where: { sales_id: obj.dataValues.id },
+        // console.log(result);
+        let list = [];
+        for await (let item of result) {
+            let items = await GinSales.findAll({
+                where: { ...whereCondition, season_id: item.dataValues.season.id },
                 include: [
                     {
-                        model: GinBale,
-                        as: 'bale'
+                        model: Ginner,
+                        as: "ginner",
+                        attributes: ['id', 'name']
+                    },
+                    {
+                        model: Program,
+                        as: "program",
+                        attributes: ['id', 'program_name']
                     }
-                ]
+                ],
+                attributes: ['id', 'date', 'total_qty', 'no_of_bales', 'choosen_bale', 'lot_no', 'press_no', 'reel_lot_no', 'qty_stock', 'invoice_no'],
+                order: [['id', 'DESC']]
             });
-            bales_list.push({ ...obj.dataValues, bale: lot_details })
+            list.push({ ...item.dataValues, data: items });
         }
-        return res.sendSuccess(res, bales_list);
+        return res.sendSuccess(res, list);
 
     } catch (error: any) {
         return res.sendError(res, error.message);
     }
 };
 
+const chooseYarn = async (req: Request, res: Response) => {
+    const searchTerm = req.query.search || "";
+    const { spinnerId, programId, reelLotNo, seasonId }: any = req.query;
+    const whereCondition: any = {};
+    try {
+        if (!spinnerId) {
+            return res.sendError(res, 'Spinner Id is required')
+        }
+        if (!programId) {
+            return res.sendError(res, 'Program Id is required')
+        }
+        if (spinnerId) {
+            whereCondition.spinner_id = spinnerId;
+        }
+        if (seasonId) {
+            const idArray: number[] = seasonId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition.season_id = { [Op.in]: idArray };
+        }
+
+        if (programId) {
+            const idArray: number[] = programId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition.program_id = { [Op.in]: idArray };
+        }
+
+        if (reelLotNo) {
+            const idArray: any[] = reelLotNo
+                .split(",")
+                .map((id: any) => id);
+            whereCondition.reel_lot_no = { [Op.in]: idArray };
+        }
+        whereCondition.qty_stock = { [Op.gt]: 0 }
+        let include = [
+            {
+                model: Season,
+                as: "season",
+                attributes: ['id', 'name']
+            }
+        ];
+
+        //fetch data with pagination
+        let result = await SpinProcess.findAll({
+            where: whereCondition,
+            include: include,
+            attributes: [
+                [Sequelize.fn('SUM', Sequelize.col('qty_stock')), 'available_yarn']
+            ],
+            group: ["season.id", "season_id"]
+        });
+        // console.log(result);
+        let list = [];
+        for await (let item of result) {
+            let items = await SpinProcess.findAll({
+                where: { ...whereCondition, season_id: item.dataValues.season.id },
+                attributes: ['id', 'yarn_type', 'no_of_boxes', 'reel_lot_no', 'batch_lot_no', 'qty_stock', 'tot_box_user'],
+                include: [
+                    {
+                        model: Program,
+                        as: "program",
+                        attributes: ['id', 'program_name']
+                    },
+                    {
+                        model: YarnCount,
+                        as: "yarncount",
+                        attributes: ['id', 'yarnCount_name']
+                    },
+                    {
+                        model: Spinner,
+                        as: "spinner",
+                        attributes: ['id', 'name']
+                    }
+                ],
+                order: [['id', 'DESC']]
+            });
+            list.push({ ...item.dataValues, data: items });
+        }
+        return res.sendSuccess(res, list);
+
+    } catch (error: any) {
+        return res.sendError(res, error.message);
+    }
+};
+
+const getInvoiceAndReelLotNo = async (req: Request, res: Response) => {
+    const { programId, status, spinnerId }: any = req.query;
+    const whereCondition: any = {};
+    try {
+        if (!spinnerId) {
+            return res.sendError(res, 'Spinner Id is required')
+        }
+        if (!programId) {
+            return res.sendError(res, 'Program Id is required')
+        }
+        if (programId) {
+            const idArray: number[] = programId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition.program_id = { [Op.in]: idArray };
+        }
+        if (spinnerId) {
+            whereCondition.buyer = spinnerId;
+        }
+        whereCondition.status = 'Sold';
+        whereCondition.qty_stock = { [Op.gt]: 0 }
+        const invoice = await GinSales.findAll({
+            attributes: ['invoice_no'],
+            where: whereCondition,
+            group: ['invoice_no']
+        });
+        const reelLot = await GinSales.findAll({
+            attributes: ['reel_lot_no'],
+            where: { ...whereCondition, reel_lot_no: { [Op.not]: null } },
+            group: ['reel_lot_no']
+        });
+
+        res.sendSuccess(res, { invoice, reelLot });
+    } catch (error: any) {
+        return res.sendError(res, error.message);
+    }
+};
+
+const getYarnReelLotNo = async (req: Request, res: Response) => {
+    const { programId, status, spinnerId }: any = req.query;
+    const whereCondition: any = {};
+    try {
+        if (!spinnerId) {
+            return res.sendError(res, 'Spinner Id is required')
+        }
+        if (!programId) {
+            return res.sendError(res, 'Program Id is required')
+        }
+        if (programId) {
+            const idArray: number[] = programId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition.program_id = { [Op.in]: idArray };
+        }
+        if (spinnerId) {
+            whereCondition.spinner_id = spinnerId;
+        }
+        whereCondition.reel_lot_no = { [Op.not]: null }
+        whereCondition.qty_stock = { [Op.gt]: 0 }
+        const reelLot = await SpinProcess.findAll({
+            attributes: ['reel_lot_no'],
+            where: whereCondition,
+            group: ['reel_lot_no']
+        });
+
+        res.sendSuccess(res, reelLot);
+    } catch (error: any) {
+        return res.sendError(res, error.message);
+    }
+};
 
 export {
     createSpinnerProcess,
@@ -1446,5 +1647,8 @@ export {
     fetchSpinnerProcess,
     getGinnerDashboard,
     chooseLint,
-    getSalesInvoice
+    getSalesInvoice,
+    chooseYarn,
+    getInvoiceAndReelLotNo,
+    getYarnReelLotNo
 }

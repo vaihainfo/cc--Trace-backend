@@ -9,13 +9,15 @@ import {
     getSpinnerAndProgram,
     getInvoiceAndyarnType,
     deleteKnitterSales,
-    getGarments
+    getGarments,
+    fetchKnitterSale
 } from "../../controllers/knitter";
 
 import { Router } from "express";
 const router = Router();
 
 router.get('/', fetchKnitterSalesPagination);
+router.get('/get-sale', fetchKnitterSale);
 router.post('/', createKnitterrSales);
 router.delete('/', deleteKnitterSales);
 router.get('/export', exportKnitterSale);

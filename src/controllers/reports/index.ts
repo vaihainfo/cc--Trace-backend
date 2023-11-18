@@ -3469,7 +3469,7 @@ const fetchGinnerSummaryPagination = async (req: Request, res: Response) => {
             let [cottonProcuredCur, qtyPrev, weightcurrent, weightPrev, linSoldCurr, linSoldPrev]: any = await Promise.all([
                 Transaction.findOne({
                     attributes: [
-                        [sequelize.fn('COALESCE', sequelize.fn('SUM', Sequelize.literal("CAST(qty_purchased AS INTEGER)")), 0), 'qty']
+                        [sequelize.fn('COALESCE', sequelize.fn('SUM', Sequelize.literal("CAST(qty_purchased AS DOUBLE PRECISION)")), 0), 'qty']
                     ],
                     where: {
                         season_id: 13,
@@ -3478,7 +3478,7 @@ const fetchGinnerSummaryPagination = async (req: Request, res: Response) => {
                 }),
                 Transaction.findOne({
                     attributes: [
-                        [sequelize.fn('COALESCE', sequelize.fn('SUM', Sequelize.literal("CAST(qty_purchased AS INTEGER)")), 0), 'qty']
+                        [sequelize.fn('COALESCE', sequelize.fn('SUM', Sequelize.literal("CAST(qty_purchased AS DOUBLE PRECISION)")), 0), 'qty']
                     ],
                     where: {
                         season_id: 14,
@@ -3653,7 +3653,7 @@ const exportGinnerSummary = async (req: Request, res: Response) => {
             let [cottonProcuredCur, qtyPrev, weightcurrent, weightPrev, linSoldCurr, linSoldPrev]: any = await Promise.all([
                 Transaction.findOne({
                     attributes: [
-                        [sequelize.fn('COALESCE', sequelize.fn('SUM', Sequelize.literal("CAST(qty_purchased AS INTEGER)")), 0), 'qty']
+                        [sequelize.fn('COALESCE', sequelize.fn('SUM', Sequelize.literal("CAST(qty_purchased AS DOUBLE PRECISION)")), 0), 'qty']
                     ],
                     where: {
                         season_id: 13,
@@ -3662,7 +3662,7 @@ const exportGinnerSummary = async (req: Request, res: Response) => {
                 }),
                 Transaction.findOne({
                     attributes: [
-                        [sequelize.fn('COALESCE', sequelize.fn('SUM', Sequelize.literal("CAST(qty_purchased AS INTEGER)")), 0), 'qty']
+                        [sequelize.fn('COALESCE', sequelize.fn('SUM', Sequelize.literal("CAST(qty_purchased AS DOUBLE PRECISION)")), 0), 'qty']
                     ],
                     where: {
                         season_id: 14,
@@ -3960,7 +3960,7 @@ const fetchPscpPrecurement = async (req: Request, res: Response) => {
             let obj: any = {}
             let procurementrow = await Transaction.findOne({
                 attributes: [
-                    [sequelize.fn('COALESCE', sequelize.fn('SUM', Sequelize.literal("CAST(qty_purchased AS INTEGER)")), 0), 'procurement_seed_cotton'],
+                    [sequelize.fn('COALESCE', sequelize.fn('SUM', Sequelize.literal("CAST(qty_purchased AS DOUBLE PRECISION)")), 0), 'procurement_seed_cotton'],
                     [sequelize.fn('COALESCE', sequelize.fn('SUM', sequelize.col('qty_stock')), 0), 'total_qty_lint_produced']
                 ],
                 where: { season_id: item.season_id }
@@ -4068,7 +4068,7 @@ const exportPscpCottonProcurement = async (req: Request, res: Response) => {
             let obj: any = {};
             let procurementrow = await Transaction.findOne({
                 attributes: [
-                    [sequelize.fn('COALESCE', sequelize.fn('SUM', Sequelize.literal("CAST(qty_purchased AS INTEGER)")), 0), 'procurement_seed_cotton'],
+                    [sequelize.fn('COALESCE', sequelize.fn('SUM', Sequelize.literal("CAST(qty_purchased AS DOUBLE PRECISION)")), 0), 'procurement_seed_cotton'],
                     [sequelize.fn('COALESCE', sequelize.fn('SUM', sequelize.col('qty_stock')), 0), 'total_qty_lint_produced']
                 ],
                 where: { season_id: item.season_id }

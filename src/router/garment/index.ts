@@ -12,7 +12,8 @@ import {
     dashboardGraph,
     getprocessName,
     getInvoice,
-    fetchGarmentSale
+    fetchGarmentSale,
+    getBrands
 } from "../../controllers/garment-sales";
 
 import { Router } from "express";
@@ -33,5 +34,6 @@ router.get('/dashboard/garph', dashboardGraph);
 router.get('/get-processor', getprocessName);
 router.get('/get-invoice', getInvoice);
 router.get('/get-sale', fetchGarmentSale);
+router.get('/get-brand', getBrands);
 
 export default router;

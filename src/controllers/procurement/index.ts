@@ -474,7 +474,7 @@ const cottonData = async (req: Request, res: Response) => {
       });
       const soldQty = await Transaction.findOne({
         attributes: [
-          [sequelize.fn('COALESCE', sequelize.fn('SUM', Sequelize.literal("CAST(qty_purchased AS INTEGER)")), 0), 'qty']
+          [sequelize.fn('COALESCE', sequelize.fn('SUM', Sequelize.literal("CAST(qty_purchased AS DOUBLE PRECISION)")), 0), 'qty']
         ],
         where: {
           village_id: req.query.villageId,
@@ -504,7 +504,7 @@ const cottonData = async (req: Request, res: Response) => {
       }
       const soldQty = await Transaction.findOne({
         attributes: [
-          [sequelize.fn('COALESCE', sequelize.fn('SUM', Sequelize.literal("CAST(qty_purchased AS INTEGER)")), 0), 'qty']
+          [sequelize.fn('COALESCE', sequelize.fn('SUM', Sequelize.literal("CAST(qty_purchased AS DOUBLE PRECISION)")), 0), 'qty']
         ],
         where: whereCondition
       })

@@ -429,7 +429,7 @@ const fetchQrDashboard = async (req: Request, res: Response) => {
             INNER JOIN farms ON transactions.farm_id=farms.id`,
         ),
         sequelize.query(
-            `SELECT sum(CAST(qty_purchased AS INTEGER)) as seedCotton
+            `SELECT sum(CAST(qty_purchased AS DOUBLE PRECISION)) as seedCotton
             FROM transactions 
             INNER JOIN farmers ON transactions.farmer_id=farmers.id
             INNER JOIN farms ON transactions.farm_id=farms.id

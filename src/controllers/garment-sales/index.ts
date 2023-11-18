@@ -333,8 +333,7 @@ const createGarmentSales = async (req: Request, res: Response) => {
                 final_no_of_pieces: req.body.finalNoOfPieces,
             });
         }
-        let uniqueFilename = `garment_sales_qrcode_${Date.now()}.png`;
-        let aa = await generateOnlyQrCode(`Test`, uniqueFilename);
+
         const data = {
             garment_id: req.body.garmentId,
             program_id: req.body.programId,
@@ -370,10 +369,16 @@ const createGarmentSales = async (req: Request, res: Response) => {
             qty_stock: req.body.totalFabricLength,
             embroidering_required: req.body.embroideringRequired,
             embroidering_id: embroidering ? embroidering.id : null,
-            status: req.body.buyerId ? 'Sold' : 'Pending',
-            qr: uniqueFilename
+            status: req.body.buyerId ? 'Sold' : 'Pending'
         };
         const garmentSales = await GarmentSales.create(data);
+        let uniqueFilename = `garment_sales_qrcode_${Date.now()}.png`;
+        let aa = await generateOnlyQrCode(`${process.env.ADMIN_URL}/qrdetails/garmentsales/${garmentSales.id}`, uniqueFilename);
+        const gin = await GarmentSales.update({ qr: uniqueFilename }, {
+            where: {
+                id: garmentSales.id
+            }
+        });
         if (req.body.chooseFabric && req.body.chooseFabric.length > 0) {
             for await (let obj of req.body.chooseFabric) {
                 if (obj.processor === 'knitter') {
@@ -698,7 +703,8 @@ const dashboardGraph = async (req: Request, res: Response) => {
         let program = await Program.findAll({
             where: {
                 id: result.program_id
-            }
+            },
+            attributes: ['id', 'program_name']
         });
         let resulting: any = [];
         for await (let obj of program) {
@@ -716,7 +722,45 @@ const dashboardGraph = async (req: Request, res: Response) => {
                 ],
                 group: ["garment_type"]
             });
-            resulting.push({ graphData: data, program: obj })
+            let knit = await KnitSales.findOne({
+                attributes: [
+                    [
+                        Sequelize.fn("SUM", Sequelize.col("fabric_weight")),
+                        "totalQuantity",
+                    ],
+                    [
+                        Sequelize.fn(
+                            "SUM",
+                            Sequelize.col("qty_stock")
+                        ),
+                        "totalQuantityStock",
+                    ],
+                ],
+                where: { buyer_id: req.query.garmentId, program_id: obj.id, status: 'Sold' },
+                group: ["program_id"],
+                raw: true
+            })
+            let weaver = await WeaverSales.findOne({
+                attributes: [
+                    [
+                        Sequelize.fn("SUM", Sequelize.col("fabric_weight")),
+                        "totalQuantity",
+                    ],
+                    [
+                        Sequelize.fn(
+                            "SUM",
+                            Sequelize.col("qty_stock")
+                        ),
+                        "totalQuantityStock",
+                    ],
+                ],
+                where: { buyer_id: req.query.garmentId, program_id: obj.id, status: 'Sold' },
+                group: ["program_id"],
+                raw: true
+            })
+            let totalQuantity = (knit.totalQuantity ?? 0) + (weaver.totalQuantity ?? 0);
+            let totalQuantityStock = (knit.totalQuantityStock ?? 0) + (weaver.totalQuantityStock);
+            resulting.push({ program: obj, graphData: data, fabric: { totalQuantity, totalQuantityStock } })
         }
 
         return res.sendSuccess(res, resulting);
@@ -825,6 +869,21 @@ const getInvoice = async (req: Request, res: Response) => {
     }
 };
 
+const getBrands = async (req: Request, res: Response) => {
+    let garmentId = req.query.garmentId;
+    if (!garmentId) {
+        return res.sendError(res, 'Need Garment Id ');
+    }
+    let garment = await Garment.findOne({ where: { id: garmentId } });
+    if (!garment) {
+        return res.sendError(res, 'No Weaver Found ');
+    }
+    let brand = await Brand.findAll({
+        attributes: ['id', 'brand_name', 'address'],
+        where: { id: { [Op.in]: garment.dataValues.brand } }
+    })
+    res.sendSuccess(res, brand);
+}
 
 export {
     fetchBrandQrGarmentSalesPagination,
@@ -840,5 +899,6 @@ export {
     dashboardGraph,
     getprocessName,
     getInvoice,
-    fetchGarmentSale
+    fetchGarmentSale,
+    getBrands
 }

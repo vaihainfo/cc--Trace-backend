@@ -615,4 +615,8 @@ export {
     encrypt,
     decrypt,
     generateGinSalesHtml
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> 7c59b9b42d787eb90f3d2dde1fb9d3a22ed6b275

@@ -703,13 +703,29 @@ const exportFarmer = async (req: Request, res: Response) => {
     const worksheet = workbook.addWorksheet("Sheet1");
 
     // Set bold font for header row
-    const headerRow = worksheet.addRow([
-      "Sr No.", "Farmer Name", "Farmer Code",
-      "Country", "State", "District", "Block", "Village",
-      "Season", "FarmGroup", "Brand", "Program", "Total Agriculture Area", "Estimated Yield (Kg/Ac)", "Total estimated Production", "Cotton Total Area",
-      "Total EstimatedCotton", "Tracenet Id", "ICS Name", "Certification Status"
-    ]);
-    headerRow.font = { bold: true };
+    worksheet.columns = [
+      { header: 'Farmer Name', key: 'farmerName', width: 25 },
+      { header: 'Farmer Code', key: 'fatherCode', width: 25 },
+      { header: 'Country', key: 'country', width: 10 },
+      { header: 'State', key: 'state', width: 10 },
+      { header: 'District', key: 'district', width: 10 },
+      { header: 'Block', key: 'block', width: 10 },
+      { header: 'Village', key: 'village', width: 10 },
+      { header: 'Season', key: 'seasons', width: 10 },
+      { header: 'FarmGroup', key: 'farmGroup', width: 25 },
+      { header: 'Brand', key: 'brand', width: 15 },
+      { header: 'Program', key: 'program', width: 10 },
+      { header: 'Total Agriculture Area', key: 'agriTotalArea', width: 10 },
+      { header: 'Estimated Yield (Kg/Ac)', key: 'agriEstimatedYield', width: 10 },
+      { header: 'Total estimated Production', key: 'agriEstimatedProd', width: 10 },
+      { header: 'Cotton Total Area', key: 'totalEstimatedCotton', width: 10 },
+      { header: 'Total EstimatedCotton', key: 'cottonTotalArea', width: 10 },
+      { header: 'Tracenet Id', key: 'tracenetId', width: 15 },
+      { header: 'ICS Name', key: 'iscName', width: 15 },
+      { header: 'Certification Status', key: 'cert', width: 15 }
+    ];
+    let row: any = worksheet.findRow(1);
+    row.font = { bold: true };
     const farmer = await Farm.findAll({
       where: whereCondition,
       attributes: [
@@ -797,15 +813,9 @@ const exportFarmer = async (req: Request, res: Response) => {
           attributes: [],
         }
       ],
+      raw: true
     });
-    // Append data to worksheet
-    for await (const [index, item] of farmer.entries()) {
-      const rowValues = Object.values({
-        index: index + 1,
-        ...item.dataValues
-      });
-      worksheet.addRow(rowValues);
-    };
+    worksheet.addRows(farmer);
     // Save the workbook
     await workbook.xlsx.writeFile(excelFilePath);
     res.status(200).send({
@@ -955,7 +965,7 @@ const dashboardGraph = async (req: Request, res: Response) => {
     });
     const trans = await Transaction.findOne({
       attributes: [
-        [sequelize.fn('sum', Sequelize.literal("CAST(qty_purchased AS INTEGER)")), 'total_procured']
+        [sequelize.fn('sum', Sequelize.literal("CAST(qty_purchased AS DOUBLE PRECISION)")), 'total_procured']
       ],
       where: {
         ...whereCondition,

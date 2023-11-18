@@ -306,7 +306,7 @@ const organicCottonOverview = async (req: Request, res: Response) => {
         });
         const trans = await Transaction.findOne({
             attributes: [
-                [sequelize.fn('sum', Sequelize.literal("CAST(qty_purchased AS INTEGER)")), 'total_procured']
+                [sequelize.fn('sum', Sequelize.literal("CAST(qty_purchased AS DOUBLE PRECISION)")), 'total_procured']
             ],
             where: {
                 ...whereCondition,
@@ -824,20 +824,14 @@ const productTracebility = async (req: Request, res: Response) => {
     try {
         let { seasonId, brandId, styleMarkNo }: any = req.query;
         let whereCondition: any = {};
-        if (!brandId) {
-            return res.sendError(res, 'NEED_BRAND_ID')
-        }
         if (!styleMarkNo) {
             return res.sendError(res, 'NEED_MARK_NO')
         }
-
+        if (!brandId) {
+            return res.sendError(res, 'NEED_BRAND_ID')
+        }
         const garment_query = {
             include: [
-                {
-                    model: Brand,
-                    as: 'buyer',
-                    attributes: ['id', 'brand_name'],
-                },
                 {
                     model: Garment,
                     as: 'garment',
@@ -847,26 +841,50 @@ const productTracebility = async (req: Request, res: Response) => {
             where: { style_mark_no: styleMarkNo, buyer_id: brandId },
         };
 
-        let garments = await GarmentSales.findAll(garment_query);
-        for (let data of garments) {
-            // let fabric = FabricSelection.findAll({ where: { sales_id: data.dataValues.id } });
-            // let knitFabricIds = [];
-            // if(){
+        let garments = await GarmentSales.findOne(garment_query);
+        // let fabric = FabricSelection.findAll({ where: { sales_id: data.dataValues.id } });
+        // let knitFabricIds = [];
+        // if(){
 
-            // }
-        }
+        // }
+
         res.sendSuccess(res, garments)
     } catch (error) {
         console.log(error);
     }
 }
 
+const styleMarkNo = async (req: Request, res: Response) => {
+    try {
+        const brandId: any = req.query.brandId;
+        if (!brandId) {
+            return res.sendError(res, 'NEED_BRAND_ID')
+        }
+        let style = await GarmentSales.findAll({
+            attributes: ['style_mark_no'],
+            where: { buyer_id: brandId },
+            group: ['style_mark_no']
+        });
+        let invoices = await GarmentSales.findAll({
+            attributes: ['invoice_no'],
+            where: { buyer_id: brandId },
+            group: ['invoice_no']
+        });
+        let garmentType = await GarmentSales.findAll({
+            attributes: ['garment_type'],
+            where: { buyer_id: brandId },
+            group: ['garment_type']
+        });
+        res.sendSuccess(res, { style, invoices, garmentType })
+    } catch (error: any) {
+        res.sendError(res, error.message)
+    }
+}
 
 const getProgram = async (req: Request, res: Response) => {
     const brandId: any = req.query.brandId;
     const whereCondition: any = {};
     try {
-        console.log(brandId, 'hererer');
         if (brandId) {
             const idArray: number[] = brandId
                 .split(",")
@@ -882,8 +900,8 @@ const getProgram = async (req: Request, res: Response) => {
         } else {
             res.sendSuccess(res, [])
         }
-    } catch (error) {
-
+    } catch (error: any) {
+        res.sendError(res, error.message)
     }
 }
 
@@ -900,5 +918,6 @@ export {
     fetchBrandTransactionsPagination,
     productionUpdate,
     productTracebility,
-    getProgram
+    getProgram,
+    styleMarkNo
 };

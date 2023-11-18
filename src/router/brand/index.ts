@@ -2,7 +2,8 @@ import {
     organicCottonOverview,
     fetchBrandTransactionsPagination,
     productionUpdate,
-    productTracebility
+    productTracebility,
+    styleMarkNo
 } from "../../controllers/brand";
 
 
@@ -14,6 +15,7 @@ router.get('/organic-cotton-overview', organicCottonOverview);
 router.get('/transactions', fetchBrandTransactionsPagination);
 router.get('/production-update', productionUpdate);
 router.get('/product-tracebility', productTracebility);
+router.get('/style-mark', styleMarkNo);
 
 
 
