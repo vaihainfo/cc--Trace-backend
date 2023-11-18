@@ -612,13 +612,7 @@ const generateGinSalesHtml = async (sales: any) => {
 export {
     generateOnlyQrCode,
     generateQrCode,
-<<<<<<< HEAD
-    encrypt
-}
-
-=======
     encrypt,
     decrypt,
     generateGinSalesHtml
 }
->>>>>>> c76b9cf493cf4b41c24173c9700e299efb11a835
