@@ -61,12 +61,11 @@ const createTransaction = async (req: Request, res: Response) => {
       }
       data.estimated_cotton = farm.total_estimated_cotton;
       data.available_cotton = farm.total_estimated_cotton - (farm.cotton_transacted || 0);
-
     }
 
     const transaction = await Transaction.create(data);
     let s = await Farm.update({
-      cotton_transacted: (farm.cotton_transacted || 0) + req.body.qtyPurchased
+      cotton_transacted: (farm.cotton_transacted || 0) + Number(req.body.qtyPurchased)
     }, { where: { id: req.body.farmId } });
     res.sendSuccess(res, transaction);
   } catch (error) {

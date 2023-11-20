@@ -29,13 +29,13 @@ module.exports = {
         type: Sequelize.INTEGER
       },
       other_mix: {
-        type: Sequelize.DOUBLE
+        type: Sequelize.BOOLEAN
       },
       cottonmix_type: {
-        type: Sequelize.INTEGER
+        type: Sequelize.ARRAY(Sequelize.INTEGER)
       },
       cottonmix_qty: {
-        type: Sequelize.INTEGER
+        type: Sequelize.ARRAY(Sequelize.INTEGER)
       },
       yarn_type: {
         allowNull: false,
@@ -93,6 +93,21 @@ module.exports = {
       dyeing_id: {
         type: Sequelize.INTEGER,
         references: { model: 'dyeings', key: 'id' },
+      },
+      accept_date: {
+        type: Sequelize.DATE
+      },
+      tot_box_user: {
+        type: Sequelize.INTEGER
+      },
+      display_order: {
+        type: Sequelize.INTEGER
+      },
+      qr: {
+        type: Sequelize.STRING
+      },
+      comber_noil_stock: {
+        type: Sequelize.DOUBLE
       },
       createdAt: {
         allowNull: false,
