@@ -38,7 +38,17 @@ Dyeing.associate = (models: any) => {
     as: 'dyeing',
   });
 
+  Dyeing.hasMany(models.KnitProcess, {
+    foreignKey: 'dyeing_id',
+    as: 'dyeing',
+  });
+
   Dyeing.hasMany(models.KnitSales, {
+    foreignKey: 'dyeing_id',
+    as: 'dyeing',
+  });
+  
+  Dyeing.hasMany(models.WeaverProcess, {
     foreignKey: 'dyeing_id',
     as: 'dyeing',
   });

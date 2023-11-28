@@ -20,6 +20,7 @@ import PrintingSales from "../../models/printing-sales.model";
 import PrintingFabricSelection from "../../models/printing-fabric-selection.model";
 import CompactingSales from "../../models/compacting-sales.model";
 import CompactingFabricSelections from "../../models/compacting-fabric-selection.model";
+import WashingFabricSelection from "../../models/washing-fabric-selection.model";
 
 /** 
  * Dying Dashboard for fabric
@@ -40,11 +41,11 @@ const fetchDyingTransactions = async (req: Request, res: Response) => {
         let data: any = await sequelize.query(
             `SELECT "weaver_sales"."id", "weaver_sales"."weaver_id", "weaver_sales"."season_id", "weaver_sales"."date", "weaver_sales"."program_id", "weaver_sales"."order_ref", "weaver_sales"."buyer_id",  "weaver_sales"."transaction_via_trader", "weaver_sales"."transaction_agent", "weaver_sales"."fabric_type", "weaver_sales"."fabric_length", "weaver_sales"."fabric_gsm", "weaver_sales"."fabric_weight", "weaver_sales"."batch_lot_no", "weaver_sales"."job_details_garment","weaver_sales"."invoice_no", "weaver_sales"."vehicle_no","weaver_sales"."qty_stock", "weaver_sales"."qr", "program"."id" AS "program-id", "program"."program_name" AS "program_name", "fabric"."id" AS 
             "fabric_id", "fabric"."fabricType_name" AS "fabricType_name", "weaver"."id" AS "weaver-id", "weaver"."name" AS 
-            "weaver_name" FROM "weaver_sales" AS "weaver_sales" LEFT OUTER JOIN "programs" AS "program" ON "weaver_sales"."program_id" = "program"."id" LEFT OUTER JOIN "fabric_types" AS "fabric" ON "weaver_sales"."fabric_type" = "fabric"."id" LEFT OUTER JOIN "weavers" AS "weaver" ON "weaver_sales"."weaver_id" = "weaver"."id" WHERE "weaver_sales"."buyer_type" = 'Dying' AND "weaver_sales"."status" = 'Sold' AND "weaver_sales"."fabric_id" = '${fabricId}'
+            "weaver_name" FROM "weaver_sales" AS "weaver_sales" LEFT OUTER JOIN "programs" AS "program" ON "weaver_sales"."program_id" = "program"."id" LEFT OUTER JOIN "fabric_types" AS "fabric" ON "weaver_sales"."fabric_type" = "fabric"."id" LEFT OUTER JOIN "weavers" AS "weaver" ON "weaver_sales"."weaver_id" = "weaver"."id" WHERE "weaver_sales"."buyer_type" = 'Dyeing' AND "weaver_sales"."status" = 'Sold' AND "weaver_sales"."fabric_id" = '${fabricId}'
              UNION ALL 
              SELECT "knit_sales"."id", "knit_sales"."knitter_id", "knit_sales"."season_id", "knit_sales"."date", "knit_sales"."program_id", "knit_sales"."order_ref", "knit_sales"."buyer_id", "knit_sales"."transaction_via_trader", "knit_sales"."transaction_agent", "knit_sales"."fabric_type", "knit_sales"."fabric_length", "knit_sales"."fabric_gsm", "knit_sales"."fabric_weight", "knit_sales"."batch_lot_no", "knit_sales"."job_details_garment", "knit_sales"."invoice_no", "knit_sales"."vehicle_no", "knit_sales"."qty_stock", "knit_sales"."qr", "program"."id" AS "program-id", "program"."program_name" AS "program_name", "fabric"."id" AS "fabric_id", "fabric"."fabricType_name" AS "fabricType_name", "knitter"."id" AS "knitter-id", "knitter"."name" AS "knitter_name" FROM "knit_sales" AS "knit_sales" 
-             LEFT OUTER JOIN "programs" AS "program" ON "knit_sales"."program_id" = "program"."id" LEFT OUTER JOIN "fabric_types" AS "fabric" ON "knit_sales"."fabric_type" = "fabric"."id" LEFT OUTER JOIN "knitters" AS "knitter" ON "knit_sales"."knitter_id" = "knitter"."id" WHERE  "knit_sales"."buyer_type" = 'Dying' AND "knit_sales"."status" = 'Sold' AND "knit_sales"."fabric_id" = '${fabricId}'
-             OFFSET ${offset} 
+             LEFT OUTER JOIN "programs" AS "program" ON "knit_sales"."program_id" = "program"."id" LEFT OUTER JOIN "fabric_types" AS "fabric" ON "knit_sales"."fabric_type" = "fabric"."id" LEFT OUTER JOIN "knitters" AS "knitter" ON "knit_sales"."knitter_id" = "knitter"."id" WHERE  "knit_sales"."buyer_type" = 'Dyeing' AND "knit_sales"."status" = 'Sold' AND "knit_sales"."fabric_id" = '${fabricId}'
+             OFFSET ${offset}   
              LIMIT ${limit}`,
         )
         return res.sendPaginationSuccess(res, data[1].rows, data[1].rowCount);
@@ -74,11 +75,11 @@ const fetchDyingTransactionsAll = async (req: Request, res: Response) => {
         ]
         let result = await Promise.all([
             WeaverSales.findAll({
-                where: { status: 'Pending for QR scanning', buyer_type: 'Dying', fabric_id: fabricId },
+                where: { status: 'Pending for QR scanning', buyer_type: 'Dyeing', fabric_id: fabricId },
                 include: [...include, { model: Weaver, as: 'weaver', attributes: ['id', 'name'] }]
             }),
             KnitSales.findAll({
-                where: { status: 'Pending for QR scanning', buyer_type: 'Dying', fabric_id: fabricId },
+                where: { status: 'Pending for QR scanning', buyer_type: 'Dyeing', fabric_id: fabricId },
                 include: [...include, { model: Knitter, as: 'knitter', attributes: ['id', 'name'] }]
             })
         ])
@@ -160,7 +161,7 @@ const createDyingProcess = async (req: Request, res: Response) => {
             order_refernce: req.body.orderRef,
             buyer_type: req.body.buyerType,
             buyer_id: req.body.buyerId,
-            fabric_id: req.body.fabricId,
+            fabric_id: req.body.buyerFabricId,
             processor_name: req.body.processorName,
             processor_address: req.body.processorAddress,
             fabric_quantity: req.body.fabricQuantity,
@@ -176,9 +177,12 @@ const createDyingProcess = async (req: Request, res: Response) => {
             dying_details: req.body.dyingDetails,
             dying_color: req.body.dyingColor,
             invoice_no: req.body.invoiceNo,
+            weight_gain: req.body.weightGain,
+            weight_loss: req.body.weightLoss,
             bill_of_lading: req.body.billOfLadding,
             transport_info: req.body.transportInfo,
-            qty_stock: req.body.totalYarnQty,
+            qty_stock: req.body.totalFabricQuantity,
+            order_details: req.body.orderDetails,
             status: 'Pending'
         };
         const sales = await DyingSales.create(data);
@@ -194,7 +198,9 @@ const createDyingProcess = async (req: Request, res: Response) => {
                 })
             }
         }
+        res.sendSuccess(res, sales)
     } catch (error: any) {
+        console.log(error);
         return res.sendError(res, error.message);
     }
 }
@@ -223,22 +229,27 @@ const fetchDyingSalesPagination = async (req: Request, res: Response) => {
             {
                 model: Program,
                 as: 'program',
+                attributes: ['id', 'program_name']
             },
             {
                 model: Season,
                 as: 'season',
+                attributes: ['id', 'name']
             },
             {
                 model: Fabric,
                 as: 'dying_fabric',
+                attributes: ['id', 'name']
             },
             {
                 model: Fabric,
                 as: 'abuyer',
+                attributes: ['id', 'name']
             },
             {
                 model: Garment,
                 as: 'buyer',
+                attributes: ['id', 'name']
             }
         ];
         //fetch data with pagination
@@ -309,22 +320,27 @@ const exportDyingProcess = async (req: Request, res: Response) => {
             {
                 model: Program,
                 as: 'program',
+                attributes: ['id', 'program_name']
             },
             {
                 model: Season,
                 as: 'season',
+                attributes: ['id', 'name']
             },
             {
                 model: Fabric,
                 as: 'dying_fabric',
+                attributes: ['id', 'name']
             },
             {
                 model: Fabric,
                 as: 'abuyer',
+                attributes: ['id', 'name']
             },
             {
                 model: Garment,
                 as: 'buyer',
+                attributes: ['id', 'name']
             }
         ];
         const sales = await DyingSales.findAll({
@@ -412,35 +428,6 @@ const chooseDyingFabric = async (req: Request, res: Response) => {
  * Washing Dashboard for fabric
 */
 
-// Get Sold Transaction for Washing Dashboard
-const fetchWashingTransactions = async (req: Request, res: Response) => {
-    try {
-        const page = Number(req.query.page) || 1;
-        const limit = Number(req.query.limit) || 10;
-        const offset = (page - 1) * limit;
-        let fabricId = req.query.fabricId || ''
-
-        if (!fabricId) {
-            return res.sendError(res, 'Need Fabric Id');
-        }
-
-        let data: any = await sequelize.query(
-            `SELECT "weaver_sales"."id", "weaver_sales"."weaver_id", "weaver_sales"."season_id", "weaver_sales"."date", "weaver_sales"."program_id", "weaver_sales"."order_ref", "weaver_sales"."buyer_id",  "weaver_sales"."transaction_via_trader", "weaver_sales"."transaction_agent", "weaver_sales"."fabric_type", "weaver_sales"."fabric_length", "weaver_sales"."fabric_gsm", "weaver_sales"."fabric_weight", "weaver_sales"."batch_lot_no", "weaver_sales"."job_details_garment","weaver_sales"."invoice_no", "weaver_sales"."vehicle_no","weaver_sales"."qty_stock", "weaver_sales"."qr", "program"."id" AS "program-id", "program"."program_name" AS "program_name", "fabric"."id" AS 
-            "fabric_id", "fabric"."fabricType_name" AS "fabricType_name", "weaver"."id" AS "weaver-id", "weaver"."name" AS 
-            "weaver_name" FROM "weaver_sales" AS "weaver_sales" LEFT OUTER JOIN "programs" AS "program" ON "weaver_sales"."program_id" = "program"."id" LEFT OUTER JOIN "fabric_types" AS "fabric" ON "weaver_sales"."fabric_type" = "fabric"."id" LEFT OUTER JOIN "weavers" AS "weaver" ON "weaver_sales"."weaver_id" = "weaver"."id" WHERE "weaver_sales"."buyer_type" = 'Washing' AND "weaver_sales"."status" = 'Sold' AND "weaver_sales"."fabric_id" = '${fabricId}'
-             UNION ALL 
-             SELECT "knit_sales"."id", "knit_sales"."knitter_id", "knit_sales"."season_id", "knit_sales"."date", "knit_sales"."program_id", "knit_sales"."order_ref", "knit_sales"."buyer_id", "knit_sales"."transaction_via_trader", "knit_sales"."transaction_agent", "knit_sales"."fabric_type", "knit_sales"."fabric_length", "knit_sales"."fabric_gsm", "knit_sales"."fabric_weight", "knit_sales"."batch_lot_no", "knit_sales"."job_details_garment", "knit_sales"."invoice_no", "knit_sales"."vehicle_no", "knit_sales"."qty_stock", "knit_sales"."qr", "program"."id" AS "program-id", "program"."program_name" AS "program_name", "fabric"."id" AS "fabric_id", "fabric"."fabricType_name" AS "fabricType_name", "knitter"."id" AS "knitter-id", "knitter"."name" AS "knitter_name" FROM "knit_sales" AS "knit_sales" 
-             LEFT OUTER JOIN "programs" AS "program" ON "knit_sales"."program_id" = "program"."id" LEFT OUTER JOIN "fabric_types" AS "fabric" ON "knit_sales"."fabric_type" = "fabric"."id" LEFT OUTER JOIN "knitters" AS "knitter" ON "knit_sales"."knitter_id" = "knitter"."id" WHERE  "knit_sales"."buyer_type" = 'Washing' AND "knit_sales"."status" = 'Sold' AND "knit_sales"."fabric_id" = '${fabricId}'
-             OFFSET ${offset} 
-             LIMIT ${limit}`,
-        )
-        return res.sendPaginationSuccess(res, data[1].rows, data[1].rowCount);
-    } catch (error: any) {
-        console.error("Error appending data:", error);
-        return res.sendError(res, error.message);
-    }
-}
-
 // Get Pending Transaction for Washing Dashboard
 const fetchWashingTransactionsAll = async (req: Request, res: Response) => {
     try {
@@ -454,8 +441,8 @@ const fetchWashingTransactionsAll = async (req: Request, res: Response) => {
                 model: Program,
                 as: 'program'
             },
-
         ]
+
         let result = await Promise.all([
             WeaverSales.findAll({
                 where: { status: 'Pending for QR scanning', buyer_type: 'Washing', fabric_id: fabricId },
@@ -503,7 +490,7 @@ const updateWashingTransactionStatus = async (req: Request, res: Response) => {
                     },
                 });
                 trans.push(transaction)
-            } else {
+            } else if (obj.dying_id) {
                 const transaction = await DyingSales.update(data, {
                     where: {
                         id: obj.id,
@@ -526,14 +513,14 @@ const createWashingProcess = async (req: Request, res: Response) => {
         // let uniqueFilename = `dying_sales_qrcode_${Date.now()}.png`;
         // let aa = await generateOnlyQrCode(`Test`, uniqueFilename);
         const data = {
-            washing_id: req.body.washingFabricId,
+            washing_id: req.body.washingId,
             program_id: req.body.programId,
             season_id: req.body.seasonId,
             date: req.body.date,
             order_refernce: req.body.orderRef,
             buyer_type: req.body.buyerType,
             buyer_id: req.body.buyerId,
-            fabric_id: req.body.fabricId,
+            fabric_id: req.body.buyerFabricId,
             processor_name: req.body.processorName,
             processor_address: req.body.processorAddress,
             fabric_quantity: req.body.fabricQuantity,
@@ -558,18 +545,21 @@ const createWashingProcess = async (req: Request, res: Response) => {
             status: 'Pending'
         };
         const sales = await WashingSales.create(data);
-        // if (req.body.chooseFabric && req.body.chooseFabric.length > 0) {
-        //     for await (let obj of req.body.chooseFabric) {
-        //         if (obj.processor === 'knitter') {
-        //             let update = await KnitSales.update({ qty_stock: obj.totalQty - obj.qtyUsed }, { where: { id: obj.id } });
-        //         } else {
-        //             let update = await WeaverSales.update({ qty_stock: obj.totalQty - obj.qtyUsed }, { where: { id: obj.id } });
-        //         }
-        //         await DyingFabricSelection.create({
-        //             process_id: obj.id, process_type: obj.processor, sales_id: sales.id, qty_used: obj.qtyUsed
-        //         })
-        //     }
-        // }
+        if (req.body.chooseFabric && req.body.chooseFabric.length > 0) {
+            for await (let obj of req.body.chooseFabric) {
+                if (obj.processor === 'knitter') {
+                    let update = await KnitSales.update({ qty_stock: obj.totalQty - obj.qtyUsed }, { where: { id: obj.id } });
+                } else if (obj.processor === 'weaver') {
+                    let update = await WeaverSales.update({ qty_stock: obj.totalQty - obj.qtyUsed }, { where: { id: obj.id } });
+                } else {
+                    let update = await DyingSales.update({ qty_stock: obj.totalQty - obj.qtyUsed }, { where: { id: obj.id } });
+                }
+                await WashingFabricSelection.create({
+                    process_id: obj.id, process_type: obj.processor, sales_id: sales.id, qty_used: obj.qtyUsed
+                })
+            }
+        }
+        res.sendSuccess(res, sales)
     } catch (error: any) {
         return res.sendError(res, error.message);
     }
@@ -598,22 +588,27 @@ const fetchWashingSalesPagination = async (req: Request, res: Response) => {
             {
                 model: Program,
                 as: 'program',
+                attributes: ['id', 'program_name']
             },
             {
                 model: Season,
                 as: 'season',
+                attributes: ['id', 'name']
             },
             {
                 model: Fabric,
                 as: 'washing',
+                attributes: ['id', 'name']
             },
             {
                 model: Fabric,
                 as: 'abuyer',
+                attributes: ['id', 'name']
             },
             {
                 model: Garment,
                 as: 'buyer',
+                attributes: ['id', 'name']
             }
         ];
         //fetch data with pagination
@@ -835,14 +830,14 @@ const fetchPrintingTransactionSold = async (req: Request, res: Response) => {
             },
 
         ]
-        let data = await WashingSales.findAndCountAll({
+        let { rows, count } = await WashingSales.findAndCountAll({
             where: { status: 'Sold', buyer_type: 'Printing', fabric_id: fabricId },
             include: [...include, { model: Fabric, as: 'washing', attributes: ['id', 'name'] }],
             offset: offset,
             limit: limit
         })
 
-        res.sendSuccess(res, data)
+        res.sendPaginationSuccess(res, rows, count)
     } catch (error: any) {
         console.error("Error appending data:", error);
         return res.sendError(res, error.message);
@@ -1005,9 +1000,12 @@ const fetchPrintingSalesPagination = async (req: Request, res: Response) => {
 //choosing the printing fabric data
 const choosePrintingFabric = async (req: Request, res: Response) => {
     try {
-        let { fabricId }: any = req.query;
+        let { fabricId, programId, washingId }: any = req.query;
         if (!fabricId) {
             return res.sendError(res, 'Need Fabric Id');
+        }
+        if (!programId) {
+            return res.sendError(res, 'Need Program Id');
         }
 
         let include = [
@@ -1017,9 +1015,15 @@ const choosePrintingFabric = async (req: Request, res: Response) => {
             },
 
         ]
-        let whereCondition: any = { status: 'Sold', buyer_type: 'Washing', fabric_id: fabricId, qty_stock: { [Op.gt]: 0 } }
-        let result = await WashingSales.findAndCountAll({
-            where: { status: 'Sold', buyer_type: 'Printing', fabric_id: fabricId },
+        let whereCondition: any = { status: 'Sold', buyer_type: 'Printing', program_id: programId, fabric_id: fabricId, qty_stock: { [Op.gt]: 0 } };
+        if (washingId) {
+            const idArray: string[] = washingId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition.washing_id = { [Op.in]: idArray };
+        }
+        let result = await WashingSales.findAll({
+            where: whereCondition,
             include: [...include, { model: Fabric, as: 'washing', attributes: ['id', 'name'] }],
         })
         return res.sendSuccess(res, result);
@@ -1552,7 +1556,9 @@ const getFabrics = async (req: Request, res: Response) => {
     }
     let garment = await Fabric.findAll({
         attributes: ['id', 'name'],
-        where: { brand: { [Op.overlap]: result.dataValues.brand } }
+        where: {
+            brand: { [Op.overlap]: result.dataValues.brand }, fabric_processor_type: { [Op.overlap]: [req.query.type] }
+        }
     })
     res.sendSuccess(res, garment);
 }
@@ -1561,7 +1567,6 @@ export {
     fetchDyingTransactions,
     getProgram,
     fetchDyingTransactionsAll,
-    fetchWashingTransactions,
     fetchWashingTransactionsAll,
     updateTransactionStatus,
     createDyingProcess,

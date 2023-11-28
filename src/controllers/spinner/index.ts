@@ -597,7 +597,7 @@ const createSpinnerSales = async (req: Request, res: Response) => {
             transaction_agent: req.body.transactionAgent,
             no_of_boxes: req.body.noOfBoxes,
             batch_lot_no: req.body.batchLotNo,
-            reel_lot_no: req.body.reelLotNno,
+            reel_lot_no: req.body.reelLotNno ? req.body.reelLotNno : null,
             box_ids: req.body.boxIds,
             yarn_type: req.body.yarnType,
             yarn_count: req.body.yarnCount,

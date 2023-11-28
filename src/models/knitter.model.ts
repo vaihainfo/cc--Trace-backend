@@ -124,6 +124,11 @@ Knitter.belongsTo(District, {
   as: "district",
 });
 Knitter.associate = (models: any) => {
+  Knitter.hasMany(models.KnitProcess, {
+    foreignKey: 'knitter_id',
+    as: 'knitter',
+  });
+
   Knitter.hasMany(models.KnitSales, {
     foreignKey: 'knitter_id',
     as: 'knitter',

@@ -128,6 +128,11 @@ Weaver.belongsTo(District, {
 });
 
 Weaver.associate = (models: any) => {
+  Weaver.hasMany(models.WeaverProcess, {
+    foreignKey: 'weaver_id',
+    as: 'weaver',
+  });
+
   Weaver.hasMany(models.WeaverSales, {
     foreignKey: 'weaver_id',
     as: 'weaver',

@@ -4,12 +4,13 @@ import db from '../util/dbConn';
 import Knitter from './knitter.model';
 import Dyeing from './dyeing.model';
 import Program from './program.model';
-import FabricType from './fabric-type.model';
 import Season from './season.model';
+import YarnCount from './yarn-count.model';
+import FabricType from './fabric-type.model';
 import Garment from './garment.model';
 import Fabric from './fabric.model';
 
-const KnitSales = db.define('knit_sales', {
+const KnitProcess = db.define('knit_processes', {
   id: {
     type: DataTypes.INTEGER,
     autoIncrement: true,
@@ -41,27 +42,31 @@ const KnitSales = db.define('knit_sales', {
   brand_order_ref: {
     type: DataTypes.STRING
   },
-  buyer_type: {
-    allowNull: false,
-    type: DataTypes.STRING
-  },
-  buyer_id: {
-    type: DataTypes.INTEGER
-  },
-  processor_name: {
-    type: DataTypes.STRING
-  },
-  processor_address: {
-    type: DataTypes.STRING
-  },
-  transaction_via_trader: {
-    allowNull: false,
+  other_mix: {
     type: DataTypes.BOOLEAN
   },
-  transaction_agent: {
+  cottonmix_type: {
+    type: DataTypes.ARRAY(DataTypes.INTEGER)
+  },
+  cottonmix_qty: {
+    type: DataTypes.ARRAY(DataTypes.INTEGER)
+  },
+  yarn_type: {
+    type: DataTypes.STRING
+  },
+  yarn_count: {
+    type: DataTypes.DOUBLE
+  },
+  blend_material: {
+    type: DataTypes.STRING
+  },
+  blend_vendor: {
     type: DataTypes.STRING
   },
   yarn_qty: {
+    type: DataTypes.DOUBLE
+  },
+  additional_yarn_qty: {
     type: DataTypes.DOUBLE
   },
   total_yarn_qty: {
@@ -71,6 +76,12 @@ const KnitSales = db.define('knit_sales', {
   fabric_type: {
     type: DataTypes.ARRAY(DataTypes.INTEGER)
   },
+  fabric_gsm: {
+    type: DataTypes.ARRAY(DataTypes.INTEGER)
+  },
+  fabric_weight: {
+    type: DataTypes.ARRAY(DataTypes.DOUBLE)
+  },
   batch_lot_no: {
     allowNull: false,
     type: DataTypes.STRING
@@ -78,82 +89,74 @@ const KnitSales = db.define('knit_sales', {
   reel_lot_no: {
     type: DataTypes.STRING
   },
+  job_details_garment: {
+    type: DataTypes.STRING
+  },
   no_of_rolls: {
     type: DataTypes.INTEGER
   },
-  invoice_no: {
+  dyeing_required: {
     allowNull: false,
+    type: DataTypes.BOOLEAN
+  },
+  dyeing_id: {
+    type: DataTypes.INTEGER,
+    references: { model: 'dyeings', key: 'id' },
+  },
+  blend_invoice: {
     type: DataTypes.STRING
   },
-  bill_of_ladding: {
-    allowNull: false,
-    type: DataTypes.STRING
-  },
-  transporter_name: {
-    allowNull: false,
-    type: DataTypes.STRING
-  },
-  vehicle_no: {
-    allowNull: false,
-    type: DataTypes.STRING
-  },
-  tc_file: {
-    type: DataTypes.STRING
-  },
-  contract_file: {
-    type: DataTypes.STRING
-  },
-  invoice_file: {
+  blend_document: {
     type: DataTypes.ARRAY(DataTypes.STRING)
   },
-  delivery_notes: {
+  qty_stock: {
+    type: DataTypes.DOUBLE
+  },
+  physical_traceablity: {
+    type: DataTypes.BOOLEAN
+  },
+  qr: {
     type: DataTypes.STRING
   },
-  qty_stock: {
+  total_fabric_weight: {
     type: DataTypes.DOUBLE
   },
   status: {
     type: DataTypes.STRING
   },
-  qr: {
-    type: DataTypes.STRING
-  },
-  fabric_id: {
-    type: DataTypes.INTEGER
-  },
 });
 
-KnitSales.belongsTo(Knitter, {
-  foreignKey: "knitter_id",
-  as: "knitter",
-});
 
-KnitSales.belongsTo(Fabric, {
-  foreignKey: "fabric_id",
-  as: "dyingwashing",
-});
-
-// KnitSales.belongsTo(FabricType, {
-//   foreignKey: "fabric_type",
-//   as: "fabric",
-// });
-
-KnitSales.belongsTo(Program, {
-  foreignKey: "program_id",
-  as: "program",
-});
-
-KnitSales.belongsTo(Season, {
+KnitProcess.belongsTo(Season, {
   foreignKey: "season_id",
   as: "season",
 });
 
-KnitSales.belongsTo(Garment, {
-  foreignKey: "buyer_id",
-  as: "buyer",
+KnitProcess.belongsTo(YarnCount, {
+  foreignKey: "yarn_count",
+  as: "yarncount",
 });
 
+KnitProcess.belongsTo(FabricType, {
+  foreignKey: "fabric_type",
+  as: "fabric",
+});
 
-KnitSales.sync();
+KnitProcess.belongsTo(Program, {
+  foreignKey: "program_id",
+  as: "program",
+});
 
-export default KnitSales;
+KnitProcess.belongsTo(Knitter, {
+  foreignKey: "knitter_id",
+  as: "knitter",
+});
+
+KnitProcess.belongsTo(Dyeing, {
+  foreignKey: "dyeing_id",
+  as: "dyeing",
+});
+
+KnitProcess.sync();
+
+export default KnitProcess;

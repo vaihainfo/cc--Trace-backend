@@ -45,6 +45,7 @@ const fetchBaleProcess = async (req: Request, res: Response) => {
     try {
         if (searchTerm) {
             whereCondition[Op.or] = [
+                { "$ginner.name$": { [Op.iLike]: `%${searchTerm}%` } },
                 { "$season.name$": { [Op.iLike]: `%${searchTerm}%` } },
                 { "$program.program_name$": { [Op.iLike]: `%${searchTerm}%` } },
                 { lot_no: { [Op.iLike]: `%${searchTerm}%` } },
@@ -58,10 +59,8 @@ const fetchBaleProcess = async (req: Request, res: Response) => {
             const idArray: number[] = brandId
                 .split(",")
                 .map((id: any) => parseInt(id, 10));
-            let ginner = await Ginner.findAll({ brand: { [Op.overlap]: idArray } });
-            const arry: number[] = ginner
-                .map((gin: any) => parseInt(gin.id, 10));
-            whereCondition.ginner_id = { [Op.in]: arry };
+
+            whereCondition['$ginner.brand$'] = { [Op.overlap]: idArray };
         }
 
         if (seasonId) {
@@ -81,10 +80,7 @@ const fetchBaleProcess = async (req: Request, res: Response) => {
             const idArray: number[] = countryId
                 .split(",")
                 .map((id: any) => parseInt(id, 10));
-            let ginner = await Ginner.findAll({ country_id: { [Op.in]: idArray } });
-            const arry: number[] = ginner
-                .map((gin: any) => parseInt(gin.id, 10));
-            whereCondition.ginner_id = { [Op.in]: arry };
+            whereCondition['$ginner.country_id$'] = { [Op.in]: idArray };
         }
 
         if (programId) {
@@ -172,6 +168,7 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
     try {
         if (searchTerm) {
             whereCondition[Op.or] = [
+                { "$ginner.name$": { [Op.iLike]: `%${searchTerm}%` } },
                 { "$season.name$": { [Op.iLike]: `%${searchTerm}%` } },
                 { "$program.program_name$": { [Op.iLike]: `%${searchTerm}%` } },
                 { lot_no: { [Op.iLike]: `%${searchTerm}%` } },
@@ -185,10 +182,7 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
             const idArray: number[] = brandId
                 .split(",")
                 .map((id: any) => parseInt(id, 10));
-            let ginner = await Ginner.findAll({ where: { brand: { [Op.overlap]: idArray } } });
-            const arry: number[] = ginner
-                .map((gin: any) => parseInt(gin.id, 10));
-            whereCondition.ginner_id = { [Op.in]: arry };
+            whereCondition['$ginner.brand$'] = { [Op.overlap]: idArray };
         }
 
         if (seasonId) {
@@ -202,10 +196,7 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
             const idArray: number[] = countryId
                 .split(",")
                 .map((id: any) => parseInt(id, 10));
-            let ginner = await Ginner.findAll({ country_id: { [Op.in]: idArray } });
-            const arry: number[] = ginner
-                .map((gin: any) => parseInt(gin.id, 10));
-            whereCondition.ginner_id = { [Op.in]: arry };
+            whereCondition['$ginner.country_id$'] = { [Op.in]: idArray };
         }
 
         if (ginnerId) {
@@ -350,6 +341,7 @@ const fetchGinSalesPagination = async (req: Request, res: Response) => {
     try {
         if (searchTerm) {
             whereCondition[Op.or] = [
+                { "$ginner.name$": { [Op.iLike]: `%${searchTerm}%` } },
                 { "$season.name$": { [Op.iLike]: `%${searchTerm}%` } },
                 { "$program.program_name$": { [Op.iLike]: `%${searchTerm}%` } },
                 { lot_no: { [Op.iLike]: `%${searchTerm}%` } },
@@ -368,20 +360,14 @@ const fetchGinSalesPagination = async (req: Request, res: Response) => {
             const idArray: number[] = brandId
                 .split(",")
                 .map((id: any) => parseInt(id, 10));
-            let ginner = await Ginner.findAll({ where: { brand: { [Op.overlap]: idArray } } });
-            const arry: number[] = ginner
-                .map((gin: any) => parseInt(gin.id, 10));
-            whereCondition.ginner_id = { [Op.in]: arry };
+            whereCondition['$ginner.brand$'] = { [Op.overlap]: idArray };
         }
 
         if (countryId) {
             const idArray: number[] = countryId
                 .split(",")
                 .map((id: any) => parseInt(id, 10));
-            let ginner = await Ginner.findAll({ where: { country_id: { [Op.in]: idArray } } });
-            const arry: number[] = ginner
-                .map((gin: any) => parseInt(gin.id, 10));
-            whereCondition.ginner_id = { [Op.in]: arry };
+            whereCondition['$ginner.country_id$'] = { [Op.in]: idArray };
         }
 
         if (seasonId) {
@@ -408,7 +394,7 @@ const fetchGinSalesPagination = async (req: Request, res: Response) => {
             {
                 model: Ginner,
                 as: "ginner",
-                attributes: ['id', 'name']
+                attributes: ['id', 'name', 'country_id', 'brand']
             },
             {
                 model: Season,
@@ -450,9 +436,12 @@ const exportPendingGinnerSales = async (req: Request, res: Response) => {
     try {
         if (searchTerm) {
             whereCondition[Op.or] = [
+                { "$ginner.name$": { [Op.iLike]: `%${searchTerm}%` } },
+                { "$buyerdata.name$": { [Op.iLike]: `%${searchTerm}%` } },
                 { "$season.name$": { [Op.iLike]: `%${searchTerm}%` } },
                 { "$program.program_name$": { [Op.iLike]: `%${searchTerm}%` } },
                 { lot_no: { [Op.iLike]: `%${searchTerm}%` } },
+                { invoice_no: { [Op.iLike]: `%${searchTerm}%` } },
                 { reel_lot_no: { [Op.iLike]: `%${searchTerm}%` } },
                 { press_no: { [Op.iLike]: `%${searchTerm}%` } },
             ];
@@ -468,20 +457,14 @@ const exportPendingGinnerSales = async (req: Request, res: Response) => {
             const idArray: number[] = brandId
                 .split(",")
                 .map((id: any) => parseInt(id, 10));
-            let ginner = await Ginner.findAll({ where: { brand: { [Op.overlap]: idArray } } });
-            const arry: number[] = ginner
-                .map((gin: any) => parseInt(gin.id, 10));
-            whereCondition.ginner_id = { [Op.in]: arry };
+            whereCondition['$ginner.brand$'] = { [Op.overlap]: idArray };
         }
 
         if (countryId) {
             const idArray: number[] = countryId
                 .split(",")
                 .map((id: any) => parseInt(id, 10));
-            let ginner = await Ginner.findAll({ where: { country_id: { [Op.in]: idArray } } });
-            const arry: number[] = ginner
-                .map((gin: any) => parseInt(gin.id, 10));
-            whereCondition.ginner_id = { [Op.in]: arry };
+            whereCondition['$ginner.country_id$'] = { [Op.in]: idArray };
         }
 
         if (seasonId) {
@@ -592,9 +575,12 @@ const exportGinnerSales = async (req: Request, res: Response) => {
     try {
         if (searchTerm) {
             whereCondition[Op.or] = [
+                { "$ginner.name$": { [Op.iLike]: `%${searchTerm}%` } },
+                { "$buyerdata.name$": { [Op.iLike]: `%${searchTerm}%` } },
                 { "$season.name$": { [Op.iLike]: `%${searchTerm}%` } },
                 { "$program.program_name$": { [Op.iLike]: `%${searchTerm}%` } },
                 { lot_no: { [Op.iLike]: `%${searchTerm}%` } },
+                { invoice_no: { [Op.iLike]: `%${searchTerm}%` } },
                 { reel_lot_no: { [Op.iLike]: `%${searchTerm}%` } },
                 { press_no: { [Op.iLike]: `%${searchTerm}%` } },
             ];
@@ -610,20 +596,14 @@ const exportGinnerSales = async (req: Request, res: Response) => {
             const idArray: number[] = brandId
                 .split(",")
                 .map((id: any) => parseInt(id, 10));
-            let ginner = await Ginner.findAll({ where: { brand: { [Op.overlap]: idArray } } });
-            const arry: number[] = ginner
-                .map((gin: any) => parseInt(gin.id, 10));
-            whereCondition.ginner_id = { [Op.in]: arry };
+            whereCondition['$ginner.brand$'] = { [Op.overlap]: idArray };
         }
 
         if (countryId) {
             const idArray: number[] = countryId
                 .split(",")
                 .map((id: any) => parseInt(id, 10));
-            let ginner = await Ginner.findAll({ where: { country_id: { [Op.in]: idArray } } });
-            const arry: number[] = ginner
-                .map((gin: any) => parseInt(gin.id, 10));
-            whereCondition.ginner_id = { [Op.in]: arry };
+            whereCondition['$ginner.country_id$'] = { [Op.in]: idArray };
         }
 
         if (seasonId) {
@@ -751,25 +731,24 @@ const fetchSpinnerBalePagination = async (req: Request, res: Response) => {
                 .split(",")
                 .map((id: any) => parseInt(id, 10));
             whereCondition.buyer = { [Op.in]: idArray };
+        } else {
+            whereCondition.buyer = {
+                [Op.ne]: null
+            }
         }
+
         if (brandId) {
             const idArray: number[] = brandId
                 .split(",")
                 .map((id: any) => parseInt(id, 10));
-            let ginner = await Spinner.findAll({ where: { brand: { [Op.overlap]: idArray } } });
-            const arry: number[] = ginner
-                .map((gin: any) => parseInt(gin.id, 10));
-            whereCondition.buyer = { [Op.in]: arry };
+            whereCondition['$buyerdata.brand$'] = { [Op.overlap]: idArray };
         }
 
         if (countryId) {
             const idArray: number[] = countryId
                 .split(",")
                 .map((id: any) => parseInt(id, 10));
-            let ginner = await Spinner.findAll({ where: { country_id: { [Op.in]: idArray } } });
-            const arry: number[] = ginner
-                .map((gin: any) => parseInt(gin.id, 10));
-            whereCondition.buyer = { [Op.in]: arry };
+            whereCondition['$buyerdata.country_id$'] = { [Op.in]: idArray };
         }
 
         if (seasonId) {
@@ -786,9 +765,7 @@ const fetchSpinnerBalePagination = async (req: Request, res: Response) => {
             }
             whereCondition.status = 'Pending for QR scanning';
         }
-        whereCondition.buyer = {
-            [Op.ne]: null
-        }
+
 
         if (programId) {
             const idArray: number[] = programId
@@ -859,25 +836,23 @@ const exportSpinnerBale = async (req: Request, res: Response) => {
                 .split(",")
                 .map((id: any) => parseInt(id, 10));
             whereCondition.buyer = { [Op.in]: idArray };
+        } else {
+            whereCondition.buyer = {
+                [Op.ne]: null
+            }
         }
         if (brandId) {
             const idArray: number[] = brandId
                 .split(",")
                 .map((id: any) => parseInt(id, 10));
-            let ginner = await Spinner.findAll({ where: { brand: { [Op.overlap]: idArray } } });
-            const arry: number[] = ginner
-                .map((gin: any) => parseInt(gin.id, 10));
-            whereCondition.buyer = { [Op.in]: arry };
+            whereCondition['$buyerdata.brand$'] = { [Op.overlap]: idArray };
         }
 
         if (countryId) {
             const idArray: number[] = countryId
                 .split(",")
                 .map((id: any) => parseInt(id, 10));
-            let ginner = await Spinner.findAll({ where: { country_id: { [Op.in]: idArray } } });
-            const arry: number[] = ginner
-                .map((gin: any) => parseInt(gin.id, 10));
-            whereCondition.buyer = { [Op.in]: arry };
+            whereCondition['$buyerdata.country_id$'] = { [Op.in]: idArray };
         }
 
         if (seasonId) {
@@ -1012,20 +987,14 @@ const exportPendingSpinnerBale = async (req: Request, res: Response) => {
             const idArray: number[] = brandId
                 .split(",")
                 .map((id: any) => parseInt(id, 10));
-            let ginner = await Spinner.findAll({ where: { brand: { [Op.overlap]: idArray } } });
-            const arry: number[] = ginner
-                .map((gin: any) => parseInt(gin.id, 10));
-            whereCondition.buyer = { [Op.in]: arry };
+            whereCondition['$buyerdata.brand$'] = { [Op.overlap]: idArray };
         }
 
         if (countryId) {
             const idArray: number[] = countryId
                 .split(",")
                 .map((id: any) => parseInt(id, 10));
-            let ginner = await Spinner.findAll({ where: { country_id: { [Op.in]: idArray } } });
-            const arry: number[] = ginner
-                .map((gin: any) => parseInt(gin.id, 10));
-            whereCondition.buyer = { [Op.in]: arry };
+            whereCondition['$buyerdata.country_id$'] = { [Op.in]: idArray };
         }
 
         if (seasonId) {
@@ -1169,24 +1138,19 @@ const fetchSpinnerYarnProcessPagination = async (req: Request, res: Response) =>
                 .map((id: any) => parseInt(id, 10));
             whereCondition.spinner_id = { [Op.in]: idArray };
         }
+
         if (brandId) {
             const idArray: number[] = brandId
                 .split(",")
                 .map((id: any) => parseInt(id, 10));
-            let ginner = await Spinner.findAll({ where: { brand: { [Op.overlap]: idArray } } });
-            const arry: number[] = ginner
-                .map((gin: any) => parseInt(gin.id, 10));
-            whereCondition.spinner_id = { [Op.in]: arry };
+            whereCondition['$spinner.brand$'] = { [Op.overlap]: idArray };
         }
 
         if (countryId) {
             const idArray: number[] = countryId
                 .split(",")
                 .map((id: any) => parseInt(id, 10));
-            let ginner = await Spinner.findAll({ where: { country_id: { [Op.in]: idArray } } });
-            const arry: number[] = ginner
-                .map((gin: any) => parseInt(gin.id, 10));
-            whereCondition.spinner_id = { [Op.in]: arry };
+            whereCondition['$spinner.country_id$'] = { [Op.in]: idArray };
         }
 
         if (seasonId) {
@@ -1272,20 +1236,14 @@ const exportSpinnerYarnProcess = async (req: Request, res: Response) => {
             const idArray: number[] = brandId
                 .split(",")
                 .map((id: any) => parseInt(id, 10));
-            let ginner = await Spinner.findAll({ where: { brand: { [Op.overlap]: idArray } } });
-            const arry: number[] = ginner
-                .map((gin: any) => parseInt(gin.id, 10));
-            whereCondition.spinner_id = { [Op.in]: arry };
+            whereCondition['$spinner.brand$'] = { [Op.overlap]: idArray };
         }
 
         if (countryId) {
             const idArray: number[] = countryId
                 .split(",")
                 .map((id: any) => parseInt(id, 10));
-            let ginner = await Spinner.findAll({ where: { country_id: { [Op.in]: idArray } } });
-            const arry: number[] = ginner
-                .map((gin: any) => parseInt(gin.id, 10));
-            whereCondition.spinner_id = { [Op.in]: arry };
+            whereCondition['$spinner.country_id$'] = { [Op.in]: idArray };
         }
 
         if (seasonId) {
@@ -1431,20 +1389,14 @@ const fetchSpinSalesPagination = async (req: Request, res: Response) => {
             const idArray: number[] = brandId
                 .split(",")
                 .map((id: any) => parseInt(id, 10));
-            let ginner = await Spinner.findAll({ where: { brand: { [Op.overlap]: idArray } } });
-            const arry: number[] = ginner
-                .map((gin: any) => parseInt(gin.id, 10));
-            whereCondition.spinner_id = { [Op.in]: arry };
+            whereCondition['$spinner.brand$'] = { [Op.overlap]: idArray };
         }
 
         if (countryId) {
             const idArray: number[] = countryId
                 .split(",")
                 .map((id: any) => parseInt(id, 10));
-            let ginner = await Spinner.findAll({ where: { country_id: { [Op.in]: idArray } } });
-            const arry: number[] = ginner
-                .map((gin: any) => parseInt(gin.id, 10));
-            whereCondition.spinner_id = { [Op.in]: arry };
+            whereCondition['$spinner.country_id$'] = { [Op.in]: idArray };
         }
 
         if (seasonId) {
@@ -1540,20 +1492,14 @@ const exportSpinnerSale = async (req: Request, res: Response) => {
             const idArray: number[] = brandId
                 .split(",")
                 .map((id: any) => parseInt(id, 10));
-            let ginner = await Spinner.findAll({ where: { brand: { [Op.overlap]: idArray } } });
-            const arry: number[] = ginner
-                .map((gin: any) => parseInt(gin.id, 10));
-            whereCondition.spinner_id = { [Op.in]: arry };
+            whereCondition['$spinner.brand$'] = { [Op.overlap]: idArray };
         }
 
         if (countryId) {
             const idArray: number[] = countryId
                 .split(",")
                 .map((id: any) => parseInt(id, 10));
-            let ginner = await Spinner.findAll({ where: { country_id: { [Op.in]: idArray } } });
-            const arry: number[] = ginner
-                .map((gin: any) => parseInt(gin.id, 10));
-            whereCondition.spinner_id = { [Op.in]: arry };
+            whereCondition['$spinner.country_id$'] = { [Op.in]: idArray };
         }
 
         if (seasonId) {
@@ -3930,6 +3876,7 @@ const exportGarmentFabric = async (req: Request, res: Response) => {
 const fetchPscpPrecurement = async (req: Request, res: Response) => {
     try {
         let { seasonId }: any = req.query;
+        const searchTerm = req.query.search || "";
         let whereCondition: any = {}
         if (seasonId) {
             const idArray: number[] = seasonId
@@ -3937,6 +3884,12 @@ const fetchPscpPrecurement = async (req: Request, res: Response) => {
                 .map((id: any) => parseInt(id, 10));
             whereCondition.season_id = { [Op.in]: idArray };
         }
+
+        if (searchTerm) {
+            whereCondition[Op.or] = [
+              { '$season.name$': { [Op.iLike]: `%${searchTerm}%` } }, // Search by first name
+            ];
+          }
 
         const result = await Farm.findAll({
             attributes: [
@@ -4031,6 +3984,13 @@ const exportPscpCottonProcurement = async (req: Request, res: Response) => {
                 .map((id: any) => parseInt(id, 10));
             whereCondition.season_id = { [Op.in]: idArray };
         }
+
+        if (searchTerm) {
+            whereCondition[Op.or] = [
+              { '$season.name$': { [Op.iLike]: `%${searchTerm}%` } }, // Search by first name
+            ];
+          }
+          
         // Create the excel workbook file
         const workbook = new ExcelJS.Workbook();
         const worksheet = workbook.addWorksheet("Sheet1");
@@ -4150,6 +4110,236 @@ const exportPscpCottonProcurement = async (req: Request, res: Response) => {
             success: true,
             messgage: "File successfully Generated",
             data: process.env.BASE_URL + "pscp-cotton-procurement.xlsx",
+        });
+    } catch (error: any) {
+        console.error("Error appending data:", error);
+        return res.sendError(res, error.message);
+
+    }
+};
+
+const fetchPscpGinnerPrecurement = async (req: Request, res: Response) => {
+    try {
+        let { seasonId, countryId }: any = req.query;
+        const searchTerm = req.query.search || "";
+        let whereCondition: any = {}
+
+        if (searchTerm) {
+            whereCondition[Op.or] = [
+              { '$ginner.name$': { [Op.iLike]: `%${searchTerm}%` } }, // Search by first name
+            ];
+          }
+
+        if (countryId) {
+            const idArray: number[] = countryId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition.country_id = { [Op.in]: idArray };
+        }
+
+        const result = await Transaction.findAll({
+            attributes: [
+                [sequelize.fn('COALESCE', sequelize.fn('SUM', Sequelize.literal("CAST(qty_purchased AS DOUBLE PRECISION)")), 0), 'procurement_seed_cotton'],
+                [sequelize.fn('COALESCE', sequelize.fn('SUM', sequelize.col('qty_stock')), 0), 'total_qty_lint_produced']
+            ],
+            where: { season_id: seasonId, ...whereCondition },
+            include: [
+                {
+                    model: Ginner,
+                    as: 'ginner',
+                    attributes: ['id', 'name']
+                }
+            ],
+            group: ['mapped_ginner', 'ginner.id']
+        });
+        let data: any = [];
+        for await (const [index, item] of result.entries()) {
+
+            let obj: any = {}
+            console.log(item)
+            let processgin = await GinProcess.findOne({
+                attributes: [
+                    [sequelize.fn('COALESCE', sequelize.fn('SUM', sequelize.col('no_of_bales')), 0), 'no_of_bales']
+                ],
+                where: { season_id: seasonId, ginner_id: item.dataValues.ginner.id },
+            })
+            let ginbales = await GinBale.findOne({
+                attributes: [
+                    [sequelize.fn('COALESCE', sequelize.fn('SUM', Sequelize.literal('CAST("gin-bales"."weight" AS INTEGER)')), 0), 'total_qty']
+                ],
+                include: [
+                    {
+                        model: GinProcess,
+                        as: 'ginprocess',
+                        attributes: []
+                    }
+                ],
+                where: {
+                    '$ginprocess.season_id$': seasonId,
+                    '$ginprocess.ginner_id$': item.dataValues.ginner.id
+                },
+                group: ["ginprocess.season_id"]
+            });
+            let processSale = await GinSales.findOne({
+                attributes: [
+                    [sequelize.fn('COALESCE', sequelize.fn('SUM', sequelize.col('no_of_bales')), 0), 'no_of_bales'],
+                    [sequelize.fn('COALESCE', sequelize.fn('SUM', sequelize.col('total_qty')), 0), 'total_qty']
+                ],
+                where: { season_id: seasonId, ginner_id: item.dataValues.ginner.id }
+            })
+
+
+            obj.procurement_seed_cotton = ((item?.dataValues?.procurement_seed_cotton ?? 0) / 1000);
+            obj.procured_lint_cotton = (((item?.dataValues['procurement_seed_cotton'] ?? 0) * 35 / 100) / 1000);
+            obj.no_of_bales = processgin?.dataValues.no_of_bales ?? 0;
+            obj.total_qty_lint_produced = ginbales ? ((ginbales.dataValues.total_qty ?? 0) / 1000) : 0;
+            obj.sold_bales = processSale?.dataValues['no_of_bales'] ?? 0;
+            obj.average_weight = ((ginbales?.dataValues.total_qty ?? 0) / (obj.no_of_bales ?? 0));
+            obj.total_qty_sold_lint = ((processSale?.dataValues['total_qty'] ?? 0) / 1000);
+            obj.balace_stock = (obj.no_of_bales - obj.sold_bales) ?? 0;
+            obj.balance_lint_quantity = (obj.total_qty_lint_produced - obj.total_qty_sold_lint);
+            obj.ginner = item.dataValues.ginner
+            data.push(obj);
+        }
+        return res.sendPaginationSuccess(res, data);
+    } catch (error: any) {
+        console.error("Error appending data:", error);
+        return res.sendError(res, error.message);
+    }
+}
+
+const exportPscpGinnerCottonProcurement = async (req: Request, res: Response) => {
+    const excelFilePath = path.join("./upload", "pscp-cotton-ginner-procurement.xlsx");
+
+    const searchTerm = req.query.search || "";
+    let { seasonId, countryId }: any = req.query;
+    let whereCondition: any = {}
+    try {
+
+        if (searchTerm) {
+            whereCondition[Op.or] = [
+              { '$ginner.name$': { [Op.iLike]: `%${searchTerm}%` } }, // Search by first name
+            ];
+          }
+
+        if (countryId) {
+            const idArray: number[] = countryId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition.country_id = { [Op.in]: idArray };
+        }
+
+        // Create the excel workbook file
+        const workbook = new ExcelJS.Workbook();
+        const worksheet = workbook.addWorksheet("Sheet1");
+        worksheet.mergeCells('A1:L1');
+        const mergedCell = worksheet.getCell('A1');
+        mergedCell.value = 'CottonConnect | PSCP Cotton Ginner Procurement Tracker';
+        mergedCell.font = { bold: true };
+        mergedCell.alignment = { horizontal: 'center', vertical: 'middle' };
+        // Set bold font for header row
+        const headerRow = worksheet.addRow([
+            "Sr No.", "Ginner Name",
+            "Procured Seed Cotton (in MT)", "Procured Lint Cotton (in MT)", "No of Bales",
+            "Total Quantity of lint produced in (MT)", "Sold Bales", "Average Bale weight in Kgs", "Total Quantity of lint sold in (MT)", "Balance stock of bales",
+            "Balance Lint Quantity stock in MT"
+        ]);
+        headerRow.font = { bold: true };
+        const result = await Transaction.findAll({
+            attributes: [
+                [sequelize.fn('COALESCE', sequelize.fn('SUM', Sequelize.literal("CAST(qty_purchased AS DOUBLE PRECISION)")), 0), 'procurement_seed_cotton'],
+                [sequelize.fn('COALESCE', sequelize.fn('SUM', sequelize.col('qty_stock')), 0), 'total_qty_lint_produced']
+            ],
+            where: { season_id: seasonId, ...whereCondition },
+            include: [
+                {
+                    model: Ginner,
+                    as: 'ginner',
+                    attributes: ['id', 'name']
+                }
+            ],
+            group: ['mapped_ginner', 'ginner.id']
+        });
+        let data: any = [];
+        for await (const [index, item] of result.entries()) {
+
+            let obj: any = {}
+            let processgin = await GinProcess.findOne({
+                attributes: [
+                    [sequelize.fn('COALESCE', sequelize.fn('SUM', sequelize.col('no_of_bales')), 0), 'no_of_bales']
+                ],
+                where: { season_id: seasonId, ginner_id: item.dataValues.ginner.id },
+            })
+            let ginbales = await GinBale.findOne({
+                attributes: [
+                    [sequelize.fn('COALESCE', sequelize.fn('SUM', Sequelize.literal('CAST("gin-bales"."weight" AS INTEGER)')), 0), 'total_qty']
+                ],
+                include: [
+                    {
+                        model: GinProcess,
+                        as: 'ginprocess',
+                        attributes: []
+                    }
+                ],
+                where: {
+                    '$ginprocess.season_id$': seasonId,
+                    '$ginprocess.ginner_id$': item.dataValues.ginner.id
+                },
+                group: ["ginprocess.season_id"]
+            });
+            let processSale = await GinSales.findOne({
+                attributes: [
+                    [sequelize.fn('COALESCE', sequelize.fn('SUM', sequelize.col('no_of_bales')), 0), 'no_of_bales'],
+                    [sequelize.fn('COALESCE', sequelize.fn('SUM', sequelize.col('total_qty')), 0), 'total_qty']
+                ],
+                where: { season_id: seasonId, ginner_id: item.dataValues.ginner.id }
+            })
+
+
+            obj.procurement_seed_cotton = ((item?.dataValues?.procurement_seed_cotton ?? 0) / 1000);
+            obj.procured_lint_cotton = (((item?.dataValues['procurement_seed_cotton'] ?? 0) * 35 / 100) / 1000);
+            obj.no_of_bales = processgin?.dataValues.no_of_bales ?? 0;
+            obj.total_qty_lint_produced = ginbales ? ((ginbales.dataValues.total_qty ?? 0) / 1000) : 0;
+            obj.sold_bales = processSale?.dataValues['no_of_bales'] ?? 0;
+            obj.average_weight = ((ginbales?.dataValues.total_qty ?? 0) / (obj.no_of_bales ?? 0));
+            obj.total_qty_sold_lint = ((processSale?.dataValues['total_qty'] ?? 0) / 1000);
+            obj.balace_stock = (obj.no_of_bales - obj.sold_bales) ?? 0;
+            obj.balance_lint_quantity = (obj.total_qty_lint_produced - obj.total_qty_sold_lint);
+            obj.ginner = item.dataValues.ginner
+            data.push(obj);
+
+
+            const rowValues = Object.values({
+                index: index + 1,
+                name: item.dataValues.ginner.name ? item.dataValues.ginner.name : '',
+                procurement_seed_cotton: obj.procurement_seed_cotton,
+                procured_lint_cotton: obj.procured_lint_cotton,
+                no_of_bales: obj.no_of_bales,
+                total_qty_lint_produced: obj.total_qty_lint_produced,
+                sold_bales: obj.sold_bales,
+                average_weight: obj.average_weight ? obj.average_weight : 0,
+                total_qty_sold_lint: obj.total_qty_sold_lint ? obj.total_qty_sold_lint : 0,
+                balace_stock: obj.balace_stock,
+                balance_lint_quantity: obj.balance_lint_quantity
+            });
+            worksheet.addRow(rowValues);
+        }
+        // Auto-adjust column widths based on content
+        worksheet.columns.forEach((column: any) => {
+            let maxCellLength = 0;
+            column.eachCell({ includeEmpty: true }, (cell: any) => {
+                const cellLength = (cell.value ? cell.value.toString() : '').length;
+                maxCellLength = Math.max(maxCellLength, cellLength);
+            });
+            column.width = Math.min(24, maxCellLength + 2); // Limit width to 30 characters
+        });
+
+        // Save the workbook
+        await workbook.xlsx.writeFile(excelFilePath);
+        res.status(200).send({
+            success: true,
+            messgage: "File successfully Generated",
+            data: process.env.BASE_URL + "pscp-cotton-ginner-procurement.xlsx",
         });
     } catch (error: any) {
         console.error("Error appending data:", error);
@@ -4383,5 +4573,7 @@ export {
     exportGarmentFabric,
     fetchPscpPrecurement,
     exportPscpCottonProcurement,
-    consolidatedTraceability
+    consolidatedTraceability,
+    fetchPscpGinnerPrecurement,
+    exportPscpGinnerCottonProcurement
 }

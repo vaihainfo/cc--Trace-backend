@@ -13,7 +13,7 @@ const createFabricType = async (req: Request, res: Response) => {
         const fabricType = await FabricType.create(data);
         res.sendSuccess(res, fabricType);
     } catch (error) {
-        return res.sendError(res, "ERR_INTERNAL_SERVER_ERROR");
+        return res.sendError(res, "ERR_NOT_ABLE_TO_CREATE_FABRIC_TYPE");
     }
 }
 
@@ -33,7 +33,7 @@ const createFabricTypes = async (req: Request, res: Response) => {
         }
         res.sendSuccess(res, { pass, fail });
     } catch (error) {
-        return res.sendError(res, "ERR_INTERNAL_SERVER_ERROR");
+        return res.sendError(res, "ERR_NOT_ABLE_TO_CREATE_FABRIC_TYPE");
     }
 }
 
@@ -75,7 +75,7 @@ const fetchFebricTypePagination = async (req: Request, res: Response) => {
         }
 
     } catch (error) {
-        return res.sendError(res, "ERR_INTERNAL_SERVER_ERROR");
+        return res.sendError(res, "ERR_NOT_ABLE_TO_FETCH_FABRIC_TYPE");
     }
 }
 

@@ -20,6 +20,7 @@ import FarmerAgriArea from "../../models/farmer-agri-area.model";
 import FarmerCottonArea from "../../models/farmer-cotton-area.model";
 import sequelize from "../../util/dbConn";
 
+
 const createTransaction = async (req: Request, res: Response) => {
   try {
     if (Number(req.body.qtyPurchased) < 0) {

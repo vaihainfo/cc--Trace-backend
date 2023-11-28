@@ -7,6 +7,7 @@ import FabricType from './fabric-type.model';
 import Garment from './garment.model';
 import Season from './season.model';
 import Program from './program.model';
+import Fabric from './fabric.model';
 
 const WeaverSales = db.define('weaver_sales', {
   id: {
@@ -34,7 +35,10 @@ const WeaverSales = db.define('weaver_sales', {
     allowNull: false,
     type: DataTypes.INTEGER
   },
-  order_ref: {
+  garment_order_ref: {
+    type: DataTypes.STRING
+  },
+  brand_order_ref: {
     type: DataTypes.STRING
   },
   buyer_type: {
@@ -42,6 +46,9 @@ const WeaverSales = db.define('weaver_sales', {
     type: DataTypes.STRING
   },
   buyer_id: {
+    type: DataTypes.INTEGER
+  },
+  fabric_id: {
     type: DataTypes.INTEGER
   },
   processor_name: {
@@ -57,52 +64,20 @@ const WeaverSales = db.define('weaver_sales', {
   transaction_agent: {
     type: DataTypes.STRING
   },
-  warn_yarn_qty: {
-    type: DataTypes.DOUBLE
-  },
-  weft_choosen: {
-    allowNull: false,
-    type: DataTypes.STRING
-  },
-  weft_cottonmix_type: {
-    type: DataTypes.ARRAY(DataTypes.INTEGER)
-  },
-  weft_cottonmix_qty: {
-    type: DataTypes.ARRAY(DataTypes.DOUBLE)
-  },
-  weft_yarn_qty: {
+  yarn_qty: {
     type: DataTypes.DOUBLE
   },
   total_yarn_qty: {
     type: DataTypes.DOUBLE
   },
   fabric_type: {
-    allowNull: false,
+    type: DataTypes.ARRAY(DataTypes.INTEGER)
+  },
+  no_of_rolls: {
     type: DataTypes.INTEGER
-  },
-  fabric_contruction: {
-    allowNull: false,
-    type: DataTypes.STRING
-  },
-  fabric_length: {
-    allowNull: false,
-    type: DataTypes.DOUBLE
-  },
-  fabric_gsm: {
-    allowNull: false,
-    type: DataTypes.STRING
-  },
-  fabric_weight: {
-    type: DataTypes.DOUBLE
   },
   batch_lot_no: {
     allowNull: false,
-    type: DataTypes.STRING
-  },
-  job_details_garment: {
-    type: DataTypes.STRING
-  },
-  bale_ids: {
     type: DataTypes.STRING
   },
   invoice_no: {
@@ -128,7 +103,7 @@ const WeaverSales = db.define('weaver_sales', {
     type: DataTypes.STRING
   },
   invoice_file: {
-    type: DataTypes.STRING
+    type: DataTypes.ARRAY(DataTypes.STRING)
   },
   delivery_notes: {
     type: DataTypes.STRING
@@ -139,19 +114,8 @@ const WeaverSales = db.define('weaver_sales', {
   status: {
     type: DataTypes.STRING
   },
-  dyeing_required: {
-    allowNull: false,
-    type: DataTypes.BOOLEAN
-  },
-  dyeing_id: {
-    type: DataTypes.INTEGER,
-    references: { model: 'dyeings', key: 'id' },
-  },
   qr: {
     type: DataTypes.STRING
-  },
-  no_of_bales: {
-    type: DataTypes.DOUBLE
   },
   accept_date: {
     type: DataTypes.DATE
@@ -168,15 +132,15 @@ WeaverSales.belongsTo(Garment, {
   as: "buyer",
 });
 
-WeaverSales.belongsTo(FabricType, {
-  foreignKey: "fabric_type",
-  as: "fabric",
+WeaverSales.belongsTo(Fabric, {
+  foreignKey: "fabric_id",
+  as: "dyingwashing",
 });
 
-WeaverSales.belongsTo(Dyeing, {
-  foreignKey: "dyeing_id",
-  as: "dyeing",
-});
+// WeaverSales.belongsTo(FabricType, {
+//   foreignKey: "fabric_type",
+//   as: "fabric",
+// });
 
 WeaverSales.belongsTo(Season, {
   foreignKey: "season_id",

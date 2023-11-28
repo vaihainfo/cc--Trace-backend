@@ -3,7 +3,8 @@ import {
     fetchBrandTransactionsPagination,
     productionUpdate,
     productTracebility,
-    styleMarkNo
+    styleMarkNo,
+    getProgram
 } from "../../controllers/brand";
 
 
@@ -17,6 +18,6 @@ router.get('/production-update', productionUpdate);
 router.get('/product-tracebility', productTracebility);
 router.get('/style-mark', styleMarkNo);
 
-
+router.get('/get-program', getProgram);
 
 export default router;

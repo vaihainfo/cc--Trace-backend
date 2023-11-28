@@ -13,6 +13,7 @@ import Garment from "../../../models/garment.model";
 import Trader from "../../../models/trader.model";
 import Fabric from "../../../models/fabric.model";
 import { generateTokens } from "../../../util/auth";
+import Brand from "../../../models/brand.model";
 
 const getUserInfo = async (req: Request, res: Response) => {
     try {
@@ -69,7 +70,7 @@ const getUserInfo = async (req: Request, res: Response) => {
                 },
             ],
         });
-        let [spinner, ginner, weaver, knitter, garment, trader, fabric] = await Promise.all([
+        let [spinner, ginner, weaver, knitter, garment, trader, fabric, brand] = await Promise.all([
             Spinner.findOne({ where: { spinnerUser_id: { [Op.contains]: [user.dataValues.id] } } }),
             Ginner.findOne({ where: { ginnerUser_id: { [Op.contains]: [user.dataValues.id] } } }),
             Weaver.findOne({ where: { weaverUser_id: { [Op.contains]: [user.dataValues.id] } } }),
@@ -77,6 +78,7 @@ const getUserInfo = async (req: Request, res: Response) => {
             Garment.findOne({ where: { garmentUser_id: { [Op.contains]: [user.dataValues.id] } } }),
             Trader.findOne({ where: { traderUser_id: { [Op.contains]: [user.dataValues.id] } } }),
             Fabric.findOne({ where: { fabricUser_id: { [Op.contains]: [user.dataValues.id] } } }),
+            Brand.findOne({ where: { brandUser_id: { [Op.contains]: [user.dataValues.id] } } })
         ])
         let processor = [];
         spinner ? processor.push('Spinner') : "";
@@ -86,10 +88,11 @@ const getUserInfo = async (req: Request, res: Response) => {
         garment ? processor.push('Garment') : "";
         trader ? processor.push('Trader') : "";
         fabric ? processor.push('Fabric') : "";
+        brand ? processor.push('Brand') : "";
         if (req.query.ginnerId) {
             ginner = await Ginner.findOne({ where: { id: req.query.ginnerId } })
         }
-        return res.sendSuccess(res, { user, role, menuList, privileges, spinner, ginner, weaver, knitter, garment, trader, fabric, processor });
+        return res.sendSuccess(res, { user, role, menuList, privileges, spinner, ginner, weaver, knitter, garment, trader, fabric, brand, processor });
     } catch (error) {
         console.log(error)
         return res.sendError(res, "ERR_NOT_ABLE_TO_GET_USER_DETAILS");
