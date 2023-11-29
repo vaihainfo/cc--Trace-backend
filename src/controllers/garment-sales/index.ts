@@ -144,18 +144,18 @@ const fetchTransactions = async (req: Request, res: Response) => {
         if (!garmentId) {
             return res.sendError(res, 'Need Garment Id');
         }
-        if (fabricId) {
-            extra += `AND "knit_sales"."fabric_type" = '${fabricId}' `;
-            extrawave += `AND "weaver_sales"."fabric_type" = '${fabricId}' `
-        }
+        // if (fabricId) {
+        //     extra += `AND "knit_sales"."fabric_type" = '${fabricId}' `;
+        //     extrawave += `AND "weaver_sales"."fabric_type" = '${fabricId}' `
+        // }
         if (programId) {
             extra += `AND "knit_sales"."program_id" = '${programId}' `;
             extrawave += `AND "weaver_sales"."program_id" = '${programId}' `
         }
-        if (orderRef) {
-            extra += `AND "knit_sales"."order_ref" = '${orderRef}' `;
-            extrawave += `AND "weaver_sales"."order_ref" = '${orderRef}' `
-        }
+        // if (orderRef) {
+        //     extra += `AND "knit_sales"."order_ref" = '${orderRef}' `;
+        //     extrawave += `AND "weaver_sales"."order_ref" = '${orderRef}' `
+        // }
 
         if (invoiceNo) {
             extra += `AND "knit_sales"."invoice_no" = '${invoiceNo}' `;
@@ -168,16 +168,80 @@ const fetchTransactions = async (req: Request, res: Response) => {
             extra += `AND "knit_sales"."knitter_id" = '${knitterId}' `;
         }
 
-        let data: any = await sequelize.query(
-            `SELECT "weaver_sales"."id", "weaver_sales"."weaver_id", "weaver_sales"."season_id", "weaver_sales"."date", "weaver_sales"."program_id", "weaver_sales"."order_ref", "weaver_sales"."buyer_id",  "weaver_sales"."transaction_via_trader", "weaver_sales"."transaction_agent", "weaver_sales"."fabric_type", "weaver_sales"."fabric_length", "weaver_sales"."fabric_gsm", "weaver_sales"."fabric_weight", "weaver_sales"."batch_lot_no", "weaver_sales"."job_details_garment","weaver_sales"."invoice_no", "weaver_sales"."vehicle_no","weaver_sales"."qty_stock", "weaver_sales"."qr", "program"."id" AS "program-id", "program"."program_name" AS "program_name", "fabric"."id" AS 
-            "fabric_id", "fabric"."fabricType_name" AS "fabricType_name", "weaver"."id" AS "weaver-id", "weaver"."name" AS 
-            "weaver_name" FROM "weaver_sales" AS "weaver_sales" LEFT OUTER JOIN "programs" AS "program" ON "weaver_sales"."program_id" = "program"."id" LEFT OUTER JOIN "fabric_types" AS "fabric" ON "weaver_sales"."fabric_type" = "fabric"."id" LEFT OUTER JOIN "weavers" AS "weaver" ON "weaver_sales"."weaver_id" = "weaver"."id" WHERE "weaver_sales"."status" = 'Sold' AND "weaver_sales"."buyer_id" = '${garmentId}' ${extrawave}
-             UNION ALL 
-             SELECT "knit_sales"."id", "knit_sales"."knitter_id", "knit_sales"."season_id", "knit_sales"."date", "knit_sales"."program_id", "knit_sales"."order_ref", "knit_sales"."buyer_id", "knit_sales"."transaction_via_trader", "knit_sales"."transaction_agent", "knit_sales"."fabric_type", "knit_sales"."fabric_length", "knit_sales"."fabric_gsm", "knit_sales"."fabric_weight", "knit_sales"."batch_lot_no", "knit_sales"."job_details_garment", "knit_sales"."invoice_no", "knit_sales"."vehicle_no", "knit_sales"."qty_stock", "knit_sales"."qr", "program"."id" AS "program-id", "program"."program_name" AS "program_name", "fabric"."id" AS "fabric_id", "fabric"."fabricType_name" AS "fabricType_name", "knitter"."id" AS "knitter-id", "knitter"."name" AS "knitter_name" FROM "knit_sales" AS "knit_sales" 
-             LEFT OUTER JOIN "programs" AS "program" ON "knit_sales"."program_id" = "program"."id" LEFT OUTER JOIN "fabric_types" AS "fabric" ON "knit_sales"."fabric_type" = "fabric"."id" LEFT OUTER JOIN "knitters" AS "knitter" ON "knit_sales"."knitter_id" = "knitter"."id" WHERE "knit_sales"."status" = 'Sold' AND "knit_sales"."buyer_id" = '${garmentId}' ${extra}
-             OFFSET ${offset} 
-             LIMIT ${limit}`,
-        )
+        // let data: any = await sequelize.query(
+        //     `SELECT "weaver_sales"."id", "weaver_sales"."weaver_id", "weaver_sales"."season_id", "weaver_sales"."date", "weaver_sales"."program_id", "weaver_sales"."order_ref", "weaver_sales"."buyer_id",  "weaver_sales"."transaction_via_trader", "weaver_sales"."transaction_agent", "weaver_sales"."fabric_type", "weaver_sales"."fabric_length", "weaver_sales"."fabric_gsm", "weaver_sales"."fabric_weight", "weaver_sales"."batch_lot_no", "weaver_sales"."job_details_garment","weaver_sales"."invoice_no", "weaver_sales"."vehicle_no","weaver_sales"."qty_stock", "weaver_sales"."qr", "program"."id" AS "program-id", "program"."program_name" AS "program_name", "fabric"."id" AS 
+        //     "fabric_id", "fabric"."fabricType_name" AS "fabricType_name", "weaver"."id" AS "weaver-id", "weaver"."name" AS 
+        //     "weaver_name" FROM "weaver_sales" AS "weaver_sales" LEFT OUTER JOIN "programs" AS "program" ON "weaver_sales"."program_id" = "program"."id" LEFT OUTER JOIN "fabric_types" AS "fabric" ON "weaver_sales"."fabric_type" = "fabric"."id" LEFT OUTER JOIN "weavers" AS "weaver" ON "weaver_sales"."weaver_id" = "weaver"."id" WHERE "weaver_sales"."status" = 'Sold' AND "weaver_sales"."buyer_id" = '${garmentId}' ${extrawave}
+        //      UNION ALL 
+        //      SELECT "knit_sales"."id", "knit_sales"."knitter_id", "knit_sales"."season_id", "knit_sales"."date", "knit_sales"."program_id", "knit_sales"."order_ref", "knit_sales"."buyer_id", "knit_sales"."transaction_via_trader", "knit_sales"."transaction_agent", "knit_sales"."fabric_type", "knit_sales"."fabric_length", "knit_sales"."fabric_gsm", "knit_sales"."fabric_weight", "knit_sales"."batch_lot_no", "knit_sales"."job_details_garment", "knit_sales"."invoice_no", "knit_sales"."vehicle_no", "knit_sales"."qty_stock", "knit_sales"."qr", "program"."id" AS "program-id", "program"."program_name" AS "program_name", "fabric"."id" AS "fabric_id", "fabric"."fabricType_name" AS "fabricType_name", "knitter"."id" AS "knitter-id", "knitter"."name" AS "knitter_name" FROM "knit_sales" AS "knit_sales" 
+        //      LEFT OUTER JOIN "programs" AS "program" ON "knit_sales"."program_id" = "program"."id" LEFT OUTER JOIN "fabric_types" AS "fabric" ON "knit_sales"."fabric_type" = "fabric"."id" LEFT OUTER JOIN "knitters" AS "knitter" ON "knit_sales"."knitter_id" = "knitter"."id" WHERE "knit_sales"."status" = 'Sold' AND "knit_sales"."buyer_id" = '${garmentId}' ${extra}
+        //      OFFSET ${offset} 
+        //      LIMIT ${limit}`,
+        // )
+
+        const data = await sequelize.query(
+            `SELECT 
+                "weaver_sales"."id", 
+                "weaver_sales"."weaver_id", 
+                "weaver_sales"."season_id", 
+                "weaver_sales"."date", 
+                "weaver_sales"."program_id", 
+                "weaver_sales"."garment_order_ref", 
+                "weaver_sales"."brand_order_ref", 
+                "weaver_sales"."buyer_id",  
+                "weaver_sales"."transaction_via_trader", 
+                "weaver_sales"."transaction_agent", 
+                "weaver_sales"."yarn_qty", 
+                "weaver_sales"."total_yarn_qty", 
+                "weaver_sales"."bill_of_ladding", 
+                "weaver_sales"."transporter_name", 
+                "weaver_sales"."batch_lot_no", 
+                "weaver_sales"."invoice_no", 
+                "weaver_sales"."vehicle_no",
+                "weaver_sales"."qty_stock", 
+                "weaver_sales"."qr", 
+                "program"."id" AS "program-id", 
+                "program"."program_name" AS "program_name", 
+                "weaver"."id" AS "weaver-id", 
+                "weaver"."name" AS "weaver_name" 
+            FROM "weaver_sales" AS "weaver_sales" 
+            LEFT OUTER JOIN "programs" AS "program" ON "weaver_sales"."program_id" = "program"."id" 
+            LEFT OUTER JOIN "weavers" AS "weaver" ON "weaver_sales"."weaver_id" = "weaver"."id" 
+            WHERE "weaver_sales"."status" = 'Sold' AND "weaver_sales"."buyer_id" = '${garmentId}' ${extrawave}
+            
+            UNION ALL 
+            
+            SELECT 
+                "knit_sales"."id", 
+                "knit_sales"."knitter_id", 
+                "knit_sales"."season_id", 
+                "knit_sales"."date", 
+                "knit_sales"."program_id", 
+                "knit_sales"."garment_order_ref", 
+                "knit_sales"."brand_order_ref", 
+                "knit_sales"."buyer_id", 
+                "knit_sales"."transaction_via_trader", 
+                "knit_sales"."transaction_agent", 
+                "knit_sales"."batch_lot_no", 
+                "knit_sales"."yarn_qty", 
+                "knit_sales"."total_yarn_qty", 
+                "knit_sales"."invoice_no", 
+                "knit_sales"."bill_of_ladding", 
+                "knit_sales"."transporter_name", 
+                "knit_sales"."vehicle_no", 
+                "knit_sales"."qty_stock", 
+                "knit_sales"."qr", 
+                "program"."id" AS "program-id", 
+                "program"."program_name" AS "program_name", 
+                "knitter"."id" AS "knitter-id", 
+                "knitter"."name" AS "knitter_name" 
+            FROM "knit_sales" AS "knit_sales" 
+            LEFT OUTER JOIN "programs" AS "program" ON "knit_sales"."program_id" = "program"."id" 
+            LEFT OUTER JOIN "knitters" AS "knitter" ON "knit_sales"."knitter_id" = "knitter"."id" 
+            WHERE "knit_sales"."status" = 'Sold' AND "knit_sales"."buyer_id" = '${garmentId}' ${extra}
+            OFFSET ${offset} 
+            LIMIT ${limit}`,
+        );
         return res.sendPaginationSuccess(res, data[1].rows, data[1].rowCount);
     } catch (error: any) {
         console.error("Error appending data:", error);
@@ -187,7 +251,7 @@ const fetchTransactions = async (req: Request, res: Response) => {
 
 const fetchTransactionsAll = async (req: Request, res: Response) => {
     try {
-        let { garmentId, weaverId, programId, lotNo, orderRef, invoiceNo, fabricId, knitterId }: any = req.query;
+        let { garmentId, weaverId, programId, lotNo, garmentOrderRef,brandOrderRef, invoiceNo, fabricId, knitterId }: any = req.query;
         if (!garmentId) {
             return res.sendError(res, 'Need Garment Id');
         }
@@ -220,11 +284,17 @@ const fetchTransactionsAll = async (req: Request, res: Response) => {
             weaverWhere.weaver_id = { [Op.in]: [0] };
             knitterWhere.knitter_id = { [Op.in]: idArray };
         }
-        if (orderRef) {
-            const idArray: any[] = orderRef
+        if (garmentOrderRef) {
+            const idArray: any[] = garmentOrderRef
                 .split(",")
                 .map((id: any) => id);
-            whereCondition.order_ref = { [Op.in]: idArray };
+            whereCondition.garment_order_ref = { [Op.in]: idArray };
+        }
+        if (brandOrderRef) {
+            const idArray: any[] = brandOrderRef
+                .split(",")
+                .map((id: any) => id);
+            whereCondition.brand_order_ref = { [Op.in]: idArray };
         }
         if (invoiceNo) {
             const idArray: any[] = invoiceNo
@@ -244,9 +314,14 @@ const fetchTransactionsAll = async (req: Request, res: Response) => {
                 as: 'program',
             },
             {
-                model: FabricType,
-                as: 'fabric',
-            }
+                model: Season,
+                as: "season",
+                attributes: ['id', 'name']
+            },
+            // {
+            //     model: FabricType,
+            //     as: 'fabric',
+            // }
         ]
         let result = await Promise.all([
             WeaverSales.findAll({

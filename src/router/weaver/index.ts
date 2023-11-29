@@ -15,7 +15,9 @@ import {
     createWeaverProcess,
     fetchWeaverProcessPagination,
     fetchFabricReelLotNo,
-    exportWeaverProcess
+    exportWeaverProcess,
+    getChooseFabricFilters,
+    fetchWeaverSale
 } from "../../controllers/weaver";
 
 import { Router } from "express";
@@ -35,8 +37,10 @@ router.get('/transaction/count', countCottonBaleWithProgram);
 router.get('/get-spinner-trans', getSpinnerTransaction);
 router.get('/get-dyeing', getWeaverDyeing);
 router.get('/get-garments', getGarments);
+router.get('/get-sale', fetchWeaverSale);
 router.get('/get-invoice-trans', getInvoiceAndyarnType);
 router.get('/get-fabrics', getFabrics);
 router.get('/get-reel-lot-no', fetchFabricReelLotNo);
+router.get('/get-fabric-filters', getChooseFabricFilters);
 
 export default router;

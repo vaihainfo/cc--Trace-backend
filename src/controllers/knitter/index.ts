@@ -19,6 +19,8 @@ import KnitYarnSelection from "../../models/knit-yarn-seletions.model";
 import Fabric from "../../models/fabric.model";
 import KnitProcess from "../../models/knit-process.model";
 import KnitFabricSelection from "../../models/knit-fabric-selectiion.model";
+import SpinProcessYarnSelection from "../../models/spin-process-yarn-seletions.model";
+import SpinProcess from "../../models/spin-process.model";
 
 const createKnitterProcess = async (req: Request, res: Response) =>{
 try {
@@ -97,7 +99,7 @@ const fetchKnitterProcessPagination = async (req: Request, res: Response) => {
     const searchTerm = req.query.search || "";
     const page = Number(req.query.page) || 1;
     const limit = Number(req.query.limit) || 10;
-    const { knitterId, seasonId, programId } = req.query;
+    const { knitterId, seasonId, programId, filter, lotNo, reelLotNo, noOfRolls, fabricType }: any = req.query;
     const offset = (page - 1) * limit;
     const whereCondition: any = {};
     try {
@@ -126,6 +128,35 @@ const fetchKnitterProcessPagination = async (req: Request, res: Response) => {
         }
         if (programId) {
             whereCondition.program_id = programId;
+        }
+
+        if (filter === 'Quantity') {
+            whereCondition.qty_stock = { [Op.gt]: 0 }
+        }
+
+        if (lotNo) {
+            const idArray: any[] = lotNo
+                .split(",")
+                .map((id: any) => id);
+            whereCondition.batch_lot_no = { [Op.in]: idArray };
+        }
+        if (reelLotNo) {
+            const idArray: any[] = reelLotNo
+                .split(",")
+                .map((id: any) => id);
+            whereCondition.reel_lot_no = { [Op.in]: idArray };
+        }
+        if (noOfRolls) {
+            const idArray: any[] = noOfRolls
+                .split(",")
+                .map((id: any) => id);
+            whereCondition.no_of_rolls = { [Op.in]: idArray };
+        }
+        if (fabricType) {
+            const idArray: any[] = fabricType
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition.fabric_type = { [Op.overlap]: idArray };
         }
 
         let include = [
@@ -782,7 +813,7 @@ const fetchKnitterDashBoard = async (req: Request, res: Response) => {
     const searchTerm = req.query.search || "";
     const page = Number(req.query.page) || 1;
     const limit = Number(req.query.limit) || 10;
-    const { knitterId, status, filter, programId, spinnerId, invoice, lotNo, yarnCount, yarnType }: any = req.query;
+    const { knitterId, status, filter, programId, spinnerId, invoice, lotNo, yarnCount, yarnType, reelLotNo }: any = req.query;
     const offset = (page - 1) * limit;
     const whereCondition: any = {};
     try {
@@ -832,6 +863,14 @@ const fetchKnitterDashBoard = async (req: Request, res: Response) => {
                 .split(",")
                 .map((id: any) => id);
             whereCondition.batch_lot_no = { [Op.in]: idArray };
+        }
+        if (reelLotNo) {
+            const filterValues: any[] = reelLotNo
+              .split(",")
+              .map((value: any) => value.trim());
+
+            whereCondition[Op.or]= filterValues.map((value) => ({
+                reel_lot_no: {[Op.iLike]: `%${value}%`}}))
         }
         if (yarnCount) {
             const idArray: number[] = yarnCount
@@ -1070,11 +1109,27 @@ const getInvoiceAndyarnType = async (req: Request, res: Response) => {
             where: whereCondition,
             group: ['invoice_no', 'batch_lot_no']
         });
-        const reelLot = await SpinSales.findAll({
-            attributes: ['reel_lot_no'],
+        const ids = await SpinSales.findAll({
+            attributes: ['id'],
             where: { ...whereCondition, reel_lot_no: { [Op.not]: null } },
-            group: ['reel_lot_no']
         });
+
+        let salesId=ids.map((item: any) => item.dataValues.id)
+
+        let reelLot = await SpinProcessYarnSelection.findAll({
+            attributes: [[Sequelize.col('process.reel_lot_no'),'reel_lot_no']],
+            where: {sales_id: {[Op.in]:salesId}},
+            include:[
+                {
+                    model: SpinProcess,
+                    as: 'process',
+                    where :{reel_lot_no : {[Op.not]: null}},
+                    attributes: []
+                }
+            ],
+            group: ['process.reel_lot_no']
+        });
+
         const yarncount = await SpinSales.findAll({
             attributes: ['yarn_count'],
             where: whereCondition,
@@ -1092,7 +1147,49 @@ const getInvoiceAndyarnType = async (req: Request, res: Response) => {
             where: whereCondition,
             group: ['yarn_type']
         });
-        res.sendSuccess(res, { invoice, reelLot, yarn_type, yarncount });
+        res.sendSuccess(res, { invoice, yarn_type, yarncount, reelLot });
+    } catch (error: any) {
+        return res.sendError(res, error.message);
+    }
+};
+
+
+const getChooseFabricFilters = async (req: Request, res: Response) => {
+    const { knitterId, programId }: any = req.query;
+    const whereCondition: any = {};
+    try {
+        if (!knitterId) {
+            return res.sendError(res, 'Need Knitter Id ');
+        }
+
+        if (knitterId) {
+            whereCondition.knitter_id = knitterId;
+        }
+        if (programId) {
+            const idArray: number[] = programId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition.program_id = { [Op.in]: idArray };
+        }
+        whereCondition.qty_stock = { [Op.gt]: 0 }
+        
+        const batchLotNo = await KnitProcess.findAll({
+            attributes: ['batch_lot_no'],
+            where: whereCondition,
+            group: ['batch_lot_no']
+        });
+        const reelLot = await KnitProcess.findAll({
+            attributes: ['reel_lot_no'],
+            where: { ...whereCondition, reel_lot_no: { [Op.not]: null } },
+            group: ['reel_lot_no']
+        });
+        const noOfRolls = await KnitProcess.findAll({
+            attributes: ['no_of_rolls'],
+            where: whereCondition,
+            group: ['no_of_rolls']
+        });
+
+        res.sendSuccess(res, { batchLotNo,reelLot, noOfRolls });
     } catch (error: any) {
         return res.sendError(res, error.message);
     }
@@ -1148,5 +1245,6 @@ export {
     getGarments,
     fetchKnitterSale,
     getFabrics,
-    fetchFabricReelLotNo
+    fetchFabricReelLotNo,
+    getChooseFabricFilters
 }
