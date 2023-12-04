@@ -60,6 +60,32 @@ const getUserInfo = async (req: Request, res: Response) => {
             });
             role = role.dataValues;
         }
+        if (req.query.knitterId) {
+            role = await UserRole.findOne({
+                where: { user_role: 'Knitter' },
+                include: [
+                    {
+                        model: UserCategory,
+                        as: 'userCategory',
+                        attributes: ['id', 'category_name'], // Include only the name attribute of the category
+                    },
+                ],
+            });
+            role = role.dataValues;
+        }
+        if (req.query.weaverId) {
+            role = await UserRole.findOne({
+                where: { user_role: 'Weaver' },
+                include: [
+                    {
+                        model: UserCategory,
+                        as: 'userCategory',
+                        attributes: ['id', 'category_name'], // Include only the name attribute of the category
+                    },
+                ],
+            });
+            role = role.dataValues;
+        }
         let menuList = await MenuList.findAll(
             {
                 where: {
