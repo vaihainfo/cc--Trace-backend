@@ -528,25 +528,25 @@ const uploadFarmer = async (req: Request, res: Response) => {
                 fail.push({
                     success: false,
                     data: { farmerCode: data.farmerCode, farmerName: data.firstName },
-                    message: "Country cannot be empty"
+                    message: "State cannot be empty"
                 })
             } else if (!data.district) {
                 fail.push({
                     success: false,
                     data: { farmerCode: data.farmerCode, farmerName: data.firstName },
-                    message: "Country cannot be empty"
+                    message: "District cannot be empty"
                 })
             } else if (!data.block) {
                 fail.push({
                     success: false,
                     data: { farmerCode: data.farmerCode, farmerName: data.firstName },
-                    message: "Country cannot be empty"
+                    message: "Block cannot be empty"
                 })
             } else if (!data.village) {
                 fail.push({
                     success: false,
                     data: { farmerCode: data.farmerCode, farmerName: data.firstName },
-                    message: "Country cannot be empty"
+                    message: "Village cannot be empty"
                 })
             } else if (program.program_name !== "Organic" && data.tracenetId) {
                 fail.push({
