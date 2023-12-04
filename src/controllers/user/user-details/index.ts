@@ -47,6 +47,7 @@ const getUserInfo = async (req: Request, res: Response) => {
             });
             role = role.dataValues;
         }
+
         if (req.query.spinnerId) {
             role = await UserRole.findOne({
                 where: { user_role: 'Spinner' },
@@ -60,6 +61,7 @@ const getUserInfo = async (req: Request, res: Response) => {
             });
             role = role.dataValues;
         }
+
         if (req.query.knitterId) {
             role = await UserRole.findOne({
                 where: { user_role: 'Knitter' },
@@ -86,6 +88,7 @@ const getUserInfo = async (req: Request, res: Response) => {
             });
             role = role.dataValues;
         }
+
         let menuList = await MenuList.findAll(
             {
                 where: {

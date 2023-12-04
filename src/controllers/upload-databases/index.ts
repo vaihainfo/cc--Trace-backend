@@ -597,7 +597,7 @@ const uploadFarmer = async (req: Request, res: Response) => {
                                 fail.push({
                                     success: false,
                                     data: { farmerCode: data.farmerCode, farmerName: data.firstName },
-                                    message: "State not found"
+                                    message: "State is not associated with the entered Country"
                                 })
                             } else {
                                 if (data.district) {
@@ -612,7 +612,7 @@ const uploadFarmer = async (req: Request, res: Response) => {
                                         fail.push({
                                             success: false,
                                             data: { farmerCode: data.farmerCode, farmerName: data.firstName },
-                                            message: "District not found"
+                                            message: "District is not associated with entered State"
                                         })
                                     } else {
 
@@ -628,7 +628,7 @@ const uploadFarmer = async (req: Request, res: Response) => {
                                                 fail.push({
                                                     success: false,
                                                     data: { farmerCode: data.farmerCode, farmerName: data.firstName },
-                                                    message: "Block not found"
+                                                    message: "Block is not associated with entered District"
                                                 })
                                             } else {
                                                 if (data.village) {
@@ -643,7 +643,7 @@ const uploadFarmer = async (req: Request, res: Response) => {
                                                         fail.push({
                                                             success: false,
                                                             data: { farmerCode: data.farmerCode, farmerName: data.firstName },
-                                                            message: "Village not found"
+                                                            message: "Village is not associated with entered Taluk/Block"
                                                         })
                                                     }
                                                 }
