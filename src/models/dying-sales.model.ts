@@ -24,7 +24,10 @@ const DyingSales = db.define('dying_sales', {
   program_id: {
     type: DataTypes.INTEGER
   },
-  order_refernce: {
+  brand_order_ref: {
+    type: DataTypes.STRING
+  },
+  garment_order_ref: {
     type: DataTypes.STRING
   },
   buyer_type: {
@@ -108,6 +111,15 @@ const DyingSales = db.define('dying_sales', {
   },
   qr: {
     type: DataTypes.STRING
+  },
+  dye_invoice: {
+    type: DataTypes.STRING
+  },
+  invoice_files: {
+    type: DataTypes.ARRAY(DataTypes.STRING)
+  },
+  other_docs: {
+    type: DataTypes.ARRAY(DataTypes.STRING)
   }
 });
 

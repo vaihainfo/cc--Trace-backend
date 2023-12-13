@@ -33,6 +33,10 @@ const Embroidering = db.define('embroiderings',{
 });
 
 Embroidering.associate = (models: any) => {
+  Embroidering.hasMany(models.GarmentProcess, {
+    foreignKey: 'embroidering_id',
+    as: 'embroidering',
+  });
   Embroidering.hasMany(models.GarmentSales, {
     foreignKey: 'embroidering_id',
     as: 'embroidering',

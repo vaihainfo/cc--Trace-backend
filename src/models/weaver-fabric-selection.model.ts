@@ -1,5 +1,6 @@
 import { DataTypes } from 'sequelize';
 import db from '../util/dbConn';
+import WeaverProcess from './weaver-process.model';
 
 const WeaverFabricSelection = db.define('weaver_fabric_selections', {
   id: {
@@ -20,6 +21,11 @@ const WeaverFabricSelection = db.define('weaver_fabric_selections', {
   qty_used: {
     type: DataTypes.DOUBLE
   },
+});
+
+WeaverFabricSelection.belongsTo(WeaverProcess, {
+  foreignKey: "fabric_id",
+  as: "process",
 });
 
 WeaverFabricSelection.sync();

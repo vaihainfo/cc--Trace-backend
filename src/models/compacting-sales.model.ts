@@ -24,7 +24,10 @@ const CompactingSales = db.define('compacting_sales', {
   program_id: {
     type: DataTypes.INTEGER
   },
-  order_refernce: {
+  brand_order_ref: {
+    type: DataTypes.STRING
+  },
+  garment_order_ref: {
     type: DataTypes.STRING
   },
   buyer_type: {
@@ -105,6 +108,18 @@ const CompactingSales = db.define('compacting_sales', {
   },
   qr: {
     type: DataTypes.STRING
+  },
+  washing_details: {
+    type: DataTypes.STRING
+  },
+  wash_type: {
+    type: DataTypes.STRING
+  },
+  invoice_files: {
+    type: DataTypes.ARRAY(DataTypes.STRING)
+  },
+  other_docs: {
+    type: DataTypes.ARRAY(DataTypes.STRING)
   }
 });
 

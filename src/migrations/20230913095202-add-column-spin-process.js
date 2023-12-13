@@ -20,18 +20,18 @@ module.exports = {
       queryInterface.addColumn('spin_processes', 'cottonmix_qty', {
         type: Sequelize.ARRAY(Sequelize.INTEGER)
       }),
-      queryInterface.addColumn('spin_processes', 'accept_date', {
-        type: Sequelize.DATE
-      }),
-      queryInterface.addColumn('spin_processes', 'tot_box_user', {
-        type: Sequelize.INTEGER
-      }),
-      queryInterface.addColumn('spin_processes', 'display_order', {
-        type: Sequelize.INTEGER
-      }),
-      queryInterface.addColumn('spin_processes', 'qr', {
-        type: Sequelize.STRING
-      }),
+      // queryInterface.addColumn('spin_processes', 'accept_date', {
+      //   type: Sequelize.DATE
+      // }),
+      // queryInterface.addColumn('spin_processes', 'tot_box_user', {
+      //   type: Sequelize.INTEGER
+      // }),
+      // queryInterface.addColumn('spin_processes', 'display_order', {
+      //   type: Sequelize.INTEGER
+      // }),
+      // queryInterface.addColumn('spin_processes', 'qr', {
+      //   type: Sequelize.STRING
+      // }),
 
     ])
   },

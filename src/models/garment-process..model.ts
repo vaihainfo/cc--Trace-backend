@@ -2,12 +2,12 @@ import { DataTypes } from 'sequelize';
 import db from '../util/dbConn';
 
 import Garment from './garment.model';
+import Embroidering from './embroidering.model';
 import Program from './program.model';
 import Season from './season.model';
-import Brand from './brand.model';
-import Trader from './trader.model';
+import Department from './department.model';
 
-const GarmentSales = db.define('garment_sales', {
+const GarmentProcess = db.define('garment_processes', {
   id: {
     type: DataTypes.INTEGER,
     autoIncrement: true,
@@ -35,7 +35,7 @@ const GarmentSales = db.define('garment_sales', {
   },
   department_id: {
     allowNull: false,
-    type: DataTypes.ARRAY(DataTypes.INTEGER)
+    type: DataTypes.INTEGER
   },
   fabric_order_ref: {
     type: DataTypes.STRING
@@ -43,45 +43,43 @@ const GarmentSales = db.define('garment_sales', {
   brand_order_ref: {
     type: DataTypes.STRING
   },
-  buyer_type: {
-    allowNull: false,
-    type: DataTypes.STRING
-  },
-  buyer_id: {
-    type: DataTypes.INTEGER
-  },
-  trader_id: {
-    type: DataTypes.INTEGER
-  },
-  processor_name: {
-    type: DataTypes.STRING
-  },
-  processor_address: {
-    type: DataTypes.STRING
-  },
-  total_no_of_pieces: {
-    type: DataTypes.DOUBLE
-  },
-  total_no_of_boxes: {
-    type: DataTypes.DOUBLE
-  },
-  fabric_length: {
-    type: DataTypes.DOUBLE
-  },
-  total_fabric_length: {
-    type: DataTypes.DOUBLE
-  },
   fabric_weight: {
+    type: DataTypes.DOUBLE
+  },
+  additional_fabric_weight: {
     type: DataTypes.DOUBLE
   },
   total_fabric_weight: {
     type: DataTypes.DOUBLE
   },
-  transaction_via_trader: {
-    allowNull: false,
-    type: DataTypes.BOOLEAN
+  fabric_length: {
+    type: DataTypes.DOUBLE
   },
-  transaction_agent: {
+  additional_fabric_length: {
+    type: DataTypes.DOUBLE
+  },
+  total_fabric_length: {
+    type: DataTypes.DOUBLE
+  },
+  factory_lot_no: {
+    type: DataTypes.STRING
+  },
+  reel_lot_no: {
+    type: DataTypes.STRING
+  },
+  total_waste_perct: {
+    type: DataTypes.DOUBLE
+  },
+  waste_weight: {
+    type: DataTypes.DOUBLE
+  },
+  waste_length: {
+    type: DataTypes.DOUBLE
+  },
+  waste_fabric_sold_to: {
+    type: DataTypes.STRING
+  },
+  waste_fabric_invoice: {
     type: DataTypes.STRING
   },
   garment_type: {
@@ -90,50 +88,43 @@ const GarmentSales = db.define('garment_sales', {
   style_mark_no: {
     type: DataTypes.ARRAY(DataTypes.STRING)
   },
-  invoice_no: {
-    type: DataTypes.STRING
-  },
-  bill_of_ladding: {
-    type: DataTypes.STRING
-  },
-  transportor_name: {
-    type: DataTypes.STRING
-  },
-  contract_no: {
-    type: DataTypes.STRING
-  },
-  tc_file: {
-    type: DataTypes.STRING
-  },
-  contract_file: {
-    type: DataTypes.STRING
-  },
-  invoice_files: {
+  garment_size: {
     type: DataTypes.ARRAY(DataTypes.STRING)
   },
-  delivery_notes: {
-    type: DataTypes.STRING
+  color: {
+    type: DataTypes.ARRAY(DataTypes.STRING)
+  },
+  no_of_pieces: {
+    type: DataTypes.ARRAY(DataTypes.DOUBLE)
+  },
+  no_of_boxes: {
+    type: DataTypes.ARRAY(DataTypes.DOUBLE)
+  },
+  finished_garment_image: {
+    type: DataTypes.ARRAY(DataTypes.STRING)
   },
   qty_stock: {
-    type: DataTypes.DOUBLE
-  },
-  qty_stock_pieces: {
-    type: DataTypes.DOUBLE
-  },
-  qty_stock_boxes: {
-    type: DataTypes.DOUBLE
-  },
-  qty_stock_length: {
     type: DataTypes.DOUBLE
   },
   qty_stock_weight: {
     type: DataTypes.DOUBLE
   },
-  shipment_address: {
-    type: DataTypes.STRING
+  qty_stock_length: {
+    type: DataTypes.DOUBLE
   },
-  vehicle_no: {
-    type: DataTypes.STRING
+  total_qty: {
+    type: DataTypes.DOUBLE
+  },
+  embroidering_required: {
+    allowNull: false,
+    type: DataTypes.BOOLEAN
+  },
+  embroidering_id: {
+    type: DataTypes.INTEGER,
+    references: { model: 'embroiderings', key: 'id' },
+  },
+  physical_traceablity: {
+    type: DataTypes.BOOLEAN
   },
   status: {
     type: DataTypes.STRING
@@ -146,37 +137,32 @@ const GarmentSales = db.define('garment_sales', {
   }
 });
 
-GarmentSales.belongsTo(Garment, {
+GarmentProcess.belongsTo(Garment, {
   foreignKey: "garment_id",
   as: "garment",
 });
 
-GarmentSales.belongsTo(Program, {
+GarmentProcess.belongsTo(Program, {
   foreignKey: "program_id",
   as: "program",
 });
 
-// GarmentSales.belongsTo(Department, {
-//   foreignKey: "department_id",
-//   as: "department",
-// });
+GarmentProcess.belongsTo(Department, {
+  foreignKey: "department_id",
+  as: "department",
+});
 
-GarmentSales.belongsTo(Season, {
+GarmentProcess.belongsTo(Season, {
   foreignKey: "season_id",
   as: "season",
 });
 
-GarmentSales.belongsTo(Trader, {
-  foreignKey: "trader_id",
-  as: "trader",
+GarmentProcess.belongsTo(Embroidering, {
+  foreignKey: "embroidering_id",
+  as: "embroidering",
 });
 
+GarmentProcess.sync();
 
-GarmentSales.belongsTo(Brand, {
-  foreignKey: "buyer_id",
-  as: "buyer",
-});
+export default GarmentProcess;
 
-GarmentSales.sync();
-
-export default GarmentSales;

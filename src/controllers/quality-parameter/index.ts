@@ -532,6 +532,17 @@ const reportParameter = async (req: Request, res: Response) => {
                     as: 'process',
                     attributes: []
                 },
+                {
+                    model: GinSales, 
+                    as: 'sales',
+                    attributes: []
+                },
+                {
+                    model: Spinner, 
+                    as: 'spinner',
+                    attributes: []
+                }
+
             ],
             where: {
                 ...whereCondition,

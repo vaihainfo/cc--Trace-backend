@@ -13,7 +13,9 @@ import {
     getprocessName,
     getInvoice,
     fetchGarmentSale,
-    getBrands
+    getBrands,
+    createGarmentProcess,
+    fetchGarmentProcessPagination
 } from "../../controllers/garment-sales";
 
 import { Router } from "express";
@@ -25,6 +27,8 @@ const router = Router();
 router.get('/dashboard', fetchTransactions);
 router.get('/dashboard-all', fetchTransactionsAll);
 router.post('/update-transaction', updateTransactionStatus);
+router.post('/process', createGarmentProcess);
+router.get('/process', fetchGarmentProcessPagination);
 router.post('/', createGarmentSales);
 router.get('/', fetchGarmentSalesPagination);
 router.get('/export', exportGarmentSale);

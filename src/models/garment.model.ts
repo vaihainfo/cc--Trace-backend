@@ -132,6 +132,11 @@ Garment.associate = (models: any) => {
     foreignKey: 'garment_id',
     as: 'garment',
   });
+
+  Garment.hasMany(models.GarmentProcess, {
+    foreignKey: 'garment_id',
+    as: 'garment',
+  });
 };
 
 Garment.sync();

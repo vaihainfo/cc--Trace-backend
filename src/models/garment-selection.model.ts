@@ -1,15 +1,14 @@
 import { DataTypes } from 'sequelize';
 import db from '../util/dbConn';
-import KnitProcess from './knit-process.model';
 
-const KnitFabricSelection = db.define('knit_fabric_selections', {
+const GarmentSelection = db.define('garment_selections', {
   id: {
     type: DataTypes.INTEGER,
     autoIncrement: true,
     allowNull: false,
     primaryKey: true
   },
-  fabric_id: {
+  garment_id: {
     type: DataTypes.INTEGER
   },
   sales_id: {
@@ -18,15 +17,19 @@ const KnitFabricSelection = db.define('knit_fabric_selections', {
   type: {
     type: DataTypes.STRING
   },
+  processor: {
+    type: DataTypes.STRING
+  },
   qty_used: {
+    type: DataTypes.DOUBLE
+  },
+  qty_used_length: {
+    type: DataTypes.DOUBLE
+  },
+  qty_used_weight: {
     type: DataTypes.DOUBLE
   },
 });
 
-KnitFabricSelection.belongsTo(KnitProcess, {
-  foreignKey: "fabric_id",
-  as: "process",
-});
-
-KnitFabricSelection.sync();
-export default KnitFabricSelection;
+GarmentSelection.sync();
+export default GarmentSelection;
