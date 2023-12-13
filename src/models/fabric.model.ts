@@ -37,7 +37,7 @@ const Fabric = db.define('fabrics', {
   latitude: {
     type: DataTypes.STRING
   },
-  longtude: {
+  longitude: {
     type: DataTypes.STRING
   },
   website: {
