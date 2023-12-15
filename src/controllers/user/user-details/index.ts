@@ -148,6 +148,26 @@ const processorLoginAdmin = async (req: Request, res: Response) => {
             let ginner = await Ginner.findOne({ where: { id: req.query.ginnerId } });
             userId = ginner.dataValues.ginnerUser_id
         }
+        if (req.query.type === 'spinner') {
+            let spinner = await Spinner.findOne({ where: { id: req.query.spinnerId } });
+            userId = spinner.dataValues.spinnerUser_id
+        }
+        if (req.query.type === 'knitter') {
+            let knitter = await Knitter.findOne({ where: { id: req.query.knitterId } });
+            userId = knitter.dataValues.knitterUser_id
+        }
+        if (req.query.type === 'weaver') {
+            let weaver = await Weaver.findOne({ where: { id: req.query.weaverId } });
+            userId = weaver.dataValues.weaverUser_id
+        }
+        if (req.query.type === 'garment') {
+            let garment = await Garment.findOne({ where: { id: req.query.garmentId } });
+            userId = garment.dataValues.garmentUser_id
+        }
+        if (req.query.type === 'fabric') {
+            let fabric = await Fabric.findOne({ where: { id: req.query.fabricId } });
+            userId = fabric.dataValues.fabricUser_id
+        }
         const user = await User.findOne({ where: { id: userId } });
         if (!user) {
             return res.sendError(res, "user not found");
