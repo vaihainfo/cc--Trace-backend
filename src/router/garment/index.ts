@@ -11,11 +11,17 @@ import {
     getProgram,
     dashboardGraph,
     getprocessName,
-    getInvoice,
+    getChooseFabricFilters,
     fetchGarmentSale,
     getBrands,
     createGarmentProcess,
-    fetchGarmentProcessPagination
+    fetchGarmentProcessPagination,
+    chooseFabricProcess,
+    chooseGarmentSales,
+    getGarmentReelLotNo,
+    getChooseGarmentFilters,
+    exportGarmentProcess,
+    getBuyerProcessors
 } from "../../controllers/garment-sales";
 
 import { Router } from "express";
@@ -29,15 +35,21 @@ router.get('/dashboard-all', fetchTransactionsAll);
 router.post('/update-transaction', updateTransactionStatus);
 router.post('/process', createGarmentProcess);
 router.get('/process', fetchGarmentProcessPagination);
+router.get('/choose-fabric', chooseFabricProcess);
+router.get('/choose-garment', chooseGarmentSales);
 router.post('/', createGarmentSales);
 router.get('/', fetchGarmentSalesPagination);
 router.get('/export', exportGarmentSale);
+router.get('/export-process', exportGarmentProcess);
 router.get('/embroidering', getEmbroidering);
 router.get('/get-program', getProgram);
 router.get('/dashboard/garph', dashboardGraph);
 router.get('/get-processor', getprocessName);
-router.get('/get-invoice', getInvoice);
+router.get('/get-batch-lot', getChooseFabricFilters);
 router.get('/get-sale', fetchGarmentSale);
 router.get('/get-brand', getBrands);
+router.get('/get-reel-lot-no', getGarmentReelLotNo);
+router.get('/get-choose-garment-filter', getChooseGarmentFilters);
+router.get('/get-buyer-processors', getBuyerProcessors);
 
 export default router;

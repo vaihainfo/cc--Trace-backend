@@ -52,7 +52,7 @@ const createUser = async (req: Request, res: Response) => {
 
 
 const fetchUsers = async (req: Request, res: Response) => {
-  const { search } = req.query;
+  const { search, brandId, userGroupId, programId, countryId }: any = req.query;
 
   const sortOrder = req.query.sort || "";
   //   const sortField = req.query.sortBy || '';
@@ -70,6 +70,31 @@ const fetchUsers = async (req: Request, res: Response) => {
       { mobile: { [Op.iLike]: `%${search}%` } }, // Search by country name
     ];
   }
+  if (brandId) {
+    const idArray: number[] = brandId
+      .split(",")
+      .map((id: any) => parseInt(id, 10));
+
+    whereCondition.brand_mapped = { [Op.overlap]: idArray };
+    // whereCondition.processor_type = 'spinner';
+  }
+  if (userGroupId) {
+    const idArray: number[] = userGroupId
+      .split(",")
+      .map((id: any) => parseInt(id, 10));
+
+    whereCondition.role = { [Op.in]: idArray };
+    // whereCondition.processor_type = 'spinner';
+  }
+  if (countryId) {
+    const idArray: number[] = countryId
+      .split(",")
+      .map((id: any) => parseInt(id, 10));
+
+    whereCondition.countries_web = { [Op.overlap]: idArray };
+    // whereCondition.processor_type = 'spinner';
+  }
+
   whereCondition.isManagementUser = true;
   let queryOptions: any = {
     where: whereCondition,
@@ -90,9 +115,9 @@ const fetchUsers = async (req: Request, res: Response) => {
       const user = await User.findAll(queryOptions);
       return res.sendSuccess(res, user, 200);
     }
-  } catch (error) {
+  } catch (error: any) {
     console.log(error)
-    res.sendError(res, "ERR_AUTH_USERNAME_OR_EMAIL_ALREADY_EXIST");
+    res.sendError(res, error?.message);
   }
 }
 

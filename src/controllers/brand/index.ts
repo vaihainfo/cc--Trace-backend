@@ -905,6 +905,29 @@ const getProgram = async (req: Request, res: Response) => {
     }
 }
 
+const getCountries = async (req: Request, res: Response) => {
+    const brandId: any = req.query.brandId;
+    const whereCondition: any = {};
+    try {
+        if (brandId) {
+            const idArray: number[] = brandId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition.id = { [Op.in]: idArray };
+            let brand = await Brand.findAll({ where: whereCondition });
+            let countryIds: any = []
+            brand.map((countryId: any) => {
+                countryIds = [...countryIds, ...countryId.dataValues.countries_id];
+            });
+            let country = await Country.findAll({ where: { id: countryIds } })
+            res.sendSuccess(res, country)
+        } else {
+            res.sendSuccess(res, [])
+        }
+    } catch (error: any) {
+        res.sendError(res, error.message)
+    }
+}
 
 export {
     findUser,
@@ -919,5 +942,6 @@ export {
     productionUpdate,
     productTracebility,
     getProgram,
-    styleMarkNo
+    styleMarkNo,
+    getCountries
 };

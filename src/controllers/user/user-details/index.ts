@@ -88,7 +88,7 @@ const getUserInfo = async (req: Request, res: Response) => {
             });
             role = role.dataValues;
         }
-
+        
         if (req.query.garmentId) {
             role = await UserRole.findOne({
                 where: { user_role: 'Garment' },
@@ -171,10 +171,16 @@ const getUserInfo = async (req: Request, res: Response) => {
         if (req.query.knitterId) {
             knitter = await Knitter.findOne({ where: { id: req.query.knitterId } })
         }
+        if (req.query.garmentId) {
+            garment = await Garment.findOne({ where: { id: req.query.garmentId } })
+        }
+        if (req.query.fabricId) {
+            fabric = await Fabric.findOne({ where: { id: req.query.fabricId } })
+        }
         return res.sendSuccess(res, { user, role, menuList, privileges, spinner, ginner, weaver, knitter, garment, trader, fabric, brand, processor });
-    } catch (error) {
+    } catch (error: any) {
         console.log(error)
-        return res.sendError(res, "ERR_NOT_ABLE_TO_GET_USER_DETAILS");
+        return res.sendError(res, error.message);
     }
 }
 
@@ -214,8 +220,9 @@ const processorLoginAdmin = async (req: Request, res: Response) => {
 
             return res.sendSuccess(res, { accessToken: accessToken, user: user.dataValues })
         }
-    } catch (error) {
-        return res.sendError(res, "ERR_NOT_ABLE_TO_GET");
+    } catch (error: any) {
+        console.log(error)
+        return res.sendError(res, error.message);
     }
 }
 

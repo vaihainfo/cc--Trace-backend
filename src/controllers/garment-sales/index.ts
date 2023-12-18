@@ -25,6 +25,11 @@ import PrintingSales from "../../models/printing-sales.model";
 import CompactingSales from "../../models/compacting-sales.model";
 import GarmentProcess from "../../models/garment-process..model";
 import GarmentSelection from "../../models/garment-selection.model";
+import WeaverProcess from "../../models/weaver-process.model";
+import WeaverFabricSelection from "../../models/weaver-fabric-selection.model";
+import KnitProcess from "../../models/knit-process.model";
+import KnitFabricSelection from "../../models/knit-fabric-selectiion.model";
+import ProcessorList from "../../models/processor-list.model";
 
 const fetchBrandQrGarmentSalesPagination = async (
   req: Request,
@@ -213,7 +218,7 @@ const fetchTransactions = async (req: Request, res: Response) => {
         .map((id: any) => parseInt(id, 10));
       knitterWhere.knitter_id = { [Op.in]: [0] };
       weaverWhere.weaver_id = { [Op.in]: idArray };
-      fabricWhere.fabric_id = { [Op.in]: [0] };
+      // fabricWhere.fabric_id = { [Op.in]: [0] };
     }
     if (knitterId) {
       const idArray: number[] = knitterId
@@ -221,17 +226,17 @@ const fetchTransactions = async (req: Request, res: Response) => {
         .map((id: any) => parseInt(id, 10));
       weaverWhere.weaver_id = { [Op.in]: [0] };
       knitterWhere.knitter_id = { [Op.in]: idArray };
-      fabricWhere.fabric_id = { [Op.in]: [0] };
+      // fabricWhere.fabric_id = { [Op.in]: [0] };
     }
 
-    if (fabricId) {
-      const idArray: number[] = fabricId
-        .split(",")
-        .map((id: any) => parseInt(id, 10));
-      weaverWhere.weaver_id = { [Op.in]: [0] };
-      knitterWhere.knitter_id = { [Op.in]: [0] };
-      fabricWhere.fabric_id = { [Op.in]: idArray };
-    }
+    // if (fabricId) {
+    //   const idArray: number[] = fabricId
+    //     .split(",")
+    //     .map((id: any) => parseInt(id, 10));
+    //   weaverWhere.weaver_id = { [Op.in]: [0] };
+    //   knitterWhere.knitter_id = { [Op.in]: [0] };
+    //   fabricWhere.fabric_id = { [Op.in]: idArray };
+    // }
     
     if (garmentOrderRef) {
       const idArray: any[] = garmentOrderRef.split(",").map((id: any) => id);
@@ -288,55 +293,55 @@ const fetchTransactions = async (req: Request, res: Response) => {
           { model: Knitter, as: "knitter", attributes: ["id", "name"] },
         ],
       }),
-      DyingSales.findAll({
-        where: {
-          status: "Sold",
-          buyer_id: garmentId,
-          ...whereCondition,
-          ...fabricWhere,
-          [Op.or]:[{'$dying_fabric.name$': { [Op.iLike]: `%${searchTerm}%` }}]
-        },
-        include: [
-          ...include,
-          { model: Fabric, as: "dying_fabric", attributes: ["id", "name"] },
-        ],
-      }),
-      WashingSales.findAll({
-        where: {
-          status: "Sold",
-          buyer_id: garmentId,
-          ...whereCondition,
-          ...fabricWhere,
-        },
-        include: [
-          ...include,
-          { model: Fabric, as: "washing", attributes: ["id", "name"] },
-        ],
-      }),
-      PrintingSales.findAll({
-        where: {
-          status: "Sold",
-          buyer_id: garmentId,
-          ...whereCondition,
-          ...fabricWhere,
-        },
-        include: [
-          ...include,
-          { model: Fabric, as: "printing", attributes: ["id", "name"] },
-        ],
-      }),
-      CompactingSales.findAll({
-        where: {
-          status: "Sold",
-          buyer_id: garmentId,
-          ...whereCondition,
-          ...fabricWhere,
-        },
-        include: [
-          ...include,
-          { model: Fabric, as: "compacting", attributes: ["id", "name"] },
-        ],
-      }),
+      // DyingSales.findAll({
+      //   where: {
+      //     status: "Sold",
+      //     buyer_id: garmentId,
+      //     ...whereCondition,
+      //     ...fabricWhere,
+      //     [Op.or]:[{'$dying_fabric.name$': { [Op.iLike]: `%${searchTerm}%` }}]
+      //   },
+      //   include: [
+      //     ...include,
+      //     { model: Fabric, as: "dying_fabric", attributes: ["id", "name"] },
+      //   ],
+      // }),
+      // WashingSales.findAll({
+      //   where: {
+      //     status: "Sold",
+      //     buyer_id: garmentId,
+      //     ...whereCondition,
+      //     ...fabricWhere,
+      //   },
+      //   include: [
+      //     ...include,
+      //     { model: Fabric, as: "washing", attributes: ["id", "name"] },
+      //   ],
+      // }),
+      // PrintingSales.findAll({
+      //   where: {
+      //     status: "Sold",
+      //     buyer_id: garmentId,
+      //     ...whereCondition,
+      //     ...fabricWhere,
+      //   },
+      //   include: [
+      //     ...include,
+      //     { model: Fabric, as: "printing", attributes: ["id", "name"] },
+      //   ],
+      // }),
+      // CompactingSales.findAll({
+      //   where: {
+      //     status: "Sold",
+      //     buyer_id: garmentId,
+      //     ...whereCondition,
+      //     ...fabricWhere,
+      //   },
+      //   include: [
+      //     ...include,
+      //     { model: Fabric, as: "compacting", attributes: ["id", "name"] },
+      //   ],
+      // }),
     ]);
 
     let abc = result.flat();
@@ -447,50 +452,50 @@ const fetchTransactionsAll = async (req: Request, res: Response) => {
           { model: Knitter, as: "knitter", attributes: ["id", "name"] },
         ],
       }),
-      DyingSales.findAll({
-        where: {
-          status: "Pending",
-          buyer_id: garmentId,
-          ...whereCondition,
-        },
-        include: [
-          ...include,
-          { model: Fabric, as: "dying_fabric", attributes: ["id", "name"] },
-        ],
-      }),
-      WashingSales.findAll({
-        where: {
-          status: "Pending",
-          buyer_id: garmentId,
-          ...whereCondition,
-        },
-        include: [
-          ...include,
-          { model: Fabric, as: "washing", attributes: ["id", "name"] },
-        ],
-      }),
-      PrintingSales.findAll({
-        where: {
-          status: "Pending",
-          buyer_id: garmentId,
-          ...whereCondition,
-        },
-        include: [
-          ...include,
-          { model: Fabric, as: "printing", attributes: ["id", "name"] },
-        ],
-      }),
-      CompactingSales.findAll({
-        where: {
-          status: "Pending",
-          buyer_id: garmentId,
-          ...whereCondition,
-        },
-        include: [
-          ...include,
-          { model: Fabric, as: "compacting", attributes: ["id", "name"] },
-        ],
-      }),
+      // DyingSales.findAll({
+      //   where: {
+      //     status: "Pending",
+      //     buyer_id: garmentId,
+      //     ...whereCondition,
+      //   },
+      //   include: [
+      //     ...include,
+      //     { model: Fabric, as: "dying_fabric", attributes: ["id", "name"] },
+      //   ],
+      // }),
+      // WashingSales.findAll({
+      //   where: {
+      //     status: "Pending",
+      //     buyer_id: garmentId,
+      //     ...whereCondition,
+      //   },
+      //   include: [
+      //     ...include,
+      //     { model: Fabric, as: "washing", attributes: ["id", "name"] },
+      //   ],
+      // }),
+      // PrintingSales.findAll({
+      //   where: {
+      //     status: "Pending",
+      //     buyer_id: garmentId,
+      //     ...whereCondition,
+      //   },
+      //   include: [
+      //     ...include,
+      //     { model: Fabric, as: "printing", attributes: ["id", "name"] },
+      //   ],
+      // }),
+      // CompactingSales.findAll({
+      //   where: {
+      //     status: "Pending",
+      //     buyer_id: garmentId,
+      //     ...whereCondition,
+      //   },
+      //   include: [
+      //     ...include,
+      //     { model: Fabric, as: "compacting", attributes: ["id", "name"] },
+      //   ],
+      // }),
     ]);
     let abc = result.flat();
     return res.sendSuccess(res, abc);
@@ -694,13 +699,13 @@ const fetchGarmentProcessPagination = async (req: Request, res: Response) => {
         { factory_lot_no: { [Op.iLike]: `%${searchTerm}%` } }, // Search by order ref
         { "$season.name$": { [Op.iLike]: `%${searchTerm}%` } },
         { "$department.dept_name$": { [Op.iLike]: `%${searchTerm}%` } },
+        { "$program.program_name$": { [Op.iLike]: `%${searchTerm}%` } },
         // { style_mark_no: {
         //   [Op.contains]: [{ [Op.iLike]: `%${searchTerm}%` }],
         // }, },
-        { "$program.program_name$": { [Op.iLike]: `%${searchTerm}%` } },
-      //   { garment_type:  {
-      //     [Op.contains]: [{ [Op.iLike]: `%${searchTerm}%` }],
-      //   } },
+        // { garment_type:  {
+        //   [Op.overlap]: [sequelize.literal(`ARRAY['${searchTerm}'i]::citext[]`)],
+        // } },
       //   { garment_size:  {
       //     [Op.contains]: [{ [Op.iLike]: `%${searchTerm}%` }],
       //   } },
@@ -774,6 +779,322 @@ const fetchGarmentProcessPagination = async (req: Request, res: Response) => {
     return res.sendError(res, error.message);
   }
 };
+
+const exportGarmentProcess = async (req: Request, res: Response) => {
+  const excelFilePath = path.join("./upload", "garment-process.xlsx");
+
+  try {
+    const whereCondition: any = {};
+    const searchTerm = req.query.search || "";
+    if (searchTerm) {
+      whereCondition[Op.or] = [
+        { fabric_order_ref: { [Op.iLike]: `%${searchTerm}%` } }, // Search by order ref
+        { brand_order_ref: { [Op.iLike]: `%${searchTerm}%` } }, // Search by order ref
+        { reel_lot_no: { [Op.iLike]: `%${searchTerm}%` } }, // Search by order ref
+        { factory_lot_no: { [Op.iLike]: `%${searchTerm}%` } }, // Search by order ref
+        { "$season.name$": { [Op.iLike]: `%${searchTerm}%` } },
+        { "$department.dept_name$": { [Op.iLike]: `%${searchTerm}%` } },
+        { "$program.program_name$": { [Op.iLike]: `%${searchTerm}%` } },
+      ];
+    }
+    const { garmentId, seasonId, programId, brandId }: any = req.query;
+    if (garmentId) {
+      const idArray: number[] = garmentId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.garment_id = { [Op.in]: idArray };
+    }
+    if (seasonId) {
+      const idArray: number[] = seasonId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.season_id = { [Op.in]: idArray };
+    }
+    if (programId) {
+      const idArray: number[] = programId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.program_id = { [Op.in]: idArray };
+    }
+    whereCondition.garment_id = req.query.garmentId;
+    // Create the excel workbook file
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet("Sheet1");
+    worksheet.mergeCells("A1:L1");
+    const mergedCell = worksheet.getCell("A1");
+    mergedCell.value = "CottonConnect | Process";
+    mergedCell.font = { bold: true };
+    mergedCell.alignment = { horizontal: "center", vertical: "middle" };
+    // Set bold font for header row
+    const headerRow = worksheet.addRow([
+      "Sr No.",
+      "Date",
+      "Season",
+      "Brand Order Reference",
+      "Fabric Order Reference",
+      "Factory Lot No",
+      "Reel Lot No",
+      "Style/Mark No",
+      "Garment/Product Type",
+      "Color",
+      "Garment/Product Size",
+      "No of Pieces",
+      "No of Boxes",
+      "Total Fabric Length Utilized(Mts)",
+      "Total Fabric Weight Utilized(Kgs)",
+    ]);
+    headerRow.font = { bold: true };
+    let include = [
+      {
+        model: Garment,
+        as: "garment",
+        attributes: ["id", "name", "address"],
+      },
+      {
+        model: Season,
+        as: "season",
+      },
+      {
+        model: Embroidering,
+        as: "embroidering",
+      },
+      {
+        model: Department,
+        as: "department",
+      },
+      {
+        model: Program,
+        as: "program",
+      },
+    ];
+    const garment = await GarmentProcess.findAll({
+      where: whereCondition,
+      include: include,
+    });
+    // Append data to worksheet
+    for await (const [index, item] of garment.entries()) {
+      const rowValues = Object.values({
+        index: index + 1,
+        date: item.date ? item.date : "",
+        season: item.season ? item.season.name : "",
+        brandOrder: item.brand_order_ref ? item.brand_order_ref : "",
+        fabricOrder: item.fabric_order_ref ? item.fabric_order_ref : "",
+        factoryLotNo: item.factory_lot_no ? item.factory_lot_no : "",
+        reelLotNo: item.reel_lot_no ? item.reel_lot_no : "",
+        mark: item.style_mark_no && item.style_mark_no?.length > 0 ? item.style_mark_no?.join(',') : "",
+        garment: item.garment_type && item.garment_type?.length > 0? item.garment_type?.join(',') : "",
+        color: item.color && item.color?.length > 0 ? item.color?.join(',') : "",
+        garmentSize: item.garment_size && item.garment_size?.length > 0 ? item.garment_size?.join(',') : "",
+        no_of_pieces: item.no_of_pieces && item.no_of_pieces?.length > 0 ? item.no_of_pieces?.join(',') : "",
+        no_of_boxes: item.no_of_boxes && item.no_of_boxes?.length > 0 ? item.no_of_boxes?.join(',') : "",
+        totalFabricLength: item.total_fabric_length ? item.total_fabric_length : "",
+        totalFabricWeight: item.total_fabric_weight ? item.total_fabric_weight : "",
+      });
+      worksheet.addRow(rowValues);
+    }
+    // Auto-adjust column widths based on content
+    worksheet.columns.forEach((column: any) => {
+      let maxCellLength = 0;
+      column.eachCell({ includeEmpty: true }, (cell: any) => {
+        const cellLength = (cell.value ? cell.value.toString() : "").length;
+        maxCellLength = Math.max(maxCellLength, cellLength);
+      });
+      column.width = Math.min(24, maxCellLength + 2); // Limit width to 30 characters
+    });
+
+    // Save the workbook
+    await workbook.xlsx.writeFile(excelFilePath);
+    res.status(200).send({
+      success: true,
+      messgage: "File successfully Generated",
+      data: process.env.BASE_URL + "garment-process.xlsx",
+    });
+  } catch (error: any) {
+    console.error("Error appending data:", error);
+    return res.sendError(res, error.message);
+  }
+};
+
+const chooseFabricProcess = async (req: Request, res: Response) =>{
+  let {
+    garmentId,
+    fabricType,
+    programId,
+    garmentOrderRef,
+    brandOrderRef,
+    invoiceNo,
+    lotNo,
+    weaverId,
+    knitterId,
+    fabricId
+  }: any = req.query;
+  const knitterWhere: any = {};
+  const weaverWhere: any = {};
+  let whereCondition: any = {};
+
+  try {
+    if (!garmentId) {
+      return res.sendError(res, "Need Garment Id");
+    }
+
+  if (fabricType) {
+    const idArray: number[] = fabricType
+      .split(",")
+      .map((id: any) => parseInt(id, 10));
+    whereCondition.fabric_type = { [Op.overlap]: idArray };
+  }
+  if (programId) {
+    const idArray: number[] = programId
+      .split(",")
+      .map((id: any) => parseInt(id, 10));
+    whereCondition.program_id = { [Op.in]: idArray };
+  }
+  if (weaverId) {
+    const idArray: number[] = weaverId
+      .split(",")
+      .map((id: any) => parseInt(id, 10));
+    knitterWhere.knitter_id = { [Op.in]: [0] };
+    weaverWhere.weaver_id = { [Op.in]: idArray };
+    // fabricWhere.fabric_id = { [Op.in]: [0] };
+  }
+  if (knitterId) {
+    const idArray: number[] = knitterId
+      .split(",")
+      .map((id: any) => parseInt(id, 10));
+    weaverWhere.weaver_id = { [Op.in]: [0] };
+    knitterWhere.knitter_id = { [Op.in]: idArray };
+    // fabricWhere.fabric_id = { [Op.in]: [0] };
+  }
+
+  // if (fabricId) {
+  //   const idArray: number[] = fabricId
+  //     .split(",")
+  //     .map((id: any) => parseInt(id, 10));
+  //   weaverWhere.weaver_id = { [Op.in]: [0] };
+  //   knitterWhere.knitter_id = { [Op.in]: [0] };
+  //   fabricWhere.fabric_id = { [Op.in]: idArray };
+  // }
+  
+  if (garmentOrderRef) {
+    const idArray: any[] = garmentOrderRef.split(",").map((id: any) => id);
+    whereCondition.garment_order_ref = { [Op.in]: idArray };
+  }
+  if (brandOrderRef) {
+    const idArray: any[] = brandOrderRef.split(",").map((id: any) => id);
+    whereCondition.brand_order_ref = { [Op.in]: idArray };
+  }
+  if (invoiceNo) {
+    const idArray: any[] = invoiceNo.split(",").map((id: any) => id);
+    whereCondition.invoice_no = { [Op.in]: idArray };
+  }
+
+  if (lotNo) {
+    const filterValues: any[] = lotNo
+      .split(",")
+      .map((value: any) => value.trim());
+
+    whereCondition[Op.or]= filterValues.map((value) => ({
+        batch_lot_no: {[Op.iLike]: `%${value}%`}}))
+}
+
+  let include = [
+    {
+      model: Program,
+      as: "program",
+    },
+    {
+      model: Season,
+      as: "season",
+      attributes: ["id", "name"],
+    },
+  ];
+
+  let result: any = await Promise.all([
+    WeaverSales.findAll({
+      where: {
+        status: "Sold",
+        buyer_type: "Mapped",
+        buyer_id: garmentId,
+        qty_stock: { [Op.gt]: 0 },
+        ...whereCondition,
+        ...weaverWhere,
+      },
+      include: [
+        ...include,
+        { model: Weaver, as: "weaver", attributes: ["id", "name"] },
+      ],
+    }),
+    KnitSales.findAll({
+      where: {
+        status: "Sold",
+        buyer_type: "Mapped",
+        buyer_id: garmentId,
+        qty_stock: { [Op.gt]: 0 },
+        ...whereCondition,
+        ...knitterWhere,
+      },
+      include: [
+        ...include,
+        { model: Knitter, as: "knitter", attributes: ["id", "name"] },
+      ],
+    }),
+    // DyingSales.findAll({
+    //   where: {
+    //     status: "Sold",
+    //     buyer_id: garmentId,
+    //     ...whereCondition,
+    //     ...fabricWhere,
+    //   },
+    //   include: [
+    //     ...include,
+    //     { model: Fabric, as: "dying_fabric", attributes: ["id", "name"] },
+    //   ],
+    // }),
+    // WashingSales.findAll({
+    //   where: {
+    //     status: "Sold",
+    //     buyer_id: garmentId,
+    //     ...whereCondition,
+    //     ...fabricWhere,
+    //   },
+    //   include: [
+    //     ...include,
+    //     { model: Fabric, as: "washing", attributes: ["id", "name"] },
+    //   ],
+    // }),
+    // PrintingSales.findAll({
+    //   where: {
+    //     status: "Sold",
+    //     buyer_id: garmentId,
+    //     ...whereCondition,
+    //     ...fabricWhere,
+    //   },
+    //   include: [
+    //     ...include,
+    //     { model: Fabric, as: "printing", attributes: ["id", "name"] },
+    //   ],
+    // }),
+    // CompactingSales.findAll({
+    //   where: {
+    //     status: "Sold",
+    //     buyer_id: garmentId,
+    //     ...whereCondition,
+    //     ...fabricWhere,
+    //   },
+    //   include: [
+    //     ...include,
+    //     { model: Fabric, as: "compacting", attributes: ["id", "name"] },
+    //   ],
+    // }),
+  ]);
+
+  let abc = result.flat();
+  return res.sendSuccess(res, abc);
+} catch (error: any) {
+  console.error("Error appending data:", error);
+  return res.sendError(res, error.message);
+}
+}
 
 //create Garment Sale
 const createGarmentSales = async (req: Request, res: Response) => {
@@ -874,16 +1195,15 @@ const fetchGarmentSalesPagination = async (req: Request, res: Response) => {
   try {
     if (searchTerm) {
       whereCondition[Op.or] = [
-        { order_ref: { [Op.iLike]: `%${searchTerm}%` } }, // Search by order ref
+        { fabric_order_ref: { [Op.iLike]: `%${searchTerm}%` } }, // Search by order ref
+        { brand_order_ref: { [Op.iLike]: `%${searchTerm}%` } }, // Search by order ref
         { "$season.name$": { [Op.iLike]: `%${searchTerm}%` } },
         { invoice_no: { [Op.iLike]: `%${searchTerm}%` } },
-        { style_mark_no: { [Op.iLike]: `%${searchTerm}%` } },
+        // { style_mark_no: { [Op.iLike]: `%${searchTerm}%` } },
         { "$program.program_name$": { [Op.iLike]: `%${searchTerm}%` } },
         { "$buyer.brand_name$": { [Op.iLike]: `%${searchTerm}%` } },
         { transaction_agent: { [Op.iLike]: `%${searchTerm}%` } },
-        { garment_type: { [Op.iLike]: `%${searchTerm}%` } },
-        { garment_size: { [Op.iLike]: `%${searchTerm}%` } },
-        { color: { [Op.iLike]: `%${searchTerm}%` } },
+        // { garment_type: { [Op.iLike]: `%${searchTerm}%` } },
       ];
     }
 
@@ -938,14 +1258,49 @@ const fetchGarmentSalesPagination = async (req: Request, res: Response) => {
         offset: offset,
         limit: limit,
       });
-      return res.sendPaginationSuccess(res, rows, count);
+
+      let data = [];
+
+            for await (let row of rows) {
+                const department = await Department.findAll({
+                    where: {
+                        id: {
+                            [Op.in]: row.dataValues.department,
+                        },
+                    },
+                    attributes: ['id', 'dept_name']
+                });
+                data.push({
+                    ...row.dataValues,
+                    department
+                })
+            }
+
+      return res.sendPaginationSuccess(res, data, count);
     } else {
       const gin = await GarmentSales.findAll({
         where: whereCondition,
         include: include,
         order: [["id", "desc"]],
       });
-      return res.sendSuccess(res, gin);
+      let data = [];
+
+      for await (let row of gin) {
+          const department = await Department.findAll({
+              where: {
+                  id: {
+                      [Op.in]: row.dataValues.department,
+                  },
+              },
+              attributes: ['id', 'dept_name']
+          });
+          data.push({
+              ...row.dataValues,
+              department
+          })
+      }
+
+      return res.sendSuccess(res, data);
     }
   } catch (error: any) {
     return res.sendError(res, error.message);
@@ -991,6 +1346,80 @@ const fetchGarmentSale = async (req: Request, res: Response) => {
   }
 };
 
+const chooseGarmentSales = async (req: Request, res: Response) => {
+  const { garmentId, fabricOrderRef, programId, brandOrderRef, reelLotNo, factoryLotNo, garmentType }: any = req.query;
+  const whereCondition: any = {};
+
+  try {
+
+  if (garmentId) {
+    const idArray: number[] = garmentId
+      .split(",")
+      .map((id: any) => parseInt(id, 10));
+    whereCondition.garment_id = { [Op.in]: idArray };
+  }
+
+  if (programId) {
+    const idArray: number[] = programId
+      .split(",")
+      .map((id: any) => parseInt(id, 10));
+    whereCondition.program_id = { [Op.in]: idArray };
+  }
+  if (fabricOrderRef) {
+    const idArray: any[] = fabricOrderRef.split(",").map((id: any) => id);
+    whereCondition.fabric_order_ref = { [Op.in]: idArray };
+  }
+  if (brandOrderRef) {
+    const idArray: any[] = brandOrderRef.split(",").map((id: any) => id);
+    whereCondition.brand_order_ref = { [Op.in]: idArray };
+  }
+  if (factoryLotNo) {
+    const idArray: any[] = factoryLotNo.split(",").map((id: any) => id);
+    whereCondition.factory_lot_no = { [Op.in]: idArray };
+  }
+  if (reelLotNo) {
+    const idArray: any[] = reelLotNo.split(",").map((id: any) => id);
+    whereCondition.reel_lot_no = { [Op.in]: idArray };
+  }
+  if (garmentType) {
+    const idArray: any[] = garmentType.split(",").map((id: any) => id);
+    whereCondition.garment_type = { [Op.overlap]: idArray };
+  }
+
+  let include = [
+    {
+      model: Garment,
+      as: "garment",
+      attributes: ["id", "name", "address"],
+    },
+    {
+      model: Department,
+      as: "department",
+    },
+    {
+      model: Program,
+      as: "program",
+      attributes: ["id", "program_name"],
+    },
+  ];
+
+  const gin = await GarmentProcess.findAll({
+    where: {
+      ...whereCondition,
+      [Op.or]: [
+        { qty_stock_length: { [Op.gt]: 0 } },
+        { qty_stock_weight: { [Op.gt]: 0 } },
+        { qty_stock: { [Op.gt]: 0 } },
+      ],
+    },
+    include: include,
+  });
+  return res.sendSuccess(res, gin);
+} catch (error: any) {
+  return res.sendError(res, error.message);
+}
+}
+
 const exportGarmentSale = async (req: Request, res: Response) => {
   const excelFilePath = path.join("./upload", "garment-sale.xlsx");
 
@@ -999,16 +1428,14 @@ const exportGarmentSale = async (req: Request, res: Response) => {
     const searchTerm = req.query.search || "";
     if (searchTerm) {
       whereCondition[Op.or] = [
-        { order_ref: { [Op.iLike]: `%${searchTerm}%` } }, // Search by order ref
+        { fabric_order_ref: { [Op.iLike]: `%${searchTerm}%` } }, // Search by order ref
+        { brand_order_ref: { [Op.iLike]: `%${searchTerm}%` } }, // Search by order ref
         { "$season.name$": { [Op.iLike]: `%${searchTerm}%` } },
         { invoice_no: { [Op.iLike]: `%${searchTerm}%` } },
-        { style_mark_no: { [Op.iLike]: `%${searchTerm}%` } },
         { "$program.program_name$": { [Op.iLike]: `%${searchTerm}%` } },
         { "$buyer.brand_name$": { [Op.iLike]: `%${searchTerm}%` } },
         { transaction_agent: { [Op.iLike]: `%${searchTerm}%` } },
-        { garment_type: { [Op.iLike]: `%${searchTerm}%` } },
-        { garment_size: { [Op.iLike]: `%${searchTerm}%` } },
-        { color: { [Op.iLike]: `%${searchTerm}%` } },
+        { shipment_address: { [Op.iLike]: `%${searchTerm}%` } },
       ];
     }
     const { garmentId, seasonId, programId, brandId }: any = req.query;
@@ -1045,14 +1472,13 @@ const exportGarmentSale = async (req: Request, res: Response) => {
       "Date",
       "Season",
       "Brand/Retailer Name",
-      "Order Reference",
+      "Brand Order Reference",
+      "Fabric Order Reference",
       "Invoice No",
       "Style/Mark No",
       "Garment/ Product Type",
-      "Garment/ Product Size",
-      "Color",
-      "No of pieces",
-      "No of Boxes",
+      "Total No of pieces",
+      "Total No of Boxes",
     ]);
     headerRow.font = { bold: true };
     let include = [
@@ -1068,14 +1494,6 @@ const exportGarmentSale = async (req: Request, res: Response) => {
       {
         model: Program,
         as: "program",
-      },
-      {
-        model: Embroidering,
-        as: "embroidering",
-      },
-      {
-        model: Department,
-        as: "department",
       },
       {
         model: Brand,
@@ -1094,14 +1512,13 @@ const exportGarmentSale = async (req: Request, res: Response) => {
         date: item.date ? item.date : "",
         season: item.season ? item.season.name : "",
         buyer: item.buyer ? item.buyer.brand_name : item.processor_name,
-        order: item.order_ref ? item.order_ref : "",
+        brandOrder: item.brand_order_ref ? item.brand_order_ref : "",
+        fabricOrder: item.fabric_order_ref ? item.fabric_order_ref : "",
         invoice: item.invoice_no ? item.invoice_no : "",
-        mark: item.style_mark_no ? item.style_mark_no : "",
-        garment: item.garment_type ? item.garment_type : "",
-        garment_size: item.garment_size ? item.garment_size : "",
-        color: item.color ? item.color : "",
-        no_of_pieces: item.no_of_pieces ? item.no_of_pieces : "",
-        no_of_boxes: item.no_of_boxes ? item.no_of_boxes : "",
+        mark: item.style_mark_no ? item.style_mark_no?.join(',') : "",
+        garment: item.garment_type ? item.garment_type?.join(',') : "",
+        no_of_pieces: item.total_no_of_pieces ? item.total_no_of_pieces : "",
+        no_of_boxes: item.total_no_of_boxes ? item.total_no_of_boxes : "",
       });
       worksheet.addRow(rowValues);
     }
@@ -1219,6 +1636,46 @@ const dashboardGraph = async (req: Request, res: Response) => {
   }
 };
 
+const getGarmentReelLotNo = async (req: Request, res: Response) => {
+  const { garmentId } = req.query;
+  const whereCondition: any = {};
+  try {
+      if (!garmentId) {
+          return res.sendError(res, "need Garment id");
+      }
+      whereCondition.id = garmentId;
+
+      const rows = await Garment.findOne({
+          where: whereCondition,
+          attributes: ['id', 'name', 'short_name']
+      });
+
+      let count = await GarmentProcess.count({
+          include: [
+              {
+                  model: Program,
+                  as: 'program',
+                  where: { program_name: { [Op.iLike]: 'Reel' } }
+              }
+          ],
+          where: {
+              garment_id: garmentId
+          }
+      })
+
+      let prcs_date = new Date().toLocaleDateString().replace(/\//g, '');
+      let number = count + 1;
+      let prcs_name = rows ? rows?.name.substring(0,3).toUpperCase() : '';
+
+      let reelLotNo = "REEL-GAR-" + prcs_name + "-" + prcs_date + number;
+
+      return res.sendSuccess(res, {reelLotNo})
+
+  } catch (error: any) {
+      return res.sendError(res, error.message);
+  }
+};
+
 const getprocessName = async (req: Request, res: Response) => {
   const { garmentId, status, filter, programId, spinnerId }: any = req.query;
   const whereCondition: any = {};
@@ -1269,8 +1726,8 @@ const getprocessName = async (req: Request, res: Response) => {
   }
 };
 
-const getInvoice = async (req: Request, res: Response) => {
-  const { weaverId, garmentId, status, KnitterId }: any = req.query;
+const getChooseFabricFilters = async (req: Request, res: Response) => {
+  const { weaverId, garmentId, status, knitterId }: any = req.query;
   const whereCondition: any = {};
   const knitterWhere: any = {};
   const weaverWhere: any = {};
@@ -1287,8 +1744,8 @@ const getInvoice = async (req: Request, res: Response) => {
       whereCondition.status =
         status === "Pending" ? "Pending for QR scanning" : "Sold";
     }
-    if (KnitterId) {
-      const idArray: number[] = KnitterId.split(",").map((id: any) =>
+    if (knitterId) {
+      const idArray: number[] = knitterId.split(",").map((id: any) =>
         parseInt(id, 10)
       );
       knitterWhere.knitter_id = { [Op.in]: idArray };
@@ -1299,20 +1756,133 @@ const getInvoice = async (req: Request, res: Response) => {
         .map((id: any) => parseInt(id, 10));
       weaverWhere.weaver_id = { [Op.in]: idArray };
     }
-    const response = await Promise.all([
+
+    let knitIds = await KnitSales.findAll({
+      attributes: ["id"],
+      where: {
+        ...whereCondition, 
+        ...knitterWhere,
+        batch_lot_no: { [Op.not]: null },
+      },
+    });
+
+    let knitSalesId = knitIds.map((item: any) => item.dataValues.id);
+    let knitBatchLot = await KnitFabricSelection.findAll({
+      attributes: [[Sequelize.col("process.batch_lot_no"), "batch_lot_no"]],
+      where: { sales_id: { [Op.in]: knitSalesId } },
+      include: [
+        {
+          model: KnitProcess,
+          as: "process",
+          where: { batch_lot_no: { [Op.not]: null } },
+          attributes: [],
+        },
+      ],
+      group: ["process.batch_lot_no"],
+    });
+
+    let weaveIds = await WeaverSales.findAll({
+      attributes: ["id"],
+      where: {
+        ...whereCondition,
+        ...weaverWhere,
+        batch_lot_no: { [Op.not]: null },
+      },
+    });
+
+    let weaveSalesId = weaveIds.map((item: any) => item.dataValues.id);
+    let weaveBatchLot = await WeaverFabricSelection.findAll({
+      attributes: [[Sequelize.col("process.batch_lot_no"), "batch_lot_no"]],
+      where: { sales_id: { [Op.in]: weaveSalesId } },
+      include: [
+        {
+          model: WeaverProcess,
+          as: "process",
+          where: { batch_lot_no: { [Op.not]: null } },
+          attributes: [],
+        },
+      ],
+      group: ["process.batch_lot_no"],
+    });
+    let batchLot = [...weaveBatchLot, ...knitBatchLot];
+
+    const response: any = await Promise.all([
       WeaverSales.findAll({
-        attributes: ["invoice_no", "batch_lot_no", "brand_order_ref", "garment_order_ref"],
+        attributes: ["brand_order_ref", "garment_order_ref"],
         where: { ...whereCondition, ...weaverWhere },
-        group: ["invoice_no", "batch_lot_no", "brand_order_ref", "garment_order_ref"],
+        group: ["brand_order_ref", "garment_order_ref"],
       }),
       KnitSales.findAll({
-        attributes: ["invoice_no", "batch_lot_no", "brand_order_ref", "garment_order_ref"],
+        attributes: ["brand_order_ref", "garment_order_ref"],
         where: { ...whereCondition, ...knitterWhere },
-        group: ["invoice_no", "batch_lot_no", "brand_order_ref", "garment_order_ref"],
+        group: ["brand_order_ref", "garment_order_ref"],
       }),
     ]);
 
-    res.sendSuccess(res, response.flat());
+   let result: any = {
+      batchLot,
+      order_ref: response.flat(),
+    };
+
+
+    res.sendSuccess(res, result);
+  } catch (error: any) {
+    return res.sendError(res, error.message);
+  }
+};
+
+const getChooseGarmentFilters = async (req: Request, res: Response) => {
+  const { garmentId, status }: any = req.query;
+  const whereCondition: any = {};
+  try {
+    if (!garmentId) {
+      return res.sendError(res, "Need Garment Id ");
+    }
+      whereCondition.garment_id = garmentId;
+
+  const types = await GarmentProcess.findAll({
+    attributes: ['garment_type'],
+    where: { ...whereCondition }
+  });
+
+  let garmentTypes: any = [];
+
+  if(types && types.length > 0){
+    for await (let row of types){
+      garmentTypes = [...new Set(row?.dataValues?.garment_type?.map((item: any) => item))]
+    }
+  }
+
+  let brandOrderRef: any = await GarmentProcess.findAll({
+    attributes: ["brand_order_ref"],
+    where: { ...whereCondition, brand_order_ref: { [Op.not]: null } },
+    group: ["brand_order_ref"],
+  });
+
+  let fabricOrderRef:any = await GarmentProcess.findAll({
+    attributes: ["fabric_order_ref"],
+    where: { ...whereCondition, fabric_order_ref: { [Op.not]: null } }
+  });
+
+  let factoryLotNo:any = await GarmentProcess.findAll({
+    attributes: ["factory_lot_no"],
+    where: { ...whereCondition, factory_lot_no: { [Op.not]: null } }
+  });
+
+  let reelLotNo:any = await GarmentProcess.findAll({
+    attributes: ["reel_lot_no"],
+    where: { ...whereCondition, reel_lot_no: { [Op.not]: null } }
+  });
+
+   let result: any = {
+    garmentTypes,
+    brandOrderRef: brandOrderRef,
+    fabricOrderRef,
+    factoryLotNo,
+    reelLotNo
+    };
+
+    res.sendSuccess(res, result);
   } catch (error: any) {
     return res.sendError(res, error.message);
   }
@@ -1334,6 +1904,18 @@ const getBrands = async (req: Request, res: Response) => {
   res.sendSuccess(res, brand);
 };
 
+const getBuyerProcessors = async (req: Request, res: Response) => {
+  try {
+    let list = await ProcessorList.findAll({
+      attributes: ["id", "name"],
+    })
+    res.sendSuccess(res, list);
+  } catch (error: any) {
+    console.log(error)
+    return res.sendError(res, error.message);
+  }
+};
+
 export {
   fetchBrandQrGarmentSalesPagination,
   exportBrandQrGarmentSales,
@@ -1345,11 +1927,17 @@ export {
   createGarmentSales,
   fetchGarmentProcessPagination,
   fetchGarmentSalesPagination,
+  chooseFabricProcess,
+  chooseGarmentSales,
   exportGarmentSale,
   getEmbroidering,
   dashboardGraph,
   getprocessName,
-  getInvoice,
+  getChooseFabricFilters,
+  getGarmentReelLotNo,
   fetchGarmentSale,
   getBrands,
+  getChooseGarmentFilters,
+  exportGarmentProcess,
+  getBuyerProcessors
 };

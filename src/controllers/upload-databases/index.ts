@@ -676,11 +676,32 @@ const uploadFarmer = async (req: Request, res: Response) => {
                     let farmers = await Farmer.findOne({ where: { code: data.farmerCode } });
 
                     if (farmers) {
-                        fail.push({
-                            success: false,
-                            data: { farmerCode: data.farmerCode, farmerName: data.firstName },
-                            message: "Farmer with same farmer code is already exists"
-                        })
+                        const farm = await Farm.findOne({where: {farmer_id: farmers.id, season_id: season.id}});
+                        if(farm){
+                            fail.push({
+                                success: false,
+                                data: { farmerCode: data.farmerCode, farmerName: data.firstName },
+                                message: "Farmer with same farmer code and season is already exists"
+                            })
+                        }else{
+                            const farmData = {
+                                farmer_id: farmers.id,
+                                program_id: program.id,
+                                season_id: season.id,
+                                agri_total_area: data.agriTotalArea ? data.agriTotalArea : 0.0,
+                                agri_estimated_yeld: data.agriEstimatedYield ? data.agriEstimatedYield : 0.0,
+                                agri_estimated_prod: data.agriEstimatedProd ? data.agriEstimatedProd : 0.0,
+                                cotton_total_area: data.cottonTotalArea ? data.cottonTotalArea : 0.0,
+                                total_estimated_cotton: data.totalEstimatedCotton ? data.totalEstimatedCotton : 0.0
+                            };
+                            const createdFarm = await Farm.create(farmData); 
+                            pass.push({
+                                success: true,
+                                data: farmers,
+                                message: "Farmer created"
+                            });
+                        }
+                        
                     } else {
                         const farmerdata = {
                             program_id: program.id,

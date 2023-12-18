@@ -69,9 +69,9 @@ const createTransaction = async (req: Request, res: Response) => {
       cotton_transacted: (farm.cotton_transacted || 0) + Number(req.body.qtyPurchased)
     }, { where: { id: req.body.farmId } });
     res.sendSuccess(res, transaction);
-  } catch (error) {
+  } catch (error: any) {
     console.log(error);
-    return res.sendError(res, "NOT_ABLE_TO_CREATE");
+    return res.sendError(res, error.message);
   }
 };
 
@@ -280,9 +280,9 @@ const fetchTransactions = async (req: Request, res: Response) => {
       const transaction = await Transaction.findAll(queryOptions);
       return res.sendSuccess(res, transaction);
     }
-  } catch (error) {
+  } catch (error: any) {
     console.log(error);
-    return res.sendError(res, "NOT_ABLE_TO_FETCH");
+    return res.sendError(res, error.message);
   }
 };
 
@@ -295,103 +295,115 @@ const fetchTransactionById = async (req: Request, res: Response) => {
         {
           model: Village,
           as: "village",
+          attributes: ['id', 'village_name']
         },
         {
           model: Block,
           as: "block",
+          attributes: ['id', 'block_name']
         },
         {
           model: District,
           as: "district",
+          attributes: ['id', 'district_name']
         },
         {
           model: State,
           as: "state",
+          attributes: ['id', 'state_name']
         },
         {
           model: Country,
           as: "country",
+          attributes: ['id', 'county_name']
         },
         {
           model: Farmer,
           as: "farmer",
-          include: [
-            {
-              model: FarmGroup,
-              as: "farmGroup",
-            }
-          ]
         },
         {
           model: Program,
           as: "program",
+          attributes: ['id', 'program_name']
         },
         {
           model: Brand,
           as: "brand",
+          attributes: ['id', 'brand_name']
         },
         {
           model: Ginner,
           as: "ginner",
+          attributes: ['id', 'name', 'address']
         },
         {
           model: CropGrade,
           as: "grade",
+          attributes: ['id', 'cropGrade']
         },
         {
           model: Season,
           as: "season",
+          attributes: ['id', 'name']
         },
         {
           model: Farm,
-          as: "farm",
+          as: "farm"
         },
       ],
     };
 
     const data = await Transaction.findOne(queryOptions);
-    const farm = await Farm.findOne({
-      where: { farmer_id: data.farmer_id },
-      include: [
-        {
-          model: Season,
-          as: "season",
-        },
-        {
-          model: FarmerAgriArea,
-          as: "farmerAgriArea",
-        },
-        {
-          model: FarmerCottonArea,
-          as: "farmerCottonArea",
-        },
-      ],
-    });
+    // const farm = await Farm.findOne({
+    //   where: { farmer_id: data.farmer_id },
+    //   include: [
+    //     {
+    //       model: Season,
+    //       as: "season",
+    //     },
+    //     {
+    //       model: FarmerAgriArea,
+    //       as: "farmerAgriArea",
+    //     },
+    //     {
+    //       model: FarmerCottonArea,
+    //       as: "farmerCottonArea",
+    //     },
+    //   ],
+    // });
 
-    const transaction: any = {
-      ...data.dataValues,
-      farm
-    }
-    return res.sendSuccess(res, transaction);
-  } catch (error) {
+    // const transaction: any = {
+    //   ...data.dataValues,
+    //   farm
+    // }
+    return res.sendSuccess(res, data);
+  } catch (error: any) {
     console.log(error);
-    return res.sendError(res, "NOT_ABLE_TO_FETCH");
+    return res.sendError(res, error.message);
   }
 };
 
 const updateTransaction = async (req: Request, res: Response) => {
   try {
+    if (Number(req.body.qtyPurchased) < 0) {
+      return res.sendError(res, 'QtyPurchased should be greater than 0')
+    }
+    if (Number(req.body.rate) < 0) {
+      return res.sendError(res, 'Rate should be greater than 0')
+    }
     const data: any = {
       date: req.body.date,
       district_id: req.body.districtId,
       block_id: req.body.blockId,
       village_id: req.body.villageId,
       farmer_id: req.body.farmerId,
+      farm_id: req.body.farmId,
       farmer_name: req.body.farmerName,
       brand_id: req.body.brandId,
       farmer_code: req.body.farmerCode,
       season_id: req.body.season,
       qty_purchased: req.body.qtyPurchased,
+      qty_stock: req.body.qtyPurchased,
       rate: req.body.rate,
       grade_id: req.body.grade,
       program_id: req.body.program,
@@ -404,16 +416,27 @@ const updateTransaction = async (req: Request, res: Response) => {
       state_id: req.body.stateId,
       country_id: req.body.countryId
     };
-
+    let farm;
+    if (req.body.farmId) {
+      farm = await Farm.findByPk(req.body.farmId);
+      if (!farm) {
+        return res.sendError(res, "Farm is not present");
+      }
+      data.estimated_cotton = farm.total_estimated_cotton;
+      data.available_cotton = farm.total_estimated_cotton - (farm.cotton_transacted || 0);
+    }
     const transaction = await Transaction.update(data, {
       where: {
         id: req.body.id,
       },
     });
+    let s = await Farm.update({
+      cotton_transacted: (farm.cotton_transacted || 0) + Number(req.body.qtyPurchased)
+    }, { where: { id: req.body.farmId } });
     res.sendSuccess(res, transaction);
-  } catch (error) {
-    console.log(error);
-    return res.sendError(res, "NOT_ABLE_TO_UPDATE");
+  } catch (error: any) {
+    console.log(error)
+    return res.sendError(res, error.message);
   }
 };
 
@@ -548,8 +571,9 @@ const deleteTransaction = async (req: Request, res: Response) => {
     });
 
     res.sendSuccess(res, { transaction });
-  } catch (error) {
-    return res.sendError(res, "NOT_ABLE_TO_DELETE");
+  } catch (error: any) {
+    console.log(error)
+    return res.sendError(res, error.message);
   }
 };
 
@@ -586,8 +610,9 @@ const deleteBulkTransactions = async (req: Request, res: Response) => {
       }
     }
     res.sendSuccess(res, { pass, fail })
-  } catch (error) {
-    return res.sendError(res, "NOT_ABLE_TO_DELETE");
+  } catch (error: any) {
+    console.log(error)
+    return res.sendError(res, error.message);
   }
 }
 
@@ -915,8 +940,9 @@ const uploadTransactionBulk = async (req: Request, res: Response) => {
       }
     }
     res.sendSuccess(res, { pass, fail });
-  } catch (error) {
-    return res.sendError(res, "ERR_INTERNAL_SERVER_ERROR");
+  } catch (error: any) {
+    console.log(error)
+    return res.sendError(res, error.message);
   }
 };
 
@@ -1100,8 +1126,9 @@ const exportProcurement = async (req: Request, res: Response) => {
       messgage: "File successfully Generated",
       data: process.env.BASE_URL + "procurement.xlsx",
     });
-  } catch (error) {
-    console.error("Error appending data:", error);
+  } catch (error: any) {
+    console.log(error)
+    return res.sendError(res, error.message);
   }
 };
 
@@ -1229,8 +1256,9 @@ const exportGinnerProcurement = async (req: Request, res: Response) => {
       messgage: "File successfully Generated",
       data: process.env.BASE_URL + "Ginner_transactions.xlsx",
     });
-  } catch (error) {
-    console.error("Error appending data:", error);
+  } catch (error: any) {
+    console.log(error)
+    return res.sendError(res, error.message);
   }
 };
 

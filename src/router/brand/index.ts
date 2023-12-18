@@ -4,7 +4,8 @@ import {
     productionUpdate,
     productTracebility,
     styleMarkNo,
-    getProgram
+    getProgram,
+    getCountries
 } from "../../controllers/brand";
 
 
@@ -17,7 +18,7 @@ router.get('/transactions', fetchBrandTransactionsPagination);
 router.get('/production-update', productionUpdate);
 router.get('/product-tracebility', productTracebility);
 router.get('/style-mark', styleMarkNo);
-
+router.get('/get-countries', getCountries);
 router.get('/get-program', getProgram);
 
 export default router;

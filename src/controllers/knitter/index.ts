@@ -494,7 +494,7 @@ const fetchKnitterSale = async (req: Request, res: Response) => {
     }
 };
 
-//fetch knitter Sale by id
+//fetch fabric reel lot no
 const fetchFabricReelLotNo = async (req: Request, res: Response) => {
     const { knitterId } = req.query;
     const whereCondition: any = {};
