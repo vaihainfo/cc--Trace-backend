@@ -17,10 +17,10 @@ const deleteDistrict = async (req: Request, res: Response) => {
         id: req.body.id,
       },
     });
-    console.log("District deleted", district);
     res.sendSuccess(res, { district });
-  } catch (error) {
-    return res.sendError(res, "ERR_NOT_ABLE_TO_DELETE_DISTRICT");
+  } catch (error: any) {
+    console.log(error)
+    return res.sendError(res, error.message);
   }
 };
 

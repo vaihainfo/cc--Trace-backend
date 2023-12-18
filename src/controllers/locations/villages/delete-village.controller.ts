@@ -10,8 +10,9 @@ const deleteVillage = async (req: Request, res: Response) =>{
             }
           });
           res.sendSuccess(res, { village });
-      } catch (error) {
-        return res.sendError(res, "ERR_NOT_ABLE_TO_DELETE_VILLAGE");
+      } catch (error: any) {
+        console.log(error)
+        return res.sendError(res, error.message);
       }
 }
 

@@ -35,9 +35,9 @@ const fetchCountries = async (req: Request, res: Response) => {
       const countries = await Country.findAll(queryOptions);
       return res.sendSuccess(res, countries);
     }
-  } catch (error) {
-    console.log(error);
-    return res.sendError(res, "ERR_NOT_ABLE_TO_GET_COUNTRIES");
+  } catch (error: any) {
+    console.log(error)
+    return res.sendError(res, error.message);
   }
 };
 

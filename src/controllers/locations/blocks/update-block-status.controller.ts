@@ -15,8 +15,9 @@ const updateBlockStatus = async (req: Request, res: Response) => {
         });
         res.sendSuccess(res, { status });
     } catch (error: any) {
+        console.log(error)
         return res.sendError(res, error.message);
-    }
+      }
 }
 
 export default updateBlockStatus;

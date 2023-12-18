@@ -14,10 +14,10 @@ const updateCountry = async (req: Request, res: Response) => {
         id: req.body.id
       }
     });
-    console.log('country updated', country);
     res.sendSuccess(res, { country });
-  } catch (error) {
-    return res.sendError(res, "ERR_NOT_ABLE_TO_UPDATE_COUNTRY");
+  } catch (error: any) {
+    console.log(error)
+    return res.sendError(res, error.message);
   }
 }
 

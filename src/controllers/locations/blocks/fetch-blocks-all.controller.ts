@@ -99,8 +99,9 @@ const fetchBlocks = async (req: Request, res: Response) => {
       });
       return res.sendSuccess(res, block);
     }
-  } catch (error) {
-    return res.status(400).json(error);
+  } catch (error: any) {
+    console.log(error)
+    return res.sendError(res, error.message);
   }
 };
 

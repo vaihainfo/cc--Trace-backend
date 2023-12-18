@@ -29,8 +29,9 @@ const setBlock = async (req: Request, res: Response) => {
       }
     }
     res.sendSuccess(res, { pass, fail });
-  } catch (error) {
-    return res.sendError(res, "ERR_NOT_ABLE_TO_CREATE_BLOCKS");
+  } catch (error: any) {
+    console.log(error)
+    return res.sendError(res, error.message);
   }
 };
 

@@ -11,9 +11,9 @@ const fetchCountry = async (req: Request, res: Response) =>{
         const country = await Country.findByPk(req.body.id);
 
           return res.sendSuccess(res,  country );
-      } catch (error) {
+      } catch (error: any) {
         console.log(error)
-        return res.sendError(res, "ERR_NOT_ABLE_TO_GET_COUNTRY");
+        return res.sendError(res, error.message);
       }
 }
 

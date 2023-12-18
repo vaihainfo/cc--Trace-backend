@@ -17,9 +17,9 @@ const updateBlock = async (req: Request, res: Response) => {
       }
     });
     return res.sendSuccess(res, { block });
-  } catch (error) {
+  } catch (error: any) {
     console.log(error)
-    return res.sendError(res, "ERR_NOT_ABLE_TO_UPDATE_BLOCK");
+    return res.sendError(res, error.message);
   }
 }
 

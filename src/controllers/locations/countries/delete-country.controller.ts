@@ -17,8 +17,9 @@ const deleteCountry = async (req: Request, res: Response) =>{
           });
           console.log('country deleted', country);
           res.sendSuccess(res, { country });
-      } catch (error) {
-        return res.sendError(res, "ERR_NOT_ABLE_TO_DELETE_COUNTRY");
+      } catch (error: any) {
+        console.log(error)
+        return res.sendError(res, error.message);
       }
 }
 
