@@ -89,6 +89,34 @@ const getUserInfo = async (req: Request, res: Response) => {
             role = role.dataValues;
         }
 
+        if (req.query.garmentId) {
+            role = await UserRole.findOne({
+                where: { user_role: 'Garment' },
+                include: [
+                    {
+                        model: UserCategory,
+                        as: 'userCategory',
+                        attributes: ['id', 'category_name'], // Include only the name attribute of the category
+                    },
+                ],
+            });
+            role = role.dataValues;
+        }
+
+        if (req.query.fabricId) {
+            role = await UserRole.findOne({
+                where: { user_role: 'Fabric' },
+                include: [
+                    {
+                        model: UserCategory,
+                        as: 'userCategory',
+                        attributes: ['id', 'category_name'], // Include only the name attribute of the category
+                    },
+                ],
+            });
+            role = role.dataValues;
+        }
+
         let menuList = await MenuList.findAll(
             {
                 where: {
@@ -133,6 +161,15 @@ const getUserInfo = async (req: Request, res: Response) => {
         brand ? processor.push('Brand') : "";
         if (req.query.ginnerId) {
             ginner = await Ginner.findOne({ where: { id: req.query.ginnerId } })
+        }
+        if (req.query.spinnerId) {
+            spinner = await Spinner.findOne({ where: { id: req.query.spinnerId } })
+        }
+        if (req.query.weaverId) {
+            weaver = await Weaver.findOne({ where: { id: req.query.weaverId } })
+        }
+        if (req.query.knitterId) {
+            knitter = await Knitter.findOne({ where: { id: req.query.knitterId } })
         }
         return res.sendSuccess(res, { user, role, menuList, privileges, spinner, ginner, weaver, knitter, garment, trader, fabric, brand, processor });
     } catch (error) {
