@@ -54,7 +54,7 @@ const fetchBrandQrGarmentSalesPagination = async (
         { "$program.program_name$": { [Op.iLike]: `%${searchTerm}%` } }, // Search by user name
       ];
     }
-    whereCondition.buyer_type = "Mapped";
+    whereCondition.buyer_type = "Garment";
     whereCondition.buyer_id = brandId;
 
     //fetch data with pagination
@@ -110,7 +110,7 @@ const exportBrandQrGarmentSales = async (req: Request, res: Response) => {
     //fetch data with pagination
     const data = await GarmentSales.findAll({
       where: {
-        buyer_type: "Mapped",
+        buyer_type: "Garment",
         buyer_id: brandId,
       },
     });
@@ -227,6 +227,18 @@ const fetchTransactions = async (req: Request, res: Response) => {
       weaverWhere.weaver_id = { [Op.in]: [0] };
       knitterWhere.knitter_id = { [Op.in]: idArray };
       // fabricWhere.fabric_id = { [Op.in]: [0] };
+    }
+
+    if(weaverId && knitterId){
+      const idArrayKnit: number[] = knitterId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      knitterWhere.knitter_id = { [Op.in]: idArrayKnit };
+
+      const idArrayWeav: number[] = weaverId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      weaverWhere.weaver_id = { [Op.in]: idArrayWeav };
     }
 
     // if (fabricId) {
@@ -400,6 +412,19 @@ const fetchTransactionsAll = async (req: Request, res: Response) => {
       weaverWhere.weaver_id = { [Op.in]: [0] };
       knitterWhere.knitter_id = { [Op.in]: idArray };
     }
+
+    if(weaverId && knitterId){
+      const idArrayKnit: number[] = knitterId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      knitterWhere.knitter_id = { [Op.in]: idArrayKnit };
+
+      const idArrayWeav: number[] = weaverId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      weaverWhere.weaver_id = { [Op.in]: idArrayWeav };
+    }
+
     if (garmentOrderRef) {
       const idArray: any[] = garmentOrderRef.split(",").map((id: any) => id);
       whereCondition.garment_order_ref = { [Op.in]: idArray };
@@ -966,6 +991,18 @@ const chooseFabricProcess = async (req: Request, res: Response) =>{
     // fabricWhere.fabric_id = { [Op.in]: [0] };
   }
 
+  if(weaverId && knitterId){
+    const idArrayKnit: number[] = knitterId
+      .split(",")
+      .map((id: any) => parseInt(id, 10));
+    knitterWhere.knitter_id = { [Op.in]: idArrayKnit };
+
+    const idArrayWeav: number[] = weaverId
+      .split(",")
+      .map((id: any) => parseInt(id, 10));
+    weaverWhere.weaver_id = { [Op.in]: idArrayWeav };
+  }
+
   // if (fabricId) {
   //   const idArray: number[] = fabricId
   //     .split(",")
@@ -1013,7 +1050,7 @@ const chooseFabricProcess = async (req: Request, res: Response) =>{
     WeaverSales.findAll({
       where: {
         status: "Sold",
-        buyer_type: "Mapped",
+        buyer_type: "Garment",
         buyer_id: garmentId,
         qty_stock: { [Op.gt]: 0 },
         ...whereCondition,
@@ -1027,7 +1064,7 @@ const chooseFabricProcess = async (req: Request, res: Response) =>{
     KnitSales.findAll({
       where: {
         status: "Sold",
-        buyer_type: "Mapped",
+        buyer_type: "Garment",
         buyer_id: garmentId,
         qty_stock: { [Op.gt]: 0 },
         ...whereCondition,
@@ -1137,6 +1174,10 @@ const createGarmentSales = async (req: Request, res: Response) => {
       qty_stock_boxes: req.body.totalNoOfBoxes,
       qty_stock_length: req.body.totalFabricLength,
       qty_stock_weight: req.body.totalFabricWeight,
+      color: req.body.color,
+      garment_size: req.body.garmentSize,
+      no_of_pieces: req.body.noOfPieces,
+      no_of_boxes: req.body.noOfBoxes,
       status: req.body.buyerId ? "Sold" : "Pending",
     };
     const garmentSales = await GarmentSales.create(data);
@@ -1265,7 +1306,7 @@ const fetchGarmentSalesPagination = async (req: Request, res: Response) => {
                 const department = await Department.findAll({
                     where: {
                         id: {
-                            [Op.in]: row.dataValues.department,
+                            [Op.in]: row.dataValues.department_id,
                         },
                     },
                     attributes: ['id', 'dept_name']
@@ -1289,7 +1330,7 @@ const fetchGarmentSalesPagination = async (req: Request, res: Response) => {
           const department = await Department.findAll({
               where: {
                   id: {
-                      [Op.in]: row.dataValues.department,
+                      [Op.in]: row.dataValues.department_id,
                   },
               },
               attributes: ['id', 'dept_name']
@@ -1805,6 +1846,10 @@ const getChooseFabricFilters = async (req: Request, res: Response) => {
       group: ["process.batch_lot_no"],
     });
     let batchLot = [...weaveBatchLot, ...knitBatchLot];
+    const uniqueBatchSet: any = new Set<any>(batchLot?.map((order: any) => JSON.stringify(order)));
+
+    const uniqueBatchLot: any = Array.from(uniqueBatchSet, (item: any) => JSON.parse(item) as any);
+
 
     const response: any = await Promise.all([
       WeaverSales.findAll({
@@ -1818,10 +1863,13 @@ const getChooseFabricFilters = async (req: Request, res: Response) => {
         group: ["brand_order_ref", "garment_order_ref"],
       }),
     ]);
+    const uniqueOrdersSet: any = new Set<any>(response.flat()?.map((order: any) => JSON.stringify(order)));
+
+    const uniqueOrderRef: any = Array.from(uniqueOrdersSet, (item: any) => JSON.parse(item) as any);
 
    let result: any = {
-      batchLot,
-      order_ref: response.flat(),
+      batchLot: uniqueBatchLot,
+      order_ref: uniqueOrderRef,
     };
 
 
@@ -1849,7 +1897,7 @@ const getChooseGarmentFilters = async (req: Request, res: Response) => {
 
   if(types && types.length > 0){
     for await (let row of types){
-      garmentTypes = [...new Set(row?.dataValues?.garment_type?.map((item: any) => item))]
+      garmentTypes = [...garmentTypes, ...new Set(row?.dataValues?.garment_type?.map((item: any) => item))]
     }
   }
 

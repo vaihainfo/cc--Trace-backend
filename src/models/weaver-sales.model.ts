@@ -70,6 +70,9 @@ const WeaverSales = db.define('weaver_sales', {
   total_yarn_qty: {
     type: DataTypes.DOUBLE
   },
+  total_fabric_length: {
+    type: DataTypes.DOUBLE
+  },
   fabric_type: {
     type: DataTypes.ARRAY(DataTypes.INTEGER)
   },

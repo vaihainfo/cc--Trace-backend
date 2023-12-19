@@ -3418,7 +3418,6 @@ const fetchGinnerSummaryPagination = async (req: Request, res: Response) => {
                         [sequelize.fn('COALESCE', sequelize.fn('SUM', Sequelize.literal("CAST(qty_purchased AS DOUBLE PRECISION)")), 0), 'qty']
                     ],
                     where: {
-                        season_id: 13,
                         mapped_ginner: ginner.id
                     }
                 }),
@@ -3427,7 +3426,6 @@ const fetchGinnerSummaryPagination = async (req: Request, res: Response) => {
                         [sequelize.fn('COALESCE', sequelize.fn('SUM', Sequelize.literal("CAST(qty_purchased AS DOUBLE PRECISION)")), 0), 'qty']
                     ],
                     where: {
-                        season_id: 14,
                         mapped_ginner: ginner.id
                     }
                 }),
@@ -3443,7 +3441,6 @@ const fetchGinnerSummaryPagination = async (req: Request, res: Response) => {
                         }
                     ],
                     where: {
-                        '$ginprocess.season_id$': 13,
                         '$ginprocess.ginner_id$': ginner.id
                     },
                     group: ["ginprocess.ginner_id"]
@@ -3460,7 +3457,6 @@ const fetchGinnerSummaryPagination = async (req: Request, res: Response) => {
                         }
                     ],
                     where: {
-                        '$ginprocess.season_id$': 14,
                         '$ginprocess.ginner_id$': ginner.id
                     },
                     group: ["ginprocess.ginner_id"]
@@ -3482,7 +3478,6 @@ const fetchGinnerSummaryPagination = async (req: Request, res: Response) => {
                         }
                     ],
                     where: {
-                        '$sales.season_id$': 13,
                         '$sales.ginner_id$': ginner.id
                     },
                     group: ["sales.ginner_id"]
@@ -3504,7 +3499,6 @@ const fetchGinnerSummaryPagination = async (req: Request, res: Response) => {
                         }
                     ],
                     where: {
-                        '$sales.season_id$': 14,
                         '$sales.ginner_id$': ginner.id
                     },
                     group: ["sales.ginner_id"]

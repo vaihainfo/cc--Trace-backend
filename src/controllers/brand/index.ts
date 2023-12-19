@@ -137,9 +137,9 @@ const fetchBrandPagination = async (req: Request, res: Response) => {
             });
             return res.sendSuccess(res, cooperative);
         }
-    } catch (error) {
+    } catch (error: any) {
         console.log(error);
-        return res.sendError(res, "NOT_ABLE_TO_FETCH_BRAND");
+        return res.sendError(res, error.meessage);
     }
 };
 
@@ -180,9 +180,9 @@ const fetchBrandById = async (req: Request, res: Response) => {
             countries,
         };
         return res.sendSuccess(res, brandInfo);
-    } catch (error) {
+    } catch (error: any) {
         console.log(error);
-        return res.sendError(res, "NOT_ABLE_TO_FETCH_BRAND");
+        return res.sendError(res, error.meessage);
     }
 };
 
@@ -235,9 +235,9 @@ const updateBrand = async (req: Request, res: Response) => {
         };
         const result = await Brand.update(data, { where: { id: req.body.id } });
         res.sendSuccess(res, result);
-    } catch (error) {
+    } catch (error: any) {
         console.log(error);
-        return res.sendError(res, "NOT_ABLE_TO_UPDATE_BRAND");
+        return res.sendError(res, error.meessage);
     }
 };
 
@@ -420,7 +420,7 @@ const sumbrandknitterFabricSales = async (brandId: any, seasonId: any) => {
 
         let data = await KnitSales.findAll({
             attributes: [
-                [sequelize.fn('COALESCE', sequelize.fn('SUM', Sequelize.literal("CAST(fabric_length AS INTEGER)")), 0), 'total_fabric_mt']
+                [sequelize.fn('COALESCE', sequelize.fn('SUM', Sequelize.literal("CAST(total_yarn_qty AS INTEGER)")), 0), 'total_fabric_mt']
             ],
             include: [
                 { model: Knitter, as: 'knitter', attributes: [] },
@@ -445,7 +445,7 @@ const sumbrandWeaverFabricSales = async (brandId: any, seasonId: any) => {
 
         let data = await WeaverSales.findAll({
             attributes: [
-                [sequelize.fn('COALESCE', sequelize.fn('SUM', Sequelize.literal("CAST(fabric_length AS INTEGER)")), 0), 'total_fabric_mt']
+                [sequelize.fn('COALESCE', sequelize.fn('SUM', Sequelize.literal("CAST(total_yarn_qty AS INTEGER)")), 0), 'total_fabric_mt']
             ],
             include: [
                 { model: Weaver, as: 'weaver', attributes: [] },
@@ -471,7 +471,7 @@ const sumbrandgarmentFabricSales = async (brandId: any, seasonId: any) => {
 
         let data = await GarmentSales.findAll({
             attributes: [
-                [Sequelize.literal('COALESCE(SUM(no_of_pieces), 0)'), 'total_garment_pcs']
+                [Sequelize.literal('COALESCE(SUM(total_no_of_pieces), 0)'), 'total_garment_pcs']
             ],
             include: [
                 { model: Garment, as: 'garment', attributes: [] },
@@ -504,14 +504,12 @@ const fetchBrandTransactionsPagination = async (req: Request, res: Response) => 
         }
         if (searchTerm) {
             whereCondition[Op.or] = [
-                { order_ref: { [Op.iLike]: `%${searchTerm}%` } }, // Search by order ref
+                { fabric_order_ref: { [Op.iLike]: `%${searchTerm}%` } }, // Search by order ref
+                { brand_order_ref: { [Op.iLike]: `%${searchTerm}%` } }, // Search by order ref
                 { invoice_no: { [Op.iLike]: `%${searchTerm}%` } },
-                { style_mark_no: { [Op.iLike]: `%${searchTerm}%` } },
                 { '$program.program_name$': { [Op.iLike]: `%${searchTerm}%` } },
+                { '$garment.name$': { [Op.iLike]: `%${searchTerm}%` } },
                 { transaction_agent: { [Op.iLike]: `%${searchTerm}%` } },
-                { garment_type: { [Op.iLike]: `%${searchTerm}%` } },
-                { garment_size: { [Op.iLike]: `%${searchTerm}%` } },
-                { color: { [Op.iLike]: `%${searchTerm}%` } },
             ];
         }
         if (brandId) {
@@ -527,13 +525,13 @@ const fetchBrandTransactionsPagination = async (req: Request, res: Response) => 
             const idArray: any[] = styleMarkNo
                 .split(",")
                 .map((id: any) => id);
-            whereCondition.style_mark_no = { [Op.in]: idArray };
+            whereCondition.style_mark_no = { [Op.overlap]: idArray };
         }
         if (product) {
             const idArray: any[] = product
                 .split(",")
                 .map((id: any) => id);
-            whereCondition.garment_type = { [Op.in]: idArray };
+            whereCondition.garment_type = { [Op.overlap]: idArray };
         }
 
         let include = [
@@ -615,7 +613,7 @@ const productionUpdate = async (req: Request, res: Response) => {
             attributes: [
                 [Sequelize.fn('COALESCE', Sequelize.fn('SUM', Sequelize.col('total_qty')), 0), 'cotton_qty'],
                 [Sequelize.literal('"ginner"."name"'), 'name'],
-                [sequelize.literal("'Spinner'"), 'type']
+                [sequelize.literal("'Ginner'"), 'type']
             ],
             include: [
                 {
@@ -696,7 +694,7 @@ const productionUpdate = async (req: Request, res: Response) => {
         }
         const knitterList = await KnitSales.findAll({
             attributes: [
-                [sequelize.fn('COALESCE', sequelize.fn('SUM', Sequelize.literal("CAST(fabric_length AS INTEGER)")), 0), 'knitter_qty'],
+                [sequelize.fn('COALESCE', sequelize.fn('SUM', Sequelize.literal("CAST(total_yarn_qty AS INTEGER)")), 0), 'knitter_qty'],
                 [Sequelize.literal('"knitter"."name"'), 'name'],
                 [sequelize.literal("'Knitter'"), 'type']
             ],
@@ -740,7 +738,7 @@ const productionUpdate = async (req: Request, res: Response) => {
         }
         const weaverList = await WeaverSales.findAll({
             attributes: [
-                [sequelize.fn('COALESCE', sequelize.fn('SUM', Sequelize.literal("CAST(fabric_length AS INTEGER)")), 0), 'weaver_qty'],
+                [sequelize.fn('COALESCE', sequelize.fn('SUM', Sequelize.literal("CAST(total_yarn_qty AS INTEGER)")), 0), 'weaver_qty'],
                 [Sequelize.literal('"weaver"."name"'), 'name'],
                 [sequelize.literal("'Weaver'"), 'type']
             ],
@@ -785,7 +783,7 @@ const productionUpdate = async (req: Request, res: Response) => {
         const garmentList = await GarmentSales.findAll({
             attributes: [
 
-                [sequelize.fn('COALESCE', sequelize.fn('SUM', Sequelize.literal("no_of_pieces")), 0), 'garment_qty'],
+                [sequelize.fn('COALESCE', sequelize.fn('SUM', Sequelize.literal("total_no_of_pieces")), 0), 'garment_qty'],
                 [Sequelize.literal('"garment"."name"'), 'name'],
                 [sequelize.literal("'Garment'"), 'type']
             ],
@@ -815,8 +813,9 @@ const productionUpdate = async (req: Request, res: Response) => {
             group: ['garment.id', 'season.id']
         })
         res.sendSuccess(res, [...ginnerList, ...spinnerList, ...knitterList, ...weaverList, ...garmentList])
-    } catch (error) {
+    } catch (error: any) {
         console.log(error);
+        res.sendError(res, error.message)
     }
 }
 
@@ -849,8 +848,9 @@ const productTracebility = async (req: Request, res: Response) => {
         // }
 
         res.sendSuccess(res, garments)
-    } catch (error) {
+    } catch (error: any) {
         console.log(error);
+        res.sendError(res, error.message)
     }
 }
 

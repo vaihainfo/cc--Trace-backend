@@ -268,6 +268,7 @@ const createKnitterrSales = async (req: Request, res: Response) => {
             processor_address: req.body.processorAddress,
             yarn_qty: req.body.totalYarnQty,
             total_yarn_qty: req.body.totalYarnQty,
+            total_fabric_weight: req.body.totalFabricWeight,
             transaction_via_trader: req.body.transactionViaTrader,
             transaction_agent: req.body.transactionAgent,
             batch_lot_no: req.body.batchLotNo,

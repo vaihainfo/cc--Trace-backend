@@ -559,6 +559,18 @@ const chooseDyingFabric = async (req: Request, res: Response) => {
       knitterWhere.knitter_id = { [Op.in]: idArray };
     }
 
+    if(weaverId && knitterId){
+      const idArrayKnit: number[] = knitterId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      knitterWhere.knitter_id = { [Op.in]: idArrayKnit };
+  
+      const idArrayWeav: number[] = weaverId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      weaverWhere.weaver_id = { [Op.in]: idArrayWeav };
+    }
+
     if (garmentOrderRef) {
       const idArray: any[] = garmentOrderRef.split(",").map((id: any) => id);
       whereCondition.garment_order_ref = { [Op.in]: idArray };
@@ -1067,6 +1079,23 @@ const chooseWashingFabric = async (req: Request, res: Response) => {
       weaverWhere.weaver_id = { [Op.in]: [0] };
       knitterWhere.knitter_id = { [Op.in]: [0] };
       dyingWhere.dying_id = { [Op.in]: idArray };
+    }
+
+    if(weaverId && knitterId && dyingId){
+      const idArrayKnit: number[] = knitterId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      knitterWhere.knitter_id = { [Op.in]: idArrayKnit };
+  
+      const idArrayWeav: number[] = weaverId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      weaverWhere.weaver_id = { [Op.in]: idArrayWeav };
+
+      const idArrayDyed: number[] = dyingId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      dyingWhere.dying_id = { [Op.in]: idArrayDyed };
     }
 
     if (garmentOrderRef) {

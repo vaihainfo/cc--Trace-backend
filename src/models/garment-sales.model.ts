@@ -143,7 +143,19 @@ const GarmentSales = db.define('garment_sales', {
   },
   qr: {
     type: DataTypes.STRING
-  }
+  },
+  garment_size: {
+    type: DataTypes.ARRAY(DataTypes.STRING)
+  },
+  color: {
+    type: DataTypes.ARRAY(DataTypes.STRING)
+  },
+  no_of_pieces: {
+    type: DataTypes.ARRAY(DataTypes.INTEGER)
+  },
+  no_of_boxes: {
+    type: DataTypes.ARRAY(DataTypes.INTEGER)
+  },
 });
 
 GarmentSales.belongsTo(Garment, {

@@ -68,6 +68,9 @@ const KnitSales = db.define('knit_sales', {
     allowNull: false,
     type: DataTypes.DOUBLE
   },
+  total_fabric_weight: {
+    type: DataTypes.DOUBLE
+  },
   fabric_type: {
     type: DataTypes.ARRAY(DataTypes.INTEGER)
   },

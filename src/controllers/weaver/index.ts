@@ -269,6 +269,7 @@ const createWeaverSales = async (req: Request, res: Response) => {
             processor_address: req.body.processorAddress,
             yarn_qty: req.body.totalYarnQty,
             total_yarn_qty: req.body.totalYarnQty,
+            total_fabric_length: req.body.totalFabricLength,
             transaction_via_trader: req.body.transactionViaTrader,
             transaction_agent: req.body.transactionAgent,
             batch_lot_no: req.body.batchLotNo,
