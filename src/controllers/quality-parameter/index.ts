@@ -53,7 +53,7 @@ const createQualityParameter = async (req: Request, res: Response) => {
 
 
 const fetchQualityParameterPagination = async (req: Request, res: Response) => {
-    const searchTerm = req.query.search || "";
+    const searchTerm: any = req.query.search || "";
     const page = Number(req.query.page) || 1;
     const limit = Number(req.query.limit) || 10;
     const { spinnerId, ginnerId, brandId, countryId, stateId, date }: any = req.query
@@ -61,14 +61,11 @@ const fetchQualityParameterPagination = async (req: Request, res: Response) => {
     const whereCondition: any = {};
 
     try {
-
         if (searchTerm) {
             whereCondition[Op.or] = [
                 { lot_no: { [Op.iLike]: `%${searchTerm}%` } },
                 { reel_lot_no: { [Op.iLike]: `%${searchTerm}%` } },
-                { '$process.lot_no$': { [Op.iLike]: `%${searchTerm}%` } },
-                { '$process.reel_lot_no$': { [Op.iLike]: `%${searchTerm}%` } }
-            ];
+            ]
         }
         if (spinnerId) {
             const idArray: number[] = spinnerId
@@ -128,34 +125,48 @@ const fetchQualityParameterPagination = async (req: Request, res: Response) => {
                 model: GinSales, as: 'sales'
             }
         ]
+        const { count, rows } = await QualityParameter.findAndCountAll({
+            where: whereCondition,
+            include: include,
+            order: [
+                [
+                    'id', 'desc'
+                ]
+            ]
+        });
+        let data: any =[];
+
+        if(searchTerm){
+            data = rows?.filter((row: any) => {
+                return (row.sold && row.sold.name && row.sold?.name.toLowerCase().includes(searchTerm.toLowerCase()))  ||
+                (row.sales && row.sales.name && row.sales?.name.toLowerCase().includes(searchTerm.toLowerCase())) || 
+                (row.spinner && row.spinner.name && row.spinner?.name.toLowerCase().includes(searchTerm.toLowerCase())) || 
+                (row.ginner && row.ginner.name && row.ginner?.name.toLowerCase().includes(searchTerm.toLowerCase())) || 
+                (row.process && row.process.name && row.process?.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+                (row.lot_no && row.lot_no?.toLowerCase().includes(searchTerm.toLowerCase())) ||
+                (row.reel_lot_no && row.reel_lot_no?.toLowerCase().includes(searchTerm.toLowerCase()))
+            });
+        }
+
         //fetch data with pagination
         if (req.query.pagination === 'true') {
-            const { count, rows } = await QualityParameter.findAndCountAll({
-                where: whereCondition,
-                include: include,
-                offset: offset,
-                limit: limit,
-                order: [
-                    [
-                        'id', 'desc'
-                    ]
-                ]
-            });
-            return res.sendPaginationSuccess(res, rows, count);
+            if(searchTerm){
+                let ndata = data.length > 0 ? data.slice(offset, offset + limit) : [];
+                return res.sendPaginationSuccess(res, ndata, data.length > 0 ? data.length : 0);
+            }
+
+            let ndata = rows.length > 0 ? rows.slice(offset, offset + limit) : [];
+
+            return res.sendPaginationSuccess(res, ndata, count);
         } else {
-            const result = await QualityParameter.findAll({
-                where: whereCondition,
-                include: include,
-                order: [
-                    [
-                        'id', 'desc'
-                    ]
-                ]
-            });
-            return res.sendSuccess(res, result);
+            if(searchTerm){
+                return res.sendSuccess(res, data);
+            }
+            return res.sendSuccess(res, rows);
         }
 
     } catch (error: any) {
+        console.log(error)
         return res.sendError(res, error.message);
     }
 }
@@ -484,7 +495,8 @@ const reportParameter = async (req: Request, res: Response) => {
                 }
             })
             const totalSCI = result ? result.getDataValue('total_sci') : 0;
-            const totalMoisture = result ? result.getDataValue('total_mic') : 0;
+            const totalMic = result ? result.getDataValue('total_mic') : 0;
+            const totalMoisture = result ? result.getDataValue('total_moisture') : 0;
             const totalMat = result ? result.getDataValue('total_mat') : 0;
             const totaluhml = result ? result.getDataValue('total_uhml') : 0;
             const totalUi = result ? result.getDataValue('total_ui') : 0;
@@ -497,6 +509,7 @@ const reportParameter = async (req: Request, res: Response) => {
             monthlyResults.push({
                 month: startDate.toLocaleString('default', { month: 'short' }),
                 totalSci: totalSCI ? totalSCI : 0,
+                totalMic: totalMic ? totalMic : 0,
                 totalMoisture: totalMoisture ? totalMoisture : 0,
                 totalMat: totalMat ? totalMat : 0,
                 totaluhml: totaluhml ? totaluhml : 0,
@@ -553,8 +566,57 @@ const reportParameter = async (req: Request, res: Response) => {
             group: ['ginner.id'],
             limit: 5
         })
-        res.sendSuccess(res, { monthlyResults, data });
 
+        let data1 = await QualityParameter.findAll({
+            attributes: [
+                [Sequelize.fn('SUM', Sequelize.col('"quality-parameters"."sci"')), 'total_sci'],
+                [Sequelize.fn('SUM', Sequelize.col('"quality-parameters"."moisture"')), 'total_moisture'],
+                [Sequelize.fn('SUM', Sequelize.col('"quality-parameters"."mic"')), 'total_mic'],
+                [Sequelize.fn('SUM', Sequelize.col('"quality-parameters"."mat"')), 'total_mat'],
+                [Sequelize.fn('SUM', Sequelize.col('"quality-parameters"."uhml"')), 'total_uhml'],
+                [Sequelize.fn('SUM', Sequelize.col('"quality-parameters"."ui"')), 'total_ui'],
+                [Sequelize.fn('SUM', Sequelize.col('"quality-parameters"."sf"')), 'total_sf'],
+                [Sequelize.fn('SUM', Sequelize.col('"quality-parameters"."str"')), 'total_str'],
+                [Sequelize.fn('SUM', Sequelize.col('"quality-parameters"."elg"')), 'total_elg'],
+                [Sequelize.fn('SUM', Sequelize.col('"quality-parameters"."rd"')), 'total_rd'],
+                // [Sequelize.literal('ginner.name'), 'processor'],
+                [Sequelize.literal('spinner.name'), 'processor']
+            ],
+            include: [
+                {
+                    model: Ginner,
+                    as: 'ginner',
+                    attributes: []
+                    // attributes: ["id", 'name']
+                },
+                {
+                    model: GinProcess,
+                    as: 'process',
+                    attributes: []
+                },
+                {
+                    model: GinSales,
+                    as: 'sales',
+                    attributes: []
+                },
+                {
+                    model: Spinner,
+                    as: 'spinner',
+                    attributes: ["id", 'name']
+                }
+
+            ],
+            where: {
+                ...whereCondition,
+                spinner_id: {
+                    [Op.ne]: null
+                }
+            },
+            group: ['spinner.id'],
+            limit: 5
+        })
+        let main = parameter === "ginner" ? data : data1
+        res.sendSuccess(res, { monthlyResults, data: main });
     }
     catch (error: any) {
         console.error("Error appending data:", error);

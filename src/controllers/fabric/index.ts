@@ -1056,47 +1056,24 @@ const chooseWashingFabric = async (req: Request, res: Response) => {
       whereCondition.program_id = { [Op.in]: idArray };
     }
 
-    if (weaverId) {
-      const idArray: number[] = weaverId
-        .split(",")
-        .map((id: any) => parseInt(id, 10));
-      knitterWhere.knitter_id = { [Op.in]: [0] };
-      weaverWhere.weaver_id = { [Op.in]: idArray };
-      dyingWhere.dying_id = { [Op.in]: [0] };
-    }
-    if (knitterId) {
-      const idArray: number[] = knitterId
-        .split(",")
-        .map((id: any) => parseInt(id, 10));
-      weaverWhere.weaver_id = { [Op.in]: [0] };
-      knitterWhere.knitter_id = { [Op.in]: idArray };
-      dyingWhere.dying_id = { [Op.in]: [0] };
-    }
-    if (dyingId) {
-      const idArray: number[] = dyingId
-        .split(",")
-        .map((id: any) => parseInt(id, 10));
-      weaverWhere.weaver_id = { [Op.in]: [0] };
-      knitterWhere.knitter_id = { [Op.in]: [0] };
-      dyingWhere.dying_id = { [Op.in]: idArray };
-    }
 
-    if(weaverId && knitterId && dyingId){
-      const idArrayKnit: number[] = knitterId
-        .split(",")
-        .map((id: any) => parseInt(id, 10));
-      knitterWhere.knitter_id = { [Op.in]: idArrayKnit };
-  
-      const idArrayWeav: number[] = weaverId
-        .split(",")
-        .map((id: any) => parseInt(id, 10));
-      weaverWhere.weaver_id = { [Op.in]: idArrayWeav };
-
-      const idArrayDyed: number[] = dyingId
-        .split(",")
-        .map((id: any) => parseInt(id, 10));
-      dyingWhere.dying_id = { [Op.in]: idArrayDyed };
-    }
+        // Helper function to add conditions based on filter values
+        const addFilterCondition = (whereObj: any, filterKey: string, arr: any ) => {
+          let idArray:number[] = arr ? arr.split(",").map((id: any) => parseInt(id, 10)) : [0];
+          if (idArray && idArray.length > 0) {
+              whereObj[filterKey] = { [Op.in]: idArray };
+          } else {
+              // If no filter value provided, set an impossible condition to filter out all data
+              whereObj[filterKey] = { [Op.in]: [0] };
+          }
+      };
+    
+      // Dynamically add conditions for each filter
+      if(knitterId || weaverId || dyingId){
+          addFilterCondition(knitterWhere, 'knitter_id', knitterId);
+          addFilterCondition(weaverWhere, 'weaver_id', weaverId);
+          addFilterCondition(dyingWhere, 'dying_id', dyingId);
+      }
 
     if (garmentOrderRef) {
       const idArray: any[] = garmentOrderRef.split(",").map((id: any) => id);
@@ -2140,30 +2117,48 @@ const chooseCompactingFabric = async (req: Request, res: Response) => {
       whereCondition.program_id = { [Op.in]: idArray };
     }
 
-    if (washingId) {
-      const idArray: number[] = washingId
-        .split(",")
-        .map((id: any) => parseInt(id, 10));
-      washingWhere.washing_id = { [Op.in]: idArray };
-      printingWhere.printing_id = { [Op.in]: [0] };
-      dyingWhere.dying_id = { [Op.in]: [0] };
-    }
-    if (printingId) {
-      const idArray: number[] = printingId
-        .split(",")
-        .map((id: any) => parseInt(id, 10));
-      washingWhere.washing_id = { [Op.in]: [0] };
-      printingWhere.printing_id = { [Op.in]: idArray };
-      dyingWhere.dying_id = { [Op.in]: [0] };
-    }
-    if (dyingId) {
-      const idArray: number[] = dyingId
-        .split(",")
-        .map((id: any) => parseInt(id, 10));
-      washingWhere.washing_id = { [Op.in]: [0] };
-      printingWhere.printing_id = { [Op.in]: [0] };
-      dyingWhere.dying_id = { [Op.in]: idArray };
-    }
+     // Helper function to add conditions based on filter values
+     const addFilterCondition = (whereObj: any, filterKey: string, arr: any ) => {
+      let idArray:number[] = arr ? arr.split(",").map((id: any) => parseInt(id, 10)) : [0];
+      if (idArray && idArray.length > 0) {
+          whereObj[filterKey] = { [Op.in]: idArray };
+      } else {
+          // If no filter value provided, set an impossible condition to filter out all data
+          whereObj[filterKey] = { [Op.in]: [0] };
+      }
+  };
+
+  // Dynamically add conditions for each filter
+  if(washingId || printingId || dyingId){
+      addFilterCondition(washingWhere, 'washing_id', washingId);
+      addFilterCondition(printingWhere, 'printing_id', printingId);
+      addFilterCondition(dyingWhere, 'dying_id', dyingId);
+  }
+
+    // if (washingId) {
+    //   const idArray: number[] = washingId
+    //     .split(",")
+    //     .map((id: any) => parseInt(id, 10));
+    //   washingWhere.washing_id = { [Op.in]: idArray };
+    //   printingWhere.printing_id = { [Op.in]: [0] };
+    //   dyingWhere.dying_id = { [Op.in]: [0] };
+    // }
+    // if (printingId) {
+    //   const idArray: number[] = printingId
+    //     .split(",")
+    //     .map((id: any) => parseInt(id, 10));
+    //   washingWhere.washing_id = { [Op.in]: [0] };
+    //   printingWhere.printing_id = { [Op.in]: idArray };
+    //   dyingWhere.dying_id = { [Op.in]: [0] };
+    // }
+    // if (dyingId) {
+    //   const idArray: number[] = dyingId
+    //     .split(",")
+    //     .map((id: any) => parseInt(id, 10));
+    //   washingWhere.washing_id = { [Op.in]: [0] };
+    //   printingWhere.printing_id = { [Op.in]: [0] };
+    //   dyingWhere.dying_id = { [Op.in]: idArray };
+    // }
 
     if (garmentOrderRef) {
       const idArray: any[] = garmentOrderRef.split(",").map((id: any) => id);

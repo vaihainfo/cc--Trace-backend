@@ -148,6 +148,7 @@ const Transaction = db.define('transactions', {
   }
 });
 
+
 Transaction.belongsTo(Country, {
   foreignKey: "country_id",
   as: "country",

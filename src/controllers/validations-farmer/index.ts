@@ -6,6 +6,10 @@ import Brand from "../../models/brand.model";
 import ICS from "../../models/ics.model";
 import FarmGroup from "../../models/farm-group.model";
 import Season from "../../models/season.model";
+import Transaction from "../../models/transaction.model";
+import Ginner from "../../models/ginner.model";
+import Farm from "../../models/farm.model";
+import sequelize from "../../util/dbConn";
 
 const createValidationFarmer = async (req: Request, res: Response) => {
     try {
@@ -95,7 +99,7 @@ const fetchValidationFarmerPagination = async (req: Request, res: Response) => {
             },
             {
                 model: Farmer, as: 'farmer',
-                attributes: ['id', 'firstName', 'lastName', "code"]
+                attributes: ['id', 'firstName', 'lastName', "code"],
             },
             {
                 model: Season, as: 'season'
@@ -110,13 +114,47 @@ const fetchValidationFarmerPagination = async (req: Request, res: Response) => {
                 offset: offset,
                 limit: limit
             });
-            return res.sendPaginationSuccess(res, rows, count);
+            let data = [];
+            for await (const row of rows){
+                const transactions = await Transaction.findAll({
+                    attributes: [
+                        [sequelize.fn('COALESCE', sequelize.fn('SUM', Sequelize.literal("CAST(qty_purchased AS DOUBLE PRECISION)")), 0), 'qty_purchased']
+                    ],
+                    where: {
+                        farmer_id: row?.dataValues?.farmer_id, season_id: row?.dataValues?.season_id
+                    },
+                    group: ['farmer_id', 'season_id']
+                })
+
+                data.push({
+                    ...row.dataValues,
+                    transactions
+                })
+            }
+            return res.sendPaginationSuccess(res, data, count);
         } else {
             const result = await ValidationFarmer.findAll({
                 where: whereCondition,
                 include: include
             });
-            return res.sendSuccess(res, result);
+            let data = [];
+            for await (const row of result){
+                const transactions = await Transaction.findAll({
+                    attributes: [
+                        [sequelize.fn('COALESCE', sequelize.fn('SUM', Sequelize.literal("CAST(qty_purchased AS DOUBLE PRECISION)")), 0), 'qty_purchased']
+                    ],
+                    where: {
+                        farmer_id: row?.dataValues?.farmer_id, season_id: row?.dataValues?.season_id
+                    },
+                    group: ['farmer_id', 'season_id']
+                })
+
+                data.push({
+                    ...row.dataValues,
+                    transactions
+                })
+            }
+            return res.sendSuccess(res, data);
         }
 
     } catch (error: any) {
@@ -187,9 +225,56 @@ const deleteValidationFarmer = async (req: Request, res: Response) => {
 }
 
 
+const fetchPremiumFarmer = async (req: Request, res: Response) => {
+    try {
+        const {seasonId, farmerId}: any = req.query;
+
+        if (!seasonId) {
+            return res.sendError(res, 'NEED_SEASON_ID')
+        }
+
+        if (!farmerId) {
+            return res.sendError(res, 'NEED_FARMER_ID')
+        }
+
+        const result = await Transaction.findAll({
+            attributes: ["id","date", [Sequelize.literal('"ginner"."name"'), 'ginner_name'], "qty_purchased", "rate"],
+            where: {
+                farmer_id: farmerId,
+                season_id: seasonId
+            },
+            include: [
+                {
+                    model: Ginner,
+                    as: 'ginner',
+                    attributes: ['id', 'name'],
+                },
+                {
+                    model: Season,
+                    as: 'season',
+                    attributes: ['id', 'name'],
+                },
+                {
+                    model: Farmer,
+                    as: "farmer",
+                },
+                {
+                    model: Farm,
+                    as: "farm"
+                  },
+            ],
+        });
+        res.sendSuccess(res, result);
+    } catch (error: any) {
+        return res.sendError(res, error.message);
+    }
+}
+
+
 export {
     createValidationFarmer,
     fetchValidationFarmerPagination,
     fetchValidationFarmer,
-    deleteValidationFarmer
+    deleteValidationFarmer,
+    fetchPremiumFarmer
 };

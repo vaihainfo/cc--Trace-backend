@@ -579,10 +579,40 @@ const fetchBrandTransactionsPagination = async (req: Request, res: Response) => 
 const productionUpdate = async (req: Request, res: Response) => {
     try {
         let { seasonId, brandId, ginnerId, countryId, spinnerId, knitterId, weaverId, garmentId }: any = req.query;
+        const searchTerm: any = req.query.search || "";
+        const page = Number(req.query.page) || 1;
+        const limit = Number(req.query.limit) || 10;
+        const offset = (page - 1) * limit;
         let whereCondition: any = {};
+        let ginnerWhere: any = {};
+        let knitterWhere: any = {};
+        let spinnerWhere: any = {};
+        let weaverWhere: any = {};
+        let garmentWhere: any = {};
+           
         if (!brandId) {
             return res.sendError(res, 'NEED_BRAND_ID')
         }
+
+        // apply search
+    if (searchTerm) {
+        ginnerWhere[Op.or] = [
+          { "$ginner.name$": { [Op.iLike]: `%${searchTerm}%` } },
+        ];
+        spinnerWhere[Op.or] = [
+            { "$spinner.name$": { [Op.iLike]: `%${searchTerm}%` } },
+          ];
+        knitterWhere[Op.or] = [
+            { "$knitter.name$": { [Op.iLike]: `%${searchTerm}%` } },
+          ];
+        weaverWhere[Op.or] = [
+            { "$weaver.name$": { [Op.iLike]: `%${searchTerm}%` } },
+          ];
+        garmentWhere[Op.or] = [
+            { "$garment.name$": { [Op.iLike]: `%${searchTerm}%` } },
+          ];
+      }
+
         if (seasonId) {
             const idArray: number[] = seasonId
                 .split(",")
@@ -590,13 +620,26 @@ const productionUpdate = async (req: Request, res: Response) => {
             whereCondition.season_id = { [Op.in]: idArray };
         }
 
-        let ginnerWhere: any = {};
-        if (ginnerId) {
-            const idArray: number[] = ginnerId
-                .split(",")
-                .map((id: any) => parseInt(id, 10));
-            ginnerWhere.ginner_id = { [Op.in]: idArray };
+        // Helper function to add conditions based on filter values
+        const addFilterCondition = (whereObj: any, filterKey: string, arr: any ) => {
+            let idArray:number[] = arr ? arr.split(",").map((id: any) => parseInt(id, 10)) : [0];
+            if (idArray && idArray.length > 0) {
+                whereObj[filterKey] = { [Op.in]: idArray };
+            } else {
+                // If no filter value provided, set an impossible condition to filter out all data
+                whereObj[filterKey] = { [Op.in]: [0] };
+            }
+        };
+
+        // Dynamically add conditions for each filter
+        if(ginnerId || spinnerId || knitterId || weaverId || garmentId){
+            addFilterCondition(ginnerWhere, 'ginner_id', ginnerId);
+            addFilterCondition(spinnerWhere, 'spinner_id', spinnerId);
+            addFilterCondition(knitterWhere, 'knitter_id', knitterId);
+            addFilterCondition(weaverWhere, 'weaver_id', weaverId);
+            addFilterCondition(garmentWhere, 'garment_id', garmentId);
         }
+            
         if (countryId) {
             const idArray: number[] = countryId
                 .split(",")
@@ -634,13 +677,6 @@ const productionUpdate = async (req: Request, res: Response) => {
             ],
             group: ["ginner.id", 'season.id']
         });
-        let spinnerWhere: any = {};
-        if (spinnerId) {
-            const idArray: number[] = spinnerId
-                .split(",")
-                .map((id: any) => parseInt(id, 10));
-            spinnerWhere.spinner_id = { [Op.in]: idArray };
-        }
         if (countryId) {
             const idArray: number[] = countryId
                 .split(",")
@@ -679,13 +715,6 @@ const productionUpdate = async (req: Request, res: Response) => {
             ],
             group: ["spinner.id", 'season.id']
         });
-        let knitterWhere: any = {};
-        if (knitterId) {
-            const idArray: number[] = knitterId
-                .split(",")
-                .map((id: any) => parseInt(id, 10));
-            knitterWhere.knitter_id = { [Op.in]: idArray };
-        }
         if (countryId) {
             const idArray: number[] = countryId
                 .split(",")
@@ -723,13 +752,7 @@ const productionUpdate = async (req: Request, res: Response) => {
             },
             group: ['knitter.id', 'season.id']
         })
-        let weaverWhere: any = {};
-        if (weaverId) {
-            const idArray: number[] = weaverId
-                .split(",")
-                .map((id: any) => parseInt(id, 10));
-            weaverWhere.weaver_id = { [Op.in]: idArray };
-        }
+        
         if (countryId) {
             const idArray: number[] = countryId
                 .split(",")
@@ -767,13 +790,7 @@ const productionUpdate = async (req: Request, res: Response) => {
             },
             group: ['weaver.id', 'season.id']
         })
-        let garmentWhere: any = {};
-        if (garmentId) {
-            const idArray: number[] = garmentId
-                .split(",")
-                .map((id: any) => parseInt(id, 10));
-            garmentWhere.garment_id = { [Op.in]: idArray };
-        }
+       
         if (countryId) {
             const idArray: number[] = countryId
                 .split(",")
@@ -812,7 +829,10 @@ const productionUpdate = async (req: Request, res: Response) => {
             },
             group: ['garment.id', 'season.id']
         })
-        res.sendSuccess(res, [...ginnerList, ...spinnerList, ...knitterList, ...weaverList, ...garmentList])
+
+        let data = [...ginnerList, ...spinnerList, ...knitterList, ...weaverList, ...garmentList];
+        let ndata = data.length > 0 ? data.slice(offset, offset + limit) : [];
+        return res.sendPaginationSuccess(res, ndata, data.length > 0 ? data.length : 0);
     } catch (error: any) {
         console.log(error);
         res.sendError(res, error.message)
@@ -860,22 +880,43 @@ const styleMarkNo = async (req: Request, res: Response) => {
         if (!brandId) {
             return res.sendError(res, 'NEED_BRAND_ID')
         }
+
+        const types = await GarmentSales.findAll({
+            attributes: ['garment_type'],
+            where: { buyer_id: brandId },
+            group: ['garment_type']
+          });
+
+          let garmentTypes: any = [];
+
+
+          if(types && types.length > 0){
+            for await (let row of types){
+              garmentTypes = [...garmentTypes, ...new Set(row?.dataValues?.garment_type?.map((item: any) => item))]
+            }
+          }
+
         let style = await GarmentSales.findAll({
             attributes: ['style_mark_no'],
             where: { buyer_id: brandId },
-            group: ['style_mark_no']
+            group: ['style_mark_no'],
         });
+
+        let styleMarkNo: any = [];
+
+          if(style && style.length > 0){
+            for await (let row of style){
+                styleMarkNo = [...styleMarkNo, ...new Set(row?.dataValues?.style_mark_no?.map((item: any) => item))]
+            }
+          }
+        
         let invoices = await GarmentSales.findAll({
             attributes: ['invoice_no'],
             where: { buyer_id: brandId },
             group: ['invoice_no']
         });
-        let garmentType = await GarmentSales.findAll({
-            attributes: ['garment_type'],
-            where: { buyer_id: brandId },
-            group: ['garment_type']
-        });
-        res.sendSuccess(res, { style, invoices, garmentType })
+
+        res.sendSuccess(res, { styleMarkNo, invoices, garmentTypes })
     } catch (error: any) {
         res.sendError(res, error.message)
     }
