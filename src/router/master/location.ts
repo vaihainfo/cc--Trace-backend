@@ -25,6 +25,10 @@ import updateStateStatus from "../../controllers/locations/states/update-state-s
 import updateDistrictStatus from "../../controllers/locations/districts/update-district-status.controller";
 import updateBlockStatus from "../../controllers/locations/blocks/update-block-status.controller";
 import updateVillageStatus from "../../controllers/locations/villages/update-village-status.controller";
+import {
+    exportCountry,    
+  } from "../../controllers/export";
+
 
 const router = Router();
 
@@ -35,6 +39,7 @@ router.post("/set-country", setCountry);
 router.post("/delete-country", deleteCountry);
 router.put("/update-country-status", updateCountryStatus);
 router.post("/update-country", updateCountry);
+router.get("/export-country", exportCountry);
 
 router.post("/set-state", SetState);
 router.get("/get-states", fetchStates);
