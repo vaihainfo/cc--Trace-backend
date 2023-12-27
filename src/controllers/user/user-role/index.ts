@@ -243,6 +243,17 @@ const deleteUserRole = async (req: Request, res: Response) => {
         if (count > 0) {
             return res.sendError(res, 'Not possible to delete this role since some users are associated to this role.')
         }
+        let isBrand = await UserRole.findAll({
+            where: {
+                id: req.body.id,
+                user_role: 'Brand'
+            }
+        });
+
+        if(isBrand && isBrand.length > 0){
+            return res.sendError(res, 'Not possible to delete this role since brand role and category is needed.')
+        }
+
         const userRole = await UserRole.destroy({
             where: {
                 id: req.body.id

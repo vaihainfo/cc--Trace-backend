@@ -124,6 +124,9 @@ const getUserInfo = async (req: Request, res: Response) => {
                         [Op.contains]: [role.userCategory.id],
                     },
                 },
+                order: [
+                    ["id", 'asc'], // Sort the results based on the 'name' field and the specified order
+                ],
                 attributes: ['id', 'menu_name'],
             }
         );

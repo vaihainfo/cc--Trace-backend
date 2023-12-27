@@ -40,9 +40,9 @@ const createValidationFarmer = async (req: Request, res: Response) => {
         };
         const result = await ValidationFarmer.create(data);
         res.sendSuccess(res, result);
-    } catch (error) {
+    } catch (error: any) {
         console.log(error)
-        return res.sendError(res, "ERR_INTERNAL_SERVER_ERROR");
+        return res.sendError(res, error.message);
     }
 }
 
@@ -110,6 +110,7 @@ const fetchValidationFarmerPagination = async (req: Request, res: Response) => {
         if (req.query.pagination === 'true') {
             const { count, rows } = await ValidationFarmer.findAndCountAll({
                 where: whereCondition,
+                order: [['id', 'desc']],
                 include: include,
                 offset: offset,
                 limit: limit
@@ -118,7 +119,11 @@ const fetchValidationFarmerPagination = async (req: Request, res: Response) => {
             for await (const row of rows){
                 const transactions = await Transaction.findAll({
                     attributes: [
-                        [sequelize.fn('COALESCE', sequelize.fn('SUM', Sequelize.literal("CAST(qty_purchased AS DOUBLE PRECISION)")), 0), 'qty_purchased']
+                        [sequelize.fn('COALESCE', sequelize.fn('SUM', Sequelize.literal("CAST(qty_purchased AS DOUBLE PRECISION)")), 0), 'qty_purchased'],
+                        [
+                            sequelize.fn('COALESCE', sequelize.fn('AVG', sequelize.literal("CAST(rate AS DOUBLE PRECISION)")), 0),
+                            'average_rate'
+                        ]
                     ],
                     where: {
                         farmer_id: row?.dataValues?.farmer_id, season_id: row?.dataValues?.season_id
@@ -135,13 +140,18 @@ const fetchValidationFarmerPagination = async (req: Request, res: Response) => {
         } else {
             const result = await ValidationFarmer.findAll({
                 where: whereCondition,
-                include: include
+                include: include,
+                order: [['id', 'desc']],
             });
             let data = [];
             for await (const row of result){
                 const transactions = await Transaction.findAll({
                     attributes: [
-                        [sequelize.fn('COALESCE', sequelize.fn('SUM', Sequelize.literal("CAST(qty_purchased AS DOUBLE PRECISION)")), 0), 'qty_purchased']
+                        [sequelize.fn('COALESCE', sequelize.fn('SUM', Sequelize.literal("CAST(qty_purchased AS DOUBLE PRECISION)")), 0), 'qty_purchased'],
+                        [
+                            sequelize.fn('COALESCE', sequelize.fn('AVG', sequelize.literal("CAST(rate AS DOUBLE PRECISION)")), 0),
+                            'average_rate'
+                        ]
                     ],
                     where: {
                         farmer_id: row?.dataValues?.farmer_id, season_id: row?.dataValues?.season_id
@@ -158,6 +168,7 @@ const fetchValidationFarmerPagination = async (req: Request, res: Response) => {
         }
 
     } catch (error: any) {
+        console.log(error)
         return res.sendError(res, error.message);
     }
 }
@@ -177,11 +188,11 @@ const fetchValidationFarmer = async (req: Request, res: Response) => {
         let include = [
             {
                 model: FarmGroup, as: 'farmGroup',
-                attributes: ['id', 'name', 'status']
+                attributes: ['id', 'name']
             },
             {
                 model: ICS, as: 'ics',
-                attributes: ['id', 'ics_name', 'ics_status']
+                attributes: ['id', 'ics_name']
             },
             {
                 model: Brand, as: 'brand',
@@ -192,7 +203,8 @@ const fetchValidationFarmer = async (req: Request, res: Response) => {
                 attributes: ['id', 'firstName', 'lastName', "code"]
             },
             {
-                model: Season, as: 'season'
+                model: Season, as: 'season',
+                attributes: ['id', 'name']
             }
         ]
 
@@ -202,10 +214,12 @@ const fetchValidationFarmer = async (req: Request, res: Response) => {
             where: whereCondition,
             include: include,
         });
+
         return res.sendSuccess(res, data);
 
 
     } catch (error: any) {
+        console.log(error)
         return res.sendError(res, error.message);
     }
 }
@@ -220,6 +234,7 @@ const deleteValidationFarmer = async (req: Request, res: Response) => {
         });
         res.sendSuccess(res, result);
     } catch (error: any) {
+        console.log(error)
         return res.sendError(res, error.message);
     }
 }
@@ -266,6 +281,7 @@ const fetchPremiumFarmer = async (req: Request, res: Response) => {
         });
         res.sendSuccess(res, result);
     } catch (error: any) {
+        console.log(error)
         return res.sendError(res, error.message);
     }
 }

@@ -163,7 +163,7 @@ const fetchDyingTransactionsAll = async (req: Request, res: Response) => {
         as: "program",
       },
     ];
-    let result = await Promise.all([
+    let result: any = await Promise.all([
       WeaverSales.findAll({
         where: {
           status: "Pending for QR scanning",
@@ -724,7 +724,7 @@ const fetchWashingTransactions = async (req: Request, res: Response) => {
       },
     ];
 
-    let result = await Promise.all([
+    let result: any = await Promise.all([
       WeaverSales.findAll({
         where: {
           status: "Sold",
@@ -796,7 +796,7 @@ const fetchWashingTransactionsAll = async (req: Request, res: Response) => {
       },
     ];
 
-    let result = await Promise.all([
+    let result: any = await Promise.all([
       WeaverSales.findAll({
         where: {
           status: "Pending for QR scanning",
@@ -1104,7 +1104,7 @@ const chooseWashingFabric = async (req: Request, res: Response) => {
       },
     ];
 
-    let result = await Promise.all([
+    let result: any = await Promise.all([
       WeaverSales.findAll({
         where: {
           ...whereCondition,
@@ -2182,7 +2182,7 @@ const chooseCompactingFabric = async (req: Request, res: Response) => {
       },
     ];
 
-    let data = await Promise.all([
+    let data: any = await Promise.all([
       WashingSales.findAll({
         where: {
           ...whereCondition,

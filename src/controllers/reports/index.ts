@@ -3807,7 +3807,7 @@ const exportGarmentFabric = async (req: Request, res: Response) => {
                 as: 'fabric',
             }
         ]
-        let result = await Promise.all([
+        let result: any = await Promise.all([
             WeaverSales.findAll({
                 where: whereCondition,
                 include: [...include, { model: Weaver, as: 'weaver', attributes: ['id', 'name'] }]

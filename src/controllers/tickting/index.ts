@@ -16,7 +16,7 @@ const createTicketTracker = async (req: Request, res: Response) => {
 
         let nextTicketNo;
         if (lastTicket) {
-            nextTicketNo = lastTicket.ticket_no + 1;
+            nextTicketNo = Number(lastTicket.ticket_no) + 1;
         } else {
             nextTicketNo = 1; // If there are no existing tickets
         }
@@ -42,8 +42,9 @@ const createTicketTracker = async (req: Request, res: Response) => {
             ticket_id: training.id
         })
         res.sendSuccess(res, training);
-    } catch (error) {
-        return res.sendError(res, "ERR_INTERNAL_SERVER_ERROR");
+    } catch (error: any) {
+        console.log(error)
+        return res.sendError(res, error.message);
     }
 }
 
@@ -118,6 +119,9 @@ const fetchTicketTracker = async (req: Request, res: Response) => {
         if (req.query.pagination === 'true') {
             queryOptions.offset = offset;
             queryOptions.limit = limit;
+            queryOptions.order = [
+                ['date', 'desc'], // Sort the results based on the 'username' field and the specified order
+            ];
 
             const { count, rows } = await TicketTracker.findAndCountAll(queryOptions);
             return res.sendPaginationSuccess(res, rows, count);
@@ -127,8 +131,9 @@ const fetchTicketTracker = async (req: Request, res: Response) => {
             return res.sendSuccess(res, training);
         }
 
-    } catch (error) {
-        return res.sendError(res, "ERR_INTERNAL_SERVER_ERROR");
+    } catch (error: any) {
+        console.log(error)
+        return res.sendError(res, error.message);
     }
 }
 
@@ -155,6 +160,7 @@ const updateTicketTrackerStatus = async (req: Request, res: Response) => {
 
         res.sendSuccess(res, { data });
     } catch (error: any) {
+        console.log(error)
         return res.sendError(res, error.message);
     }
 }
@@ -164,6 +170,9 @@ const fetchTicketTrackerStatus = async (req: Request, res: Response) => {
     try {
         const training = await TicketTrackerStatus.findAll({
             where: { ticket_id: req.query.ticketId },
+            order: [
+                ['createdAt', 'desc'], // Sort the results based on the 'username' field and the specified order
+            ],
             include: [
                 {
                     model: TicketTracker,
@@ -178,8 +187,9 @@ const fetchTicketTrackerStatus = async (req: Request, res: Response) => {
         });
         return res.sendSuccess(res, training);
 
-    } catch (error) {
-        return res.sendError(res, "ERR_INTERNAL_SERVER_ERROR");
+    } catch (error: any) {
+        console.log(error)
+        return res.sendError(res, error.message);
     }
 }
 
@@ -198,8 +208,8 @@ const countTicketTracker = async (req: Request, res: Response) => {
             group: ['processor_type']
         });
         let data = []
-        for (let track of ['garment', 'ginner', 'weaver', 'spinner', 'knitter']) {
-            let ticket = ticketTracker.find((obj: any) => obj.processor_type === track);
+        for (let track of ['Garment', 'Ginner', 'Weaver', 'Spinner', 'Knitter']) {
+            let ticket = ticketTracker.find((obj: any) => obj?.processor_type?.toLowerCase() === track?.toLowerCase());
             if (ticket) data.push(ticket);
             else data.push({
                 "processor_type": track,
@@ -208,6 +218,7 @@ const countTicketTracker = async (req: Request, res: Response) => {
         }
         res.sendSuccess(res, data);
     } catch (error: any) {
+        console.log(error)
         return res.sendError(res, error.message);
     }
 }

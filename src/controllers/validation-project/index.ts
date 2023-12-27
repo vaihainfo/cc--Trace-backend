@@ -4,6 +4,12 @@ import ValidationProject from "../../models/validation-project.model";
 import Brand from "../../models/brand.model";
 import FarmGroup from "../../models/farm-group.model";
 import Season from "../../models/season.model";
+import Farmer from "../../models/farmer.model";
+import Farm from "../../models/farm.model";
+import Transaction from "../../models/transaction.model";
+import sequelize from "../../util/dbConn";
+import GinSales from "../../models/gin-sales.model";
+import Ginner from "../../models/ginner.model";
 
 const createValidationProject = async (req: Request, res: Response) => {
     try {
@@ -28,8 +34,8 @@ const createValidationProject = async (req: Request, res: Response) => {
         };
         const result = await ValidationProject.create(data);
         res.sendSuccess(res, result);
-    } catch (error) {
-        return res.sendError(res, "ERR_INTERNAL_SERVER_ERROR");
+    } catch (error: any) {
+        return res.sendError(res, error.message);
     }
 }
 
@@ -74,6 +80,7 @@ const fetchValidationProjectPagination = async (req: Request, res: Response) => 
         if (req.query.pagination === 'true') {
             const { count, rows } = await ValidationProject.findAndCountAll({
                 where: whereCondition,
+                order: [['id', 'desc']],
                 include: include,
                 offset: offset,
                 limit: limit
@@ -124,6 +131,118 @@ const fetchValidation = async (req: Request, res: Response) => {
     }
 }
 
+const fetchProcuredData = async (req: Request, res: Response) => {
+  try {
+    let { seasonId, brandId, farmGroupId }: any = req.query;
+    let whereCondition = {};
+
+    if (!seasonId) {
+      return res.sendError(res, "NEED_SEASON_ID");
+    }
+
+    if (!brandId) {
+      return res.sendError(res, "NEED_BRAND_ID");
+    }
+    if (!farmGroupId) {
+      return res.sendError(res, "NEED_FARMGROUP_ID");
+    }
+
+    if (brandId) {
+      whereCondition = { "$farmer.brand_id$": brandId };
+    }
+    if (seasonId) {
+      whereCondition = { season_id: seasonId };
+    }
+    if (farmGroupId) {
+      whereCondition = { "$farmer.farmGroup_id$": farmGroupId };
+    }
+
+    const noOfFarmers = await Farm.findOne({
+      where: whereCondition,
+      attributes: [
+        [
+          Sequelize.fn("COUNT", Sequelize.literal("DISTINCT farmer_id")),
+          "total_farmers",
+        ],
+      ],
+      include: [
+        {
+          model: Farmer,
+          as: "farmer",
+          attributes: [],
+        },
+        {
+          model: Season,
+          as: "season",
+          attributes: [],
+        },
+      ],
+      group: ["farmer.brand_id", "farmer.farmGroup_id", "season_id"],
+    });
+
+    const procuredQty = await Transaction.findOne({
+      attributes: [
+        [
+          sequelize.fn(
+            "sum",
+            Sequelize.literal("CAST(qty_purchased AS DOUBLE PRECISION)")
+          ),
+          "procurement_seed_cotton",
+        ],
+      ],
+      where: {
+        "$farmer.brand_id$": brandId,
+        "$farmer.farmGroup_id$": farmGroupId,
+        "$farm.season_id$": seasonId,
+      },
+      include: [
+        {
+          model: Farmer,
+          as: "farmer",
+          attributes: [],
+        },
+        {
+          model: Farm,
+          as: "farm",
+          attributes: [],
+        },
+      ],
+      group: ["farmer.brand_id", "farmer.farmGroup_id", "farm.season_id"],
+    });
+
+    const lintSold = await GinSales.findOne({
+      attributes: [
+        [
+          sequelize.fn("sum", Sequelize.literal("total_qty")),
+          "total_qty_lint_sold",
+        ],
+      ],
+      where: {
+        season_id: seasonId,
+        status: "Sold",
+      },
+      include: [
+        {
+          model: Ginner,
+          as: "ginner",
+          attributes: [],
+          brand: { [Op.contains]: [brandId] },
+        },
+      ],
+      group: ["season_id"],
+    });
+
+    let data: any = {
+      noOfFarmers,
+      procuredQty,
+      lintSold,
+    };
+
+    res.sendSuccess(res, data);
+  } catch (error: any) {
+    return res.sendError(res, error.message);
+  }
+};
 
 const deleteValidationProject = async (req: Request, res: Response) => {
     try {
@@ -143,5 +262,6 @@ export {
     createValidationProject,
     fetchValidationProjectPagination,
     fetchValidation,
-    deleteValidationProject
+    deleteValidationProject,
+    fetchProcuredData
 };

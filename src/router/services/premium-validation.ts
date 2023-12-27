@@ -10,7 +10,8 @@ import {
     createValidationProject,
     fetchValidationProjectPagination,
     deleteValidationProject,
-    fetchValidation
+    fetchValidation,
+    fetchProcuredData
 } from "../../controllers/validation-project";
 
 import { Router } from "express";
@@ -27,5 +28,6 @@ router.get('/project', fetchValidationProjectPagination);
 router.post('/project', createValidationProject);
 router.delete('/project', deleteValidationProject);
 router.get('/get-project', fetchValidation);
+router.get('/project/get-procured-data', fetchProcuredData)
 
 export default router;  

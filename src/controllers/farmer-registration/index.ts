@@ -72,8 +72,9 @@ const createFarmer = async (req: Request, res: Response) => {
     };
     const farm = await Farm.create(farmData);
     res.sendSuccess(res, { farmer, farm });
-  } catch (error) {
-    return res.sendError(res, "ERR_NOT_ABLE_TO_CREATE_FARMER");
+  } catch (error: any) {
+    console.log(error)
+    return res.sendError(res, error.message);
   }
 }
 
@@ -335,6 +336,7 @@ const fetchFarmer = async (req: Request, res: Response) => {
     })
     return res.sendSuccess(res, { ...farmer.dataValues, season_id: farm.season_id });
   } catch (error: any) {
+    console.log(error)
     return res.sendError(res, error.message);
   }
 };
@@ -421,9 +423,9 @@ const createFarmerFarm = async (req: Request, res: Response) => {
     };
     const farm = await Farm.create(data);
     res.sendSuccess(res, { farm });
-  } catch (error) {
+  } catch (error: any) {
     console.log(error)
-    return res.sendError(res, "ERR_NOT_ABLE_TO_CREATE_FARM");
+    return res.sendError(res, error.message);
   }
 };
 
@@ -450,8 +452,9 @@ const updateFarmerFarm = async (req: Request, res: Response) => {
     });
 
     res.sendSuccess(res, { farm });
-  } catch (error) {
-    return res.sendError(res, "ERR_NOT_ABLE_TO_UPDATE_FARM");
+  } catch (error: any) {
+    console.log(error)
+    return res.sendError(res, error.message);
   }
 };
 
@@ -863,6 +866,7 @@ const generateQrCodeVillage = async (req: Request, res: Response) => {
     res.sendSuccess(res, { data: `${count} farmer has been update` });
 
   } catch (error: any) {
+    console.log(error)
     return res.sendError(res, error.message);
   }
 
@@ -944,6 +948,7 @@ const exportQrCode = async (req: Request, res: Response) => {
       })
     }, 2000);
   } catch (error: any) {
+    console.log(error)
     return res.sendError(res, error.message);
   }
 }
@@ -988,6 +993,7 @@ const dashboardGraph = async (req: Request, res: Response) => {
     });
     res.sendSuccess(res, { ...result.dataValues, ...trans.dataValues, graph: graph });
   } catch (error: any) {
+    console.log(error)
     return res.sendError(res, error.message);
   }
 }
