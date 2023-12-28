@@ -1,56 +1,47 @@
 import { Request, Response } from "express";
 import { Sequelize, Op, where } from "sequelize";
-import GinnerOrder from "../../models/ginner-order.model";
+import { encrypt, generateOnlyQrCode } from "../../provider/qrcode";
+import GinBale from "../../models/gin-bale.model";
+
+import GarmentType from "../../models/garment-type.model";
+import GinProcess from "../../models/gin-process.model";
 import Season from "../../models/season.model";
 import Program from "../../models/program.model";
-import Ginner from "../../models/ginner.model";
-import Brand from "../../models/brand.model";
-import StyleMark from "../../models/style-mark.model";
-import GarmentType from "../../models/garment-type.model";
-import GinnerExpectedCotton from "../../models/ginner-expected-cotton.model";
-import Village from "../../models/village.model";
-import FarmGroup from "../../models/farm-group.model";
-import Country from "../../models/country.model";
-import State from "../../models/state.model";
-import District from "../../models/district.model";
-import Block from "../../models/block.model";
-import Farmer from "../../models/farmer.model";
-import ICS from "../../models/ics.model";
-import Farm from "../../models/farm.model";
-import { generateQrCode } from "../../provider/qrcode";
-import ProcessorList from "../../models/processor-list.model";
-import Transaction from "../../models/transaction.model";
 
 
-
-const uploadGarmentType = async (req: Request, res: Response) => {
+const uploadGinBales = async (req: Request, res: Response) => {
     try {
-        let fail = [];
-        let pass = [];
-        for await (const data of req.body.garmentType) {
-            if (!data.name) {
-                fail.push({
-                    success: false,
-                    message: "Garment Type cannot be empty"
-                });
-            } else {
-                let garmentType = await GarmentType.findOne({ where: { name: data.name } });
-                if (garmentType) {
-                    fail.push({
-                        success: false,
-                        data: { name: data.name },
-                        message: "Already exist"
-                    });
-                } else {
-                    const result = await GarmentType.create({ name: data.name });
-                    pass.push({
-                        success: true,
-                        data: result,
-                        message: "Garment Type created"
-                    });
-                }
+        let fail: any = [];
+        let pass: any = [];
+ 
+        for await (const bale of req.body.bales) {
+
+            let baleData = {
+                process_id: bale.process_id,
+                bale_no: bale.baleNo,
+                weight: bale.weight,
+                staple: bale.staple,
+                mic: bale.mic,
+                strength: bale.strength,
+                trash: bale.trash,
+                color_grade: bale.colorGrade
             }
+            const bales = await GinBale.create(baleData);
+            let uniqueFilename = `gin_bale_qrcode_${Date.now()}.png`;
+            let da = encrypt(`Ginner,Bale, ${bales.id}`);
+            let aa = await generateOnlyQrCode(da, uniqueFilename);
+            const gin = await GinBale.update({ qr: uniqueFilename }, {
+                where: {
+                    id: bales.id
+                }
+            });
         }
+
+        pass.push({
+            success: true,
+            message: "Bale uploaded for the Process created"
+        });
+        
         res.sendSuccess(res, { pass, fail });
     } catch (error) {
         console.log(error);
@@ -60,30 +51,69 @@ const uploadGarmentType = async (req: Request, res: Response) => {
 
 const uploadGinnerProcess = async (req: Request, res: Response) => {
     try {
-        let fail = [];
-        let pass = [];
-        for await (const data of req.body.garmentType) {
-            if (!data.name) {
+
+        //console.log(req.body);
+        let fail: any = [];
+        let pass: any = []; 
+
+        for await (const ginnerdata of req.body.ginners) {
+            if (!ginnerdata.ginnerId) {
                 fail.push({
                     success: false,
-                    message: "Garment Type cannot be empty"
+                    message: "Ginner ID Data cannot be empty"
                 });
             } else {
-                let garmentType = await GarmentType.findOne({ where: { name: data.name } });
-                if (garmentType) {
-                    fail.push({
-                        success: false,
-                        data: { name: data.name },
-                        message: "Already exist"
-                    });
-                } else {
-                    const result = await GarmentType.create({ name: data.name });
-                    pass.push({
-                        success: true,
-                        data: result,
-                        message: "Garment Type created"
+                const data = {
+                    ginner_id: ginnerdata.ginnerId,
+                    program_id: ginnerdata.programId,
+                    season_id: ginnerdata.seasonId,
+                    date: Date.now(),
+                    total_qty: ginnerdata.totalQty,
+                    no_of_bales: ginnerdata.noOfBales,
+                    gin_out_turn: ginnerdata.got,
+                    lot_no: ginnerdata.lotNo,
+                    reel_lot_no: ginnerdata.reelLotNno,
+                    press_no: ginnerdata.pressNo,
+                };
+                const ginprocess = await GinProcess.create(data);
+
+                let uniqueFilename = `gin_procees_qrcode_${Date.now()}.png`;
+                let da = encrypt(`${ginprocess.id}`);
+                let aa = await generateOnlyQrCode(da, uniqueFilename);
+                const gin = await GinProcess.update({ qr: uniqueFilename }, {
+                    where: {
+                        id: ginprocess.id
+                    }
+                });
+
+                for await (const bale of ginnerdata.bales) {
+
+                    let baleData = {
+                        process_id: ginprocess.id,
+                        bale_no: bale.baleNo,
+                        weight: bale.weight,
+                        staple: bale.staple,
+                        mic: bale.mic,
+                        strength: bale.strength,
+                        trash: bale.trash,
+                        color_grade: bale.colorGrade
+                    }
+                    const bales = await GinBale.create(baleData);
+                    let uniqueFilename = `gin_bale_qrcode_${Date.now()}.png`;
+                    let da = encrypt(`Ginner,Bale, ${bales.id}`);
+                    let aa = await generateOnlyQrCode(da, uniqueFilename);
+                    const gin = await GinBale.update({ qr: uniqueFilename }, {
+                        where: {
+                            id: bales.id
+                        }
                     });
                 }
+                        
+                pass.push({
+                    success: true,
+                    data: ginprocess,
+                    message: "Process is created"
+                });
             }
         }
         res.sendSuccess(res, { pass, fail });
@@ -95,6 +125,6 @@ const uploadGinnerProcess = async (req: Request, res: Response) => {
 
 
 export {
-    uploadGarmentType,
+    uploadGinBales,
     uploadGinnerProcess
 }

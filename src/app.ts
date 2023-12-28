@@ -67,6 +67,9 @@ import fabricProcessRouter from "./router/fabric";
 import errorMiddleware from "./middleware/error";
 import setInterface from "./middleware/interface";
 import qrApp from "./router/qr-app";
+import DatamigrationRouter from './router/datamigration';
+
+
 const app = express();
 
 
@@ -152,6 +155,7 @@ app.use("/trader-process", traderProcessRouter);
 app.use("/fabric-process", fabricProcessRouter);
 app.use("/brand-interface", brandProcessRouter);
 app.use("/qr-app", qrApp);
+app.use("/datamigration",DatamigrationRouter);
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument, { customCss }));
 
 app.use(errorMiddleware);

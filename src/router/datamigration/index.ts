@@ -1,5 +1,5 @@
 import {
-    uploadGarmentType,
+    uploadGinBales,
     uploadGinnerProcess   
 } from "../../controllers/datamigration";
 
@@ -8,7 +8,7 @@ const router = Router();
 
 // Upload databases Routes
 router.post('/upload-ginner-process', uploadGinnerProcess);
-router.post('/garment-type', uploadGarmentType);
+router.post('/upload-gin-bales', uploadGinBales);
 
 
 export default router;  
