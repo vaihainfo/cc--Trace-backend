@@ -31,7 +31,7 @@ Parameters:
     Description: How much memory in megabytes to give the container
   Path:
     Type: String
-    Default: "*"
+    Default: "/"
     Description: A path on the public load balancer.
   Priority:
     Type: Number
