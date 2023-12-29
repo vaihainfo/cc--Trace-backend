@@ -420,7 +420,7 @@ const exportSingleQualityParameter = async (req: Request, res: Response) => {
 
 const reportParameter = async (req: Request, res: Response) => {
     try {
-        const currentDate = new Date();
+        let currentDate: any = new Date();
         const { seasonId, countryId, stateId, processId }: any = req.query
         if (!seasonId) {
             return res.sendError(res, "Please select season");
@@ -450,6 +450,10 @@ const reportParameter = async (req: Request, res: Response) => {
             parameter === 'ginner' ? whereCondition['$process.season_id$'] = seasonId
                 : whereCondition['$sales.season_id$'] = seasonId
         }
+        let selectedSeason = await Season.findOne({where: {id: seasonId}});
+        currentDate = new Date(selectedSeason?.dataValues?.from);
+
+
         let seasons = await QualityParameter.findAll({
             where: { ...value, ...whereCondition }, include: [
                 {
@@ -471,21 +475,22 @@ const reportParameter = async (req: Request, res: Response) => {
         // Loop through the last 12 months
         for (let i = 0; i < 12; i++) {
             // Calculate the start and end dates for the current month
-            const startDate = new Date(currentDate.getFullYear(), currentDate.getMonth() - i, 1);
-            const endDate = new Date(currentDate.getFullYear(), currentDate.getMonth() - i + 1, 0, 23, 59, 59);
+            const startDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + i, 1);
+            const endDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + (i + 1), 0, 23, 59, 59);
             // Perform the query for the current month
             let result = await QualityParameter.findOne({
                 attributes: [
-                    [Sequelize.fn('SUM', Sequelize.col('sci')), 'total_sci'],
-                    [Sequelize.fn('SUM', Sequelize.col('moisture')), 'total_moisture'],
-                    [Sequelize.fn('SUM', Sequelize.col('mic')), 'total_mic'],
-                    [Sequelize.fn('SUM', Sequelize.col('mat')), 'total_mat'],
-                    [Sequelize.fn('SUM', Sequelize.col('uhml')), 'total_uhml'],
-                    [Sequelize.fn('SUM', Sequelize.col('ui')), 'total_ui'],
-                    [Sequelize.fn('SUM', Sequelize.col('sf')), 'total_sf'],
-                    [Sequelize.fn('SUM', Sequelize.col('str')), 'total_str'],
-                    [Sequelize.fn('SUM', Sequelize.col('elg')), 'total_elg'],
-                    [Sequelize.fn('SUM', Sequelize.col('rd')), 'total_rd'],
+                    [Sequelize.fn('AVG', Sequelize.col('sci')), 'total_sci'],
+                    [Sequelize.fn('AVG', Sequelize.col('moisture')), 'total_moisture'],
+                    [Sequelize.fn('AVG', Sequelize.col('mic')), 'total_mic'],
+                    [Sequelize.fn('AVG', Sequelize.col('mat')), 'total_mat'],
+                    [Sequelize.fn('AVG', Sequelize.col('uhml')), 'total_uhml'],
+                    [Sequelize.fn('AVG', Sequelize.col('ui')), 'total_ui'],
+                    [Sequelize.fn('AVG', Sequelize.col('sf')), 'total_sf'],
+                    [Sequelize.fn('AVG', Sequelize.col('str')), 'total_str'],
+                    [Sequelize.fn('AVG', Sequelize.col('elg')), 'total_elg'],
+                    [Sequelize.fn('AVG', Sequelize.col('rd')), 'total_rd'],
+                    [Sequelize.fn('AVG', Sequelize.literal("CAST(plusb AS DOUBLE PRECISION)")), 'total_plusb']
                 ],
                 where: {
                     test_report: {
@@ -504,6 +509,7 @@ const reportParameter = async (req: Request, res: Response) => {
             const totalElg = result ? result.getDataValue('total_elg') : 0;
             const totalStr = result ? result.getDataValue('total_str') : 0;
             const totalRd = result ? result.getDataValue('total_rd') : 0;
+            const totalPlusb = result ? result.getDataValue('total_plusb') : 0;
 
             // Store the results for the current month
             monthlyResults.push({
@@ -518,6 +524,7 @@ const reportParameter = async (req: Request, res: Response) => {
                 totalSf: totalSf ? totalSf : 0,
                 totalStr: totalStr ? totalStr : 0,
                 totalRd: totalRd ? totalRd : 0,
+                totalPlusb: totalPlusb ? totalPlusb : 0,
             });
         }
         let data = await QualityParameter.findAll({
@@ -532,6 +539,7 @@ const reportParameter = async (req: Request, res: Response) => {
                 [Sequelize.fn('SUM', Sequelize.col('"quality-parameters"."str"')), 'total_str'],
                 [Sequelize.fn('SUM', Sequelize.col('"quality-parameters"."elg"')), 'total_elg'],
                 [Sequelize.fn('SUM', Sequelize.col('"quality-parameters"."rd"')), 'total_rd'],
+                [Sequelize.fn('SUM', Sequelize.literal('CAST("quality-parameters"."plusb" AS DOUBLE PRECISION)')), 'total_plusb'],
                 [Sequelize.literal('ginner.name'), 'processor']
             ],
             include: [
@@ -558,10 +566,10 @@ const reportParameter = async (req: Request, res: Response) => {
 
             ],
             where: {
-                ...whereCondition,
                 ginner_id: {
                     [Op.ne]: null
-                }
+                },
+                ...whereCondition
             },
             group: ['ginner.id'],
             limit: 5
@@ -579,6 +587,7 @@ const reportParameter = async (req: Request, res: Response) => {
                 [Sequelize.fn('SUM', Sequelize.col('"quality-parameters"."str"')), 'total_str'],
                 [Sequelize.fn('SUM', Sequelize.col('"quality-parameters"."elg"')), 'total_elg'],
                 [Sequelize.fn('SUM', Sequelize.col('"quality-parameters"."rd"')), 'total_rd'],
+                [Sequelize.fn('SUM', Sequelize.literal('CAST("quality-parameters"."plusb" AS DOUBLE PRECISION)')), 'total_plusb'],
                 // [Sequelize.literal('ginner.name'), 'processor'],
                 [Sequelize.literal('spinner.name'), 'processor']
             ],
@@ -607,10 +616,10 @@ const reportParameter = async (req: Request, res: Response) => {
 
             ],
             where: {
-                ...whereCondition,
                 spinner_id: {
                     [Op.ne]: null
-                }
+                },
+                ...whereCondition,
             },
             group: ['spinner.id'],
             limit: 5
@@ -627,39 +636,67 @@ const reportParameter = async (req: Request, res: Response) => {
 const reportCountryParameter = async (req: Request, res: Response) => {
     try {
 
+        const {seasonId, countryId, stateId,ginnerId, spinnerId}: any = req.query;
+
         // Get the current date
-        const currentDate = new Date();
+        let currentDate: any = new Date();
+
+        if (!seasonId) {
+            return res.sendError(res, "Please select season");
+        }
 
         // Create an array to store the results for each month
         let monthlyResults: any = [];
         let result = [];
         let parameter = req.query.filter || 'ginner';
+        let countryWhere: any = {};
 
-        let countries = await Country.findAll();
+        if(countryId){
+            countryWhere.id=countryId
+        }
+
+        let season = await Season.findOne({where: {id: seasonId}});
+        currentDate = new Date(season?.dataValues?.from);
+
+        let countries = await Country.findAll({where: countryWhere});
 
         for await (const country of countries) {
-            let value = parameter === 'ginner' ?
+            let value: any = parameter === 'ginner' ?
                 { ginner_id: { [Op.not]: null }, '$ginner.country_id$': country.id } :
                 { spinner_id: { [Op.not]: null }, '$spinner.country_id$': country.id };
+            
+            if(stateId){
+                parameter === 'ginner' ? value['$ginner.state_id$']= stateId : value['$spinner.state_id$']= stateId
+            }
+
+            if(ginnerId && parameter === 'ginner'){
+                value['ginner_id']= ginnerId
+            }
+
+            if(spinnerId && parameter === 'spinner'){
+                value['spinner_id']= spinnerId
+            }
+
             let group = parameter === 'ginner' ? [Sequelize.literal('ginner.country_id')] : [Sequelize.literal('spinner.country_id')]
             // Loop through the last 12 months
             for (let i = 0; i < 12; i++) {
                 // Calculate the start and end dates for the current month
-                const startDate = new Date(currentDate.getFullYear(), currentDate.getMonth() - i, 1);
-                const endDate = new Date(currentDate.getFullYear(), currentDate.getMonth() - i + 1, 0, 23, 59, 59);
+                const startDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + i, 1);
+                const endDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + (i + 1), 0, 23, 59, 59);
                 // Perform the query for the current month
                 let result = await QualityParameter.findOne({
                     attributes: [
-                        [Sequelize.fn('SUM', Sequelize.col('sci')), 'total_sci'],
-                        [Sequelize.fn('SUM', Sequelize.col('moisture')), 'total_moisture'],
-                        [Sequelize.fn('SUM', Sequelize.col('mic')), 'total_mic'],
-                        [Sequelize.fn('SUM', Sequelize.col('mat')), 'total_mat'],
-                        [Sequelize.fn('SUM', Sequelize.col('uhml')), 'total_uhml'],
-                        [Sequelize.fn('SUM', Sequelize.col('ui')), 'total_ui'],
-                        [Sequelize.fn('SUM', Sequelize.col('sf')), 'total_sf'],
-                        [Sequelize.fn('SUM', Sequelize.col('str')), 'total_str'],
-                        [Sequelize.fn('SUM', Sequelize.col('elg')), 'total_elg'],
-                        [Sequelize.fn('SUM', Sequelize.col('rd')), 'total_rd'],
+                        [Sequelize.fn('AVG', Sequelize.col('sci')), 'total_sci'],
+                        [Sequelize.fn('AVG', Sequelize.col('moisture')), 'total_moisture'],
+                        [Sequelize.fn('AVG', Sequelize.col('mic')), 'total_mic'],
+                        [Sequelize.fn('AVG', Sequelize.col('mat')), 'total_mat'],
+                        [Sequelize.fn('AVG', Sequelize.col('uhml')), 'total_uhml'],
+                        [Sequelize.fn('AVG', Sequelize.col('ui')), 'total_ui'],
+                        [Sequelize.fn('AVG', Sequelize.col('sf')), 'total_sf'],
+                        [Sequelize.fn('AVG', Sequelize.col('str')), 'total_str'],
+                        [Sequelize.fn('AVG', Sequelize.col('elg')), 'total_elg'],
+                        [Sequelize.fn('AVG', Sequelize.col('rd')), 'total_rd'],
+                        [Sequelize.fn('AVG', Sequelize.literal("CAST(plusb AS DOUBLE PRECISION)")), 'total_plusb']
                     ],
                     include: [
                         {
@@ -678,7 +715,8 @@ const reportCountryParameter = async (req: Request, res: Response) => {
                     group: group
                 })
                 const totalSCI = result ? result.getDataValue('total_sci') : 0;
-                const totalMoisture = result ? result.getDataValue('total_mic') : 0;
+                const totalMic = result ? result.getDataValue('total_mic') : 0;
+                const totalMoisture = result ? result.getDataValue('total_moisture') : 0;
                 const totalMat = result ? result.getDataValue('total_mat') : 0;
                 const totaluhml = result ? result.getDataValue('total_uhml') : 0;
                 const totalUi = result ? result.getDataValue('total_ui') : 0;
@@ -686,11 +724,13 @@ const reportCountryParameter = async (req: Request, res: Response) => {
                 const totalElg = result ? result.getDataValue('total_elg') : 0;
                 const totalStr = result ? result.getDataValue('total_str') : 0;
                 const totalRd = result ? result.getDataValue('total_rd') : 0;
+                const totalPlusb = result ? result.getDataValue('total_plusb') : 0;
 
                 // Store the results for the current month
                 monthlyResults.push({
                     month: startDate.toLocaleString('default', { month: 'short' }),
                     totalSci: totalSCI ? totalSCI : 0,
+                    totalMic: totalMic ? totalMic : 0,
                     totalMoisture: totalMoisture ? totalMoisture : 0,
                     totalMat: totalMat ? totalMat : 0,
                     totaluhml: totaluhml ? totaluhml : 0,
@@ -699,6 +739,7 @@ const reportCountryParameter = async (req: Request, res: Response) => {
                     totalSf: totalSf ? totalSf : 0,
                     totalStr: totalStr ? totalStr : 0,
                     totalRd: totalRd ? totalRd : 0,
+                    totalPlusb: totalPlusb ? totalPlusb : 0,
                 });
             }
 
@@ -754,7 +795,8 @@ const reportDashBoardParameter = async (req: Request, res: Response) => {
                 [Sequelize.fn('COALESCE', Sequelize.fn('AVG', Sequelize.col('sf')), 0), 'total_sf'],
                 [Sequelize.fn('COALESCE', Sequelize.fn('AVG', Sequelize.col('str')), 0), 'total_str'],
                 [Sequelize.fn('COALESCE', Sequelize.fn('AVG', Sequelize.col('elg')), 0), 'total_elg'],
-                [Sequelize.fn('COALESCE', Sequelize.fn('AVG', Sequelize.col('rd')), 0), 'total_rd']
+                [Sequelize.fn('COALESCE', Sequelize.fn('AVG', Sequelize.col('rd')), 0), 'total_rd'],
+                [Sequelize.fn('COALESCE', Sequelize.fn('AVG', Sequelize.literal("CAST(plusb AS DOUBLE PRECISION)")), 0), 'total_plusb'],
             ],
             where: {
                 id: ids,
@@ -793,7 +835,8 @@ const reportDashBoardParameter = async (req: Request, res: Response) => {
                 [Sequelize.fn('COALESCE', Sequelize.fn('AVG', Sequelize.col('sf')), 0), 'total_sf'],
                 [Sequelize.fn('COALESCE', Sequelize.fn('AVG', Sequelize.col('str')), 0), 'total_str'],
                 [Sequelize.fn('COALESCE', Sequelize.fn('AVG', Sequelize.col('elg')), 0), 'total_elg'],
-                [Sequelize.fn('COALESCE', Sequelize.fn('AVG', Sequelize.col('rd')), 0), 'total_rd']
+                [Sequelize.fn('COALESCE', Sequelize.fn('AVG', Sequelize.col('rd')), 0), 'total_rd'],
+                [Sequelize.fn('COALESCE', Sequelize.fn('AVG', Sequelize.literal("CAST(plusb AS DOUBLE PRECISION)")), 0), 'total_plusb'],
             ],
             where: {
                 id: id,
@@ -925,7 +968,8 @@ const reportNationalQualityParameter = async (req: Request, res: Response) => {
                 [Sequelize.fn('COALESCE', Sequelize.fn('AVG', Sequelize.col('sf')), 0), 'total_sf'],
                 [Sequelize.fn('COALESCE', Sequelize.fn('AVG', Sequelize.col('str')), 0), 'total_str'],
                 [Sequelize.fn('COALESCE', Sequelize.fn('AVG', Sequelize.col('elg')), 0), 'total_elg'],
-                [Sequelize.fn('COALESCE', Sequelize.fn('AVG', Sequelize.col('rd')), 0), 'total_rd']
+                [Sequelize.fn('COALESCE', Sequelize.fn('AVG', Sequelize.col('rd')), 0), 'total_rd'],
+                [Sequelize.fn('COALESCE', Sequelize.fn('AVG', Sequelize.literal("CAST(plusb AS DOUBLE PRECISION)")), 0), 'total_plusb']
             ],
             include: [
                 {
@@ -958,7 +1002,8 @@ const reportNationalQualityParameter = async (req: Request, res: Response) => {
                 [Sequelize.fn('COALESCE', Sequelize.fn('AVG', Sequelize.col('"quality-parameters"."sf"')), 0), 'total_sf'],
                 [Sequelize.fn('COALESCE', Sequelize.fn('AVG', Sequelize.col('"quality-parameters"."str"')), 0), 'total_str'],
                 [Sequelize.fn('COALESCE', Sequelize.fn('AVG', Sequelize.col('"quality-parameters"."elg"')), 0), 'total_elg'],
-                [Sequelize.fn('COALESCE', Sequelize.fn('AVG', Sequelize.col('"quality-parameters"."rd"')), 0), 'total_rd']
+                [Sequelize.fn('COALESCE', Sequelize.fn('AVG', Sequelize.col('"quality-parameters"."rd"')), 0), 'total_rd'],
+                [Sequelize.fn('COALESCE', Sequelize.fn('AVG', Sequelize.literal('CAST("quality-parameters"."plusb" AS DOUBLE PRECISION)')), 0), 'total_plusb']
             ],
             include: [
                 {
@@ -990,7 +1035,8 @@ const reportNationalQualityParameter = async (req: Request, res: Response) => {
                     [Sequelize.fn('COALESCE', Sequelize.fn('AVG', Sequelize.col('"quality-parameters"."sf"')), 0), 'total_sf'],
                     [Sequelize.fn('COALESCE', Sequelize.fn('AVG', Sequelize.col('"quality-parameters"."str"')), 0), 'total_str'],
                     [Sequelize.fn('COALESCE', Sequelize.fn('AVG', Sequelize.col('"quality-parameters"."elg"')), 0), 'total_elg'],
-                    [Sequelize.fn('COALESCE', Sequelize.fn('AVG', Sequelize.col('"quality-parameters"."rd"')), 0), 'total_rd']
+                    [Sequelize.fn('COALESCE', Sequelize.fn('AVG', Sequelize.col('"quality-parameters"."rd"')), 0), 'total_rd'],
+                    [Sequelize.fn('COALESCE', Sequelize.fn('AVG', Sequelize.literal('CAST("quality-parameters"."plusb" AS DOUBLE PRECISION)')), 0), 'total_plusb']
                 ],
                 include: [
                     {
@@ -1019,7 +1065,8 @@ const reportNationalQualityParameter = async (req: Request, res: Response) => {
                     [Sequelize.fn('COALESCE', Sequelize.fn('AVG', Sequelize.col('sf')), 0), 'total_sf'],
                     [Sequelize.fn('COALESCE', Sequelize.fn('AVG', Sequelize.col('str')), 0), 'total_str'],
                     [Sequelize.fn('COALESCE', Sequelize.fn('AVG', Sequelize.col('elg')), 0), 'total_elg'],
-                    [Sequelize.fn('COALESCE', Sequelize.fn('AVG', Sequelize.col('rd')), 0), 'total_rd']
+                    [Sequelize.fn('COALESCE', Sequelize.fn('AVG', Sequelize.col('rd')), 0), 'total_rd'],
+                    [Sequelize.fn('COALESCE', Sequelize.fn('AVG', Sequelize.literal("CAST(plusb AS DOUBLE PRECISION)")), 0), 'total_plusb']
                 ],
                 include: [
                     {
@@ -1073,7 +1120,8 @@ const reporProcessorWiseParameter = async (req: Request, res: Response) => {
                 [Sequelize.fn('COALESCE', Sequelize.fn('AVG', Sequelize.col('sf')), 0), 'total_sf'],
                 [Sequelize.fn('COALESCE', Sequelize.fn('AVG', Sequelize.col('str')), 0), 'total_str'],
                 [Sequelize.fn('COALESCE', Sequelize.fn('AVG', Sequelize.col('elg')), 0), 'total_elg'],
-                [Sequelize.fn('COALESCE', Sequelize.fn('AVG', Sequelize.col('rd')), 0), 'total_rd']
+                [Sequelize.fn('COALESCE', Sequelize.fn('AVG', Sequelize.col('rd')), 0), 'total_rd'],
+                [Sequelize.fn('COALESCE', Sequelize.fn('AVG', Sequelize.literal("CAST(plusb AS DOUBLE PRECISION)")), 0), 'total_plusb'],
             ],
             include: [
                 {
@@ -1102,7 +1150,8 @@ const reporProcessorWiseParameter = async (req: Request, res: Response) => {
                 [Sequelize.fn('COALESCE', Sequelize.fn('AVG', Sequelize.col('sf')), 0), 'total_sf'],
                 [Sequelize.fn('COALESCE', Sequelize.fn('AVG', Sequelize.col('str')), 0), 'total_str'],
                 [Sequelize.fn('COALESCE', Sequelize.fn('AVG', Sequelize.col('elg')), 0), 'total_elg'],
-                [Sequelize.fn('COALESCE', Sequelize.fn('AVG', Sequelize.col('rd')), 0), 'total_rd']
+                [Sequelize.fn('COALESCE', Sequelize.fn('AVG', Sequelize.col('rd')), 0), 'total_rd'],
+                [Sequelize.fn('COALESCE', Sequelize.fn('AVG', Sequelize.literal("CAST(plusb AS DOUBLE PRECISION)")), 0), 'total_plusb']
             ],
             include: [
                 {
@@ -1160,7 +1209,8 @@ const reporProcessorWiseParameter = async (req: Request, res: Response) => {
                 [Sequelize.fn('COALESCE', Sequelize.fn('AVG', Sequelize.col('"quality-parameters"."sf"')), 0), 'total_sf'],
                 [Sequelize.fn('COALESCE', Sequelize.fn('AVG', Sequelize.col('"quality-parameters"."str"')), 0), 'total_str'],
                 [Sequelize.fn('COALESCE', Sequelize.fn('AVG', Sequelize.col('"quality-parameters"."elg"')), 0), 'total_elg'],
-                [Sequelize.fn('COALESCE', Sequelize.fn('AVG', Sequelize.col('"quality-parameters"."rd"')), 0), 'total_rd']
+                [Sequelize.fn('COALESCE', Sequelize.fn('AVG', Sequelize.col('"quality-parameters"."rd"')), 0), 'total_rd'],
+                [Sequelize.fn('COALESCE', Sequelize.fn('AVG', Sequelize.literal('CAST("quality-parameters"."plusb" AS DOUBLE PRECISION)')), 0), 'total_plusb']
             ],
             include: [
                 {
@@ -1190,7 +1240,8 @@ const reporProcessorWiseParameter = async (req: Request, res: Response) => {
                 [Sequelize.fn('COALESCE', Sequelize.fn('AVG', Sequelize.col('"quality-parameters"."sf"')), 0), 'total_sf'],
                 [Sequelize.fn('COALESCE', Sequelize.fn('AVG', Sequelize.col('"quality-parameters"."str"')), 0), 'total_str'],
                 [Sequelize.fn('COALESCE', Sequelize.fn('AVG', Sequelize.col('"quality-parameters"."elg"')), 0), 'total_elg'],
-                [Sequelize.fn('COALESCE', Sequelize.fn('AVG', Sequelize.col('"quality-parameters"."rd"')), 0), 'total_rd']
+                [Sequelize.fn('COALESCE', Sequelize.fn('AVG', Sequelize.col('"quality-parameters"."rd"')), 0), 'total_rd'],
+                [Sequelize.fn('COALESCE', Sequelize.fn('AVG', Sequelize.literal('CAST("quality-parameters"."plusb" AS DOUBLE PRECISION)')), 0), 'total_plusb']
             ],
             include: [
                 {

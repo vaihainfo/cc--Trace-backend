@@ -109,8 +109,9 @@ const getUnRegisteredDevices = async (req: Request, res: Response) => {
             }
         });
         res.sendSuccess(res, data)
-    } catch (error: any) {
-        return res.sendError(res, error.meessage);
+    }  catch (error: any) {
+        console.error("Error appending data:", error);
+        return res.sendError(res, error.message);
     }
 }
 
@@ -156,8 +157,9 @@ const agentLogin = async (req: Request, res: Response) => {
         if (!verifyPassword) { return res.sendError(res, "Invalid Password"); };
         var { accessToken } = await generateTokens(user.dataValues.id, user.dataValues.access_level);
         return res.sendSuccess(res, { accessToken, user })
-    } catch (error: any) {
-        return res.sendError(res, error.message)
+    }  catch (error: any) {
+        console.error("Error appending data:", error);
+        return res.sendError(res, error.message);
     }
 
 }
@@ -175,8 +177,9 @@ const profile = async (req: Request, res: Response) => {
             where: { id: req.query.id }
         });
         res.sendSuccess(res, data)
-    } catch (error: any) {
-        return res.sendError(res, error.message)
+    }  catch (error: any) {
+        console.error("Error appending data:", error);
+        return res.sendError(res, error.message);
     }
 }
 
@@ -377,11 +380,12 @@ const fetchAgentTransactions = async (req: Request, res: Response) => {
             const transaction = await Transaction.findAll(queryOptions);
             return res.sendSuccess(res, transaction);
         }
-    } catch (error) {
-        console.log(error);
-        return res.sendError(res, "NOT_ABLE_TO_FETCH");
+    }  catch (error: any) {
+        console.error("Error appending data:", error);
+        return res.sendError(res, error.message);
     }
 };
+
 const fetchQrDashboard = async (req: Request, res: Response) => {
     const { villageId, programId, seasonId, brandId, countryId, stateId, blockId, districtId }: any = req.query;
     const whereCondition: any = {};
@@ -474,9 +478,9 @@ const fetchQrDashboard = async (req: Request, res: Response) => {
             ...fifth[0][0]
         })
 
-    } catch (error) {
-        console.log(error);
-        return res.sendError(res, "NOT_ABLE_TO_FETCH");
+    }  catch (error: any) {
+        console.error("Error appending data:", error);
+        return res.sendError(res, error.message);
     }
 };
 
@@ -531,7 +535,45 @@ const farmerByQrCode = async (req: Request, res: Response) => {
         }
         let farm = await Farm.findAll({ where: { farmer_id: farmer.dataValues.id } })
         return res.sendSuccess(res, { ...farmer.dataValues, farm });
-    } catch (error: any) {
+    }  catch (error: any) {
+        console.error("Error appending data:", error);
+        return res.sendError(res, error.message);
+    }
+}
+
+const createUserApp = async (req: Request, res: Response) => {
+    try {
+        const data = {
+            username:req.body.username,
+            password: await hash.generate(req.body.password),
+            firstname: req.body.firstName || "",
+            lastname: req.body.lastName || "",
+            mobile: req.body.mobile,
+            access_level: req.body.accessLevel,
+            user_reg_id: req.body.userRegId,
+            email: req.body.email,
+            program: req.body.programId,
+            agent_id: req.body.agentId,
+            ginner_id: req.body.ginnerId,
+            spinner_id: req.body.spinnerId,
+            weaver_id: req.body.weaverId,
+            knitter_id: req.body.knitterId,
+            garment_id: req.body.garmentId,
+            acs_country_id: req.body.country,
+            acs_state_id: req.body.state,
+            acs_district: req.body.districtsId,
+            acs_block: req.body.blocksId,
+            acs_village: req.body.villagesId,
+            acs_ginner: req.body.acsGinner,
+            acs_brand: req.body.brandId,
+            platform: req.body.platform,
+            status: req.body.status,
+        }
+
+        const userApp = await UserApp.create(data);
+        return res.sendSuccess(res, userApp)
+    }  catch (error: any) {
+        console.error("Error appending data:", error);
         return res.sendError(res, error.message);
     }
 }
@@ -545,5 +587,5 @@ export {
     agentLogin,
     profile,
     fetchQrDashboard,
-    farmerByQrCode
+    farmerByQrCode,
 }

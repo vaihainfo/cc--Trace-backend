@@ -18,8 +18,9 @@ const createEmailTemplate = async (req: Request, res: Response) => {
 
     const emailTemplate = await EmailTemplate.create(data);
     res.sendSuccess(res, emailTemplate);
-  } catch (error) {
-    return res.sendError(res, "EMAIL_TEMPLATE_NOT_CREATED");
+  }  catch (error: any) {
+    console.error("Error appending data:", error);
+    return res.sendError(res, error.message);
   }
 };
 
@@ -37,9 +38,9 @@ const createEmailJob = async (req: Request, res: Response) => {
 
     const emailJob = await EmailManagement.create(data);
     res.sendSuccess(res, emailJob);
-  } catch (error) {
-    console.log(error);
-    return res.sendError(res, "EMAIL_TEMPLATE_NOT_CREATED");
+  }  catch (error: any) {
+    console.error("Error appending data:", error);
+    return res.sendError(res, error.message);
   }
 };
 
@@ -118,10 +119,10 @@ const getEmailJobs = async (req: Request, res: Response) => {
       const linen = await EmailManagement.findAll({});
       return res.sendSuccess(res, linen);
     }
-  } catch (error) {
-    console.log(error);
-    return res.sendError(res, "EMAIL_TEMPLATE_NOT_CREATED");
-  }
+  }  catch (error: any) {
+    console.error("Error appending data:", error);
+    return res.sendError(res, error.message);
+}
 };
 
 const updateEmailJob = async (req: Request, res: Response) => {
@@ -142,10 +143,10 @@ const updateEmailJob = async (req: Request, res: Response) => {
       }
     });
     res.sendSuccess(res, emailJob);
-  } catch (error) {
-    console.log(error);
-    return res.sendError(res, "EMAIL_TEMPLATE_NOT_CREATED");
-  }
+  }  catch (error: any) {
+    console.error("Error appending data:", error);
+    return res.sendError(res, error.message);
+}
 };
 
 const deleteEmailJob = async (req: Request, res: Response) => {
@@ -156,10 +157,10 @@ const deleteEmailJob = async (req: Request, res: Response) => {
       }
     });
     res.sendSuccess(res, emailJob);
-  } catch (error) {
-    console.log(error);
-    return res.sendError(res, "EMAIL_TEMPLATE_NOT_CREATED");
-  }
+  }  catch (error: any) {
+    console.error("Error appending data:", error);
+    return res.sendError(res, error.message);
+}
 };
 
 
@@ -202,10 +203,10 @@ const getEmailJobById = async (req: Request, res: Response) => {
     };
 
     return res.sendSuccess(res, emailJob);
-  } catch (error) {
-    console.log(error);
-    return res.sendError(res, "EMAIL_TEMPLATE_NOT_FIND");
-  }
+  } catch (error: any) {
+    console.error("Error appending data:", error);
+    return res.sendError(res, error.message);
+}
 };
 
 const getEmailTemplates = async (req: Request, res: Response) => {
@@ -223,8 +224,9 @@ const getEmailTemplateByID = async (req: Request, res: Response) => {
       where: { id: req.query.id },
     });
     res.sendSuccess(res, emailTemplate);
-  } catch (error) {
-    return res.sendError(res, "EMAIL_TEMPLATE_NOT_FIND");
+  }  catch (error: any) {
+    console.error("Error appending data:", error);
+    return res.sendError(res, error.message);
   }
 };
 

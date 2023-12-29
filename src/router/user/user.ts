@@ -4,7 +4,7 @@ import { createMenuItem, deleteMenuItem, getMenuList, updateMenuItem } from "../
 import { checkRoleExists, createUserRole, deleteUserRole, getUserRole, getUserRoles, updateUserRole } from "../../controllers/user/user-role";
 import accessControl from "../../middleware/access-control";
 import { getUserInfo, processorLoginAdmin } from "../../controllers/user/user-details";
-import { createUser, deleteUser, fetchUser, fetchUsers, updateUser } from "../../controllers/user/user-management";
+import { createUser, createUserRegistration, deleteUser, fetchUser, fetchUsers, updateUser } from "../../controllers/user/user-management";
 
 const router = Router();
 
@@ -28,6 +28,8 @@ router.get("/get-users", fetchUsers);
 router.get("/get-user", fetchUser);
 router.put("/update-user", updateUser);
 router.delete("/delete-user", deleteUser);
+
+router.post("/create-registration-user", createUserRegistration);
 
 router.use(accessControl)
 

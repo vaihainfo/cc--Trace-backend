@@ -18,7 +18,8 @@ import {
     chooseBale,
     deleteGinnerProcess,
     getSpinner,
-    getVillageAndFarmer
+    getVillageAndFarmer,
+    deleteGinSales
 } from "../../controllers/ginner";
 
 
@@ -36,6 +37,7 @@ router.post('/sales', createGinnerSales);
 router.get('/sales', fetchGinSalesPagination);
 router.get('/sales/get-gin-sale', fetchGinSale);
 router.put('/sales', updateGinnerSales);
+router.delete('/sales', deleteGinSales);
 router.get('/sales/export', exportGinnerSales);
 router.get('/sales/bale', fetchGinSaleBale);
 // router.post('/sales/spinner', createSpinnerProcess);

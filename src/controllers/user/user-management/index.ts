@@ -3,6 +3,7 @@ import { Op } from "sequelize";
 
 import User from "../../../models/user.model";
 import hash from "../../../util/hash";
+import UserRegistrations from "../../../models/user-registrations.model";
 
 const createUser = async (req: Request, res: Response) => {
   const userExist = await User.findAll({
@@ -192,4 +193,22 @@ const deleteUser = async (req: Request, res: Response) => {
   }
 }
 
-export { createUser, fetchUsers, fetchUser, updateUser, deleteUser };
+const createUserRegistration = async (req: Request, res: Response) => {
+  try {
+      const data = {
+          firstName: req.body.firstName,
+          lastName: req.body.lastName,
+          mobile_no: req.body.mobileNo,
+          device_id: req.body.deviceId,
+          status: false
+        };
+    
+        const userRegistration = await UserRegistrations.create(data);
+        res.sendSuccess(res, userRegistration);
+  }  catch (error: any) {
+      console.error("Error appending data:", error);
+      return res.sendError(res, error.message);
+  }
+}
+
+export { createUser, fetchUsers, fetchUser, updateUser, deleteUser, createUserRegistration };

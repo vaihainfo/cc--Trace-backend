@@ -69,9 +69,7 @@ import setInterface from "./middleware/interface";
 import qrApp from "./router/qr-app";
 import DatamigrationRouter from './router/datamigration';
 
-
 const app = express();
-
 
 app.use(express.json({ limit: '2450mb' }));
 
