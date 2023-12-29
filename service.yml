@@ -110,7 +110,7 @@ Resources:
                 !Join [':', [!Ref 'EnvironmentName', 'FargateContainerSecurityGroup']]
           Subnets:
             - Fn::ImportValue:
-                !Join [':', [!Ref 'EnvironmentName', 'PublicSubnetOne']]
+                !Join [':', [!Ref 'EnvironmentName', 'PrivateSubnetOne']]
 
       TaskDefinition: !Ref 'TaskDefinition'
       Role:
