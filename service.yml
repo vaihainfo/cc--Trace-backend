@@ -96,7 +96,7 @@ Resources:
     DependsOn: LoadBalancerRule
     Properties:
       ServiceName: !Ref 'ServiceName'
-      Cluster: vpc-1-tracable
+      Cluster: vpc-1-traceable
       LaunchType: FARGATE
       DeploymentConfiguration:
         MaximumPercent: 200
