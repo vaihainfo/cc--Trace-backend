@@ -10,7 +10,7 @@ import sequelize from "./util/dbConn";
 import cors from "cors";
 const fs = require("fs");
 const swaggerUi = require("swagger-ui-express");
-const swaggerDocument = require("./swagger/swagger.json");
+const swaggerDocument = require("../src/swagger/swagger.json");
 const customCss = fs.readFileSync((process.cwd() + "/src/swagger/swagger.css"), "utf8");
 import authRouter from './router/auth';
 import locationRouter from './router/master/location';
