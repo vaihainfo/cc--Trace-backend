@@ -295,7 +295,6 @@ const uploadBalesSelection = async (req: Request, res: Response) => {
                 bale_id: bale.bale_id,
             }
             const bales = await BaleSelection.create(baleData);
-            const ginbaleSatus = await GinBale.update({ sold_status: true }, { where: { id: bale.bale_id } });
         }       
         
         res.sendSuccess(res, { pass, fail });
