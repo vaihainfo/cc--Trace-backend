@@ -14,7 +14,7 @@ const uploadGinBales = async (req: Request, res: Response) => {
         let fail: any = [];
         let pass: any = [];
  
-        for await (const bale of req.body.bales) {
+        for await (const bale of req.body.data) {
 
             let baleData = {
                 process_id: bale.process_id,
@@ -56,7 +56,7 @@ const uploadGinCottonselection = async (req: Request, res: Response) => {
         let fail: any = [];
         let pass: any = [];
  
-        for await (const cottonselection of req.body.cotton) {
+        for await (const cottonselection of req.body.data) {
 
             let cottonData = {
                 process_id: cottonselection.process_id,
@@ -89,7 +89,7 @@ const uploadGinnerProcess = async (req: Request, res: Response) => {
         let fail: any = [];
         let pass: any = []; 
 
-        for await (const ginnerdata of req.body.ginners) {
+        for await (const ginnerdata of req.body.data) {
             if (!ginnerdata.ginnerId) {
                 fail.push({
                     success: false,
@@ -171,7 +171,7 @@ const uploadGinnerSale = async (req: Request, res: Response) => {
         let fail: any = [];
         let pass: any = []; 
 
-        for await (const ginnersaledata of req.body.ginnersale) {
+        for await (const ginnersaledata of req.body.data) {
             if (!ginnersaledata.ginnerId) {
                 fail.push({
                     success: false,
@@ -269,7 +269,7 @@ const uploadBalesSelection = async (req: Request, res: Response) => {
         let pass: any = [];
  
    
-        for await (const bale of req.body.bales) {
+        for await (const bale of req.body.data) {
             let baleData = {
                 sales_id: bale.sales_id,
                 bale_id: bale.bale_id,
