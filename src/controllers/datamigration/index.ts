@@ -14,7 +14,7 @@ const uploadGinBales = async (req: Request, res: Response) => {
         let fail: any = [];
         let pass: any = [];
  
-        for await (const bale of req.body.data) {
+        for await (const bale of req.body.bales) {
 
             let baleData = {
                 process_id: bale.process_id,
@@ -56,7 +56,7 @@ const uploadGinCottonselection = async (req: Request, res: Response) => {
         let fail: any = [];
         let pass: any = [];
  
-        for await (const cottonselection of req.body.data) {
+        for await (const cottonselection of req.body.cotton) {
 
             let cottonData = {
                 process_id: cottonselection.process_id,
@@ -89,7 +89,7 @@ const uploadGinnerProcess = async (req: Request, res: Response) => {
         let fail: any = [];
         let pass: any = []; 
 
-        for await (const ginnerdata of req.body.data) {
+        for await (const ginnerdata of req.body.ginners) {
             if (!ginnerdata.ginnerId) {
                 fail.push({
                     success: false,
@@ -171,7 +171,7 @@ const uploadGinnerSale = async (req: Request, res: Response) => {
         let fail: any = [];
         let pass: any = []; 
 
-        for await (const ginnersaledata of req.body.data) {
+        for await (const ginnersaledata of req.body.ginnersale) {
             if (!ginnersaledata.ginnerId) {
                 fail.push({
                     success: false,
@@ -200,7 +200,17 @@ const uploadGinnerSale = async (req: Request, res: Response) => {
                         despatch_from: ginnersaledata.despatchFrom,
                         press_no: ginnersaledata.pressNo,
                         status: ginnersaledata.status,
-                        qty_stock: ginnersaledata.totalQty
+                        qty_stock: ginnersaledata.totalQty,
+                        weight_loss: ginnersaledata.weightLoss,
+                        sale_value: ginnersaledata.saleValue,
+                        invoice_no: ginnersaledata.invoiceNo,
+                        tc_file:ginnersaledata.tcFile,
+                        contract_file: ginnersaledata.contractFile,
+                        invoice_file: ginnersaledata.invoiceFile,
+                        delivery_notes: ginnersaledata.deliveryNotes,
+                        transporter_name: ginnersaledata.transporterName,
+                        vehicle_no: ginnersaledata.vehicleNo,
+                        lrbl_no: ginnersaledata.lrblNo
                     }, {
                         where: {
                             id: ginnersaledata.processId
@@ -233,7 +243,17 @@ const uploadGinnerSale = async (req: Request, res: Response) => {
                         despatch_from: ginnersaledata.despatchFrom,
                         press_no: ginnersaledata.pressNo,
                         status: ginnersaledata.status,
-                        qty_stock: ginnersaledata.totalQty
+                        qty_stock: ginnersaledata.totalQty,
+                        weight_loss: ginnersaledata.weightLoss,
+                        sale_value: ginnersaledata.saleValue,
+                        invoice_no: ginnersaledata.invoiceNo,
+                        tc_file:ginnersaledata.tcFile,
+                        contract_file: ginnersaledata.contractFile,
+                        invoice_file: ginnersaledata.invoiceFile,
+                        delivery_notes: ginnersaledata.deliveryNotes,
+                        transporter_name: ginnersaledata.transporterName,
+                        vehicle_no: ginnersaledata.vehicleNo,
+                        lrbl_no: ginnersaledata.lrblNo
                     };
                     const ginSales = await GinSales.create(data); 
                             
@@ -269,7 +289,7 @@ const uploadBalesSelection = async (req: Request, res: Response) => {
         let pass: any = [];
  
    
-        for await (const bale of req.body.data) {
+        for await (const bale of req.body.bales) {
             let baleData = {
                 sales_id: bale.sales_id,
                 bale_id: bale.bale_id,
