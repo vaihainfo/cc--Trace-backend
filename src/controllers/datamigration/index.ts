@@ -200,7 +200,17 @@ const uploadGinnerSale = async (req: Request, res: Response) => {
                         despatch_from: ginnersaledata.despatchFrom,
                         press_no: ginnersaledata.pressNo,
                         status: ginnersaledata.status,
-                        qty_stock: ginnersaledata.totalQty
+                        qty_stock: ginnersaledata.totalQty,
+                        weight_loss: ginnersaledata.weightLoss,
+                        sale_value: ginnersaledata.saleValue,
+                        invoice_no: ginnersaledata.invoiceNo,
+                        tc_file:ginnersaledata.tcFile,
+                        contract_file: ginnersaledata.contractFile,
+                        invoice_file: ginnersaledata.invoiceFile,
+                        delivery_notes: ginnersaledata.deliveryNotes,
+                        transporter_name: ginnersaledata.transporterName,
+                        vehicle_no: ginnersaledata.vehicleNo,
+                        lrbl_no: ginnersaledata.lrblNo
                     }, {
                         where: {
                             id: ginnersaledata.processId
@@ -233,7 +243,17 @@ const uploadGinnerSale = async (req: Request, res: Response) => {
                         despatch_from: ginnersaledata.despatchFrom,
                         press_no: ginnersaledata.pressNo,
                         status: ginnersaledata.status,
-                        qty_stock: ginnersaledata.totalQty
+                        qty_stock: ginnersaledata.totalQty,
+                        weight_loss: ginnersaledata.weightLoss,
+                        sale_value: ginnersaledata.saleValue,
+                        invoice_no: ginnersaledata.invoiceNo,
+                        tc_file:ginnersaledata.tcFile,
+                        contract_file: ginnersaledata.contractFile,
+                        invoice_file: ginnersaledata.invoiceFile,
+                        delivery_notes: ginnersaledata.deliveryNotes,
+                        transporter_name: ginnersaledata.transporterName,
+                        vehicle_no: ginnersaledata.vehicleNo,
+                        lrbl_no: ginnersaledata.lrblNo
                     };
                     const ginSales = await GinSales.create(data); 
                             
@@ -275,7 +295,6 @@ const uploadBalesSelection = async (req: Request, res: Response) => {
                 bale_id: bale.bale_id,
             }
             const bales = await BaleSelection.create(baleData);
-            const ginbaleSatus = await GinBale.update({ sold_status: true }, { where: { id: bale.bale_id } });
         }       
         
         res.sendSuccess(res, { pass, fail });
