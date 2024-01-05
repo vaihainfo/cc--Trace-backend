@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import { Sequelize, Op } from "sequelize";
+import moment from "moment";
 
 import EmailTemplate from "../../models/email-template.model";
 import EmailManagement from "../../models/email-management.model";
@@ -7,12 +8,12 @@ import UserRole from "../../models/user-role.model";
 import Brand from "../../models/brand.model";
 import Program from "../../models/program.model";
 import Country from "../../models/country.model";
+import ScheduledEmailJobs from "../../models/scheduled-email-jobs.model";
 
 const createEmailTemplate = async (req: Request, res: Response) => {
   try {
     const data = {
       template_name: req.body.templateName,
-      file_name: req.body.fileName,
       mail_type: req.body.mailType
     };
 
@@ -23,6 +24,29 @@ const createEmailTemplate = async (req: Request, res: Response) => {
     return res.sendError(res, error.message);
   }
 };
+
+const createEmailTemplates = async (req: Request, res: Response) => {
+  try {
+    let pass = [];
+    let fail = [];
+    for await (const obj of req.body.data) {
+      let result = await EmailTemplate.findOne({ where: { template_name: { [Op.iLike]: obj.templateName } } })
+      if (result) {
+        fail.push({ data: result });
+      } else {
+        const result = await EmailTemplate.create({ template_name: obj.templateName, mail_type: obj.mailType });
+        pass.push({ data: result });
+      }
+    }
+    return res.sendSuccess(res, { pass, fail });
+  }  catch (error: any) {
+    console.error("Error appending data:", error);
+    return res.sendError(res, error.message);
+  }
+};
+
+//scheduled templates array exculding "Whenever any sales happens" templates
+let scheduledTemplates = ["Ginner Bale Process Report", "Ginner Pending Sales Report", "Ginner Sales Report", "Spinner Bale Receipt Report", "Spinner Yarn Sales Report", "Knitter Yarn Receipt Report", "Knitter Fabric Sales Report", "Weaver Yarn Receipt Report", "Weaver Fabric Sales Report", "Garment Fabric Receipt Report", "Garment Fabric Sales Report", "When Gin Sales are still pending - 5 days reminder", "When Gin Sales are still pending - 7 days and Before", "Organic Integrity Report", "Procurement Report", "Organic Farmer Report","Spinner Transaction Pending Notification","Pscp Procurement and Sell Live Tracker", "Ticket Approval reminder Admin/brand - 5 days", "Ticket Approval reminder Technical team - 7 days", "Ticket Approval reminder Technical team - 15 days"]
 
 const createEmailJob = async (req: Request, res: Response) => {
   try {
@@ -37,7 +61,31 @@ const createEmailJob = async (req: Request, res: Response) => {
     };
 
     const emailJob = await EmailManagement.create(data);
-    res.sendSuccess(res, emailJob);
+
+    if(emailJob){
+      let currentDate = moment().utc();
+      let scheduledDate = moment().utc();
+      let selectedTemplate = await EmailTemplate.findOne({where: {
+        id: req.body.templateId
+      }});
+
+      if(selectedTemplate && scheduledTemplates.includes(selectedTemplate?.dataValues?.template_name)){
+        const daysToAdd = req.body.mailType === 'Weekly' ? 7 : 1;
+        scheduledDate.add(daysToAdd, 'days');
+
+        const emailData = {
+          email_job_id: emailJob?.dataValues?.id,
+          created_date: currentDate,
+          scheduled_date: scheduledDate,
+          no_of_attempts: 0,
+          email_status: false,
+          email_message: null,
+        };
+
+        const emailSchedule = await ScheduledEmailJobs.create(emailData);
+      } 
+    }
+    return res.sendSuccess(res, emailJob);
   }  catch (error: any) {
     console.error("Error appending data:", error);
     return res.sendError(res, error.message);
@@ -211,7 +259,7 @@ const getEmailJobById = async (req: Request, res: Response) => {
 
 const getEmailTemplates = async (req: Request, res: Response) => {
   try {
-    const emailTemplate = await EmailTemplate.findAll();
+    const emailTemplate = await EmailTemplate.findAll({order: [["id", "asc"]]});
     res.sendSuccess(res, emailTemplate);
   } catch (error) {
     return res.sendError(res, "EMAIL_TEMPLATES_NOT_FIND");
@@ -237,6 +285,7 @@ export {
   getEmailTemplateByID,
   createEmailJob,
   createEmailTemplate,
+  createEmailTemplates,
   updateEmailJob,
   deleteEmailJob
 };

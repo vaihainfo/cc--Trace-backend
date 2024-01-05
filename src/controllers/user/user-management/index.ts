@@ -45,10 +45,10 @@ const createUser = async (req: Request, res: Response) => {
   try {
     const user = await User.create(USER_MODEL);
     return res.sendSuccess(res, user, 200);
-  } catch (error) {
-    console.log(error)
-    res.sendError(res, "ERR_NOT_ABLE_TO_CREATE_USER");
-  }
+  } catch (error: any) {
+    console.error("Error appending data:", error);
+    return res.sendError(res, error.message);
+}
 }
 
 
@@ -174,9 +174,9 @@ const updateUser = async (req: Request, res: Response) => {
       }
     });
     return res.sendSuccess(res, user, 200);
-  } catch (error) {
-    console.log(error)
-    res.sendError(res, "ERR_AUTH_USERNAME_OR_EMAIL_ALREADY_EXIST");
+  } catch (error: any) {
+    console.error("Error appending data:", error);
+    return res.sendError(res, error.message);
   }
 }
 

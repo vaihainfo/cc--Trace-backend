@@ -13,6 +13,7 @@ import Brand from './brand.model';
 import Season from './season.model';
 import Ginner from './ginner.model';
 import Farm from './farm.model';
+import UserApp from './users-app.model';
 
 const Transaction = db.define('transactions', {
   id: {
@@ -208,6 +209,12 @@ Transaction.belongsTo(Farm, {
   foreignKey: "farm_id",
   as: "farm",
 });
+
+Transaction.belongsTo(UserApp, {
+  foreignKey: "agent_id",
+  as: "agent",
+});
+
 
 Transaction.sync();
 

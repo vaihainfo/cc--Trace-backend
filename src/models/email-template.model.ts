@@ -12,9 +12,6 @@ const EmailTemplate = db.define('email_templates', {
     allowNull: false,
     type: DataTypes.STRING
   },
-  file_name: {
-    type: DataTypes.STRING
-  },
   mail_type: {
     type: DataTypes.ARRAY(DataTypes.STRING)
   }

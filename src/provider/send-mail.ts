@@ -29,6 +29,7 @@ const sendForgotEmail = (link: any, email: string) => {
 }
 
 const sendEmail = (html: any, email: any, subject: any, cc?: any, attachment?: any) => {
+    return new Promise((resolve, reject) => {
     const message = {
         from: process.env.SENDER_EMAIL_ADDRESS,
         to: email,
@@ -40,9 +41,16 @@ const sendEmail = (html: any, email: any, subject: any, cc?: any, attachment?: a
 
     //send email
     transporter.sendMail(message, function (err, info) {
-        if (err) { console.log(err) }
-        else { console.log('sent'); }
+        if (err) { 
+            console.log(err);  
+            resolve(false);
+        }
+        else { 
+            console.log('sent'); 
+        resolve(true);
+    }
     });
+});
 }
 
 export { sendForgotEmail, sendEmail }

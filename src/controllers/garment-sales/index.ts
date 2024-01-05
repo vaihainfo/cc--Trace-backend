@@ -452,7 +452,7 @@ const fetchTransactionsAll = async (req: Request, res: Response) => {
         attributes: ["id", "name"],
       },
     ];
-    let result = await Promise.all([
+    let result: any = await Promise.all([
       WeaverSales.findAll({
         where: {
           status: "Pending for QR scanning",
@@ -1734,7 +1734,7 @@ const getprocessName = async (req: Request, res: Response) => {
         status === "Pending" ? "Pending for QR scanning" : "Sold";
     }
 
-    const response = await Promise.all([
+    const response: any = await Promise.all([
       WeaverSales.findAll({
         attributes: ["weaver_id", "weaver.name"],
         where: whereCondition,

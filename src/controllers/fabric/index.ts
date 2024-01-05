@@ -608,7 +608,7 @@ const chooseDyingFabric = async (req: Request, res: Response) => {
         attributes: ["id", "name"],
       },
     ];
-    let result = await Promise.all([
+    let result: any = await Promise.all([
       WeaverSales.findAll({
         where: {
           status: "Sold",

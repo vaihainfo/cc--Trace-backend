@@ -1333,7 +1333,7 @@ const getKnitterWeaver = async (req: Request, res: Response) => {
     if (!ress) {
         return res.sendError(res, 'No Spinner Found ');
     }
-    let result = await Promise.all([
+    let result: any = await Promise.all([
         Knitter.findAll({
             attributes: ['id', 'name', [sequelize.literal("'kniter'"), 'type']],
             where: { brand: { [Op.overlap]: ress.dataValues.brand } }

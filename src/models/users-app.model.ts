@@ -1,6 +1,15 @@
 import { DataTypes } from 'sequelize';
 import db from '../util/dbConn';
 import UserRegistrations from './user-registrations.model';
+import Program from './program.model';
+import Ginner from './ginner.model';
+import Spinner from './spinner.model';
+import Garment from './garment.model';
+import Weaver from './weaver.model';
+import Knitter from './knitter.model';
+import Country from './country.model';
+import State from './state.model';
+import Brand from './brand.model';
 
 const UserApp = db.define('users_apps', {
   id: {
@@ -76,22 +85,22 @@ const UserApp = db.define('users_apps', {
     type: DataTypes.INTEGER
   },
   acs_district: {
-    type: DataTypes.STRING
+    type: DataTypes.ARRAY(DataTypes.INTEGER)
   },
   acs_block: {
-    type: DataTypes.STRING
+    type: DataTypes.ARRAY(DataTypes.INTEGER)
   },
   acs_village: {
-    type: DataTypes.STRING
+    type: DataTypes.ARRAY(DataTypes.INTEGER)
   },
   acs_ginner: {
-    type: DataTypes.STRING
+    type: DataTypes.ARRAY(DataTypes.INTEGER)
   },
   acs_brand: {
     type: DataTypes.INTEGER
   },
   acs_all_village: {
-    type: DataTypes.INTEGER
+    type: DataTypes.BOOLEAN
   },
   remember_me_token: {
     type: DataTypes.STRING
@@ -102,6 +111,51 @@ UserApp.belongsTo(UserRegistrations, {
   foreignKey: "user_reg_id",
   as: "registrations",
 })
+
+UserApp.belongsTo(Program, {
+  foreignKey: "program",
+  as: "programs",
+})
+
+UserApp.belongsTo(Ginner, {
+  foreignKey: "ginner_id",
+  as: "ginner",
+})
+
+UserApp.belongsTo(Spinner, {
+  foreignKey: "spinner_id",
+  as: "spinner",
+})
+
+UserApp.belongsTo(Garment, {
+  foreignKey: "garment_id",
+  as: "garment",
+})
+
+UserApp.belongsTo(Weaver, {
+  foreignKey: "weaver_id",
+  as: "weaver",
+});
+
+UserApp.belongsTo(Knitter, {
+  foreignKey: "knitter_id",
+  as: "knitter",
+});
+
+UserApp.belongsTo(Country, {
+  foreignKey: "acs_country_id",
+  as: "acscountry",
+});
+
+UserApp.belongsTo(State, {
+  foreignKey: "acs_state_id",
+  as: "acsstate",
+});
+
+UserApp.belongsTo(Brand, {
+  foreignKey: "acs_brand",
+  as: "acsbrand",
+});
 
 UserApp.sync();
 

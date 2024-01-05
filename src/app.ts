@@ -8,10 +8,12 @@ console.log(process.env.NODE_ENV);
 import express, { Request, Response } from "express";
 import sequelize from "./util/dbConn";
 import cors from "cors";
+
 const fs = require("fs");
 const swaggerUi = require("swagger-ui-express");
 const swaggerDocument = require("../src/swagger/swagger.json");
 const customCss = fs.readFileSync((process.cwd() + "/src/swagger/swagger.css"), "utf8");
+
 import authRouter from './router/auth';
 import locationRouter from './router/master/location';
 import cropRouter from './router/master/crop';
@@ -68,6 +70,7 @@ import errorMiddleware from "./middleware/error";
 import setInterface from "./middleware/interface";
 import qrApp from "./router/qr-app";
 import DatamigrationRouter from './router/datamigration';
+import { sendScheduledEmails } from "./controllers/email-management/scheduled-email.controller";
 
 const app = express();
 
@@ -85,6 +88,13 @@ const connectToDb = async () => {
     console.error("Unable to connect to the database:", error);
   }
 };
+
+var cron = require('node-cron');
+
+cron.schedule('0 23 * * *', async () => {
+  console.log('running a task once a day at 11 pm');
+  sendScheduledEmails();
+});
 
 var corsOptions = {
   origin: function (origin: any, callback: any) {

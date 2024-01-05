@@ -11,6 +11,7 @@ import GinProcess from "../../models/gin-process.model";
 import * as ExcelJS from "exceljs";
 import * as fs from "fs";
 import * as path from "path";
+import moment from "moment";
 import Ginner from "../../models/ginner.model";
 import Season from "../../models/season.model";
 import { sendEmail } from "../../provider/send-mail";
@@ -37,12 +38,12 @@ import Trader from "../../models/trader.model";
 import TicketTracker from "../../models/ticket-tracker.model";
 
 
-const sendGinnerBaleProcess = async () => {
+export const sendGinnerBaleProcess = async (jobId?: number) => {
     try {
         let template = await EmailTemplate.findOne({ where: { template_name: { [Op.iLike]: 'Ginner Bale Process Report' } } })
         if (template) {
             let adminEmail = await User.findAll({ where: { role: 1 }, attributes: ['email'] });
-            const emailJob = await EmailManagement.findOne({ where: { template_id: template.dataValues.id } });
+            const emailJob = await EmailManagement.findOne({ where: { id: jobId } });
             if (emailJob) {
                 let emails = await User.findAll({ where: { id: { [Op.in]: emailJob.dataValues.user_ids } }, attributes: ['email'] });
                 emails = emails.map((obj: any) => obj.email);
@@ -51,20 +52,21 @@ const sendGinnerBaleProcess = async () => {
                 let body_title = 'Ginner Bale';
                 let subject = 'Ginner Bale Process Report ' + new Date().toLocaleDateString('en-GB');
                 let body = get_process_report_body(body_title, emailJob.mail_type === 'Daily' ? 'Day' : 'Week', emails, adminEmail);
-                sendEmail(body, emails, subject, adminEmail, [{ path: path, filename: 'gin-bale-process.xlsx' }])
+               return sendEmail(body, emails, subject, adminEmail, [{ path: path, filename: 'gin-bale-process.xlsx' }])
             }
         }
-    } catch (error) {
+    }  catch (error) {
         console.log(error);
+        return false;
     }
 };
 
-const sendGinnerPendingSales = async () => {
+export const sendGinnerPendingSales = async (jobId?: number) => {
     try {
         let template = await EmailTemplate.findOne({ where: { template_name: { [Op.iLike]: 'Ginner Pending Sales Report' } } })
         if (template) {
             let adminEmail = await User.findAll({ where: { role: 1 }, attributes: ['email'] });
-            const emailJob = await EmailManagement.findOne({ where: { template_id: template.dataValues.id } });
+            const emailJob = await EmailManagement.findOne({ where: { id: jobId } });
             if (emailJob) {
                 let emails = await User.findAll({ where: { id: { [Op.in]: emailJob.dataValues.user_ids } }, attributes: ['email'] });
                 emails = emails.map((obj: any) => obj.email);
@@ -74,21 +76,22 @@ const sendGinnerPendingSales = async () => {
                 let subject = 'Ginner Pending Sales Report ' + new Date().toLocaleDateString('en-GB');
                 let body = get_process_report_body(body_title, emailJob.mail_type === 'Daily' ? 'Day' : 'Week', emails, adminEmail);
                 if (count > 0) {
-                    sendEmail(body, emails, subject, adminEmail, [{ path: path, filename: 'Ginner-pending-sales-report.xlsx' }])
+                    return sendEmail(body, emails, subject, adminEmail, [{ path: path, filename: 'Ginner-pending-sales-report.xlsx' }])
                 }
             }
         }
-    } catch (error) {
+    }  catch (error) {
         console.log(error);
+        return false;
     }
 };
 
-const sendGinnerSales = async () => {
+export const sendGinnerSales = async (jobId?: number) => {
     try {
         let template = await EmailTemplate.findOne({ where: { template_name: { [Op.iLike]: 'Ginner Sales Report' } } })
         if (template) {
             let adminEmail = await User.findAll({ where: { role: 1 }, attributes: ['email'] });
-            const emailJob = await EmailManagement.findOne({ where: { template_id: template.dataValues.id } });
+            const emailJob = await EmailManagement.findOne({ where: { id: jobId } });
             if (emailJob) {
                 let emails = await User.findAll({ where: { id: { [Op.in]: emailJob.dataValues.user_ids } }, attributes: ['email'] });
                 emails = emails.map((obj: any) => obj.email);
@@ -98,21 +101,22 @@ const sendGinnerSales = async () => {
                 let subject = 'Ginner Sales Report ' + new Date().toLocaleDateString('en-GB');
                 let body = get_process_report_body(body_title, emailJob.mail_type === 'Daily' ? 'Day' : 'Week', emails, adminEmail);
                 if (count > 0) {
-                    sendEmail(body, emails, subject, adminEmail, [{ path: path, filename: 'Ginner-sales-report.xlsx' }])
+                    return  sendEmail(body, emails, subject, adminEmail, [{ path: path, filename: 'Ginner-sales-report.xlsx' }])
                 }
             }
         }
-    } catch (error) {
+    }  catch (error) {
         console.log(error);
+        return false;
     }
 };
 
-const sendSpinnerBale = async () => {
+export const sendSpinnerBale = async (jobId?: number) => {
     try {
         let template = await EmailTemplate.findOne({ where: { template_name: { [Op.iLike]: 'Spinner Bale Receipt Report' } } })
         if (template) {
             let adminEmail = await User.findAll({ where: { role: 1 }, attributes: ['email'] });
-            const emailJob = await EmailManagement.findOne({ where: { template_id: template.dataValues.id } });
+            const emailJob = await EmailManagement.findOne({ where: { id: jobId } });
             if (emailJob) {
                 let emails = await User.findAll({ where: { id: { [Op.in]: emailJob.dataValues.user_ids } }, attributes: ['email'] });
                 emails = emails.map((obj: any) => obj.email);
@@ -122,21 +126,22 @@ const sendSpinnerBale = async () => {
                 let subject = 'Spinner Bale Receipt Report ' + new Date().toLocaleDateString('en-GB');
                 let body = get_process_report_body(body_title, emailJob.mail_type === 'Daily' ? 'Day' : 'Week', emails, adminEmail);
                 if (count > 0) {
-                    sendEmail(body, emails, subject, adminEmail, [{ path: path, filename: 'Spinner-bale-report.xlsx' }])
+                    return sendEmail(body, emails, subject, adminEmail, [{ path: path, filename: 'Spinner-bale-report.xlsx' }])
                 }
             }
         }
-    } catch (error) {
+    }  catch (error) {
         console.log(error);
+        return false;
     }
 };
 
-const sendSpinnerYarnSale = async () => {
+export const sendSpinnerYarnSale = async (jobId?: number) => {
     try {
         let template = await EmailTemplate.findOne({ where: { template_name: { [Op.iLike]: 'Spinner Yarn Sales Report' } } })
         if (template) {
             let adminEmail = await User.findAll({ where: { role: 1 }, attributes: ['email'] });
-            const emailJob = await EmailManagement.findOne({ where: { template_id: template.dataValues.id } });
+            const emailJob = await EmailManagement.findOne({ where: { id: jobId } });
             if (emailJob) {
                 let emails = await User.findAll({ where: { id: { [Op.in]: emailJob.dataValues.user_ids } }, attributes: ['email'] });
                 emails = emails.map((obj: any) => obj.email);
@@ -146,21 +151,22 @@ const sendSpinnerYarnSale = async () => {
                 let subject = 'Spinner Yarn Sales Report ' + new Date().toLocaleDateString('en-GB');
                 let body = get_process_report_body(body_title, emailJob.mail_type === 'Daily' ? 'Day' : 'Week', emails, adminEmail);
                 if (count > 0) {
-                    sendEmail(body, emails, subject, adminEmail, [{ path: path, filename: 'Spinner-yarn-sale.xlsx' }])
+                    return  sendEmail(body, emails, subject, adminEmail, [{ path: path, filename: 'Spinner-yarn-sale.xlsx' }])
                 }
             }
         }
-    } catch (error) {
+    }  catch (error) {
         console.log(error);
+        return false;
     }
 };
 
-const sendKnitterYarnReceipt = async () => {
+export const sendKnitterYarnReceipt = async (jobId?: number) => {
     try {
         let template = await EmailTemplate.findOne({ where: { template_name: { [Op.iLike]: 'Knitter Yarn Receipt Report' } } })
         if (template) {
             let adminEmail = await User.findAll({ where: { role: 1 }, attributes: ['email'] });
-            const emailJob = await EmailManagement.findOne({ where: { template_id: template.dataValues.id } });
+            const emailJob = await EmailManagement.findOne({ where: { id: jobId } });
             if (emailJob) {
                 let emails = await User.findAll({ where: { id: { [Op.in]: emailJob.dataValues.user_ids } }, attributes: ['email'] });
                 emails = emails.map((obj: any) => obj.email);
@@ -170,21 +176,22 @@ const sendKnitterYarnReceipt = async () => {
                 let subject = 'Knitter Yarn Receipt Report ' + new Date().toLocaleDateString('en-GB');
                 let body = get_process_report_body(body_title, emailJob.mail_type === 'Daily' ? 'Day' : 'Week', emails, adminEmail);
                 if (count > 0) {
-                    sendEmail(body, emails, subject, adminEmail, [{ path: path, filename: 'knitter-yarn-receipt.xlsx' }])
+                    return sendEmail(body, emails, subject, adminEmail, [{ path: path, filename: 'knitter-yarn-receipt.xlsx' }])
                 }
             }
         }
-    } catch (error) {
+    }  catch (error) {
         console.log(error);
+        return false;
     }
 };
 
-const sendKnitterFabricSale = async () => {
+export const sendKnitterFabricSale = async (jobId?: number) => {
     try {
         let template = await EmailTemplate.findOne({ where: { template_name: { [Op.iLike]: 'Knitter Fabric Sales Report' } } })
         if (template) {
             let adminEmail = await User.findAll({ where: { role: 1 }, attributes: ['email'] });
-            const emailJob = await EmailManagement.findOne({ where: { template_id: template.dataValues.id } });
+            const emailJob = await EmailManagement.findOne({ where: { id: jobId } });
             if (emailJob) {
                 let emails = await User.findAll({ where: { id: { [Op.in]: emailJob.dataValues.user_ids } }, attributes: ['email'] });
                 emails = emails.map((obj: any) => obj.email);
@@ -194,21 +201,22 @@ const sendKnitterFabricSale = async () => {
                 let subject = 'Knitter Fabric Sales Report ' + new Date().toLocaleDateString('en-GB');
                 let body = get_process_report_body(body_title, emailJob.mail_type === 'Daily' ? 'Day' : 'Week', emails, adminEmail);
                 if (count > 0) {
-                    sendEmail(body, emails, subject, adminEmail, [{ path: path, filename: 'knitter-sale.xlsx' }])
+                    return  sendEmail(body, emails, subject, adminEmail, [{ path: path, filename: 'knitter-sale.xlsx' }])
                 }
             }
         }
-    } catch (error) {
+    }  catch (error) {
         console.log(error);
+        return false;
     }
 };
 
-const sendWeaverYarnReceipt = async () => {
+export const sendWeaverYarnReceipt = async (jobId?: number) => {
     try {
         let template = await EmailTemplate.findOne({ where: { template_name: { [Op.iLike]: 'Weaver Yarn Receipt Report' } } })
         if (template) {
             let adminEmail = await User.findAll({ where: { role: 1 }, attributes: ['email'] });
-            const emailJob = await EmailManagement.findOne({ where: { template_id: template.dataValues.id } });
+            const emailJob = await EmailManagement.findOne({ where: { id: jobId } });
             if (emailJob) {
                 let emails = await User.findAll({ where: { id: { [Op.in]: emailJob.dataValues.user_ids } }, attributes: ['email'] });
                 emails = emails.map((obj: any) => obj.email);
@@ -218,21 +226,22 @@ const sendWeaverYarnReceipt = async () => {
                 let subject = 'Weaver Yarn Receipt Report ' + new Date().toLocaleDateString('en-GB');
                 let body = get_process_report_body(body_title, emailJob.mail_type === 'Daily' ? 'Day' : 'Week', emails, adminEmail);
                 if (count > 0) {
-                    sendEmail(body, emails, subject, adminEmail, [{ path: path, filename: 'Weaver-yarn.xlsx' }])
+                    return  sendEmail(body, emails, subject, adminEmail, [{ path: path, filename: 'Weaver-yarn.xlsx' }])
                 }
             }
         }
-    } catch (error) {
+    }  catch (error) {
         console.log(error);
+        return false;
     }
 };
 
-const sendWeaverFabricSale = async () => {
+export const sendWeaverFabricSale = async (jobId?: number) => {
     try {
         let template = await EmailTemplate.findOne({ where: { template_name: { [Op.iLike]: 'Weaver Fabric Sales Report' } } })
         if (template) {
             let adminEmail = await User.findAll({ where: { role: 1 }, attributes: ['email'] });
-            const emailJob = await EmailManagement.findOne({ where: { template_id: template.dataValues.id } });
+            const emailJob = await EmailManagement.findOne({ where: { id: jobId } });
             if (emailJob) {
                 let emails = await User.findAll({ where: { id: { [Op.in]: emailJob.dataValues.user_ids } }, attributes: ['email'] });
                 emails = emails.map((obj: any) => obj.email);
@@ -242,21 +251,22 @@ const sendWeaverFabricSale = async () => {
                 let subject = 'Weaver Fabric Sales Report ' + new Date().toLocaleDateString('en-GB');
                 let body = get_process_report_body(body_title, emailJob.mail_type === 'Daily' ? 'Day' : 'Week', emails, adminEmail);
                 if (count > 0) {
-                    sendEmail(body, emails, subject, adminEmail, [{ path: path, filename: 'Weaver-sale-report.xlsx' }])
+                    return sendEmail(body, emails, subject, adminEmail, [{ path: path, filename: 'Weaver-sale-report.xlsx' }])
                 }
             }
         }
-    } catch (error) {
+    }  catch (error) {
         console.log(error);
+        return false;
     }
 };
 
-const sendGarmentFabric = async () => {
+export const sendGarmentFabric = async (jobId?: number) => {
     try {
         let template = await EmailTemplate.findOne({ where: { template_name: { [Op.iLike]: 'Garment Fabric Receipt Report' } } })
         if (template) {
             let adminEmail = await User.findAll({ where: { role: 1 }, attributes: ['email'] });
-            const emailJob = await EmailManagement.findOne({ where: { template_id: template.dataValues.id } });
+            const emailJob = await EmailManagement.findOne({ where: { id: jobId } });
             if (emailJob) {
                 let emails = await User.findAll({ where: { id: { [Op.in]: emailJob.dataValues.user_ids } }, attributes: ['email'] });
                 emails = emails.map((obj: any) => obj.email);
@@ -266,21 +276,22 @@ const sendGarmentFabric = async () => {
                 let subject = 'Garment Fabric Receipt Report ' + new Date().toLocaleDateString('en-GB');
                 let body = get_process_report_body(body_title, emailJob.mail_type === 'Daily' ? 'Day' : 'Week', emails, adminEmail);
                 if (count > 0) {
-                    sendEmail(body, emails, subject, adminEmail, [{ path: path, filename: 'Garment-fabric-report.xlsx' }])
+                    return  sendEmail(body, emails, subject, adminEmail, [{ path: path, filename: 'Garment-fabric-report.xlsx' }])
                 }
             }
         }
-    } catch (error) {
+    }  catch (error) {
         console.log(error);
+        return false;
     }
 };
 
-const sendGarmentFabricSale = async () => {
+export const sendGarmentFabricSale = async (jobId?: number) => {
     try {
         let template = await EmailTemplate.findOne({ where: { template_name: { [Op.iLike]: 'Garment Fabric Sales Report' } } })
         if (template) {
             let adminEmail = await User.findAll({ where: { role: 1 }, attributes: ['email'] });
-            const emailJob = await EmailManagement.findOne({ where: { template_id: template.dataValues.id } });
+            const emailJob = await EmailManagement.findOne({ where: { id: jobId } });
             if (emailJob) {
                 let emails = await User.findAll({ where: { id: { [Op.in]: emailJob.dataValues.user_ids } }, attributes: ['email'] });
                 emails = emails.map((obj: any) => obj.email);
@@ -290,22 +301,23 @@ const sendGarmentFabricSale = async () => {
                 let subject = 'Garment Fabric Sales Report ' + new Date().toLocaleDateString('en-GB');
                 let body = get_process_report_body(body_title, emailJob.mail_type === 'Daily' ? 'Day' : 'Week', emails, adminEmail);
                 if (count > 0) {
-                    sendEmail(body, emails, subject, adminEmail, [{ path: path, filename: 'Garment-sale-report.xlsx' }])
+                    return sendEmail(body, emails, subject, adminEmail, [{ path: path, filename: 'Garment-sale-report.xlsx' }])
                 }
             }
         }
-    } catch (error) {
+    }  catch (error) {
         console.log(error);
+        return false;
     }
 };
 
-const sendFarmerReport = async () => {
+export const sendFarmerReport = async (jobId?: number) => {
     try {
         let template = await EmailTemplate.findOne({ where: { template_name: { [Op.iLike]: 'Farmer Report' } } });
         console.log(template);
         if (template) {
             let adminEmail = await User.findAll({ where: { role: 1 }, attributes: ['email'] });
-            const emailJob = await EmailManagement.findOne({ where: { template_id: template.dataValues.id } });
+            const emailJob = await EmailManagement.findOne({ where: { id: jobId } });
 
             if (emailJob) {
                 let emails = await User.findAll({ where: { id: { [Op.in]: emailJob.dataValues.user_ids } }, attributes: ['email'] });
@@ -316,21 +328,22 @@ const sendFarmerReport = async () => {
                 let subject = 'Farmer Report ' + new Date().toLocaleDateString('en-GB');
                 let body = get_process_report_body(body_title, emailJob.mail_type === 'Daily' ? 'Day' : 'Week', emails, adminEmail);
                 if (count > 0) {
-                    sendEmail(body, emails, subject, adminEmail, [{ path: path, filename: 'Farmer-report.xlsx' }])
+                    return  sendEmail(body, emails, subject, adminEmail, [{ path: path, filename: 'Farmer-report.xlsx' }])
                 }
             }
         }
-    } catch (error) {
+    }  catch (error) {
         console.log(error);
+        return false;
     }
 };
 
-const sendOrganicFarmerReport = async () => {
+export const sendOrganicFarmerReport = async (jobId?: number) => {
     try {
         let template = await EmailTemplate.findOne({ where: { template_name: { [Op.iLike]: 'Organic Farmer Report' } } });
         if (template) {
             let adminEmail = await User.findAll({ where: { role: 1 }, attributes: ['email'] });
-            const emailJob = await EmailManagement.findOne({ where: { template_id: template.dataValues.id } });
+            const emailJob = await EmailManagement.findOne({ where: { id: jobId } });
 
             if (emailJob) {
                 let emails = await User.findAll({ where: { id: { [Op.in]: emailJob.dataValues.user_ids } }, attributes: ['email'] });
@@ -341,21 +354,22 @@ const sendOrganicFarmerReport = async () => {
                 let subject = 'Organic Farmer Report ' + new Date().toLocaleDateString('en-GB');
                 let body = get_process_report_body(body_title, emailJob.mail_type === 'Daily' ? 'Day' : 'Week', emails, adminEmail);
                 if (count > 0) {
-                    sendEmail(body, emails, subject, adminEmail, [{ path: path, filename: 'Farmer-report.xlsx' }])
+                    return sendEmail(body, emails, subject, adminEmail, [{ path: path, filename: 'Farmer-report.xlsx' }])
                 }
             }
         }
-    } catch (error) {
+    }  catch (error) {
         console.log(error);
+        return false;
     }
 };
 
-const sendProcurementReport = async () => {
+export const sendProcurementReport = async (jobId?: number) => {
     try {
         let template = await EmailTemplate.findOne({ where: { template_name: { [Op.iLike]: 'Procurement Report' } } });
         if (template) {
             let adminEmail = await User.findAll({ where: { role: 1 }, attributes: ['email'] });
-            const emailJob = await EmailManagement.findOne({ where: { template_id: template.dataValues.id } });
+            const emailJob = await EmailManagement.findOne({ where: { id: jobId } });
 
             if (emailJob) {
                 let emails = await User.findAll({ where: { id: { [Op.in]: emailJob.dataValues.user_ids } }, attributes: ['email'] });
@@ -366,40 +380,106 @@ const sendProcurementReport = async () => {
                 let subject = 'Procurement Report ' + new Date().toLocaleDateString('en-GB');
                 let body = get_process_report_body(body_title, emailJob.mail_type === 'Daily' ? 'Day' : 'Week', emails, adminEmail);
                 if (count > 0) {
-                    sendEmail(body, emails, subject, adminEmail, [{ path: path, filename: 'Procurement.xlsx' }])
+                    return sendEmail(body, emails, subject, adminEmail, [{ path: path, filename: 'Procurement.xlsx' }])
                 }
             }
         }
-    } catch (error) {
+    }  catch (error) {
         console.log(error);
+        return false;
     }
 };
 
-const sendIntegrityReport = async () => {
+export const sendIntegrityReport = async (jobId?: number) => {
     try {
-        let template = await EmailTemplate.findOne({ where: { template_name: { [Op.iLike]: 'Procurement Report' } } });
+        let template = await EmailTemplate.findOne({ where: { template_name: { [Op.iLike]: 'Organic Integrity Report' } } });
         if (template) {
             let adminEmail = await User.findAll({ where: { role: 1 }, attributes: ['email'] });
-            const emailJob = await EmailManagement.findOne({ where: { template_id: template.dataValues.id } });
+            const emailJob = await EmailManagement.findOne({ where: { id: jobId } });
             if (emailJob) {
                 let emails = await User.findAll({ where: { id: { [Op.in]: emailJob.dataValues.user_ids } }, attributes: ['email'] });
                 emails = emails.map((obj: any) => obj.email);
                 adminEmail = adminEmail.map((obj: any) => obj.email);
                 let { path, count }: any = await integrityReport(emailJob.brand_ids, emailJob.mail_type, emailJob.program_ids, emailJob.country_ids, new Date());
-                let body_title = 'Procurement ';
-                let subject = 'Procurement Report ' + new Date().toLocaleDateString('en-GB');
+                let body_title = 'Organic Integrity ';
+                let subject = 'Organic Integrity Report ' + new Date().toLocaleDateString('en-GB');
                 let body = get_process_report_body(body_title, emailJob.mail_type === 'Daily' ? 'Day' : 'Week', emails, adminEmail);
                 if (count > 0) {
-                    sendEmail(body, emails, subject, adminEmail, [{ path: path, filename: 'Integrity-report.xlsx' }])
+                    return  sendEmail(body, emails, subject, adminEmail, [{ path: path, filename: 'Integrity-report.xlsx' }])
                 }
             }
         }
     } catch (error) {
         console.log(error);
+        return false;
     }
 };
 
-const send_gin_mail = async () => {
+export const sendGinnerPendingReminder = async (jobId?: number) => {
+    try {
+        const emailJob = await EmailManagement.findOne({ where: { id: jobId }, include: [{
+            model: EmailTemplate,
+            as: "template",
+        }] });
+        let type = emailJob?.dataValues?.template?.template_name;
+
+        const currentDate = moment().utc().startOf('day'); // Get the current UTC date at the start of the day
+        let daysToSub;
+        let success: boolean = true; // Initialize success flag
+        if (type) {
+                if(type === "When Gin Sales are still pending - 5 days reminder"){
+                    daysToSub = 5
+                }else if (type === "When Gin Sales are still pending - 7 days and Before"){
+                    daysToSub = 7
+                }
+
+            const startDate = moment(currentDate).subtract(daysToSub, 'days').startOf('day'); // Get the current UTC date at the start of the day
+            const endDate = moment(startDate).add(1, 'days'); // Get the date for the next day
+
+            let sales = await GinSales.findAll({
+                where: { date: {
+                    [Op.gte]: startDate.toDate(),
+                    [Op.lt]: endDate.toDate(),
+                  },
+                  status: 'To be Submitted' }, include: [
+                    {
+                        model: Ginner,
+                        as: "ginner",
+                    },
+                    {
+                        model: Spinner,
+                        as: "buyerdata",
+                    }
+                ]
+            });
+            if (sales && sales.length > 0) {
+                for await (let row of sales){
+                    let adminEmail = await User.findAll({ where: { role: 1 }, attributes: ['email'] });
+                    if (emailJob) {
+                        let emails = await User.findAll({ where: { id: { [Op.in]: emailJob.dataValues.user_ids } }, attributes: ['email'] });
+                        emails = emails.length > 0 ? emails.map((obj: any) => obj.email) : [];
+                        adminEmail = adminEmail.length > 0 ? adminEmail.map((obj: any) => obj.email) : [];
+                        let toEmail = (row.dataValues.ginner && row.dataValues.ginner.email) ? row.dataValues.ginner.email : adminEmail;
+                        let ccEmails = [...adminEmail,...emails]
+                        let body = get_reminder_email_subject(row.dataValues.ginner.name, new Date(row.dataValues.date).toLocaleDateString('en-GB'), row.dataValues.buyerdata.name, toEmail, ccEmails)
+                        let subject = 'Please complete sales process'
+                        const emailSent: any = await sendEmail(body, row.dataValues.ginner.email ? [row.dataValues.ginner.email] : adminEmail, subject, emails)
+                            // Update success flag based on the result of email sending
+                        success = success && emailSent;
+                    }
+                }
+            }else{
+                success = false;
+            }
+        }
+        return success;
+    } catch (error) {
+        console.log(error);
+        return false;
+    }
+};
+
+export const send_gin_mail = async () => {
     try {
         let template = await EmailTemplate.findOne({ where: { template_name: { [Op.iLike]: 'Whenever gin sales happen' } } });
         if (template) {
@@ -425,7 +505,7 @@ const send_gin_mail = async () => {
                 let subject = 'Please complete sales process'
                 if (sales.dataValues.status === 'To be Submitted') {
                     console.log(sales.dataValues.ginner.email ? [sales.dataValues.ginner.email] : adminEmail)
-                    sendEmail(body, sales.dataValues.ginner.email ? [sales.dataValues.ginner.email] : adminEmail, subject, emails)
+                    return sendEmail(body, sales.dataValues.ginner.email ? [sales.dataValues.ginner.email] : adminEmail, subject, emails);
                 }
             }
         }
@@ -434,7 +514,7 @@ const send_gin_mail = async () => {
     }
 };
 
-const send_spin_mail = async () => {
+export const send_spin_mail = async () => {
     try {
         let template = await EmailTemplate.findOne({ where: { template_name: { [Op.iLike]: 'Whenever spin sales happen' } } });
         if (template) {
@@ -476,7 +556,7 @@ const send_spin_mail = async () => {
     }
 };
 
-const send_weaver_mail = async () => {
+export const send_weaver_mail = async () => {
     try {
         let template = await EmailTemplate.findOne({ where: { template_name: { [Op.iLike]: 'Whenever weaver sales happen' } } });
         if (template) {
@@ -516,7 +596,7 @@ const send_weaver_mail = async () => {
     }
 };
 
-const send_knitter_mail = async () => {
+export const send_knitter_mail = async () => {
     try {
         let template = await EmailTemplate.findOne({ where: { template_name: { [Op.iLike]: 'Whenever knitter sales happen' } } });
         if (template) {
@@ -551,7 +631,7 @@ const send_knitter_mail = async () => {
     }
 };
 
-const send_garment_mail = async () => {
+export const send_garment_mail = async () => {
     try {
         let template = await EmailTemplate.findOne({ where: { template_name: { [Op.iLike]: 'Whenever garment sales happen' } } });
         if (template) {
@@ -585,26 +665,64 @@ const send_garment_mail = async () => {
         console.log(error);
     }
 };
-const processAndSentTicketReminder = async () => {
-    let type = "Ticket Approval reminder Technical team - 7 days"
-    let template = await EmailTemplate.findOne({ where: { template_name: { [Op.iLike]: type } } });
-    if (template) {
-        let ticketEscalation = await TicketTracker.findOne({ where: { id: 4 } });
-        if (ticketEscalation) {
-            let pending = await getPendingTicket(type, ticketEscalation);
 
-            if (pending) {
-                const emailJob = await EmailManagement.findOne({ where: { template_id: template.dataValues.id } });
-                if (emailJob) {
-                    let users = await getUsers(type, emailJob)
-                    console.log(users)
-                    for (let user of users?.userDetails) {
-                        let body = generateEmailTemplate(user.name, ticketEscalation.dataValues.ticket_no, users?.day, [...users?.ccEmails, user.email]);
-                        let email = sendEmail(body, [...users?.ccEmails, user.email], 'Ticketing Reminder')
+export const processAndSentTicketReminder = async (jobId?: number) => {
+    try{
+    const emailJob = await EmailManagement.findOne({ where: { id: jobId }, include: [{
+            model: EmailTemplate,
+            as: "template",
+    }] });
+    let type = emailJob?.dataValues?.template?.template_name;
+    const currentDate = moment().utc().startOf('day'); // Get the current UTC date at the start of the day
+    let daysToSub;
+    let success: boolean = true; // Initialize success flag
+
+    if (type) {
+        if(type === "Ticket Approval reminder Technical team - 7 days"){
+            daysToSub = 7
+        }else if (type === "Ticket Approval reminder Admin/brand - 5 days"){
+            daysToSub = 5
+        }else if(type === "Ticket Approval reminder Technical team - 15 days"){
+            daysToSub = 15
+        }
+        const startDate = moment(currentDate).subtract(daysToSub, 'days').startOf('day'); // Get the current UTC date at the start of the day
+        const endDate = moment(startDate).add(1, 'days'); // Get the date for the next day
+        let ticketEscalation = await TicketTracker.findAll({where: {
+            date: {
+              [Op.gte]: startDate.toDate(),
+              [Op.lt]: endDate.toDate(),
+            }}}); 
+
+        if (ticketEscalation && ticketEscalation.length > 0) {
+            for await (let row of ticketEscalation){
+                let pending = await getPendingTicket(type, row);
+                if (pending) {
+                    if (emailJob) {
+                        let users = await getUsers(type, emailJob);
+                        if(!users){
+                            success = false;
+                            return;
+                        }
+                        console.log(users)
+                        for (let user of users?.userDetails) {
+                            let body = generateEmailTemplate(user.name, row.dataValues.ticket_no, users?.day, [...users?.ccEmails, user.email]);
+                            const emailSent: any = await sendEmail(body, [...users?.ccEmails, user.email], 'Ticketing Reminder');
+
+                            // Update success flag based on the result of email sending
+                            success = success && emailSent;
+                        }
                     }
                 }
             }
+        }else{
+            success = false;
         }
+    }
+    return success;
+    }
+    catch (error) {
+        console.log(error);
+        return false;
     }
 }
 
@@ -1624,7 +1742,7 @@ const garmentFabricReceipt = async (brandId: any, type: any, programId: any, cou
                 as: 'fabric',
             }
         ]
-        let result = await Promise.all([
+        let result: any = await Promise.all([
             WeaverSales.findAll({
                 where: whereCondition,
                 include: [...include, { model: Weaver, as: 'weaver', attributes: ['id', 'name'] }]
