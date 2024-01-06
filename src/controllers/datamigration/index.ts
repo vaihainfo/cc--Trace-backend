@@ -19,7 +19,7 @@ const createGinnerProcessor = async (req: Request, res: Response) => {
         let pass: any = []; 
         let userIds : any = [];
 
-        for await (const ginnerdata of req.body.ginners) {
+        for await (const ginnerdata of req.body.processors) {
             if (!ginnerdata.processorId) {
                 fail.push({
                     success: false,
@@ -62,7 +62,7 @@ const createGinnerProcessor = async (req: Request, res: Response) => {
                         email: ginnerdata.processor_email,
                         gin_type: ginnerdata.gin_type,
                         registration_document: ginnerdata.registrationDocument,
-                        ginnerUser_id: [ginnerdata.registrationDocument]
+                        ginnerUser_id: [ginnerdata.userid]
                     }
                     const ginnerInfo = await Ginner.create(data);
     
