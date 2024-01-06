@@ -6,6 +6,81 @@ import GinSales from "../../models/gin-sales.model";
 import BaleSelection from "../../models/bale-selection.model";
 import GinProcess from "../../models/gin-process.model";
 import CottonSelection from "../../models/cotton-selection.model";
+import { now } from "sequelize/types/utils";
+import Ginner from "../../models/ginner.model";
+
+// Processor Registration for Ginner - Data Migration
+
+const createGinnerProcessor = async (req: Request, res: Response) => {
+
+    try {
+        console.log(req.body);
+        let fail: any = [];
+        let pass: any = []; 
+        let userIds : any = [];
+
+        for await (const ginnerdata of req.body.ginners) {
+            if (!ginnerdata.processorId) {
+                fail.push({
+                    success: false,
+                    message: "Processor Data cannot be empty"
+                });
+            } else {
+                let processtype = await Ginner.findOne({ where: { id: ginnerdata.processId } });
+                if (processtype) {
+                    fail.push({
+                        success: false,
+                        message: "Already this processor is available in db"
+                    });
+                }       
+                else {
+                    const data = {
+                        id : ginnerdata.processorId,
+                        name: ginnerdata.processor_name,
+                        short_name: ginnerdata.short_name,
+                        address: ginnerdata.address,
+                        country_id: ginnerdata.country_id,
+                        state_id: ginnerdata.state_id,
+                        district_id: ginnerdata.district_id,
+                        program_id: ginnerdata.program,
+                        latitude: ginnerdata.latitude,
+                        longitude: ginnerdata.latitude,
+                        website: ginnerdata.website,
+                        contact_person: ginnerdata.contact_person_name,
+                        outturn_range_from: ginnerdata.gin_outrun_range_frm,
+                        outturn_range_to: ginnerdata.gin_outrun_range_to,
+                        bale_weight_from: ginnerdata.bale_weight_range_frm,
+                        bale_weight_to: ginnerdata.bale_weight_range_to,
+                        unit_cert: ginnerdata.unit_certified_for,
+                        company_info: ginnerdata.company_info,
+                        org_logo: ginnerdata.organisation_logo,
+                        org_photo: ginnerdata.organisation_photo,
+                        certs: ginnerdata.certified_other,
+                        brand: [ginnerdata.brand_mapped],
+                        mobile: ginnerdata.mobileno,
+                        landline: ginnerdata.landlineno,
+                        email: ginnerdata.processor_email,
+                        gin_type: ginnerdata.gin_type,
+                        registration_document: ginnerdata.registrationDocument,
+                        ginnerUser_id: [ginnerdata.registrationDocument]
+                    }
+                    const ginnerInfo = await Ginner.create(data);
+    
+                    pass.push({
+                        success: true,
+                        data: ginnerInfo,
+                        message: "Ginner Processor is created"
+                    });
+                }
+            }      
+      
+        }
+        res.sendSuccess(res, { pass, fail });
+    } catch (error) {
+        console.log(error);
+        return res.sendError(res, "ERR_INTERNAL_SERVER_ERROR");
+    }
+}
 
 // Ginner Process section - Data Migration
 
@@ -85,7 +160,7 @@ const uploadGinCottonselection = async (req: Request, res: Response) => {
 
 const uploadGinnerProcess = async (req: Request, res: Response) => {
     try {
-        //console.log(req.body);
+        console.log(req.body);
         let fail: any = [];
         let pass: any = []; 
 
@@ -104,12 +179,16 @@ const uploadGinnerProcess = async (req: Request, res: Response) => {
                         program_id: ginnerdata.programId,
                         season_id: ginnerdata.seasonId,
                         total_qty: ginnerdata.totalQty,
-                        no_of_bales: ginnerdata.noOfBales,
+                        no_of_bales: ginnerdata.noOfbales,
                         gin_out_turn: ginnerdata.got,
                         lot_no: ginnerdata.lotNo,
                         reel_lot_no: ginnerdata.reelLotNno,
                         press_no: ginnerdata.pressNo,
-                        updatedAt: Date.now()
+                        weight: ginnerdata.uniformity,
+                        staple: ginnerdata.staple_length,
+                        mic: ginnerdata.mic,
+                        strength: ginnerdata.strength,
+                        color_grade: ginnerdata.rd_value
                     }, {
                         where: {
                             id: ginnerdata.processId
@@ -129,11 +208,16 @@ const uploadGinnerProcess = async (req: Request, res: Response) => {
                         season_id: ginnerdata.seasonId,
                         date: Date.now(),
                         total_qty: ginnerdata.totalQty,
-                        no_of_bales: ginnerdata.noOfBales,
+                        no_of_bales: ginnerdata.noOfbales,
                         gin_out_turn: ginnerdata.got,
                         lot_no: ginnerdata.lotNo,
                         reel_lot_no: ginnerdata.reelLotNno,
                         press_no: ginnerdata.pressNo,
+                        weight: ginnerdata.uniformity,
+                        staple: ginnerdata.staple_length,
+                        mic: ginnerdata.mic,
+                        strength: ginnerdata.strength,
+                        color_grade: ginnerdata.rd_value
                     };
                     const ginprocess = await GinProcess.create(data);
     
@@ -311,5 +395,6 @@ export {
     uploadGinnerProcess,
     uploadGinCottonselection,
     uploadGinnerSale,
-    uploadBalesSelection
+    uploadBalesSelection,
+    createGinnerProcessor
 }
