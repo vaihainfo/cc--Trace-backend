@@ -21,6 +21,4 @@ router.post('/upload-bale-selection', uploadBalesSelection);
 // Processor Registration
 router.post('/upload-ginner-processor-registration', createGinnerProcessor);
 
-
-
 export default router;  

@@ -129,9 +129,9 @@ const uploadGinBales = async (req: Request, res: Response) => {
        
         
         res.sendSuccess(res, { pass, fail });
-    } catch (error) {
-        console.log(error);
-        return res.sendError(res, "ERR_INTERNAL_SERVER_ERROR");
+    } catch (error: any) {
+        console.error(error);
+        return res.sendError(res, error.message);
     }
 }
 
@@ -161,9 +161,9 @@ const uploadGinCottonselection = async (req: Request, res: Response) => {
 
        
         res.sendSuccess(res, { pass, fail });
-    } catch (error) {
-        console.log(error);
-        return res.sendError(res, "ERR_INTERNAL_SERVER_ERROR");
+    } catch (error: any) {
+        console.error(error);
+        return res.sendError(res, error.message);
     }
 }
 
@@ -250,9 +250,9 @@ const uploadGinnerProcess = async (req: Request, res: Response) => {
       
         }
         res.sendSuccess(res, { pass, fail });
-    } catch (error) {
-        console.log(error);
-        return res.sendError(res, "ERR_INTERNAL_SERVER_ERROR");
+    } catch (error: any) {
+        console.error(error);
+        return res.sendError(res, error.message);
     }
 }
 
@@ -370,9 +370,9 @@ const uploadGinnerSale = async (req: Request, res: Response) => {
       
         }
         res.sendSuccess(res, { pass, fail });
-    } catch (error) {
-        console.log(error);
-        return res.sendError(res, "ERR_INTERNAL_SERVER_ERROR");
+    } catch (error: any) {
+        console.error(error);
+        return res.sendError(res, error.message);
     }
 }
 
@@ -391,9 +391,9 @@ const uploadBalesSelection = async (req: Request, res: Response) => {
         }       
         
         res.sendSuccess(res, { pass, fail });
-    } catch (error) {
-        console.log(error);
-        return res.sendError(res, "ERR_INTERNAL_SERVER_ERROR");
+    } catch (error: any) {
+        console.error(error);
+        return res.sendError(res, error.message);
     }
 }
 
