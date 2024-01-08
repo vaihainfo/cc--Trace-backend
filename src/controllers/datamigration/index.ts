@@ -14,7 +14,7 @@ import Ginner from "../../models/ginner.model";
 const createGinnerProcessor = async (req: Request, res: Response) => {
 
     try {
-        console.log(req.body);
+        //console.log(req.body);
         let fail: any = [];
         let pass: any = []; 
         let userIds : any = [];
@@ -27,14 +27,18 @@ const createGinnerProcessor = async (req: Request, res: Response) => {
                 });
             } else {
                 let processtype = await Ginner.findOne({ where: { id: ginnerdata.processorId } });
+
+                console.log("check",processtype);
                 if (processtype) {
+
+                    console.log("inside fail");
+                    
                     fail.push({
                         success: false,
                         message: "Already this processor is available in db"
                     });
                 }       
                 else {
-
                     
                     const data = {
                         id : ginnerdata.processorId,
@@ -44,7 +48,7 @@ const createGinnerProcessor = async (req: Request, res: Response) => {
                         country_id: ginnerdata.country_id,
                         state_id: ginnerdata.state_id,
                         district_id: ginnerdata.district_id,
-                        program_id: ginnerdata.program,
+                        program_id: [ginnerdata.program],
                         latitude: ginnerdata.latitude,
                         longitude: ginnerdata.latitude,
                         website: ginnerdata.website,
@@ -53,21 +57,22 @@ const createGinnerProcessor = async (req: Request, res: Response) => {
                         outturn_range_to: ginnerdata.gin_outrun_range_to,
                         bale_weight_from: ginnerdata.bale_weight_range_frm,
                         bale_weight_to: ginnerdata.bale_weight_range_to,
-                        unit_cert: ginnerdata.unit_certified_for,
+                        unit_cert: [ginnerdata.unit_certified_for],
                         company_info: ginnerdata.company_info,
                         org_logo: ginnerdata.organisation_logo,
                         org_photo: ginnerdata.organisation_photo,
                         certs: ginnerdata.certified_other,
-                        brand: ginnerdata.brand_mapped,
+                        brand: [ginnerdata.brand_mapped],
                         mobile: ginnerdata.mobileno,
                         landline: ginnerdata.landlineno,
                         email: ginnerdata.processor_email,
                         gin_type: ginnerdata.gin_type,
-                        registration_document: ginnerdata.registrationDocument,
-                        ginnerUser_id: ginnerdata.userid
+                        registration_document: "",
+                        ginnerUser_id: [ginnerdata.userid]
                     }
 
-                    console.log(data);
+                    //console.log(data);
+                    
                     const ginnerInfo = await Ginner.create(data);
     
                     pass.push({
