@@ -278,7 +278,7 @@ const uploadGinnerSale = async (req: Request, res: Response) => {
                         ginner_id: ginnersaledata.ginnerId,
                         program_id: ginnersaledata.programId,
                         season_id: ginnersaledata.seasonId,
-                        date: ginnersaledata.date,
+                        date: Date.now,
                         total_qty: ginnersaledata.totalQty,
                         no_of_bales: ginnersaledata.noOfBales,
                         choosen_bale: ginnersaledata.choosenBale,
