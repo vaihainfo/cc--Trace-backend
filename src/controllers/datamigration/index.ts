@@ -26,7 +26,7 @@ const createGinnerProcessor = async (req: Request, res: Response) => {
                     message: "Processor Data cannot be empty"
                 });
             } else {
-                let processtype = await Ginner.findOne({ where: { id: ginnerdata.processId } });
+                let processtype = await Ginner.findOne({ where: { id: ginnerdata.processorId } });
                 if (processtype) {
                     fail.push({
                         success: false,
@@ -34,6 +34,8 @@ const createGinnerProcessor = async (req: Request, res: Response) => {
                     });
                 }       
                 else {
+
+                    
                     const data = {
                         id : ginnerdata.processorId,
                         name: ginnerdata.processor_name,
@@ -56,14 +58,16 @@ const createGinnerProcessor = async (req: Request, res: Response) => {
                         org_logo: ginnerdata.organisation_logo,
                         org_photo: ginnerdata.organisation_photo,
                         certs: ginnerdata.certified_other,
-                        brand: [ginnerdata.brand_mapped],
+                        brand: ginnerdata.brand_mapped,
                         mobile: ginnerdata.mobileno,
                         landline: ginnerdata.landlineno,
                         email: ginnerdata.processor_email,
                         gin_type: ginnerdata.gin_type,
                         registration_document: ginnerdata.registrationDocument,
-                        ginnerUser_id: [ginnerdata.userid]
+                        ginnerUser_id: ginnerdata.userid
                     }
+
+                    console.log(data);
                     const ginnerInfo = await Ginner.create(data);
     
                     pass.push({
