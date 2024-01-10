@@ -160,9 +160,9 @@ const uploadGinnerOrder = async (req: Request, res: Response) => {
 
         }
         res.sendSuccess(res, { pass, fail });
-    } catch (error) {
-        console.log(error);
-        return res.sendError(res, "ERR_INTERNAL_SERVER_ERROR");
+    } catch (error: any) {
+        console.error(error);
+        return res.sendError(res, error.message);
     }
 }
 
@@ -196,9 +196,9 @@ const uploadStyleMark = async (req: Request, res: Response) => {
             }
         }
         res.sendSuccess(res, { pass, fail });
-    } catch (error) {
-        console.log(error);
-        return res.sendError(res, "ERR_INTERNAL_SERVER_ERROR");
+    } catch (error: any) {
+        console.error(error);
+        return res.sendError(res, error.message);
     }
 }
 
@@ -231,9 +231,9 @@ const uploadGarmentType = async (req: Request, res: Response) => {
             }
         }
         res.sendSuccess(res, { pass, fail });
-    } catch (error) {
-        console.log(error);
-        return res.sendError(res, "ERR_INTERNAL_SERVER_ERROR");
+    } catch (error: any) {
+        console.error(error);
+        return res.sendError(res, error.message);
     }
 }
 
@@ -358,9 +358,9 @@ const uploadGinnerExpectedSeed = async (req: Request, res: Response) => {
             }
         }
         res.sendSuccess(res, { pass, fail });
-    } catch (error) {
-        console.log(error);
-        return res.sendError(res, "ERR_INTERNAL_SERVER_ERROR");
+    } catch (error: any) {
+        console.error(error);
+        return res.sendError(res, error.message);
     }
 }
 
@@ -401,9 +401,9 @@ const uploadVillage = async (req: Request, res: Response) => {
             }
         }
         res.sendSuccess(res, { pass, fail });
-    } catch (error) {
-        console.log(error);
-        return res.sendError(res, "ERR_INTERNAL_SERVER_ERROR");
+    } catch (error: any) {
+        console.error(error);
+        return res.sendError(res, error.message);
     }
 }
 
@@ -757,9 +757,9 @@ const uploadFarmer = async (req: Request, res: Response) => {
             }
         }
         res.sendSuccess(res, { pass, fail });
-    } catch (error) {
-        console.log(error);
-        return res.sendError(res, "ERR_INTERNAL_SERVER_ERROR");
+    } catch (error: any) {
+        console.error(error);
+        return res.sendError(res, error.message);
     }
 }
 
@@ -805,9 +805,9 @@ const uploadProcessorList = async (req: Request, res: Response) => {
             }
         }
         res.sendSuccess(res, { pass, fail });
-    } catch (error) {
-        console.log(error);
-        return res.sendError(res, "ERR_INTERNAL_SERVER_ERROR");
+    } catch (error: any) {
+        console.error(error);
+        return res.sendError(res, error.message);
     }
 }
 
@@ -866,9 +866,9 @@ const uploadProcurementPrice = async (req: Request, res: Response) => {
             }
         }
         res.sendSuccess(res, { pass, fail });
-    } catch (error) {
-        console.log(error);
-        return res.sendError(res, "ERR_INTERNAL_SERVER_ERROR");
+    } catch (error: any) {
+        console.error(error);
+        return res.sendError(res, error.message);
     }
 }
 

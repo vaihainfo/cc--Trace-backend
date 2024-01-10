@@ -85,9 +85,9 @@ const createGinnerProcessor = async (req: Request, res: Response) => {
       
         }
         res.sendSuccess(res, { pass, fail });
-    } catch (error) {
-        console.log(error);
-        return res.sendError(res, "ERR_INTERNAL_SERVER_ERROR");
+    } catch (error: any) {
+        console.error(error);
+        return res.sendError(res, error.message);
     }
 }
 

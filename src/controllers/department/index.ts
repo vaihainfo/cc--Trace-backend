@@ -12,8 +12,9 @@ const createDepartment = async (req: Request, res: Response) => {
         };
         const department = await Department.create(data);
         res.sendSuccess(res, department);
-    } catch (error) {
-        return res.sendError(res, "ERR_INTERNAL_SERVER_ERROR");
+    } catch (error: any) {
+        console.error(error);
+        return res.sendError(res, error.message);
     }
 }
 
@@ -32,8 +33,9 @@ const createDepartments = async (req: Request, res: Response) => {
             }
         }
         res.sendSuccess(res, { pass, fail });
-    } catch (error) {
-        return res.sendError(res, "ERR_INTERNAL_SERVER_ERROR");
+    } catch (error: any) {
+        console.error(error);
+        return res.sendError(res, error.message);
     }
 }
 
@@ -74,8 +76,9 @@ const fetchDepartmentPagination = async (req: Request, res: Response) => {
             return res.sendSuccess(res, department);
         }
 
-    } catch (error) {
-        return res.sendError(res, "ERR_INTERNAL_SERVER_ERROR");
+    } catch (error: any) {
+        console.error(error);
+        return res.sendError(res, error.message);
     }
 }
 

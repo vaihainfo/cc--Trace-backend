@@ -9,9 +9,10 @@ const createUserCategory = async (req: Request, res: Response) => {
         };
         const category = await UserCategory.create(data);
         res.sendSuccess(res, category);
-    } catch (error) {
-        return res.sendError(res, "ERR_NOT_ABLE_TO_CREATE_CATEGORY");
-    }
+    } catch (error: any) {
+      console.error(error);
+      return res.sendError(res, error.message);
+  }
 }
 
 const getUserCategories = async (req: Request, res: Response) => {
@@ -31,10 +32,10 @@ const getUserCategories = async (req: Request, res: Response) => {
             whereCondition
         );
           return res.sendSuccess(res,  categories );
-      } catch (error) {
-        console.log(error)
-        return res.sendError(res, "ERR_NOT_ABLE_TO_GET_CATEGORY");
-      }
+      } catch (error: any) {
+        console.error(error);
+        return res.sendError(res, error.message);
+    }
 }
 
 

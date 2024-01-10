@@ -27,8 +27,9 @@ const forgotPassword = async (req: Request, res: Response) => {
 
         sendForgotEmail(link, user.email);
         return res.send({ success: true, message: 'Forgot password email has been send' });
-    } catch (error) {
-        return res.sendError(res, "ERR_INTERNAL_SERVER_ERROR");
+    } catch (error: any) {
+        console.error(error);
+        return res.sendError(res, error.message);
     }
 };
 
@@ -47,8 +48,9 @@ const resetPassword = async (req: Request, res: Response) => {
             }
         });
         return res.send({ status: true, message: 'Password changed successfully' });
-    } catch (error) {
-        return res.sendError(res, "ERR_INTERNAL_SERVER_ERROR");
+    } catch (error: any) {
+        console.error(error);
+        return res.sendError(res, error.message);
     }
 
 };

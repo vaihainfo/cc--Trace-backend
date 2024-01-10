@@ -14,8 +14,9 @@ const createDevice = async (req: Request, res: Response) => {
         };
         const device = await Device.create(data);
         res.sendSuccess(res, device);
-    } catch (error) {
-        return res.sendError(res, "ERR_INTERNAL_SERVER_ERROR");
+    } catch (error: any) {
+        console.error(error);
+        return res.sendError(res, error.message);
     }
 }
 
@@ -56,9 +57,9 @@ const fetchDevicePagination = async (req: Request, res: Response) => {
             });
             return res.sendSuccess(res, data);
         }
-    } catch (error) {
+    } catch (error: any) {
         console.error(error);
-        return res.sendError(res, "ERR_INTERNAL_SERVER_ERROR");
+        return res.sendError(res, error.message);
     }
 }
 

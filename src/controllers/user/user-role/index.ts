@@ -51,8 +51,8 @@ const createUserRole = async (req: Request, res: Response) => {
             res.sendSuccess(res, { role, privileges });
         }
     } catch (error: any) {
-        console.log(error)
-        return res.sendError(res, "ERR_NOT_ABLE_TO_CREATE_ROLE");
+        console.error(error);
+        return res.sendError(res, error.message);
     }
 }
 
@@ -69,9 +69,9 @@ const checkRoleExists = async (req: Request, res: Response) => {
 
         return res.sendSuccess(res, role ? { exist: true } : { exist: false })
 
-    } catch (error) {
-        console.log(error)
-        return res.sendError(res, "ERR_NOT_ABLE_TO_CHECk_ROLE");
+    } catch (error: any) {
+        console.error(error);
+        return res.sendError(res, error.message);
     }
 }
 
@@ -120,9 +120,9 @@ const getUserRoles = async (req: Request, res: Response) => {
             const userrole = await UserRole.findAll(queryOptions);
             return res.sendSuccess(res, userrole, 200);
         }
-    } catch (error) {
-        console.log(error)
-        return res.sendError(res, "ERR_NOT_ABLE_TO_GET_ROLES");
+    } catch (error: any) {
+        console.error(error);
+        return res.sendError(res, error.message);
     }
 }
 
@@ -162,9 +162,9 @@ const getUserRole = async (req: Request, res: Response) => {
             ],
         });
         return res.sendSuccess(res, { role, menuList, privileges });
-    } catch (error) {
-        console.log(error)
-        return res.sendError(res, "ERR_NOT_ABLE_TO_GET_ROLE");
+    } catch (error: any) {
+        console.error(error);
+        return res.sendError(res, error.message);
     }
 }
 
@@ -230,9 +230,9 @@ const updateUserRole = async (req: Request, res: Response) => {
         }
 
         return res.sendSuccess(res, rowsUpdated);
-    } catch (error) {
-        console.log(error)
-        return res.sendError(res, "ERR_ROLE_NOT_UPDATED");
+    } catch (error: any) {
+        console.error(error);
+        return res.sendError(res, error.message);
     }
 }
 

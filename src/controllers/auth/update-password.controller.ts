@@ -21,8 +21,9 @@ const updatePassword = async (req: Request, res: Response) => {
         });
         return res.send({ status: true, message: 'Password changed successfully' });
     }
-    } catch (error) {
-        return res.sendError(res, "ERR_INTERNAL_SERVER_ERROR");
+    } catch (error: any) {
+        console.error(error);
+        return res.sendError(res, error.message);
     }
 
 };
