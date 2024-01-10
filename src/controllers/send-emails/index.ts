@@ -44,15 +44,20 @@ export const sendGinnerBaleProcess = async (jobId?: number) => {
         if (template) {
             let adminEmail = await User.findAll({ where: { role: 1 }, attributes: ['email'] });
             const emailJob = await EmailManagement.findOne({ where: { id: jobId } });
+            const currentDate = moment();
             if (emailJob) {
                 let emails = await User.findAll({ where: { id: { [Op.in]: emailJob.dataValues.user_ids } }, attributes: ['email'] });
                 emails = emails.map((obj: any) => obj.email);
                 adminEmail = adminEmail.map((obj: any) => obj.email)
-                let { path, count }: any = await bale_process_report(emailJob.brand_ids, emailJob.mail_type, emailJob.program_ids, emailJob.country_ids, new Date());
+                let { path, count }: any = await bale_process_report(emailJob.brand_ids, emailJob.mail_type, emailJob.program_ids, emailJob.country_ids, currentDate);
                 let body_title = 'Ginner Bale';
                 let subject = 'Ginner Bale Process Report ' + new Date().toLocaleDateString('en-GB');
                 let body = get_process_report_body(body_title, emailJob.mail_type === 'Daily' ? 'Day' : 'Week', emails, adminEmail);
-               return sendEmail(body, emails, subject, adminEmail, [{ path: path, filename: 'gin-bale-process.xlsx' }])
+                if (count > 0) {
+                    return sendEmail(body, emails, subject, adminEmail, [{ path: path, filename: 'gin-bale-process.xlsx' }])
+                }else{
+                    return false;
+                }
             }
         }
     }  catch (error) {
@@ -67,16 +72,19 @@ export const sendGinnerPendingSales = async (jobId?: number) => {
         if (template) {
             let adminEmail = await User.findAll({ where: { role: 1 }, attributes: ['email'] });
             const emailJob = await EmailManagement.findOne({ where: { id: jobId } });
+            const currentDate = moment();
             if (emailJob) {
                 let emails = await User.findAll({ where: { id: { [Op.in]: emailJob.dataValues.user_ids } }, attributes: ['email'] });
                 emails = emails.map((obj: any) => obj.email);
                 adminEmail = adminEmail.map((obj: any) => obj.email)
-                let { path, count }: any = await pendingGinnerSales(emailJob.brand_ids, emailJob.mail_type, emailJob.program_ids, emailJob.country_ids, new Date());
+                let { path, count }: any = await pendingGinnerSales(emailJob.brand_ids, emailJob.mail_type, emailJob.program_ids, emailJob.country_ids, currentDate);
                 let body_title = 'Ginner Pending Sales';
                 let subject = 'Ginner Pending Sales Report ' + new Date().toLocaleDateString('en-GB');
                 let body = get_process_report_body(body_title, emailJob.mail_type === 'Daily' ? 'Day' : 'Week', emails, adminEmail);
                 if (count > 0) {
                     return sendEmail(body, emails, subject, adminEmail, [{ path: path, filename: 'Ginner-pending-sales-report.xlsx' }])
+                }else{
+                    return false;
                 }
             }
         }
@@ -92,16 +100,19 @@ export const sendGinnerSales = async (jobId?: number) => {
         if (template) {
             let adminEmail = await User.findAll({ where: { role: 1 }, attributes: ['email'] });
             const emailJob = await EmailManagement.findOne({ where: { id: jobId } });
+            const currentDate = moment();
             if (emailJob) {
                 let emails = await User.findAll({ where: { id: { [Op.in]: emailJob.dataValues.user_ids } }, attributes: ['email'] });
                 emails = emails.map((obj: any) => obj.email);
                 adminEmail = adminEmail.map((obj: any) => obj.email)
-                let { path, count }: any = await ginnerSales(emailJob.brand_ids, emailJob.mail_type, emailJob.program_ids, emailJob.country_ids, new Date());
+                let { path, count }: any = await ginnerSales(emailJob.brand_ids, emailJob.mail_type, emailJob.program_ids, emailJob.country_ids, currentDate);
                 let body_title = 'Ginner Sales ';
                 let subject = 'Ginner Sales Report ' + new Date().toLocaleDateString('en-GB');
                 let body = get_process_report_body(body_title, emailJob.mail_type === 'Daily' ? 'Day' : 'Week', emails, adminEmail);
                 if (count > 0) {
                     return  sendEmail(body, emails, subject, adminEmail, [{ path: path, filename: 'Ginner-sales-report.xlsx' }])
+                }else{
+                    return false;
                 }
             }
         }
@@ -117,16 +128,19 @@ export const sendSpinnerBale = async (jobId?: number) => {
         if (template) {
             let adminEmail = await User.findAll({ where: { role: 1 }, attributes: ['email'] });
             const emailJob = await EmailManagement.findOne({ where: { id: jobId } });
+            const currentDate = moment();
             if (emailJob) {
                 let emails = await User.findAll({ where: { id: { [Op.in]: emailJob.dataValues.user_ids } }, attributes: ['email'] });
                 emails = emails.map((obj: any) => obj.email);
                 adminEmail = adminEmail.map((obj: any) => obj.email)
-                let { path, count }: any = await spinnerBale(emailJob.brand_ids, emailJob.mail_type, emailJob.program_ids, emailJob.country_ids, new Date());
+                let { path, count }: any = await spinnerBale(emailJob.brand_ids, emailJob.mail_type, emailJob.program_ids, emailJob.country_ids, currentDate);
                 let body_title = 'Spinner Bale ';
                 let subject = 'Spinner Bale Receipt Report ' + new Date().toLocaleDateString('en-GB');
                 let body = get_process_report_body(body_title, emailJob.mail_type === 'Daily' ? 'Day' : 'Week', emails, adminEmail);
                 if (count > 0) {
                     return sendEmail(body, emails, subject, adminEmail, [{ path: path, filename: 'Spinner-bale-report.xlsx' }])
+                }else{
+                    return false;
                 }
             }
         }
@@ -142,16 +156,19 @@ export const sendSpinnerYarnSale = async (jobId?: number) => {
         if (template) {
             let adminEmail = await User.findAll({ where: { role: 1 }, attributes: ['email'] });
             const emailJob = await EmailManagement.findOne({ where: { id: jobId } });
+            const currentDate = moment();
             if (emailJob) {
                 let emails = await User.findAll({ where: { id: { [Op.in]: emailJob.dataValues.user_ids } }, attributes: ['email'] });
                 emails = emails.map((obj: any) => obj.email);
                 adminEmail = adminEmail.map((obj: any) => obj.email)
-                let { path, count }: any = await spinnerYarnSale(emailJob.brand_ids, emailJob.mail_type, emailJob.program_ids, emailJob.country_ids, new Date());
+                let { path, count }: any = await spinnerYarnSale(emailJob.brand_ids, emailJob.mail_type, emailJob.program_ids, emailJob.country_ids, currentDate);
                 let body_title = 'Spinner Yarn Sales ';
                 let subject = 'Spinner Yarn Sales Report ' + new Date().toLocaleDateString('en-GB');
                 let body = get_process_report_body(body_title, emailJob.mail_type === 'Daily' ? 'Day' : 'Week', emails, adminEmail);
                 if (count > 0) {
                     return  sendEmail(body, emails, subject, adminEmail, [{ path: path, filename: 'Spinner-yarn-sale.xlsx' }])
+                }else{
+                    return false;
                 }
             }
         }
@@ -167,16 +184,19 @@ export const sendKnitterYarnReceipt = async (jobId?: number) => {
         if (template) {
             let adminEmail = await User.findAll({ where: { role: 1 }, attributes: ['email'] });
             const emailJob = await EmailManagement.findOne({ where: { id: jobId } });
+            const currentDate = moment();
             if (emailJob) {
                 let emails = await User.findAll({ where: { id: { [Op.in]: emailJob.dataValues.user_ids } }, attributes: ['email'] });
                 emails = emails.map((obj: any) => obj.email);
                 adminEmail = adminEmail.map((obj: any) => obj.email)
-                let { path, count }: any = await knitterYarnReceipt(emailJob.brand_ids, emailJob.mail_type, emailJob.program_ids, emailJob.country_ids, new Date());
+                let { path, count }: any = await knitterYarnReceipt(emailJob.brand_ids, emailJob.mail_type, emailJob.program_ids, emailJob.country_ids, currentDate);
                 let body_title = 'Knitter Yarn Receipt ';
                 let subject = 'Knitter Yarn Receipt Report ' + new Date().toLocaleDateString('en-GB');
                 let body = get_process_report_body(body_title, emailJob.mail_type === 'Daily' ? 'Day' : 'Week', emails, adminEmail);
                 if (count > 0) {
                     return sendEmail(body, emails, subject, adminEmail, [{ path: path, filename: 'knitter-yarn-receipt.xlsx' }])
+                }else{
+                    return false;
                 }
             }
         }
@@ -192,16 +212,19 @@ export const sendKnitterFabricSale = async (jobId?: number) => {
         if (template) {
             let adminEmail = await User.findAll({ where: { role: 1 }, attributes: ['email'] });
             const emailJob = await EmailManagement.findOne({ where: { id: jobId } });
+            const currentDate = moment();
             if (emailJob) {
                 let emails = await User.findAll({ where: { id: { [Op.in]: emailJob.dataValues.user_ids } }, attributes: ['email'] });
                 emails = emails.map((obj: any) => obj.email);
                 adminEmail = adminEmail.map((obj: any) => obj.email)
-                let { path, count }: any = await knitterFabricSale(emailJob.brand_ids, emailJob.mail_type, emailJob.program_ids, emailJob.country_ids, new Date());
+                let { path, count }: any = await knitterFabricSale(emailJob.brand_ids, emailJob.mail_type, emailJob.program_ids, emailJob.country_ids, currentDate);
                 let body_title = 'Knitter Fabric Sales ';
                 let subject = 'Knitter Fabric Sales Report ' + new Date().toLocaleDateString('en-GB');
                 let body = get_process_report_body(body_title, emailJob.mail_type === 'Daily' ? 'Day' : 'Week', emails, adminEmail);
                 if (count > 0) {
                     return  sendEmail(body, emails, subject, adminEmail, [{ path: path, filename: 'knitter-sale.xlsx' }])
+                }else{
+                    return false;
                 }
             }
         }
@@ -217,16 +240,19 @@ export const sendWeaverYarnReceipt = async (jobId?: number) => {
         if (template) {
             let adminEmail = await User.findAll({ where: { role: 1 }, attributes: ['email'] });
             const emailJob = await EmailManagement.findOne({ where: { id: jobId } });
+            const currentDate = moment();
             if (emailJob) {
                 let emails = await User.findAll({ where: { id: { [Op.in]: emailJob.dataValues.user_ids } }, attributes: ['email'] });
                 emails = emails.map((obj: any) => obj.email);
                 adminEmail = adminEmail.map((obj: any) => obj.email)
-                let { path, count }: any = await weaverYarnReceipt(emailJob.brand_ids, emailJob.mail_type, emailJob.program_ids, emailJob.country_ids, new Date());
+                let { path, count }: any = await weaverYarnReceipt(emailJob.brand_ids, emailJob.mail_type, emailJob.program_ids, emailJob.country_ids, currentDate);
                 let body_title = 'Weaver Yarn ';
                 let subject = 'Weaver Yarn Receipt Report ' + new Date().toLocaleDateString('en-GB');
                 let body = get_process_report_body(body_title, emailJob.mail_type === 'Daily' ? 'Day' : 'Week', emails, adminEmail);
                 if (count > 0) {
                     return  sendEmail(body, emails, subject, adminEmail, [{ path: path, filename: 'Weaver-yarn.xlsx' }])
+                }else{
+                    return false;
                 }
             }
         }
@@ -242,16 +268,19 @@ export const sendWeaverFabricSale = async (jobId?: number) => {
         if (template) {
             let adminEmail = await User.findAll({ where: { role: 1 }, attributes: ['email'] });
             const emailJob = await EmailManagement.findOne({ where: { id: jobId } });
+            const currentDate = moment();
             if (emailJob) {
                 let emails = await User.findAll({ where: { id: { [Op.in]: emailJob.dataValues.user_ids } }, attributes: ['email'] });
                 emails = emails.map((obj: any) => obj.email);
                 adminEmail = adminEmail.map((obj: any) => obj.email)
-                let { path, count }: any = await weaverSale(emailJob.brand_ids, emailJob.mail_type, emailJob.program_ids, emailJob.country_ids, new Date());
+                let { path, count }: any = await weaverSale(emailJob.brand_ids, emailJob.mail_type, emailJob.program_ids, emailJob.country_ids, currentDate);
                 let body_title = 'Weaver Fabric Sales ';
                 let subject = 'Weaver Fabric Sales Report ' + new Date().toLocaleDateString('en-GB');
                 let body = get_process_report_body(body_title, emailJob.mail_type === 'Daily' ? 'Day' : 'Week', emails, adminEmail);
                 if (count > 0) {
                     return sendEmail(body, emails, subject, adminEmail, [{ path: path, filename: 'Weaver-sale-report.xlsx' }])
+                }else{
+                    return false;
                 }
             }
         }
@@ -267,16 +296,19 @@ export const sendGarmentFabric = async (jobId?: number) => {
         if (template) {
             let adminEmail = await User.findAll({ where: { role: 1 }, attributes: ['email'] });
             const emailJob = await EmailManagement.findOne({ where: { id: jobId } });
+            const currentDate = moment();
             if (emailJob) {
                 let emails = await User.findAll({ where: { id: { [Op.in]: emailJob.dataValues.user_ids } }, attributes: ['email'] });
                 emails = emails.map((obj: any) => obj.email);
                 adminEmail = adminEmail.map((obj: any) => obj.email)
-                let { path, count }: any = await garmentFabricReceipt(emailJob.brand_ids, emailJob.mail_type, emailJob.program_ids, emailJob.country_ids, new Date());
+                let { path, count }: any = await garmentFabricReceipt(emailJob.brand_ids, emailJob.mail_type, emailJob.program_ids, emailJob.country_ids, currentDate);
                 let body_title = 'Garment Fabric Receipt ';
                 let subject = 'Garment Fabric Receipt Report ' + new Date().toLocaleDateString('en-GB');
                 let body = get_process_report_body(body_title, emailJob.mail_type === 'Daily' ? 'Day' : 'Week', emails, adminEmail);
                 if (count > 0) {
                     return  sendEmail(body, emails, subject, adminEmail, [{ path: path, filename: 'Garment-fabric-report.xlsx' }])
+                }else{
+                    return false;
                 }
             }
         }
@@ -292,16 +324,19 @@ export const sendGarmentFabricSale = async (jobId?: number) => {
         if (template) {
             let adminEmail = await User.findAll({ where: { role: 1 }, attributes: ['email'] });
             const emailJob = await EmailManagement.findOne({ where: { id: jobId } });
+            const currentDate = moment();
             if (emailJob) {
                 let emails = await User.findAll({ where: { id: { [Op.in]: emailJob.dataValues.user_ids } }, attributes: ['email'] });
                 emails = emails.map((obj: any) => obj.email);
                 adminEmail = adminEmail.map((obj: any) => obj.email)
-                let { path, count }: any = await exportGarmentSales(emailJob.brand_ids, emailJob.mail_type, emailJob.program_ids, emailJob.country_ids, new Date());
+                let { path, count }: any = await exportGarmentSales(emailJob.brand_ids, emailJob.mail_type, emailJob.program_ids, emailJob.country_ids, currentDate);
                 let body_title = 'Garment Fabric Sales ';
                 let subject = 'Garment Fabric Sales Report ' + new Date().toLocaleDateString('en-GB');
                 let body = get_process_report_body(body_title, emailJob.mail_type === 'Daily' ? 'Day' : 'Week', emails, adminEmail);
                 if (count > 0) {
                     return sendEmail(body, emails, subject, adminEmail, [{ path: path, filename: 'Garment-sale-report.xlsx' }])
+                }else{
+                    return false;
                 }
             }
         }
@@ -314,7 +349,6 @@ export const sendGarmentFabricSale = async (jobId?: number) => {
 export const sendFarmerReport = async (jobId?: number) => {
     try {
         let template = await EmailTemplate.findOne({ where: { template_name: { [Op.iLike]: 'Farmer Report' } } });
-        console.log(template);
         if (template) {
             let adminEmail = await User.findAll({ where: { role: 1 }, attributes: ['email'] });
             const emailJob = await EmailManagement.findOne({ where: { id: jobId } });
@@ -329,6 +363,8 @@ export const sendFarmerReport = async (jobId?: number) => {
                 let body = get_process_report_body(body_title, emailJob.mail_type === 'Daily' ? 'Day' : 'Week', emails, adminEmail);
                 if (count > 0) {
                     return  sendEmail(body, emails, subject, adminEmail, [{ path: path, filename: 'Farmer-report.xlsx' }])
+                }else{
+                    return false;
                 }
             }
         }
@@ -355,6 +391,8 @@ export const sendOrganicFarmerReport = async (jobId?: number) => {
                 let body = get_process_report_body(body_title, emailJob.mail_type === 'Daily' ? 'Day' : 'Week', emails, adminEmail);
                 if (count > 0) {
                     return sendEmail(body, emails, subject, adminEmail, [{ path: path, filename: 'Farmer-report.xlsx' }])
+                }else{
+                    return false;
                 }
             }
         }
@@ -370,17 +408,20 @@ export const sendProcurementReport = async (jobId?: number) => {
         if (template) {
             let adminEmail = await User.findAll({ where: { role: 1 }, attributes: ['email'] });
             const emailJob = await EmailManagement.findOne({ where: { id: jobId } });
+            const currentDate = moment();
 
             if (emailJob) {
                 let emails = await User.findAll({ where: { id: { [Op.in]: emailJob.dataValues.user_ids } }, attributes: ['email'] });
                 emails = emails.map((obj: any) => obj.email);
                 adminEmail = adminEmail.map((obj: any) => obj.email)
-                let { path, count }: any = await procurementReport(emailJob.brand_ids, emailJob.mail_type, emailJob.program_ids, emailJob.country_ids, new Date());
+                let { path, count }: any = await procurementReport(emailJob.brand_ids, emailJob.mail_type, emailJob.program_ids, emailJob.country_ids, currentDate);
                 let body_title = 'Procurement ';
                 let subject = 'Procurement Report ' + new Date().toLocaleDateString('en-GB');
                 let body = get_process_report_body(body_title, emailJob.mail_type === 'Daily' ? 'Day' : 'Week', emails, adminEmail);
                 if (count > 0) {
                     return sendEmail(body, emails, subject, adminEmail, [{ path: path, filename: 'Procurement.xlsx' }])
+                }else{
+                    return false;
                 }
             }
         }
@@ -396,16 +437,19 @@ export const sendIntegrityReport = async (jobId?: number) => {
         if (template) {
             let adminEmail = await User.findAll({ where: { role: 1 }, attributes: ['email'] });
             const emailJob = await EmailManagement.findOne({ where: { id: jobId } });
+            const currentDate = moment();
             if (emailJob) {
                 let emails = await User.findAll({ where: { id: { [Op.in]: emailJob.dataValues.user_ids } }, attributes: ['email'] });
                 emails = emails.map((obj: any) => obj.email);
                 adminEmail = adminEmail.map((obj: any) => obj.email);
-                let { path, count }: any = await integrityReport(emailJob.brand_ids, emailJob.mail_type, emailJob.program_ids, emailJob.country_ids, new Date());
+                let { path, count }: any = await integrityReport(emailJob.brand_ids, emailJob.mail_type, emailJob.program_ids, emailJob.country_ids, currentDate);
                 let body_title = 'Organic Integrity ';
                 let subject = 'Organic Integrity Report ' + new Date().toLocaleDateString('en-GB');
                 let body = get_process_report_body(body_title, emailJob.mail_type === 'Daily' ? 'Day' : 'Week', emails, adminEmail);
                 if (count > 0) {
                     return  sendEmail(body, emails, subject, adminEmail, [{ path: path, filename: 'Integrity-report.xlsx' }])
+                }else{
+                    return false;
                 }
             }
         }
@@ -459,11 +503,11 @@ export const sendGinnerPendingReminder = async (jobId?: number) => {
                         let emails = await User.findAll({ where: { id: { [Op.in]: emailJob.dataValues.user_ids } }, attributes: ['email'] });
                         emails = emails.length > 0 ? emails.map((obj: any) => obj.email) : [];
                         adminEmail = adminEmail.length > 0 ? adminEmail.map((obj: any) => obj.email) : [];
-                        let toEmail = (row.dataValues.ginner && row.dataValues.ginner.email) ? row.dataValues.ginner.email : adminEmail;
+                        let toEmail = (row.dataValues.ginner && row.dataValues.ginner.email) ? [row.dataValues.ginner.email] : adminEmail;
                         let ccEmails = [...adminEmail,...emails]
                         let body = get_reminder_email_subject(row.dataValues.ginner.name, new Date(row.dataValues.date).toLocaleDateString('en-GB'), row.dataValues.buyerdata.name, toEmail, ccEmails)
                         let subject = 'Please complete sales process'
-                        const emailSent: any = await sendEmail(body, row.dataValues.ginner.email ? [row.dataValues.ginner.email] : adminEmail, subject, emails)
+                        const emailSent: any = await sendEmail(body, row.dataValues.ginner.email ? [row.dataValues.ginner.email] : adminEmail, subject, ccEmails)
                             // Update success flag based on the result of email sending
                         success = success && emailSent;
                     }
@@ -479,12 +523,12 @@ export const sendGinnerPendingReminder = async (jobId?: number) => {
     }
 };
 
-export const send_gin_mail = async () => {
+export const send_gin_mail = async (salesId: number) => {
     try {
         let template = await EmailTemplate.findOne({ where: { template_name: { [Op.iLike]: 'Whenever gin sales happen' } } });
         if (template) {
             let sales = await GinSales.findOne({
-                where: { id: 3 }, include: [
+                where: { id: salesId, status: 'Pending for QR scanning' }, include: [
                     {
                         model: Ginner,
                         as: "ginner",
@@ -495,31 +539,32 @@ export const send_gin_mail = async () => {
                     }
                 ]
             });
+            let buyer = sales?.dataValues?.buyerdata;
             let adminEmail = await User.findAll({ where: { role: 1 }, attributes: ['email'] });
-            const emailJob = await is_email_job_available(template.dataValues.id, sales.dataValues.ginner.brand, [sales.dataValues.ginner.country_id], sales.dataValues.ginner.program_id);
+            const emailJob = await is_email_job_available(template.dataValues.id, buyer?.brand, [buyer?.country_id], buyer?.program_id);
             if (emailJob) {
-                let emails = await User.findAll({ where: { id: { [Op.in]: emailJob.dataValues.user_ids } }, attributes: ['email'] });
+                let emails = await User.findAll({ where: { id: { [Op.in]: emailJob.dataValues?.user_ids } }, attributes: ['email'] });
                 emails = emails.map((obj: any) => obj.email);
                 adminEmail = adminEmail.map((obj: any) => obj.email);
-                let body = get_reminder_email_subject(sales.dataValues.ginner.name, new Date(sales.dataValues.date).toLocaleDateString('en-GB'), sales.dataValues.buyerdata.name, adminEmail, emails)
-                let subject = 'Please complete sales process'
-                if (sales.dataValues.status === 'To be Submitted') {
-                    console.log(sales.dataValues.ginner.email ? [sales.dataValues.ginner.email] : adminEmail)
-                    return sendEmail(body, sales.dataValues.ginner.email ? [sales.dataValues.ginner.email] : adminEmail, subject, emails);
-                }
+                let to = buyer.email ? [buyer.email] : adminEmail
+                let ccEmails = [...adminEmail,...emails];
+                let body = get_init_email_subject(buyer?.name, sales?.dataValues?.ginner?.name, sales?.dataValues?.total_qty, 'lint', sales?.dataValues?.invoice_no, to, ccEmails)
+                let subject = 'Acknowledge incoming transaction'
+                return sendEmail(body, to, subject, ccEmails);
             }
         }
     } catch (error) {
         console.log(error);
+        return false;
     }
 };
 
-export const send_spin_mail = async () => {
+export const send_spin_mail = async (salesId: number) => {
     try {
         let template = await EmailTemplate.findOne({ where: { template_name: { [Op.iLike]: 'Whenever spin sales happen' } } });
         if (template) {
             let sales = await SpinSales.findOne({
-                where: { id: 1, status: 'Pending for QR scanning' }, include: [
+                where: { id: salesId, status: 'Pending for QR scanning' }, include: [
                     {
                         model: Spinner,
                         as: "spinner",
@@ -542,33 +587,31 @@ export const send_spin_mail = async () => {
             let adminEmail = await User.findAll({ where: { role: 1 }, attributes: ['email'] });
             const emailJob = await is_email_job_available(template.dataValues.id, buyer.brand, [buyer.country_id], buyer.program_id);
             if (emailJob) {
-                let emails = await User.findAll({ where: { id: { [Op.in]: emailJob.dataValues.user_ids } }, attributes: ['email'] });
+                let emails = await User.findAll({ where: { id: { [Op.in]: emailJob.dataValues?.user_ids } }, attributes: ['email'] });
                 emails = emails.map((obj: any) => obj.email);
                 adminEmail = adminEmail.map((obj: any) => obj.email);
-                let to = buyer.email ? [buyer.email] : adminEmail
-                let body = get_init_email_subject(buyer.name, sales.dataValues.spinner.name, sales.dataValues.total_qty, 'yarn', sales.dataValues.invoice_no, to, emails)
+                let to = buyer.email ? [buyer.email] : adminEmail;
+                let ccEmails = [...adminEmail,...emails];
+                let body = get_init_email_subject(buyer?.name, sales?.dataValues?.spinner.name, sales?.dataValues?.total_qty, 'yarn', sales?.dataValues?.invoice_no, to, ccEmails)
                 let subject = 'Acknowledge incoming transaction'
-                sendEmail(body, to, subject, emails)
+                return sendEmail(body, to, subject, ccEmails)
             }
         }
     } catch (error) {
         console.log(error);
+        return false;
     }
 };
 
-export const send_weaver_mail = async () => {
+export const send_weaver_mail = async (salesId: number) => {
     try {
         let template = await EmailTemplate.findOne({ where: { template_name: { [Op.iLike]: 'Whenever weaver sales happen' } } });
         if (template) {
             let sales = await WeaverSales.findOne({
-                where: { id: 3, status: 'Pending for QR scanning' }, include: [
+                where: { id: salesId, status: 'Pending for QR scanning' }, include: [
                     {
                         model: Weaver,
                         as: "weaver"
-                    },
-                    {
-                        model: FabricType,
-                        as: "fabric",
                     },
                     {
                         model: Garment,
@@ -577,31 +620,33 @@ export const send_weaver_mail = async () => {
                 ]
             });
 
-            let buyer = sales.dataValues.buyer;
+            let buyer = sales.dataValues?.buyer;
             console.log(buyer);
             let adminEmail = await User.findAll({ where: { role: 1 }, attributes: ['email'] });
-            const emailJob = await is_email_job_available(template.dataValues.id, buyer.brand, [buyer.country_id], buyer.program_id);
+            const emailJob = await is_email_job_available(template.dataValues.id, buyer?.brand, [buyer?.country_id], buyer?.program_id);
             if (emailJob) {
-                let emails = await User.findAll({ where: { id: { [Op.in]: emailJob.dataValues.user_ids } }, attributes: ['email'] });
+                let emails = await User.findAll({ where: { id: { [Op.in]: emailJob.dataValues?.user_ids } }, attributes: ['email'] });
                 emails = emails.map((obj: any) => obj.email);
                 adminEmail = adminEmail.map((obj: any) => obj.email);
-                let to = buyer.email ? [buyer.email] : adminEmail
-                let body = get_init_email_subject(buyer.name, sales.dataValues.weaver.name, sales.dataValues.total_yarn_qty, 'fabric', sales.dataValues.invoice_no, to, emails)
+                let to = buyer.email ? [buyer.email] : adminEmail;
+                let ccEmails = [...adminEmail,...emails];
+                let body = get_init_email_subject(buyer?.name, sales?.dataValues?.weaver?.name, sales?.dataValues?.total_yarn_qty, 'fabric', sales?.dataValues?.invoice_no, to, ccEmails)
                 let subject = 'Acknowledge incoming transaction'
-                sendEmail(body, to, subject, emails)
+                return sendEmail(body, to, subject, ccEmails)
             }
         }
     } catch (error) {
         console.log(error);
+        return false;
     }
 };
 
-export const send_knitter_mail = async () => {
+export const send_knitter_mail = async (salesId: number) => {
     try {
         let template = await EmailTemplate.findOne({ where: { template_name: { [Op.iLike]: 'Whenever knitter sales happen' } } });
         if (template) {
             let sales = await KnitSales.findOne({
-                where: { id: 1, status: 'Pending for QR scanning' }, include: [
+                where: { id: salesId, status: 'Pending for QR scanning' }, include: [
                     {
                         model: Knitter,
                         as: "knitter",
@@ -613,30 +658,32 @@ export const send_knitter_mail = async () => {
                 ]
             });
 
-            let buyer = sales.dataValues.buyer;
+            let buyer = sales.dataValues?.buyer;
             let adminEmail = await User.findAll({ where: { role: 1 }, attributes: ['email'] });
             const emailJob = await is_email_job_available(template.dataValues.id, buyer.brand, [buyer.country_id], buyer.program_id);
             if (emailJob) {
                 let emails = await User.findAll({ where: { id: { [Op.in]: emailJob.dataValues.user_ids } }, attributes: ['email'] });
                 emails = emails.map((obj: any) => obj.email);
                 adminEmail = adminEmail.map((obj: any) => obj.email);
-                let to = buyer.email ? [buyer.email] : adminEmail
-                let body = get_init_email_subject(buyer.name, sales.dataValues.knitter.name, sales.dataValues.total_yarn_qty, 'fabric', sales.dataValues.invoice_no, to, emails)
+                let to = buyer.email ? [buyer.email] : adminEmail;
+                let ccEmails = [...adminEmail,...emails];
+                let body = get_init_email_subject(buyer.name, sales.dataValues.knitter.name, sales.dataValues.total_yarn_qty, 'fabric', sales.dataValues.invoice_no, to, ccEmails)
                 let subject = 'Acknowledge incoming transaction'
-                sendEmail(body, to, subject, emails)
+                return sendEmail(body, to, subject, ccEmails)
             }
         }
     } catch (error) {
         console.log(error);
+        return false;
     }
 };
 
-export const send_garment_mail = async () => {
+export const send_garment_mail = async (salesId: number) => {
     try {
         let template = await EmailTemplate.findOne({ where: { template_name: { [Op.iLike]: 'Whenever garment sales happen' } } });
         if (template) {
             let sales = await GarmentSales.findOne({
-                where: { id: 1 }, include: [
+                where: { id: salesId, status: 'Pending'}, include: [
                     {
                         model: Garment,
                         as: "garment",
@@ -648,21 +695,23 @@ export const send_garment_mail = async () => {
                 ]
             });
 
-            let buyer = sales.dataValues.buyer;
+            let buyer = sales.dataValues?.buyer;
             let adminEmail = await User.findAll({ where: { role: 1 }, attributes: ['email'] });
             const emailJob = await is_email_job_available(template.dataValues.id, [buyer.id], buyer.countries_id, buyer.programs_id);
             if (emailJob) {
                 let emails = await User.findAll({ where: { id: { [Op.in]: emailJob.dataValues.user_ids } }, attributes: ['email'] });
                 emails = emails.map((obj: any) => obj.email);
                 adminEmail = adminEmail.map((obj: any) => obj.email);
-                let to = buyer.email ? [buyer.email] : adminEmail
-                let body = get_init_email_subject(buyer.brand_name, sales.dataValues.garment.name, sales.dataValues.no_of_pieces, 'finished product', sales.dataValues.invoice_no, to, emails)
+                let to = buyer.email ? [buyer.email] : adminEmail;
+                let ccEmails = [...adminEmail,...emails];
+                let body = get_init_email_subject(buyer.brand_name, sales.dataValues.garment.name, sales.dataValues.total_no_of_pieces, 'finished product', sales.dataValues.invoice_no, to, ccEmails)
                 let subject = 'Acknowledge incoming transaction'
-                sendEmail(body, to, subject, emails)
+                return sendEmail(body, to, subject, ccEmails)
             }
         }
     } catch (error) {
         console.log(error);
+        return false;
     }
 };
 
@@ -790,22 +839,26 @@ const bale_process_report = async (brandId: any, type: any, programIds: any, cou
     const whereCondition: any = {};
     try {
         if (brandId) {
-            let ginner = await Ginner.findAll({ where: { brand: { [Op.overlap]: brandId } } });
-            const arry: number[] = ginner
-                .map((gin: any) => parseInt(gin.id, 10));
-            whereCondition.ginner_id = { [Op.in]: arry };
+            whereCondition['$ginner.brand$']= { [Op.overlap]: brandId  };
         }
 
 
         if (countryIds) {
-            let ginner = await Ginner.findAll({ country_id: { [Op.in]: countryIds } });
-            const arry: number[] = ginner
-                .map((gin: any) => parseInt(gin.id, 10));
-            whereCondition.ginner_id = { [Op.in]: arry };
+            whereCondition['$ginner.country_id$'] = { [Op.in]: countryIds };
         }
 
         if (programIds) {
             whereCondition.program_id = { [Op.in]: programIds };
+        }
+
+        if(type && date){
+            let daysToSub = type === 'Weekly' ? 7 : 1;
+            const startDate = moment(date).subtract(daysToSub, 'days');
+            const endDate = moment(date);
+            whereCondition.date = { 
+                [Op.gte]: startDate.toDate(),
+                [Op.lt]: endDate.toDate(), 
+            }
         }
 
         // Create the excel workbook file
@@ -841,6 +894,7 @@ const bale_process_report = async (brandId: any, type: any, programIds: any, cou
             where: whereCondition,
             include: include
         });
+
         // Append data to worksheet
         for await (const [index, item] of rows.entries()) {
 
@@ -893,22 +947,28 @@ const pendingGinnerSales = async (brandId: any, type: any, programIds: any, coun
     try {
 
         if (brandId) {
-            let ginner = await Ginner.findAll({ where: { brand: { [Op.overlap]: brandId } } });
-            const arry: number[] = ginner
-                .map((gin: any) => parseInt(gin.id, 10));
-            whereCondition.ginner_id = { [Op.in]: arry };
+            whereCondition['$ginner.brand$']= { [Op.overlap]: brandId  };
         }
 
+
         if (countryIds) {
-            let ginner = await Ginner.findAll({ where: { country_id: { [Op.in]: countryIds } } });
-            const arry: number[] = ginner
-                .map((gin: any) => parseInt(gin.id, 10));
-            whereCondition.ginner_id = { [Op.in]: arry };
+            whereCondition['$ginner.country_id$'] = { [Op.in]: countryIds };
         }
+
         whereCondition.status = 'To be Submitted';
 
         if (programIds) {
             whereCondition.program_id = { [Op.in]: programIds };
+        }
+
+        if(type && date){
+            let daysToSub = type === 'Weekly' ? 7 : 1;
+            const startDate = moment(date).subtract(daysToSub, 'days');
+            const endDate = moment(date);
+            whereCondition.date = { 
+                [Op.gte]: startDate.toDate(),
+                [Op.lt]: endDate.toDate(), 
+            }
         }
 
         // Create the excel workbook file
@@ -994,23 +1054,28 @@ const ginnerSales = async (brandId: any, type: any, programId: any, countryId: a
     try {
 
         if (brandId) {
-            let ginner = await Ginner.findAll({ where: { brand: { [Op.overlap]: brandId } } });
-            const arry: number[] = ginner
-                .map((gin: any) => parseInt(gin.id, 10));
-            whereCondition.ginner_id = { [Op.in]: arry };
+            whereCondition['$ginner.brand$']= { [Op.overlap]: brandId  };
         }
 
+
         if (countryId) {
-            let ginner = await Ginner.findAll({ where: { country_id: { [Op.in]: countryId } } });
-            const arry: number[] = ginner
-                .map((gin: any) => parseInt(gin.id, 10));
-            whereCondition.ginner_id = { [Op.in]: arry };
+            whereCondition['$ginner.country_id$'] = { [Op.in]: countryId };
         }
 
         whereCondition.status = { [Op.ne]: 'To be Submitted' };
 
         if (programId) {
             whereCondition.program_id = { [Op.in]: programId };
+        }
+
+        if(type && date){
+            let daysToSub = type === 'Weekly' ? 7 : 1;
+            const startDate = moment(date).subtract(daysToSub, 'days');
+            const endDate = moment(date);
+            whereCondition.date = { 
+                [Op.gte]: startDate.toDate(),
+                [Op.lt]: endDate.toDate(), 
+            }
         }
 
         // Create the excel workbook file
@@ -1096,17 +1161,11 @@ const spinnerBale = async (brandId: any, type: any, programId: any, countryId: a
     try {
 
         if (brandId) {
-            let ginner = await Spinner.findAll({ where: { brand: { [Op.overlap]: brandId } } });
-            const arry: number[] = ginner
-                .map((gin: any) => parseInt(gin.id, 10));
-            whereCondition.buyer = { [Op.in]: arry };
+            whereCondition['$buyerdata.brand$']= { [Op.overlap]: brandId  };
         }
 
         if (countryId) {
-            let ginner = await Spinner.findAll({ where: { country_id: { [Op.in]: countryId } } });
-            const arry: number[] = ginner
-                .map((gin: any) => parseInt(gin.id, 10));
-            whereCondition.buyer = { [Op.in]: arry };
+            whereCondition['$buyerdata.country_id$'] = { [Op.in]: countryId };
         }
 
         whereCondition.status = 'Sold';
@@ -1116,6 +1175,16 @@ const spinnerBale = async (brandId: any, type: any, programId: any, countryId: a
 
         if (programId) {
             whereCondition.program_id = { [Op.in]: programId };
+        }
+
+        if(type && date){
+            let daysToSub = type === 'Weekly' ? 7 : 1;
+            const startDate = moment(date).subtract(daysToSub, 'days');
+            const endDate = moment(date);
+            whereCondition.date = { 
+                [Op.gte]: startDate.toDate(),
+                [Op.lt]: endDate.toDate(), 
+            }
         }
 
         // Create the excel workbook file
@@ -1197,27 +1266,31 @@ const spinnerYarnSale = async (brandId: any, type: any, programId: any, countryI
     const whereCondition: any = {};
     try {
         if (brandId) {
-            let ginner = await Spinner.findAll({ where: { brand: { [Op.overlap]: brandId } } });
-            const arry: number[] = ginner
-                .map((gin: any) => parseInt(gin.id, 10));
-            whereCondition.spinner_id = { [Op.in]: arry };
+            whereCondition['$spinner.brand$']= { [Op.overlap]: brandId  };
         }
 
         if (countryId) {
-            let ginner = await Spinner.findAll({ where: { country_id: { [Op.in]: countryId } } });
-            const arry: number[] = ginner
-                .map((gin: any) => parseInt(gin.id, 10));
-            whereCondition.spinner_id = { [Op.in]: arry };
+            whereCondition['$spinner.country_id$'] = { [Op.in]: countryId };
         }
 
         if (programId) {
             whereCondition.program_id = { [Op.in]: programId };
         }
 
+        if(type && date){
+            let daysToSub = type === 'Weekly' ? 7 : 1;
+            const startDate = moment(date).subtract(daysToSub, 'days');
+            const endDate = moment(date);
+            whereCondition.date = { 
+                [Op.gte]: startDate.toDate(),
+                [Op.lt]: endDate.toDate(), 
+            }
+        }
+
         // Create the excel workbook file
         const workbook = new ExcelJS.Workbook();
         const worksheet = workbook.addWorksheet("Sheet1");
-        worksheet.mergeCells('A1:Q1');
+        worksheet.mergeCells('A1:O1');
         const mergedCell = worksheet.getCell('A1');
         mergedCell.value = 'CottonConnect | Spinner Yarn Sales Report';
         mergedCell.font = { bold: true };
@@ -1225,7 +1298,7 @@ const spinnerYarnSale = async (brandId: any, type: any, programId: any, countryI
         // Set bold font for header row
         const headerRow = worksheet.addRow([
             "Sr No.", "Date", "Season", "Spinner Name", "Knitter/Weaver Name",
-            "Invoice No", "Lot/Batch Number", "Reel Lot No", "Cotton Mix Types", "Cotton Mix Qty (kgs)", "Yarn Type", "Yarn Count", "No of Boxes",
+            "Invoice No", "Lot/Batch Number", "Reel Lot No", "Yarn Type", "Yarn Count", "No of Boxes",
             "Box ID", "Net Weight(Kgs)"
         ]);
         headerRow.font = { bold: true };
@@ -1271,8 +1344,6 @@ const spinnerYarnSale = async (brandId: any, type: any, programId: any, countryI
                 invoice: item.invoice_no ? item.invoice_no : '',
                 lotNo: item.batch_lot_no ? item.batch_lot_no : '',
                 reelLot: item.reel_lot_no ? item.reel_lot_no : '',
-                blend: "",
-                blendqty: '',
                 yarnType: item.yarn_type ? item.yarn_type : '',
                 count: item.yarn_count ? item.yarn_count : '',
                 boxes: item.no_of_boxes ? item.no_of_boxes : '',
@@ -1305,23 +1376,28 @@ const knitterYarnReceipt = async (brandId: any, type: any, programId: any, count
     try {
 
         if (brandId) {
-
-            let knitter = await Knitter.findAll({ where: { brand: { [Op.overlap]: brandId } } });
-            const arry: number[] = knitter
-                .map((gin: any) => parseInt(gin.id, 10));
-            whereCondition.knitter_id = { [Op.in]: arry };
+            whereCondition['$knitter.brand$']= { [Op.overlap]: brandId  };
         }
 
         if (countryId) {
-            let knitter = await Knitter.findAll({ where: { country_id: { [Op.in]: countryId } } });
-            const arry: number[] = knitter
-                .map((gin: any) => parseInt(gin.id, 10));
-            whereCondition.knitter_id = { [Op.in]: arry };
+            whereCondition['$knitter.country_id$'] = { [Op.in]: countryId };
         }
 
         if (programId) {
             whereCondition.program_id = { [Op.in]: programId };
         }
+
+        if(type && date){
+            let daysToSub = type === 'Weekly' ? 7 : 1;
+            const startDate = moment(date).subtract(daysToSub, 'days');
+            const endDate = moment(date);
+            whereCondition.date = { 
+                [Op.gte]: startDate.toDate(),
+                [Op.lt]: endDate.toDate(), 
+            }
+        }
+
+
         whereCondition.knitter_id = { [Op.ne]: null };
         whereCondition.status = 'Sold';
         // Create the excel workbook file
@@ -1412,20 +1488,28 @@ const knitterFabricSale = async (brandId: any, type: any, programId: any, countr
         const whereCondition: any = {};
 
         if (brandId) {
-            let knitter = await Knitter.findAll({ where: { brand: { [Op.overlap]: brandId } } });
-            const arry: number[] = knitter
-                .map((gin: any) => parseInt(gin.id, 10));
-            whereCondition.knitter_id = { [Op.in]: arry };
+            whereCondition['$knitter.brand$']= { [Op.overlap]: brandId  };
         }
+
         if (countryId) {
-            let knitter = await Knitter.findAll({ where: { country_id: { [Op.in]: countryId } } });
-            const arry: number[] = knitter
-                .map((gin: any) => parseInt(gin.id, 10));
-            whereCondition.knitter_id = { [Op.in]: arry };
+            whereCondition['$knitter.country_id$'] = { [Op.in]: countryId };
         }
+
         if (programId) {
             whereCondition.program_id = { [Op.in]: programId };
         }
+
+        if(type && date){
+            let daysToSub = type === 'Weekly' ? 7 : 1;
+            const startDate = moment(date).subtract(daysToSub, 'days');
+            const endDate = moment(date);
+            whereCondition.date = { 
+                [Op.gte]: startDate.toDate(),
+                [Op.lt]: endDate.toDate(), 
+            }
+        }
+
+        whereCondition.status = 'Sold';
 
         // Create the excel workbook file
         const workbook = new ExcelJS.Workbook();
@@ -1438,15 +1522,11 @@ const knitterFabricSale = async (brandId: any, type: any, programId: any, countr
         // Set bold font for header row
         const headerRow = worksheet.addRow([
             "Sr No.", "Date", "Knitter Name", "Sold To",
-            "Invoice No", "Lot No", "Fabirc Type", "No. of Bales", "Bale Id", "Fabirc Length",
-            "Net Weight (Kgs)",
+            "Invoice No", "Lot No", "Garment Order Reference", "Brand Order Reference",
+            "Total Fabric Quantity (Kgs)",
         ]);
         headerRow.font = { bold: true };
         let include = [
-            {
-                model: FabricType,
-                as: "fabric",
-            },
             {
                 model: Garment,
                 as: "buyer",
@@ -1471,11 +1551,9 @@ const knitterFabricSale = async (brandId: any, type: any, programId: any, countr
                 buyer: item.buyer ? item.buyer.name : item.processor_name,
                 invoice: item.invoice_no ? item.invoice_no : '',
                 lotNo: item.batch_lot_no ? item.batch_lot_no : '',
-                fabrictype: item.fabric ? item.fabric.fabricType_name : '',
-                no_of_bales: item.no_of_bales ? item.no_of_bales : '',
-                bale_ids: item.bale_ids ? item.bale_ids : '',
-                length: item.fabric_length ? item.fabric_length : '',
-                fabric_weight: item.fabric_weight ? item.fabric_weight : '',
+                garment: item.garment_order_ref ? item.garment_order_ref : '',
+                brand: item.brand_order_ref ? item.brand_order_ref : '',
+                fabric_weight: item.total_yarn_qty ? item.total_yarn_qty : '',
             });
             worksheet.addRow(rowValues);
         }
@@ -1503,21 +1581,28 @@ const weaverYarnReceipt = async (brandId: any, type: any, programId: any, countr
     try {
 
         if (brandId) {
-            let weaver = await Weaver.findAll({ where: { brand: { [Op.overlap]: brandId } } });
-            const arry: number[] = weaver
-                .map((gin: any) => parseInt(gin.id, 10));
-            whereCondition.buyer_id = { [Op.in]: arry };
+            whereCondition['$weaver.brand$']= { [Op.overlap]: brandId  };
         }
 
         if (countryId) {
-            let weaver = await Weaver.findAll({ where: { country_id: { [Op.in]: countryId } } });
-            const arry: number[] = weaver
-                .map((gin: any) => parseInt(gin.id, 10));
-            whereCondition.buyer_id = { [Op.in]: arry };
+            whereCondition['$weaver.country_id$'] = { [Op.in]: countryId };
         }
+
         if (programId) {
             whereCondition.program_id = { [Op.in]: programId };
         }
+
+        if(type && date){
+            let daysToSub = type === 'Weekly' ? 7 : 1;
+            const startDate = moment(date).subtract(daysToSub, 'days');
+            const endDate = moment(date);
+            whereCondition.date = { 
+                [Op.gte]: startDate.toDate(),
+                [Op.lt]: endDate.toDate(), 
+            }
+        }
+
+
         whereCondition.buyer_id = { [Op.ne]: null };
         whereCondition.status = 'Sold';
         // Create the excel workbook file
@@ -1599,22 +1684,28 @@ const weaverSale = async (brandId: any, type: any, programId: any, countryId: an
     try {
         const whereCondition: any = {};
         if (brandId) {
-            let weaver = await Weaver.findAll({ where: { brand: { [Op.overlap]: brandId } } });
-            const arry: number[] = weaver
-                .map((gin: any) => parseInt(gin.id, 10));
-            whereCondition.weaver_id = { [Op.in]: arry };
+            whereCondition['$weaver.brand$']= { [Op.overlap]: brandId  };
         }
 
         if (countryId) {
-            let weaver = await Weaver.findAll({ where: { country_id: { [Op.in]: countryId } } });
-            const arry: number[] = weaver
-                .map((gin: any) => parseInt(gin.id, 10));
-            whereCondition.weaver_id = { [Op.in]: arry };
+            whereCondition['$weaver.country_id$'] = { [Op.in]: countryId };
         }
 
         if (programId) {
             whereCondition.program_id = { [Op.in]: programId };
         }
+
+        if(type && date){
+            let daysToSub = type === 'Weekly' ? 7 : 1;
+            const startDate = moment(date).subtract(daysToSub, 'days');
+            const endDate = moment(date);
+            whereCondition.date = { 
+                [Op.gte]: startDate.toDate(),
+                [Op.lt]: endDate.toDate(), 
+            }
+        }
+
+        whereCondition.status = 'Sold';
 
         // Create the excel workbook file
         const workbook = new ExcelJS.Workbook();
@@ -1628,7 +1719,8 @@ const weaverSale = async (brandId: any, type: any, programId: any, countryId: an
         const headerRow = worksheet.addRow([
             "Sr No.", "Date", "Weaver Name", "Sold To",
             "Invoice No", "Lot No",
-            "Fabric Type", "No. of Bales", "Bale Id", "Fabric Length", "Net Weight"
+            "Garment Order Reference", "Brand Order Reference",
+            "Total Fabric Quantity (mts)"
         ]);
         headerRow.font = { bold: true };
         let include = [
@@ -1640,10 +1732,6 @@ const weaverSale = async (brandId: any, type: any, programId: any, countryId: an
             {
                 model: Season,
                 as: "season",
-            },
-            {
-                model: FabricType,
-                as: "fabric",
             },
             {
                 model: Garment,
@@ -1664,11 +1752,9 @@ const weaverSale = async (brandId: any, type: any, programId: any, countryId: an
                 buyer: item.buyer ? item.buyer.name : item.processor_name,
                 invoice: item.invoice_no ? item.invoice_no : '',
                 lotNo: item.batch_lot_no ? item.batch_lot_no : '',
-                fabrictype: item.fabric ? item.fabric.fabricType_name : '',
-                no_of_bales: item.no_of_bales ? item.no_of_bales : '',
-                boxId: item.bale_ids ? item.bale_ids : '',
-                length: item.fabric_length ? item.fabric_length : '',
-                fabric_weight: item.fabric_weight ? item.fabric_weight : ''
+                garment: item.garment_order_ref ? item.garment_order_ref : '',
+                brand: item.brand_order_ref ? item.brand_order_ref : '',
+                fabric_length: item.total_yarn_qty ? item.total_yarn_qty : '',
             });
             worksheet.addRow(rowValues);
         }
@@ -1696,22 +1782,32 @@ const garmentFabricReceipt = async (brandId: any, type: any, programId: any, cou
         const whereCondition: any = {};
         const whereCondition2: any = {}
         if (brandId) {
-            let garment = await Garment.findAll({ where: { brand: { [Op.overlap]: brandId } } });
-            const arry: number[] = garment
-                .map((gin: any) => parseInt(gin.id, 10));
-            whereCondition.buyer_id = { [Op.in]: arry };
+            whereCondition['$weaver.brand$']= { [Op.overlap]: brandId  };
+            whereCondition2['$knitter.brand$']= { [Op.overlap]: brandId  };
         }
 
         if (countryId) {
-            let garment = await Garment.findAll({ where: { country_id: { [Op.in]: countryId } } });
-            const arry: number[] = garment
-                .map((gin: any) => parseInt(gin.id, 10));
-            whereCondition.buyer_id = { [Op.in]: arry };
+            whereCondition['$weaver.country_id$'] = { [Op.in]: countryId };
+            whereCondition2['$knitter.country_id$'] = { [Op.in]: countryId };
         }
+
 
         if (programId) {
             whereCondition.program_id = { [Op.in]: programId };
         }
+
+        if(type && date){
+            let daysToSub = type === 'Weekly' ? 7 : 1;
+            const startDate = moment(date).subtract(daysToSub, 'days');
+            const endDate = moment(date);
+            whereCondition.date = { 
+                [Op.gte]: startDate.toDate(),
+                [Op.lt]: endDate.toDate(), 
+            }
+        }
+
+        whereCondition.status = 'Sold';
+
         // Create the excel workbook file
         const workbook = new ExcelJS.Workbook();
         const worksheet = workbook.addWorksheet("Sheet1");
@@ -1723,9 +1819,9 @@ const garmentFabricReceipt = async (brandId: any, type: any, programId: any, cou
         // Set bold font for header row
         // Set bold font for header row
         const headerRow = worksheet.addRow([
-            "Sr No.", "Date", "Weave/Knit Uint", "Garment Processor Unit",
+            "Sr No.", "Date", "Weave/Knit Unit", "Garment Processor Unit",
             "Invoice Number", "Lot/Batch No",
-            "Fabirc Type", "No. of Bales/Rolls", "Bale/Roll Id", "Fabric in Mts", "Net Weight(Kgs)", "Qr code"
+            "Garment Order Reference", "Brand Order Reference", "Total Fabric Length(Mts)", "Total Fabric Weight(Kgs)", "Qr code"
         ]);
         headerRow.font = { bold: true };
         let include = [
@@ -1736,10 +1832,6 @@ const garmentFabricReceipt = async (brandId: any, type: any, programId: any, cou
             {
                 model: Garment,
                 as: 'buyer',
-            },
-            {
-                model: FabricType,
-                as: 'fabric',
             }
         ]
         let result: any = await Promise.all([
@@ -1748,7 +1840,7 @@ const garmentFabricReceipt = async (brandId: any, type: any, programId: any, cou
                 include: [...include, { model: Weaver, as: 'weaver', attributes: ['id', 'name'] }]
             }),
             KnitSales.findAll({
-                where: whereCondition,
+                where: whereCondition2,
                 include: [...include, { model: Knitter, as: 'knitter', attributes: ['id', 'name'] }]
             })
         ])
@@ -1763,11 +1855,10 @@ const garmentFabricReceipt = async (brandId: any, type: any, programId: any, cou
                 garment_name: item.buyer ? item.buyer.name : '',
                 invoice: item.invoice_no ? item.invoice_no : '',
                 batch_lot_no: item.batch_lot_no ? item.batch_lot_no : '',
-                fabric: item.fabric ? item.fabric.fabricType_name : '',
-                no_of_pieces: item.no_of_pieces ? item.no_of_pieces : '',
-                bale_ids: item.bale_ids ? item.bale_ids : '',
-                fabric_length: item.fabric_length ? item.fabric_length : '',
-                fabric_weight: item.fabric_weight ? item.fabric_weight : '',
+                garment: item.garment_order_ref ? item.garment_order_ref : '',
+                brand: item.brand_order_ref ? item.brand_order_ref : '',
+                fabric_length: item.weaver ? item.total_yarn_qty : '',
+                fabric_weight: item.weaver ? '' : item.total_yarn_qty,
                 color: process.env.BASE_URL + item.qr ?? '',
             });
             worksheet.addRow(rowValues);
@@ -1796,22 +1887,29 @@ const exportGarmentSales = async (brandId: any, type: any, programId: any, count
         const whereCondition: any = {};
 
         if (brandId) {
-            let weaver = await Garment.findAll({ where: { brand: { [Op.overlap]: brandId } } });
-            const arry: number[] = weaver
-                .map((gin: any) => parseInt(gin.id, 10));
-            whereCondition.garment_id = { [Op.in]: arry };
+            whereCondition['$garment.brand$']= { [Op.overlap]: brandId  };
         }
 
         if (countryId) {
-            let weaver = await Garment.findAll({ where: { country_id: { [Op.in]: countryId } } });
-            const arry: number[] = weaver
-                .map((gin: any) => parseInt(gin.id, 10));
-            whereCondition.garment_id = { [Op.in]: arry };
+            whereCondition['$garment.country_id$'] = { [Op.in]: countryId };
         }
 
         if (programId) {
             whereCondition.program_id = { [Op.in]: programId };
         }
+
+        if(type && date){
+            let daysToSub = type === 'Weekly' ? 7 : 1;
+            const startDate = moment(date).subtract(daysToSub, 'days');
+            const endDate = moment(date);
+            whereCondition.date = { 
+                [Op.gte]: startDate.toDate(),
+                [Op.lt]: endDate.toDate(), 
+            }
+        }
+
+        whereCondition.status = 'Sold';
+
         // Create the excel workbook file
         const workbook = new ExcelJS.Workbook();
         const worksheet = workbook.addWorksheet("Sheet1");
@@ -1825,7 +1923,7 @@ const exportGarmentSales = async (brandId: any, type: any, programId: any, count
         const headerRow = worksheet.addRow([
             "Sr No.", "Date", "Season", "Garment Unit Name", "Customer (R&B) Name",
             "Invoice No", "Mark/Style No",
-            "Item", "No of Boxes", "No of pieces", "Net weight",
+            "Item", "Total No of Boxes", "Total No of pieces", "Garment Size",
         ]);
         headerRow.font = { bold: true };
         let include = [
@@ -1857,11 +1955,11 @@ const exportGarmentSales = async (brandId: any, type: any, programId: any, count
                 garment_name: item.garment ? item.garment.name : '',
                 buyer: item.buyer ? item.buyer.brand_name : item.processor_name,
                 invoice: item.invoice_no ? item.invoice_no : '',
-                mark: item.style_mark_no ? item.style_mark_no : '',
-                garment: item.garment_type ? item.garment_type : '',
-                no_of_boxes: item.no_of_boxes ? item.no_of_boxes : '',
-                no_of_pieces: item.no_of_pieces ? item.no_of_pieces : '',
-                garment_size: item.garment_size ? item.garment_size : '',
+                mark: item.style_mark_no && item.style_mark_no.length > 0 ? item.style_mark_no.join(',') : '',
+                garment: item.garment_type && item.garment_type.length > 0 ? item.garment_type.join(',') : '',
+                no_of_boxes: item.total_no_of_boxes ? item.total_no_of_boxes : '',
+                no_of_pieces: item.total_no_of_pieces ? item.total_no_of_pieces : '',
+                garment_size: item.garment_size && item.garment_type.length > 0  ? item.garment_size.join(',') : '',
             });
             worksheet.addRow(rowValues);
         }
@@ -2102,6 +2200,15 @@ const procurementReport = async (brandId: any, type: any, programId: any, countr
         if (programId) {
             whereCondition.program_id = { [Op.in]: programId };
         }
+        if(type && date){
+            let daysToSub = type === 'Weekly' ? 7 : 1;
+            const startDate = moment(date).subtract(daysToSub, 'days');
+            const endDate = moment(date);
+            whereCondition.date = { 
+                [Op.gte]: startDate.toDate(),
+                [Op.lt]: endDate.toDate(), 
+            }
+        }
         //   if (startDate && endDate) {
         //     const startOfDay = new Date(startDate);
         //     startOfDay.setUTCHours(0, 0, 0, 0);
@@ -2228,6 +2335,16 @@ const integrityReport = async (brandId: any, type: any, programId: any, countryI
         // Set bold font for header row
         if (brandId) {
             whereCondition.brand_id = { [Op.in]: brandId };
+        }
+
+        if(type && date){
+            let daysToSub = type === 'Weekly' ? 7 : 1;
+            const startDate = moment(date).subtract(daysToSub, 'days');
+            const endDate = moment(date);
+            whereCondition.date = { 
+                [Op.gte]: startDate.toDate(),
+                [Op.lt]: endDate.toDate(), 
+            }
         }
 
         let include = [

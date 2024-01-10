@@ -25,6 +25,7 @@ import SpinProcessYarnSelection from "../../models/spin-process-yarn-seletions.m
 import BaleSelection from "../../models/bale-selection.model";
 import GinBale from "../../models/gin-bale.model";
 import ComberSelection from "../../models/comber-selection.model";
+import { send_spin_mail } from "../send-emails";
 
 //create Spinner Process
 const createSpinnerProcess = async (req: Request, res: Response) => {
@@ -630,6 +631,11 @@ const createSpinnerSales = async (req: Request, res: Response) => {
                 await SpinProcessYarnSelection.create({ spin_process_id: obj.id, sales_id: spinSales.id, no_of_box: obj.totalBoxesUsed, qty_used: obj.qtyUsed })
             }
         }
+
+        if(spinSales){
+            await send_spin_mail(spinSales.id);
+        }
+
         res.sendSuccess(res, { spinSales });
     } catch (error: any) {
         console.error(error)

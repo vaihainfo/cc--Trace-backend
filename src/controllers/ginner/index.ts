@@ -19,6 +19,7 @@ import Spinner from "../../models/spinner.model";
 import CottonSelection from "../../models/cotton-selection.model";
 import sequelize from "../../util/dbConn";
 import Farmer from "../../models/farmer.model";
+import { send_gin_mail} from '../send-emails'
 
 //create Ginner Process
 const createGinnerProcess = async (req: Request, res: Response) => {
@@ -458,9 +459,10 @@ const updateTransactionStatus = async (req: Request, res: Response) => {
         }
 
         res.sendSuccess(res, trans);
-    } catch (error) {
-        console.log(error);
-        return res.sendError(res, "NOT_ABLE_TO_UPDATE");
+    } catch (error: any) {
+        console.error("Error appending data:", error);
+        return res.sendError(res, error.message);
+
     }
 };
 
@@ -647,9 +649,13 @@ const updateGinnerSales = async (req: Request, res: Response) => {
             for await (let obj of req.body.lossData) {
                 let bale = await GinBale.findOne({ where: { '$ginprocess.lot_no$': String(obj.lotNo), bale_no: String(obj.baleNo) }, include: [{ model: GinProcess, as: 'ginprocess' }] });
                 if (bale) {
-                    GinBale.update({ weight: obj.newWeight }, { where: { id: bale.dataValues.id } })
+                    await GinBale.update({ weight: obj.newWeight }, { where: { id: bale.dataValues.id } })
                 }
             }
+        }
+
+        if(ginSales && ginSales[0] === 1){
+            await send_gin_mail(req.body.id);
         }
         res.sendSuccess(res, { ginSales });
     } catch (error: any) {

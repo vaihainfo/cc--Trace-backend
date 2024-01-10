@@ -3,8 +3,8 @@ import Mail from "nodemailer/lib/mailer";
 
 const transporter = nodemailer.createTransport({
     host: process.env.EMAIL_HOST,
-    port: 587,
-    secure: false,
+    port: 465, // Use 587 for local gmail email ids
+    secure: true, // Use false for local gmail email ids
     requireTLS: true,
     auth: {
         user: process.env.EMAIL_USER,

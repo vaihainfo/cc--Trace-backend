@@ -21,6 +21,7 @@ import WeaverProcess from "../../models/weaver-process.model";
 import WeaverFabricSelection from "../../models/weaver-fabric-selection.model";
 import SpinProcess from "../../models/spin-process.model";
 import SpinProcessYarnSelection from "../../models/spin-process-yarn-seletions.model";
+import { send_weaver_mail } from "../send-emails";
 
 const createWeaverProcess = async (req: Request, res: Response) =>{
     try {
@@ -302,7 +303,11 @@ const createWeaverSales = async (req: Request, res: Response) => {
                 }
             }
         }
-        res.sendSuccess(res, { weaverSales });
+
+        if(weaverSales){
+            await send_weaver_mail(weaverSales.id);
+        }
+        return res.sendSuccess(res, { weaverSales });
     } catch (error: any) {
         console.error(error)
         return res.sendError(res, error.meessage);

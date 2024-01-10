@@ -226,9 +226,7 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
         mergedCell.alignment = { horizontal: 'center', vertical: 'middle' };
         // Set bold font for header row
         const headerRow = worksheet.addRow([
-            "Sr No.", "Date", "Season", "Ginner Name", "Gin Lot No", "Gin Press No", "REEL Lot No", "REEL Process Nos", "No of Bales"
-            , "Staple Length(mm)", "Strength (g/tex)", "Mic", "Uniformity", "RD Value", "Quantity(Kgs)", "Program", "Village", "GOT", "Total Seed Cotton Consumed(Kgs)",
-            "Status"
+            "Sr No.", "Process Date", "Data Entry Date", "Season", "Ginner Name", "Heap Number", "Gin Lot No", "Gin Press No", "REEL Lot No", "REEL Process Nos", "No of Bales", "Lint Quantity(Kgs)", "Total Seed Cotton Consumed(Kgs)", "GOT", "Total lint cotton sold(Kgs)", "Total Bales Sold","Total lint cotton in stock(Kgs)", "Total Bales in stock", "Program", "Village"
         ]);
         headerRow.font = { bold: true };
         let include = [
@@ -290,21 +288,17 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
                 date: item.date ? item.date : '',
                 season: item.season ? item.season.name : '',
                 ginner: item.ginner ? item.ginner.name : '',
+                heap: "",
                 lot_no: item.lot_no ? item.lot_no : '',
                 press_no: item.press_no ? item.press_no : '',
                 reel_lot_no: item.reel_lot_no ? item.reel_lot_no : '',
                 process_no: reel_press_no ? reel_press_no : "-",
                 noOfBales: item.no_of_bales ? item.no_of_bales : 0,
-                staple: item.staple ? item.staple : '',
-                strength: item.strength ? item.strength : '',
-                mic: item.mic ? item.mic : '',
-                trash: item.trash ? item.trash : "",
-                rdValue: "",
                 total_qty: item.total_qty ? item.total_qty : '',
+                seedConsmed: bale.dataValues.lint_quantity ? bale.dataValues.lint_quantity : '',
+                got: item.gin_out_turn ? item.gin_out_turn : '',
                 program: item.program ? item.program.program_name : '',
                 village: village.map((obj: any) => obj.village.village_name),
-                got: item.gin_out_turn ? item.gin_out_turn : '',
-                seedConsmed: bale.dataValues.lint_quantity ? bale.dataValues.lint_quantity : '',
                 status: `Available [Stocks : 0]`
             });
             worksheet.addRow(rowValues);

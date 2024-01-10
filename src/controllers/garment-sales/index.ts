@@ -30,6 +30,7 @@ import WeaverFabricSelection from "../../models/weaver-fabric-selection.model";
 import KnitProcess from "../../models/knit-process.model";
 import KnitFabricSelection from "../../models/knit-fabric-selectiion.model";
 import ProcessorList from "../../models/processor-list.model";
+import { send_garment_mail } from "../send-emails";
 
 const fetchBrandQrGarmentSalesPagination = async (
   req: Request,
@@ -1216,6 +1217,10 @@ const createGarmentSales = async (req: Request, res: Response) => {
                     });
                 }
       }
+    }
+
+    if(garmentSales){
+      await send_garment_mail(garmentSales.id)
     }
 
     res.sendSuccess(res, garmentSales);

@@ -21,6 +21,7 @@ import KnitProcess from "../../models/knit-process.model";
 import KnitFabricSelection from "../../models/knit-fabric-selectiion.model";
 import SpinProcessYarnSelection from "../../models/spin-process-yarn-seletions.model";
 import SpinProcess from "../../models/spin-process.model";
+import { send_knitter_mail } from "../send-emails";
 
 const createKnitterProcess = async (req: Request, res: Response) =>{
 try {
@@ -301,8 +302,14 @@ const createKnitterrSales = async (req: Request, res: Response) => {
                 }
             }
         }
-        res.sendSuccess(res,  kniSale );
+
+        if(kniSale){
+            await send_knitter_mail(kniSale.id);
+        }
+
+        return res.sendSuccess(res,  kniSale );
     } catch (error: any) {
+        console.log(error)
         return res.sendError(res, error.meessage);
     }
 }
