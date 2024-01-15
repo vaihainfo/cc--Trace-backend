@@ -19,6 +19,7 @@ import Farm from "../../models/farm.model";
 import FarmerAgriArea from "../../models/farmer-agri-area.model";
 import FarmerCottonArea from "../../models/farmer-cotton-area.model";
 import sequelize from "../../util/dbConn";
+import {saveFailedRecord} from "../failed-records";
 
 
 const createTransaction = async (req: Request, res: Response) => {
@@ -628,74 +629,182 @@ const uploadTransactionBulk = async (req: Request, res: Response) => {
           data: { farmerName: data.farmerName ? data.farmerName : '', farmerCode: data.farmerCode ? data.farmerCode : '' },
           message: "Season cannot be empty",
         });
+        let failedRecord = {
+          type: 'Procurement',
+          season: '',
+          farmerCode: data.farmerCode ? data.farmerCode : '', 
+          farmerName:  data.farmerName ?  data.farmerName : '',
+          body: { ...data },
+          reason: "Season cannot be empty"
+        }
+        saveFailedRecord(failedRecord)
       } else if (!data.date) {
         fail.push({
           success: false,
           data: { farmerName: data.farmerName ? data.farmerName : '', farmerCode: data.farmerCode ? data.farmerCode : '' },
           message: "Date cannot be empty",
         });
+        let failedRecord = {
+          type: 'Procurement',
+          season: '',
+          farmerCode: data.farmerCode ? data.farmerCode : '', 
+          farmerName:  data.farmerName ?  data.farmerName : '',
+          body: { ...data },
+          reason: "Date cannot be empty"
+        }
+        saveFailedRecord(failedRecord)
       } else if (!data.country) {
         fail.push({
           success: false,
           data: { farmerName: data.farmerName ? data.farmerName : '', farmerCode: data.farmerCode ? data.farmerCode : '' },
           message: "Country cannot be empty",
         });
+        let failedRecord = {
+          type: 'Procurement',
+          season: '',
+          farmerCode: data.farmerCode ? data.farmerCode : '', 
+          farmerName:  data.farmerName ?  data.farmerName : '',
+          body: { ...data },
+          reason: "Country cannot be empty"
+        }
+        saveFailedRecord(failedRecord)
       } else if (!data.state) {
         fail.push({
           success: false,
           data: { farmerName: data.farmerName ? data.farmerName : '', farmerCode: data.farmerCode ? data.farmerCode : '' },
-          message: "state cannot be empty",
+          message: "State cannot be empty",
         });
+        let failedRecord = {
+          type: 'Procurement',
+          season: '',
+          farmerCode: data.farmerCode ? data.farmerCode : '', 
+          farmerName:  data.farmerName ?  data.farmerName : '',
+          body: { ...data },
+          reason: "State cannot be empty"
+        }
+        saveFailedRecord(failedRecord)
       }
       else if (!data.district) {
         fail.push({
           success: false,
           data: { farmerName: data.farmerName ? data.farmerName : '', farmerCode: data.farmerCode ? data.farmerCode : '' },
-          message: "district cannot be empty",
+          message: "District cannot be empty",
         });
+        let failedRecord = {
+          type: 'Procurement',
+          season: '',
+          farmerCode: data.farmerCode ? data.farmerCode : '', 
+          farmerName:  data.farmerName ?  data.farmerName : '',
+          body: { ...data },
+          reason: "District cannot be empty"
+        }
+        saveFailedRecord(failedRecord)
       }
       else if (!data.block) {
         fail.push({
           success: false,
           data: { farmerName: data.farmerName ? data.farmerName : '', farmerCode: data.farmerCode ? data.farmerCode : '' },
-          message: "block cannot be empty",
+          message: "Block cannot be empty",
         });
+        let failedRecord = {
+          type: 'Procurement',
+          season: '',
+          farmerCode: data.farmerCode ? data.farmerCode : '', 
+          farmerName:  data.farmerName ?  data.farmerName : '',
+          body: { ...data },
+          reason: "Block cannot be empty"
+        }
+        saveFailedRecord(failedRecord)
       } else if (!data.village) {
         fail.push({
           success: false,
           data: { farmerName: data.farmerName ? data.farmerName : '', farmerCode: data.farmerCode ? data.farmerCode : '' },
-          message: "village cannot be empty",
+          message: "Village cannot be empty",
         });
+        let failedRecord = {
+          type: 'Procurement',
+          season: '',
+          farmerCode: data.farmerCode ? data.farmerCode : '', 
+          farmerName:  data.farmerName ?  data.farmerName : '',
+          body: { ...data },
+          reason: "Village cannot be empty"
+        }
+        saveFailedRecord(failedRecord)
       } else if (!data.farmerName) {
         fail.push({
           success: false,
           data: { farmerName: data.farmerName ? data.farmerName : '', farmerCode: data.farmerCode ? data.farmerCode : '' },
           message: "Farmer Name cannot be empty",
         });
+        let failedRecord = {
+          type: 'Procurement',
+          season: '',
+          farmerCode: data.farmerCode ? data.farmerCode : '', 
+          farmerName:  data.farmerName ?  data.farmerName : '',
+          body: { ...data },
+          reason: "Farmer Name cannot be empty"
+        }
+        saveFailedRecord(failedRecord)
       } else if (!data.rate) {
         fail.push({
           success: false,
           data: { farmerName: data.farmerName ? data.farmerName : '', farmerCode: data.farmerCode ? data.farmerCode : '' },
-          message: "rate cannot be empty",
+          message: "Rate cannot be empty",
         });
+        let failedRecord = {
+          type: 'Procurement',
+          season: '',
+          farmerCode: data.farmerCode ? data.farmerCode : '', 
+          farmerName:  data.farmerName ?  data.farmerName : '',
+          body: { ...data },
+          reason: "Rate cannot be empty"
+        }
+        saveFailedRecord(failedRecord)
       } else if (!data.qtyPurchased) {
         fail.push({
           success: false,
           data: { farmerName: data.farmerName ? data.farmerName : '', farmerCode: data.farmerCode ? data.farmerCode : '' },
           message: "Qty Purchased cannot be empty",
         });
+        let failedRecord = {
+          type: 'Procurement',
+          season: '',
+          farmerCode: data.farmerCode ? data.farmerCode : '', 
+          farmerName:  data.farmerName ?  data.farmerName : '',
+          body: { ...data },
+          reason: "Qty. Purchased cannot be empty"
+        }
+        saveFailedRecord(failedRecord)
       } else if (!data.grade) {
         fail.push({
           success: false,
           data: { farmerName: data.farmerName ? data.farmerName : '', farmerCode: data.farmerCode ? data.farmerCode : '' },
-          message: "grade cannot be empty",
+          message: "Grade cannot be empty",
         });
+        let failedRecord = {
+          type: 'Procurement',
+          season: '',
+          farmerCode: data.farmerCode ? data.farmerCode : '', 
+          farmerName:  data.farmerName ?  data.farmerName : '',
+          body: { ...data },
+          reason: "Grade cannot be empty"
+        }
+        saveFailedRecord(failedRecord)
       } else if (!data.ginner) {
         fail.push({
           success: false,
           data: { farmerName: data.farmerName ? data.farmerName : '', farmerCode: data.farmerCode ? data.farmerCode : '' },
           message: "Ginner cannot be empty",
         });
+        let failedRecord = {
+          type: 'Procurement',
+          season: '',
+          farmerCode: data.farmerCode ? data.farmerCode : '', 
+          farmerName:  data.farmerName ?  data.farmerName : '',
+          body: { ...data },
+          reason: "Ginner cannot be empty"
+        }
+        saveFailedRecord(failedRecord)
       } else {
         let season;
         let country;
@@ -720,6 +829,15 @@ const uploadTransactionBulk = async (req: Request, res: Response) => {
               data: { farmerName: data.farmerName ? data.farmerName : '', farmerCode: data.farmerCode ? data.farmerCode : '' },
               message: "Season not found",
             });
+            let failedRecord = {
+              type: 'Procurement',
+              season: '',
+              farmerCode: data.farmerCode ? data.farmerCode : '', 
+              farmerName:  data.farmerName ?  data.farmerName : '',
+              body: { ...data },
+              reason: "Season not found"
+            }
+            saveFailedRecord(failedRecord)
           } else if (data.ginner) {
             ginner = await Ginner.findOne({
               where: {
@@ -732,6 +850,15 @@ const uploadTransactionBulk = async (req: Request, res: Response) => {
                 data: { farmerName: data.farmerName ? data.farmerName : '', farmerCode: data.farmerCode ? data.farmerCode : '' },
                 message: "Ginner not found",
               });
+              let failedRecord = {
+                type: 'Procurement',
+                season: season,
+                farmerCode: data.farmerCode ? data.farmerCode : '', 
+                farmerName:  data.farmerName ?  data.farmerName : '',
+                body: { ...data },
+                reason: "Ginner not found"
+              }
+              saveFailedRecord(failedRecord)
             } else if (data.country) {
               country = await Country.findOne({
                 where: {
@@ -745,6 +872,15 @@ const uploadTransactionBulk = async (req: Request, res: Response) => {
                   data: { farmerName: data.farmerName ? data.farmerName : '', farmerCode: data.farmerCode ? data.farmerCode : '' },
                   message: "Country not found",
                 });
+                let failedRecord = {
+                  type: 'Procurement',
+                  season: season,
+                  farmerCode: data.farmerCode ? data.farmerCode : '', 
+                  farmerName:  data.farmerName ?  data.farmerName : '',
+                  body: { ...data },
+                  reason: "Country not found"
+                }
+                saveFailedRecord(failedRecord)
               } else {
                 if (data.state) {
                   state = await State.findOne({
@@ -757,8 +893,17 @@ const uploadTransactionBulk = async (req: Request, res: Response) => {
                     fail.push({
                       success: false,
                       data: { farmerName: data.farmerName ? data.farmerName : '', farmerCode: data.farmerCode ? data.farmerCode : '' },
-                      message: "State not found",
+                      message: "State is not associated with the entered Country",
                     });
+                    let failedRecord = {
+                      type: 'Procurement',
+                      season: season,
+                      farmerCode: data.farmerCode ? data.farmerCode : '', 
+                      farmerName:  data.farmerName ?  data.farmerName : '',
+                      body: { ...data },
+                      reason: "State is not associated with the entered Country"
+                    }
+                    saveFailedRecord(failedRecord)
                   } else {
                     if (data.district) {
                       district = await District.findOne({
@@ -772,8 +917,17 @@ const uploadTransactionBulk = async (req: Request, res: Response) => {
                         fail.push({
                           success: false,
                           data: { farmerName: data.farmerName ? data.farmerName : '', farmerCode: data.farmerCode ? data.farmerCode : '' },
-                          message: "District not found",
+                          message: "District is not associated with entered State",
                         });
+                        let failedRecord = {
+                          type: 'Procurement',
+                          season: season,
+                          farmerCode: data.farmerCode ? data.farmerCode : '', 
+                          farmerName:  data.farmerName ?  data.farmerName : '',
+                          body: { ...data },
+                          reason: "District is not associated with entered State"
+                        }
+                        saveFailedRecord(failedRecord)
                       } else {
                         if (data.block) {
                           block = await Block.findOne({
@@ -787,8 +941,17 @@ const uploadTransactionBulk = async (req: Request, res: Response) => {
                             fail.push({
                               success: false,
                               data: { farmerName: data.farmerName ? data.farmerName : '', farmerCode: data.farmerCode ? data.farmerCode : '' },
-                              message: "Block not found",
+                              message: "Block is not associated with entered District",
                             });
+                            let failedRecord = {
+                              type: 'Procurement',
+                              season: season,
+                              farmerCode: data.farmerCode ? data.farmerCode : '', 
+                              farmerName:  data.farmerName ?  data.farmerName : '',
+                              body: { ...data },
+                              reason: "Block is not associated with entered District"
+                            }
+                            saveFailedRecord(failedRecord)
                           } else {
                             if (data.village) {
                               village = await Village.findOne({
@@ -802,8 +965,17 @@ const uploadTransactionBulk = async (req: Request, res: Response) => {
                                 fail.push({
                                   success: false,
                                   data: { farmerName: data.farmerName ? data.farmerName : '', farmerCode: data.farmerCode ? data.farmerCode : '' },
-                                  message: "Village not found",
+                                  message: "Village is not associated with entered Taluk/Block",
                                 });
+                                let failedRecord = {
+                                  type: 'Procurement',
+                                  season: season,
+                                  farmerCode: data.farmerCode ? data.farmerCode : '', 
+                                  farmerName:  data.farmerName ?  data.farmerName : '',
+                                  body: { ...data },
+                                  reason: "Village is not associated with entered Taluk/Block"
+                                }
+                                saveFailedRecord(failedRecord)
                               } else if (data.farmerCode) {
                                 farmer = await Farmer.findOne({
                                   where: {
@@ -816,8 +988,17 @@ const uploadTransactionBulk = async (req: Request, res: Response) => {
                                   fail.push({
                                     success: false,
                                     data: { farmerName: data.farmerName ? data.farmerName : '', farmerCode: data.farmerCode ? data.farmerCode : '' },
-                                    message: "farmer not found",
+                                    message: "Farmer not found",
                                   });
+                                  let failedRecord = {
+                                    type: 'Procurement',
+                                    season: season,
+                                    farmerCode: data.farmerCode ? data.farmerCode : '', 
+                                    farmerName:  data.farmerName ?  data.farmerName : '',
+                                    body: { ...data },
+                                    reason: "Farmer not found"
+                                  }
+                                  saveFailedRecord(failedRecord)
                                 } else if (data.grade) {
                                   grade = await CropGrade.findOne({
                                     where: {
@@ -828,8 +1009,17 @@ const uploadTransactionBulk = async (req: Request, res: Response) => {
                                     fail.push({
                                       success: false,
                                       data: { farmerName: data.farmerName ? data.farmerName : '', farmerCode: data.farmerCode ? data.farmerCode : '' },
-                                      message: "grade not found",
+                                      message: "Grade not found",
                                     });
+                                    let failedRecord = {
+                                      type: 'Procurement',
+                                      season: season,
+                                      farmerCode: data.farmerCode ? data.farmerCode : '', 
+                                      farmerName:  data.farmerName ?  data.farmerName : '',
+                                      body: { ...data },
+                                      reason: "Grade not found"
+                                    }
+                                    saveFailedRecord(failedRecord)
                                   } else {
                                     farm = await Farm.findOne({ where: { farmer_id: farmer.id, season_id: season.id } });
                                     if (!farm) {
@@ -838,6 +1028,15 @@ const uploadTransactionBulk = async (req: Request, res: Response) => {
                                         data: { farmerName: data.farmerName ? data.farmerName : '', farmerCode: data.farmerCode ? data.farmerCode : '' },
                                         message: "Farm data does not exist",
                                       });
+                                      let failedRecord = {
+                                        type: 'Procurement',
+                                        season: season,
+                                        farmerCode: data.farmerCode ? data.farmerCode : '', 
+                                        farmerName:  data.farmerName ?  data.farmerName : '',
+                                        body: { ...data },
+                                        reason: "Farm data does not exist"
+                                      }
+                                      saveFailedRecord(failedRecord)
                                     } else {
                                       let available_cotton = (Number(farm.total_estimated_cotton) || 0) - (Number(farm.cotton_transacted) || 0);
                                       if (available_cotton < 1) {
@@ -846,6 +1045,15 @@ const uploadTransactionBulk = async (req: Request, res: Response) => {
                                           data: { farmerName: data.farmerName ? data.farmerName : '', farmerCode: data.farmerCode ? data.farmerCode : '' },
                                           message: "This season used all the cotton",
                                         });
+                                        let failedRecord = {
+                                          type: 'Procurement',
+                                          season: season,
+                                          farmerCode: data.farmerCode ? data.farmerCode : '', 
+                                          farmerName:  data.farmerName ?  data.farmerName : '',
+                                          body: { ...data },
+                                          reason: "This season used all the cotton"
+                                        }
+                                        saveFailedRecord(failedRecord)
                                         farm = undefined;
                                       } else {
                                         if (Number(data.qtyPurchased) < 0) {
@@ -854,6 +1062,15 @@ const uploadTransactionBulk = async (req: Request, res: Response) => {
                                             data: { farmerName: data.farmerName ? data.farmerName : '', farmerCode: data.farmerCode ? data.farmerCode : '' },
                                             message: "QtyPurchased should be greater than 0",
                                           });
+                                          let failedRecord = {
+                                            type: 'Procurement',
+                                            season: season,
+                                            farmerCode: data.farmerCode ? data.farmerCode : '', 
+                                            farmerName:  data.farmerName ?  data.farmerName : '',
+                                            body: { ...data },
+                                            reason: "QtyPurchased should be greater than 0"
+                                          }
+                                          saveFailedRecord(failedRecord)
                                           farm = undefined;
                                         } else {
                                           if (Number(data.rate) < 0) {
@@ -862,6 +1079,15 @@ const uploadTransactionBulk = async (req: Request, res: Response) => {
                                               data: { farmerName: data.farmerName ? data.farmerName : '', farmerCode: data.farmerCode ? data.farmerCode : '' },
                                               message: "Rate should be greater than 0",
                                             });
+                                            let failedRecord = {
+                                              type: 'Procurement',
+                                              season: season,
+                                              farmerCode: data.farmerCode ? data.farmerCode : '', 
+                                              farmerName:  data.farmerName ?  data.farmerName : '',
+                                              body: { ...data },
+                                              reason: "Rate should be greater than 0"
+                                            }
+                                            saveFailedRecord(failedRecord);
                                             farm = undefined;
                                           }
                                         }
@@ -894,6 +1120,31 @@ const uploadTransactionBulk = async (req: Request, res: Response) => {
           season &&
           farm
         ) {
+          const transactionExist = await Transaction.findOne({
+            where:{
+              date: new Date(data.date).toISOString(),
+              farmer_id: farmer.id,
+              qty_purchased: data.qtyPurchased,
+              rate: data.rate,
+              vehicle: data.vehicle ? data.vehicle : "",
+            }
+          });
+          if(transactionExist){
+            fail.push({
+              success: false,
+              data: { farmerName: data.farmerName ? data.farmerName : '', farmerCode: data.farmerCode ? data.farmerCode : '' },
+              message: "Transaction with same Date, Farmer, Qty. Purchased, Rate and Vehicle is already exist",
+            });
+            let failedRecord = {
+              type: 'Procurement',
+              season: season,
+              farmerCode: data.farmerCode ? data.farmerCode : '', 
+              farmerName:  data.farmerName ?  data.farmerName : '',
+              body: { ...data },
+              reason: "Transaction with same Date, Farmer, Qty. Purchased, Rate and Vehicle is already exist"
+            }
+            saveFailedRecord(failedRecord);
+          }else{        
           let transactionData: any = {
             date: new Date(data.date).toISOString(),
             country_id: country.id,
@@ -937,6 +1188,7 @@ const uploadTransactionBulk = async (req: Request, res: Response) => {
             message: "Transaction created",
           });
         }
+      }
       }
     }
     res.sendSuccess(res, { pass, fail });

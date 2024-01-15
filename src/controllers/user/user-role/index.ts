@@ -78,7 +78,7 @@ const checkRoleExists = async (req: Request, res: Response) => {
 //get user roles
 const getUserRoles = async (req: Request, res: Response) => {
     const searchTerm = req.query.search || '';
-    const sortOrder = req.query.sort || '';
+    const sortOrder = req.query.sort || 'desc';
     //   const sortField = req.query.sortBy || ''; 
     const page = Number(req.query.page) || 1;
     const limit = Number(req.query.limit) || 10;
@@ -107,7 +107,7 @@ const getUserRoles = async (req: Request, res: Response) => {
         };
 
         if (sortOrder === 'asc' || sortOrder === 'desc') {
-            queryOptions.order = [['user_role', sortOrder]];
+            queryOptions.order = [['id', sortOrder]];
         }
         //fetch data with pagination
         if (req.query.pagination === "true") {

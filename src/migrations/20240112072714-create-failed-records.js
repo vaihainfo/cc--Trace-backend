@@ -2,18 +2,30 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
-    await queryInterface.createTable('user_tokens', {
+    await queryInterface.createTable('failed_records', {
       id: {
         allowNull: false,
         autoIncrement: true,
         primaryKey: true,
         type: Sequelize.INTEGER
       },
-      user_id: {
+      season_id: {
         type: Sequelize.INTEGER
       },
-      token: {
+      type: {
         type: Sequelize.STRING
+      },
+      farmer_code: {
+        type: Sequelize.STRING
+      },
+      farmer_name: {
+        type: Sequelize.STRING
+      },
+      reason: {
+        type: Sequelize.TEXT
+      },
+      body: {
+        type: Sequelize.JSON
       },
       createdAt: {
         allowNull: false,
@@ -26,6 +38,6 @@ module.exports = {
     });
   },
   async down(queryInterface, Sequelize) {
-    await queryInterface.dropTable('user_tokens');
+    await queryInterface.dropTable('failed_records');
   }
 };

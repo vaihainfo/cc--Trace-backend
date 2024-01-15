@@ -70,6 +70,7 @@ import errorMiddleware from "./middleware/error";
 import setInterface from "./middleware/interface";
 import qrApp from "./router/qr-app";
 import DatamigrationRouter from './router/datamigration';
+import failedRouter from './router/failed-records';
 import { sendScheduledEmails } from "./controllers/email-management/scheduled-email.controller";
 
 const app = express();
@@ -164,6 +165,7 @@ app.use("/fabric-process", fabricProcessRouter);
 app.use("/brand-interface", brandProcessRouter);
 app.use("/qr-app", qrApp);
 app.use("/datamigration",DatamigrationRouter);
+app.use("/failed-records",failedRouter);
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument, { customCss }));
 
 app.use(errorMiddleware);

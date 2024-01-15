@@ -101,9 +101,7 @@ const fetchUsers = async (req: Request, res: Response) => {
     where: whereCondition,
   };
 
-  if (sortOrder === "asc" || sortOrder === "desc") {
-    queryOptions.order = [["username", sortOrder]];
-  }
+  queryOptions.order = [["id", 'desc']];
 
   try {
     if (req.query.pagination === "true") {

@@ -275,6 +275,9 @@ const chooseBale = async (req: Request, res: Response) => {
                     [sequelize.fn('SUM', Sequelize.literal('CAST("gin-bales"."weight" AS INTEGER)')), 'weight'],
                     // Add other attributes here...
                 ],
+                where: {
+                    sold_status: false
+                },
                 include: [
                     {
                         model: GinProcess,

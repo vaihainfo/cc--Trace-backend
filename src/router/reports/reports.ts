@@ -7,6 +7,7 @@ import {
     fetchBaleProcess,
     exportPendingGinnerSales,
     fetchGinSalesPagination,
+    fetchPendingGinnerSales,
     exportGinnerProcess,
     exportGinnerSales,
     fetchSpinnerBalePagination,
@@ -59,6 +60,7 @@ router.get('/export-organic-farmer-report', exportOrganicFarmerReport);
 router.get('/get-bale-process-report', fetchBaleProcess);
 router.get('/export-bale-process-report', exportGinnerProcess);
 router.get('/get-gin-sales-report', fetchGinSalesPagination);
+router.get('/get-gin-pending-sales-report', fetchPendingGinnerSales);
 router.get('/export-pending-sales-report', exportPendingGinnerSales);
 router.get('/export-gin-sales-report', exportGinnerSales);
 router.get('/get-spinner-bale-report', fetchSpinnerBalePagination);
