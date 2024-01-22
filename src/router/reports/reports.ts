@@ -41,7 +41,12 @@ import {
     fetchPscpGinnerPrecurement,
     exportPscpGinnerCottonProcurement,
     fetchPscpProcurementLiveTracker,
-    exportPscpProcurementLiveTracker
+    exportPscpProcurementLiveTracker,
+    fetchGinnerCottonStock,
+    exportGinnerCottonStock,
+    fetchSpinnerPendingBale,
+    fetchSpinnerLintCottonStock,
+    exportSpinnerCottonStock
 } from "../../controllers/reports";
 const router = Router();
 
@@ -64,6 +69,7 @@ router.get('/get-gin-pending-sales-report', fetchPendingGinnerSales);
 router.get('/export-pending-sales-report', exportPendingGinnerSales);
 router.get('/export-gin-sales-report', exportGinnerSales);
 router.get('/get-spinner-bale-report', fetchSpinnerBalePagination);
+router.get('/get-spinner-pending-bale-report', fetchSpinnerPendingBale);
 router.get('/export-spinner-pending-bale-report', exportPendingSpinnerBale);
 router.get('/export-spinner-bale-report', exportSpinnerBale);
 router.get('/get-spinner-yarn-report', fetchSpinnerYarnProcessPagination);
@@ -80,10 +86,14 @@ router.get('/get-weaver-sales-report', fetchWeaverSalesPagination);
 router.get('/export-weaver-sales-report', exportWeaverSale);
 router.get('/get-Qr-track-report', fetchQrCodeTrackPagination);
 router.get('/export-Qr-trackreport', exportQrCodeTrack);
-router.get('/get-spinnner-summary-report', fetchSpinnerSummaryPagination);
+router.get('/get-spinner-summary-report', fetchSpinnerSummaryPagination);
 router.get('/export-spinner-summary-report', exportSpinnerSummary);
 router.get('/get-ginner-summary-report', fetchGinnerSummaryPagination);
 router.get('/export-ginner-summary-report', exportGinnerSummary);
+router.get('/get-ginner-cotton-stock-report', fetchGinnerCottonStock);
+router.get('/export-ginner-cotton-stock-report', exportGinnerCottonStock);
+router.get('/get-spinner-cotton-stock-report', fetchSpinnerLintCottonStock);
+router.get('/export-spinner-cotton-stock-report', exportSpinnerCottonStock);
 router.get('/get-garment-sales-report', fetchGarmentSalesPagination);
 router.get('/export-garment-sales-report', exportGarmentSales);
 router.get('/get-garment-fabric-report', fetchGarmentFabricPagination);
@@ -96,4 +106,5 @@ router.get('/export-pscp-precurement-live-tracker-report', exportPscpProcurement
 router.get('/export-pscp-precurement-report', exportPscpCottonProcurement);
 router.get('/export-ginner-pscp-precurement-report', exportPscpGinnerCottonProcurement);
 router.get('/get-consolidated-report', consolidatedTraceability);
+
 export default router;  

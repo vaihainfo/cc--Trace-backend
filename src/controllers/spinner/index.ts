@@ -1063,7 +1063,8 @@ const updateStatusSales = async (req: Request, res: Response) => {
         for (const obj of req.body.items) {
             const data = {
                 status: obj.status,
-                qty_stock: obj.qtyStock
+                qty_stock: obj.qtyStock,
+                accept_date: obj.status === 'Sold' ? new Date().toISOString() : null
             };
             let result = await GinSales.update(data, { where: { id: obj.id } });
             update.push(result);
