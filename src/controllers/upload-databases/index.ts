@@ -20,7 +20,7 @@ import Farm from "../../models/farm.model";
 import { generateQrCode } from "../../provider/qrcode";
 import ProcessorList from "../../models/processor-list.model";
 import Transaction from "../../models/transaction.model";
-import {saveFailedRecord} from "../failed-records";
+import { saveFailedRecord } from "../failed-records";
 
 const uploadGinnerOrder = async (req: Request, res: Response) => {
     try {
@@ -424,8 +424,8 @@ const uploadFarmer = async (req: Request, res: Response) => {
             let failedRecord = {
                 type: 'Farmer',
                 season: '',
-                farmerCode: '', 
-                farmerName:  '',
+                farmerCode: '',
+                farmerName: '',
                 body: {},
                 reason: "Program cannot be empty"
             }
@@ -445,8 +445,8 @@ const uploadFarmer = async (req: Request, res: Response) => {
                 let failedRecord = {
                     type: 'Farmer',
                     season: '',
-                    farmerCode: '', 
-                    farmerName:  '',
+                    farmerCode: '',
+                    farmerName: '',
                     body: {},
                     reason: "Program not found"
                 }
@@ -462,8 +462,8 @@ const uploadFarmer = async (req: Request, res: Response) => {
             let failedRecord = {
                 type: 'Farmer',
                 season: '',
-                farmerCode: '', 
-                farmerName:  '',
+                farmerCode: '',
+                farmerName: '',
                 body: {},
                 reason: "Brand cannot be empty"
             }
@@ -484,8 +484,8 @@ const uploadFarmer = async (req: Request, res: Response) => {
                 let failedRecord = {
                     type: 'Farmer',
                     season: '',
-                    farmerCode: '', 
-                    farmerName:  '',
+                    farmerCode: '',
+                    farmerName: '',
                     body: {},
                     reason: "Brand not found"
                 }
@@ -501,8 +501,8 @@ const uploadFarmer = async (req: Request, res: Response) => {
             let failedRecord = {
                 type: 'Farmer',
                 season: '',
-                farmerCode: '', 
-                farmerName:  '',
+                farmerCode: '',
+                farmerName: '',
                 body: {},
                 reason: "FarmGroup cannot be empty"
             }
@@ -523,8 +523,8 @@ const uploadFarmer = async (req: Request, res: Response) => {
                 let failedRecord = {
                     type: 'Farmer',
                     season: '',
-                    farmerCode: '', 
-                    farmerName:  '',
+                    farmerCode: '',
+                    farmerName: '',
                     body: {},
                     reason: "Farm Group not found"
                 }
@@ -540,8 +540,8 @@ const uploadFarmer = async (req: Request, res: Response) => {
             let failedRecord = {
                 type: 'Farmer',
                 season: '',
-                farmerCode: '', 
-                farmerName:  '',
+                farmerCode: '',
+                farmerName: '',
                 body: {},
                 reason: "Season cannot be empty"
             }
@@ -561,8 +561,8 @@ const uploadFarmer = async (req: Request, res: Response) => {
                 let failedRecord = {
                     type: 'Farmer',
                     season: '',
-                    farmerCode: '', 
-                    farmerName:  '',
+                    farmerCode: '',
+                    farmerName: '',
                     body: {},
                     reason: "Season not found"
                 }
@@ -572,22 +572,7 @@ const uploadFarmer = async (req: Request, res: Response) => {
         }
 
         for await (const data of req.body.farmers) {
-            if (!data.dateOfJoining) {
-                fail.push({
-                    success: false,
-                    data: { farmerCode: data.farmerCode ? data.farmerCode : '', farmerName: data.firstName ? data.firstName : '' },
-                    message: "Date of joining cannot be empty"
-                });
-                let failedRecord = {
-                    type: 'Farmer',
-                    season: season,
-                    farmerCode: data.farmerCode ? data.farmerCode : '', 
-                    farmerName:  data.firstName ?  data.firstName : '',
-                    body: { ...data },
-                    reason: "Date of joining cannot be empty"
-                }
-                saveFailedRecord(failedRecord)
-            } else if (!data.firstName) {
+            if (!data.firstName) {
                 fail.push({
                     success: false,
                     data: { farmerCode: data.farmerCode ? data.farmerCode : '', farmerName: data.firstName ? data.firstName : '' },
@@ -596,8 +581,8 @@ const uploadFarmer = async (req: Request, res: Response) => {
                 let failedRecord = {
                     type: 'Farmer',
                     season: season,
-                    farmerCode: data.farmerCode ? data.farmerCode : '', 
-                    farmerName:  data.firstName ?  data.firstName : '',
+                    farmerCode: data.farmerCode ? data.farmerCode : '',
+                    farmerName: data.firstName ? data.firstName : '',
                     body: { ...data },
                     reason: "First Name cannot be empty"
                 }
@@ -611,8 +596,8 @@ const uploadFarmer = async (req: Request, res: Response) => {
                 let failedRecord = {
                     type: 'Farmer',
                     season: season,
-                    farmerCode: data.farmerCode ? data.farmerCode : '', 
-                    farmerName:  data.firstName ?  data.firstName : '',
+                    farmerCode: data.farmerCode ? data.farmerCode : '',
+                    farmerName: data.firstName ? data.firstName : '',
                     body: { ...data },
                     reason: "Farmer Code cannot be empty"
                 }
@@ -626,8 +611,8 @@ const uploadFarmer = async (req: Request, res: Response) => {
                 let failedRecord = {
                     type: 'Farmer',
                     season: season,
-                    farmerCode: data.farmerCode ? data.farmerCode : '', 
-                    farmerName:  data.firstName ?  data.firstName : '',
+                    farmerCode: data.farmerCode ? data.farmerCode : '',
+                    farmerName: data.firstName ? data.firstName : '',
                     body: { ...data },
                     reason: "Country cannot be empty"
                 }
@@ -641,8 +626,8 @@ const uploadFarmer = async (req: Request, res: Response) => {
                 let failedRecord = {
                     type: 'Farmer',
                     season: season,
-                    farmerCode: data.farmerCode ? data.farmerCode : '', 
-                    farmerName:  data.firstName ?  data.firstName : '',
+                    farmerCode: data.farmerCode ? data.farmerCode : '',
+                    farmerName: data.firstName ? data.firstName : '',
                     body: { ...data },
                     reason: "State cannot be empty"
                 }
@@ -656,8 +641,8 @@ const uploadFarmer = async (req: Request, res: Response) => {
                 let failedRecord = {
                     type: 'Farmer',
                     season: season,
-                    farmerCode: data.farmerCode ? data.farmerCode : '', 
-                    farmerName:  data.firstName ?  data.firstName : '',
+                    farmerCode: data.farmerCode ? data.farmerCode : '',
+                    farmerName: data.firstName ? data.firstName : '',
                     body: { ...data },
                     reason: "District cannot be empty"
                 }
@@ -671,8 +656,8 @@ const uploadFarmer = async (req: Request, res: Response) => {
                 let failedRecord = {
                     type: 'Farmer',
                     season: season,
-                    farmerCode: data.farmerCode ? data.farmerCode : '', 
-                    farmerName:  data.firstName ?  data.firstName : '',
+                    farmerCode: data.farmerCode ? data.farmerCode : '',
+                    farmerName: data.firstName ? data.firstName : '',
                     body: { ...data },
                     reason: "Block cannot be empty"
                 }
@@ -686,8 +671,8 @@ const uploadFarmer = async (req: Request, res: Response) => {
                 let failedRecord = {
                     type: 'Farmer',
                     season: season,
-                    farmerCode: data.farmerCode ? data.farmerCode : '', 
-                    farmerName:  data.firstName ?  data.firstName : '',
+                    farmerCode: data.farmerCode ? data.farmerCode : '',
+                    farmerName: data.firstName ? data.firstName : '',
                     body: { ...data },
                     reason: "Village cannot be empty"
                 }
@@ -701,8 +686,8 @@ const uploadFarmer = async (req: Request, res: Response) => {
                 let failedRecord = {
                     type: 'Farmer',
                     season: season,
-                    farmerCode: data.farmerCode ? data.farmerCode : '', 
-                    farmerName:  data.firstName ?  data.firstName : '',
+                    farmerCode: data.farmerCode ? data.farmerCode : '',
+                    farmerName: data.firstName ? data.firstName : '',
                     body: { ...data },
                     reason: "Tracenet Id is only for Organic Program"
                 }
@@ -716,8 +701,8 @@ const uploadFarmer = async (req: Request, res: Response) => {
                 let failedRecord = {
                     type: 'Farmer',
                     season: season,
-                    farmerCode: data.farmerCode ? data.farmerCode : '', 
-                    farmerName:  data.firstName ?  data.firstName : '',
+                    farmerCode: data.farmerCode ? data.farmerCode : '',
+                    farmerName: data.firstName ? data.firstName : '',
                     body: { ...data },
                     reason: "ICS name is only for Organic Program"
                 }
@@ -731,8 +716,8 @@ const uploadFarmer = async (req: Request, res: Response) => {
                 let failedRecord = {
                     type: 'Farmer',
                     season: season,
-                    farmerCode: data.farmerCode ? data.farmerCode : '', 
-                    farmerName:  data.firstName ?  data.firstName : '',
+                    farmerCode: data.farmerCode ? data.farmerCode : '',
+                    farmerName: data.firstName ? data.firstName : '',
                     body: { ...data },
                     reason: "Cert Status is only for Organic Program"
                 }
@@ -759,8 +744,8 @@ const uploadFarmer = async (req: Request, res: Response) => {
                         let failedRecord = {
                             type: 'Farmer',
                             season: season,
-                            farmerCode: data.farmerCode ? data.farmerCode : '', 
-                            farmerName:  data.firstName ?  data.firstName : '',
+                            farmerCode: data.farmerCode ? data.farmerCode : '',
+                            farmerName: data.firstName ? data.firstName : '',
                             body: { ...data },
                             reason: "Country not found"
                         }
@@ -782,8 +767,8 @@ const uploadFarmer = async (req: Request, res: Response) => {
                                 let failedRecord = {
                                     type: 'Farmer',
                                     season: season,
-                                    farmerCode: data.farmerCode ? data.farmerCode : '', 
-                                    farmerName:  data.firstName ?  data.firstName : '',
+                                    farmerCode: data.farmerCode ? data.farmerCode : '',
+                                    farmerName: data.firstName ? data.firstName : '',
                                     body: { ...data },
                                     reason: "State is not associated with the entered Country"
                                 }
@@ -806,8 +791,8 @@ const uploadFarmer = async (req: Request, res: Response) => {
                                         let failedRecord = {
                                             type: 'Farmer',
                                             season: season,
-                                            farmerCode: data.farmerCode ? data.farmerCode : '', 
-                                            farmerName:  data.firstName ?  data.firstName : '',
+                                            farmerCode: data.farmerCode ? data.farmerCode : '',
+                                            farmerName: data.firstName ? data.firstName : '',
                                             body: { ...data },
                                             reason: "District is not associated with entered State"
                                         }
@@ -831,8 +816,8 @@ const uploadFarmer = async (req: Request, res: Response) => {
                                                 let failedRecord = {
                                                     type: 'Farmer',
                                                     season: season,
-                                                    farmerCode: data.farmerCode ? data.farmerCode : '', 
-                                                    farmerName:  data.firstName ?  data.firstName : '',
+                                                    farmerCode: data.farmerCode ? data.farmerCode : '',
+                                                    farmerName: data.firstName ? data.firstName : '',
                                                     body: { ...data },
                                                     reason: "Block is not associated with entered District"
                                                 }
@@ -855,8 +840,8 @@ const uploadFarmer = async (req: Request, res: Response) => {
                                                         let failedRecord = {
                                                             type: 'Farmer',
                                                             season: season,
-                                                            farmerCode: data.farmerCode ? data.farmerCode : '', 
-                                                            farmerName:  data.firstName ?  data.firstName : '',
+                                                            farmerCode: data.farmerCode ? data.farmerCode : '',
+                                                            farmerName: data.firstName ? data.firstName : '',
                                                             body: { ...data },
                                                             reason: "Village is not associated with entered Taluk/Block"
                                                         }
@@ -888,8 +873,8 @@ const uploadFarmer = async (req: Request, res: Response) => {
                         let failedRecord = {
                             type: 'Farmer',
                             season: season,
-                            farmerCode: data.farmerCode ? data.farmerCode : '', 
-                            farmerName:  data.firstName ?  data.firstName : '',
+                            farmerCode: data.farmerCode ? data.farmerCode : '',
+                            farmerName: data.firstName ? data.firstName : '',
                             body: { ...data },
                             reason: "ICS not found"
                         }
@@ -901,8 +886,8 @@ const uploadFarmer = async (req: Request, res: Response) => {
                     let farmers = await Farmer.findOne({ where: { code: data.farmerCode } });
 
                     if (farmers) {
-                        const farm = await Farm.findOne({where: {farmer_id: farmers.id, season_id: season.id}});
-                        if(farm){
+                        const farm = await Farm.findOne({ where: { farmer_id: farmers.id, season_id: season.id } });
+                        if (farm) {
                             fail.push({
                                 success: false,
                                 data: { farmerCode: data.farmerCode, farmerName: data.firstName },
@@ -911,13 +896,13 @@ const uploadFarmer = async (req: Request, res: Response) => {
                             let failedRecord = {
                                 type: 'Farmer',
                                 season: season,
-                                farmerCode: data.farmerCode ? data.farmerCode : '', 
-                                farmerName:  data.firstName ?  data.firstName : '',
+                                farmerCode: data.farmerCode ? data.farmerCode : '',
+                                farmerName: data.firstName ? data.firstName : '',
                                 body: { ...data },
                                 reason: "Farmer with same farmer code and season is already exists"
                             }
                             saveFailedRecord(failedRecord)
-                        }else{
+                        } else {
                             const farmData = {
                                 farmer_id: farmers.id,
                                 program_id: program.id,
@@ -928,14 +913,14 @@ const uploadFarmer = async (req: Request, res: Response) => {
                                 cotton_total_area: data.cottonTotalArea ? data.cottonTotalArea : 0.0,
                                 total_estimated_cotton: data.totalEstimatedCotton ? data.totalEstimatedCotton : 0.0
                             };
-                            const createdFarm = await Farm.create(farmData); 
+                            const createdFarm = await Farm.create(farmData);
                             pass.push({
                                 success: true,
                                 data: farmers,
                                 message: "Farmer created"
                             });
                         }
-                        
+
                     } else {
                         const farmerdata = {
                             program_id: program.id,
