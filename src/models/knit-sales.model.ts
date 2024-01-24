@@ -118,6 +118,9 @@ const KnitSales = db.define('knit_sales', {
   status: {
     type: DataTypes.STRING
   },
+  accept_date: {
+    type: DataTypes.DATE
+  },
   qr: {
     type: DataTypes.STRING
   },

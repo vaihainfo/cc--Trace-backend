@@ -184,7 +184,7 @@ const fetchGinProcessPagination = async (req: Request, res: Response) => {
                 }
                 let bale = await GinBale.findOne({
                     attributes: [
-                        [Sequelize.fn("SUM", Sequelize.literal("CAST(weight AS INTEGER)")),
+                        [Sequelize.fn("SUM", Sequelize.literal("CAST(weight AS DOUBLE PRECISION)")),
                             "lint_quantity",],
                         [sequelize.fn('min', sequelize.col('bale_no')), 'pressno_from'],
                         [sequelize.fn('max', sequelize.col('bale_no')), 'pressno_to']
@@ -272,7 +272,7 @@ const chooseBale = async (req: Request, res: Response) => {
         for await (const id of id_array) {
             const lot_details = await GinBale.findAll({
                 attributes: [
-                    [sequelize.fn('SUM', Sequelize.literal('CAST("gin-bales"."weight" AS INTEGER)')), 'weight'],
+                    [sequelize.fn('SUM', Sequelize.literal('CAST("gin-bales"."weight" AS DOUBLE PRECISION)')), 'weight'],
                     // Add other attributes here...
                 ],
                 where: {

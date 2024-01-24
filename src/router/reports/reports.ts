@@ -46,7 +46,11 @@ import {
     exportGinnerCottonStock,
     fetchSpinnerPendingBale,
     fetchSpinnerLintCottonStock,
-    exportSpinnerCottonStock
+    exportSpinnerCottonStock,
+    fetchKnitterYarnProcess,
+    exportKnitterYarnProcess,
+    fetchWeaverYarnProcess,
+    exportWeaverYarnProcess
 } from "../../controllers/reports";
 const router = Router();
 
@@ -78,10 +82,14 @@ router.get('/get-spinner-yarn-sales-report', fetchSpinSalesPagination);
 router.get('/export-spinner-yarn-sales-report', exportSpinnerSale);
 router.get('/get-knitter-yarn-report', fetchKnitterYarnPagination);
 router.get('/export-knitter-yarn-report', exportKnitterYarn);
+router.get('/get-knitter-yarn-process-report', fetchKnitterYarnProcess);
+router.get('/export-knitter-yarn-process-report', exportKnitterYarnProcess);
 router.get('/get-knitter-sales-report', fetchKnitterSalesPagination);
 router.get('/export-knitter-sales-report', exportKnitterSale);
 router.get('/get-weaver-yarn-report', fetchWeaverYarnPagination);
 router.get('/export-weaver-yarn-report', exportWeaverYarn);
+router.get('/get-weaver-yarn-process-report', fetchWeaverYarnProcess);
+router.get('/export-weaver-yarn-process-report', exportWeaverYarnProcess);
 router.get('/get-weaver-sales-report', fetchWeaverSalesPagination);
 router.get('/export-weaver-sales-report', exportWeaverSale);
 router.get('/get-Qr-track-report', fetchQrCodeTrackPagination);

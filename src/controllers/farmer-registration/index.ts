@@ -832,7 +832,7 @@ const exportFarmer = async (req: Request, res: Response) => {
   }
 };
 
-//generate Qr for villages
+//generate Qr for villages 
 const generateQrCodeVillage = async (req: Request, res: Response) => {
   try {
     if (!req.query.villageId) {
@@ -1000,7 +1000,7 @@ const dashboardGraph = async (req: Request, res: Response) => {
 
 const fetchFarmerPecurement = async (req: Request, res: Response) => {
   const searchTerm = req.query.search || "";
-  const { icsId, farmGroupId, countryId, stateId, villageId, brandId, cert, seasonId }: any = req.query;
+  const { icsId, farmGroupId, countryId, stateId, villageId,brandId, cert, seasonId }: any = req.query;
   const page = Number(req.query.page) || 1;
   const limit = Number(req.query.limit) || 10;
   const offset = (page - 1) * limit;

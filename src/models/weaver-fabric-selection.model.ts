@@ -1,6 +1,7 @@
 import { DataTypes } from 'sequelize';
 import db from '../util/dbConn';
 import WeaverProcess from './weaver-process.model';
+import WeaverSales from './weaver-sales.model';
 
 const WeaverFabricSelection = db.define('weaver_fabric_selections', {
   id: {
@@ -26,6 +27,11 @@ const WeaverFabricSelection = db.define('weaver_fabric_selections', {
 WeaverFabricSelection.belongsTo(WeaverProcess, {
   foreignKey: "fabric_id",
   as: "process",
+});
+
+WeaverFabricSelection.belongsTo(WeaverSales, {
+  foreignKey: "sales_id",
+  as: "sales",
 });
 
 WeaverFabricSelection.sync();

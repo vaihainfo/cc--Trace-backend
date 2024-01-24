@@ -131,7 +131,7 @@ const generateGinSalesHtml = async (sales: any) => {
                 padding: 0;
                 text-indent: 0;
             }
-
+    
             h2 {
                 color: black;
                 font-family: Arial, sans-serif;
@@ -140,7 +140,7 @@ const generateGinSalesHtml = async (sales: any) => {
                 text-decoration: none;
                 font-size: 12pt;
             }
-
+    
             h1 {
                 color: black;
                 font-family: Arial, sans-serif;
@@ -149,7 +149,7 @@ const generateGinSalesHtml = async (sales: any) => {
                 text-decoration: none;
                 font-size: 15pt;
             }
-
+    
             p {
                 color: black;
                 font-family: Arial, sans-serif;
@@ -159,7 +159,7 @@ const generateGinSalesHtml = async (sales: any) => {
                 font-size: 10pt;
                 margin: 0pt;
             }
-
+    
             .a,
             a {
                 color: black;
@@ -169,7 +169,7 @@ const generateGinSalesHtml = async (sales: any) => {
                 text-decoration: none;
                 font-size: 10pt;
             }
-
+    
             .s1 {
                 color: black;
                 font-family: Arial, sans-serif;
@@ -178,7 +178,7 @@ const generateGinSalesHtml = async (sales: any) => {
                 text-decoration: none;
                 font-size: 10pt;
             }
-
+    
             .s2 {
                 color: black;
                 font-family: Arial, sans-serif;
@@ -187,7 +187,7 @@ const generateGinSalesHtml = async (sales: any) => {
                 text-decoration: none;
                 font-size: 10pt;
             }
-
+    
             .s3 {
                 color: black;
                 font-family: Arial, sans-serif;
@@ -196,7 +196,7 @@ const generateGinSalesHtml = async (sales: any) => {
                 text-decoration: none;
                 font-size: 10pt;
             }
-
+    
             table,
             tbody {
                 vertical-align: top;
@@ -204,7 +204,7 @@ const generateGinSalesHtml = async (sales: any) => {
             }
         </style>
     </head>
-
+    
     <body>
         <div style="margin:1% 6%">
             <h2 style="padding-top: 3pt;text-indent: 0pt;text-align: center;">INVOICE</h2>
@@ -219,7 +219,7 @@ const generateGinSalesHtml = async (sales: any) => {
             <p class="s1" style="text-indent: 0pt;text-align: center;">Supply of goods under rule 46 of CGST
                 rules, 2017 read with section 31 of the CGST Act, 2017</p>
             <p style="text-indent: 0pt;text-align: left;"><br /></p>
-
+    
             <div style="display: flex; justify-content: space-between;  margin:7px">
                 <p style="padding-left: 8pt;text-indent: 0pt;text-align: left;">PAN No : </p>
                 <p style="padding-left: 8pt;text-indent: 0pt;text-align: left;"> Invoice No : ${sales.invoice_no}</p>
@@ -586,7 +586,7 @@ const generateGinSalesHtml = async (sales: any) => {
             <p class="s1" style="padding-top: 4pt;text-indent: 0pt;text-align: right;">For ${sales.ginner ? sales.ginner.name : ''}</p>
         </div>
     </body>
-
+    
     </html>`
         const browser = await puppeteer.launch();
         const page = await browser.newPage();

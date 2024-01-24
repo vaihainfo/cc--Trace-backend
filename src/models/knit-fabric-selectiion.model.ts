@@ -1,6 +1,7 @@
 import { DataTypes } from 'sequelize';
 import db from '../util/dbConn';
 import KnitProcess from './knit-process.model';
+import KnitSales from './knit-sales.model';
 
 const KnitFabricSelection = db.define('knit_fabric_selections', {
   id: {
@@ -26,6 +27,11 @@ const KnitFabricSelection = db.define('knit_fabric_selections', {
 KnitFabricSelection.belongsTo(KnitProcess, {
   foreignKey: "fabric_id",
   as: "process",
+});
+
+KnitFabricSelection.belongsTo(KnitSales, {
+  foreignKey: "sales_id",
+  as: "sales",
 });
 
 KnitFabricSelection.sync();

@@ -282,6 +282,8 @@ const createKnitterrSales = async (req: Request, res: Response) => {
             invoice_file: req.body.invoiceFile,
             delivery_notes: req.body.deliveryNotes,
             qty_stock: req.body.totalYarnQty,
+            fabric_type: req.body.fabricType,
+            no_of_rolls: req.body.noOfRolls,
             status: 'Pending for QR scanning'
         };
         const kniSale = await KnitSales.create(data);
@@ -948,7 +950,8 @@ const updateStatusKnitterSale = async (req: Request, res: Response) => {
         let update = [];
         for (const obj of req.body.items) {
             const data = {
-                status: obj.status
+                status: obj.status,
+                accept_date: obj.status === 'Sold' ? new Date().toISOString() : null
             };
             let result = await SpinSales.update(data, { where: { id: obj.id } });
             update.push(result);

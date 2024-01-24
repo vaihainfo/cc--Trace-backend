@@ -188,9 +188,9 @@ const fetchTransactionsReport = async (req: Request, res: Response) => {
       const transaction = await Transaction.findAll(queryOptions);
       return res.sendSuccess(res, transaction);
     }
-  } catch (error) {
+  } catch (error: any) {
     console.log(error);
-    return res.sendError(res, "NOT_ABLE_TO_FETCH");
+    return res.sendError(res, error.message);
   }
 };
 
@@ -215,9 +215,9 @@ const fetchSumOfQtyPurchasedByProgram = async (req: Request, res: Response) => {
     });
 
     return res.sendSuccess(res, sumByProgram);
-  } catch (error) {
+  } catch (error: any) {
     console.log(error);
-    return res.sendError(res, "NOT_ABLE_TO_FETCH_SUM_BY_PROGRAM");
+    return res.sendError(res, error.message);
   }
 };
 
