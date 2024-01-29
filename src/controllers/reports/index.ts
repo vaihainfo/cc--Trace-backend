@@ -5754,8 +5754,8 @@ const exportGarmentSales = async (req: Request, res: Response) => {
                 no_of_boxes: item.total_no_of_boxes ? item.total_no_of_boxes : '',
                 no_of_pieces: item.total_no_of_pieces ? item.total_no_of_pieces : '',
                 transaction_agent: item.transaction_agent ? item.transaction_agent : '',
-                total_fabric_weight: item.total_fabric_weight ? item.total_fabric_weight : '',
                 total_fabric_length: item.total_fabric_length ? item.total_fabric_length : '',
+                total_fabric_weight: item.total_fabric_weight ? item.total_fabric_weight : '',
                 color: item.qr ? process.env.BASE_URL + item.qr : '',
             });
             worksheet.addRow(rowValues);
