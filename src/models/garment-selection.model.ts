@@ -1,5 +1,7 @@
 import { DataTypes } from 'sequelize';
 import db from '../util/dbConn';
+import GarmentProcess from './garment-process..model';
+import GarmentSales from './garment-sales.model';
 
 const GarmentSelection = db.define('garment_selections', {
   id: {
@@ -29,6 +31,16 @@ const GarmentSelection = db.define('garment_selections', {
   qty_used_weight: {
     type: DataTypes.DOUBLE
   },
+});
+
+GarmentSelection.belongsTo(GarmentProcess, {
+  foreignKey: "garment_id",
+  as: "garmentprocess",
+});
+
+GarmentSelection.belongsTo(GarmentSales, {
+  foreignKey: "sales_id",
+  as: "garmentsales",
 });
 
 GarmentSelection.sync();

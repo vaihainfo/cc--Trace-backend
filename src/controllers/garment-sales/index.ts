@@ -176,11 +176,12 @@ const fetchTransactions = async (req: Request, res: Response) => {
     let extrawave = ``;
     const knitterWhere: any = {};
     const weaverWhere: any = {};
+    const searchCondition: any = {};
     const fabricWhere: any = {};
     let whereCondition: any = {};
 
     if (searchTerm) {
-        whereCondition[Op.or] = [
+      searchCondition[Op.or] = [
 // Search by order ref
             { '$season.name$': { [Op.iLike]: `%${searchTerm}%` } },
             { garment_order_ref: { [Op.iLike]: `%${searchTerm}%` } }, // Search by order ref
@@ -195,6 +196,16 @@ const fetchTransactions = async (req: Request, res: Response) => {
             { processor_name: { [Op.iLike]: `%${searchTerm}%` } },
             { processor_address: { [Op.iLike]: `%${searchTerm}%` } },
         ];
+
+        weaverWhere[Op.or]=[
+          ...searchCondition[Op.or], 
+          { '$weaver.name$': { [Op.iLike]: `%${searchTerm}%` } },
+      ]
+
+      knitterWhere[Op.or]=[
+          ...searchCondition[Op.or], 
+          { '$knitter.name$': { [Op.iLike]: `%${searchTerm}%` } },
+      ]
     }
 
     if (!garmentId) {
@@ -286,7 +297,6 @@ const fetchTransactions = async (req: Request, res: Response) => {
           buyer_id: garmentId,
           ...whereCondition,
           ...weaverWhere,
-          [Op.or]:[{'$weaver.name$': { [Op.iLike]: `%${searchTerm}%` }}]
         },
         include: [
           ...include,
@@ -299,7 +309,6 @@ const fetchTransactions = async (req: Request, res: Response) => {
           buyer_id: garmentId,
           ...whereCondition,
           ...knitterWhere,
-          [Op.or]:[{'$knitter.name$': { [Op.iLike]: `%${searchTerm}%` }}]
         },
         include: [
           ...include,

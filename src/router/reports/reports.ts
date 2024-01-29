@@ -33,8 +33,6 @@ import {
     exportGinnerSummary,
     fetchGarmentSalesPagination,
     exportGarmentSales,
-    fetchGarmentFabricPagination,
-    exportGarmentFabric,
     fetchPscpPrecurement,
     exportPscpCottonProcurement,
     consolidatedTraceability,
@@ -50,7 +48,12 @@ import {
     fetchKnitterYarnProcess,
     exportKnitterYarnProcess,
     fetchWeaverYarnProcess,
-    exportWeaverYarnProcess
+    exportWeaverYarnProcess,
+    fetchGarmentFabricReceipt,
+    exportGarmentFabricReceipt,
+    fetchGarmentFabricProcess,
+    exportGarmentFabricProcess,
+    getGarmentSalesFilter
 } from "../../controllers/reports";
 const router = Router();
 
@@ -102,10 +105,13 @@ router.get('/get-ginner-cotton-stock-report', fetchGinnerCottonStock);
 router.get('/export-ginner-cotton-stock-report', exportGinnerCottonStock);
 router.get('/get-spinner-cotton-stock-report', fetchSpinnerLintCottonStock);
 router.get('/export-spinner-cotton-stock-report', exportSpinnerCottonStock);
+router.get('/get-garment-fabric-receipt-report', fetchGarmentFabricReceipt);
+router.get('/export-garment-fabric-receipt-report', exportGarmentFabricReceipt);
+router.get('/get-garment-sales-filters', getGarmentSalesFilter);
 router.get('/get-garment-sales-report', fetchGarmentSalesPagination);
 router.get('/export-garment-sales-report', exportGarmentSales);
-router.get('/get-garment-fabric-report', fetchGarmentFabricPagination);
-router.get('/export-garment-fabric-report', exportGarmentFabric);
+router.get('/get-garment-fabric-process-report', fetchGarmentFabricProcess);
+router.get('/export-garment-fabric-process-report', exportGarmentFabricProcess);
 router.get('/get-pscp-precurement-report', fetchPscpPrecurement);
 router.get('/get-ginner-pscp-precurement-report', fetchPscpGinnerPrecurement);
 router.get('/get-pscp-precurement-live-tracker-report', fetchPscpProcurementLiveTracker);

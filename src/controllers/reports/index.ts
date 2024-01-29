@@ -43,6 +43,8 @@ import WeaverProcess from "../../models/weaver-process.model";
 import Fabric from "../../models/fabric.model";
 import KnitFabricSelection from "../../models/knit-fabric-selectiion.model";
 import WeaverFabricSelection from "../../models/weaver-fabric-selection.model";
+import GarmentProcess from "../../models/garment-process..model";
+import GarmentSelection from "../../models/garment-selection.model";
 
 const fetchBaleProcess = async (req: Request, res: Response) => {
     const searchTerm = req.query.search || "";
@@ -4118,7 +4120,7 @@ const fetchWeaverSalesPagination = async (req: Request, res: Response) => {
     try {
         if (searchTerm) {
             whereCondition[Op.or] = [
-                { '$sales.knitter.name$': { [Op.iLike]: `%${searchTerm}%` } },
+                { '$sales.weaver.name$': { [Op.iLike]: `%${searchTerm}%` } },
                 { '$sales.buyer.name$': { [Op.iLike]: `%${searchTerm}%` } },
                 { '$sales.dyingwashing.name$': { [Op.iLike]: `%${searchTerm}%` } },
                 { '$sales.season.name$': { [Op.iLike]: `%${searchTerm}%` } },
@@ -4526,238 +4528,583 @@ const exportWeaverSale = async (req: Request, res: Response) => {
     }
 };
 
-
-//fetch Weaver Sales with filters
-const fetchGarmentSalesPagination = async (req: Request, res: Response) => {
+const fetchGarmentFabricReceipt = async (req: Request, res: Response) => {
     const searchTerm = req.query.search || "";
     const page = Number(req.query.page) || 1;
     const limit = Number(req.query.limit) || 10;
-    const { garmentId, seasonId, programId, brandId, countryId }: any = req.query;
+    const { weaverId,garmentId,knitterId, seasonId, programId, brandId, countryId, fabricType }: any = req.query;
     const offset = (page - 1) * limit;
     const whereCondition: any = {};
+    const searchCondition: any = {};
+    const weaverWhere: any = {};
+    const knitterWhere: any = {};
     try {
         if (searchTerm) {
-            whereCondition[Op.or] = [
-                { order_ref: { [Op.iLike]: `%${searchTerm}%` } }, // Search by order ref
-                { '$season.name$': { [Op.iLike]: `%${searchTerm}%` } },
-                { invoice_no: { [Op.iLike]: `%${searchTerm}%` } },
-                { style_mark_no: { [Op.iLike]: `%${searchTerm}%` } },
-                { '$program.program_name$': { [Op.iLike]: `%${searchTerm}%` } },
-                { '$buyer.brand_name$': { [Op.iLike]: `%${searchTerm}%` } },
-                { transaction_agent: { [Op.iLike]: `%${searchTerm}%` } },
-                { garment_type: { [Op.iLike]: `%${searchTerm}%` } },
-                { garment_size: { [Op.iLike]: `%${searchTerm}%` } },
-                { color: { [Op.iLike]: `%${searchTerm}%` } },
+            searchCondition[Op.or] = [
+                { '$sales.buyer.name$': { [Op.iLike]: `%${searchTerm}%` } },
+                { '$sales.season.name$': { [Op.iLike]: `%${searchTerm}%` } },
+                { '$sales.program.program_name$': { [Op.iLike]: `%${searchTerm}%` } },
+                { '$sales.garment_order_ref$': { [Op.iLike]: `%${searchTerm}%` } },
+                { '$sales.brand_order_ref$': { [Op.iLike]: `%${searchTerm}%` } },
+                {'$sales.invoice_no$' : { [Op.iLike]: `%${searchTerm}%` } },
+                {'$sales.batch_lot_no$' : { [Op.iLike]: `%${searchTerm}%` } },
+                {'$sales.transporter_name$' : { [Op.iLike]: `%${searchTerm}%` } },
+                {'$sales.vehicle_no$' : { [Op.iLike]: `%${searchTerm}%` } },
+                {'$sales.transaction_agent$' : { [Op.iLike]: `%${searchTerm}%` } },
+                {'$process.reel_lot_no$' : { [Op.iLike]: `%${searchTerm}%` } },
+                {'$process.batch_lot_no$' : { [Op.iLike]: `%${searchTerm}%` } },
             ];
+
+            weaverWhere[Op.or]=[
+                ...searchCondition[Op.or], 
+                { '$sales.weaver.name$': { [Op.iLike]: `%${searchTerm}%` } },
+            ]
+
+            knitterWhere[Op.or]=[
+                ...searchCondition[Op.or], 
+                { '$sales.knitter.name$': { [Op.iLike]: `%${searchTerm}%` } },
+            ]
         }
-        if (garmentId) {
-            const idArray: number[] = garmentId
+        if (weaverId) {
+            const idArray: number[] = weaverId
                 .split(",")
                 .map((id: any) => parseInt(id, 10));
-            whereCondition.garment_id = { [Op.in]: idArray };
+                weaverWhere['$sales.weaver_id$'] = { [Op.in]: idArray };
         }
         if (brandId) {
             const idArray: number[] = brandId
                 .split(",")
                 .map((id: any) => parseInt(id, 10));
-            let weaver = await Garment.findAll({ where: { brand: { [Op.overlap]: idArray } } });
-            const arry: number[] = weaver
-                .map((gin: any) => parseInt(gin.id, 10));
-            whereCondition.garment_id = { [Op.in]: arry };
+                weaverWhere['$sales.weaver.brand$'] = { [Op.overlap]: idArray };
+                knitterWhere['$sales.knitter.brand$'] = { [Op.overlap]: idArray };
         }
 
         if (countryId) {
             const idArray: number[] = countryId
                 .split(",")
                 .map((id: any) => parseInt(id, 10));
-            let weaver = await Garment.findAll({ where: { country_id: { [Op.in]: idArray } } });
-            const arry: number[] = weaver
-                .map((gin: any) => parseInt(gin.id, 10));
-            whereCondition.garment_id = { [Op.in]: arry };
+                weaverWhere['$sales.weaver.country_id$'] = { [Op.in]: idArray };
+                knitterWhere['$sales.knitter.country_id$'] = { [Op.in]: idArray };
         }
 
         if (seasonId) {
             const idArray: number[] = seasonId
                 .split(",")
                 .map((id: any) => parseInt(id, 10));
-            whereCondition.season_id = { [Op.in]: idArray };
+                whereCondition['$sales.season_id$'] = { [Op.in]: idArray };
         }
 
         if (programId) {
             const idArray: number[] = programId
                 .split(",")
                 .map((id: any) => parseInt(id, 10));
-            whereCondition.program_id = { [Op.in]: idArray };
+            whereCondition['$sales.program_id$'] = { [Op.in]: idArray };
+        }
+
+        if (fabricType) {
+            const idArray: any[] = fabricType
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition['$process.fabric_type$'] = { [Op.overlap]: idArray };
+        }
+
+         // Helper function to add conditions based on filter values
+         const addFilterCondition = (whereObj: any, filterKey: string, arr: any ) => {
+            let idArray:number[] = arr ? arr.split(",").map((id: any) => parseInt(id, 10)) : [0];
+            if (idArray && idArray.length > 0) {
+                whereObj[filterKey] = { [Op.in]: idArray };
+            } else {
+                // If no filter value provided, set an impossible condition to filter out all data
+                whereObj[filterKey] = { [Op.in]: [0] };
+            }
+        };
+      
+        // Dynamically add conditions for each filter
+        if(knitterId || weaverId){
+            addFilterCondition(knitterWhere, '$sales.knitter_id$', knitterId);
+            addFilterCondition(weaverWhere,'$sales.weaver_id$', weaverId);
+        }
+
+        whereCondition['$sales.status$'] = 'Sold';
+        whereCondition['$sales.buyer_id$'] = { [Op.not]: null };
+
+        if (garmentId) {
+            const idArray: number[] = garmentId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition['$sales.buyer_id$'] = { [Op.in]: idArray };
         }
 
         let include = [
             {
-                model: Garment,
-                as: "garment",
-                attributes: ['id', 'name', 'address']
-            },
-            {
                 model: Season,
                 as: "season",
+                attributes: ['id', 'name']
             },
             {
                 model: Program,
                 as: "program",
+                attributes: ['id', 'program_name']
             },
             {
-                model: Department,
-                as: "department",
-            },
-            {
-                model: Brand,
+                model: Garment,
                 as: "buyer",
-                attributes: ['id', 'brand_name', 'address']
-            }
+                attributes: ['id', 'name', 'address']
+            },
         ];
+
         //fetch data with pagination
 
-        const { count, rows } = await GarmentSales.findAndCountAll({
-            where: whereCondition,
-            include: include,
-            order: [
-                [
-                    'id', 'asc'
-                ]
+        let rows: any = await Promise.all([
+        WeaverFabricSelection.findAll({
+            attributes:[
+                [Sequelize.literal('"sales"."id"'), 'sales_id'],
+                [Sequelize.literal('"sales"."accept_date"'), 'accept_date'],
+                [Sequelize.literal('"sales"."date"'), 'date'],
+                [Sequelize.col('"sales"."season"."name"'), 'season_name'],
+                [Sequelize.col('"sales"."season"."id"'), 'season_id'],
+                [Sequelize.col('"sales"."weaver"."id"'), 'weaver_id'],
+                [Sequelize.col('"sales"."weaver"."name"'), 'weaver'],
+                [Sequelize.col('"sales"."program"."program_name"'), 'program'],
+                [Sequelize.col('"sales"."garment_order_ref"'), 'garment_order_ref'],
+                [Sequelize.col('"sales"."brand_order_ref"'), 'brand_order_ref'],
+                [Sequelize.col('"sales"."buyer_type"'), 'buyer_type'],
+                [Sequelize.col('"sales"."buyer_id"'), 'garment_id'],
+                [Sequelize.col('"sales"."fabric_id"'), 'fabric_id'],
+                [Sequelize.col('"sales"."buyer"."name"'), 'garment'],
+                [Sequelize.literal('"sales"."total_yarn_qty"'), 'total_length_qty'],
+                [Sequelize.literal('"sales"."invoice_no"'), 'invoice_no'],
+                [Sequelize.literal('"process"."batch_lot_no"'), 'batch_lot_no'],
+                [Sequelize.literal('"process"."reel_lot_no"'), 'reel_lot_no'],
+                [Sequelize.literal('"process"."fabric_type"'), 'fabric_type'],
+                [Sequelize.literal("qty_used"), 'net_length'],
+                [Sequelize.literal('"sales"."tc_file"'), 'tc_files'],
+                [Sequelize.literal('"sales"."contract_file"'), 'contract_file'],
+                [Sequelize.literal('"sales"."invoice_file"'), 'invoice_file'],
+                [Sequelize.literal('"sales"."delivery_notes"'), 'delivery_notes'],
+                [Sequelize.literal('"sales"."transporter_name"'), 'transporter_name'],
+                [Sequelize.literal('"sales"."vehicle_no"'), 'vehicle_no'],
+                [Sequelize.literal('"sales"."qr"'), 'qr'],
+                [Sequelize.literal('"sales"."transaction_agent"'), 'transaction_agent'],
+                [Sequelize.literal('"sales"."qty_stock"'), 'qty_stock'],
+                [Sequelize.literal('"sales"."status"'), 'status'],
             ],
-            offset: offset,
-            limit: limit,
-        });
-        return res.sendPaginationSuccess(res, rows, count);
+            where: {
+                ...whereCondition,
+                ...weaverWhere 
+            },
+            include: [{
+                model: WeaverSales,
+                as: "sales",
+                include: [
+                    ...include,
+                    { model: Weaver, as: "weaver", attributes: ["id", "name"] },
+                  ],
+                attributes:[]
+            },{
+                model: WeaverProcess,
+                attributes:[],
+                as: "process",
+            }],
+            order: [
+                        [
+                            'sales_id', 'desc'
+                        ]
+                    ],
+        }),
+        KnitFabricSelection.findAll({
+            attributes:[
+                [Sequelize.literal('"sales"."id"'), 'sales_id'],
+                [Sequelize.literal('"sales"."accept_date"'), 'accept_date'],
+                [Sequelize.literal('"sales"."date"'), 'date'],
+                [Sequelize.col('"sales"."season"."name"'), 'season_name'],
+                [Sequelize.col('"sales"."season"."id"'), 'season_id'],
+                [Sequelize.col('"sales"."knitter"."id"'), 'knitter_id'],
+                [Sequelize.col('"sales"."knitter"."name"'), 'knitter'],
+                [Sequelize.col('"sales"."program"."program_name"'), 'program'],
+                [Sequelize.col('"sales"."garment_order_ref"'), 'garment_order_ref'],
+                [Sequelize.col('"sales"."brand_order_ref"'), 'brand_order_ref'],
+                [Sequelize.col('"sales"."buyer_type"'), 'buyer_type'],
+                [Sequelize.col('"sales"."buyer_id"'), 'garment_id'],
+                [Sequelize.col('"sales"."fabric_id"'), 'fabric_id'],
+                [Sequelize.col('"sales"."buyer"."name"'), 'garment'],
+                [Sequelize.literal('"sales"."total_yarn_qty"'), 'total_weight_qty'],
+                [Sequelize.literal('"sales"."invoice_no"'), 'invoice_no'],
+                [Sequelize.literal('"process"."batch_lot_no"'), 'batch_lot_no'],
+                [Sequelize.literal('"process"."reel_lot_no"'), 'reel_lot_no'],
+                [Sequelize.literal('"process"."fabric_type"'), 'fabric_type'],
+                [Sequelize.literal("qty_used"), 'net_weight'],
+                [Sequelize.literal('"sales"."tc_file"'), 'tc_files'],
+                [Sequelize.literal('"sales"."contract_file"'), 'contract_file'],
+                [Sequelize.literal('"sales"."invoice_file"'), 'invoice_file'],
+                [Sequelize.literal('"sales"."delivery_notes"'), 'delivery_notes'],
+                [Sequelize.literal('"sales"."transporter_name"'), 'transporter_name'],
+                [Sequelize.literal('"sales"."vehicle_no"'), 'vehicle_no'],
+                [Sequelize.literal('"sales"."qr"'), 'qr'],
+                [Sequelize.literal('"sales"."transaction_agent"'), 'transaction_agent'],
+                [Sequelize.literal('"sales"."qty_stock"'), 'qty_stock'],
+                [Sequelize.literal('"sales"."status"'), 'status'],
+            ],
+            where: {
+                ...whereCondition,
+                ...knitterWhere
+            },
+            include: [{
+                model: KnitSales,
+                as: "sales",
+                include: [
+                    ...include,
+                    { model: Knitter, as: "knitter", attributes: ["id", "name"] },
+                ],
+                attributes:[]
+            },{
+                model: KnitProcess,
+                attributes:[],
+                as: "process",
+            }],
+            order: [
+                        [
+                            'sales_id', 'desc'
+                        ]
+                    ],
+        })
+    ]);
+
+        let data = [];
+
+        
+        for await (let row of rows.flat()) {
+            if(row.dataValues?.fabric_type.length > 0){
+                for await (const [index, id] of row.dataValues?.fabric_type.entries() ){
+                    const fabrictype = await FabricType.findOne({
+                        where: {
+                            id:  id,
+                        },
+                        attributes: ['id', 'fabricType_name']
+                    });
+
+                    if(fabrictype){
+                        data.push({
+                            ...row.dataValues,
+                            fabricType: fabrictype ? fabrictype.dataValues?.fabricType_name : '',
+                        })
+                    } 
+                }
+
+            }
+        }
+
+        let result = data.slice(offset, offset + limit);
+
+        return res.sendPaginationSuccess(res, result, data.length);
 
     } catch (error: any) {
         return res.sendError(res, error.message);
     }
 };
 
-const exportGarmentSales = async (req: Request, res: Response) => {
-    const excelFilePath = path.join("./upload", "garment-sale-report.xlsx");
-    const { garmentId, seasonId, programId, brandId, countryId }: any = req.query;
+const exportGarmentFabricReceipt = async (req: Request, res: Response) => {
+    const excelFilePath = path.join("./upload", "garment-fabric-receipt-report.xlsx");
+    const searchTerm = req.query.search || "";
+    const page = Number(req.query.page) || 1;
+    const limit = Number(req.query.limit) || 10;
+    const { weaverId,garmentId,knitterId, seasonId, programId, brandId, countryId, fabricType }: any = req.query;
+    const offset = (page - 1) * limit;
+    const whereCondition: any = {};
+    const searchCondition: any = {};
+    const weaverWhere: any = {};
+    const knitterWhere: any = {};
     try {
-        const whereCondition: any = {};
-        const searchTerm = req.query.search || "";
         if (searchTerm) {
-            whereCondition[Op.or] = [
-                { order_ref: { [Op.iLike]: `%${searchTerm}%` } }, // Search by order ref
-                { '$season.name$': { [Op.iLike]: `%${searchTerm}%` } },
-                { '$garment.name$': { [Op.iLike]: `%${searchTerm}%` } },
-                { batch_lot_no: { [Op.iLike]: `%${searchTerm}%` } },
-                { bale_ids: { [Op.iLike]: `%${searchTerm}%` } },
-                { fabric_length: { [Op.eq]: searchTerm } },
-                { invoice_no: { [Op.iLike]: `%${searchTerm}%` } },
-                { '$fabric.fabricType_name$': { [Op.iLike]: `%${searchTerm}%` } },
-                { fabric_contruction: { [Op.iLike]: `%${searchTerm}%` } },
-                { fabric_gsm: { [Op.iLike]: `%${searchTerm}%` } },
-                { '$program.program_name$': { [Op.iLike]: `%${searchTerm}%` } },
-                { vehicle_no: { [Op.iLike]: `%${searchTerm}%` } },
-                { transaction_agent: { [Op.iLike]: `%${searchTerm}%` } },
+            searchCondition[Op.or] = [
+                { '$sales.buyer.name$': { [Op.iLike]: `%${searchTerm}%` } },
+                { '$sales.season.name$': { [Op.iLike]: `%${searchTerm}%` } },
+                { '$sales.program.program_name$': { [Op.iLike]: `%${searchTerm}%` } },
+                { '$sales.garment_order_ref$': { [Op.iLike]: `%${searchTerm}%` } },
+                { '$sales.brand_order_ref$': { [Op.iLike]: `%${searchTerm}%` } },
+                {'$sales.invoice_no$' : { [Op.iLike]: `%${searchTerm}%` } },
+                {'$sales.batch_lot_no$' : { [Op.iLike]: `%${searchTerm}%` } },
+                {'$sales.transporter_name$' : { [Op.iLike]: `%${searchTerm}%` } },
+                {'$sales.vehicle_no$' : { [Op.iLike]: `%${searchTerm}%` } },
+                {'$sales.transaction_agent$' : { [Op.iLike]: `%${searchTerm}%` } },
+                {'$process.reel_lot_no$' : { [Op.iLike]: `%${searchTerm}%` } },
+                {'$process.batch_lot_no$' : { [Op.iLike]: `%${searchTerm}%` } },
             ];
+
+            weaverWhere[Op.or]=[
+                ...searchCondition[Op.or], 
+                { '$sales.weaver.name$': { [Op.iLike]: `%${searchTerm}%` } },
+            ]
+
+            knitterWhere[Op.or]=[
+                ...searchCondition[Op.or], 
+                { '$sales.knitter.name$': { [Op.iLike]: `%${searchTerm}%` } },
+            ]
         }
-        if (garmentId) {
-            const idArray: number[] = garmentId
+        if (weaverId) {
+            const idArray: number[] = weaverId
                 .split(",")
                 .map((id: any) => parseInt(id, 10));
-            whereCondition.garment_id = { [Op.in]: idArray };
+                weaverWhere['$sales.weaver_id$'] = { [Op.in]: idArray };
         }
         if (brandId) {
             const idArray: number[] = brandId
                 .split(",")
                 .map((id: any) => parseInt(id, 10));
-            let weaver = await Garment.findAll({ where: { brand: { [Op.overlap]: idArray } } });
-            const arry: number[] = weaver
-                .map((gin: any) => parseInt(gin.id, 10));
-            whereCondition.garment_id = { [Op.in]: arry };
+                weaverWhere['$sales.weaver.brand$'] = { [Op.overlap]: idArray };
+                knitterWhere['$sales.knitter.brand$'] = { [Op.overlap]: idArray };
         }
 
         if (countryId) {
             const idArray: number[] = countryId
                 .split(",")
                 .map((id: any) => parseInt(id, 10));
-            let weaver = await Garment.findAll({ where: { country_id: { [Op.in]: idArray } } });
-            const arry: number[] = weaver
-                .map((gin: any) => parseInt(gin.id, 10));
-            whereCondition.garment_id = { [Op.in]: arry };
+                weaverWhere['$sales.weaver.country_id$'] = { [Op.in]: idArray };
+                knitterWhere['$sales.knitter.country_id$'] = { [Op.in]: idArray };
         }
 
         if (seasonId) {
             const idArray: number[] = seasonId
                 .split(",")
                 .map((id: any) => parseInt(id, 10));
-            whereCondition.season_id = { [Op.in]: idArray };
+                whereCondition['$sales.season_id$'] = { [Op.in]: idArray };
         }
 
         if (programId) {
             const idArray: number[] = programId
                 .split(",")
                 .map((id: any) => parseInt(id, 10));
-            whereCondition.program_id = { [Op.in]: idArray };
+            whereCondition['$sales.program_id$'] = { [Op.in]: idArray };
         }
+
+        if (fabricType) {
+            const idArray: any[] = fabricType
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition['$process.fabric_type$'] = { [Op.overlap]: idArray };
+        }
+
+                 // Helper function to add conditions based on filter values
+                 const addFilterCondition = (whereObj: any, filterKey: string, arr: any ) => {
+                    let idArray:number[] = arr ? arr.split(",").map((id: any) => parseInt(id, 10)) : [0];
+                    if (idArray && idArray.length > 0) {
+                        whereObj[filterKey] = { [Op.in]: idArray };
+                    } else {
+                        // If no filter value provided, set an impossible condition to filter out all data
+                        whereObj[filterKey] = { [Op.in]: [0] };
+                    }
+                };
+              
+                // Dynamically add conditions for each filter
+                if(knitterId || weaverId){
+                    addFilterCondition(knitterWhere, '$sales.knitter_id$', knitterId);
+                    addFilterCondition(weaverWhere,'$sales.weaver_id$', weaverId);
+                }
+        
+                whereCondition['$sales.status$'] = 'Sold';
+                whereCondition['$sales.buyer_id$'] = { [Op.not]: null };
+        
+                if (garmentId) {
+                    const idArray: number[] = garmentId
+                        .split(",")
+                        .map((id: any) => parseInt(id, 10));
+                    whereCondition['$sales.buyer_id$'] = { [Op.in]: idArray };
+                }
+
+        
 
         // Create the excel workbook file
         const workbook = new ExcelJS.Workbook();
         const worksheet = workbook.addWorksheet("Sheet1");
         worksheet.mergeCells('A1:L1');
         const mergedCell = worksheet.getCell('A1');
-        mergedCell.value = 'CottonConnect | Garment Fabric Sales Report';
+        mergedCell.value = 'CottonConnect | Garment Fabric Fabric Receipt Report';
         mergedCell.font = { bold: true };
         mergedCell.alignment = { horizontal: 'center', vertical: 'middle' };
         // Set bold font for header row
         // Set bold font for header row
         const headerRow = worksheet.addRow([
-            "Sr No.", "Date", "Season", "Garment Unit Name", "Customer (R&B) Name",
-            "Invoice No", "Mark/Style No",
-            "Item", "No of Boxes", "No of pieces", "Agent Details", "Net weight", "QR code",
+            "Sr No.", "Date of accept transaction", "Date", "Weave/Knit Unit", "Garment Processor Unit", "Invoice Number",
+            "Lot/Batch No", "Fabric Type",
+            "Finished Fabric Length", "Total Fabric Net Length (Mts)", "Finished Fabric Weight", "Total Fabric Net Weight (Kgs)",
         ]);
         headerRow.font = { bold: true };
         let include = [
             {
-                model: Garment,
-                as: "garment",
-                attributes: ['id', 'name', 'address']
-            },
-            {
                 model: Season,
                 as: "season",
+                attributes: ['id', 'name']
             },
             {
                 model: Program,
                 as: "program",
+                attributes: ['id', 'program_name']
             },
             {
-                model: Department,
-                as: "department",
-            },
-            {
-                model: Brand,
+                model: Garment,
                 as: "buyer",
-                attributes: ['id', 'brand_name', 'address']
-            }
+                attributes: ['id', 'name', 'address']
+            },
         ];
-        const garment = await GarmentSales.findAll({
-            where: whereCondition,
-            include: include
-        });
+
+        //fetch data with pagination
+
+        let rows: any = await Promise.all([
+        WeaverFabricSelection.findAll({
+            attributes:[
+                [Sequelize.literal('"sales"."id"'), 'sales_id'],
+                [Sequelize.literal('"sales"."accept_date"'), 'accept_date'],
+                [Sequelize.literal('"sales"."date"'), 'date'],
+                [Sequelize.col('"sales"."season"."name"'), 'season_name'],
+                [Sequelize.col('"sales"."season"."id"'), 'season_id'],
+                [Sequelize.col('"sales"."weaver"."id"'), 'weaver_id'],
+                [Sequelize.col('"sales"."weaver"."name"'), 'weaver'],
+                [Sequelize.col('"sales"."program"."program_name"'), 'program'],
+                [Sequelize.col('"sales"."garment_order_ref"'), 'garment_order_ref'],
+                [Sequelize.col('"sales"."brand_order_ref"'), 'brand_order_ref'],
+                [Sequelize.col('"sales"."buyer_type"'), 'buyer_type'],
+                [Sequelize.col('"sales"."buyer_id"'), 'garment_id'],
+                [Sequelize.col('"sales"."fabric_id"'), 'fabric_id'],
+                [Sequelize.col('"sales"."buyer"."name"'), 'garment'],
+                [Sequelize.literal('"sales"."total_yarn_qty"'), 'total_length_qty'],
+                [Sequelize.literal('"sales"."invoice_no"'), 'invoice_no'],
+                [Sequelize.literal('"process"."batch_lot_no"'), 'batch_lot_no'],
+                [Sequelize.literal('"process"."reel_lot_no"'), 'reel_lot_no'],
+                [Sequelize.literal('"process"."fabric_type"'), 'fabric_type'],
+                [Sequelize.literal("qty_used"), 'net_length'],
+                [Sequelize.literal('"sales"."tc_file"'), 'tc_files'],
+                [Sequelize.literal('"sales"."contract_file"'), 'contract_file'],
+                [Sequelize.literal('"sales"."invoice_file"'), 'invoice_file'],
+                [Sequelize.literal('"sales"."delivery_notes"'), 'delivery_notes'],
+                [Sequelize.literal('"sales"."transporter_name"'), 'transporter_name'],
+                [Sequelize.literal('"sales"."vehicle_no"'), 'vehicle_no'],
+                [Sequelize.literal('"sales"."qr"'), 'qr'],
+                [Sequelize.literal('"sales"."transaction_agent"'), 'transaction_agent'],
+                [Sequelize.literal('"sales"."qty_stock"'), 'qty_stock'],
+                [Sequelize.literal('"sales"."status"'), 'status'],
+            ],
+            where: {
+                ...whereCondition,
+                ...weaverWhere 
+            },
+            include: [{
+                model: WeaverSales,
+                as: "sales",
+                include: [
+                    ...include,
+                    { model: Weaver, as: "weaver", attributes: ["id", "name"] },
+                  ],
+                attributes:[]
+            },{
+                model: WeaverProcess,
+                attributes:[],
+                as: "process",
+            }],
+            order: [
+                        [
+                            'sales_id', 'desc'
+                        ]
+                    ],
+        }),
+        KnitFabricSelection.findAll({
+            attributes:[
+                [Sequelize.literal('"sales"."id"'), 'sales_id'],
+                [Sequelize.literal('"sales"."accept_date"'), 'accept_date'],
+                [Sequelize.literal('"sales"."date"'), 'date'],
+                [Sequelize.col('"sales"."season"."name"'), 'season_name'],
+                [Sequelize.col('"sales"."season"."id"'), 'season_id'],
+                [Sequelize.col('"sales"."knitter"."id"'), 'knitter_id'],
+                [Sequelize.col('"sales"."knitter"."name"'), 'knitter'],
+                [Sequelize.col('"sales"."program"."program_name"'), 'program'],
+                [Sequelize.col('"sales"."garment_order_ref"'), 'garment_order_ref'],
+                [Sequelize.col('"sales"."brand_order_ref"'), 'brand_order_ref'],
+                [Sequelize.col('"sales"."buyer_type"'), 'buyer_type'],
+                [Sequelize.col('"sales"."buyer_id"'), 'garment_id'],
+                [Sequelize.col('"sales"."fabric_id"'), 'fabric_id'],
+                [Sequelize.col('"sales"."buyer"."name"'), 'garment'],
+                [Sequelize.literal('"sales"."total_yarn_qty"'), 'total_weight_qty'],
+                [Sequelize.literal('"sales"."invoice_no"'), 'invoice_no'],
+                [Sequelize.literal('"process"."batch_lot_no"'), 'batch_lot_no'],
+                [Sequelize.literal('"process"."reel_lot_no"'), 'reel_lot_no'],
+                [Sequelize.literal('"process"."fabric_type"'), 'fabric_type'],
+                [Sequelize.literal("qty_used"), 'net_weight'],
+                [Sequelize.literal('"sales"."tc_file"'), 'tc_files'],
+                [Sequelize.literal('"sales"."contract_file"'), 'contract_file'],
+                [Sequelize.literal('"sales"."invoice_file"'), 'invoice_file'],
+                [Sequelize.literal('"sales"."delivery_notes"'), 'delivery_notes'],
+                [Sequelize.literal('"sales"."transporter_name"'), 'transporter_name'],
+                [Sequelize.literal('"sales"."vehicle_no"'), 'vehicle_no'],
+                [Sequelize.literal('"sales"."qr"'), 'qr'],
+                [Sequelize.literal('"sales"."transaction_agent"'), 'transaction_agent'],
+                [Sequelize.literal('"sales"."qty_stock"'), 'qty_stock'],
+                [Sequelize.literal('"sales"."status"'), 'status'],
+            ],
+            where: {
+                ...whereCondition,
+                ...knitterWhere
+            },
+            include: [{
+                model: KnitSales,
+                as: "sales",
+                include: [
+                    ...include,
+                    { model: Knitter, as: "knitter", attributes: ["id", "name"] },
+                ],
+                attributes:[]
+            },{
+                model: KnitProcess,
+                attributes:[],
+                as: "process",
+            }],
+            order: [
+                        [
+                            'sales_id', 'desc'
+                        ]
+                    ],
+        })
+    ]);
+
+        let data = [];
+
+        
+        for await (let row of rows.flat()) {
+            if(row.dataValues?.fabric_type.length > 0){
+                for await (const [index, id] of row.dataValues?.fabric_type.entries() ){
+                    const fabrictype = await FabricType.findOne({
+                        where: {
+                            id:  id,
+                        },
+                        attributes: ['id', 'fabricType_name']
+                    });
+
+                    if(fabrictype){
+                        data.push({
+                            ...row.dataValues,
+                            fabricType: fabrictype ? fabrictype.dataValues?.fabricType_name : '',
+                        })
+                    } 
+                }
+
+            }
+        }
+
+        let result = data.slice(offset, offset + limit);
         // Append data to worksheet
-        for await (const [index, item] of garment.entries()) {
+        for await (const [index, item] of result.entries()) {
 
             const rowValues = Object.values({
                 index: index + 1,
+                accept_date: item.accept_date ? item.accept_date : '',
                 date: item.date ? item.date : '',
-                season: item.season ? item.season.name : '',
-                garment_name: item.garment ? item.garment.name : '',
-                buyer: item.buyer ? item.buyer.brand_name : item.processor_name,
+                weaver: item.weaver ? item.weaver : item.knitter ? item.knitter : '',
+                buyer: item.garment ? item.garment : '',
                 invoice: item.invoice_no ? item.invoice_no : '',
-                mark: item.style_mark_no ? item.style_mark_no : '',
-                garment: item.garment_type ? item.garment_type : '',
-                no_of_boxes: item.no_of_boxes ? item.no_of_boxes : '',
-                no_of_pieces: item.no_of_pieces ? item.no_of_pieces : '',
-                transaction_agent: item.transaction_agent ? item.transaction_agent : '',
-                garment_size: item.garment_size ? item.garment_size : '',
-                color: process.env.BASE_URL + item.qr ?? '',
+                lotNo: item.batch_lot_no ? item.batch_lot_no : '',
+                fabrictype: item.fabricType ? item.fabricType : '',
+                fabric_length: item.net_length ? item.net_length : '',
+                total_fabric_length: item.total_length_qty ? item.total_length_qty : '',
+                fabric_weight: item.net_weight ? item.net_weight : '',
+                total_fabric_weight: item.total_weight_qty ? item.total_weight_qty : '',
             });
             worksheet.addRow(rowValues);
         }
@@ -4776,7 +5123,7 @@ const exportGarmentSales = async (req: Request, res: Response) => {
         res.status(200).send({
             success: true,
             messgage: "File successfully Generated",
-            data: process.env.BASE_URL + "garment-sale-report.xlsx",
+            data: process.env.BASE_URL + "garment-fabric-receipt-report.xlsx",
         });
     } catch (error: any) {
         console.error("Error appending data:", error);
@@ -4785,9 +5132,139 @@ const exportGarmentSales = async (req: Request, res: Response) => {
     }
 };
 
+const fetchGarmentFabricProcess = async (req: Request, res: Response) =>{
+    const searchTerm = req.query.search || "";
+    const page = Number(req.query.page) || 1;
+    const limit = Number(req.query.limit) || 10;
+    const { garmentId, seasonId, programId, brandId, countryId , fabricType}: any = req.query;
+    const offset = (page - 1) * limit;
+    const whereCondition: any = {};
+    try {
+        if (searchTerm) {
+            whereCondition[Op.or] = [
+                { fabric_order_ref: { [Op.iLike]: `%${searchTerm}%` } }, // Search by order ref
+                { brand_order_ref: { [Op.iLike]: `%${searchTerm}%` } }, // Search by order ref
+                { '$season.name$': { [Op.iLike]: `%${searchTerm}%` } },
+                { factory_lot_no: { [Op.iLike]: `%${searchTerm}%` } },
+                { reel_lot_no: { [Op.iLike]: `%${searchTerm}%` } },
+                { '$program.program_name$': { [Op.iLike]: `%${searchTerm}%` } },
+                { '$garment.name$': { [Op.iLike]: `%${searchTerm}%` } },
+                { "$department.dept_name$": { [Op.iLike]: `%${searchTerm}%` } },
+            ];
+        }
 
-//fetch Qr Code Tracker with filters
-const fetchQrCodeTrackPagination = async (req: Request, res: Response) => {
+        if (garmentId) {
+            const idArray: number[] = garmentId
+              .split(",")
+              .map((id: any) => parseInt(id, 10));
+            whereCondition.garment_id = { [Op.in]: idArray };
+          }
+
+        if (brandId) {
+            const idArray: number[] = brandId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition['$garment.brand$'] = { [Op.overlap]: idArray };
+        }
+
+        if (countryId) {
+            const idArray: number[] = countryId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition['$garment.country_id$'] = { [Op.in]: idArray };
+        }
+
+        if (seasonId) {
+            const idArray: number[] = seasonId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition.season_id = { [Op.in]: idArray };
+        }
+
+        if (programId) {
+            const idArray: number[] = programId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition.program_id = { [Op.in]: idArray };
+        }
+
+        if (fabricType) {
+            const idArray: any[] = fabricType
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition.fabric_type = { [Op.overlap]: idArray };
+        }
+
+        let include = [
+            {
+                model: Garment,
+                as: "garment",
+                attributes: ['id', 'name', 'address']
+            },
+            {
+                model: Season,
+                as: "season",
+                attributes: ['id', 'name']
+            },
+            {
+                model: Program,
+                as: "program",
+                attributes: ['id', 'program_name']
+            },
+            {
+                model: Department,
+                as: "department",
+              },
+        ];
+
+        const { count, rows } = await GarmentProcess.findAndCountAll({
+            where: whereCondition,
+            include: include,
+            order: [
+                [
+                    'id', 'desc'
+                ]
+            ],
+        });
+
+        let data = [];
+
+        
+        for await (let row of rows) {
+            if(row.dataValues?.garment_type.length > 0){
+                for await (const [index, garment] of row.dataValues?.garment_type.entries() ){
+                    // const fabrictype = await FabricType.findOne({
+                    //     where: {
+                    //         id:  id,
+                    //     },
+                    //     attributes: ['id', 'fabricType_name']
+                    // });
+
+                    data.push({
+                        ...row.dataValues,
+                        garmentType: garment,
+                        styleMarkNo: row.dataValues.style_mark_no && row.dataValues.style_mark_no[index] ? row.dataValues.style_mark_no[index] : '',
+                        noOfPieces: row.dataValues.no_of_pieces && row.dataValues.no_of_pieces[index] ? row.dataValues.no_of_pieces[index] : '',
+                        noOfBoxes: row.dataValues.no_of_boxes && row.dataValues.no_of_boxes[index] ? row.dataValues.no_of_boxes[index] : '',
+                    })
+                }
+
+            }
+        }
+
+        let result = data.slice(offset, offset + limit);
+
+        return res.sendPaginationSuccess(res, result, data.length);
+
+    } catch (error: any) {
+        console.log(error)
+        return res.sendError(res, error.message);
+    }
+}
+
+
+const exportGarmentFabricProcess = async (req: Request, res: Response) =>{
+    const excelFilePath = path.join("./upload", "garment-fabric-process-report.xlsx");
     const searchTerm = req.query.search || "";
     const page = Number(req.query.page) || 1;
     const limit = Number(req.query.limit) || 10;
@@ -4797,18 +5274,576 @@ const fetchQrCodeTrackPagination = async (req: Request, res: Response) => {
     try {
         if (searchTerm) {
             whereCondition[Op.or] = [
+                { fabric_order_ref: { [Op.iLike]: `%${searchTerm}%` } }, // Search by order ref
+                { brand_order_ref: { [Op.iLike]: `%${searchTerm}%` } }, // Search by order ref
+                { '$season.name$': { [Op.iLike]: `%${searchTerm}%` } },
+                { factory_lot_no: { [Op.iLike]: `%${searchTerm}%` } },
+                { reel_lot_no: { [Op.iLike]: `%${searchTerm}%` } },
+                { '$program.program_name$': { [Op.iLike]: `%${searchTerm}%` } },
+                { '$garment.name$': { [Op.iLike]: `%${searchTerm}%` } },
+            ];
+        }
+
+        if (garmentId) {
+            const idArray: number[] = garmentId
+              .split(",")
+              .map((id: any) => parseInt(id, 10));
+            whereCondition.garment_id = { [Op.in]: idArray };
+          }
+
+        if (brandId) {
+            const idArray: number[] = brandId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition['$garment.brand$'] = { [Op.overlap]: idArray };
+        }
+
+        if (countryId) {
+            const idArray: number[] = countryId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition['$garment.country_id$'] = { [Op.in]: idArray };
+        }
+
+        if (seasonId) {
+            const idArray: number[] = seasonId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition.season_id = { [Op.in]: idArray };
+        }
+
+        if (programId) {
+            const idArray: number[] = programId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition.program_id = { [Op.in]: idArray };
+        }
+
+
+        // Create the excel workbook file
+        const workbook = new ExcelJS.Workbook();
+        const worksheet = workbook.addWorksheet("Sheet1");
+        worksheet.mergeCells('A1:O1');
+        const mergedCell = worksheet.getCell('A1');
+        mergedCell.value = 'CottonConnect | Garment Fabric Process Report';
+        mergedCell.font = { bold: true };
+        mergedCell.alignment = { horizontal: 'center', vertical: 'middle' };
+        // Set bold font for header row
+        // Set bold font for header row
+        const headerRow = worksheet.addRow([
+            "S No.", "Process Date", "Date", "Season", "Garment Processor Unit", "Fabric Order Reference No.", "Brand Order Reference No.",
+            "Factory Lot No.","Garment Type", "Style Mark No.", "No. of Pieces", "No. of Boxes", "Total Fabric Weight(Kgs) - Knitted Fabric", "Total Fabric Length(Mts) - Woven Fabric"
+        ]);
+        headerRow.font = { bold: true };
+
+        let include = [
+            {
+                model: Garment,
+                as: "garment",
+                attributes: ['id', 'name', 'address']
+            },
+            {
+                model: Season,
+                as: "season",
+                attributes: ['id', 'name']
+            },
+            {
+                model: Program,
+                as: "program",
+                attributes: ['id', 'program_name']
+            },
+        ];
+
+        const { count, rows } = await GarmentProcess.findAndCountAll({
+            where: whereCondition,
+            include: include,
+            order: [
+                [
+                    'id', 'desc'
+                ]
+            ],
+        });
+
+        let data = [];
+
+        
+        for await (let row of rows) {
+            if(row.dataValues?.garment_type.length > 0){
+                for await (const [index, garment] of row.dataValues?.garment_type.entries() ){
+                    // const fabrictype = await FabricType.findOne({
+                    //     where: {
+                    //         id:  id,
+                    //     },
+                    //     attributes: ['id', 'fabricType_name']
+                    // });
+
+                    data.push({
+                        ...row.dataValues,
+                        garmentType: garment,
+                        styleMarkNo: row.dataValues.style_mark_no && row.dataValues.style_mark_no[index] ? row.dataValues.style_mark_no[index] : '',
+                        noOfPieces: row.dataValues.no_of_pieces && row.dataValues.no_of_pieces[index] ? row.dataValues.no_of_pieces[index] : '',
+                        noOfBoxes: row.dataValues.no_of_boxes && row.dataValues.no_of_boxes[index] ? row.dataValues.no_of_boxes[index] : '',
+                    })
+                }
+
+            }
+        }
+
+        let result = data.slice(offset, offset + limit);
+
+        for await (const [index, item] of result.entries()) {
+
+            const rowValues = Object.values({
+                index: index + 1,
+                createdAt: item.createdAt ? item.createdAt : '',
+                date: item.date ? item.date : '',
+                season: item.season ? item.season.name : '',
+                garment: item.garment ? item.garment.name : '',
+                fabricOrderRef: item.fabric_order_ref ? item.fabric_order_ref : '',
+                brandOrderRef: item.brand_order_ref ? item.brand_order_ref : '',
+                lotNo: item.factory_lot_no ? item.factory_lot_no : '',
+                garmentType: item.garmentType ? item.garmentType : '',
+                stylemarkNo: item.styleMarkNo ? item.styleMarkNo : '',
+                noOfPieces: item.noOfPieces ? item.noOfPieces : '',
+                noOfBoxes: item.noOfBoxes ? item.noOfBoxes : '',
+                total_fabric_weight: item.total_fabric_weight ? item.total_fabric_weight : '',
+                total_fabric_length: item.total_fabric_length ? item.total_fabric_length : '',
+            });
+            worksheet.addRow(rowValues);
+        }
+        // Auto-adjust column widths based on content
+        worksheet.columns.forEach((column: any) => {
+            let maxCellLength = 0;
+            column.eachCell({ includeEmpty: true }, (cell: any) => {
+                const cellLength = (cell.value ? cell.value.toString() : '').length;
+                maxCellLength = Math.max(maxCellLength, cellLength);
+            });
+            column.width = Math.min(14, maxCellLength + 2); // Limit width to 30 characters
+        });
+
+        // Save the workbook
+        await workbook.xlsx.writeFile(excelFilePath);
+        res.status(200).send({
+            success: true,
+            messgage: "File successfully Generated",
+            data: process.env.BASE_URL + "garment-fabric-process-report.xlsx",
+        });
+
+    } catch (error: any) {
+        console.log(error)
+        return res.sendError(res, error.message);
+    }
+}
+
+//fetch Weaver Sales with filters
+const fetchGarmentSalesPagination = async (req: Request, res: Response) => {
+    const searchTerm: any = req.query.search || "";
+    const page = Number(req.query.page) || 1;
+    const limit = Number(req.query.limit) || 10;
+    const { garmentId, seasonId, programId, brandId, countryId, departmentId, buyerId, styleMarkNo, garmentType }: any = req.query;
+    const offset = (page - 1) * limit;
+    const whereCondition: any = {};
+    try {
+        if (searchTerm) {
+            whereCondition[Op.or] = [
+                { fabric_order_ref: { [Op.iLike]: `%${searchTerm}%` } }, // Search by order ref
+                { brand_order_ref: { [Op.iLike]: `%${searchTerm}%` } }, // Search by order ref
+                { '$season.name$': { [Op.iLike]: `%${searchTerm}%` } },
+                { invoice_no: { [Op.iLike]: `%${searchTerm}%` } },
+                { vehicle_no: { [Op.iLike]: `%${searchTerm}%` } },
+                { transaction_agent: { [Op.iLike]: `%${searchTerm}%` } },
+                { '$program.program_name$': { [Op.iLike]: `%${searchTerm}%` } },
+                { '$buyer.brand_name$': { [Op.iLike]: `%${searchTerm}%` } },
+                { '$garment.name$': { [Op.iLike]: `%${searchTerm}%` } },
+                { style_mark_no: { [Op.contains]: [`${searchTerm}`] } },
+                { garment_type: { [Op.contains]: [`${searchTerm}`] } },
+            ];
+        }
+
+        if (garmentId) {
+            const idArray: number[] = garmentId
+              .split(",")
+              .map((id: any) => parseInt(id, 10));
+            whereCondition.garment_id = { [Op.in]: idArray };
+          }
+
+        if (brandId) {
+            const idArray: number[] = brandId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition['$garment.brand$'] = { [Op.overlap]: idArray };
+        }
+
+        if (countryId) {
+            const idArray: number[] = countryId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition['$garment.country_id$'] = { [Op.in]: idArray };
+        }
+
+        if (seasonId) {
+            const idArray: number[] = seasonId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition.season_id = { [Op.in]: idArray };
+        }
+
+        if (programId) {
+            const idArray: number[] = programId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition.program_id = { [Op.in]: idArray };
+        }
+
+        if (departmentId) {
+            const idArray: number[] = departmentId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition.department_id = { [Op.overlap]: idArray };
+        }
+
+        if (buyerId) {
+            const idArray: number[] = buyerId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition.buyer_id = { [Op.in]: idArray };
+        }
+
+        if (styleMarkNo) {
+            const idArray: any[] = styleMarkNo
+                .split(",")
+                .map((id: any) => id);
+            whereCondition.style_mark_no = { [Op.overlap]: idArray };
+        }
+        if (garmentType) {
+            const idArray: any[] = garmentType
+                .split(",")
+                .map((id: any) => id);
+            whereCondition.garment_type = { [Op.overlap]: idArray };
+        }
+
+
+        let include = [
+            {
+                model: Garment,
+                as: "garment",
+                attributes: ['id', 'name', 'address']
+            },
+            {
+                model: Season,
+                as: "season",
+            },
+            {
+                model: Program,
+                as: "program",
+            },
+            {
+                model: Brand,
+                as: "buyer",
+                attributes: ['id', 'brand_name', 'address']
+            }
+        ];
+        //fetch data with pagination
+
+        const { count, rows } = await GarmentSales.findAndCountAll({
+            where: whereCondition,
+            include: include,
+            order: [
+                [
+                    'id', 'desc'
+                ]
+            ],
+        });
+
+        let data = [];
+
+        
+        for await (let row of rows) {
+            if(row.dataValues?.garment_type.length > 0){
+                for await (const [index, garment] of row.dataValues?.garment_type.entries() ){
+
+                    data.push({
+                        ...row.dataValues,
+                        garmentType: garment,
+                        styleMarkNo: row.dataValues.style_mark_no && row.dataValues.style_mark_no[index] ? row.dataValues.style_mark_no[index] : '',
+                        noOfPieces: row.dataValues.no_of_pieces && row.dataValues.no_of_pieces[index] ? row.dataValues.no_of_pieces[index] : '',
+                        noOfBoxes: row.dataValues.no_of_boxes && row.dataValues.no_of_boxes[index] ? row.dataValues.no_of_boxes[index] : '',
+                    })
+                }
+
+            }
+        }
+
+        let result = data.slice(offset, offset + limit);
+
+        return res.sendPaginationSuccess(res, result, data.length);
+
+    } catch (error: any) {
+        console.log(error)
+        return res.sendError(res, error.message);
+    }
+};
+
+const exportGarmentSales = async (req: Request, res: Response) => {
+    const excelFilePath = path.join("./upload", "garment-fabric-sale-report.xlsx");
+    const searchTerm = req.query.search || "";
+    const page = Number(req.query.page) || 1;
+    const limit = Number(req.query.limit) || 10;
+    const { garmentId, seasonId, programId, brandId, countryId, departmentId, buyerId, styleMarkNo, garmentType }: any = req.query;
+    const offset = (page - 1) * limit;
+    const whereCondition: any = {};
+    try {
+        if (searchTerm) {
+            whereCondition[Op.or] = [
+                { fabric_order_ref: { [Op.iLike]: `%${searchTerm}%` } }, // Search by order ref
+                { brand_order_ref: { [Op.iLike]: `%${searchTerm}%` } }, // Search by order ref
+                { '$season.name$': { [Op.iLike]: `%${searchTerm}%` } },
+                { invoice_no: { [Op.iLike]: `%${searchTerm}%` } },
+                { vehicle_no: { [Op.iLike]: `%${searchTerm}%` } },
+                { transaction_agent: { [Op.iLike]: `%${searchTerm}%` } },
+                { '$program.program_name$': { [Op.iLike]: `%${searchTerm}%` } },
+                { '$buyer.brand_name$': { [Op.iLike]: `%${searchTerm}%` } },
+                { '$garment.name$': { [Op.iLike]: `%${searchTerm}%` } },
+                { style_mark_no: { [Op.contains]: [`${searchTerm}`] } },
+                { garment_type: { [Op.contains]: [`${searchTerm}`] } },
+            ];
+        }
+        if (garmentId) {
+            const idArray: number[] = garmentId
+              .split(",")
+              .map((id: any) => parseInt(id, 10));
+            whereCondition.garment_id = { [Op.in]: idArray };
+          }
+
+        if (brandId) {
+            const idArray: number[] = brandId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition['$garment.brand$'] = { [Op.overlap]: idArray };
+        }
+
+        if (countryId) {
+            const idArray: number[] = countryId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition['$garment.country_id$'] = { [Op.in]: idArray };
+        }
+
+        if (seasonId) {
+            const idArray: number[] = seasonId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition.season_id = { [Op.in]: idArray };
+        }
+
+        if (programId) {
+            const idArray: number[] = programId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition.program_id = { [Op.in]: idArray };
+        }
+
+        if (departmentId) {
+            const idArray: number[] = departmentId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition.department_id = { [Op.overlap]: idArray };
+        }
+
+        if (buyerId) {
+            const idArray: number[] = buyerId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition.buyer_id = { [Op.in]: idArray };
+        }
+
+        if (styleMarkNo) {
+            const idArray: any[] = styleMarkNo
+                .split(",")
+                .map((id: any) => id);
+            whereCondition.style_mark_no = { [Op.overlap]: idArray };
+        }
+        if (garmentType) {
+            const idArray: any[] = garmentType
+                .split(",")
+                .map((id: any) => id);
+            whereCondition.garment_type = { [Op.overlap]: idArray };
+        }
+        // Create the excel workbook file
+        const workbook = new ExcelJS.Workbook();
+        const worksheet = workbook.addWorksheet("Sheet1");
+        worksheet.mergeCells('A1:P1');
+        const mergedCell = worksheet.getCell('A1');
+        mergedCell.value = 'CottonConnect | Garment Fabric Sales Report';
+        mergedCell.font = { bold: true };
+        mergedCell.alignment = { horizontal: 'center', vertical: 'middle' };
+        // Set bold font for header row
+        // Set bold font for header row
+        const headerRow = worksheet.addRow([
+            "S No.","Date of Sale", "Date", "Garment Unit Name", "Customer (R&B) Name",
+            "Invoice No", "Fabric Order Reference", "Brand Order Reference", "Garment Type", "Mark/Style No",
+            "Total No. of Boxes/Cartons", "Total No. of Pieces", "Agent Details", "Total Fabric Length(Woven)","Total Fabric Weight(Knitted)", "QR code",
+        ]);
+        headerRow.font = { bold: true };
+
+        let include = [
+            {
+                model: Garment,
+                as: "garment",
+                attributes: ['id', 'name', 'address']
+            },
+            {
+                model: Season,
+                as: "season",
+            },
+            {
+                model: Program,
+                as: "program",
+            },
+            {
+                model: Brand,
+                as: "buyer",
+                attributes: ['id', 'brand_name', 'address']
+            }
+        ];
+        
+        const { count, rows } = await GarmentSales.findAndCountAll({
+            where: whereCondition,
+            include: include,
+            order: [
+                [
+                    'id', 'desc'
+                ]
+            ],
+        });
+
+        let data = [];
+
+        
+        for await (let row of rows) {
+            if(row.dataValues?.garment_type.length > 0){
+                for await (const [index, garment] of row.dataValues?.garment_type.entries() ){
+
+                    data.push({
+                        ...row.dataValues,
+                        garmentType: garment,
+                        styleMarkNo: row.dataValues.style_mark_no && row.dataValues.style_mark_no[index] ? row.dataValues.style_mark_no[index] : '',
+                        noOfPieces: row.dataValues.no_of_pieces && row.dataValues.no_of_pieces[index] ? row.dataValues.no_of_pieces[index] : '',
+                        noOfBoxes: row.dataValues.no_of_boxes && row.dataValues.no_of_boxes[index] ? row.dataValues.no_of_boxes[index] : '',
+                    })
+                }
+
+            }
+        }
+
+        let result = data.slice(offset, offset + limit);
+
+        for await (const [index, item] of result.entries()) {
+
+            const rowValues = Object.values({
+                index: index + 1,
+                createdAt: item.createdAt ? item.createdAt : '',
+                date: item.date ? item.date : '',
+                garment_name: item.garment ? item.garment.name : '',
+                buyer: item.buyer ? item.buyer.brand_name : item.processor_name,
+                invoice: item.invoice_no ? item.invoice_no : '',
+                fabricOrderRef: item.fabric_order_ref ? item.fabric_order_ref : '',
+                brandOrderRef: item.brand_order_ref ? item.brand_order_ref : '',
+                garmentType: item.garmentType ? item.garmentType : '',
+                stylemarkNo: item.styleMarkNo ? item.styleMarkNo : '',
+                no_of_boxes: item.total_no_of_boxes ? item.total_no_of_boxes : '',
+                no_of_pieces: item.total_no_of_pieces ? item.total_no_of_pieces : '',
+                transaction_agent: item.transaction_agent ? item.transaction_agent : '',
+                total_fabric_weight: item.total_fabric_weight ? item.total_fabric_weight : '',
+                total_fabric_length: item.total_fabric_length ? item.total_fabric_length : '',
+                color: item.qr ? process.env.BASE_URL + item.qr : '',
+            });
+            worksheet.addRow(rowValues);
+        }
+        // Auto-adjust column widths based on content
+        worksheet.columns.forEach((column: any) => {
+            let maxCellLength = 0;
+            column.eachCell({ includeEmpty: true }, (cell: any) => {
+                const cellLength = (cell.value ? cell.value.toString() : '').length;
+                maxCellLength = Math.max(maxCellLength, cellLength);
+            });
+            column.width = Math.min(14, maxCellLength + 2); // Limit width to 30 characters
+        });
+
+        // Save the workbook
+        await workbook.xlsx.writeFile(excelFilePath);
+        res.status(200).send({
+            success: true,
+            messgage: "File successfully Generated",
+            data: process.env.BASE_URL + "garment-fabric-sale-report.xlsx",
+        });
+    } catch (error: any) {
+        console.error("Error appending data:", error);
+        return res.sendError(res, error.message);
+
+    }
+};
+
+//filter Style Mark and garment type for Garment Fabric Sales Report
+const getGarmentSalesFilter = async (req: Request, res: Response) => {
+    try {
+        const types = await GarmentSales.findAll({
+            attributes: ['garment_type'],
+            group: ['garment_type']
+          });
+
+          let garmentTypes: any = [];
+
+
+          if(types && types.length > 0){
+            for await (let row of types){
+              garmentTypes = [...garmentTypes, ...new Set(row?.dataValues?.garment_type?.map((item: any) => item))]
+            }
+          }
+
+        let style = await GarmentSales.findAll({
+            attributes: ['style_mark_no'],
+            group: ['style_mark_no'],
+        });
+
+        let styleMarkNo: any = [];
+
+          if(style && style.length > 0){
+            for await (let row of style){
+                styleMarkNo = [...styleMarkNo, ...new Set(row?.dataValues?.style_mark_no?.map((item: any) => item))]
+            }
+          }
+        
+
+        res.sendSuccess(res, { styleMarkNo, garmentTypes })
+    } catch (error: any) {
+        res.sendError(res, error.message)
+    }
+}
+
+
+//fetch Qr Code Tracker with filters
+const fetchQrCodeTrackPagination = async (req: Request, res: Response) => {
+    const searchTerm = req.query.search || "";
+    const page = Number(req.query.page) || 1;
+    const limit = Number(req.query.limit) || 10;
+    const { garmentId, seasonId, programId, brandId, countryId, departmentId, buyerId, styleMarkNo, garmentType }: any = req.query;
+    const offset = (page - 1) * limit;
+    const whereCondition: any = {};
+    try {
+        if (searchTerm) {
+            whereCondition[Op.or] = [
+                { '$season.name$': { [Op.iLike]: `%${searchTerm}%` } },
                 { invoice_no: { [Op.iLike]: `%${searchTerm}%` } },
                 { '$program.program_name$': { [Op.iLike]: `%${searchTerm}%` } },
                 { '$buyer.brand_name$': { [Op.iLike]: `%${searchTerm}%` } },
+                { '$garment.name$': { [Op.iLike]: `%${searchTerm}%` } },
+                { style_mark_no: { [Op.contains]: [`${searchTerm}`] } },
+                { garment_type: { [Op.contains]: [`${searchTerm}`] } },
             ];
         }
         whereCondition.status = 'Sold';
-        if (garmentId) {
-            const idArray: number[] = garmentId
-                .split(",")
-                .map((id: any) => parseInt(id, 10));
-            whereCondition.garment_id = { [Op.in]: idArray };
-        }
+
         if (brandId) {
             const idArray: number[] = brandId
                 .split(",")
@@ -4816,29 +5851,25 @@ const fetchQrCodeTrackPagination = async (req: Request, res: Response) => {
             whereCondition.buyer_id = { [Op.in]: idArray };
         }
 
-        // if (countryId) {
-        //     const idArray: number[] = countryId
-        //         .split(",")
-        //         .map((id: any) => parseInt(id, 10));
-        //     let weaver = await Weaver.findAll({ where: { country_id: { [Op.in]: idArray } } });
-        //     const arry: number[] = weaver
-        //         .map((gin: any) => parseInt(gin.id, 10));
-        //     whereCondition.weaver_id = { [Op.in]: arry };
-        // }
+        if (styleMarkNo) {
+            const idArray: any[] = styleMarkNo
+                .split(",")
+                .map((id: any) => id);
+            whereCondition.style_mark_no = { [Op.overlap]: idArray };
+        }
+        if (garmentType) {
+            const idArray: any[] = garmentType
+                .split(",")
+                .map((id: any) => id);
+            whereCondition.garment_type = { [Op.overlap]: idArray };
+        }
 
-        // if (seasonId) {
-        //     const idArray: number[] = seasonId
-        //         .split(",")
-        //         .map((id: any) => parseInt(id, 10));
-        //     whereCondition.season_id = { [Op.in]: idArray };
-        // }
-
-        // if (programId) {
-        //     const idArray: number[] = programId
-        //         .split(",")
-        //         .map((id: any) => parseInt(id, 10));
-        //     whereCondition.program_id = { [Op.in]: idArray };
-        // }
+        if (programId) {
+            const idArray: number[] = programId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition.program_id = { [Op.in]: idArray };
+        }
 
         let include = [
             {
@@ -4868,7 +5899,7 @@ const fetchQrCodeTrackPagination = async (req: Request, res: Response) => {
             include: include,
             order: [
                 [
-                    'accept_date', 'desc'
+                    'id', 'desc'
                 ]
             ],
             offset: offset,
@@ -4883,78 +5914,112 @@ const fetchQrCodeTrackPagination = async (req: Request, res: Response) => {
 
 const exportQrCodeTrack = async (req: Request, res: Response) => {
     const excelFilePath = path.join("./upload", "barcode-report.xlsx");
-    const { garmentId, seasonId, programId, brandId, countryId }: any = req.query;
+    const searchTerm = req.query.search || "";
+    const page = Number(req.query.page) || 1;
+    const limit = Number(req.query.limit) || 10;
+    const { garmentId, seasonId, programId, brandId, countryId, departmentId, buyerId, styleMarkNo, garmentType }: any = req.query;
+    const offset = (page - 1) * limit;
+    const whereCondition: any = {};
     try {
-        const whereCondition: any = {};
-        const searchTerm = req.query.search || "";
         if (searchTerm) {
             whereCondition[Op.or] = [
+                { '$season.name$': { [Op.iLike]: `%${searchTerm}%` } },
                 { invoice_no: { [Op.iLike]: `%${searchTerm}%` } },
                 { '$program.program_name$': { [Op.iLike]: `%${searchTerm}%` } },
                 { '$buyer.brand_name$': { [Op.iLike]: `%${searchTerm}%` } },
+                { '$garment.name$': { [Op.iLike]: `%${searchTerm}%` } },
+                { style_mark_no: { [Op.contains]: [`${searchTerm}`] } },
+                { garment_type: { [Op.contains]: [`${searchTerm}`] } },
             ];
         }
-        if (garmentId) {
-            const idArray: number[] = garmentId
-                .split(",")
-                .map((id: any) => parseInt(id, 10));
-            whereCondition.garment_id = { [Op.in]: idArray };
-        }
+        whereCondition.status = 'Sold';
+
         if (brandId) {
             const idArray: number[] = brandId
                 .split(",")
                 .map((id: any) => parseInt(id, 10));
             whereCondition.buyer_id = { [Op.in]: idArray };
         }
-        whereCondition.status = "Sold";
+
+        if (styleMarkNo) {
+            const idArray: any[] = styleMarkNo
+                .split(",")
+                .map((id: any) => id);
+            whereCondition.style_mark_no = { [Op.overlap]: idArray };
+        }
+        if (garmentType) {
+            const idArray: any[] = garmentType
+                .split(",")
+                .map((id: any) => id);
+            whereCondition.garment_type = { [Op.overlap]: idArray };
+        }
+
+        if (programId) {
+            const idArray: number[] = programId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition.program_id = { [Op.in]: idArray };
+        }
+
         // Create the excel workbook file
         const workbook = new ExcelJS.Workbook();
         const worksheet = workbook.addWorksheet("Sheet1");
-        worksheet.mergeCells('A1:H1');
+        worksheet.mergeCells('A1:I1');
         const mergedCell = worksheet.getCell('A1');
         mergedCell.value = 'CottonConnect | Barcode Report';
         mergedCell.font = { bold: true };
         mergedCell.alignment = { horizontal: 'center', vertical: 'middle' };
         // Set bold font for header row
         const headerRow = worksheet.addRow([
-            "Sr No.", "Qr Code", "Brand Name",
+            "S No.", "Qr Code", "Brand Name", "Garment unit Name",
             "Invoice No", "Garment Type", "Style/Mark No",
-            "Total No of pieces", "Program"
+            "Total No. of Pieces", "Program"
         ]);
         headerRow.font = { bold: true };
         let include = [
             {
-                model: Garment,
-                as: "garment",
-                attributes: ['id', 'name', 'address']
+                model: Brand,
+                as: "buyer",
+                attributes: ['id', 'brand_name', 'address']
+            },
+            {
+                model: Season,
+                as: "season",
             },
             {
                 model: Program,
                 as: "program",
             },
             {
-                model: Brand,
-                as: "buyer",
-                attributes: ['id', 'brand_name', 'address']
+                model: Garment,
+                as: "garment",
+                attributes: ['id', 'name', 'address']
             }
         ];
-        const garment = await GarmentSales.findAll({
+        const { count, rows } = await GarmentSales.findAndCountAll({
             where: whereCondition,
-            include: include
+            include: include,
+            order: [
+                [
+                    'id', 'desc'
+                ]
+            ],
+            offset: offset,
+            limit: limit,
         });
         // Append data to worksheet
-        for await (const [index, item] of garment.entries()) {
+        for await (const [index, item] of rows.entries()) {
 
             const rowValues = Object.values({
                 index: index + 1,
                 qrCode: item.qr ? process.env.BASE_URL + item.qr : '',
                 buyer: item.buyer ? item.buyer.brand_name : item.processor_name,
+                garment: item.garment ? item.garment.name : '',
                 invoice: item.invoice_no ? item.invoice_no : '',
-                garment: item.garment_type ? item.garment_type : '',
-                mark: item.style_mark_no ? item.style_mark_no : '',
-                garment_size: item.garment_size ? item.garment_size : '',
-                no_of_pieces: item.no_of_pieces ? item.no_of_pieces : '',
-                program: item.program ? item.program.name : '',
+                garmentType: item.garment_type && item.garment_type.length > 0 ? item.garment_type.join(", ") : '',
+                mark: item.style_mark_no && item.style_mark_no.length > 0 ? item.style_mark_no.join(", ") : '',
+                no_of_pieces: item.total_no_of_pieces ? item.total_no_of_pieces : '',
+                program: item.program ? item.program.program_name : '',
             });
             worksheet.addRow(rowValues);
         }
@@ -7387,11 +8452,17 @@ const consolidatedTraceability = async (req: Request, res: Response) => {
     try {
         if (searchTerm) {
             whereCondition[Op.or] = [
+                { fabric_order_ref: { [Op.iLike]: `%${searchTerm}%` } }, // Search by order ref
+                { brand_order_ref: { [Op.iLike]: `%${searchTerm}%` } }, // Search by order ref
+                { '$season.name$': { [Op.iLike]: `%${searchTerm}%` } },
                 { invoice_no: { [Op.iLike]: `%${searchTerm}%` } },
-                { style_mark_no: { [Op.iLike]: `%${searchTerm}%` } },
+                { vehicle_no: { [Op.iLike]: `%${searchTerm}%` } },
+                { transaction_agent: { [Op.iLike]: `%${searchTerm}%` } },
                 { '$program.program_name$': { [Op.iLike]: `%${searchTerm}%` } },
                 { '$buyer.brand_name$': { [Op.iLike]: `%${searchTerm}%` } },
-                { garment_type: { [Op.iLike]: `%${searchTerm}%` } },
+                { '$garment.name$': { [Op.iLike]: `%${searchTerm}%` } },
+                { style_mark_no: { [Op.contains]: [`${searchTerm}`] } },
+                { garment_type: { [Op.contains]: [`${searchTerm}`] } },
             ];
         }
         whereCondition.status = 'Sold';
@@ -7411,15 +8482,49 @@ const consolidatedTraceability = async (req: Request, res: Response) => {
                 as: "program",
             },
             {
-                model: Department,
-                as: "department",
-            },
-            {
                 model: Garment,
                 as: "garment",
                 attributes: ['id', 'name', 'address']
             }
         ];
+
+        // const {count, rows} = await GarmentSelection.findAndCountAll({
+        //     attributes:[
+        //         [Sequelize.literal('"garmentsales"."id"'), 'garment_sales_id'],
+        //         [Sequelize.literal('"garmentprocess"."id"'), 'garment_process_id'],
+        //         [Sequelize.literal('"garmentsales"."accept_date"'), 'accept_date'],
+        //         [Sequelize.literal('"garmentsales"."date"'), 'dispatch_date'],
+        //         [Sequelize.col('"garmentsales"."season"."name"'), 'season_name'],
+        //         [Sequelize.col('"garmentsales"."season"."id"'), 'season_id'],
+        //         [Sequelize.col('"garmentsales"."garment"."id"'), 'garment_id'],
+        //         [Sequelize.col('"garmentsales"."garment"."name"'), 'garment_name'],
+        //         [Sequelize.col('"garmentsales"."program"."program_name"'), 'program_name'],
+        //         [Sequelize.col('"garmentsales"."fabric_order_ref"'), 'fabric_order_ref'],
+        //         [Sequelize.col('"garmentsales"."brand_order_ref"'), 'brand_order_ref'],
+        //         [Sequelize.col('"garmentsales"."buyer_type"'), 'buyer_type'],
+        //         [Sequelize.col('"garmentsales"."buyer_id"'), 'brand_id'],
+        //         [Sequelize.col('"garmentsales"."buyer"."brand_name"'), 'brand_name'],
+        //         [Sequelize.col('"garmentsales"."invoice_no"'), 'garment_invoice_no'],
+        //         [Sequelize.col('"garmentsales"."garment_type"'), 'garment_type'],
+        //         [Sequelize.col('"garmentsales"."style_mark_no"'), 'style_mark_no'],
+        //         [Sequelize.col('"garmentsales"."style_mark_no"'), 'style_mark_no'],
+        //         [Sequelize.col('"garmentsales"."style_mark_no"'), 'style_mark_no'],
+
+        //     ],
+        //     where: whereCondition,
+        //     include: [{
+        //         model: GarmentSales,
+        //         as: "garmentsales",
+        //         include: include,
+        //         attributes:[]
+        //     },{
+        //         model: GarmentProcess,
+        //         attributes:[],
+        //         as: "garmentprocess",
+        //     }],
+        //     offset: offset,
+        //     limit: limit,
+        // })
 
         //fetch data with pagination
         const { count, rows } = await GarmentSales.findAndCountAll({
@@ -7427,16 +8532,24 @@ const consolidatedTraceability = async (req: Request, res: Response) => {
             include: include,
             order: [
                 [
-                    'accept_date', 'asc'
+                    'id', 'desc'
                 ]
             ],
             offset: offset,
             limit: limit,
         });
         for await (let [index, item] of rows.entries()) {
-            let fabric = await FabricSelection.findAll({
+            let process = await GarmentSelection.findAll({
                 where: {
                     sales_id: item.dataValues.id
+                },
+                attributes: ['id', 'garment_id', 'sales_id']
+            });
+
+             const processIds = process ? process.map((obj: any) => obj.dataValues.garment_id) : []
+            let fabric = await FabricSelection.findAll({
+                where: {
+                    sales_id: processIds
                 },
                 attributes: ['id', 'fabric_id', 'processor']
             })
@@ -7453,22 +8566,23 @@ const consolidatedTraceability = async (req: Request, res: Response) => {
                             as: 'knitter',
                             attributes: ['id', 'name'],
                         },
-                        {
-                            model: FabricType,
-                            as: 'fabric',
-                            attributes: ['fabricType_name'],
-                        }
                     ],
                     where: {
                         id: {
                             [Op.in]: knit_fabric_ids
                         }
                     },
-                    raw: true // Return raw data
+                    // raw: true // Return raw data
                 })
-                let knitYarn = KnitYarnSelection.findAll({
+                let knitProcess = await KnitFabricSelection.findAll({
                     where: {
                         sales_id: knitSales.map((obj: any) => obj.id)
+                    },
+                    attributes: ['id', 'fabric_id','sales_id']
+                })
+                let knitYarn = await KnitYarnSelection.findAll({
+                    where: {
+                        sales_id: knitProcess.map((obj: any) => obj.dataValues.fabric_id)
                     },
                     attributes: ['id', 'yarn_id']
                 })
@@ -7485,11 +8599,6 @@ const consolidatedTraceability = async (req: Request, res: Response) => {
                             as: 'weaver',
                             attributes: ['id', 'name'],
                         },
-                        {
-                            model: FabricType,
-                            as: 'fabric',
-                            attributes: ['fabricType_name'],
-                        }
                     ],
                     where: {
                         id: {
@@ -7607,10 +8716,13 @@ export {
     exportGinnerCottonStock,
     fetchSpinnerLintCottonStock,
     exportSpinnerCottonStock,
+    fetchGarmentFabricReceipt,
+    exportGarmentFabricReceipt,
     fetchGarmentSalesPagination,
     exportGarmentSales,
-    fetchGarmentFabricPagination,
-    exportGarmentFabric,
+    getGarmentSalesFilter,
+    fetchGarmentFabricProcess,
+    exportGarmentFabricProcess,
     fetchPscpPrecurement,
     exportPscpCottonProcurement,
     consolidatedTraceability,
