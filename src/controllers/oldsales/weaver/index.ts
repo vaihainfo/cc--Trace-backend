@@ -1,12 +1,12 @@
 import { Request, Response } from "express";
 import { Op } from "sequelize";
-import OldKnitterSales from "../../../models/old-knitter-sales.model";
+import OldWeaverSales from "../../../models/old-weaver-sales.model";
 import Season from "../../../models/season.model";
 import FabricType from "../../../models/fabric-type.model";
 import Program from "../../../models/program.model";
 import Garment from "../../../models/garment.model";
 
-const fetchOldKnitterSales = async (req: Request, res: Response) => {
+const fetchOldWeaverSales = async (req: Request, res: Response) => {
     const searchTerm = req.query.search || "";
     const sortOrder = req.query.sort || "desc";
     const sortField = req.query.sortBy || "id";
@@ -33,7 +33,7 @@ const fetchOldKnitterSales = async (req: Request, res: Response) => {
                 {
                     model: Season,
                     as: "season",
-                }
+                },
             ],
         }
         if (sortOrder === "asc" || sortOrder === "desc") {
@@ -44,11 +44,11 @@ const fetchOldKnitterSales = async (req: Request, res: Response) => {
             queryOptions.offset = offset;
             queryOptions.limit = limit;
 
-            const { count, rows } = await OldKnitterSales.findAndCountAll(queryOptions);
+            const { count, rows } = await OldWeaverSales.findAndCountAll(queryOptions);
             return res.sendPaginationSuccess(res, rows, count);
         } else {
-            const oldKnitterSales = await OldKnitterSales.findAll(queryOptions);
-            return res.sendSuccess(res, oldKnitterSales);
+            const oldWeaverSales = await OldWeaverSales.findAll(queryOptions);
+            return res.sendSuccess(res, oldWeaverSales);
         }
     } catch (error: any) {
         console.log(error);
@@ -57,5 +57,5 @@ const fetchOldKnitterSales = async (req: Request, res: Response) => {
 }
 
 export {
-    fetchOldKnitterSales
+    fetchOldWeaverSales
 };

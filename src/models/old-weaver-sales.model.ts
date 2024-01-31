@@ -5,14 +5,14 @@ import FabricType from './fabric-type.model';
 import Program from './program.model';
 import Garment from './garment.model';
 
-const OldKnitterSales = db.define('old_knitter_sales', {
+const OldWeaverSales = db.define('old_weaver_sales', {
     id: {
         type: DataTypes.INTEGER,
         autoIncrement: true,
         allowNull: false,
         primaryKey: true
     },
-    knitter_id: {
+    weaver_id: {
         type: DataTypes.INTEGER,
         allowNull: false
     },
@@ -44,11 +44,23 @@ const OldKnitterSales = db.define('old_knitter_sales', {
         type: DataTypes.TEXT,
         allowNull: false
     },
-    yarn_qty: {
+    weftchosen: {
+        type: DataTypes.STRING,
+        allowNull: false
+    },
+    weft_cottonmix_type: {
+        type: DataTypes.STRING,
+        allowNull: false
+    },
+    weft_cottonmix_qty: {
+        type: DataTypes.STRING,
+        allowNull: false
+    },
+    warp_yarn_qty: {
         type: DataTypes.DOUBLE,
         allowNull: false
     },
-    add_yarn_qty: {
+    weft_yarn_qty: {
         type: DataTypes.DOUBLE,
         allowNull: false
     },
@@ -58,6 +70,10 @@ const OldKnitterSales = db.define('old_knitter_sales', {
     },
     fabric_type: {
         type: DataTypes.INTEGER,
+        allowNull: false
+    },
+    fabric_construction: {
+        type: DataTypes.STRING,
         allowNull: false
     },
     fabric_length: {
@@ -161,15 +177,7 @@ const OldKnitterSales = db.define('old_knitter_sales', {
         allowNull: false
     },
     season_id: {
-        type: DataTypes.BIGINT,
-        defaultValue: null
-    },
-    cottonmix_type: {
-        type: DataTypes.STRING,
-        defaultValue: null
-    },
-    cottonmix_qty: {
-        type: DataTypes.STRING,
+        type: DataTypes.INTEGER,
         defaultValue: null
     },
     transaction_via_trader: {
@@ -196,31 +204,30 @@ const OldKnitterSales = db.define('old_knitter_sales', {
         type: DataTypes.SMALLINT,
         allowNull: false,
         defaultValue: "0"
-    },
+    }
 }, {
     timestamps: false
 });
 
-OldKnitterSales.belongsTo(Program, {
+OldWeaverSales.belongsTo(Program, {
     foreignKey: "program",
     as: "program_data"
 });
 
-OldKnitterSales.belongsTo(Garment, {
+OldWeaverSales.belongsTo(Garment, {
     foreignKey: "garment_id",
     as: "garment"
 });
 
-OldKnitterSales.belongsTo(FabricType, {
+OldWeaverSales.belongsTo(FabricType, {
     foreignKey: "fabric_type",
     as: "fabricType_data"
 });
 
-OldKnitterSales.belongsTo(Season, {
+OldWeaverSales.belongsTo(Season, {
     foreignKey: "season_id",
     as: "season"
 });
 
-
-OldKnitterSales.sync();
-export default OldKnitterSales;
+OldWeaverSales.sync();
+export default OldWeaverSales;

@@ -1,12 +1,11 @@
 import { Request, Response } from "express";
 import { Op } from "sequelize";
-import OldKnitterSales from "../../../models/old-knitter-sales.model";
+import OldGarmentSales from "../../../models/old-garment-sales.model";
 import Season from "../../../models/season.model";
-import FabricType from "../../../models/fabric-type.model";
 import Program from "../../../models/program.model";
-import Garment from "../../../models/garment.model";
+import Brand from "../../../models/brand.model";
 
-const fetchOldKnitterSales = async (req: Request, res: Response) => {
+const fetchOldGarmentSales = async (req: Request, res: Response) => {
     const searchTerm = req.query.search || "";
     const sortOrder = req.query.sort || "desc";
     const sortField = req.query.sortBy || "id";
@@ -16,19 +15,15 @@ const fetchOldKnitterSales = async (req: Request, res: Response) => {
 
     try {
         let queryOptions: any = {
-            where: { garment_name: { [Op.iLike]: `%${searchTerm}%` } },
+            where: { brand_name: { [Op.iLike]: `%${searchTerm}%` } },
             include: [
                 {
                     model: Program,
                     as: "program_data",
                 },
                 {
-                    model: Garment,
-                    as: "garment",
-                },
-                {
-                    model: FabricType,
-                    as: "fabricType_data",
+                    model: Brand,
+                    as: "brand",
                 },
                 {
                     model: Season,
@@ -44,11 +39,11 @@ const fetchOldKnitterSales = async (req: Request, res: Response) => {
             queryOptions.offset = offset;
             queryOptions.limit = limit;
 
-            const { count, rows } = await OldKnitterSales.findAndCountAll(queryOptions);
+            const { count, rows } = await OldGarmentSales.findAndCountAll(queryOptions);
             return res.sendPaginationSuccess(res, rows, count);
         } else {
-            const oldKnitterSales = await OldKnitterSales.findAll(queryOptions);
-            return res.sendSuccess(res, oldKnitterSales);
+            const oldGarmentSales = await OldGarmentSales.findAll(queryOptions);
+            return res.sendSuccess(res, oldGarmentSales);
         }
     } catch (error: any) {
         console.log(error);
@@ -57,5 +52,5 @@ const fetchOldKnitterSales = async (req: Request, res: Response) => {
 }
 
 export {
-    fetchOldKnitterSales
+    fetchOldGarmentSales
 };

@@ -1,18 +1,17 @@
 import { DataTypes } from 'sequelize';
 import db from '../util/dbConn';
-import Season from './season.model';
-import FabricType from './fabric-type.model';
 import Program from './program.model';
-import Garment from './garment.model';
+import Season from './season.model';
+import Brand from './brand.model';
 
-const OldKnitterSales = db.define('old_knitter_sales', {
+const OldGarmentSales = db.define('old_garment_sales', {
     id: {
         type: DataTypes.INTEGER,
         autoIncrement: true,
         allowNull: false,
         primaryKey: true
     },
-    knitter_id: {
+    garment_id: {
         type: DataTypes.INTEGER,
         allowNull: false
     },
@@ -28,83 +27,66 @@ const OldKnitterSales = db.define('old_knitter_sales', {
         type: DataTypes.INTEGER,
         allowNull: false
     },
+    trader_id: {
+        type: DataTypes.INTEGER,
+        allowNull: false
+    },
     buyer_type: {
         type: DataTypes.STRING,
         allowNull: false
     },
-    garment_id: {
+    brand_id: {
         type: DataTypes.INTEGER,
         allowNull: false
     },
-    garment_name: {
+    department_id: {
+        type: DataTypes.INTEGER,
+        allowNull: false
+    },
+    brand_name: {
         type: DataTypes.STRING,
         allowNull: false
     },
-    garment_address: {
-        type: DataTypes.TEXT,
-        allowNull: false
-    },
-    yarn_qty: {
-        type: DataTypes.DOUBLE,
-        allowNull: false
-    },
-    add_yarn_qty: {
-        type: DataTypes.DOUBLE,
-        allowNull: false
-    },
-    total_yarn_qty: {
-        type: DataTypes.DOUBLE,
-        allowNull: false
-    },
-    fabric_type: {
-        type: DataTypes.INTEGER,
-        allowNull: false
+    brand_address: {
+        type: DataTypes.TEXT
     },
     fabric_length: {
         type: DataTypes.DOUBLE,
         allowNull: false
     },
-    gsm: {
+    add_fabric_length: {
+        type: DataTypes.INTEGER,
+        allowNull: false
+    },
+    total_fabric_length: {
+        type: DataTypes.INTEGER,
+        allowNull: false
+    },
+    garment_type: {
         type: DataTypes.STRING,
         allowNull: false
     },
-    fabric_net_weight: {
-        type: DataTypes.DOUBLE,
-        allowNull: false
-    },
-    batch_lot_no: {
+    style_mark_no: {
         type: DataTypes.STRING,
         allowNull: false
     },
-    bale_ids: {
+    garment_size: {
         type: DataTypes.STRING,
         allowNull: false
     },
-    invoice_no: {
+    colour: {
         type: DataTypes.STRING,
         allowNull: false
     },
-    no_of_bales: {
-        type: DataTypes.STRING,
+    total_no_pc: {
+        type: DataTypes.INTEGER,
         allowNull: false
     },
-    bill_of_lading: {
-        type: DataTypes.STRING,
+    no_of_box: {
+        type: DataTypes.INTEGER,
         allowNull: false
     },
-    transport_info: {
-        type: DataTypes.STRING,
-        allowNull: false
-    },
-    transporter_name: {
-        type: DataTypes.STRING,
-        allowNull: false
-    },
-    vehicle_no: {
-        type: DataTypes.STRING,
-        allowNull: false
-    },
-    quality_doc: {
+    barcode: {
         type: DataTypes.STRING,
         allowNull: false
     },
@@ -124,27 +106,47 @@ const OldKnitterSales = db.define('old_knitter_sales', {
         type: DataTypes.STRING,
         allowNull: false
     },
-    dyeing_process: {
+    invoice_no: {
         type: DataTypes.STRING,
         allowNull: false
     },
-    dyeing_processor_name: {
+    box_ids: {
         type: DataTypes.STRING,
         allowNull: false
     },
-    dyeing_address: {
+    bill_of_lading: {
         type: DataTypes.STRING,
         allowNull: false
     },
-    dyeing_process_name: {
+    transport_info: {
         type: DataTypes.STRING,
         allowNull: false
     },
-    dyeing_process_loss: {
+    contract_no: {
+        type: DataTypes.STRING,
+        allowNull: false
+    },
+    embroidering_process: {
+        type: DataTypes.STRING,
+        allowNull: false
+    },
+    embroidering_processor_name: {
+        type: DataTypes.STRING,
+        allowNull: false
+    },
+    embroidering_address: {
+        type: DataTypes.STRING,
+        allowNull: false
+    },
+    embroidering_process_name: {
+        type: DataTypes.STRING,
+        allowNull: false
+    },
+    embroidering_process_loss: {
         type: DataTypes.DOUBLE,
         allowNull: false
     },
-    dyeing_net_weight: {
+    final_no_of_pcs: {
         type: DataTypes.DOUBLE,
         allowNull: false
     },
@@ -164,12 +166,8 @@ const OldKnitterSales = db.define('old_knitter_sales', {
         type: DataTypes.BIGINT,
         defaultValue: null
     },
-    cottonmix_type: {
-        type: DataTypes.STRING,
-        defaultValue: null
-    },
-    cottonmix_qty: {
-        type: DataTypes.STRING,
+    order_to_shipped: {
+        type: DataTypes.DOUBLE,
         defaultValue: null
     },
     transaction_via_trader: {
@@ -184,43 +182,29 @@ const OldKnitterSales = db.define('old_knitter_sales', {
         allowNull: false,
         defaultValue: new Date()
     },
-    submitted_by: {
-        type: DataTypes.BIGINT,
-        defaultValue: null
-    },
-    accept_by: {
-        type: DataTypes.BIGINT,
-        defaultValue: null
-    },
     physical_traceability_process: {
         type: DataTypes.SMALLINT,
         allowNull: false,
         defaultValue: "0"
-    },
+    }
 }, {
     timestamps: false
 });
 
-OldKnitterSales.belongsTo(Program, {
+OldGarmentSales.belongsTo(Program, {
     foreignKey: "program",
     as: "program_data"
 });
 
-OldKnitterSales.belongsTo(Garment, {
-    foreignKey: "garment_id",
-    as: "garment"
+OldGarmentSales.belongsTo(Brand, {
+    foreignKey: "brand_id",
+    as: "brand"
 });
 
-OldKnitterSales.belongsTo(FabricType, {
-    foreignKey: "fabric_type",
-    as: "fabricType_data"
-});
-
-OldKnitterSales.belongsTo(Season, {
+OldGarmentSales.belongsTo(Season, {
     foreignKey: "season_id",
     as: "season"
 });
 
-
-OldKnitterSales.sync();
-export default OldKnitterSales;
+OldGarmentSales.sync();
+export default OldGarmentSales;
