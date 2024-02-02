@@ -214,6 +214,10 @@ const processorLoginAdmin = async (req: Request, res: Response) => {
             let fabric = await Fabric.findOne({ where: { id: req.query.fabricId } });
             userId = fabric.dataValues.fabricUser_id
         }
+        if (req.query.type === 'brand') {
+            let brand = await Brand.findOne({ where: { id: req.query.brandId } });
+            userId = brand.dataValues.brandUser_id
+        }
         const user = await User.findOne({ where: { id: userId } });
         if (!user) {
             return res.sendError(res, "user not found");
