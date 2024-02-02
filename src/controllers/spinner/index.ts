@@ -656,12 +656,15 @@ const fetchSpinSalesPagination = async (req: Request, res: Response) => {
             whereCondition[Op.or] = [
                 { order_ref: { [Op.iLike]: `%${searchTerm}%` } },
                 { invoice_no: { [Op.iLike]: `%${searchTerm}%` } },
+                { batch_lot_no: { [Op.iLike]: `%${searchTerm}%` } },
                 { reel_lot_no: { [Op.iLike]: `%${searchTerm}%` } },
                 { yarn_type: { [Op.iLike]: `%${searchTerm}%` } },
+                { vehicle_no: { [Op.iLike]: `%${searchTerm}%` } },
                 { '$weaver.name$': { [Op.iLike]: `%${searchTerm}%` } },
                 { '$knitter.name$': { [Op.iLike]: `%${searchTerm}%` } },
                 { '$season.name$': { [Op.iLike]: `%${searchTerm}%` } },
                 { '$program.program_name$': { [Op.iLike]: `%${searchTerm}%` } },
+                { '$yarncount.yarnCount_name$': { [Op.iLike]: `%${searchTerm}%` } },// Search season spinner name  
             ];
         }
         if (spinnerId) {

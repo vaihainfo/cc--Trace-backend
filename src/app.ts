@@ -165,8 +165,8 @@ app.use("/trader-process", traderProcessRouter);
 app.use("/fabric-process", fabricProcessRouter);
 app.use("/brand-interface", brandProcessRouter);
 app.use("/qr-app", qrApp);
-app.use("/datamigration", DatamigrationRouter);
-app.use("/failed-records", failedRouter);
+app.use("/datamigration",DatamigrationRouter);
+app.use("/failed-records",failedRouter);
 app.use("/oldsales", oldsalesRouter);
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument, { customCss }));
 

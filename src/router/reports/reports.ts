@@ -1,6 +1,6 @@
 import { fetchValidationProjectReport } from "../../controllers/reports/validation-project-report";
 import { getOrganicIntegrityReport } from "../../controllers/reports/integrity-report";
-import { fetchTransactionsReport, fetchSumOfQtyPurchasedByProgram } from "../../controllers/reports/procurement-report";
+import { fetchTransactionsReport, fetchSumOfQtyPurchasedByProgram, exportProcurementReport } from "../../controllers/reports/procurement-report";
 import { Router } from "express";
 import { exportNonOrganicFarmerReport, exportOrganicFarmerReport, fetchFarmerReportPagination } from "../../controllers/reports/farmer-reports";
 import {
@@ -53,12 +53,16 @@ import {
     exportGarmentFabricReceipt,
     fetchGarmentFabricProcess,
     exportGarmentFabricProcess,
-    getGarmentSalesFilter
+    getGarmentSalesFilter,
+    exportConsolidatedTraceability,
+    villageSeedCottonReport,
+    exportVillageSeedCotton
 } from "../../controllers/reports";
 const router = Router();
 
 // Transaction Report Route
 router.get('/get-transactions', fetchTransactionsReport);
+router.get('/export-procurement-report', exportProcurementReport);
 router.get('/get-procured-quantities', fetchSumOfQtyPurchasedByProgram);
 
 
@@ -120,5 +124,9 @@ router.get('/export-pscp-precurement-live-tracker-report', exportPscpProcurement
 router.get('/export-pscp-precurement-report', exportPscpCottonProcurement);
 router.get('/export-ginner-pscp-precurement-report', exportPscpGinnerCottonProcurement);
 router.get('/get-consolidated-report', consolidatedTraceability);
+router.get('/export-consolidated-report', exportConsolidatedTraceability);
+
+router.get('/get-village-seed-cotton-report', villageSeedCottonReport);
+router.get('/export-village-seed-cotton-report', exportVillageSeedCotton);
 
 export default router;  

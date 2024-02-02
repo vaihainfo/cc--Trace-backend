@@ -835,11 +835,17 @@ const fetchKnitterDashBoard = async (req: Request, res: Response) => {
         }
         if (searchTerm) {
             whereCondition[Op.or] = [
-                { batch_lot_no: { [Op.iLike]: `%${searchTerm}%` } }, // Search by 
-                { invoice_no: { [Op.iLike]: `%${searchTerm}%` } }, // Search by
+                { order_ref: { [Op.iLike]: `%${searchTerm}%` } }, // Search by batch lot number
+                { reel_lot_no: { [Op.iLike]: `%${searchTerm}%` } }, // Search by batch lot number
+                { box_ids: { [Op.iLike]: `%${searchTerm}%` } }, // Search by batch lot number
+                { batch_lot_no: { [Op.iLike]: `%${searchTerm}%` } }, // Search by batch lot number
+                { invoice_no: { [Op.iLike]: `%${searchTerm}%` } }, // Search by invoice number
+                { yarn_type: { [Op.iLike]: `%${searchTerm}%` } }, // Search by invoice number
+                { vehicle_no: { [Op.iLike]: `%${searchTerm}%` } }, // Search by invoice number
                 { '$program.program_name$': { [Op.iLike]: `%${searchTerm}%` } }, // Search by program
-                { '$season.name$': { [Op.iLike]: `%${searchTerm}%` } },
-                { '$spinner.name$': { [Op.iLike]: `%${searchTerm}%` } }// Search by crop Type
+                { '$season.name$': { [Op.iLike]: `%${searchTerm}%` } }, // Search season name  
+                { '$spinner.name$': { [Op.iLike]: `%${searchTerm}%` } },// Search season spinner name  
+                { '$yarncount.yarnCount_name$': { [Op.iLike]: `%${searchTerm}%` } },// Search season spinner name 
             ];
         }
         if (status === 'Pending' || status === 'Sold') {

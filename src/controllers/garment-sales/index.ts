@@ -1957,7 +1957,7 @@ const getBrands = async (req: Request, res: Response) => {
   }
   let garment = await Garment.findOne({ where: { id: garmentId } });
   if (!garment) {
-    return res.sendError(res, "No Weaver Found ");
+    return res.sendError(res, "No Garment Found ");
   }
   let brand = await Brand.findAll({
     attributes: ["id", "brand_name", "address"],

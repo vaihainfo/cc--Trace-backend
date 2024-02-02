@@ -61,13 +61,13 @@ const createTransaction = async (req: Request, res: Response) => {
       if (!farm) {
         return res.sendError(res, "Farm is not present");
       }
-      data.estimated_cotton = farm.total_estimated_cotton;
-      data.available_cotton = farm.total_estimated_cotton - (farm.cotton_transacted || 0);
+      data.estimated_cotton = Number(farm.total_estimated_cotton);
+      data.available_cotton = Number(farm.total_estimated_cotton) - Number(farm.cotton_transacted || 0);
     }
 
     const transaction = await Transaction.create(data);
     let s = await Farm.update({
-      cotton_transacted: (farm.cotton_transacted || 0) + Number(req.body.qtyPurchased)
+      cotton_transacted: Number(farm.cotton_transacted || 0) + Number(req.body.qtyPurchased)
     }, { where: { id: req.body.farmId } });
     res.sendSuccess(res, transaction);
   } catch (error: any) {
@@ -92,6 +92,7 @@ const fetchTransactions = async (req: Request, res: Response) => {
   const ginnerId: string = req.query.ginnerId as string;
   const farmerId: string = req.query.farmerId as string;
   const villageId: string = req.query.villageId as string;
+  const stateId: any = req.query.villageId;
   const { endDate, startDate, transactionVia }: any = req.query;
   const whereCondition: any = {};
 
@@ -109,6 +110,13 @@ const fetchTransactions = async (req: Request, res: Response) => {
         .split(",")
         .map((id) => parseInt(id, 10));
       whereCondition.village_id = { [Op.in]: idArray };
+    }
+
+    if (stateId) {
+      const idArray: number[] = stateId
+        .split(",")
+        .map((id:any) => parseInt(id, 10));
+      whereCondition.state_id = { [Op.in]: idArray };
     }
 
     if (brandId) {
@@ -175,14 +183,17 @@ const fetchTransactions = async (req: Request, res: Response) => {
     if (searchTerm) {
       whereCondition[Op.or] = [
         { farmer_code: { [Op.iLike]: `%${searchTerm}%` } },
+        { farmer_name: { [Op.iLike]: `%${searchTerm}%` } },
         { total_amount: { [Op.iLike]: `%${searchTerm}%` } },
+        { rate: { [Op.iLike]: `%${searchTerm}%` } },
+        { qty_purchased: { [Op.iLike]: `%${searchTerm}%` } },
+        { vehicle: { [Op.iLike]: `%${searchTerm}%` } },
         { "$block.block_name$": { [Op.iLike]: `%${searchTerm}%` } },
         { "$country.county_name$": { [Op.iLike]: `%${searchTerm}%` } },
         { "$state.state_name$": { [Op.iLike]: `%${searchTerm}%` } },
         { "$village.village_name$": { [Op.iLike]: `%${searchTerm}%` } },
         { "$district.district_name$": { [Op.iLike]: `%${searchTerm}%` } },
-        { "$brand.brand_name$": { [Op.iLike]: `%${searchTerm}%` } },
-        { farmer_name: { [Op.iLike]: `%${searchTerm}%` } },
+        { "$farmer.firstName$": { [Op.iLike]: `%${searchTerm}%` } },
         { "$program.program_name$": { [Op.iLike]: `%${searchTerm}%` } },
         { "$ginner.name$": { [Op.iLike]: `%${searchTerm}%` } },
       ];
@@ -384,6 +395,67 @@ const fetchTransactionById = async (req: Request, res: Response) => {
   }
 };
 
+const fetchTransactionsBySeasonAndFarmer = async (req: Request, res: Response) => {
+  try {
+        // Create the excel workbook file
+        const { seasonId,farmerId } = req.query;
+        if (!seasonId) {
+            return res.sendError(res, 'NEED_SEASON_ID');
+        }
+        if (!farmerId) {
+          return res.sendError(res, 'NEED_FARMER_ID');
+      }
+    let include= [
+        {
+          model: Farmer,
+          as: "farmer",
+          attributes: []
+        },
+        {
+          model: Season,
+          as: "season",
+          attributes: []
+        },
+        {
+          model: Farm,
+          as: "farm",
+          attributes: [],
+          include:[{
+            model: Season,
+            as: "season",
+            attributes: []
+          }]
+        },
+      ];
+
+    const data = await Transaction.findAll({
+      attributes:[
+        'id','farmer_code',
+        [Sequelize.col('"farmer"."firstName"'), 'firstName'],
+        [Sequelize.col('"farmer"."lastName"'), 'lastName'],
+        [Sequelize.col('"farm"."season"."name'), 'season_name'],
+        [Sequelize.col('"farm"."total_estimated_cotton"'), 'total_estimated_cotton'],
+        'available_cotton',
+        'qty_purchased',
+        // [
+        //   Sequelize.literal('"available_cotton" - "qty_purchased"'),
+        //   'cotton_stock'
+        // ],
+      ],
+      where:{
+        farmer_id: farmerId,
+        '$farm.season_id$': seasonId
+      },
+      include: include,
+      order: [["id", 'asc']]
+    });
+    return res.sendSuccess(res, data);
+  } catch (error: any) {
+    console.log(error);
+    return res.sendError(res, error.message);
+  }
+};
+
 const updateTransaction = async (req: Request, res: Response) => {
   try {
     if (Number(req.body.qtyPurchased) < 0) {
@@ -442,39 +514,63 @@ const updateTransaction = async (req: Request, res: Response) => {
 };
 
 const allVillageCottonData = async (req: Request, res: Response) => {
-  try {
-    let userCondition = ''; // Define your user condition here
-    if (req.query.brandId) {
-      userCondition += `farmer.brand_id='${req.query.brandId}' AND `;
-    }
+  const searchTerm = req.query.search || "";
+    const page = Number(req.query.page) || 1;
+    const limit = Number(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+    const whereCondition: any = {};
+    const { villageId, brandId, countryId }: any = req.query;
+    try {
+        if(searchTerm){
+            whereCondition[Op.or] = [
+                { '$farmer.village.village_name$': { [Op.iLike]: `%${searchTerm}%` } }, // Search by first name
+              ];
+        }
 
-    if (req.query.search) {
-      userCondition += `vg.village_name ILIKE '%${req.query.search}%' AND `;
-    }
+        if(brandId){
+            const idArray: number[] = brandId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition['$farmer.brand_id$'] = { [Op.in]: idArray };
+        }
 
-    // Remove the trailing 'AND' if it exists
-    if (userCondition.endsWith(' AND ')) {
-      userCondition = userCondition.slice(0, -5);
-    }
-    const result = await sequelize.query(`
-    SELECT 
-      farmer.village_id, 
-        vg.village_name, 
-        ROUND(SUM(fr.total_estimated_cotton)) AS estimated_qty, 
-        ROUND(SUM(fr.cotton_transacted)) AS sold_qty, 
-        (ROUND(SUM(fr.total_estimated_cotton)) - ROUND(SUM(fr.cotton_transacted))) AS available_qty 
-    FROM ${Farm.getTableName()} fr 
-    JOIN ${Farmer.getTableName()} farmer ON fr.farmer_id = farmer.id 
-    JOIN ${Village.getTableName()} vg ON farmer.village_id = vg.id
-    ${userCondition ? `WHERE ${userCondition}` : ''} 
-    GROUP BY farmer.village_id, vg.village_name
-`, {
-      type: sequelize.QueryTypes.SELECT
-    });
-
-    res.sendSuccess(res, result)
+        const { count, rows } = await Farm.findAndCountAll({
+            attributes: [
+                [sequelize.col('"farmer"."village_id"'), 'village_id'],
+                [sequelize.col('"farmer"."village"."village_name"'), 'village_name'],
+                [sequelize.fn('COALESCE', sequelize.fn('SUM', Sequelize.literal('CAST("farms"."total_estimated_cotton"AS DOUBLE PRECISION)')), 0), 'estimated_qty'],
+                [sequelize.fn('COALESCE', sequelize.fn('SUM', Sequelize.literal('CAST("farms"."cotton_transacted" AS DOUBLE PRECISION)')), 0), 'sold_qty'],
+                [sequelize.literal('(COALESCE(SUM(CAST("farms"."total_estimated_cotton" AS DOUBLE PRECISION)), 0) - COALESCE(SUM(CAST("farms"."cotton_transacted" AS DOUBLE PRECISION)), 0))'), 'available_qty'],
+            ],
+            include: [
+                {
+                    model: Farmer,
+                    as: 'farmer',
+                    attributes: [],
+                    include:[
+                        {
+                            model: Village,
+                            as: 'village',
+                            attributes: []
+                        },
+                    ]
+                }
+            ],
+            where: whereCondition,
+            group: ['farmer.village_id','farmer.village.id'],
+            order: [
+                [
+                    'village_id', 'desc'
+                ]
+            ],
+            offset: offset,
+            limit: limit,
+        });
+       
+        return res.sendPaginationSuccess(res, rows, count.length);
 
   } catch (error: any) {
+    console.log(error);
     return res.sendError(res, error.meessage);
   }
 
@@ -1524,6 +1620,7 @@ export {
   deleteBulkTransactions,
   exportProcurement,
   fetchTransactionById,
+  fetchTransactionsBySeasonAndFarmer,
   exportGinnerProcurement,
   allVillageCottonData,
   cottonData

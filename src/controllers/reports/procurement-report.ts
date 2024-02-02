@@ -12,6 +12,9 @@ import Program from "../../models/program.model";
 import Ginner from "../../models/ginner.model";
 import Season from "../../models/season.model";
 import CropGrade from "../../models/crop-grade.model";
+import Farm from "../../models/farm.model";
+import * as ExcelJS from "exceljs";
+import * as path from "path";
 
 
 const fetchTransactionsReport = async (req: Request, res: Response) => {
@@ -76,7 +79,11 @@ const fetchTransactionsReport = async (req: Request, res: Response) => {
     if (searchTerm) {
       whereCondition[Op.or] = [
         { farmer_code: { [Op.iLike]: `%${searchTerm}%` } },
+        { farmer_name: { [Op.iLike]: `%${searchTerm}%` } },
         { total_amount: { [Op.iLike]: `%${searchTerm}%` } },
+        { rate: { [Op.iLike]: `%${searchTerm}%` } },
+        { qty_purchased: { [Op.iLike]: `%${searchTerm}%` } },
+        { vehicle: { [Op.iLike]: `%${searchTerm}%` } },
         { "$block.block_name$": { [Op.iLike]: `%${searchTerm}%` } },
         { "$country.county_name$": { [Op.iLike]: `%${searchTerm}%` } },
         { "$state.state_name$": { [Op.iLike]: `%${searchTerm}%` } },
@@ -167,6 +174,10 @@ const fetchTransactionsReport = async (req: Request, res: Response) => {
             "cropGrade"
           ],
         },
+        {
+          model: Farm,
+          as: "farm",
+        },
       ],
     };
 
@@ -221,7 +232,239 @@ const fetchSumOfQtyPurchasedByProgram = async (req: Request, res: Response) => {
   }
 };
 
+//Export the export details through excel file
+const exportProcurementReport = async (req: Request, res: Response) => {
+  const excelFilePath = path.join("./upload", "procurement-report.xlsx");
+
+  try {
+    const searchTerm = req.query.search || "";
+    let whereCondition: any = {};
+    const { status, countryId, stateId, brandId, farmGroupId, seasonId, programId, ginnerId, startDate, endDate }: any = req.query;
+    if (countryId) {
+      const idArray: number[] = countryId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.country_id = { [Op.in]: idArray };
+    }
+    if (stateId) {
+      const idArray: number[] = stateId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.state_id = { [Op.in]: idArray };
+    }
+    if (brandId) {
+      const idArray: number[] = brandId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.brand_id = { [Op.in]: idArray };
+    }
+    if (farmGroupId) {
+      const idArray: number[] = farmGroupId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition["$farmer.farmGroup_id$"] = { [Op.in]: idArray };
+    }
+    if (seasonId) {
+      const idArray: number[] = seasonId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.season_id = { [Op.in]: idArray };
+    }
+
+    if (programId) {
+      const idArray: number[] = programId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.program_id = { [Op.in]: idArray };
+    }
+
+    if (ginnerId) {
+      const idArray: number[] = ginnerId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.mapped_ginner = { [Op.in]: idArray };
+    }
+    whereCondition.status = 'Sold';
+
+    if (startDate && endDate) {
+      const startOfDay = new Date(startDate);
+      startOfDay.setUTCHours(0, 0, 0, 0);
+      const endOfDay = new Date(endDate);
+      endOfDay.setUTCHours(23, 59, 59, 999);
+      whereCondition.date = { [Op.between]: [startOfDay, endOfDay] }
+    }
+
+    // apply search
+    if (searchTerm) {
+      whereCondition[Op.or] = [
+        { farmer_code: { [Op.iLike]: `%${searchTerm}%` } },
+        { farmer_name: { [Op.iLike]: `%${searchTerm}%` } },
+        { total_amount: { [Op.iLike]: `%${searchTerm}%` } },
+        { rate: { [Op.iLike]: `%${searchTerm}%` } },
+        { qty_purchased: { [Op.iLike]: `%${searchTerm}%` } },
+        { vehicle: { [Op.iLike]: `%${searchTerm}%` } },
+        { "$block.block_name$": { [Op.iLike]: `%${searchTerm}%` } },
+        { "$country.county_name$": { [Op.iLike]: `%${searchTerm}%` } },
+        { "$state.state_name$": { [Op.iLike]: `%${searchTerm}%` } },
+        { "$village.village_name$": { [Op.iLike]: `%${searchTerm}%` } },
+        { "$district.district_name$": { [Op.iLike]: `%${searchTerm}%` } },
+        { "$farmer.firstName$": { [Op.iLike]: `%${searchTerm}%` } },
+        { "$program.program_name$": { [Op.iLike]: `%${searchTerm}%` } },
+        { "$ginner.name$": { [Op.iLike]: `%${searchTerm}%` } },
+      ];
+    }
+    // Create the excel workbook file
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet("Sheet1");
+    worksheet.mergeCells('A1:S1');
+    const mergedCell = worksheet.getCell('A1');
+    mergedCell.value = 'CottonConnect | Procurement Report';
+    mergedCell.font = { bold: true };
+    mergedCell.alignment = { horizontal: 'center', vertical: 'middle' };
+
+    // Set bold font for header row
+    const headerRow = worksheet.addRow([
+      "Sr No.",
+      "Date",
+      "Farmer Name",
+      "Farmer Code",
+      "Season",
+      "Country",
+      "State",
+      "District",
+      "Block",
+      "Village",
+      "Transaction Id",
+      "Quantity Purchased (Kgs)",
+      "Available Cotton(Kgs)",
+      "Price/Kg (Local Currency)",
+      "Program",
+      "Transport Vehicle No",
+      "Payment Method",
+      "Ginner Name",
+      "Agent",
+    ]);
+    headerRow.font = { bold: true };
+    const transaction = await Transaction.findAll({
+      where: whereCondition,
+      include: [
+        {
+          model: Village,
+          as: "village",
+          attributes: ['id', 'village_name']
+        },
+        {
+          model: Block,
+          as: "block",
+          attributes: ['id', 'block_name']
+        },
+        {
+          model: District,
+          as: "district",
+          attributes: ['id', 'district_name']
+        },
+        {
+          model: State,
+          as: "state",
+          attributes: ['id', 'state_name']
+        },
+        {
+          model: Country,
+          as: "country",
+          attributes: ['id', 'county_name']
+        },
+        {
+          model: Farmer,
+          as: "farmer",
+        },
+        {
+          model: Program,
+          as: "program",
+          attributes: ['id', 'program_name']
+        },
+        {
+          model: Brand,
+          as: "brand",
+          attributes: ['id', 'brand_name']
+        },
+        {
+          model: Ginner,
+          as: "ginner",
+          attributes: ['id', 'name', 'address']
+        },
+        {
+          model: CropGrade,
+          as: "grade",
+          attributes: ['id', 'cropGrade']
+        },
+        {
+          model: Season,
+          as: "season",
+          attributes: ['id', 'name']
+        },
+        {
+          model: Farm,
+          as: "farm"
+        },
+      ],
+      order: [
+        [
+          'id', 'desc'
+        ]
+      ]
+    });
+
+    // Append data to worksheet
+    for await (const [index, item] of transaction.entries()) {
+      const rowValues = Object.values({
+        index: index + 1,
+        date: item.dataValues.date ? item.dataValues.date : '',
+        farmer_code: item.dataValues.farmer_code ? item.dataValues.farmer_code : '',
+        farmer_name: item.dataValues.farmer ? item.dataValues.farmer.firstName + ' ' + item.dataValues.farmer.lastName : item.dataValues.farmer_name,
+        season: item.dataValues.season ? item.dataValues.season.name : ' ',
+        country: item.dataValues.country ? item.dataValues.country.county_name : '',
+        state: item.dataValues.state ? item.dataValues.state.state_name : '',
+        district: item.dataValues.district ? item.dataValues.district.district_name : '',
+        block: item.dataValues.block ? item.dataValues.block.block_name : '',
+        village: item.dataValues.village ? item.dataValues.village.village_name : '',
+        id: item.dataValues.id ? item.dataValues.id : '',
+        qty_purchased: item.dataValues.qty_purchased ? item.dataValues.qty_purchased : '',
+        available_cotton: item.dataValues.farm ? (Number(item.dataValues.farm.total_estimated_cotton) > Number(item.dataValues.farm.cotton_transacted) ? Number(item.dataValues.farm.total_estimated_cotton) - Number(item.dataValues.farm.cotton_transacted) : 0) : 0,
+        rate: item.dataValues.rate ? item.dataValues.rate : '',
+        program: item.dataValues.program ? item.dataValues.program.program_name : '',
+        vehicle: item.dataValues.vehicle ? item.dataValues.vehicle : '',
+        payment_method: item.dataValues.payment_method ? item.dataValues.payment_method : '',
+        ginner: item.dataValues.ginner ? item.dataValues.ginner.name : '',
+        agent: '',
+
+      });
+      worksheet.addRow(rowValues);
+    }
+    // Auto-adjust column widths based on content
+    worksheet.columns.forEach((column: any) => {
+      let maxCellLength = 0;
+      column.eachCell({ includeEmpty: true }, (cell: any) => {
+        const cellLength = (cell.value ? cell.value.toString() : '').length;
+        maxCellLength = Math.max(maxCellLength, cellLength);
+      });
+      column.width = Math.min(20, maxCellLength + 2); // Limit width to 30 characters
+    });
+
+    // Save the workbook
+    await workbook.xlsx.writeFile(excelFilePath);
+    res.status(200).send({
+      success: true,
+      messgage: "File successfully Generated",
+      data: process.env.BASE_URL + "procurement-report.xlsx",
+    });
+  } catch (error: any) {
+    console.log(error)
+    return res.sendError(res, error.message);
+  }
+};
+
 export {
   fetchTransactionsReport,
-  fetchSumOfQtyPurchasedByProgram
+  fetchSumOfQtyPurchasedByProgram,
+  exportProcurementReport
 };

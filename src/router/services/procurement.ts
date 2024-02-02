@@ -1,4 +1,4 @@
-import { createTransaction, deleteBulkTransactions, deleteTransaction, exportProcurement, cottonData, fetchTransactionById, fetchTransactions, updateTransaction, uploadTransactionBulk, allVillageCottonData } from "../../controllers/procurement";
+import { createTransaction, deleteBulkTransactions, deleteTransaction, exportProcurement, cottonData, fetchTransactionById, fetchTransactions, updateTransaction, uploadTransactionBulk, allVillageCottonData, fetchTransactionsBySeasonAndFarmer } from "../../controllers/procurement";
 // import { createLinenDetails, fetchlinenDetails } from "../../controllers/linen-details";
 import { Router } from "express";
 const router = Router();
@@ -6,6 +6,7 @@ const router = Router();
 // Farmer & farm Routes
 router.get('/get-transactions', fetchTransactions);
 router.get('/get-transaction/:id', fetchTransactionById);
+router.get('/get-season-farmer-transactions', fetchTransactionsBySeasonAndFarmer);
 router.post('/set-transaction', createTransaction);
 router.put('/update-transaction', updateTransaction);
 router.delete('/delete-transaction', deleteTransaction);

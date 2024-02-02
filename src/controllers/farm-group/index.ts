@@ -42,7 +42,7 @@ const fetchFarmGroupPagination = async (req: Request, res: Response) => {
   const sortOrder = req.query.sort || "asc";
   const page = Number(req.query.page) || 1;
   const limit = Number(req.query.limit) || 10;
-  const brandId = req.query.brandId as string;
+  const {brandId, countryId}: any = req.query;
   const offset = (page - 1) * limit;
   const status = req.query.status || '';
   const whereCondition: any = {};
@@ -58,9 +58,17 @@ const fetchFarmGroupPagination = async (req: Request, res: Response) => {
     if (brandId) {
       const idArray: number[] = brandId
         .split(",")
-        .map((id) => parseInt(id, 10));
+        .map((id: any) => parseInt(id, 10));
       whereCondition.brand_id = { [Op.in]: idArray };
     }
+
+    if (countryId) {
+      const idArray: number[] = countryId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition['$brand.countries_id$'] = { [Op.overlap]: idArray };
+    }
+
     //fetch data with pagination
     if (req.query.pagination === "true") {
       const { count, rows } = await FarmGroup.findAndCountAll({
@@ -72,7 +80,7 @@ const fetchFarmGroupPagination = async (req: Request, res: Response) => {
           {
             model: Brand,
             as: "brand",
-            attributes: ["id", "brand_name", "address"],
+            attributes: ["id", "brand_name", "address","countries_id"],
           },
         ],
         offset: offset,
@@ -86,7 +94,7 @@ const fetchFarmGroupPagination = async (req: Request, res: Response) => {
           {
             model: Brand,
             as: "brand",
-            attributes: ["id", "brand_name", "address"],
+            attributes: ["id", "brand_name", "address","countries_id"],
           },
         ],
         order: [

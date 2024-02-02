@@ -430,6 +430,12 @@ const exportOrganicFarmerReport = async (req: Request, res: Response) => {
                 .map((id: any) => parseInt(id, 10));
             whereCondition.village_id = { [Op.in]: idArray };
         }
+        if (icsId) {
+            const idArray: number[] = icsId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition.ics_id = { [Op.in]: idArray };
+        }
 
         let farmer: any
         let include = [
