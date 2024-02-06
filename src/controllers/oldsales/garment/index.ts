@@ -1,12 +1,12 @@
 import { Request, Response } from "express";
-import { Op } from "sequelize";
+// import { Op } from "sequelize";
 import OldGarmentSales from "../../../models/old-garment-sales.model";
 import Season from "../../../models/season.model";
 import Program from "../../../models/program.model";
 import Brand from "../../../models/brand.model";
 
 const fetchOldGarmentSales = async (req: Request, res: Response) => {
-    const searchTerm = req.query.search || "";
+    // const searchTerm = req.query.search || "";
     const sortOrder = req.query.sort || "desc";
     const sortField = req.query.sortBy || "id";
     const page = Number(req.query.page) || 1;
@@ -15,7 +15,7 @@ const fetchOldGarmentSales = async (req: Request, res: Response) => {
 
     try {
         let queryOptions: any = {
-            where: { brand_name: { [Op.iLike]: `%${searchTerm}%` } },
+            // where: { brand_name: { [Op.iLike]: `%${searchTerm}%` } },
             include: [
                 {
                     model: Program,

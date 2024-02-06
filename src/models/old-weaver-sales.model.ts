@@ -9,187 +9,143 @@ const OldWeaverSales = db.define('old_weaver_sales', {
     id: {
         type: DataTypes.INTEGER,
         autoIncrement: true,
-        allowNull: false,
         primaryKey: true
     },
     weaver_id: {
-        type: DataTypes.INTEGER,
-        allowNull: false
+        type: DataTypes.INTEGER
     },
     date: {
-        type: DataTypes.DATE,
-        allowNull: false
+        type: DataTypes.DATE
     },
     order_refernce: {
-        type: DataTypes.STRING,
-        allowNull: false
+        type: DataTypes.STRING
     },
     program: {
-        type: DataTypes.INTEGER,
-        allowNull: false
+        type: DataTypes.INTEGER
     },
     buyer_type: {
-        type: DataTypes.STRING,
-        allowNull: false
+        type: DataTypes.STRING
     },
     garment_id: {
-        type: DataTypes.INTEGER,
-        allowNull: false
+        type: DataTypes.INTEGER
     },
     garment_name: {
-        type: DataTypes.STRING,
-        allowNull: false
+        type: DataTypes.STRING
     },
     garment_address: {
-        type: DataTypes.TEXT,
-        allowNull: false
+        type: DataTypes.TEXT
     },
     weftchosen: {
-        type: DataTypes.STRING,
-        allowNull: false
+        type: DataTypes.STRING
     },
     weft_cottonmix_type: {
-        type: DataTypes.STRING,
-        allowNull: false
+        type: DataTypes.STRING
     },
     weft_cottonmix_qty: {
-        type: DataTypes.STRING,
-        allowNull: false
+        type: DataTypes.STRING
     },
     warp_yarn_qty: {
-        type: DataTypes.DOUBLE,
-        allowNull: false
+        type: DataTypes.DOUBLE
     },
     weft_yarn_qty: {
-        type: DataTypes.DOUBLE,
-        allowNull: false
+        type: DataTypes.DOUBLE
     },
     total_yarn_qty: {
-        type: DataTypes.DOUBLE,
-        allowNull: false
+        type: DataTypes.DOUBLE
     },
     fabric_type: {
-        type: DataTypes.INTEGER,
-        allowNull: false
+        type: DataTypes.INTEGER
     },
     fabric_construction: {
-        type: DataTypes.STRING,
-        allowNull: false
+        type: DataTypes.STRING
     },
     fabric_length: {
-        type: DataTypes.DOUBLE,
-        allowNull: false
+        type: DataTypes.DOUBLE
     },
     gsm: {
-        type: DataTypes.STRING,
-        allowNull: false
+        type: DataTypes.STRING
     },
     fabric_net_weight: {
-        type: DataTypes.DOUBLE,
-        allowNull: false
+        type: DataTypes.DOUBLE
     },
     batch_lot_no: {
-        type: DataTypes.STRING,
-        allowNull: false
+        type: DataTypes.STRING
     },
     bale_ids: {
-        type: DataTypes.STRING,
-        allowNull: false
+        type: DataTypes.STRING
     },
     invoice_no: {
-        type: DataTypes.STRING,
-        allowNull: false
+        type: DataTypes.STRING
     },
     no_of_bales: {
-        type: DataTypes.STRING,
-        allowNull: false
+        type: DataTypes.STRING
     },
     bill_of_lading: {
-        type: DataTypes.STRING,
-        allowNull: false
+        type: DataTypes.STRING
     },
     transport_info: {
-        type: DataTypes.STRING,
-        allowNull: false
+        type: DataTypes.STRING
     },
     transporter_name: {
-        type: DataTypes.STRING,
-        allowNull: false
+        type: DataTypes.STRING
     },
     vehicle_no: {
-        type: DataTypes.STRING,
-        allowNull: false
+        type: DataTypes.STRING
     },
     quality_doc: {
-        type: DataTypes.STRING,
-        allowNull: false
+        type: DataTypes.STRING
     },
     tc_files: {
-        type: DataTypes.STRING,
-        allowNull: false
+        type: DataTypes.STRING
     },
     contract_files: {
-        type: DataTypes.STRING,
-        allowNull: false
+        type: DataTypes.STRING
     },
     invoice_files: {
-        type: DataTypes.STRING,
-        allowNull: false
+        type: DataTypes.STRING
     },
     delivery_notes: {
-        type: DataTypes.STRING,
-        allowNull: false
+        type: DataTypes.STRING
     },
     dyeing_process: {
-        type: DataTypes.STRING,
-        allowNull: false
+        type: DataTypes.STRING
     },
     dyeing_processor_name: {
-        type: DataTypes.STRING,
-        allowNull: false
+        type: DataTypes.STRING
     },
     dyeing_address: {
-        type: DataTypes.STRING,
-        allowNull: false
+        type: DataTypes.STRING
     },
     dyeing_process_name: {
-        type: DataTypes.STRING,
-        allowNull: false
+        type: DataTypes.STRING
     },
     dyeing_process_loss: {
-        type: DataTypes.DOUBLE,
-        allowNull: false
+        type: DataTypes.DOUBLE
     },
     dyeing_net_weight: {
-        type: DataTypes.DOUBLE,
-        allowNull: false
+        type: DataTypes.DOUBLE
     },
     qty_stock: {
-        type: DataTypes.DOUBLE,
-        allowNull: false
+        type: DataTypes.DOUBLE
     },
     status: {
-        type: DataTypes.INTEGER,
-        allowNull: false
+        type: DataTypes.INTEGER
     },
     accept_date: {
-        type: DataTypes.DATE,
-        allowNull: false
+        type: DataTypes.DATE
     },
     season_id: {
         type: DataTypes.INTEGER,
         defaultValue: null
     },
     transaction_via_trader: {
-        type: DataTypes.INTEGER,
-        allowNull: false
+        type: DataTypes.INTEGER
     },
     transcation_details: {
         type: DataTypes.TEXT
     },
     created_date: {
         type: DataTypes.DATE,
-        allowNull: false,
         defaultValue: new Date()
     },
     submitted_by: {
@@ -202,7 +158,6 @@ const OldWeaverSales = db.define('old_weaver_sales', {
     },
     physical_traceability_process: {
         type: DataTypes.SMALLINT,
-        allowNull: false,
         defaultValue: "0"
     }
 }, {

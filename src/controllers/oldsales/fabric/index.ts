@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { Op } from "sequelize";
+// import { Op } from "sequelize";
 import OldDyingSales from "../../../models/old-dying-sales.model";
 import OldPrintingSales from "../../../models/old-printing-sales.model";
 import OldWashingSales from "../../../models/old-washing-sales.model";
@@ -7,7 +7,7 @@ import OldCompactingSales from "../../../models/old-compacting-sales.model";
 import Program from "../../../models/program.model";
 
 const fetchOldDyeingSales = async (req: Request, res: Response) => {
-    const searchTerm = req.query.search || "";
+    // const searchTerm = req.query.search || "";
     const sortOrder = req.query.sort || "desc";
     const sortField = req.query.sortBy || "id";
     const page = Number(req.query.page) || 1;
@@ -16,7 +16,7 @@ const fetchOldDyeingSales = async (req: Request, res: Response) => {
 
     try {
         let queryOptions: any = {
-            where: { invoice_no: { [Op.iLike]: `%${searchTerm}%` } },
+            // where: { invoice_no: { [Op.iLike]: `%${searchTerm}%` } },
             include: [
                 {
                     model: Program,
@@ -45,7 +45,7 @@ const fetchOldDyeingSales = async (req: Request, res: Response) => {
 }
 
 const fetchOldPrintingSales = async (req: Request, res: Response) => {
-    const searchTerm = req.query.search || "";
+    // const searchTerm = req.query.search || "";
     const sortOrder = req.query.sort || "desc";
     const sortField = req.query.sortBy || "id";
     const page = Number(req.query.page) || 1;
@@ -54,7 +54,7 @@ const fetchOldPrintingSales = async (req: Request, res: Response) => {
 
     try {
         let queryOptions: any = {
-            where: { invoice_no: { [Op.iLike]: `%${searchTerm}%` } },
+            // where: { invoice_no: { [Op.iLike]: `%${searchTerm}%` } },
             include: [
                 {
                     model: Program,
@@ -83,7 +83,7 @@ const fetchOldPrintingSales = async (req: Request, res: Response) => {
 }
 
 const fetchOldWashingSales = async (req: Request, res: Response) => {
-    const searchTerm = req.query.search || "";
+    // const searchTerm = req.query.search || "";
     const sortOrder = req.query.sort || "desc";
     const sortField = req.query.sortBy || "id";
     const page = Number(req.query.page) || 1;
@@ -92,7 +92,7 @@ const fetchOldWashingSales = async (req: Request, res: Response) => {
 
     try {
         let queryOptions: any = {
-            where: { invoice_no: { [Op.iLike]: `%${searchTerm}%` } },
+            // where: { invoice_no: { [Op.iLike]: `%${searchTerm}%` } },
             include: [
                 {
                     model: Program,
@@ -120,7 +120,7 @@ const fetchOldWashingSales = async (req: Request, res: Response) => {
     }
 }
 const fetchOldCompactingSales = async (req: Request, res: Response) => {
-    const searchTerm = req.query.search || "";
+    // const searchTerm = req.query.search || "";
     const sortOrder = req.query.sort || "desc";
     const sortField = req.query.sortBy || "id";
     const page = Number(req.query.page) || 1;
@@ -129,7 +129,7 @@ const fetchOldCompactingSales = async (req: Request, res: Response) => {
 
     try {
         let queryOptions: any = {
-            where: { invoice_no: { [Op.iLike]: `%${searchTerm}%` } },
+            // where: { invoice_no: { [Op.iLike]: `%${searchTerm}%` } },
             include: [
                 {
                     model: Program,

@@ -6,116 +6,89 @@ const OldPrintingSales = db.define('old_printing_sales', {
     id: {
         type: DataTypes.INTEGER,
         autoIncrement: true,
-        allowNull: false,
         primaryKey: true
     },
     season_id: {
-        type: DataTypes.INTEGER,
-        allowNull: false
+        type: DataTypes.INTEGER
     },
     printing_id: {
-        type: DataTypes.INTEGER,
-        allowNull: false
+        type: DataTypes.INTEGER
     },
     date: {
-        type: DataTypes.DATE,
-        allowNull: false
+        type: DataTypes.DATE
     },
     program: {
-        type: DataTypes.INTEGER,
-        allowNull: false
+        type: DataTypes.INTEGER
     },
     order_refernce: {
-        type: DataTypes.STRING,
-        allowNull: false
+        type: DataTypes.STRING
     },
     buyer_type: {
-        type: DataTypes.STRING,
-        allowNull: false
+        type: DataTypes.STRING
     },
     buyer_id: {
-        type: DataTypes.INTEGER,
-        allowNull: false
+        type: DataTypes.INTEGER
     },
     processor_name: {
-        type: DataTypes.STRING,
-        allowNull: false
+        type: DataTypes.STRING
     },
     processor_address: {
-        type: DataTypes.TEXT,
-        allowNull: false
+        type: DataTypes.TEXT
     },
     fabric_quantity: {
-        type: DataTypes.DOUBLE,
-        allowNull: false
+        type: DataTypes.DOUBLE
     },
     old_fabric_quantity: {
-        type: DataTypes.DOUBLE,
-        allowNull: false
+        type: DataTypes.DOUBLE
     },
     add_fabric_quantity: {
-        type: DataTypes.DOUBLE,
-        allowNull: false
+        type: DataTypes.DOUBLE
     },
     total_fabric_quantity: {
-        type: DataTypes.DOUBLE,
-        allowNull: false
+        type: DataTypes.DOUBLE
     },
     fabric_type: {
         type: DataTypes.STRING,
         defaultValue: null
     },
     fabric_length: {
-        type: DataTypes.DOUBLE,
-        allowNull: false
+        type: DataTypes.DOUBLE
     },
     gsm: {
-        type: DataTypes.STRING,
-        allowNull: false
+        type: DataTypes.STRING
     },
     fabric_net_weight: {
-        type: DataTypes.DOUBLE,
-        allowNull: false
+        type: DataTypes.DOUBLE
     },
     batch_lot_no: {
-        type: DataTypes.STRING,
-        allowNull: false
+        type: DataTypes.STRING
     },
     job_details: {
-        type: DataTypes.STRING,
-        allowNull: false
+        type: DataTypes.STRING
     },
     print_type: {
-        type: DataTypes.STRING,
-        allowNull: false
+        type: DataTypes.STRING
     },
     invoice_no: {
-        type: DataTypes.STRING,
-        allowNull: false
+        type: DataTypes.STRING
     },
     upload_patter_from_garment: {
-        type: DataTypes.STRING,
-        allowNull: false
+        type: DataTypes.STRING
     },
     order_details: {
-        type: DataTypes.STRING,
-        allowNull: false
+        type: DataTypes.STRING
     },
     bill_of_lading: {
-        type: DataTypes.STRING,
-        allowNull: false
+        type: DataTypes.STRING
     },
     transport_information: {
-        type: DataTypes.STRING,
-        allowNull: false
+        type: DataTypes.STRING
     },
     qty_stock: {
-        type: DataTypes.DOUBLE,
-        allowNull: false
+        type: DataTypes.DOUBLE
     },
     status: {
-        type: DataTypes.INTEGER,
-        allowNull: false
+        type: DataTypes.INTEGER
     },
     printing_details: {
         type: DataTypes.STRING,
@@ -126,20 +99,16 @@ const OldPrintingSales = db.define('old_printing_sales', {
         defaultValue: null
     },
     weight_gain: {
-        type: DataTypes.STRING,
-        allowNull: false
+        type: DataTypes.STRING
     },
     weight_loss: {
-        type: DataTypes.STRING,
-        allowNull: false
+        type: DataTypes.STRING
     },
     accept_date: {
-        type: DataTypes.DATE,
-        allowNull: false
+        type: DataTypes.DATE
     },
     created_date: {
         type: DataTypes.DATE,
-        allowNull: false,
         defaultValue: new Date()
     }
 }, {

@@ -8,159 +8,121 @@ const OldGarmentSales = db.define('old_garment_sales', {
     id: {
         type: DataTypes.INTEGER,
         autoIncrement: true,
-        allowNull: false,
         primaryKey: true
     },
     garment_id: {
-        type: DataTypes.INTEGER,
-        allowNull: false
+        type: DataTypes.INTEGER
     },
     date: {
-        type: DataTypes.DATE,
-        allowNull: false
+        type: DataTypes.DATE
     },
     order_refernce: {
-        type: DataTypes.STRING,
-        allowNull: false
+        type: DataTypes.STRING
     },
     program: {
-        type: DataTypes.INTEGER,
-        allowNull: false
+        type: DataTypes.INTEGER
     },
     trader_id: {
-        type: DataTypes.INTEGER,
-        allowNull: false
+        type: DataTypes.INTEGER
     },
     buyer_type: {
-        type: DataTypes.STRING,
-        allowNull: false
+        type: DataTypes.STRING
     },
     brand_id: {
-        type: DataTypes.INTEGER,
-        allowNull: false
+        type: DataTypes.INTEGER
     },
     department_id: {
-        type: DataTypes.INTEGER,
-        allowNull: false
+        type: DataTypes.INTEGER
     },
     brand_name: {
-        type: DataTypes.STRING,
-        allowNull: false
+        type: DataTypes.STRING
     },
     brand_address: {
         type: DataTypes.TEXT
     },
     fabric_length: {
-        type: DataTypes.DOUBLE,
-        allowNull: false
+        type: DataTypes.DOUBLE
     },
     add_fabric_length: {
-        type: DataTypes.INTEGER,
-        allowNull: false
+        type: DataTypes.INTEGER
     },
     total_fabric_length: {
-        type: DataTypes.INTEGER,
-        allowNull: false
+        type: DataTypes.INTEGER
     },
     garment_type: {
-        type: DataTypes.STRING,
-        allowNull: false
+        type: DataTypes.STRING
     },
     style_mark_no: {
-        type: DataTypes.STRING,
-        allowNull: false
+        type: DataTypes.STRING
     },
     garment_size: {
-        type: DataTypes.STRING,
-        allowNull: false
+        type: DataTypes.STRING
     },
     colour: {
-        type: DataTypes.STRING,
-        allowNull: false
+        type: DataTypes.STRING
     },
     total_no_pc: {
-        type: DataTypes.INTEGER,
-        allowNull: false
+        type: DataTypes.INTEGER
     },
     no_of_box: {
-        type: DataTypes.INTEGER,
-        allowNull: false
+        type: DataTypes.INTEGER
     },
     barcode: {
-        type: DataTypes.STRING,
-        allowNull: false
+        type: DataTypes.STRING
     },
     tc_files: {
-        type: DataTypes.STRING,
-        allowNull: false
+        type: DataTypes.STRING
     },
     contract_files: {
-        type: DataTypes.STRING,
-        allowNull: false
+        type: DataTypes.STRING
     },
     invoice_files: {
-        type: DataTypes.STRING,
-        allowNull: false
+        type: DataTypes.STRING
     },
     delivery_notes: {
-        type: DataTypes.STRING,
-        allowNull: false
+        type: DataTypes.STRING
     },
     invoice_no: {
-        type: DataTypes.STRING,
-        allowNull: false
+        type: DataTypes.STRING
     },
     box_ids: {
-        type: DataTypes.STRING,
-        allowNull: false
+        type: DataTypes.STRING
     },
     bill_of_lading: {
-        type: DataTypes.STRING,
-        allowNull: false
+        type: DataTypes.STRING
     },
     transport_info: {
-        type: DataTypes.STRING,
-        allowNull: false
+        type: DataTypes.STRING
     },
     contract_no: {
-        type: DataTypes.STRING,
-        allowNull: false
+        type: DataTypes.STRING
     },
     embroidering_process: {
-        type: DataTypes.STRING,
-        allowNull: false
+        type: DataTypes.STRING
     },
     embroidering_processor_name: {
-        type: DataTypes.STRING,
-        allowNull: false
+        type: DataTypes.STRING
     },
     embroidering_address: {
-        type: DataTypes.STRING,
-        allowNull: false
+        type: DataTypes.STRING
     },
     embroidering_process_name: {
-        type: DataTypes.STRING,
-        allowNull: false
+        type: DataTypes.STRING
     },
     embroidering_process_loss: {
-        type: DataTypes.DOUBLE,
-        allowNull: false
+        type: DataTypes.DOUBLE
     },
     final_no_of_pcs: {
-        type: DataTypes.DOUBLE,
-        allowNull: false
+        type: DataTypes.DOUBLE
     },
     qty_stock: {
-        type: DataTypes.DOUBLE,
-        allowNull: false
+        type: DataTypes.DOUBLE
     },
     status: {
-        type: DataTypes.INTEGER,
-        allowNull: false
+        type: DataTypes.INTEGER
     },
     accept_date: {
-        type: DataTypes.DATE,
-        allowNull: false
+        type: DataTypes.DATE
     },
     season_id: {
         type: DataTypes.BIGINT,
@@ -171,20 +133,17 @@ const OldGarmentSales = db.define('old_garment_sales', {
         defaultValue: null
     },
     transaction_via_trader: {
-        type: DataTypes.INTEGER,
-        allowNull: false
+        type: DataTypes.INTEGER
     },
     transcation_details: {
         type: DataTypes.TEXT
     },
     created_date: {
         type: DataTypes.DATE,
-        allowNull: false,
         defaultValue: new Date()
     },
     physical_traceability_process: {
         type: DataTypes.SMALLINT,
-        allowNull: false,
         defaultValue: "0"
     }
 }, {

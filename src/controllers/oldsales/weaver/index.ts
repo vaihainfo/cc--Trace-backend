@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { Op } from "sequelize";
+// import { Op } from "sequelize";
 import OldWeaverSales from "../../../models/old-weaver-sales.model";
 import Season from "../../../models/season.model";
 import FabricType from "../../../models/fabric-type.model";
@@ -7,7 +7,7 @@ import Program from "../../../models/program.model";
 import Garment from "../../../models/garment.model";
 
 const fetchOldWeaverSales = async (req: Request, res: Response) => {
-    const searchTerm = req.query.search || "";
+    // const searchTerm = req.query.search || "";
     const sortOrder = req.query.sort || "desc";
     const sortField = req.query.sortBy || "id";
     const page = Number(req.query.page) || 1;
@@ -16,7 +16,7 @@ const fetchOldWeaverSales = async (req: Request, res: Response) => {
 
     try {
         let queryOptions: any = {
-            where: { garment_name: { [Op.iLike]: `%${searchTerm}%` } },
+            // where: { garment_name: { [Op.iLike]: `%${searchTerm}%` } },
             include: [
                 {
                     model: Program,
