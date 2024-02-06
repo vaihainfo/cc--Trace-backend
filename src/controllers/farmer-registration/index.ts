@@ -374,6 +374,18 @@ const updateFarmer = async (req: Request, res: Response) => {
         id: req.body.id,
       },
     });
+    if(farmer && (farmer[0] === 1)){
+      let village = await Village.findOne({ where: { id: Number(req.body.villageId) } })
+      let uniqueFilename = `qrcode_${Date.now()}.png`;
+      let name = req.body.firstName + " " + req.body.lastName
+      let aa = await generateQrCode(`${farmer.id}`,
+        name, uniqueFilename, req.body.code, village ? village.village_name : '');
+      const farmerPLace = await Farmer.update({ qrUrl: uniqueFilename }, {
+          where: {
+              id: req.body.id
+            }
+          });
+      }
     if (req.body.farmId) {
       let farmer = await Farm.update({
         program_id: Number(req.body.programId),
@@ -496,6 +508,9 @@ const fetchFarmPagination = async (req: Request, res: Response) => {
       const { count, rows } = await Farm.findAndCountAll({
         where: whereCondition,
         include: include,
+        order :[
+          ['season_id',"desc"]
+        ],
         offset: offset,
         limit: limit,
       });

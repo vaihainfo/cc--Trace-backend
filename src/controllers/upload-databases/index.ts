@@ -886,22 +886,62 @@ const uploadFarmer = async (req: Request, res: Response) => {
                     let farmers = await Farmer.findOne({ where: { code: data.farmerCode } });
 
                     if (farmers) {
+                        const farmerdata = {
+                            program_id: program.id,
+                            brand_id: brand.id,
+                            farmGroup_id: farmGroup.id,
+                            firstName: data.firstName,
+                            lastName: data.lastName,
+                            code: data.farmerCode,
+                            country_id: country.id,
+                            state_id: state.id,
+                            district_id: district.id,
+                            block_id: block.id,
+                            village_id: village.id,
+                            joining_date: data.dateOfJoining ? new Date(data.dateOfJoining).toISOString() : null,
+                            ics_id: ics ? ics.id : null,
+                            tracenet_id: data.tracenetId ? data.tracenetId : null,
+                            cert_status: data.certStatus ? data.certStatus : null,
+                            cotton_total_area: data.cottonTotalArea ? data.cottonTotalArea : 0.0,
+                            total_estimated_cotton: data.totalEstimatedCotton ? data.totalEstimatedCotton : 0.0,
+                            agri_total_area: data.agriTotalArea ? data.agriTotalArea : 0.0,
+                            agri_estimated_yeld: data.agriEstimatedYield ? data.agriEstimatedYield : 0.0,
+                            agri_estimated_prod: data.agriEstimatedProd ? data.agriEstimatedProd : 0.0
+                        };
+                        const farmer = await Farmer.update(farmerdata, {
+                            where: {
+                              id: farmers.id,
+                            },
+                          });
+
+
+                        //check if farm exists
                         const farm = await Farm.findOne({where: {farmer_id: farmers.id, season_id: season.id}});
+
                         if(farm){
-                            fail.push({
-                                success: false,
-                                data: { farmerCode: data.farmerCode, farmerName: data.firstName },
-                                message: "Farmer with same farmer code and season is already exists"
-                            })
-                            let failedRecord = {
-                                type: 'Farmer',
-                                season: season,
-                                farmerCode: data.farmerCode ? data.farmerCode : '', 
-                                farmerName:  data.firstName ?  data.firstName : '',
-                                body: { ...data },
-                                reason: "Farmer with same farmer code and season is already exists"
-                            }
-                            saveFailedRecord(failedRecord)
+
+                            const farmData = {
+                                farmer_id: farmers.id,
+                                program_id: program.id,
+                                season_id: season.id,
+                                agri_total_area: data.agriTotalArea ? data.agriTotalArea : 0.0,
+                                agri_estimated_yeld: data.agriEstimatedYield ? data.agriEstimatedYield : 0.0,
+                                agri_estimated_prod: data.agriEstimatedProd ? data.agriEstimatedProd : 0.0,
+                                cotton_total_area: data.cottonTotalArea ? data.cottonTotalArea : 0.0,
+                                total_estimated_cotton: data.totalEstimatedCotton ? data.totalEstimatedCotton : 0.0
+                            };
+                            const updatedFarm = await Farm.update(farmData,{
+                                where: {
+                                    id: farm.id,
+                                  },
+                            }); 
+
+                            pass.push({
+                                success: true,
+                                data: farmers,
+                                message: "Farmer created"
+                            });
+
                         }else{
                             const farmData = {
                                 farmer_id: farmers.id,
@@ -934,7 +974,7 @@ const uploadFarmer = async (req: Request, res: Response) => {
                             district_id: district.id,
                             block_id: block.id,
                             village_id: village.id,
-                            joining_date: new Date(data.dateOfJoining).toISOString(),
+                            joining_date: data.dateOfJoining ? new Date(data.dateOfJoining).toISOString() : null,
                             ics_id: ics ? ics.id : null,
                             tracenet_id: data.tracenetId ? data.tracenetId : null,
                             cert_status: data.certStatus ? data.certStatus : null,

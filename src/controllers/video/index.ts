@@ -16,8 +16,9 @@ const createVideoName = async (req: Request, res: Response) => {
         };
         const result = await Video.create(data);
         res.sendSuccess(res, result);
-    } catch (error) {
-        return res.sendError(res, "ERR_INTERNAL_SERVER_ERROR");
+    } catch (error: any) {
+        console.error(error);
+        return res.sendError(res, error.message);
     }
 }
 
@@ -75,6 +76,7 @@ const fetchVideoNamePagination = async (req: Request, res: Response) => {
         }
 
     } catch (error: any) {
+        console.error(error);
         return res.sendError(res, error.message);
     }
 }
@@ -96,6 +98,7 @@ const updateVideoName = async (req: Request, res: Response) => {
         });
         res.sendSuccess(res, result);
     } catch (error: any) {
+        console.error(error);
         return res.sendError(res, error.message);
     }
 }
@@ -111,6 +114,7 @@ const updateVideoNameStatus = async (req: Request, res: Response) => {
         });
         res.sendSuccess(res, result);
     } catch (error: any) {
+        console.error(error);
         return res.sendError(res, error.message);
     }
 }
@@ -124,6 +128,7 @@ const deleteVideoName = async (req: Request, res: Response) => {
         });
         res.sendSuccess(res, result);
     } catch (error: any) {
+        console.error(error);
         return res.sendError(res, error.message);
     }
 }

@@ -15,6 +15,7 @@ import CropGrade from "../../models/crop-grade.model";
 import Farm from "../../models/farm.model";
 import * as ExcelJS from "exceljs";
 import * as path from "path";
+import UserApp from "../../models/users-app.model";
 
 
 const fetchTransactionsReport = async (req: Request, res: Response) => {
@@ -84,6 +85,7 @@ const fetchTransactionsReport = async (req: Request, res: Response) => {
         { rate: { [Op.iLike]: `%${searchTerm}%` } },
         { qty_purchased: { [Op.iLike]: `%${searchTerm}%` } },
         { vehicle: { [Op.iLike]: `%${searchTerm}%` } },
+        { payment_method: { [Op.iLike]: `%${searchTerm}%` } },
         { "$block.block_name$": { [Op.iLike]: `%${searchTerm}%` } },
         { "$country.county_name$": { [Op.iLike]: `%${searchTerm}%` } },
         { "$state.state_name$": { [Op.iLike]: `%${searchTerm}%` } },
@@ -92,6 +94,8 @@ const fetchTransactionsReport = async (req: Request, res: Response) => {
         { "$farmer.firstName$": { [Op.iLike]: `%${searchTerm}%` } },
         { "$program.program_name$": { [Op.iLike]: `%${searchTerm}%` } },
         { "$ginner.name$": { [Op.iLike]: `%${searchTerm}%` } },
+        { "$agent.firstName$": { [Op.iLike]: `%${searchTerm}%` } },
+        { "$season.name$": { [Op.iLike]: `%${searchTerm}%` } },
       ];
     }
     whereCondition.status = 'Sold';
@@ -177,6 +181,10 @@ const fetchTransactionsReport = async (req: Request, res: Response) => {
         {
           model: Farm,
           as: "farm",
+        },
+        {
+          model: UserApp,
+          as: "agent"
         },
       ],
     };
@@ -303,6 +311,7 @@ const exportProcurementReport = async (req: Request, res: Response) => {
         { rate: { [Op.iLike]: `%${searchTerm}%` } },
         { qty_purchased: { [Op.iLike]: `%${searchTerm}%` } },
         { vehicle: { [Op.iLike]: `%${searchTerm}%` } },
+        { payment_method: { [Op.iLike]: `%${searchTerm}%` } },
         { "$block.block_name$": { [Op.iLike]: `%${searchTerm}%` } },
         { "$country.county_name$": { [Op.iLike]: `%${searchTerm}%` } },
         { "$state.state_name$": { [Op.iLike]: `%${searchTerm}%` } },
@@ -311,6 +320,8 @@ const exportProcurementReport = async (req: Request, res: Response) => {
         { "$farmer.firstName$": { [Op.iLike]: `%${searchTerm}%` } },
         { "$program.program_name$": { [Op.iLike]: `%${searchTerm}%` } },
         { "$ginner.name$": { [Op.iLike]: `%${searchTerm}%` } },
+        { "$agent.firstName$": { [Op.iLike]: `%${searchTerm}%` } },
+        { "$season.name$": { [Op.iLike]: `%${searchTerm}%` } },
       ];
     }
     // Create the excel workbook file
@@ -406,6 +417,10 @@ const exportProcurementReport = async (req: Request, res: Response) => {
           model: Farm,
           as: "farm"
         },
+        {
+          model: UserApp,
+          as: "agent"
+        },
       ],
       order: [
         [
@@ -435,7 +450,7 @@ const exportProcurementReport = async (req: Request, res: Response) => {
         vehicle: item.dataValues.vehicle ? item.dataValues.vehicle : '',
         payment_method: item.dataValues.payment_method ? item.dataValues.payment_method : '',
         ginner: item.dataValues.ginner ? item.dataValues.ginner.name : '',
-        agent: '',
+        agent: item.dataValues.agent ? item.dataValues.agent.firstName : "",
 
       });
       worksheet.addRow(rowValues);

@@ -8886,8 +8886,8 @@ const consolidatedTraceability = async (req: Request, res: Response) => {
             let obj:any = {};
 
             //knitter and weaver data
-            let knitdate = knitSales && knitSales.length > 0 ? knitSales.map((val:any)=> val?.date).filter((item:any) => item !== null && item !== undefined) : [];
-            let weaverdate = weaverSales && weaverSales.length > 0 ? weaverSales.map((val:any)=> val?.date).filter((item:any) => item !== null && item !== undefined) : [];
+            let knitdate = knitSales && knitSales.length > 0 ? knitSales.map((val:any)=> moment(val?.date).format('DD-MM-YYYY')).filter((item:any) => item !== null && item !== undefined) : [];
+            let weaverdate = weaverSales && weaverSales.length > 0 ? weaverSales.map((val:any)=> moment(val?.date).format('DD-MM-YYYY')).filter((item:any) => item !== null && item !== undefined) : [];
             let knitName = knitSales && knitSales.length > 0 ? knitSales.map((val:any)=> val?.knitter?.name).filter((item:any) => item !== null && item !== undefined) : [];
             let weaverName = weaverSales && weaverSales.length > 0 ? weaverSales.map((val:any)=> val?.weaver?.name).filter((item:any) => item !== null && item !== undefined) : [];
             let knitInvoice = knitSales && knitSales.length > 0 ? knitSales.map((val:any)=> val?.invoice_no).filter((item:any) => item !== null && item !== undefined) : [];
@@ -8920,7 +8920,7 @@ const consolidatedTraceability = async (req: Request, res: Response) => {
             obj.fbrc_total_qty = [...knitTotalQty,...weaverTotalQty].reduce((acc: any, value: any) => acc + value, 0);
 
             //spinner data
-            let spindate = spinSales && spinSales.length > 0 ? spinSales.map((val:any)=> val?.date).filter((item:any) => item !== null && item !== undefined) : [];
+            let spindate = spinSales && spinSales.length > 0 ? spinSales.map((val:any)=> moment(val?.date).format('DD-MM-YYYY')).filter((item:any) => item !== null && item !== undefined) : [];
             let spinName = spinSales && spinSales.length > 0 ? spinSales.map((val:any)=> val?.spinner?.name).filter((item:any) => item !== null && item !== undefined) : [];
             let spinInvoice = spinSales && spinSales.length > 0 ? spinSales.map((val:any)=> val?.invoice_no).filter((item:any) => item !== null && item !== undefined) : [];
             let spinLot = spinSales && spinSales.length > 0 ? spinSales.map((val:any)=> val?.batch_lot_no).filter((item:any) => item !== null && item !== undefined) : [];
@@ -8943,7 +8943,7 @@ const consolidatedTraceability = async (req: Request, res: Response) => {
             obj.spnr_total_qty = spinTotalQty.reduce((acc: any, value: any) => acc + value, 0);
 
             //ginner data
-            let gindate = ginSales && ginSales.length > 0 ? ginSales.map((val:any)=> val?.date).filter((item:any) => item !== null && item !== undefined) : [];
+            let gindate = ginSales && ginSales.length > 0 ? ginSales.map((val:any)=> moment(val?.date).format('DD-MM-YYYY')).filter((item:any) => item !== null && item !== undefined) : [];
             let ginName = ginSales && ginSales.length > 0 ? ginSales.map((val:any)=> val?.ginner?.name).filter((item:any) => item !== null && item !== undefined) : [];
             let ginInvoice = ginSales && ginSales.length > 0 ? ginSales.map((val:any)=> val?.invoice_no).filter((item:any) => item !== null && item !== undefined) : [];
             let ginLot = ginSales && ginSales.length > 0 ? ginSales.map((val:any)=> val?.lot_no).filter((item:any) => item !== null && item !== undefined) : [];
@@ -8964,7 +8964,7 @@ const consolidatedTraceability = async (req: Request, res: Response) => {
 
             //transaction data
             let frmrTransactionIds = transactions && transactions.length > 0 ? transactions.map((val:any)=> val?.id).filter((item:any) => item !== null && item !== undefined) : [];
-            let frmrdate = transactions && transactions.length > 0 ? transactions.map((val:any)=> val?.date).filter((item:any) => item !== null && item !== undefined) : [];
+            let frmrdate = transactions && transactions.length > 0 ? transactions.map((val:any)=> moment(val?.date).format('DD-MM-YYYY')).filter((item:any) => item !== null && item !== undefined) : [];
             let frmrFarmGroupName = transactions && transactions.length > 0 ? transactions.map((val:any)=> val?.farmer?.farmGroup?.name).filter((item:any) => item !== null && item !== undefined) : [];
             let frmrVillages = transactions && transactions.length > 0 ? transactions.map((val:any)=> val?.village?.village_name).filter((item:any) => item !== null && item !== undefined) : [];
             let frmrStates = transactions && transactions.length > 0 ? transactions.map((val:any)=> val?.state?.state_name).filter((item:any) => item !== null && item !== undefined) : [];
@@ -9326,8 +9326,8 @@ const exportConsolidatedTraceability = async (req: Request, res: Response) => {
             let obj:any = {};
 
             //knitter and weaver data
-            let knitdate = knitSales && knitSales.length > 0 ? knitSales.map((val:any)=> val?.date).filter((item:any) => item !== null && item !== undefined) : [];
-            let weaverdate = weaverSales && weaverSales.length > 0 ? weaverSales.map((val:any)=> val?.date).filter((item:any) => item !== null && item !== undefined) : [];
+            let knitdate = knitSales && knitSales.length > 0 ? knitSales.map((val:any)=> moment(val?.date).format('DD-MM-YYYY')).filter((item:any) => item !== null && item !== undefined) : [];
+            let weaverdate = weaverSales && weaverSales.length > 0 ? weaverSales.map((val:any)=> moment(val?.date).format('DD-MM-YYYY')).filter((item:any) => item !== null && item !== undefined) : [];
             let knitName = knitSales && knitSales.length > 0 ? knitSales.map((val:any)=> val?.knitter?.name).filter((item:any) => item !== null && item !== undefined) : [];
             let weaverName = weaverSales && weaverSales.length > 0 ? weaverSales.map((val:any)=> val?.weaver?.name).filter((item:any) => item !== null && item !== undefined) : [];
             let knitInvoice = knitSales && knitSales.length > 0 ? knitSales.map((val:any)=> val?.invoice_no).filter((item:any) => item !== null && item !== undefined) : [];
@@ -9360,7 +9360,7 @@ const exportConsolidatedTraceability = async (req: Request, res: Response) => {
             obj.fbrc_total_qty = [...knitTotalQty,...weaverTotalQty].reduce((acc: any, value: any) => acc + value, 0);
 
             //spinner data
-            let spindate = spinSales && spinSales.length > 0 ? spinSales.map((val:any)=> val?.date).filter((item:any) => item !== null && item !== undefined) : [];
+            let spindate = spinSales && spinSales.length > 0 ? spinSales.map((val:any)=> moment(val?.date).format('DD-MM-YYYY')).filter((item:any) => item !== null && item !== undefined) : [];
             let spinName = spinSales && spinSales.length > 0 ? spinSales.map((val:any)=> val?.spinner?.name).filter((item:any) => item !== null && item !== undefined) : [];
             let spinInvoice = spinSales && spinSales.length > 0 ? spinSales.map((val:any)=> val?.invoice_no).filter((item:any) => item !== null && item !== undefined) : [];
             let spinLot = spinSales && spinSales.length > 0 ? spinSales.map((val:any)=> val?.batch_lot_no).filter((item:any) => item !== null && item !== undefined) : [];
@@ -9383,7 +9383,7 @@ const exportConsolidatedTraceability = async (req: Request, res: Response) => {
             obj.spnr_total_qty = spinTotalQty.reduce((acc: any, value: any) => acc + value, 0);
 
             //ginner data
-            let gindate = ginSales && ginSales.length > 0 ? ginSales.map((val:any)=> val?.date).filter((item:any) => item !== null && item !== undefined) : [];
+            let gindate = ginSales && ginSales.length > 0 ? ginSales.map((val:any)=> moment(val?.date).format('DD-MM-YYYY')).filter((item:any) => item !== null && item !== undefined) : [];
             let ginName = ginSales && ginSales.length > 0 ? ginSales.map((val:any)=> val?.ginner?.name).filter((item:any) => item !== null && item !== undefined) : [];
             let ginInvoice = ginSales && ginSales.length > 0 ? ginSales.map((val:any)=> val?.invoice_no).filter((item:any) => item !== null && item !== undefined) : [];
             let ginLot = ginSales && ginSales.length > 0 ? ginSales.map((val:any)=> val?.lot_no).filter((item:any) => item !== null && item !== undefined) : [];
@@ -9404,7 +9404,7 @@ const exportConsolidatedTraceability = async (req: Request, res: Response) => {
 
             //transaction data
             let frmrTransactionIds = transactions && transactions.length > 0 ? transactions.map((val:any)=> val?.id).filter((item:any) => item !== null && item !== undefined) : [];
-            let frmrdate = transactions && transactions.length > 0 ? transactions.map((val:any)=> val?.date).filter((item:any) => item !== null && item !== undefined) : [];
+            let frmrdate = transactions && transactions.length > 0 ? transactions.map((val:any)=> moment(val?.date).format('DD-MM-YYYY')).filter((item:any) => item !== null && item !== undefined) : [];
             let frmrFarmGroupName = transactions && transactions.length > 0 ? transactions.map((val:any)=> val?.farmer?.farmGroup?.name).filter((item:any) => item !== null && item !== undefined) : [];
             let frmrVillages = transactions && transactions.length > 0 ? transactions.map((val:any)=> val?.village?.village_name).filter((item:any) => item !== null && item !== undefined) : [];
             let frmrStates = transactions && transactions.length > 0 ? transactions.map((val:any)=> val?.state?.state_name).filter((item:any) => item !== null && item !== undefined) : [];
@@ -9444,7 +9444,7 @@ const exportConsolidatedTraceability = async (req: Request, res: Response) => {
                 no_of_boxes: item.dataValues.total_no_of_boxes ? item.dataValues.total_no_of_boxes : 0,
                 no_of_pieces: item.dataValues.total_no_of_pieces ? item.dataValues.total_no_of_pieces : 0,
                 // fbrc_date: obj.fbrc_sale_date && obj.fbrc_sale_date.length > 0 ? obj.fbrc_sale_date.join(', ') : '',
-                fbrc_date: obj.fbrc_sale_date && obj.fbrc_sale_date.length > 0 ? obj.fbrc_sale_date.map((date: any) => moment(date).format('DD-MM-YYYY')).join(', ') : '',
+                fbrc_date: obj.fbrc_sale_date && obj.fbrc_sale_date.length > 0 ? obj.fbrc_sale_date.join(', ') : '',
                 fbrc_name: obj.fbrc_name && obj.fbrc_name.length > 0 ? obj.fbrc_name.join(', ') : '',
                 fbrc_invoice: obj.fbrc_invoice_no && obj.fbrc_invoice_no.length > 0 ? obj.fbrc_invoice_no.join(', ') : '',
                 fbrc_lot: obj.fbrc_lot_no && obj.fbrc_lot_no.length > 0 ? obj.fbrc_lot_no.join(', ') : '',
@@ -9453,7 +9453,7 @@ const exportConsolidatedTraceability = async (req: Request, res: Response) => {
                 total_fabric_weight: item.dataValues.total_fabric_weight ? item.dataValues.total_fabric_weight : 0,
                 fbrc_net_length: obj.fbrc_weave_total_length ? obj.fbrc_weave_total_length : 0,
                 fbrc_net_weight: obj.fbrc_knit_total_weight ? obj.fbrc_knit_total_weight : 0,
-                spnr_date: obj.spnr_sale_date && obj.spnr_sale_date.length > 0 ? obj.spnr_sale_date.map((date: any) => moment(date).format('DD-MM-YYYY')).join(', ') : '',
+                spnr_date: obj.spnr_sale_date && obj.spnr_sale_date.length > 0 ? obj.spnr_sale_date.join(', ') : '',
                 spnr_name: obj.spnr_name && obj.spnr_name.length > 0 ? obj.spnr_name.join(', ') : '',
                 spnr_invoice_no: obj.spnr_invoice_no && obj.spnr_invoice_no.length > 0 ? obj.spnr_invoice_no.join(', ') : '',
                 spnr_reel_lot_no: obj.spnr_reel_lot_no && obj.spnr_reel_lot_no.length > 0 ? obj.spnr_reel_lot_no.join(', ') : '',
@@ -9463,7 +9463,7 @@ const exportConsolidatedTraceability = async (req: Request, res: Response) => {
                 spnr_no_of_boxes: obj.spnr_no_of_boxes ? obj.spnr_no_of_boxes : 0,
                 spnr_box_ids: obj.spnr_box_ids && obj.spnr_box_ids.length > 0 ? obj.spnr_box_ids.join(', ') : '',
                 fbrc_total_qty: obj.fbrc_total_qty ? obj.fbrc_total_qty : 0,
-                gnr_sale_date: obj.gnr_sale_date && obj.gnr_sale_date.length > 0 ? obj.gnr_sale_date.map((date: any) => moment(date).format('DD-MM-YYYY')).join(', ') : '',
+                gnr_sale_date: obj.gnr_sale_date && obj.gnr_sale_date.length > 0 ? obj.gnr_sale_date.join(', ') : '',
                 gnr_invoice_no: obj.gnr_invoice_no && obj.gnr_invoice_no.length > 0 ? obj.gnr_invoice_no.join(', ') : '',
                 gnr_name: obj.gnr_name && obj.gnr_name.length > 0 ? obj.gnr_name.join(', ') : '',
                 gnr_reel_lot_no: obj.gnr_reel_lot_no && obj.gnr_reel_lot_no.length > 0 ? obj.gnr_reel_lot_no.join(', ') : '',
@@ -9471,7 +9471,7 @@ const exportConsolidatedTraceability = async (req: Request, res: Response) => {
                 gnr_no_of_bales: obj.gnr_no_of_bales ? obj.gnr_no_of_bales : 0,
                 gnr_press_no: obj.gnr_press_no && obj.gnr_press_no.length > 0 ? obj.gnr_press_no.join(', ') : '',
                 gnr_total_qty: obj.gnr_total_qty ? obj.gnr_total_qty : 0,
-                frmr_sale_date: obj.frmr_sale_date && obj.frmr_sale_date.length > 0 ? obj.frmr_sale_date.map((date: any) => moment(date).format('DD-MM-YYYY')).join(', ') : '',
+                frmr_sale_date: obj.frmr_sale_date && obj.frmr_sale_date.length > 0 ? obj.frmr_sale_date.join(', ') : '',
                 frmr_farm_group: obj.frmr_farm_group && obj.frmr_farm_group.length > 0 ? obj.frmr_farm_group.join(', ') : '',
                 frmr_transactions_id: obj.frmr_transactions_id && obj.frmr_transactions_id.length > 0 ? obj.frmr_transactions_id.join(', ') : '',
                 frmr_villages: obj.frmr_villages && obj.frmr_villages.length > 0 ? obj.frmr_villages.join(', ') : '',
@@ -9501,6 +9501,602 @@ const exportConsolidatedTraceability = async (req: Request, res: Response) => {
             data: process.env.BASE_URL + "consolidated-traceabilty-report.xlsx",
         });
 
+    } catch (error: any) {
+        console.log(error)
+        return res.sendError(res, error.message);
+    }
+}
+
+const spinnerBackwardTraceabiltyReport = async(req: Request, res: Response)=>{
+    const searchTerm = req.query.search || "";
+    const page = Number(req.query.page) || 1;
+    const limit = Number(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+    const whereCondition: any = {};
+    const { spinnerId, knitterId, weaverId, seasonId, brandId, programId }: any = req.query;  
+    try {
+        if (searchTerm) {
+        whereCondition[Op.or] = [
+            { invoice_no: { [Op.iLike]: `%${searchTerm}%` } },
+            { batch_lot_no: { [Op.iLike]: `%${searchTerm}%` } },
+            { reel_lot_no: { [Op.iLike]: `%${searchTerm}%` } },
+            { '$weaver.name$': { [Op.iLike]: `%${searchTerm}%` } },
+            { '$knitter.name$': { [Op.iLike]: `%${searchTerm}%` } },
+            { '$spinner.name$': { [Op.iLike]: `%${searchTerm}%` } },
+            { '$season.name$': { [Op.iLike]: `%${searchTerm}%` } },
+            { '$program.program_name$': { [Op.iLike]: `%${searchTerm}%` } },
+        ];
+    }
+        if (spinnerId) {
+            const idArray: number[] = spinnerId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition.spinner_id = { [Op.in]: idArray };
+        }
+
+        if(brandId){
+            const idArray: number[] = brandId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition['$spinner.brand$'] = { [Op.overlap]: idArray };
+        }
+
+        if (seasonId) {
+            const idArray: number[] = seasonId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition.season_id = { [Op.in]: idArray };
+        }
+
+        if (programId) {
+            const idArray: number[] = programId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition.program_id = { [Op.in]: idArray };
+        }
+
+        if (knitterId) {
+            const idArray: number[] = knitterId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition.knitter_id = { [Op.in]: idArray };
+        }
+        if (weaverId) {
+            const idArray: number[] = weaverId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition.buyer_id = { [Op.in]: idArray };
+        }
+
+        whereCondition.status = 'Sold';
+
+        let include = [
+            {
+                model: Spinner,
+                as: "spinner",
+                attributes: ['id', 'name']
+            },
+            {
+                model: Season,
+                as: "season",
+                attributes: ['id', 'name']
+            },
+            {
+                model: Program,
+                as: "program",
+                attributes: ['id', 'program_name']
+            },
+            {
+                model: YarnCount,
+                as: 'yarncount',
+                attributes: ['id', 'yarnCount_name']
+            },
+            {
+                model: Weaver,
+                as: "weaver",
+                attributes: ['id', 'name']
+            },
+            {
+                model: Knitter,
+                as: "knitter",
+                attributes: ['id', 'name']
+            }
+        ];
+
+        //fetch data with pagination
+            const { count, rows } = await SpinSales.findAndCountAll({
+                where: whereCondition,
+                include: include,
+                order: [
+                    [
+                        'id', 'desc'
+                    ]
+                ],
+                offset: offset,
+                limit: limit,
+            });
+
+            let data = [];
+
+        for await (let [index, item] of rows.entries()) {
+            let spnr_lint_ids: any = [];
+            let spinSaleProcess = await SpinProcessYarnSelection.findAll({
+                where: {
+                    sales_id: item.dataValues.id
+                },
+                attributes: ['id', 'spin_process_id']
+            })
+            let spinProcess = await LintSelections.findAll({
+                where: {
+                    process_id: spinSaleProcess.map((obj: any) => obj?.dataValues?.spin_process_id)
+                },
+                attributes: ['id', 'lint_id']
+            })
+            spnr_lint_ids = spinProcess.map((obj: any) => obj?.dataValues?.lint_id);
+
+            let ginSales: any =[];
+            let gin_process_ids: any =[];
+            let transactions_ids: any =[];
+
+            if (spnr_lint_ids.length > 0) {
+                ginSales = await GinSales.findAll({
+                    attributes: ['id', 'date','buyer','invoice_no','lot_no','total_qty','no_of_bales','press_no','reel_lot_no','ginner_id'],
+                    include: [
+                        {
+                            model: Ginner,
+                            as: 'ginner',
+                            attributes: ['id', 'name'],
+                        }
+                    ],
+                    where: {
+                        id: {
+                            [Op.in]: spnr_lint_ids
+                        }
+                    }
+                })
+
+                let ginBaleId = await BaleSelection.findAll({
+                    where: {
+                        sales_id: ginSales.map((obj: any) => obj.dataValues.id)
+                    },
+                    attributes: ['id', 'bale_id']
+                })
+
+                let ginProcessIds = await GinBale.findAll({
+                    where: {
+                        id: ginBaleId.map((obj: any) => obj.dataValues.bale_id)
+                    },
+                    attributes: ['id', 'process_id']
+                })
+                gin_process_ids = ginProcessIds.map((obj: any) => obj.dataValues.process_id);
+            }
+
+            if(gin_process_ids.length > 0){
+                let cottornIds = await CottonSelection.findAll({
+                    where: {
+                        process_id: gin_process_ids
+                    },
+                    attributes: ['id', 'transaction_id']
+                }) 
+                transactions_ids = cottornIds.map((obj: any) => obj.dataValues.transaction_id);
+            }
+
+            let transactions: any = [];
+            if(transactions_ids.length > 0){
+                transactions = await Transaction.findAll({
+                    attributes: ['id', 'date','state_id','village_id','farmer_id','farm_id','program_id','qty_purchased'],
+                   where: {
+                    id: {
+                        [Op.in]: transactions_ids
+                    }
+                    },
+                    include: [
+                      {
+                        model: Village,
+                        as: "village",
+                        attributes: ['id', 'village_name']
+                      },
+                      {
+                        model: State,
+                        as: "state",
+                        attributes: ['id', 'state_name']
+                      },
+                      {
+                        model: Farmer,
+                        as: "farmer",
+                        attributes: ['id', 'farmGroup_id','firstName','lastName','code'],
+                        include:[
+                            {
+                                model: FarmGroup,
+                                as: "farmGroup",
+                                attributes: ['id', 'name']
+                              },
+                        ]
+                      },
+                      {
+                        model: Program,
+                        as: "program",
+                        attributes: ['id', 'program_name']
+                      },
+                      {
+                        model: Ginner,
+                        as: "ginner",
+                        attributes: ['id', 'name', 'address']
+                      },
+                    ],
+                  });
+            }
+
+
+            let obj:any = {};
+
+            //ginner data
+            let gindate = ginSales && ginSales.length > 0 ? ginSales.map((val:any)=> moment(val?.date).format('DD-MM-YYYY')).filter((item:any) => item !== null && item !== undefined) : [];
+            let ginName = ginSales && ginSales.length > 0 ? ginSales.map((val:any)=> val?.ginner?.name).filter((item:any) => item !== null && item !== undefined) : [];
+            let ginInvoice = ginSales && ginSales.length > 0 ? ginSales.map((val:any)=> val?.invoice_no).filter((item:any) => item !== null && item !== undefined) : [];
+            let ginLot = ginSales && ginSales.length > 0 ? ginSales.map((val:any)=> val?.lot_no).filter((item:any) => item !== null && item !== undefined) : [];
+            let ginReelLot = ginSales && ginSales.length > 0 ? ginSales.map((val:any)=> val?.reel_lot_no).filter((item:any) => item !== null && item !== undefined) : [];
+            let ginPressNo = ginSales && ginSales.length > 0 ? ginSales.map((val:any)=> val?.press_no).filter((item:any) => item !== null && item !== undefined) : [];
+            let ginNoOfBales = ginSales && ginSales.length > 0 ? ginSales.map((val:any)=> val?.no_of_bales).filter((item:any) => item !== null && item !== undefined) : [];
+            let ginTotalQty = ginSales && ginSales.length > 0 ? ginSales.map((val:any)=> val?.total_qty).filter((item:any) => item !== null && item !== undefined) : [];
+
+            obj.gnr_sale_date = [...new Set(gindate)];
+            obj.gnr_name = [...new Set(ginName)];
+            obj.gnr_invoice_no = [...new Set(ginInvoice)];
+            obj.gnr_lot_no = [...new Set(ginLot)];
+            obj.gnr_reel_lot_no = [...new Set(ginReelLot)];
+            obj.gnr_press_no = [...new Set(ginPressNo)];
+            obj.gnr_no_of_bales = ginNoOfBales.reduce((acc: any, value: any) => acc + value, 0);
+            obj.gnr_total_qty = ginTotalQty.reduce((acc: any, value: any) => acc + value, 0);
+
+
+            //transaction data
+            let frmrTransactionIds = transactions && transactions.length > 0 ? transactions.map((val:any)=> val?.id).filter((item:any) => item !== null && item !== undefined) : [];
+            let frmrdate = transactions && transactions.length > 0 ? transactions.map((val:any)=> moment(val?.date).format('DD-MM-YYYY')).filter((item:any) => item !== null && item !== undefined) : [];
+            let frmrFarmGroupName = transactions && transactions.length > 0 ? transactions.map((val:any)=> val?.farmer?.farmGroup?.name).filter((item:any) => item !== null && item !== undefined) : [];
+            let frmrVillages = transactions && transactions.length > 0 ? transactions.map((val:any)=> val?.village?.village_name).filter((item:any) => item !== null && item !== undefined) : [];
+            let frmrStates = transactions && transactions.length > 0 ? transactions.map((val:any)=> val?.state?.state_name).filter((item:any) => item !== null && item !== undefined) : [];
+            let frmrPrograms = transactions && transactions.length > 0 ? transactions.map((val:any)=> val?.program?.program_name).filter((item:any) => item !== null && item !== undefined) : [];
+            let frmrQtyPurchased = transactions && transactions.length > 0 ? transactions.map((val:any)=> Number(val?.qty_purchased)).filter((item:any) => item !== null && item !== undefined) : [];
+
+            obj.frmr_transactions_id = [...new Set(frmrTransactionIds)];
+            obj.frmr_sale_date = [...new Set(frmrdate)];
+            obj.frmr_farm_group = [...new Set(frmrFarmGroupName)];
+            obj.frmr_villages = [...new Set(frmrVillages)];
+            obj.frmr_states = [...new Set(frmrStates)];
+            obj.frmr_programs = [...new Set(frmrPrograms)];
+            obj.frmr_total_qty_purchased = frmrQtyPurchased.reduce((acc: any, value: any) => acc + value, 0);
+
+            data.push({
+                ...item.dataValues,
+                ...obj,
+            })
+        }
+
+        return res.sendPaginationSuccess(res, data, count);
+    } catch (error: any) {
+        console.log(error)
+        return res.sendError(res, error.message);
+    }
+}
+
+const exportSpinnerBackwardTraceability = async(req: Request, res: Response)=>{
+    const excelFilePath = path.join("./upload", "spinner-backward-traceabilty-report.xlsx");
+    const searchTerm = req.query.search || "";
+    const page = Number(req.query.page) || 1;
+    const limit = Number(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+    const whereCondition: any = {};
+    const { spinnerId, knitterId, weaverId, seasonId, brandId, programId }: any = req.query;  
+    try {
+        if (searchTerm) {
+            whereCondition[Op.or] = [
+                { invoice_no: { [Op.iLike]: `%${searchTerm}%` } },
+                { batch_lot_no: { [Op.iLike]: `%${searchTerm}%` } },
+                { reel_lot_no: { [Op.iLike]: `%${searchTerm}%` } },
+                { '$weaver.name$': { [Op.iLike]: `%${searchTerm}%` } },
+                { '$knitter.name$': { [Op.iLike]: `%${searchTerm}%` } },
+                { '$spinner.name$': { [Op.iLike]: `%${searchTerm}%` } },
+                { '$season.name$': { [Op.iLike]: `%${searchTerm}%` } },
+                { '$program.program_name$': { [Op.iLike]: `%${searchTerm}%` } },
+            ];
+        }
+            if (spinnerId) {
+                const idArray: number[] = spinnerId
+                    .split(",")
+                    .map((id: any) => parseInt(id, 10));
+                whereCondition.spinner_id = { [Op.in]: idArray };
+            }
+    
+            if(brandId){
+                const idArray: number[] = brandId
+                    .split(",")
+                    .map((id: any) => parseInt(id, 10));
+                whereCondition['$spinner.brand$'] = { [Op.overlap]: idArray };
+            }
+    
+            if (seasonId) {
+                const idArray: number[] = seasonId
+                    .split(",")
+                    .map((id: any) => parseInt(id, 10));
+                whereCondition.season_id = { [Op.in]: idArray };
+            }
+    
+            if (programId) {
+                const idArray: number[] = programId
+                    .split(",")
+                    .map((id: any) => parseInt(id, 10));
+                whereCondition.program_id = { [Op.in]: idArray };
+            }
+    
+            if (knitterId) {
+                const idArray: number[] = knitterId
+                    .split(",")
+                    .map((id: any) => parseInt(id, 10));
+                whereCondition.knitter_id = { [Op.in]: idArray };
+            }
+            if (weaverId) {
+                const idArray: number[] = weaverId
+                    .split(",")
+                    .map((id: any) => parseInt(id, 10));
+                whereCondition.buyer_id = { [Op.in]: idArray };
+            }
+    
+            whereCondition.status = 'Sold';
+
+            let include = [
+                {
+                    model: Spinner,
+                    as: "spinner",
+                    attributes: ['id', 'name']
+                },
+                {
+                    model: Season,
+                    as: "season",
+                    attributes: ['id', 'name']
+                },
+                {
+                    model: Program,
+                    as: "program",
+                    attributes: ['id', 'program_name']
+                },
+                {
+                    model: YarnCount,
+                    as: 'yarncount',
+                    attributes: ['id', 'yarnCount_name']
+                },
+                {
+                    model: Weaver,
+                    as: "weaver",
+                    attributes: ['id', 'name']
+                },
+                {
+                    model: Knitter,
+                    as: "knitter",
+                    attributes: ['id', 'name']
+                }
+            ];
+
+            // Create the excel workbook file
+        const workbook = new ExcelJS.Workbook();
+        const worksheet = workbook.addWorksheet("Sheet1");
+        worksheet.mergeCells('A1:J1');
+        const mergedCell = worksheet.getCell('A1');
+        mergedCell.value = 'CottonConnect | Spinner Backward Traceability Report';
+        mergedCell.font = { bold: true };
+        mergedCell.alignment = { horizontal: 'center', vertical: 'middle' };
+        // Set bold font for header row
+        const headerRow = worksheet.addRow([
+            "S No.", "Fabric Mill name", "Spinner- Fabric Invoice No", "Spinner Name", "Yarn REEL Lot Sold", "Ginner to Spinner Invoice",
+            "Ginner name", "Bale REEL lot lint consumed", "Villages","Farm Group"
+        ]);
+        headerRow.font = { bold: true };
+
+                //fetch data with pagination
+                const { count, rows } = await SpinSales.findAndCountAll({
+                    where: whereCondition,
+                    include: include,
+                    order: [
+                        [
+                            'id', 'desc'
+                        ]
+                    ],
+                    offset: offset,
+                    limit: limit,
+                });
+    
+                let data = [];
+    
+            for await (let [index, item] of rows.entries()) {
+                let spnr_lint_ids: any = [];
+                let spinSaleProcess = await SpinProcessYarnSelection.findAll({
+                    where: {
+                        sales_id: item.dataValues.id
+                    },
+                    attributes: ['id', 'spin_process_id']
+                })
+                let spinProcess = await LintSelections.findAll({
+                    where: {
+                        process_id: spinSaleProcess.map((obj: any) => obj?.dataValues?.spin_process_id)
+                    },
+                    attributes: ['id', 'lint_id']
+                })
+                spnr_lint_ids = spinProcess.map((obj: any) => obj?.dataValues?.lint_id);
+    
+                let ginSales: any =[];
+                let gin_process_ids: any =[];
+                let transactions_ids: any =[];
+    
+                if (spnr_lint_ids.length > 0) {
+                    ginSales = await GinSales.findAll({
+                        attributes: ['id', 'date','buyer','invoice_no','lot_no','total_qty','no_of_bales','press_no','reel_lot_no','ginner_id'],
+                        include: [
+                            {
+                                model: Ginner,
+                                as: 'ginner',
+                                attributes: ['id', 'name'],
+                            }
+                        ],
+                        where: {
+                            id: {
+                                [Op.in]: spnr_lint_ids
+                            }
+                        }
+                    })
+    
+                    let ginBaleId = await BaleSelection.findAll({
+                        where: {
+                            sales_id: ginSales.map((obj: any) => obj.dataValues.id)
+                        },
+                        attributes: ['id', 'bale_id']
+                    })
+    
+                    let ginProcessIds = await GinBale.findAll({
+                        where: {
+                            id: ginBaleId.map((obj: any) => obj.dataValues.bale_id)
+                        },
+                        attributes: ['id', 'process_id']
+                    })
+                    gin_process_ids = ginProcessIds.map((obj: any) => obj.dataValues.process_id);
+                }
+    
+                if(gin_process_ids.length > 0){
+                    let cottornIds = await CottonSelection.findAll({
+                        where: {
+                            process_id: gin_process_ids
+                        },
+                        attributes: ['id', 'transaction_id']
+                    }) 
+                    transactions_ids = cottornIds.map((obj: any) => obj.dataValues.transaction_id);
+                }
+    
+                let transactions: any = [];
+                if(transactions_ids.length > 0){
+                    transactions = await Transaction.findAll({
+                        attributes: ['id', 'date','state_id','village_id','farmer_id','farm_id','program_id','qty_purchased'],
+                       where: {
+                        id: {
+                            [Op.in]: transactions_ids
+                        }
+                        },
+                        include: [
+                          {
+                            model: Village,
+                            as: "village",
+                            attributes: ['id', 'village_name']
+                          },
+                          {
+                            model: State,
+                            as: "state",
+                            attributes: ['id', 'state_name']
+                          },
+                          {
+                            model: Farmer,
+                            as: "farmer",
+                            attributes: ['id', 'farmGroup_id','firstName','lastName','code'],
+                            include:[
+                                {
+                                    model: FarmGroup,
+                                    as: "farmGroup",
+                                    attributes: ['id', 'name']
+                                  },
+                            ]
+                          },
+                          {
+                            model: Program,
+                            as: "program",
+                            attributes: ['id', 'program_name']
+                          },
+                          {
+                            model: Ginner,
+                            as: "ginner",
+                            attributes: ['id', 'name', 'address']
+                          },
+                        ],
+                      });
+                }
+    
+    
+                let obj:any = {};
+    
+                //ginner data
+                let gindate = ginSales && ginSales.length > 0 ? ginSales.map((val:any)=> moment(val?.date).format('DD-MM-YYYY')).filter((item:any) => item !== null && item !== undefined) : [];
+                let ginName = ginSales && ginSales.length > 0 ? ginSales.map((val:any)=> val?.ginner?.name).filter((item:any) => item !== null && item !== undefined) : [];
+                let ginInvoice = ginSales && ginSales.length > 0 ? ginSales.map((val:any)=> val?.invoice_no).filter((item:any) => item !== null && item !== undefined) : [];
+                let ginLot = ginSales && ginSales.length > 0 ? ginSales.map((val:any)=> val?.lot_no).filter((item:any) => item !== null && item !== undefined) : [];
+                let ginReelLot = ginSales && ginSales.length > 0 ? ginSales.map((val:any)=> val?.reel_lot_no).filter((item:any) => item !== null && item !== undefined) : [];
+                let ginPressNo = ginSales && ginSales.length > 0 ? ginSales.map((val:any)=> val?.press_no).filter((item:any) => item !== null && item !== undefined) : [];
+                let ginNoOfBales = ginSales && ginSales.length > 0 ? ginSales.map((val:any)=> val?.no_of_bales).filter((item:any) => item !== null && item !== undefined) : [];
+                let ginTotalQty = ginSales && ginSales.length > 0 ? ginSales.map((val:any)=> val?.total_qty).filter((item:any) => item !== null && item !== undefined) : [];
+    
+                obj.gnr_sale_date = [...new Set(gindate)];
+                obj.gnr_name = [...new Set(ginName)];
+                obj.gnr_invoice_no = [...new Set(ginInvoice)];
+                obj.gnr_lot_no = [...new Set(ginLot)];
+                obj.gnr_reel_lot_no = [...new Set(ginReelLot)];
+                obj.gnr_press_no = [...new Set(ginPressNo)];
+                obj.gnr_no_of_bales = ginNoOfBales.reduce((acc: any, value: any) => acc + value, 0);
+                obj.gnr_total_qty = ginTotalQty.reduce((acc: any, value: any) => acc + value, 0);
+    
+    
+                //transaction data
+                let frmrTransactionIds = transactions && transactions.length > 0 ? transactions.map((val:any)=> val?.id).filter((item:any) => item !== null && item !== undefined) : [];
+                let frmrdate = transactions && transactions.length > 0 ? transactions.map((val:any)=> moment(val?.date).format('DD-MM-YYYY')).filter((item:any) => item !== null && item !== undefined) : [];
+                let frmrFarmGroupName = transactions && transactions.length > 0 ? transactions.map((val:any)=> val?.farmer?.farmGroup?.name).filter((item:any) => item !== null && item !== undefined) : [];
+                let frmrVillages = transactions && transactions.length > 0 ? transactions.map((val:any)=> val?.village?.village_name).filter((item:any) => item !== null && item !== undefined) : [];
+                let frmrStates = transactions && transactions.length > 0 ? transactions.map((val:any)=> val?.state?.state_name).filter((item:any) => item !== null && item !== undefined) : [];
+                let frmrPrograms = transactions && transactions.length > 0 ? transactions.map((val:any)=> val?.program?.program_name).filter((item:any) => item !== null && item !== undefined) : [];
+                let frmrQtyPurchased = transactions && transactions.length > 0 ? transactions.map((val:any)=> Number(val?.qty_purchased)).filter((item:any) => item !== null && item !== undefined) : [];
+    
+                obj.frmr_transactions_id = [...new Set(frmrTransactionIds)];
+                obj.frmr_sale_date = [...new Set(frmrdate)];
+                obj.frmr_farm_group = [...new Set(frmrFarmGroupName)];
+                obj.frmr_villages = [...new Set(frmrVillages)];
+                obj.frmr_states = [...new Set(frmrStates)];
+                obj.frmr_programs = [...new Set(frmrPrograms)];
+                obj.frmr_total_qty_purchased = frmrQtyPurchased.reduce((acc: any, value: any) => acc + value, 0);
+    
+                data.push({
+                    ...item.dataValues,
+                    ...obj,
+                });
+
+                const rowValues = Object.values({
+                    index: index + 1,
+                    buyer: item.dataValues.knitter ? item.dataValues.knitter.name : item.dataValues.weaver.name,
+                    invoice: item.dataValues.invoice_no ? item.dataValues.invoice_no : '',
+                    spinner_name: item.dataValues.spinner ? item.dataValues.spinner.name : '',
+                    reelLot: item.dataValues.reel_lot_no ? item.dataValues.reel_lot_no : '',
+                    gnr_invoice_no: obj.gnr_invoice_no && obj.gnr_invoice_no.length > 0 ? obj.gnr_invoice_no.join(', ') : '',
+                    gnr_name: obj.gnr_name && obj.gnr_name.length > 0 ? obj.gnr_name.join(', ') : '',
+                    gnr_reel_lot_no: obj.gnr_reel_lot_no && obj.gnr_reel_lot_no.length > 0 ? obj.gnr_reel_lot_no.join(', ') : '',
+                    frmr_villages: obj.frmr_villages && obj.frmr_villages.length > 0 ? obj.frmr_villages.join(', ') : '',
+                    frmr_farm_group: obj.frmr_farm_group && obj.frmr_farm_group.length > 0 ? obj.frmr_farm_group.join(', ') : '',
+                });
+                worksheet.addRow(rowValues);
+            }
+
+            // Set the width for the S No. column
+        worksheet.getColumn(1).width = 8; // Adjust the width as needed
+
+        // Auto-adjust other column widths based on content
+        worksheet.columns.slice(1).forEach((column: any) => {
+            let maxCellLength = 0;
+            column.eachCell({ includeEmpty: true }, (cell: any) => {
+                const cellLength = (cell.value ? cell.value.toString() : '').length;
+                maxCellLength = Math.max(maxCellLength, cellLength);
+            });
+            column.width = Math.min(30, maxCellLength + 2); // Limit width to 30 characters
+        });
+
+        // Save the workbook
+        await workbook.xlsx.writeFile(excelFilePath);
+        res.status(200).send({
+            success: true,
+            messgage: "File successfully Generated",
+            data: process.env.BASE_URL + "spinner-backward-traceabilty-report.xlsx",
+        });
+        
     } catch (error: any) {
         console.log(error)
         return res.sendError(res, error.message);
@@ -9775,6 +10371,8 @@ export {
     exportPscpGinnerCottonProcurement,
     fetchPscpProcurementLiveTracker,
     exportPscpProcurementLiveTracker,
+    spinnerBackwardTraceabiltyReport,
+    exportSpinnerBackwardTraceability,
     villageSeedCottonReport,
     exportVillageSeedCotton
 }

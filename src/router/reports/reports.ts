@@ -56,7 +56,9 @@ import {
     getGarmentSalesFilter,
     exportConsolidatedTraceability,
     villageSeedCottonReport,
-    exportVillageSeedCotton
+    exportVillageSeedCotton,
+    spinnerBackwardTraceabiltyReport,
+    exportSpinnerBackwardTraceability
 } from "../../controllers/reports";
 const router = Router();
 
@@ -125,6 +127,9 @@ router.get('/export-pscp-precurement-report', exportPscpCottonProcurement);
 router.get('/export-ginner-pscp-precurement-report', exportPscpGinnerCottonProcurement);
 router.get('/get-consolidated-report', consolidatedTraceability);
 router.get('/export-consolidated-report', exportConsolidatedTraceability);
+
+router.get('/get-spinner-traceability-report', spinnerBackwardTraceabiltyReport);
+router.get('/export-spinner-traceability-report', exportSpinnerBackwardTraceability);
 
 router.get('/get-village-seed-cotton-report', villageSeedCottonReport);
 router.get('/export-village-seed-cotton-report', exportVillageSeedCotton);

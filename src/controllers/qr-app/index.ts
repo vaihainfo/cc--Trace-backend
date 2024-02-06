@@ -269,6 +269,7 @@ const fetchAgentTransactions = async (req: Request, res: Response) => {
     const ginnerId: string = req.query.ginnerId as string;
     const farmerId: string = req.query.farmerId as string;
     const villageId: string = req.query.villageId as string;
+    const agentId: string = req.query.agentId as string;
     const { endDate, startDate, transactionVia }: any = req.query;
     const whereCondition: any = {};
 
@@ -327,7 +328,15 @@ const fetchAgentTransactions = async (req: Request, res: Response) => {
                 .map((id) => parseInt(id, 10));
             whereCondition.mapped_ginner = { [Op.in]: idArray };
         }
-        whereCondition.agent_id = { [Op.not]: null }
+        whereCondition.agent_id = { [Op.not]: null };
+
+        if (agentId) {
+            const idArray: number[] = agentId
+                .split(",")
+                .map((id) => parseInt(id, 10));
+            whereCondition.agent_id = { [Op.in]: idArray };
+        }
+
         if (startDate && endDate) {
             const startOfDay = new Date(startDate);
             startOfDay.setUTCHours(0, 0, 0, 0);
@@ -344,16 +353,22 @@ const fetchAgentTransactions = async (req: Request, res: Response) => {
         if (searchTerm) {
             whereCondition[Op.or] = [
                 { farmer_code: { [Op.iLike]: `%${searchTerm}%` } },
+                { farmer_name: { [Op.iLike]: `%${searchTerm}%` } },
                 { total_amount: { [Op.iLike]: `%${searchTerm}%` } },
+                { rate: { [Op.iLike]: `%${searchTerm}%` } },
+                { qty_purchased: { [Op.iLike]: `%${searchTerm}%` } },
+                { vehicle: { [Op.iLike]: `%${searchTerm}%` } },
+                { payment_method: { [Op.iLike]: `%${searchTerm}%` } },
                 { "$block.block_name$": { [Op.iLike]: `%${searchTerm}%` } },
                 { "$country.county_name$": { [Op.iLike]: `%${searchTerm}%` } },
                 { "$state.state_name$": { [Op.iLike]: `%${searchTerm}%` } },
                 { "$village.village_name$": { [Op.iLike]: `%${searchTerm}%` } },
                 { "$district.district_name$": { [Op.iLike]: `%${searchTerm}%` } },
-                { "$brand.brand_name$": { [Op.iLike]: `%${searchTerm}%` } },
-                { farmer_name: { [Op.iLike]: `%${searchTerm}%` } },
+                { "$farmer.firstName$": { [Op.iLike]: `%${searchTerm}%` } },
                 { "$program.program_name$": { [Op.iLike]: `%${searchTerm}%` } },
                 { "$ginner.name$": { [Op.iLike]: `%${searchTerm}%` } },
+                { "$agent.firstName$": { [Op.iLike]: `%${searchTerm}%` } },
+                { "$season.name$": { [Op.iLike]: `%${searchTerm}%` } },
             ];
         }
 
@@ -468,6 +483,7 @@ const exportAgentTransactions = async (req: Request, res: Response) => {
         const ginnerId: string = req.query.ginnerId as string;
         const farmerId: string = req.query.farmerId as string;
         const villageId: string = req.query.villageId as string;
+        const agentId: string = req.query.agentId as string;
         const { endDate, startDate, transactionVia }: any = req.query;
 
         // Create the excel workbook file
@@ -475,7 +491,7 @@ const exportAgentTransactions = async (req: Request, res: Response) => {
         const worksheet = workbook.addWorksheet("Sheet1");
         worksheet.mergeCells('A1:S1');
         const mergedCell = worksheet.getCell('A1');
-        mergedCell.value = 'CottonConnect | Procurement Report';
+        mergedCell.value = 'CottonConnect | QR App Procurement Report';
         mergedCell.font = { bold: true };
         mergedCell.alignment = { horizontal: 'center', vertical: 'middle' };
         // Set bold font for header row
@@ -489,16 +505,22 @@ const exportAgentTransactions = async (req: Request, res: Response) => {
         if (searchTerm) {
             whereCondition[Op.or] = [
                 { farmer_code: { [Op.iLike]: `%${searchTerm}%` } },
+                { farmer_name: { [Op.iLike]: `%${searchTerm}%` } },
                 { total_amount: { [Op.iLike]: `%${searchTerm}%` } },
+                { rate: { [Op.iLike]: `%${searchTerm}%` } },
+                { qty_purchased: { [Op.iLike]: `%${searchTerm}%` } },
+                { vehicle: { [Op.iLike]: `%${searchTerm}%` } },
+                { payment_method: { [Op.iLike]: `%${searchTerm}%` } },
                 { "$block.block_name$": { [Op.iLike]: `%${searchTerm}%` } },
                 { "$country.county_name$": { [Op.iLike]: `%${searchTerm}%` } },
                 { "$state.state_name$": { [Op.iLike]: `%${searchTerm}%` } },
                 { "$village.village_name$": { [Op.iLike]: `%${searchTerm}%` } },
                 { "$district.district_name$": { [Op.iLike]: `%${searchTerm}%` } },
-                { "$brand.brand_name$": { [Op.iLike]: `%${searchTerm}%` } },
-                { farmer_name: { [Op.iLike]: `%${searchTerm}%` } },
+                { "$farmer.firstName$": { [Op.iLike]: `%${searchTerm}%` } },
                 { "$program.program_name$": { [Op.iLike]: `%${searchTerm}%` } },
                 { "$ginner.name$": { [Op.iLike]: `%${searchTerm}%` } },
+                { "$agent.firstName$": { [Op.iLike]: `%${searchTerm}%` } },
+                { "$season.name$": { [Op.iLike]: `%${searchTerm}%` } },
             ];
         }
 // apply filters
@@ -555,7 +577,15 @@ const exportAgentTransactions = async (req: Request, res: Response) => {
                 .map((id) => parseInt(id, 10));
             whereCondition.mapped_ginner = { [Op.in]: idArray };
         }
-        whereCondition.agent_id = { [Op.not]: null }
+        whereCondition.agent_id = { [Op.not]: null };
+
+
+        if (agentId) {
+            const idArray: number[] = agentId
+                .split(",")
+                .map((id) => parseInt(id, 10));
+            whereCondition.agent_id = { [Op.in]: idArray };
+        }
         if (startDate && endDate) {
             const startOfDay = new Date(startDate);
             startOfDay.setUTCHours(0, 0, 0, 0);
@@ -669,7 +699,7 @@ const exportAgentTransactions = async (req: Request, res: Response) => {
                 village: item.village ? item.village.village_name : "",
                 transactionId: item.id,
                 qty_purchased: item.qty_purchased,
-                qty_stock: item.qty_stock,
+                available_cotton: item.farm ? (Number(item.farm.total_estimated_cotton) > Number(item.farm.cotton_transacted) ? Number(item.farm.total_estimated_cotton) - Number(item.farm.cotton_transacted) : 0) : 0,
                 rate: item.rate,
                 program: item.program ? item.program.program_name : "",
                 vehicle: item.vehicle ? item.vehicle : "",
@@ -1035,7 +1065,13 @@ const findUser = async (req: Request, res: Response) => {
 }
 
 const fetchAgentList = async (req: Request, res: Response) => {
+    const { program }: any = req.query;
+    const whereCondition: any = {};
     try {
+        if(program === 'REEL'){
+            whereCondition.program_name = "REEL"
+        }
+
         const data = await UserApp.findAll({
           include: [
             {
@@ -1045,7 +1081,7 @@ const fetchAgentList = async (req: Request, res: Response) => {
             {
               model: Program,
               as: "programs",
-              where: { program_name: "REEL" },
+              where: whereCondition,
             },
           ],
           where: { access_level: "Agent" },

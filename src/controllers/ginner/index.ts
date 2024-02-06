@@ -81,18 +81,19 @@ const createGinnerProcess = async (req: Request, res: Response) => {
                     let qty_stock = (tran.dataValues.qty_stock || 0);
                     if (qty_stock < cotton.qty_used) {
                         realQty = qty_stock;
-                        cotton.qty_used = cotton.qty_used - realQty;
+                        cotton.qty_used = Number(cotton.qty_used) - Number(realQty);
                     } else {
                         realQty = cotton.qty_used;
                         cotton.qty_used = 0;
                     }
-                    let update = await Transaction.update({ qty_stock: (qty_stock - realQty) }, { where: { id: tran.id } })
+                    let update = await Transaction.update({ qty_stock: (qty_stock - Number(realQty)) }, { where: { id: tran.id } })
                     let cot = await CottonSelection.create({ process_id: ginprocess.id, transaction_id: tran.id, qty_used: realQty })
                 }
             }
         }
         res.sendSuccess(res, { ginprocess });
     } catch (error: any) {
+        console.error(error)
         return res.sendError(res, error.meessage);
     }
 }
@@ -212,7 +213,8 @@ const fetchGinProcessPagination = async (req: Request, res: Response) => {
             return res.sendSuccess(res, gin);
         }
     } catch (error: any) {
-        return res.sendError(res, error.message);
+        console.error(error)
+        return res.sendError(res, error.meessage);
     }
 };
 
@@ -305,7 +307,8 @@ const chooseBale = async (req: Request, res: Response) => {
         return res.sendSuccess(res, bales_list);
 
     } catch (error: any) {
-        return res.sendError(res, error.message);
+        console.error(error)
+        return res.sendError(res, error.meessage);
     }
 };
 
@@ -337,8 +340,9 @@ const deleteGinnerProcess = async (req: Request, res: Response) => {
             });
             return res.sendSuccess(res, { message: 'Successfully deleted this process' });
         }
-    } catch (error) {
-
+    } catch (error: any) {
+        console.log(error)
+        return res.sendError(res, error.message);
     }
 }
 
@@ -361,7 +365,8 @@ const fetchGinBale = async (req: Request, res: Response) => {
         return res.sendSuccess(res, gin);
 
     } catch (error: any) {
-        return res.sendError(res, error.message);
+        console.error(error)
+        return res.sendError(res, error.meessage);
     }
 };
 
@@ -662,6 +667,7 @@ const updateGinnerSales = async (req: Request, res: Response) => {
         }
         res.sendSuccess(res, { ginSales });
     } catch (error: any) {
+        console.error(error)
         return res.sendError(res, error.meessage);
     }
 }
@@ -751,7 +757,8 @@ const fetchGinSalesPagination = async (req: Request, res: Response) => {
             return res.sendSuccess(res, gin);
         }
     } catch (error: any) {
-        return res.sendError(res, error.message);
+        console.error(error)
+        return res.sendError(res, error.meessage);
     }
 };
 
@@ -785,6 +792,7 @@ const deleteGinSales = async (req: Request, res: Response) => {
         return res.sendSuccess(res, { message: 'Successfully deleted this process' });
 
     } catch (error: any) {
+        console.error(error)
         return res.sendError(res, error.meessage);
     }
 }
@@ -820,7 +828,8 @@ const fetchGinSale = async (req: Request, res: Response) => {
         return res.sendSuccess(res, gin);
 
     } catch (error: any) {
-        return res.sendError(res, error.message);
+        console.error(error)
+        return res.sendError(res, error.meessage);
     }
 };
 
@@ -862,13 +871,15 @@ const fetchGinSaleBale = async (req: Request, res: Response) => {
                     }],
                 }
             ],
+            order: [['id', 'DESC']],
             offset: offset,
             limit: limit
         });
         return res.sendPaginationSuccess(res, rows, count);
 
     } catch (error: any) {
-        return res.sendError(res, error.message);
+        console.error(error)
+        return res.sendError(res, error.meessage);
     }
 };
 
@@ -890,7 +901,8 @@ const updateGinSaleBale = async (req: Request, res: Response) => {
         return res.sendSuccess(res, gins);
 
     } catch (error: any) {
-        return res.sendError(res, error.message);
+        console.error(error)
+        return res.sendError(res, error.meessage);
     }
 };
 
@@ -973,7 +985,8 @@ const dashboardGraphWithProgram = async (req: Request, res: Response) => {
 
         res.sendSuccess(res, { transaction, ginner });
     } catch (error: any) {
-        return res.sendError(res, error.message);
+        console.error(error)
+        return res.sendError(res, error.meessage);
     }
 };
 
@@ -1028,7 +1041,8 @@ const getReelBaleId = async (req: Request, res: Response) => {
         var reelbale_id = baleid_prefix + prcs_date + '/' + String(bale_no);
         res.sendSuccess(res, { id: reelbale_id });
     } catch (error: any) {
-        return res.sendError(res, error.message);
+        console.error(error)
+        return res.sendError(res, error.meessage);
     }
 };
 
@@ -1050,7 +1064,8 @@ const getProgram = async (req: Request, res: Response) => {
         });
         res.sendSuccess(res, data);
     } catch (error: any) {
-        return res.sendError(res, error.message);
+        console.error(error)
+        return res.sendError(res, error.meessage);
     }
 };
 

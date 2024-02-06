@@ -143,8 +143,9 @@ const createTraining = async (req: Request, res: Response) => {
             }
         }
         res.sendSuccess(res, training);
-    } catch (error) {
-        return res.sendError(res, "ERR_INTERNAL_SERVER_ERROR");
+    } catch (error: any) {
+        console.error(error)
+        return res.sendError(res, error.meessage);
     }
 }
 
@@ -242,8 +243,9 @@ const fetchTrainings = async (req: Request, res: Response) => {
             return res.sendSuccess(res, training);
         }
 
-    } catch (error) {
-        return res.sendError(res, "ERR_INTERNAL_SERVER_ERROR");
+    } catch (error: any) {
+        console.error(error)
+        return res.sendError(res, error.meessage);
     }
 }
 
@@ -269,8 +271,9 @@ const fetchTraining = async (req: Request, res: Response) => {
             ],
         });
         return res.sendSuccess(res, training);
-    } catch (error) {
-        return res.sendError(res, "ERR_INTERNAL_SERVER_ERROR");
+    } catch (error: any) {
+        console.error(error)
+        return res.sendError(res, error.meessage);
     }
 }
 
@@ -287,7 +290,8 @@ const updateTraining = async (req: Request, res: Response) => {
         });
         res.sendSuccess(res, { training });
     } catch (error: any) {
-        return res.sendError(res, error.message);
+        console.error(error)
+        return res.sendError(res, error.meessage);
     }
 }
 
@@ -302,7 +306,8 @@ const updateTrainingStatus = async (req: Request, res: Response) => {
         });
         res.sendSuccess(res, { training });
     } catch (error: any) {
-        return res.sendError(res, error.message);
+        console.error(error)
+        return res.sendError(res, error.meessage);
     }
 }
 
@@ -316,7 +321,8 @@ const deleteTraining = async (req: Request, res: Response) => {
         const result = await ProcessTrainingProcessStatus.destroy({ where: { process_training_id: req.body.id } });
         res.sendSuccess(res, { training });
     } catch (error: any) {
-        return res.sendError(res, error.message);
+        console.error(error)
+        return res.sendError(res, error.meessage);
     }
 }
 
@@ -324,8 +330,273 @@ const fecthTrainingStatus = async (req: Request, res: Response) => {
     try {
         const searchTerm = req.query.search || '';
         const whereCondition: any = {};
+        const page = Number(req.query.page) || 1;
+        const limit = Number(req.query.limit) || 10;
+        const offset = (page - 1) * limit;
+
         whereCondition.process_training_id = req.query.id;
 
+        if (searchTerm) {
+            whereCondition[Op.or] = [
+                { feedback: { [Op.iLike]: `%${searchTerm}%` } }, // Search by Feedback
+                { status: { [Op.iLike]: `%${searchTerm}%` } }, // Search by Status 
+                { '$spinner.name$': { [Op.iLike]: `%${searchTerm}%` } }, // Search by crop name
+                { '$ginner.name$': { [Op.iLike]: `%${searchTerm}%` } },
+                { '$weaver.name$': { [Op.iLike]: `%${searchTerm}%` } },
+                { '$garment.name$': { [Op.iLike]: `%${searchTerm}%` } },
+                { '$knitter.name$': { [Op.iLike]: `%${searchTerm}%` } },
+                { '$trader.name$': { [Op.iLike]: `%${searchTerm}%` } },
+                { '$process-training.country.county_name$': { [Op.iLike]: `%${searchTerm}%` } },
+                { '$process-training.state.state_name$': { [Op.iLike]: `%${searchTerm}%` } },
+                { '$process-training.venue$': { [Op.iLike]: `%${searchTerm}%` } },
+                { '$process-training.brand.brand_name$': { [Op.iLike]: `%${searchTerm}%` } },
+                { '$process-training.training_mode$': { [Op.iLike]: `%${searchTerm}%` } },
+            ];
+        }
+        const { count, rows } =  await ProcessTrainingProcessStatus.findAndCountAll({
+            where: whereCondition,
+            include: [
+                {
+                    model: ProcessorTraining,
+                    as: 'process-training',
+                    include: [
+                        {
+                            model: Country,
+                            as: 'country'
+                        },
+                        {
+                            model: State,
+                            as: 'state'
+                        },
+                        {
+                            model: Brand,
+                            as: 'brand'
+                        }
+                    ]
+                },
+                {
+                    model: Spinner,
+                    as: 'spinner',
+                    attributes: ['id', 'name'],
+                },
+                {
+                    model: Ginner,
+                    as: 'ginner',
+                    attributes: ['id', 'name'],
+                },
+                {
+                    model: Weaver,
+                    as: 'weaver',
+                    attributes: ['id', 'name'],
+                },
+                {
+                    model: Garment,
+                    as: 'garment',
+                    attributes: ['id', 'name'],
+                },
+
+                {
+                    model: Knitter,
+                    as: 'knitter',
+                    attributes: ['id', 'name'],
+                },
+                {
+                    model: Trader,
+                    as: 'trader',
+                    attributes: ['id', 'name'],
+                }
+            ],
+            order: [
+                [
+                    'id', 'desc'
+                ]
+            ],
+            offset: offset,
+            limit: limit,
+        });
+
+        return res.sendPaginationSuccess(res, rows, count);
+    } catch (error: any) {
+        console.error(error)
+        return res.sendError(res, error.meessage);
+    }
+}
+
+const fecthTrainingStatusSpecific = async (req: Request, res: Response) => {
+    try {
+        const searchTerm = req.query.search || '';
+        const page = Number(req.query.page) || 1;
+        const limit = Number(req.query.limit) || 10;
+        const offset = (page - 1) * limit;
+
+        const whereCondition: any = {};
+        const { spinnerId, ginnerId, weaverId, knitterId, traderId, garmentId, mode, date }: any = req.query;
+        if (spinnerId) {
+            whereCondition.spinner_id = spinnerId;
+        }
+        if (mode) {
+            const idArray: any[] = mode.split(",").map((id: any) => id);
+            whereCondition['$process-training.training_mode$']= { [Op.in]: idArray };
+            // whereCondition['$process-training.training_mode$'] = mode;
+        }
+        if (date) {
+            const startOfDay = new Date(date);
+            startOfDay.setUTCHours(0, 0, 0, 0);
+            const endOfDay = new Date(date);
+            endOfDay.setUTCHours(23, 59, 59, 999);
+            whereCondition['$process-training.date$'] = { [Op.between]: [startOfDay, endOfDay] }
+        }
+        if (ginnerId) {
+            whereCondition.ginner_id = ginnerId;
+        }
+        if (weaverId) {
+            whereCondition.weaver_id = weaverId;
+        }
+        if (knitterId) {
+            whereCondition.knitter_id = knitterId;
+        }
+        if (traderId) {
+            whereCondition.trader_id = traderId;
+        }
+        if (garmentId) {
+            whereCondition.garment_id = garmentId;
+        }
+        if (searchTerm) {
+            whereCondition[Op.or] = [
+                { feedback: { [Op.iLike]: `%${searchTerm}%` } }, // Search by Feedback
+                { '$process-training.training_type$': { [Op.iLike]: `%${searchTerm}%` } }, // Search by training type
+                { status: { [Op.iLike]: `%${searchTerm}%` } }, // Search by Status 
+                { '$spinner.name$': { [Op.iLike]: `%${searchTerm}%` } }, // Search by spinner name
+                { '$ginner.name$': { [Op.iLike]: `%${searchTerm}%` } },
+                { '$weaver.name$': { [Op.iLike]: `%${searchTerm}%` } },
+                { '$garment.name$': { [Op.iLike]: `%${searchTerm}%` } },
+                { '$knitter.name$': { [Op.iLike]: `%${searchTerm}%` } },
+                { '$trader.name$': { [Op.iLike]: `%${searchTerm}%` } },
+                { '$process-training.country.county_name$': { [Op.iLike]: `%${searchTerm}%` } },
+                { '$process-training.state.state_name$': { [Op.iLike]: `%${searchTerm}%` } },
+                { '$process-training.venue$': { [Op.iLike]: `%${searchTerm}%` } },
+                { '$process-training.brand.brand_name$': { [Op.iLike]: `%${searchTerm}%` } },
+                { '$process-training.training_mode$': { [Op.iLike]: `%${searchTerm}%` } }, // Search by training type
+            ];
+        }
+        const { count, rows } = await ProcessTrainingProcessStatus.findAndCountAll({
+            where: whereCondition,
+            include: [
+                {
+                    model: ProcessorTraining,
+                    as: 'process-training',
+                    include: [
+                        {
+                            model: Country,
+                            as: 'country'
+                        },
+                        {
+                            model: State,
+                            as: 'state'
+                        },
+                        {
+                            model: Brand,
+                            as: 'brand'
+                        }
+                    ]
+                },
+                {
+                    model: Spinner,
+                    as: 'spinner',
+                    attributes: ['id', 'name'],
+                },
+                {
+                    model: Ginner,
+                    as: 'ginner',
+                    attributes: ['id', 'name'],
+                },
+                {
+                    model: Weaver,
+                    as: 'weaver',
+                    attributes: ['id', 'name'],
+                },
+                {
+                    model: Garment,
+                    as: 'garment',
+                    attributes: ['id', 'name'],
+                },
+
+                {
+                    model: Knitter,
+                    as: 'knitter',
+                    attributes: ['id', 'name'],
+                },
+                {
+                    model: Trader,
+                    as: 'trader',
+                    attributes: ['id', 'name'],
+                }
+            ],
+            order: [
+                [
+                    'id', 'desc'
+                ]
+            ],
+            offset: offset,
+            limit: limit,
+        });
+        return res.sendPaginationSuccess(res, rows, count);
+    } catch (error: any) {
+        console.error(error)
+        return res.sendError(res, error.meessage);
+    }
+}
+
+const updateTrainingProcessStatus = async (req: Request, res: Response) => {
+    try {
+        let body: any
+        if (req.body.status) {
+            body = {
+                status: req.body.status
+            }
+        }
+        if (req.body.feedback) {
+            body = {
+                feedback: req.body.feedback,
+                subject: req.body.subject
+            }
+        }
+        const training = await ProcessTrainingProcessStatus.update(body, {
+            where: {
+                id: req.body.id
+            }
+        });
+        res.sendSuccess(res, { training });
+    } catch (error: any) {
+        console.error(error)
+        return res.sendError(res, error.meessage);
+    }
+}
+
+const exportTrainingStatus = async (req: Request, res: Response) => {
+    try {
+        const excelFilePath = path.join('./upload', 'training-process-report.xlsx');
+        const searchTerm = req.query.search || '';
+        const page = Number(req.query.page) || 1;
+        const limit = Number(req.query.limit) || 10;
+        const offset = (page - 1) * limit;
+        const whereCondition: any = {};
+        const workbook = new ExcelJS.Workbook();
+        const worksheet = workbook.addWorksheet('Sheet1');
+        //mergin the cells for first row
+        worksheet.mergeCells('A1:K1');
+        const mergedCell = worksheet.getCell('A1');
+        mergedCell.value = 'Cotton Connect | Training process report';
+        mergedCell.font = { bold: true };
+        mergedCell.alignment = { horizontal: 'center', vertical: 'middle' };
+
+        // Set bold font for header row
+        const headerRow = worksheet.addRow([
+            'S.No', 'Date', 'Name', 'Brand',
+            'Processor', 'Country', 'State', 'Training Type', 'Venue', 'Status', 'Feedback'
+        ]);
+        headerRow.font = { bold: true };
+        whereCondition.process_training_id = req.query.id
         if (searchTerm) {
             whereCondition[Op.or] = [
                 { feedback: { [Op.iLike]: `%${searchTerm}%` } }, // Search by Feedback
@@ -400,244 +671,9 @@ const fecthTrainingStatus = async (req: Request, res: Response) => {
                 [
                     'id', 'desc'
                 ]
-            ]
-        });
-        res.sendSuccess(res, training);
-    } catch (error: any) {
-        return res.sendError(res, error.message);
-    }
-}
-
-const fecthTrainingStatusSpecific = async (req: Request, res: Response) => {
-    try {
-        const searchTerm = req.query.search || '';
-        const whereCondition: any = {};
-        const { spinnerId, ginnerId, weaverId, knitterId, traderId, garmentId, mode, date }: any = req.query;
-        if (spinnerId) {
-            whereCondition.spinner_id = spinnerId;
-        }
-        if (mode) {
-            whereCondition['$process-training.training_mode$'] = mode;
-        }
-        if (date) {
-            const startOfDay = new Date(date);
-            startOfDay.setUTCHours(0, 0, 0, 0);
-            const endOfDay = new Date(date);
-            endOfDay.setUTCHours(23, 59, 59, 999);
-            whereCondition['$process-training.date$'] = { [Op.between]: [startOfDay, endOfDay] }
-        }
-        if (ginnerId) {
-            whereCondition.ginner_id = ginnerId;
-        }
-        if (weaverId) {
-            whereCondition.weaver_id = weaverId;
-        }
-        if (knitterId) {
-            whereCondition.knitter_id = knitterId;
-        }
-        if (traderId) {
-            whereCondition.trader_id = traderId;
-        }
-        if (garmentId) {
-            whereCondition.garment_id = garmentId;
-        }
-        if (searchTerm) {
-            whereCondition[Op.or] = [
-                { feedback: { [Op.iLike]: `%${searchTerm}%` } }, // Search by Feedback
-                { '$process-training.training_type$': { [Op.iLike]: `%${searchTerm}%` } }, // Search by training type
-                { status: { [Op.iLike]: `%${searchTerm}%` } }, // Search by Status 
-                { '$spinner.name$': { [Op.iLike]: `%${searchTerm}%` } }, // Search by spinner name
-                { '$ginner.name$': { [Op.iLike]: `%${searchTerm}%` } },
-                { '$weaver.name$': { [Op.iLike]: `%${searchTerm}%` } },
-                { '$garment.name$': { [Op.iLike]: `%${searchTerm}%` } },
-                { '$knitter.name$': { [Op.iLike]: `%${searchTerm}%` } },
-                { '$trader.name$': { [Op.iLike]: `%${searchTerm}%` } },
-                { '$process-training.country.county_name$': { [Op.iLike]: `%${searchTerm}%` } },
-                { '$process-training.state.state_name$': { [Op.iLike]: `%${searchTerm}%` } },
-                { '$process-training.venue$': { [Op.iLike]: `%${searchTerm}%` } },
-                { '$process-training.brand.brand_name$': { [Op.iLike]: `%${searchTerm}%` } },
-                { '$process-training.training_mode$': { [Op.iLike]: `%${searchTerm}%` } }, // Search by training type
-            ];
-        }
-        const training = await ProcessTrainingProcessStatus.findAll({
-            where: whereCondition,
-            include: [
-                {
-                    model: ProcessorTraining,
-                    as: 'process-training',
-                    include: [
-                        {
-                            model: Country,
-                            as: 'country'
-                        },
-                        {
-                            model: State,
-                            as: 'state'
-                        },
-                        {
-                            model: Brand,
-                            as: 'brand'
-                        }
-                    ]
-                },
-                {
-                    model: Spinner,
-                    as: 'spinner',
-                    attributes: ['id', 'name'],
-                },
-                {
-                    model: Ginner,
-                    as: 'ginner',
-                    attributes: ['id', 'name'],
-                },
-                {
-                    model: Weaver,
-                    as: 'weaver',
-                    attributes: ['id', 'name'],
-                },
-                {
-                    model: Garment,
-                    as: 'garment',
-                    attributes: ['id', 'name'],
-                },
-
-                {
-                    model: Knitter,
-                    as: 'knitter',
-                    attributes: ['id', 'name'],
-                },
-                {
-                    model: Trader,
-                    as: 'trader',
-                    attributes: ['id', 'name'],
-                }
             ],
-            order: [
-                [
-                    'id', 'desc'
-                ]
-            ]
-        });
-        res.sendSuccess(res, training);
-    } catch (error: any) {
-        return res.sendError(res, error.message);
-    }
-}
-
-const updateTrainingProcessStatus = async (req: Request, res: Response) => {
-    try {
-        let body: any
-        if (req.body.status) {
-            body = {
-                status: req.body.status
-            }
-        }
-        if (req.body.feedback) {
-            body = {
-                feedback: req.body.feedback,
-                subject: req.body.subject
-            }
-        }
-        const training = await ProcessTrainingProcessStatus.update(body, {
-            where: {
-                id: req.body.id
-            }
-        });
-        res.sendSuccess(res, { training });
-    } catch (error: any) {
-        return res.sendError(res, error.message);
-    }
-}
-
-const exportTrainingStatus = async (req: Request, res: Response) => {
-    try {
-        const excelFilePath = path.join('./upload', 'training-process-report.xlsx');
-        const searchTerm = req.query.search || '';
-        const whereCondition: any = {};
-        const workbook = new ExcelJS.Workbook();
-        const worksheet = workbook.addWorksheet('Sheet1');
-        //mergin the cells for first row
-        worksheet.mergeCells('A1:K1');
-        const mergedCell = worksheet.getCell('A1');
-        mergedCell.value = 'Cotton Connect | Training process report';
-        mergedCell.font = { bold: true };
-        mergedCell.alignment = { horizontal: 'center', vertical: 'middle' };
-
-        // Set bold font for header row
-        const headerRow = worksheet.addRow([
-            'S.No', 'Date', 'Name', 'Brand',
-            'Processor', 'Country', 'State', 'Training Type', 'Venue', 'Status', 'Feedback'
-        ]);
-        headerRow.font = { bold: true };
-        whereCondition.process_training_id = req.query.id
-        if (searchTerm) {
-            whereCondition[Op.or] = [
-                { feedback: { [Op.iLike]: `%${searchTerm}%` } }, // Search by Feedback
-                { status: { [Op.iLike]: `%${searchTerm}%` } }, // Search by Status 
-                { '$spinner.name$': { [Op.iLike]: `%${searchTerm}%` } }, // Search by crop name
-                { '$ginner.name$': { [Op.iLike]: `%${searchTerm}%` } },
-                { '$weaver.name$': { [Op.iLike]: `%${searchTerm}%` } },
-                { '$garment.name$': { [Op.iLike]: `%${searchTerm}%` } },
-                { '$knitter.name$': { [Op.iLike]: `%${searchTerm}%` } },
-                { '$trader.name$': { [Op.iLike]: `%${searchTerm}%` } },
-                { '$process-training.country.county_name$': { [Op.iLike]: `%${searchTerm}%` } },
-                { '$process-training.state.state_name$': { [Op.iLike]: `%${searchTerm}%` } },
-                { '$process-training.training_mode$': { [Op.iLike]: `%${searchTerm}%` } }, // Search by training type
-            ];
-        }
-        const training = await ProcessTrainingProcessStatus.findAll({
-            where: whereCondition,
-            include: [
-                {
-                    model: ProcessorTraining,
-                    as: 'process-training',
-                    include: [
-                        {
-                            model: Country,
-                            as: 'country'
-                        },
-                        {
-                            model: State,
-                            as: 'state'
-                        },
-                        {
-                            model: Brand,
-                            as: 'brand'
-                        }
-                    ]
-                },
-                {
-                    model: Spinner,
-                    as: 'spinner',
-                    attributes: ['id', 'name'],
-                },
-                {
-                    model: Ginner,
-                    as: 'ginner',
-                    attributes: ['id', 'name'],
-                },
-                {
-                    model: Weaver,
-                    as: 'weaver',
-                    attributes: ['id', 'name'],
-                },
-                {
-                    model: Garment,
-                    as: 'garment',
-                    attributes: ['id', 'name'],
-                },
-
-                {
-                    model: Knitter,
-                    as: 'knitter',
-                    attributes: ['id', 'name'],
-                },
-                {
-                    model: Trader,
-                    as: 'trader',
-                    attributes: ['id', 'name'],
-                }
-            ],
+            offset: offset,
+            limit: limit,
         });
         // Append data to worksheet
         for await (const [index, item] of training.entries()) {
@@ -679,7 +715,8 @@ const exportTrainingStatus = async (req: Request, res: Response) => {
         })
 
     } catch (error: any) {
-        return res.sendError(res, error.message);
+        console.error(error)
+        return res.sendError(res, error.meessage);
     }
 }
 
