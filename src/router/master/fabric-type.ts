@@ -6,9 +6,11 @@ import {
     updateFebricTypeStatus,
     deleteFebricType
 } from "../../controllers/fabric-type";
-
+import accessControl from "../../middleware/access-control";
 import { Router } from "express";
 const router = Router();
+
+router.use(accessControl);
 
 // Fabric Type Routes
 router.get('/', fetchFebricTypePagination);

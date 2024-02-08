@@ -5,9 +5,11 @@ import {
     updateVideoNameStatus,
     deleteVideoName
 } from "../../controllers/video";
-
+import accessControl from "../../middleware/access-control";
 import { Router } from "express";
 const router = Router();
+
+router.use(accessControl);
 
 // Video Routes
 router.get('/', fetchVideoNamePagination);

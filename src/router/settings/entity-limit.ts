@@ -1,7 +1,9 @@
 import { fetchEntityLimits, updateEntityLimit } from "../../controllers/entity-limit";
-
+import accessControl from "../../middleware/access-control";
 import { Router } from "express";
 const router = Router();
+
+router.use(accessControl);
 
 // Entity Routes
 router.get('/', fetchEntityLimits);

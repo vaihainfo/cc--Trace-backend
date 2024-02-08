@@ -66,7 +66,7 @@ const GinSales = db.define('gin_sales', {
     type: DataTypes.STRING
   },
   invoice_file: {
-    type: DataTypes.STRING
+    type: DataTypes.ARRAY(DataTypes.TEXT)
   },
   delivery_notes: {
     type: DataTypes.STRING

@@ -655,7 +655,7 @@ const updateGinnerSales = async (req: Request, res: Response) => {
         const ginSales = await GinSales.update(data, { where: { id: req.body.id } });
         if (req.body.weightLoss) {
             for await (let obj of req.body.lossData) {
-                let bale = await GinBale.findOne({ where: { '$ginprocess.lot_no$': String(obj.lotNo), bale_no: String(obj.baleNo) }, include: [{ model: GinProcess, as: 'ginprocess' }] });
+                let bale = await GinBale.findOne({ where: { '$ginprocess.reel_lot_no$': String(obj.reelLotNo), bale_no: String(obj.baleNo) }, include: [{ model: GinProcess, as: 'ginprocess' }] });
                 if (bale) {
                     await GinBale.update({ weight: obj.newWeight }, { where: { id: bale.dataValues.id } })
                 }

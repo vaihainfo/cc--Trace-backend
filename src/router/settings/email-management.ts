@@ -9,9 +9,11 @@ import {
     getEmailTemplates,
     updateEmailJob
 } from "../../controllers/email-management";
-
+import accessControl from "../../middleware/access-control";
 import { Router } from "express";
 const router = Router();
+
+router.use(accessControl);
 
 // Entity Routes
 router.get('/get-email-templates', getEmailTemplates);

@@ -6,9 +6,11 @@ import {
     fetchWeaver,
     checkWeaver
 } from "../../controllers/process-registration/weaver";
-
+import accessControl from "../../middleware/access-control";
 import { Router } from "express";
 const router = Router();
+
+router.use(accessControl);
 
 // Scope Certificate Routes
 router.get('/', fetchWeaverPagination);

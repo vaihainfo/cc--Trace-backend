@@ -6,9 +6,11 @@ import {
     fetchGarment,
     checkGarment
 } from "../../controllers/process-registration/garment";
-
+import accessControl from "../../middleware/access-control";
 import { Router } from "express";
 const router = Router();
+
+router.use(accessControl);
 
 // Scope Certificate Routes
 router.get('/', fetchGarmentPagination);

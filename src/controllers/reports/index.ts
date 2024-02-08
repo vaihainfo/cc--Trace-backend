@@ -9513,7 +9513,7 @@ const spinnerBackwardTraceabiltyReport = async(req: Request, res: Response)=>{
     const limit = Number(req.query.limit) || 10;
     const offset = (page - 1) * limit;
     const whereCondition: any = {};
-    const { spinnerId, knitterId, weaverId, seasonId, brandId, programId }: any = req.query;  
+    const { spinnerId, knitterId, weaverId, seasonId, brandId, programId, type }: any = req.query;  
     try {
         if (searchTerm) {
         whereCondition[Op.or] = [
@@ -9553,6 +9553,15 @@ const spinnerBackwardTraceabiltyReport = async(req: Request, res: Response)=>{
                 .split(",")
                 .map((id: any) => parseInt(id, 10));
             whereCondition.program_id = { [Op.in]: idArray };
+        }
+
+        if (type) {
+            if(type === 'knitter'){
+                whereCondition.knitter_id = { [Op.not]: null }
+            }
+            if(type === 'weaver'){
+                whereCondition.buyer_id = { [Op.not]: null }
+            }
         }
 
         if (knitterId) {
@@ -9787,7 +9796,7 @@ const exportSpinnerBackwardTraceability = async(req: Request, res: Response)=>{
     const limit = Number(req.query.limit) || 10;
     const offset = (page - 1) * limit;
     const whereCondition: any = {};
-    const { spinnerId, knitterId, weaverId, seasonId, brandId, programId }: any = req.query;  
+    const { spinnerId, knitterId, weaverId, seasonId, brandId, programId, type }: any = req.query;  
     try {
         if (searchTerm) {
             whereCondition[Op.or] = [
@@ -9827,6 +9836,15 @@ const exportSpinnerBackwardTraceability = async(req: Request, res: Response)=>{
                     .split(",")
                     .map((id: any) => parseInt(id, 10));
                 whereCondition.program_id = { [Op.in]: idArray };
+            }
+
+            if (type) {
+                if(type === 'knitter'){
+                    whereCondition.knitter_id = { [Op.not]: null }
+                }
+                if(type === 'weaver'){
+                    whereCondition.buyer_id = { [Op.not]: null }
+                }
             }
     
             if (knitterId) {

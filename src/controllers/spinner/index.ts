@@ -648,7 +648,7 @@ const fetchSpinSalesPagination = async (req: Request, res: Response) => {
     const searchTerm = req.query.search || "";
     const page = Number(req.query.page) || 1;
     const limit = Number(req.query.limit) || 10;
-    const { spinnerId, seasonId, programId, knitterId, weaverId, yarnType }: any = req.query;
+    const { spinnerId, seasonId, programId, knitterId, weaverId, yarnType, type }: any = req.query;
     const offset = (page - 1) * limit;
     const whereCondition: any = {};
     try {
@@ -682,6 +682,15 @@ const fetchSpinSalesPagination = async (req: Request, res: Response) => {
                 .split(",")
                 .map((id: any) => parseInt(id, 10));
             whereCondition.program_id = { [Op.in]: idArray };
+        }
+
+        if (type) {
+            if(type === 'knitter'){
+                whereCondition.knitter_id = { [Op.not]: null }
+            }
+            if(type === 'weaver'){
+                whereCondition.buyer_id = { [Op.not]: null }
+            }
         }
 
         if (knitterId) {
@@ -772,7 +781,7 @@ const exportSpinnerSale = async (req: Request, res: Response) => {
     const searchTerm = req.query.search || "";
     const page = Number(req.query.page) || 1;
     const limit = Number(req.query.limit) || 10;
-    const { spinnerId, seasonId, programId, knitterId, weaverId, yarnType }: any = req.query;
+    const { spinnerId, seasonId, programId, knitterId, weaverId, yarnType, type }: any = req.query;
     const offset = (page - 1) * limit;
     const whereCondition: any = {};
     try {
@@ -804,6 +813,16 @@ const exportSpinnerSale = async (req: Request, res: Response) => {
                 .map((id: any) => parseInt(id, 10));
             whereCondition.program_id = { [Op.in]: idArray };
         }
+
+        if (type) {
+            if(type === 'knitter'){
+                whereCondition.knitter_id = { [Op.not]: null }
+            }
+            if(type === 'weaver'){
+                whereCondition.buyer_id = { [Op.not]: null }
+            }
+        }
+        
         if (knitterId) {
             const idArray: number[] = knitterId
                 .split(",")

@@ -4,9 +4,11 @@ import {
     checkProcessorName,
     updateProcessor
 } from "../../controllers/process-registration/new-processor";
-
+import accessControl from "../../middleware/access-control";
 import { Router } from "express";
 const router = Router();
+
+router.use(accessControl);
 
 // Scope Certificate Routes
 router.post('/', createProcessor);

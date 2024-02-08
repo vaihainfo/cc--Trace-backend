@@ -5,9 +5,11 @@ import {
     updateLinenStatus,
     deleteLinen
 } from "../../controllers/linenvariety";
-
+import accessControl from "../../middleware/access-control";
 import { Router } from "express";
 const router = Router();
+
+router.use(accessControl);
 
 // Linen Routes
 router.get('/', fetchLinenPagination);

@@ -5,9 +5,11 @@ import {
     updateSeasonStatus,
     deleteSeason
 } from "../../controllers/season";
-
+import accessControl from "../../middleware/access-control";
 import { Router } from "express";
 const router = Router();
+
+router.use(accessControl);
 
 // Season Routes
 router.get('/', fetchSeasonPagination);

@@ -5,9 +5,11 @@ import {
     updateDeviceStatus,
     deleteDevice
 } from "../../controllers/device";
-
+import accessControl from "../../middleware/access-control";
 import { Router } from "express";
 const router = Router();
+
+router.use(accessControl);
 
 // Device Routes
 router.get('/', fetchDevicePagination);

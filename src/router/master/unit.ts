@@ -23,9 +23,11 @@ import {
     updateUnitType,
     updateUnitTypeStatus
 } from "../../controllers/units/unit-type";
-
+import accessControl from "../../middleware/access-control";
 import { Router } from "express";
 const router = Router();
+
+router.use(accessControl);
 
 // Unit Type Routes
 router.get('/unit-type', fetchUnitTypePagination);

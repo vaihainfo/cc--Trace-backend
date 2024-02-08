@@ -6,9 +6,11 @@ import {
     updateCottonMixStatus,
     deleteCottonMix
 } from "../../controllers/cotton-mix";
-
+import accessControl from "../../middleware/access-control";
 import { Router } from "express";
 const router = Router();
+
+router.use(accessControl);
 
 // Cottonmix Routes
 router.get('/', fetchCottonMixPagination);

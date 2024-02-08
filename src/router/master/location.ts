@@ -32,7 +32,7 @@ import {
 
 const router = Router();
 
-// router.use(accessControl)
+router.use(accessControl);
 
 router.get("/get-countries", fetchCountries);
 router.post("/set-country", setCountry);

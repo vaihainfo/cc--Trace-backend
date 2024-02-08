@@ -16,6 +16,7 @@ import Farm from "../../models/farm.model";
 import * as ExcelJS from "exceljs";
 import * as path from "path";
 import UserApp from "../../models/users-app.model";
+import sequelize from "../../util/dbConn";
 
 
 const fetchTransactionsReport = async (req: Request, res: Response) => {
@@ -79,9 +80,11 @@ const fetchTransactionsReport = async (req: Request, res: Response) => {
     // apply search
     if (searchTerm) {
       whereCondition[Op.or] = [
+          sequelize.where(sequelize.cast(sequelize.col('"transactions"."id"'), 'text'), {
+            [Op.like]: `%${searchTerm}%`
+        }),
         { farmer_code: { [Op.iLike]: `%${searchTerm}%` } },
         { farmer_name: { [Op.iLike]: `%${searchTerm}%` } },
-        { total_amount: { [Op.iLike]: `%${searchTerm}%` } },
         { rate: { [Op.iLike]: `%${searchTerm}%` } },
         { qty_purchased: { [Op.iLike]: `%${searchTerm}%` } },
         { vehicle: { [Op.iLike]: `%${searchTerm}%` } },
@@ -305,9 +308,11 @@ const exportProcurementReport = async (req: Request, res: Response) => {
     // apply search
     if (searchTerm) {
       whereCondition[Op.or] = [
+          sequelize.where(sequelize.cast(sequelize.col('"transactions"."id"'), 'text'), {
+            [Op.like]: `%${searchTerm}%`
+        }),
         { farmer_code: { [Op.iLike]: `%${searchTerm}%` } },
         { farmer_name: { [Op.iLike]: `%${searchTerm}%` } },
-        { total_amount: { [Op.iLike]: `%${searchTerm}%` } },
         { rate: { [Op.iLike]: `%${searchTerm}%` } },
         { qty_purchased: { [Op.iLike]: `%${searchTerm}%` } },
         { vehicle: { [Op.iLike]: `%${searchTerm}%` } },

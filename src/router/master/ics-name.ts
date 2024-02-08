@@ -6,9 +6,11 @@ import {
     updateIcsNameStatus,
     deleteIcsName
 } from "../../controllers/ics-name";
-
+import accessControl from "../../middleware/access-control";
 import { Router } from "express";
 const router = Router();
+
+router.use(accessControl);
 
 // ICS name Routes
 router.get('/', fetchIcsNamePagination);

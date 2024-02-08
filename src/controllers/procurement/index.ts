@@ -182,9 +182,11 @@ const fetchTransactions = async (req: Request, res: Response) => {
     // apply search
     if (searchTerm) {
       whereCondition[Op.or] = [
+          sequelize.where(sequelize.cast(sequelize.col('"transactions"."id"'), 'text'), {
+            [Op.like]: `%${searchTerm}%`
+        }),
         { farmer_code: { [Op.iLike]: `%${searchTerm}%` } },
         { farmer_name: { [Op.iLike]: `%${searchTerm}%` } },
-        { total_amount: { [Op.iLike]: `%${searchTerm}%` } },
         { rate: { [Op.iLike]: `%${searchTerm}%` } },
         { qty_purchased: { [Op.iLike]: `%${searchTerm}%` } },
         { vehicle: { [Op.iLike]: `%${searchTerm}%` } },
@@ -1360,6 +1362,9 @@ const exportProcurement = async (req: Request, res: Response) => {
     // apply search
     if (searchTerm) {
       whereCondition[Op.or] = [
+        sequelize.where(sequelize.cast(sequelize.col('"transactions"."id"'), 'text'), {
+          [Op.like]: `%${searchTerm}%`
+      }),
         { farmer_code: { [Op.iLike]: `%${searchTerm}%` } },
         { total_amount: { [Op.iLike]: `%${searchTerm}%` } },
         { "$block.block_name$": { [Op.iLike]: `%${searchTerm}%` } },
