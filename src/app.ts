@@ -80,6 +80,7 @@ import dashboardSpinnerRouter from './router/dashboard/spinner';
 import dashboardProcurementRouter from './router/dashboard/procurement';
 import dashboardProcessorRouter from './router/dashboard/processor';
 import labMasterRouter from './router/master/lab-master';
+import seedCompanyRouter from './router/master/seed-company';
 import { sendScheduledEmails } from "./controllers/email-management/scheduled-email.controller";
 import ExportData from "./models/export-data-check.model";
 import { exportGinnerPendingSchedule, exportGinnerProcessSchedule, exportGinnerSalesSchedule, exportGinnerSeedCottonSchedule, exportGinnerySummarySchedule, exportSpinnerBaleReceiptSchedule, exportSpinnerSummarySchedule, exportSpinnerYarnProcessSchedule, exportSpinnerYarnSalesSchedule } from "./controllers/reports";
@@ -300,6 +301,7 @@ app.use("/dashboard/spinner", dashboardSpinnerRouter)
 app.use("/dashboard/procurement", dashboardProcurementRouter)
 app.use("/dashboard/processor", dashboardProcessorRouter)
 app.use("/lab-master", labMasterRouter);
+app.use("/seed-company", seedCompanyRouter);
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument, { customCss }));
 
 app.use(errorMiddleware);
