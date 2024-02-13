@@ -1,22 +1,17 @@
 import { DataTypes } from 'sequelize';
 import db from '../util/dbConn';
 
-const SeedCompany = db.define('seed_company', {
+const CropCurrentSeason = db.define('crop_current_season', {
     id: {
         type: DataTypes.INTEGER,
         autoIncrement: true,
         allowNull: false,
         primaryKey: true
     },
-    name: {
+    crop_name: {
         type: DataTypes.STRING,
         allowNull: false,
-    },
-    status: {
-        type: DataTypes.BOOLEAN,
-        allowNull: false,
-        defaultValue: true,
-    },
+    }
 });
 
-export default SeedCompany;
+export default CropCurrentSeason;
