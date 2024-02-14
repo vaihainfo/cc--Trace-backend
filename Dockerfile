@@ -29,6 +29,10 @@ RUN apt-get update && apt-get install -y nginx
 EXPOSE 80
 
 
+Run chmod -R 777 upload
+Run chmod -R 777 src
+Run chmod -R 777 qrCode
+
 # Remove default NGINX configuration
 RUN rm /etc/nginx/sites-enabled/default
 
