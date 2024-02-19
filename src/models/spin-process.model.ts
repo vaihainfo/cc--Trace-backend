@@ -52,11 +52,11 @@ const SpinProcess = db.define('spin_processes', {
   },
   yarn_count: {
     allowNull: false,
-    type: DataTypes.DOUBLE
+    type: DataTypes.ARRAY(DataTypes.INTEGER)
   },
   yarn_qty_produced: {
     allowNull: false,
-    type: DataTypes.DOUBLE
+    type: DataTypes.ARRAY(DataTypes.DOUBLE)
   },
   yarn_realisation: {
     allowNull: false,

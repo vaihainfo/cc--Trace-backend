@@ -70,6 +70,21 @@ const GinProcess = db.define('gin_process', {
   },
   qr: {
     type: DataTypes.STRING
+  },
+  heap_number: {
+    type: DataTypes.STRING
+  },
+  heap_register: {
+    type: DataTypes.STRING
+  },
+  weigh_bridge: {
+    type: DataTypes.STRING
+  },
+  delivery_challan: {
+    type: DataTypes.STRING
+  },
+  bale_process: {
+    type: DataTypes.STRING
   }
 });
 

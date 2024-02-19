@@ -26,6 +26,7 @@ import BaleSelection from "../../models/bale-selection.model";
 import GinBale from "../../models/gin-bale.model";
 import ComberSelection from "../../models/comber-selection.model";
 import { send_spin_mail } from "../send-emails";
+import SpinYarn from "../../models/spin-yarn.model";
 
 //create Spinner Process
 const createSpinnerProcess = async (req: Request, res: Response) => {
@@ -83,6 +84,25 @@ const createSpinnerProcess = async (req: Request, res: Response) => {
                 id: spin.id
             }
         });
+
+        for await(let yarn of req.body.yarns){
+            let yarnData = {
+                process_id: spin.id,
+                yarn_count: yarn.yarnCount,
+                yarn_produced: yarn.yarnProduced,
+            }
+
+            const yarns = await SpinYarn.create(yarnData);
+            let uniqueFilename = `spin_yarn_qrcode_${Date.now()}.png`;
+            let da = encrypt(`Spinner,Yarn, ${yarns.id}`);
+            let aa = await generateOnlyQrCode(da, uniqueFilename);
+            const gin = await SpinYarn.update({ qr: uniqueFilename }, {
+                where: {
+                    id: yarns.id
+                }
+            });
+        }
+
         for await (let obj of req.body.chooseLint) {
             let update = await GinSales.update({ qty_stock: obj.totalQty - obj.qtyUsed }, { where: { id: obj.id } });
             let create = await LintSelections.create({ qty_used: obj.qtyUsed, process_id: spin.id, lint_id: obj.id })
@@ -148,7 +168,7 @@ const fetchSpinnerProcessPagination = async (req: Request, res: Response) => {
                 { reel_lot_no: { [Op.iLike]: `%${searchTerm}%` } },
                 { batch_lot_no: { [Op.iLike]: `%${searchTerm}%` } },
                 { box_id: { [Op.iLike]: `%${searchTerm}%` } },
-                { '$yarncount.yarnCount_name$': { [Op.iLike]: `%${searchTerm}%` } },
+                // { '$yarncount.yarnCount_name$': { [Op.iLike]: `%${searchTerm}%` } },
             ]
         }
         if (spinnerId) {
@@ -188,11 +208,11 @@ const fetchSpinnerProcessPagination = async (req: Request, res: Response) => {
                 as: "program",
                 attributes: ['id', 'program_name']
             },
-            {
-                model: YarnCount,
-                as: "yarncount",
-                attributes: ['id', 'yarnCount_name']
-            }
+            // {
+            //     model: YarnCount,
+            //     as: "yarncount",
+            //     attributes: ['id', 'yarnCount_name']
+            // }
         ];
         //fetch data with pagination
         if (req.query.pagination === "true") {
@@ -207,7 +227,26 @@ const fetchSpinnerProcessPagination = async (req: Request, res: Response) => {
                 offset: offset,
                 limit: limit,
             });
-            return res.sendPaginationSuccess(res, rows, count);
+
+            let data = [];
+
+            for await (let row of rows){
+                let yarncount = [];
+
+            if(row.dataValues?.yarn_count.length > 0){
+                 yarncount = await YarnCount.findAll({
+                        attributes: ["id","yarnCount_name"], 
+                        where: { id: { [Op.in]: row.dataValues?.yarn_count } }
+                    });
+                }
+
+                data.push({
+                    ...row.dataValues,
+                    yarncount
+                })
+            }
+
+            return res.sendPaginationSuccess(res, data, count);
         } else {
             const gin = await SpinProcess.findAll({
                 where: whereCondition,
@@ -218,7 +257,26 @@ const fetchSpinnerProcessPagination = async (req: Request, res: Response) => {
                     ]
                 ]
             });
-            return res.sendSuccess(res, gin);
+
+            let data = [];
+
+            for await (let row of gin){
+                let yarncount = [];
+
+            if(row.dataValues?.yarn_count.length > 0){
+                 yarncount = await YarnCount.findAll({
+                        attributes: ["id","yarnCount_name"], 
+                        where: { id: { [Op.in]: row.dataValues?.yarn_count } }
+                    });
+                }
+
+                data.push({
+                    ...row.dataValues,
+                    yarncount
+                })
+            }
+
+            return res.sendSuccess(res, data);
         }
     } catch (error: any) {
         return res.sendError(res, error.message);
@@ -248,10 +306,10 @@ const fetchSpinnerProcess = async (req: Request, res: Response) => {
                 model: Program,
                 as: "program",
             },
-            {
-                model: YarnCount,
-                as: "yarncount",
-            }
+            // {
+            //     model: YarnCount,
+            //     as: "yarncount",
+            // }
         ];
         //fetch data with pagination
 
@@ -264,7 +322,24 @@ const fetchSpinnerProcess = async (req: Request, res: Response) => {
                 ]
             ]
         });
-        return res.sendSuccess(res, gin);
+
+        let data = [];
+        let yarncount = [];
+
+        if (gin.dataValues?.yarn_count.length > 0) {
+          yarncount = await YarnCount.findAll({
+            attributes: ["id", "yarnCount_name"],
+            where: { id: { [Op.in]: gin.dataValues?.yarn_count } },
+          });
+        }
+
+        data.push({
+          ...gin.dataValues,
+          yarncount,
+        });
+
+
+        return res.sendSuccess(res, data);
 
     } catch (error: any) {
         return res.sendError(res, error.message);
@@ -414,7 +489,7 @@ const exportSpinnerProcess = async (req: Request, res: Response) => {
                 { reel_lot_no: { [Op.iLike]: `%${searchTerm}%` } },
                 { batch_lot_no: { [Op.iLike]: `%${searchTerm}%` } },
                 { box_id: { [Op.iLike]: `%${searchTerm}%` } },
-                { '$yarncount.yarnCount_name$': { [Op.iLike]: `%${searchTerm}%` } },
+                // { '$yarncount.yarnCount_name$': { [Op.iLike]: `%${searchTerm}%` } },
             ]
         }
         if (spinnerId) {
@@ -465,10 +540,10 @@ const exportSpinnerProcess = async (req: Request, res: Response) => {
                 model: Program,
                 as: "program",
             },
-            {
-                model: YarnCount,
-                as: "yarncount",
-            }
+            // {
+            //     model: YarnCount,
+            //     as: "yarncount",
+            // }
         ];
         const gin = await SpinProcess.findAll({
             where: whereCondition,
@@ -477,7 +552,9 @@ const exportSpinnerProcess = async (req: Request, res: Response) => {
         // Append data to worksheet
         for await (const [index, item] of gin.entries()) {
             let blendValue = '';
-            let blendqty = ''
+            let blendqty = '';
+            let yarncount = '';
+
             if (item.cottonmix_type && item.cottonmix_type.length > 0) {
                 let blend = await CottonMix.findAll({ where: { id: { [Op.in]: item.cottonmix_type } } });
                 for (let bl of blend) {
@@ -488,13 +565,18 @@ const exportSpinnerProcess = async (req: Request, res: Response) => {
                 }
             }
 
+            if (item.yarn_count && item.yarn_count.length > 0) {
+                let yarn = await YarnCount.findAll({attributes: ["id","yarnCount_name"], where: { id: { [Op.in]: item.yarn_count } } });
+                yarncount = yarn.map((yrn: any) => yrn.dataValues.yarnCount_name).join(',')
+            }
+
             const rowValues = Object.values({
                 index: index + 1,
                 date: item.date ? item.date : '',
                 season: item.season ? item.season.name : '',
                 lotNo: item.batch_lot_no ? item.batch_lot_no : '',
                 yarnType: item.yarn_type ? item.yarn_type : '',
-                count: item.yarncount ? item.yarncount.yarnCount_name : '',
+                count: yarncount ? yarncount : '',
                 resa: item.yarn_realisation ? item.yarn_realisation : '',
                 boxes: item.no_of_boxes ? item.no_of_boxes : '',
                 boxId: item.box_id ? item.box_id : '',
@@ -552,11 +634,11 @@ const chooseYarnProcess = async (req: Request, res: Response) => {
                 as: "program",
                 attributes: ["id", "program_name"]
             },
-            {
-                model: YarnCount,
-                as: "yarncount",
-                attributes: ['id', 'yarnCount_name']
-            }
+            // {
+            //     model: YarnCount,
+            //     as: "yarncount",
+            //     attributes: ['id', 'yarnCount_name']
+            // }
         ];
         whereCondition.qty_stock = { [Op.gt]: 0 }
         //fetch data with pagination
@@ -564,14 +646,33 @@ const chooseYarnProcess = async (req: Request, res: Response) => {
         const gin = await SpinProcess.findAll({
             where: whereCondition,
             include: include,
-            attributes: ['id', 'yarn_type', 'no_of_boxes', 'reel_lot_no', 'batch_lot_no', 'qty_stock', 'tot_box_user'],
+            attributes: ['id', 'yarn_type', 'yarn_count', 'no_of_boxes', 'reel_lot_no', 'batch_lot_no', 'qty_stock', 'tot_box_user'],
             order: [
                 [
                     'id', 'desc'
                 ]
             ]
         });
-        return res.sendSuccess(res, gin);
+
+        let data = [];
+
+            for await (let row of gin){
+                let yarncount = [];
+
+            if(row.dataValues?.yarn_count.length > 0){
+                 yarncount = await YarnCount.findAll({
+                        attributes: ["id","yarnCount_name"], 
+                        where: { id: { [Op.in]: row.dataValues?.yarn_count } }
+                    });
+                }
+
+                data.push({
+                    ...row.dataValues,
+                    yarncount
+                })
+            }
+
+        return res.sendSuccess(res, data);
 
     } catch (error: any) {
         return res.sendError(res, error.message);
@@ -627,8 +728,9 @@ const createSpinnerSales = async (req: Request, res: Response) => {
 
         if (req.body.chooseYarn && req.body.chooseYarn.length > 0) {
             for await (let obj of req.body.chooseYarn) {
-                let update = await SpinProcess.update({ qty_stock: obj.totalQty - obj.qtyUsed, tot_box_user: obj.totalBoxes - obj.totalBoxesUsed }, { where: { id: obj.id } });
-                await SpinProcessYarnSelection.create({ spin_process_id: obj.id, sales_id: spinSales.id, no_of_box: obj.totalBoxesUsed, qty_used: obj.qtyUsed })
+                let update = await SpinProcess.update({ qty_stock: obj.totalQty - obj.qtyUsed }, { where: { id: obj.process_id } });
+                const spinYarnStatus = await SpinYarn.update({ sold_status: true }, { where: { id: obj.id } });
+                await SpinProcessYarnSelection.create({ spin_process_id: obj.process_id, yarn_id: obj.id, sales_id: spinSales.id, qty_used: obj.qtyUsed })
             }
         }
 
@@ -1536,35 +1638,46 @@ const chooseYarn = async (req: Request, res: Response) => {
             {
                 model: Season,
                 as: "season",
-                attributes: ['id', 'name']
+                attributes: []
             }
         ];
 
-        //fetch data with pagination
-        let result = await SpinProcess.findAll({
-            where: whereCondition,
-            include: include,
+        let result = await SpinYarn.findAll({
             attributes: [
-                [Sequelize.fn('SUM', Sequelize.col('qty_stock')), 'available_yarn']
+                [Sequelize.col('"spinprocess"."season"."id"'), 'season_id'],
+                [Sequelize.col('"spinprocess"."season"."name"'), 'season_name'],
+                [Sequelize.fn('SUM', Sequelize.col('yarn_produced')), 'available_yarn']
             ],
-            group: ["season.id", "season_id"]
-        });
-        // console.log(result);
+            include:[{
+                model: SpinProcess,
+                attributes: [],
+                as: "spinprocess",
+                where: whereCondition,
+                include: include,
+            }],
+            group: ["spinprocess.season.id", "spinprocess.season_id"]
+        })
+
+        //fetch data with pagination
+        // let result = await SpinProcess.findAll({
+        //     where: whereCondition,
+        //     include: include,
+        //     attributes: [
+        //         [Sequelize.fn('SUM', Sequelize.col('qty_stock')), 'available_yarn']
+        //     ],
+        //     group: ["season.id", "season_id"]
+        // });
+        console.log(result);
         let list = [];
         for await (let item of result) {
             let items = await SpinProcess.findAll({
-                where: { ...whereCondition, season_id: item.dataValues.season.id },
-                attributes: ['id', 'yarn_type', 'no_of_boxes', 'reel_lot_no', 'batch_lot_no', 'qty_stock', 'tot_box_user'],
+                where: { ...whereCondition, season_id: item.dataValues.season_id },
+                attributes: ['id', 'yarn_type', 'yarn_count', 'net_yarn_qty', 'reel_lot_no', 'batch_lot_no', 'qty_stock',],
                 include: [
                     {
                         model: Program,
                         as: "program",
                         attributes: ['id', 'program_name']
-                    },
-                    {
-                        model: YarnCount,
-                        as: "yarncount",
-                        attributes: ['id', 'yarnCount_name']
                     },
                     {
                         model: Spinner,
@@ -1574,11 +1687,58 @@ const chooseYarn = async (req: Request, res: Response) => {
                 ],
                 order: [['id', 'DESC']]
             });
-            list.push({ ...item.dataValues, data: items });
+
+            let data = [];
+
+            for await (let row of items){
+                const lot_details = await SpinYarn.findAll({
+                    attributes: [
+                        [sequelize.fn('SUM', Sequelize.col('"spinprocess"."net_yarn_qty"')), 'total_yarn'],
+                        [sequelize.fn('SUM', Sequelize.col('"spin_yarns"."yarn_produced"')), 'qty_stock'],
+                        // Add other attributes here...
+                    ],
+                    where: {
+                        sold_status: false
+                    },
+                    include: [
+                        {
+                            model: SpinProcess,
+                            as: 'spinprocess',
+                            attributes: ['id', 'batch_lot_no', 'date', 'net_yarn_qty', 'qty_stock', 'reel_lot_no'],
+                            where: { id: row?.dataValues?.id },
+                        },
+                    ],
+                    group: ['spinprocess.id', 'spinprocess.batch_lot_no', 'spinprocess.reel_lot_no'],
+                });
+
+
+                if (lot_details.length > 0) {
+                    const yarns = await SpinYarn.findAll({
+                        include:[{
+                            model: YarnCount,
+                            as: 'yarncount', 
+                            attributes: ['id', 'yarnCount_name'],
+                        }],
+                        where: {
+                            process_id: row?.dataValues?.id,
+                            sold_status: false
+                        },
+                    });
+    
+                    if (yarns.length > 0) {
+                        lot_details[0].dataValues.yarns = yarns;
+                        data.push(lot_details[0]);
+                    }
+                }
+            }
+
+
+            list.push({ ...item.dataValues, data: data });
         }
         return res.sendSuccess(res, list);
 
     } catch (error: any) {
+        console.log(error)
         return res.sendError(res, error.message);
     }
 };

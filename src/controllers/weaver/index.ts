@@ -61,7 +61,7 @@ const createWeaverProcess = async (req: Request, res: Response) =>{
                 no_of_rolls: req.body.noOfRolls,
                 dyeing_required: req.body.dyeingRequired,
                 dyeing_id: dyeing ? dyeing.id : null,
-                qty_stock: req.body.totalYarnQty,
+                qty_stock: req.body.totalFabricLength,
                 physical_traceablity: req.body.physicalTraceablity,
                 total_fabric_length: req.body.totalFabricLength,
                 blend_invoice: req.body.blendInvoice,
@@ -269,7 +269,7 @@ const createWeaverSales = async (req: Request, res: Response) => {
             processor_name: req.body.processorName,
             processor_address: req.body.processorAddress,
             yarn_qty: req.body.totalYarnQty,
-            total_yarn_qty: req.body.totalYarnQty,
+            total_yarn_qty: req.body.totalFabricLength,
             total_fabric_length: req.body.totalFabricLength,
             transaction_via_trader: req.body.transactionViaTrader,
             transaction_agent: req.body.transactionAgent,
@@ -282,7 +282,7 @@ const createWeaverSales = async (req: Request, res: Response) => {
             contract_file: req.body.contractFile,
             invoice_file: req.body.invoiceFile,
             delivery_notes: req.body.deliveryNotes,
-            qty_stock: req.body.totalYarnQty,
+            qty_stock: req.body.totalFabricLength,
             fabric_type: req.body.fabricType,
             no_of_rolls: req.body.noOfRolls,
             status: 'Pending for QR scanning'
@@ -515,7 +515,7 @@ const exportWeaverSale = async (req: Request, res: Response) => {
         // Set bold font for header row
         const headerRow = worksheet.addRow([
             "Sr No.", "Date", "Season", "Sold To", "Program", "Garment Order Reference", "Brand Order Reference",
-            "Invoice No", "Batch Lot No","Quanitity in Kgs",
+            "Invoice No", "Batch Lot No","Quanitity in Mts",
             "Vehicle No", "Transcation via trader", "Agent Details"
         ]);
         headerRow.font = { bold: true };

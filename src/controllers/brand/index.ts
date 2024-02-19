@@ -490,12 +490,13 @@ const sumbrandgarmentFabricSales = async (brandId: any, seasonId: any) => {
         console.log(error);
     }
 }
+
 //fetch brand transactions with filters
 const fetchBrandTransactionsPagination = async (req: Request, res: Response) => {
     const searchTerm = req.query.search || "";
     const page = Number(req.query.page) || 1;
     const limit = Number(req.query.limit) || 10;
-    const { product, styleMarkNo, invoiceNo, brandId }: any = req.query;
+    const { product, styleMarkNo, invoiceNo, brandId, status }: any = req.query;
     const offset = (page - 1) * limit;
     const whereCondition: any = {};
     try {
@@ -515,6 +516,7 @@ const fetchBrandTransactionsPagination = async (req: Request, res: Response) => 
         if (brandId) {
             whereCondition.buyer_id = brandId;
         }
+
         if (invoiceNo) {
             const idArray: any[] = invoiceNo
                 .split(",")
@@ -534,6 +536,11 @@ const fetchBrandTransactionsPagination = async (req: Request, res: Response) => 
             whereCondition.garment_type = { [Op.overlap]: idArray };
         }
 
+        if (status === "Pending" || status === "Sold") {
+            whereCondition.status =
+              status === "Pending" ? "Pending" : "Sold";
+          }
+
         let include = [
             {
                 model: Garment,
@@ -543,6 +550,10 @@ const fetchBrandTransactionsPagination = async (req: Request, res: Response) => 
             {
                 model: Program,
                 as: 'program'
+            },
+            {
+                model: Season,
+                as: 'season'
             }
         ];
         //fetch data with pagination
@@ -572,9 +583,31 @@ const fetchBrandTransactionsPagination = async (req: Request, res: Response) => 
             return res.sendSuccess(res, gin);
         }
     } catch (error: any) {
+        console.log(error);
         return res.sendError(res, error.message);
     }
 };
+
+
+//update Brand transactions to accept and reject
+const updateStatusBrandSale = async (req: Request, res: Response) => {
+    try {
+        let update = [];
+        for (const obj of req.body.items) {
+            const data = {
+                status: obj.status,
+                accept_date: obj.status === 'Sold' ? new Date().toISOString() : null
+            };
+            let result = await GarmentSales.update(data, { where: { id: obj.id } });
+            update.push(result);
+        }
+
+        res.sendSuccess(res, { update });
+    } catch (error: any) {
+        console.log(error);
+        return res.sendError(res, error.meessage);
+    }
+}
 
 const productionUpdate = async (req: Request, res: Response) => {
     try {
@@ -980,6 +1013,7 @@ export {
     checkBrand,
     organicCottonOverview,
     fetchBrandTransactionsPagination,
+    updateStatusBrandSale,
     productionUpdate,
     productTracebility,
     getProgram,

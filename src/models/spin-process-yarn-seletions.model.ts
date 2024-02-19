@@ -2,6 +2,7 @@ import { DataTypes } from 'sequelize';
 import db from '../util/dbConn';
 import SpinProcess from './spin-process.model';
 import SpinSales from './spin-sales.model';
+import SpinYarn from './spin-yarn.model';
 
 const SpinProcessYarnSelection = db.define('spin_process_yarn_selections', {
   id: {
@@ -11,6 +12,9 @@ const SpinProcessYarnSelection = db.define('spin_process_yarn_selections', {
     primaryKey: true
   },
   spin_process_id: {
+    type: DataTypes.INTEGER
+  },
+  yarn_id:{
     type: DataTypes.INTEGER
   },
   sales_id: {
@@ -27,6 +31,11 @@ const SpinProcessYarnSelection = db.define('spin_process_yarn_selections', {
 SpinProcessYarnSelection.belongsTo(SpinProcess, {
   foreignKey: "spin_process_id",
   as: "process",
+});
+
+SpinProcessYarnSelection.belongsTo(SpinYarn, {
+  foreignKey: "yarn_id",
+  as: "spinyarn",
 });
 
 SpinProcessYarnSelection.belongsTo(SpinSales, {

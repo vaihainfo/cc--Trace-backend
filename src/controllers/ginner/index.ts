@@ -41,6 +41,11 @@ const createGinnerProcess = async (req: Request, res: Response) => {
             lot_no: req.body.lotNo,
             reel_lot_no: req.body.reelLotNno,
             press_no: req.body.pressNo,
+            heap_number: req.body.heapNumber,
+            heap_register: req.body.heapRegister,
+            weigh_bridge: req.body.weighBridge,
+            delivery_challan: req.body.deliveryChallan,
+            bale_process: req.body.baleProcess,
         };
         const ginprocess = await GinProcess.create(data);
         let uniqueFilename = `gin_procees_qrcode_${Date.now()}.png`;
@@ -113,6 +118,7 @@ const fetchGinProcessPagination = async (req: Request, res: Response) => {
                 { lot_no: { [Op.iLike]: `%${searchTerm}%` } },
                 { reel_lot_no: { [Op.iLike]: `%${searchTerm}%` } },
                 { press_no: { [Op.iLike]: `%${searchTerm}%` } },
+                { heap_number: { [Op.iLike]: `%${searchTerm}%` } },
             ];
 
         }
@@ -187,8 +193,8 @@ const fetchGinProcessPagination = async (req: Request, res: Response) => {
                     attributes: [
                         [Sequelize.fn("SUM", Sequelize.literal("CAST(weight AS DOUBLE PRECISION)")),
                             "lint_quantity",],
-                        [sequelize.fn('min', sequelize.col('bale_no')), 'pressno_from'],
-                        [sequelize.fn('max', sequelize.col('bale_no')), 'pressno_to']
+                        [sequelize.fn('min',Sequelize.literal('CAST("bale_no" AS DOUBLE PRECISION)')), 'pressno_from'],
+                        [sequelize.fn('max', Sequelize.literal('CAST("bale_no" AS DOUBLE PRECISION)')), 'pressno_to']
                     ],
                     where: { process_id: row.dataValues.id }
                 });

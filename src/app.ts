@@ -24,6 +24,8 @@ import programRouter from './router/master/program';
 import fabricTypeRouter from './router/master/fabric-type';
 import seasonRouter from './router/master/season';
 import loomTypeRouter from './router/master/loom-type';
+import garmentTypeRouter from './router/master/garment-type';
+import styleMarkRouter from './router/master/style-mark-no';
 import cottonmixRouter from './router/master/cottonmix';
 import yarnCountRouter from './router/master/yarn-count-range';
 import cooperativeRouter from './router/master/cooperative';
@@ -168,6 +170,8 @@ app.use("/qr-app", qrApp);
 app.use("/datamigration",DatamigrationRouter);
 app.use("/failed-records",failedRouter);
 app.use("/oldsales", oldsalesRouter);
+app.use("/garment-type", garmentTypeRouter);
+app.use("/style-mark", styleMarkRouter);
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument, { customCss }));
 
 app.use(errorMiddleware);
