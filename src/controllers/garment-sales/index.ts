@@ -1195,7 +1195,7 @@ const createGarmentSales = async (req: Request, res: Response) => {
     const garmentSales = await GarmentSales.create(data);
     let uniqueFilename = `garment_sales_qrcode_${Date.now()}.png`;
     let aa = await generateOnlyQrCode(
-      `${process.env.ADMIN_URL}/qr-details/garment-sales?id=${garmentSales.id}`,
+      `${process.env.ADMIN_URL}/brand/qr-details/garment-sales?id=${garmentSales.id}`,
       uniqueFilename
     );
     const gin = await GarmentSales.update(
