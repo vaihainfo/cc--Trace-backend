@@ -74,6 +74,7 @@ import qrApp from "./router/qr-app";
 import DatamigrationRouter from './router/datamigration';
 import failedRouter from './router/failed-records';
 import oldsalesRouter from './router/oldsales';
+import dashboardRouter from './router/dashboard';
 import { sendScheduledEmails } from "./controllers/email-management/scheduled-email.controller";
 
 const app = express();
@@ -172,6 +173,7 @@ app.use("/failed-records",failedRouter);
 app.use("/oldsales", oldsalesRouter);
 app.use("/garment-type", garmentTypeRouter);
 app.use("/style-mark", styleMarkRouter);
+app.use("/dashboard", dashboardRouter)
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument, { customCss }));
 
 app.use(errorMiddleware);
