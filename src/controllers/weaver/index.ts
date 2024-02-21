@@ -912,10 +912,15 @@ const fetchWeaverDashBoard = async (req: Request, res: Response) => {
                 { '$yarncount.yarnCount_name$': { [Op.iLike]: `%${searchTerm}%` } },// Search season spinner name  
             ];
         }
-        if (status === 'Pending' || status === 'Sold') {
+        if (status === 'Pending' ) {
             whereCondition.buyer_id = weaverId
-            whereCondition.status = status === 'Pending' ? 'Pending for QR scanning' : 'Sold';
+            whereCondition.status = { [Op.in]: [ 'Pending' , 'Pending for QR scanning'] }
+        } 
+        if(status === 'Sold') {
+            whereCondition.buyer_id = weaverId
+            whereCondition.status = 'Sold';
         }
+       
         if (spinnerId) {
             const idArray: number[] = spinnerId
                 .split(",")
@@ -1135,9 +1140,13 @@ const getSpinnerTransaction = async (req: Request, res: Response) => {
             return res.sendError(res, 'Need  status');
         }
 
-        if (status === 'Pending' || status === 'Sold') {
+        if (status === 'Pending' ) {
             whereCondition.buyer_id = weaverId
-            whereCondition.status = status === 'Pending' ? 'Pending for QR scanning' : 'Sold';
+            whereCondition.status = { [Op.in]: [ 'Pending' , 'Pending for QR scanning'] }
+        } 
+        if(status === 'Sold') {
+            whereCondition.buyer_id = weaverId
+            whereCondition.status = 'Sold';
         }
 
         if (filter === 'Quantity') {
@@ -1173,10 +1182,16 @@ const getInvoiceAndyarnType = async (req: Request, res: Response) => {
             return res.sendError(res, 'Need  status');
         }
 
-        if (status === 'Pending' || status === 'Sold') {
+        if (status === 'Pending' ) {
             whereCondition.buyer_id = weaverId
-            whereCondition.status = status === 'Pending' ? 'Pending for QR scanning' : 'Sold';
+            whereCondition.status = { [Op.in]: [ 'Pending' , 'Pending for QR scanning'] }
+        } 
+        
+        if(status === 'Sold') {
+            whereCondition.buyer_id = weaverId
+            whereCondition.status = 'Sold';
         }
+
         if (filter === 'Quantity') {
             whereCondition.qty_stock = { [Op.gt]: 0 }
         }

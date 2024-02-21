@@ -19,7 +19,10 @@ import {
     deleteGinnerProcess,
     getSpinner,
     getVillageAndFarmer,
-    deleteGinSales
+    deleteGinSales,
+    updateGinnerProcess,
+    updateGinnerSalesField,
+    fetchGinProcess
 } from "../../controllers/ginner";
 
 
@@ -29,6 +32,9 @@ const router = Router();
 // Ginner Routes
 router.get('/', fetchGinProcessPagination);
 router.post('/', createGinnerProcess);
+router.put('/', updateGinnerProcess);
+router.get('/get-gin-process', fetchGinProcess);
+
 router.delete('/', deleteGinnerProcess);
 router.get('/choose-cotton', chooseCotton);
 router.get('/fetch-bale', fetchGinBale);
@@ -37,6 +43,7 @@ router.post('/sales', createGinnerSales);
 router.get('/sales', fetchGinSalesPagination);
 router.get('/sales/get-gin-sale', fetchGinSale);
 router.put('/sales', updateGinnerSales);
+router.put('/sales/update', updateGinnerSalesField);
 router.delete('/sales', deleteGinSales);
 router.get('/sales/export', exportGinnerSales);
 router.get('/sales/bale', fetchGinSaleBale);

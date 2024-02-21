@@ -20,6 +20,7 @@ import FarmerAgriArea from "../../models/farmer-agri-area.model";
 import FarmerCottonArea from "../../models/farmer-cotton-area.model";
 import sequelize from "../../util/dbConn";
 import {saveFailedRecord} from "../failed-records";
+import UserApp from "../../models/users-app.model";
 
 
 const createTransaction = async (req: Request, res: Response) => {
@@ -261,6 +262,10 @@ const fetchTransactions = async (req: Request, res: Response) => {
         {
           model: Farm,
           as: "farm"
+        },
+        {
+          model: UserApp,
+          as: "agent"
         },
       ],
     };

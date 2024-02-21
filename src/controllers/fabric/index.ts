@@ -298,7 +298,7 @@ const createDyingProcess = async (req: Request, res: Response) => {
     const sales = await DyingSales.create(data);
     if (req.body.chooseFabric && req.body.chooseFabric.length > 0) {
       for await (let obj of req.body.chooseFabric) {
-        if (obj.processor === "knitter") {
+        if (obj.processor === "Knitter") {
           let update = await KnitSales.update(
             { qty_stock: obj.totalQty - obj.qtyUsed },
             { where: { id: obj.id } }

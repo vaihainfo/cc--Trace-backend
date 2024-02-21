@@ -848,9 +848,13 @@ const fetchKnitterDashBoard = async (req: Request, res: Response) => {
                 { '$yarncount.yarnCount_name$': { [Op.iLike]: `%${searchTerm}%` } },// Search season spinner name 
             ];
         }
-        if (status === 'Pending' || status === 'Sold') {
+        if (status === 'Pending' ) {
             whereCondition.knitter_id = knitterId
-            whereCondition.status = status === 'Pending' ? 'Pending for QR scanning' : 'Sold';
+            whereCondition.status = { [Op.in]: [ 'Pending' , 'Pending for QR scanning'] }
+        } 
+        if(status === 'Sold') {
+            whereCondition.knitter_id = knitterId
+            whereCondition.status = 'Sold';
         }
         if (spinnerId) {
             const idArray: number[] = spinnerId
@@ -1064,9 +1068,13 @@ const getSpinnerAndProgram = async (req: Request, res: Response) => {
             return res.sendError(res, 'Need  status');
         }
 
-        if (status === 'Pending' || status === 'Sold') {
+        if (status === 'Pending' ) {
             whereCondition.knitter_id = knitterId
-            whereCondition.status = status === 'Pending' ? 'Pending for QR scanning' : 'Sold';
+            whereCondition.status = { [Op.in]: [ 'Pending' , 'Pending for QR scanning'] }
+        } 
+        if(status === 'Sold') {
+            whereCondition.knitter_id = knitterId
+            whereCondition.status = 'Sold';
         }
 
         const spinner = await SpinSales.findAll({
@@ -1109,11 +1117,15 @@ const getInvoiceAndyarnType = async (req: Request, res: Response) => {
         if (!status) {
             return res.sendError(res, 'Need  status');
         }
-
-        if (status === 'Pending' || status === 'Sold') {
+        if (status === 'Pending' ) {
             whereCondition.knitter_id = knitterId
-            whereCondition.status = status === 'Pending' ? 'Pending for QR scanning' : 'Sold';
+            whereCondition.status = { [Op.in]: [ 'Pending' , 'Pending for QR scanning'] }
+        } 
+        if(status === 'Sold') {
+            whereCondition.knitter_id = knitterId
+            whereCondition.status = 'Sold';
         }
+
         if (spinnerId) {
             const idArray: number[] = spinnerId
                 .split(",")
