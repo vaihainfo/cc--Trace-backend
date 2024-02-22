@@ -1,4 +1,12 @@
 import {
+    createSeedTestingLinkage,
+    fetchSeedTestingLinkagePagination,
+    fetchSeedTestingLinkage,
+    updateSeedTestingLinkage,
+    deleteSeedTestingLinkage,
+    deleteSeedTestingLinkageReport
+} from "../../controllers/organic-program-data-digitization/seed-testing-linkage";
+import {
     fetchSeedDemandPagination,
     fetchSeedDemand,
     updateSeedDemand,
@@ -14,6 +22,14 @@ import {
 import { Router } from "express";
 
 const router = Router();
+
+// seed-testing-linkage routes
+router.post("/seed-testing-linkage", createSeedTestingLinkage);
+router.get("/seed-testing-linkage", fetchSeedTestingLinkagePagination);
+router.get("/seed-testing-linkage/:id", fetchSeedTestingLinkage);
+router.put("/seed-testing-linkage", updateSeedTestingLinkage);
+router.delete("/seed-testing-linkage", deleteSeedTestingLinkage);
+router.delete("/seed-testing-linkage-report", deleteSeedTestingLinkageReport);
 
 // seed-demand routes
 router.get("/seed-demand", fetchSeedDemandPagination);
