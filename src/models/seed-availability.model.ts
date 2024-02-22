@@ -12,7 +12,7 @@ const SeedAvailability = db.define('seed_availability', {
     },
     season_id: {
         type: DataTypes.INTEGER,
-        allowNull: false,
+        allowNull: false
     },
     seed_company_id: {
         type: DataTypes.INTEGER,

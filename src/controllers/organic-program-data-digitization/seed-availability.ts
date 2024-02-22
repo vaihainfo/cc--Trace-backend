@@ -26,6 +26,8 @@ const fetchSeedAvailabilityPagination = async (req: Request, res: Response) => {
 
         if (searchTerm) {
             whereCondition[Op.or] = [
+                { '$season.name$': { [Op.iLike]: `%${searchTerm}%` } },
+                { '$seed_company.name$': { [Op.iLike]: `%${searchTerm}%` } },
                 { lot_no: { [Op.iLike]: `%${searchTerm}%` } },
                 { variety: { [Op.iLike]: `%${searchTerm}%` } },
                 { pkt: { [Op.iLike]: `%${searchTerm}%` } },

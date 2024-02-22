@@ -12,7 +12,7 @@ const SeedDemand = db.define('seed_demand', {
     },
     season_id: {
         type: DataTypes.INTEGER,
-        allowNull: false,
+        allowNull: false
     },
     project_name: {
         type: DataTypes.STRING,
