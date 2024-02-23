@@ -15,7 +15,7 @@ const SeedTestingLinkageReport = db.define('seed_testing_linkage_report', {
     },
     report: {
         type: DataTypes.STRING,
-        allowNull: false,
+        allowNull: false
     }
 });
 

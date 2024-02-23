@@ -10,12 +10,12 @@ const LabMaster = db.define('lab_master', {
     },
     name: {
         type: DataTypes.STRING,
-        allowNull: false,
+        allowNull: false
     },
     status: {
         type: DataTypes.BOOLEAN,
         allowNull: false,
-        defaultValue: true,
+        defaultValue: true
     },
 });
 

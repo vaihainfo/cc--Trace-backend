@@ -1,4 +1,11 @@
 import {
+    createIcsQuantityEstimation,
+    fetchIcsQuantityEstimationPagination,
+    fetchIcsQuantityEstimation,
+    updateIcsQuantityEstimation,
+    deleteIcsQuantityEstimation
+} from "../../controllers/organic-program-data-digitization/ics-quantity-estimation";
+import {
     createSeedTestingLinkage,
     fetchSeedTestingLinkagePagination,
     fetchSeedTestingLinkage,
@@ -22,6 +29,13 @@ import {
 import { Router } from "express";
 
 const router = Router();
+
+// ics-quantity-estimation routes
+router.post("/ics-quantity-estimation", createIcsQuantityEstimation);
+router.get("/ics-quantity-estimation", fetchIcsQuantityEstimationPagination);
+router.get("/ics-quantity-estimation/:id", fetchIcsQuantityEstimation);
+router.put("/ics-quantity-estimation", updateIcsQuantityEstimation);
+router.delete("/ics-quantity-estimation", deleteIcsQuantityEstimation);
 
 // seed-testing-linkage routes
 router.post("/seed-testing-linkage", createSeedTestingLinkage);

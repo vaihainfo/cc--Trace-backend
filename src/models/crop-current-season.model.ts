@@ -10,7 +10,7 @@ const CropCurrentSeason = db.define('crop_current_season', {
     },
     crop_name: {
         type: DataTypes.STRING,
-        allowNull: false,
+        allowNull: false
     }
 });
 
