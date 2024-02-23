@@ -1203,7 +1203,7 @@ const getVillageAndFarmer = async (req: Request, res: Response) => {
     res.sendSuccess(res, { farmers, village });
 }
 
-const ginnerProcessTracingChartData = async (req: Request, res: Response) => {
+const getGinnerProcessTracingChartData = async (req: Request, res: Response) => {
     const { reelLotNo } = req.query;
     let include = [
         {
@@ -1303,7 +1303,7 @@ export {
     deleteGinSales,
     getSpinner,
     getVillageAndFarmer,
-    ginnerProcessTracingChartData,
+    getGinnerProcessTracingChartData,
     updateGinnerProcess,
     updateGinnerSalesField,
     fetchGinProcess

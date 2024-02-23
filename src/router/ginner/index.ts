@@ -20,7 +20,7 @@ import {
     getSpinner,
     getVillageAndFarmer,
     deleteGinSales,
-    ginnerProcessTracingChartData,
+    getGinnerProcessTracingChartData,
     updateGinnerProcess,
     updateGinnerSalesField,
     fetchGinProcess
@@ -58,6 +58,6 @@ router.get('/sales/choose-bale', chooseBale);
 router.get('/get-spinner', getSpinner);
 router.get('/get-village-farmer', getVillageAndFarmer);
 router.get('/export-ginner-transactions', exportGinnerProcurement);
-router.get('/tracing/chart', ginnerProcessTracingChartData);
+router.get('/tracing/chart', getGinnerProcessTracingChartData);
 
 export default router;

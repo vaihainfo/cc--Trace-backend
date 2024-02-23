@@ -19,8 +19,8 @@ import Farm from "../../models/farm.model";
 import FarmerAgriArea from "../../models/farmer-agri-area.model";
 import FarmerCottonArea from "../../models/farmer-cotton-area.model";
 import sequelize from "../../util/dbConn";
-import {saveFailedRecord} from "../failed-records";
 import UserApp from "../../models/users-app.model";
+import { saveFailedRecord } from "../failed-records";
 
 
 const createTransaction = async (req: Request, res: Response) => {
@@ -116,7 +116,7 @@ const fetchTransactions = async (req: Request, res: Response) => {
     if (stateId) {
       const idArray: number[] = stateId
         .split(",")
-        .map((id:any) => parseInt(id, 10));
+        .map((id: any) => parseInt(id, 10));
       whereCondition.state_id = { [Op.in]: idArray };
     }
 
@@ -183,8 +183,8 @@ const fetchTransactions = async (req: Request, res: Response) => {
     // apply search
     if (searchTerm) {
       whereCondition[Op.or] = [
-          sequelize.where(sequelize.cast(sequelize.col('"transactions"."id"'), 'text'), {
-            [Op.like]: `%${searchTerm}%`
+        sequelize.where(sequelize.cast(sequelize.col('"transactions"."id"'), 'text'), {
+          [Op.like]: `%${searchTerm}%`
         }),
         { farmer_code: { [Op.iLike]: `%${searchTerm}%` } },
         { farmer_name: { [Op.iLike]: `%${searchTerm}%` } },
@@ -404,40 +404,40 @@ const fetchTransactionById = async (req: Request, res: Response) => {
 
 const fetchTransactionsBySeasonAndFarmer = async (req: Request, res: Response) => {
   try {
-        // Create the excel workbook file
-        const { seasonId,farmerId } = req.query;
-        if (!seasonId) {
-            return res.sendError(res, 'NEED_SEASON_ID');
-        }
-        if (!farmerId) {
-          return res.sendError(res, 'NEED_FARMER_ID');
-      }
-    let include= [
-        {
-          model: Farmer,
-          as: "farmer",
-          attributes: []
-        },
-        {
+    // Create the excel workbook file
+    const { seasonId, farmerId } = req.query;
+    if (!seasonId) {
+      return res.sendError(res, 'NEED_SEASON_ID');
+    }
+    if (!farmerId) {
+      return res.sendError(res, 'NEED_FARMER_ID');
+    }
+    let include = [
+      {
+        model: Farmer,
+        as: "farmer",
+        attributes: []
+      },
+      {
+        model: Season,
+        as: "season",
+        attributes: []
+      },
+      {
+        model: Farm,
+        as: "farm",
+        attributes: [],
+        include: [{
           model: Season,
           as: "season",
           attributes: []
-        },
-        {
-          model: Farm,
-          as: "farm",
-          attributes: [],
-          include:[{
-            model: Season,
-            as: "season",
-            attributes: []
-          }]
-        },
-      ];
+        }]
+      },
+    ];
 
     const data = await Transaction.findAll({
-      attributes:[
-        'id','farmer_code',
+      attributes: [
+        'id', 'farmer_code',
         [Sequelize.col('"farmer"."firstName"'), 'firstName'],
         [Sequelize.col('"farmer"."lastName"'), 'lastName'],
         [Sequelize.col('"farm"."season"."name'), 'season_name'],
@@ -449,7 +449,7 @@ const fetchTransactionsBySeasonAndFarmer = async (req: Request, res: Response) =
         //   'cotton_stock'
         // ],
       ],
-      where:{
+      where: {
         farmer_id: farmerId,
         '$farm.season_id$': seasonId
       },
@@ -522,59 +522,59 @@ const updateTransaction = async (req: Request, res: Response) => {
 
 const allVillageCottonData = async (req: Request, res: Response) => {
   const searchTerm = req.query.search || "";
-    const page = Number(req.query.page) || 1;
-    const limit = Number(req.query.limit) || 10;
-    const offset = (page - 1) * limit;
-    const whereCondition: any = {};
-    const { villageId, brandId, countryId }: any = req.query;
-    try {
-        if(searchTerm){
-            whereCondition[Op.or] = [
-                { '$farmer.village.village_name$': { [Op.iLike]: `%${searchTerm}%` } }, // Search by first name
-              ];
-        }
+  const page = Number(req.query.page) || 1;
+  const limit = Number(req.query.limit) || 10;
+  const offset = (page - 1) * limit;
+  const whereCondition: any = {};
+  const { villageId, brandId, countryId }: any = req.query;
+  try {
+    if (searchTerm) {
+      whereCondition[Op.or] = [
+        { '$farmer.village.village_name$': { [Op.iLike]: `%${searchTerm}%` } }, // Search by first name
+      ];
+    }
 
-        if(brandId){
-            const idArray: number[] = brandId
-                .split(",")
-                .map((id: any) => parseInt(id, 10));
-            whereCondition['$farmer.brand_id$'] = { [Op.in]: idArray };
-        }
+    if (brandId) {
+      const idArray: number[] = brandId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition['$farmer.brand_id$'] = { [Op.in]: idArray };
+    }
 
-        const { count, rows } = await Farm.findAndCountAll({
-            attributes: [
-                [sequelize.col('"farmer"."village_id"'), 'village_id'],
-                [sequelize.col('"farmer"."village"."village_name"'), 'village_name'],
-                [sequelize.fn('COALESCE', sequelize.fn('SUM', Sequelize.literal('CAST("farms"."total_estimated_cotton"AS DOUBLE PRECISION)')), 0), 'estimated_qty'],
-                [sequelize.fn('COALESCE', sequelize.fn('SUM', Sequelize.literal('CAST("farms"."cotton_transacted" AS DOUBLE PRECISION)')), 0), 'sold_qty'],
-                [sequelize.literal('(COALESCE(SUM(CAST("farms"."total_estimated_cotton" AS DOUBLE PRECISION)), 0) - COALESCE(SUM(CAST("farms"."cotton_transacted" AS DOUBLE PRECISION)), 0))'), 'available_qty'],
-            ],
-            include: [
-                {
-                    model: Farmer,
-                    as: 'farmer',
-                    attributes: [],
-                    include:[
-                        {
-                            model: Village,
-                            as: 'village',
-                            attributes: []
-                        },
-                    ]
-                }
-            ],
-            where: whereCondition,
-            group: ['farmer.village_id','farmer.village.id'],
-            order: [
-                [
-                    'village_id', 'desc'
-                ]
-            ],
-            offset: offset,
-            limit: limit,
-        });
-       
-        return res.sendPaginationSuccess(res, rows, count.length);
+    const { count, rows } = await Farm.findAndCountAll({
+      attributes: [
+        [sequelize.col('"farmer"."village_id"'), 'village_id'],
+        [sequelize.col('"farmer"."village"."village_name"'), 'village_name'],
+        [sequelize.fn('COALESCE', sequelize.fn('SUM', Sequelize.literal('CAST("farms"."total_estimated_cotton"AS DOUBLE PRECISION)')), 0), 'estimated_qty'],
+        [sequelize.fn('COALESCE', sequelize.fn('SUM', Sequelize.literal('CAST("farms"."cotton_transacted" AS DOUBLE PRECISION)')), 0), 'sold_qty'],
+        [sequelize.literal('(COALESCE(SUM(CAST("farms"."total_estimated_cotton" AS DOUBLE PRECISION)), 0) - COALESCE(SUM(CAST("farms"."cotton_transacted" AS DOUBLE PRECISION)), 0))'), 'available_qty'],
+      ],
+      include: [
+        {
+          model: Farmer,
+          as: 'farmer',
+          attributes: [],
+          include: [
+            {
+              model: Village,
+              as: 'village',
+              attributes: []
+            },
+          ]
+        }
+      ],
+      where: whereCondition,
+      group: ['farmer.village_id', 'farmer.village.id'],
+      order: [
+        [
+          'village_id', 'desc'
+        ]
+      ],
+      offset: offset,
+      limit: limit,
+    });
+
+    return res.sendPaginationSuccess(res, rows, count.length);
 
   } catch (error: any) {
     console.log(error);
@@ -735,8 +735,8 @@ const uploadTransactionBulk = async (req: Request, res: Response) => {
         let failedRecord = {
           type: 'Procurement',
           season: '',
-          farmerCode: data.farmerCode ? data.farmerCode : '', 
-          farmerName:  data.farmerName ?  data.farmerName : '',
+          farmerCode: data.farmerCode ? data.farmerCode : '',
+          farmerName: data.farmerName ? data.farmerName : '',
           body: { ...data },
           reason: "Season cannot be empty"
         }
@@ -750,8 +750,8 @@ const uploadTransactionBulk = async (req: Request, res: Response) => {
         let failedRecord = {
           type: 'Procurement',
           season: '',
-          farmerCode: data.farmerCode ? data.farmerCode : '', 
-          farmerName:  data.farmerName ?  data.farmerName : '',
+          farmerCode: data.farmerCode ? data.farmerCode : '',
+          farmerName: data.farmerName ? data.farmerName : '',
           body: { ...data },
           reason: "Date cannot be empty"
         }
@@ -765,8 +765,8 @@ const uploadTransactionBulk = async (req: Request, res: Response) => {
         let failedRecord = {
           type: 'Procurement',
           season: '',
-          farmerCode: data.farmerCode ? data.farmerCode : '', 
-          farmerName:  data.farmerName ?  data.farmerName : '',
+          farmerCode: data.farmerCode ? data.farmerCode : '',
+          farmerName: data.farmerName ? data.farmerName : '',
           body: { ...data },
           reason: "Country cannot be empty"
         }
@@ -780,8 +780,8 @@ const uploadTransactionBulk = async (req: Request, res: Response) => {
         let failedRecord = {
           type: 'Procurement',
           season: '',
-          farmerCode: data.farmerCode ? data.farmerCode : '', 
-          farmerName:  data.farmerName ?  data.farmerName : '',
+          farmerCode: data.farmerCode ? data.farmerCode : '',
+          farmerName: data.farmerName ? data.farmerName : '',
           body: { ...data },
           reason: "State cannot be empty"
         }
@@ -796,8 +796,8 @@ const uploadTransactionBulk = async (req: Request, res: Response) => {
         let failedRecord = {
           type: 'Procurement',
           season: '',
-          farmerCode: data.farmerCode ? data.farmerCode : '', 
-          farmerName:  data.farmerName ?  data.farmerName : '',
+          farmerCode: data.farmerCode ? data.farmerCode : '',
+          farmerName: data.farmerName ? data.farmerName : '',
           body: { ...data },
           reason: "District cannot be empty"
         }
@@ -812,8 +812,8 @@ const uploadTransactionBulk = async (req: Request, res: Response) => {
         let failedRecord = {
           type: 'Procurement',
           season: '',
-          farmerCode: data.farmerCode ? data.farmerCode : '', 
-          farmerName:  data.farmerName ?  data.farmerName : '',
+          farmerCode: data.farmerCode ? data.farmerCode : '',
+          farmerName: data.farmerName ? data.farmerName : '',
           body: { ...data },
           reason: "Block cannot be empty"
         }
@@ -827,8 +827,8 @@ const uploadTransactionBulk = async (req: Request, res: Response) => {
         let failedRecord = {
           type: 'Procurement',
           season: '',
-          farmerCode: data.farmerCode ? data.farmerCode : '', 
-          farmerName:  data.farmerName ?  data.farmerName : '',
+          farmerCode: data.farmerCode ? data.farmerCode : '',
+          farmerName: data.farmerName ? data.farmerName : '',
           body: { ...data },
           reason: "Village cannot be empty"
         }
@@ -842,8 +842,8 @@ const uploadTransactionBulk = async (req: Request, res: Response) => {
         let failedRecord = {
           type: 'Procurement',
           season: '',
-          farmerCode: data.farmerCode ? data.farmerCode : '', 
-          farmerName:  data.farmerName ?  data.farmerName : '',
+          farmerCode: data.farmerCode ? data.farmerCode : '',
+          farmerName: data.farmerName ? data.farmerName : '',
           body: { ...data },
           reason: "Farmer Name cannot be empty"
         }
@@ -857,8 +857,8 @@ const uploadTransactionBulk = async (req: Request, res: Response) => {
         let failedRecord = {
           type: 'Procurement',
           season: '',
-          farmerCode: data.farmerCode ? data.farmerCode : '', 
-          farmerName:  data.farmerName ?  data.farmerName : '',
+          farmerCode: data.farmerCode ? data.farmerCode : '',
+          farmerName: data.farmerName ? data.farmerName : '',
           body: { ...data },
           reason: "Rate cannot be empty"
         }
@@ -872,8 +872,8 @@ const uploadTransactionBulk = async (req: Request, res: Response) => {
         let failedRecord = {
           type: 'Procurement',
           season: '',
-          farmerCode: data.farmerCode ? data.farmerCode : '', 
-          farmerName:  data.farmerName ?  data.farmerName : '',
+          farmerCode: data.farmerCode ? data.farmerCode : '',
+          farmerName: data.farmerName ? data.farmerName : '',
           body: { ...data },
           reason: "Qty. Purchased cannot be empty"
         }
@@ -887,8 +887,8 @@ const uploadTransactionBulk = async (req: Request, res: Response) => {
         let failedRecord = {
           type: 'Procurement',
           season: '',
-          farmerCode: data.farmerCode ? data.farmerCode : '', 
-          farmerName:  data.farmerName ?  data.farmerName : '',
+          farmerCode: data.farmerCode ? data.farmerCode : '',
+          farmerName: data.farmerName ? data.farmerName : '',
           body: { ...data },
           reason: "Grade cannot be empty"
         }
@@ -902,8 +902,8 @@ const uploadTransactionBulk = async (req: Request, res: Response) => {
         let failedRecord = {
           type: 'Procurement',
           season: '',
-          farmerCode: data.farmerCode ? data.farmerCode : '', 
-          farmerName:  data.farmerName ?  data.farmerName : '',
+          farmerCode: data.farmerCode ? data.farmerCode : '',
+          farmerName: data.farmerName ? data.farmerName : '',
           body: { ...data },
           reason: "Ginner cannot be empty"
         }
@@ -935,8 +935,8 @@ const uploadTransactionBulk = async (req: Request, res: Response) => {
             let failedRecord = {
               type: 'Procurement',
               season: '',
-              farmerCode: data.farmerCode ? data.farmerCode : '', 
-              farmerName:  data.farmerName ?  data.farmerName : '',
+              farmerCode: data.farmerCode ? data.farmerCode : '',
+              farmerName: data.farmerName ? data.farmerName : '',
               body: { ...data },
               reason: "Season not found"
             }
@@ -956,8 +956,8 @@ const uploadTransactionBulk = async (req: Request, res: Response) => {
               let failedRecord = {
                 type: 'Procurement',
                 season: season,
-                farmerCode: data.farmerCode ? data.farmerCode : '', 
-                farmerName:  data.farmerName ?  data.farmerName : '',
+                farmerCode: data.farmerCode ? data.farmerCode : '',
+                farmerName: data.farmerName ? data.farmerName : '',
                 body: { ...data },
                 reason: "Ginner not found"
               }
@@ -978,8 +978,8 @@ const uploadTransactionBulk = async (req: Request, res: Response) => {
                 let failedRecord = {
                   type: 'Procurement',
                   season: season,
-                  farmerCode: data.farmerCode ? data.farmerCode : '', 
-                  farmerName:  data.farmerName ?  data.farmerName : '',
+                  farmerCode: data.farmerCode ? data.farmerCode : '',
+                  farmerName: data.farmerName ? data.farmerName : '',
                   body: { ...data },
                   reason: "Country not found"
                 }
@@ -1001,8 +1001,8 @@ const uploadTransactionBulk = async (req: Request, res: Response) => {
                     let failedRecord = {
                       type: 'Procurement',
                       season: season,
-                      farmerCode: data.farmerCode ? data.farmerCode : '', 
-                      farmerName:  data.farmerName ?  data.farmerName : '',
+                      farmerCode: data.farmerCode ? data.farmerCode : '',
+                      farmerName: data.farmerName ? data.farmerName : '',
                       body: { ...data },
                       reason: "State is not associated with the entered Country"
                     }
@@ -1025,8 +1025,8 @@ const uploadTransactionBulk = async (req: Request, res: Response) => {
                         let failedRecord = {
                           type: 'Procurement',
                           season: season,
-                          farmerCode: data.farmerCode ? data.farmerCode : '', 
-                          farmerName:  data.farmerName ?  data.farmerName : '',
+                          farmerCode: data.farmerCode ? data.farmerCode : '',
+                          farmerName: data.farmerName ? data.farmerName : '',
                           body: { ...data },
                           reason: "District is not associated with entered State"
                         }
@@ -1049,8 +1049,8 @@ const uploadTransactionBulk = async (req: Request, res: Response) => {
                             let failedRecord = {
                               type: 'Procurement',
                               season: season,
-                              farmerCode: data.farmerCode ? data.farmerCode : '', 
-                              farmerName:  data.farmerName ?  data.farmerName : '',
+                              farmerCode: data.farmerCode ? data.farmerCode : '',
+                              farmerName: data.farmerName ? data.farmerName : '',
                               body: { ...data },
                               reason: "Block is not associated with entered District"
                             }
@@ -1073,8 +1073,8 @@ const uploadTransactionBulk = async (req: Request, res: Response) => {
                                 let failedRecord = {
                                   type: 'Procurement',
                                   season: season,
-                                  farmerCode: data.farmerCode ? data.farmerCode : '', 
-                                  farmerName:  data.farmerName ?  data.farmerName : '',
+                                  farmerCode: data.farmerCode ? data.farmerCode : '',
+                                  farmerName: data.farmerName ? data.farmerName : '',
                                   body: { ...data },
                                   reason: "Village is not associated with entered Taluk/Block"
                                 }
@@ -1096,8 +1096,8 @@ const uploadTransactionBulk = async (req: Request, res: Response) => {
                                   let failedRecord = {
                                     type: 'Procurement',
                                     season: season,
-                                    farmerCode: data.farmerCode ? data.farmerCode : '', 
-                                    farmerName:  data.farmerName ?  data.farmerName : '',
+                                    farmerCode: data.farmerCode ? data.farmerCode : '',
+                                    farmerName: data.farmerName ? data.farmerName : '',
                                     body: { ...data },
                                     reason: "Farmer not found"
                                   }
@@ -1117,8 +1117,8 @@ const uploadTransactionBulk = async (req: Request, res: Response) => {
                                     let failedRecord = {
                                       type: 'Procurement',
                                       season: season,
-                                      farmerCode: data.farmerCode ? data.farmerCode : '', 
-                                      farmerName:  data.farmerName ?  data.farmerName : '',
+                                      farmerCode: data.farmerCode ? data.farmerCode : '',
+                                      farmerName: data.farmerName ? data.farmerName : '',
                                       body: { ...data },
                                       reason: "Grade not found"
                                     }
@@ -1134,8 +1134,8 @@ const uploadTransactionBulk = async (req: Request, res: Response) => {
                                       let failedRecord = {
                                         type: 'Procurement',
                                         season: season,
-                                        farmerCode: data.farmerCode ? data.farmerCode : '', 
-                                        farmerName:  data.farmerName ?  data.farmerName : '',
+                                        farmerCode: data.farmerCode ? data.farmerCode : '',
+                                        farmerName: data.farmerName ? data.farmerName : '',
                                         body: { ...data },
                                         reason: "Farm data does not exist"
                                       }
@@ -1151,8 +1151,8 @@ const uploadTransactionBulk = async (req: Request, res: Response) => {
                                         let failedRecord = {
                                           type: 'Procurement',
                                           season: season,
-                                          farmerCode: data.farmerCode ? data.farmerCode : '', 
-                                          farmerName:  data.farmerName ?  data.farmerName : '',
+                                          farmerCode: data.farmerCode ? data.farmerCode : '',
+                                          farmerName: data.farmerName ? data.farmerName : '',
                                           body: { ...data },
                                           reason: "This season used all the cotton"
                                         }
@@ -1168,8 +1168,8 @@ const uploadTransactionBulk = async (req: Request, res: Response) => {
                                           let failedRecord = {
                                             type: 'Procurement',
                                             season: season,
-                                            farmerCode: data.farmerCode ? data.farmerCode : '', 
-                                            farmerName:  data.farmerName ?  data.farmerName : '',
+                                            farmerCode: data.farmerCode ? data.farmerCode : '',
+                                            farmerName: data.farmerName ? data.farmerName : '',
                                             body: { ...data },
                                             reason: "QtyPurchased should be greater than 0"
                                           }
@@ -1185,8 +1185,8 @@ const uploadTransactionBulk = async (req: Request, res: Response) => {
                                             let failedRecord = {
                                               type: 'Procurement',
                                               season: season,
-                                              farmerCode: data.farmerCode ? data.farmerCode : '', 
-                                              farmerName:  data.farmerName ?  data.farmerName : '',
+                                              farmerCode: data.farmerCode ? data.farmerCode : '',
+                                              farmerName: data.farmerName ? data.farmerName : '',
                                               body: { ...data },
                                               reason: "Rate should be greater than 0"
                                             }
@@ -1224,7 +1224,7 @@ const uploadTransactionBulk = async (req: Request, res: Response) => {
           farm
         ) {
           const transactionExist = await Transaction.findOne({
-            where:{
+            where: {
               date: new Date(data.date).toISOString(),
               farmer_id: farmer.id,
               qty_purchased: data.qtyPurchased,
@@ -1232,7 +1232,7 @@ const uploadTransactionBulk = async (req: Request, res: Response) => {
               vehicle: data.vehicle ? data.vehicle : "",
             }
           });
-          if(transactionExist){
+          if (transactionExist) {
             fail.push({
               success: false,
               data: { farmerName: data.farmerName ? data.farmerName : '', farmerCode: data.farmerCode ? data.farmerCode : '' },
@@ -1241,57 +1241,57 @@ const uploadTransactionBulk = async (req: Request, res: Response) => {
             let failedRecord = {
               type: 'Procurement',
               season: season,
-              farmerCode: data.farmerCode ? data.farmerCode : '', 
-              farmerName:  data.farmerName ?  data.farmerName : '',
+              farmerCode: data.farmerCode ? data.farmerCode : '',
+              farmerName: data.farmerName ? data.farmerName : '',
               body: { ...data },
               reason: "Transaction with same Date, Farmer, Qty. Purchased, Rate and Vehicle is already exist"
             }
             saveFailedRecord(failedRecord);
-          }else{        
-          let transactionData: any = {
-            date: new Date(data.date).toISOString(),
-            country_id: country.id,
-            state_id: state.id,
-            district_id: district.id,
-            block_id: block.id,
-            village_id: village.id,
-            farmer_id: farmer.id,
-            farm_id: farm.id,
-            farmer_name: farmer.firstName,
-            brand_id: farmer.brand_id ? farmer.brand_id : null,
-            farmer_code: data.farmerCode,
-            season_id: season.id,
-            qty_purchased: data.qtyPurchased,
-            qty_stock: data.qtyPurchased,
-            rate: data.rate,
-            grade_id: grade.id,
-            program_id: farmer?.program_id,
-            total_amount: data.totalAmount,
-            mapped_ginner: ginner.id,
-            vehicle: data.vehicle ? data.vehicle : "",
-            payment_method: data.paymentMethod ? data.paymentMethod : "",
-            proof: data.proof ? data.proof : "",
-            status: 'Pending',
-          };
-          let available_cotton = Number(farm.total_estimated_cotton) - Number(farm.cotton_transacted);
-          transactionData.estimated_cotton = Number(farm.total_estimated_cotton);
-          transactionData.available_cotton = available_cotton;
-          if (data.qtyPurchased > available_cotton) {
-            transactionData.qty_purchased = available_cotton;
-            transactionData.qty_stock = available_cotton;
-            transactionData.total_amount = available_cotton * data.rate;
+          } else {
+            let transactionData: any = {
+              date: new Date(data.date).toISOString(),
+              country_id: country.id,
+              state_id: state.id,
+              district_id: district.id,
+              block_id: block.id,
+              village_id: village.id,
+              farmer_id: farmer.id,
+              farm_id: farm.id,
+              farmer_name: farmer.firstName,
+              brand_id: farmer.brand_id ? farmer.brand_id : null,
+              farmer_code: data.farmerCode,
+              season_id: season.id,
+              qty_purchased: data.qtyPurchased,
+              qty_stock: data.qtyPurchased,
+              rate: data.rate,
+              grade_id: grade.id,
+              program_id: farmer?.program_id,
+              total_amount: data.totalAmount,
+              mapped_ginner: ginner.id,
+              vehicle: data.vehicle ? data.vehicle : "",
+              payment_method: data.paymentMethod ? data.paymentMethod : "",
+              proof: data.proof ? data.proof : "",
+              status: 'Pending',
+            };
+            let available_cotton = Number(farm.total_estimated_cotton) - Number(farm.cotton_transacted);
+            transactionData.estimated_cotton = Number(farm.total_estimated_cotton);
+            transactionData.available_cotton = available_cotton;
+            if (data.qtyPurchased > available_cotton) {
+              transactionData.qty_purchased = available_cotton;
+              transactionData.qty_stock = available_cotton;
+              transactionData.total_amount = available_cotton * data.rate;
+            }
+            const result = await Transaction.create(transactionData);
+            let s = await Farm.update({
+              cotton_transacted: (Number(farm.cotton_transacted) || 0) + (Number(transactionData.qty_purchased) || 0)
+            }, { where: { id: farm.id } });
+            pass.push({
+              success: true,
+              data: result,
+              message: "Transaction created",
+            });
           }
-          const result = await Transaction.create(transactionData);
-          let s = await Farm.update({
-            cotton_transacted: (Number(farm.cotton_transacted) || 0) + (Number(transactionData.qty_purchased) || 0)
-          }, { where: { id: farm.id } });
-          pass.push({
-            success: true,
-            data: result,
-            message: "Transaction created",
-          });
         }
-      }
       }
     }
     res.sendSuccess(res, { pass, fail });
@@ -1369,7 +1369,7 @@ const exportProcurement = async (req: Request, res: Response) => {
       whereCondition[Op.or] = [
         sequelize.where(sequelize.cast(sequelize.col('"transactions"."id"'), 'text'), {
           [Op.like]: `%${searchTerm}%`
-      }),
+        }),
         { farmer_code: { [Op.iLike]: `%${searchTerm}%` } },
         { total_amount: { [Op.iLike]: `%${searchTerm}%` } },
         { "$block.block_name$": { [Op.iLike]: `%${searchTerm}%` } },
@@ -1619,7 +1619,6 @@ const exportGinnerProcurement = async (req: Request, res: Response) => {
     return res.sendError(res, error.message);
   }
 };
-
 
 export {
   createTransaction,
