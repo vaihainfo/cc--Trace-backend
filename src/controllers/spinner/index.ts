@@ -1104,10 +1104,15 @@ const fetchSpinSalesDashBoard = async (req: Request, res: Response) => {
                 { '$season.name$': { [Op.iLike]: `%${searchTerm}%` } }, // Search by crop Type
             ];
         }
-        if (status === 'Pending' || status === 'Sold') {
+        if (status === 'Pending' ) {
             whereCondition.buyer = spinnerId
-            whereCondition.status = status === 'Pending' ? 'Pending for QR scanning' : 'Sold';
+            whereCondition.status = { [Op.in]: [ 'Pending' , 'Pending for QR scanning'] }
+        } 
+        if(status === 'Sold') {
+            whereCondition.buyer = spinnerId
+            whereCondition.status = 'Sold';
         }
+
         if (ginnerId) {
             const idArray: number[] = ginnerId
                 .split(",")
@@ -1704,7 +1709,7 @@ const chooseYarn = async (req: Request, res: Response) => {
                         {
                             model: SpinProcess,
                             as: 'spinprocess',
-                            attributes: ['id', 'batch_lot_no', 'date', 'net_yarn_qty', 'qty_stock', 'reel_lot_no'],
+                            attributes: ['id', 'batch_lot_no', 'date', 'yarn_type', 'net_yarn_qty', 'qty_stock', 'reel_lot_no'],
                             where: { id: row?.dataValues?.id },
                         },
                     ],

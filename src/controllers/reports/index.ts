@@ -730,6 +730,7 @@ const fetchGinSalesPagination = async (req: Request, res: Response) => {
                 [Sequelize.literal('"sales"."transporter_name"'), 'transporter_name'],
                 [Sequelize.literal('"sales"."transaction_agent"'), 'transaction_agent'],
                 [Sequelize.literal('"sales"."status"'), 'status'],
+                [Sequelize.literal('"sales"."qr"'), 'qr'],
         ],
             where: whereCondition,
             include: [{
@@ -1105,6 +1106,7 @@ const fetchSpinnerBalePagination = async (req: Request, res: Response) => {
                 [Sequelize.literal('"sales"."transporter_name"'), 'transporter_name'],
                 [Sequelize.literal('"sales"."transaction_agent"'), 'transaction_agent'],
                 [Sequelize.literal('"sales"."status"'), 'status'],
+                [Sequelize.literal('"sales"."qr"'), 'qr'],
         ],
             where: whereCondition,
             include: [{

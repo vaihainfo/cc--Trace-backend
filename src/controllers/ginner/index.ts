@@ -22,7 +22,7 @@ import Farmer from "../../models/farmer.model";
 import { send_gin_mail } from '../send-emails';
 import FarmGroup from "../../models/farm-group.model";
 import { formatDataForGinnerProcess } from '../../util/tracing-chart-data-formatter';
-
+import Farm from "../../models/farm.model";
 
 //create Ginner Process
 const createGinnerProcess = async (req: Request, res: Response) => {
@@ -104,6 +104,24 @@ const createGinnerProcess = async (req: Request, res: Response) => {
         console.error(error)
         return res.sendError(res, error.meessage);
     }
+}
+
+const updateGinnerProcess = async (req:Request, res:Response) => {
+    if(!req.body.id){
+        return res.sendError(res, 'Need Process Id');
+    }
+    if (req.body.lotNo) {
+        let lot = await GinProcess.findOne({ where: { lot_no: req.body.lotNo, id: { [Op.ne]: req.body.id }  } });
+        if (lot) {
+            return res.sendError(res, 'Lot No already Exists');
+        }
+    }
+    const data = {
+        date: req.body.date,
+        lot_no: req.body.lotNo
+    };
+    const ginprocess = await GinProcess.update(data,{ where: { id: req.body.id } });
+    res.sendSuccess(res, { ginprocess });
 }
 
 //fetch Ginner Process with filters
@@ -355,7 +373,37 @@ const deleteGinnerProcess = async (req: Request, res: Response) => {
     }
 }
 
+const fetchGinProcess = async (req: Request, res: Response) => {
+    const whereCondition: any = { id: req.query.id };
+    try {
 
+        let include = [
+            {
+                model: Ginner,
+                as: "ginner",
+            },
+            {
+                model: Season,
+                as: "season",
+            },
+            {
+                model: Program,
+                as: "program",
+            }
+        ];
+        //fetch data with pagination
+
+        const gin = await GinProcess.findOne({
+            where: whereCondition,
+            include: include,
+        });
+        return res.sendSuccess(res, gin);
+
+    } catch (error: any) {
+        console.error(error)
+        return res.sendError(res, error.meessage);
+    }
+};
 //fetch Ginner Bale 
 const fetchGinBale = async (req: Request, res: Response) => {
     try {
@@ -417,11 +465,12 @@ const chooseCotton = async (req: Request, res: Response) => {
                     Sequelize.fn("SUM", Sequelize.col("qty_stock")),
                     "qty_used",
                 ],
+                [sequelize.fn('COALESCE', sequelize.fn('SUM', Sequelize.literal('CAST("qty_purchased" AS DOUBLE PRECISION)')), 0), 'estimated_qty'],
                 [Sequelize.col('village.id'), 'vlg_id'],
             ],
             include: [
                 { model: Village, as: 'village' },
-                { model: Program, as: 'program' },
+                { model: Program, as: 'program' }
             ],
             where: whereCondition,
             group: ['vlg_id', 'program.id', 'transactions.id'],
@@ -437,10 +486,12 @@ const chooseCotton = async (req: Request, res: Response) => {
             if (summedData[villageId]) {
                 summedData[villageId].qty_stock += result.dataValues.qty_stock;
                 summedData[villageId].qty_used += result.dataValues.qty_used;
+                summedData[villageId].estimated_qty += result.dataValues.estimated_qty;
             } else {
                 summedData[villageId] = {
                     qty_stock: result.dataValues.qty_stock,
                     qty_used: result.dataValues.qty_used,
+                    estimated_qty :result.dataValues.estimated_qty,
                     vlg_id: villageId,
                     village: result.village,
                     program: result.program
@@ -674,6 +725,25 @@ const updateGinnerSales = async (req: Request, res: Response) => {
         if (ginSales && ginSales[0] === 1) {
             await send_gin_mail(req.body.id);
         }
+        res.sendSuccess(res, { ginSales });
+    } catch (error: any) {
+        console.error(error)
+        return res.sendError(res, error.meessage);
+    }
+}
+
+const updateGinnerSalesField = async (req: Request, res: Response) => {
+    try {
+        if(!req.body.id){
+            return res.sendError(res, 'Need Sale Id');
+        }
+        const data = {
+            invoice_no: req.body.invoiceNo,
+            date :req.body.date,
+            vehicle_no: req.body.vehicleNo
+        };
+        const ginSales = await GinSales.update(data, { where: { id: req.body.id } });
+        
         res.sendSuccess(res, { ginSales });
     } catch (error: any) {
         console.error(error)
@@ -1133,7 +1203,7 @@ const getVillageAndFarmer = async (req: Request, res: Response) => {
     res.sendSuccess(res, { farmers, village });
 }
 
-const ginnerProcessTracingChartDara = async (req: Request, res: Response) => {
+const ginnerProcessTracingChartData = async (req: Request, res: Response) => {
     const { reelLotNo } = req.query;
     let include = [
         {
@@ -1233,5 +1303,8 @@ export {
     deleteGinSales,
     getSpinner,
     getVillageAndFarmer,
-    ginnerProcessTracingChartDara
+    ginnerProcessTracingChartData,
+    updateGinnerProcess,
+    updateGinnerSalesField,
+    fetchGinProcess
 }

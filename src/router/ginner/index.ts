@@ -20,7 +20,10 @@ import {
     getSpinner,
     getVillageAndFarmer,
     deleteGinSales,
-    ginnerProcessTracingChartDara
+    ginnerProcessTracingChartData,
+    updateGinnerProcess,
+    updateGinnerSalesField,
+    fetchGinProcess
 } from "../../controllers/ginner";
 
 
@@ -30,6 +33,9 @@ const router = Router();
 // Ginner Routes
 router.get('/', fetchGinProcessPagination);
 router.post('/', createGinnerProcess);
+router.put('/', updateGinnerProcess);
+router.get('/get-gin-process', fetchGinProcess);
+
 router.delete('/', deleteGinnerProcess);
 router.get('/choose-cotton', chooseCotton);
 router.get('/fetch-bale', fetchGinBale);
@@ -38,6 +44,7 @@ router.post('/sales', createGinnerSales);
 router.get('/sales', fetchGinSalesPagination);
 router.get('/sales/get-gin-sale', fetchGinSale);
 router.put('/sales', updateGinnerSales);
+router.put('/sales/update', updateGinnerSalesField);
 router.delete('/sales', deleteGinSales);
 router.get('/sales/export', exportGinnerSales);
 router.get('/sales/bale', fetchGinSaleBale);
@@ -51,6 +58,6 @@ router.get('/sales/choose-bale', chooseBale);
 router.get('/get-spinner', getSpinner);
 router.get('/get-village-farmer', getVillageAndFarmer);
 router.get('/export-ginner-transactions', exportGinnerProcurement);
-router.get('/tracing/chart', ginnerProcessTracingChartDara);
+router.get('/tracing/chart', ginnerProcessTracingChartData);
 
 export default router;
