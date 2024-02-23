@@ -19,7 +19,10 @@ import Spinner from "../../models/spinner.model";
 import CottonSelection from "../../models/cotton-selection.model";
 import sequelize from "../../util/dbConn";
 import Farmer from "../../models/farmer.model";
-import { send_gin_mail} from '../send-emails'
+import { send_gin_mail } from '../send-emails';
+import FarmGroup from "../../models/farm-group.model";
+import { formatDataForGinnerProcess } from '../../util/tracing-chart-data-formatter';
+
 
 //create Ginner Process
 const createGinnerProcess = async (req: Request, res: Response) => {
@@ -193,7 +196,7 @@ const fetchGinProcessPagination = async (req: Request, res: Response) => {
                     attributes: [
                         [Sequelize.fn("SUM", Sequelize.literal("CAST(weight AS DOUBLE PRECISION)")),
                             "lint_quantity",],
-                        [sequelize.fn('min',Sequelize.literal('CAST("bale_no" AS DOUBLE PRECISION)')), 'pressno_from'],
+                        [sequelize.fn('min', Sequelize.literal('CAST("bale_no" AS DOUBLE PRECISION)')), 'pressno_from'],
                         [sequelize.fn('max', Sequelize.literal('CAST("bale_no" AS DOUBLE PRECISION)')), 'pressno_to']
                     ],
                     where: { process_id: row.dataValues.id }
@@ -668,7 +671,7 @@ const updateGinnerSales = async (req: Request, res: Response) => {
             }
         }
 
-        if(ginSales && ginSales[0] === 1){
+        if (ginSales && ginSales[0] === 1) {
             await send_gin_mail(req.body.id);
         }
         res.sendSuccess(res, { ginSales });
@@ -1130,6 +1133,85 @@ const getVillageAndFarmer = async (req: Request, res: Response) => {
     res.sendSuccess(res, { farmers, village });
 }
 
+const ginnerProcessTracingChartDara = async (req: Request, res: Response) => {
+    const { reelLotNo } = req.query;
+    let include = [
+        {
+            model: Ginner,
+            as: "ginner"
+        }
+    ];
+
+    let transactionInclude = [
+        {
+            model: Village,
+            as: 'village'
+        },
+        {
+            model: Farmer,
+            as: 'farmer',
+            include: [
+                {
+                    model: Village,
+                    as: 'village'
+                },
+                {
+                    model: FarmGroup,
+                    as: 'farmGroup'
+                }
+            ]
+        }
+    ]
+
+    let whereCondition = {
+        reel_lot_no: reelLotNo
+    }
+
+    let gin = await GinProcess.findAll({
+        where: whereCondition,
+        include: include,
+        order: [
+            [
+                'id', 'desc'
+            ]
+        ]
+    });
+
+    gin = await Promise.all(gin.map(async (el: any) => {
+        el = el.toJSON();
+        el.transaction = await Transaction.findAll({
+            where: {
+                mapped_ginner: el.ginner_id
+            },
+            include: transactionInclude
+        });
+        return el;
+    }));
+
+    let formattedData: any = {};
+
+    gin.forEach((el: any) => {
+        el.transaction.forEach((el: any) => {
+            if (!formattedData[el.farmer.farmGroup_id]) {
+                formattedData[el.farmer.farmGroup_id] = {
+                    farm_name: el.farmer.farmGroup.name,
+                    villages: []
+                }
+            };
+
+            const village_name = el.farmer.village.village_name;
+            if (!formattedData[el.farmer.farmGroup_id].villages.includes(village_name)) {
+                formattedData[el.farmer.farmGroup_id].villages.push(village_name);
+            }
+        })
+    })
+
+    formattedData = Object.keys(formattedData).map((el: any) => {
+        return formattedData[el];
+    })
+    res.sendSuccess(res, formatDataForGinnerProcess(reelLotNo, formattedData));
+}
+
 export {
     createGinnerProcess,
     fetchGinProcessPagination,
@@ -1150,5 +1232,6 @@ export {
     deleteGinnerProcess,
     deleteGinSales,
     getSpinner,
-    getVillageAndFarmer
+    getVillageAndFarmer,
+    ginnerProcessTracingChartDara
 }

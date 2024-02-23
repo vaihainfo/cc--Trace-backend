@@ -19,7 +19,8 @@ import {
     deleteGinnerProcess,
     getSpinner,
     getVillageAndFarmer,
-    deleteGinSales
+    deleteGinSales,
+    ginnerProcessTracingChartDara
 } from "../../controllers/ginner";
 
 
@@ -50,5 +51,6 @@ router.get('/sales/choose-bale', chooseBale);
 router.get('/get-spinner', getSpinner);
 router.get('/get-village-farmer', getVillageAndFarmer);
 router.get('/export-ginner-transactions', exportGinnerProcurement);
+router.get('/tracing/chart', ginnerProcessTracingChartDara);
 
 export default router;
