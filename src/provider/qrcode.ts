@@ -588,7 +588,7 @@ const generateGinSalesHtml = async (sales: any) => {
     </body>
     
     </html>`
-        const browser = await puppeteer.launch();
+        const browser = await puppeteer.launch({ args: ['--no-sandbox']});
         const page = await browser.newPage();
 
         const htmlContent = html;
