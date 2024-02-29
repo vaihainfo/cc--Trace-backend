@@ -21,6 +21,7 @@ import { generateQrCode } from "../../provider/qrcode";
 import ProcessorList from "../../models/processor-list.model";
 import Transaction from "../../models/transaction.model";
 import {saveFailedRecord} from "../failed-records";
+import VillageImpact from "../../models/village-impact.model";
 
 const uploadGinnerOrder = async (req: Request, res: Response) => {
     try {
@@ -1131,6 +1132,101 @@ const uploadProcurementPrice = async (req: Request, res: Response) => {
     }
 }
 
+
+const uploadImpactData = async (req: Request, res: Response) => {
+    try {
+        let fail = [];
+        let pass = [];
+
+        if (!req.body.impactData || !Array.isArray(req.body.impactData))
+            throw Error('Req Error');
+
+        for (const data of req.body.impactData) {
+            if (!data.village) {
+                fail.push({
+                    success: false,
+                    data: { id: "" },
+                    message: "village cannot be empty"
+                });
+            } else if (!data.reducedChemicalPesticide) {
+                fail.push({
+                    success: false,
+                    data: { id: data.transactionId },
+                    message: "Reduced chemical pesticide use by cannot be empty"
+                });
+            } else if (!data.reducedChemicalFertilizer) {
+                fail.push({
+                    success: false,
+                    data: { id: data.transactionId },
+                    message: "Reduced chemical fertilizer use by cannot be empty"
+                });
+            } else if (!data.reducedWater) {
+                fail.push({
+                    success: false,
+                    data: { id: data.transactionId },
+                    message: "Reduced water use by by cannot be empty"
+                });
+            } else if (!data.increasedYield) {
+                fail.push({
+                    success: false,
+                    data: { id: data.transactionId },
+                    message: "Increased yield by cannot be empty"
+                });
+            } else if (!data.increasedInputCost) {
+                fail.push({
+                    success: false,
+                    data: { id: data.transactionId },
+                    message: "Reduced input costs by cannot be empty"
+                });
+            } else if (!data.increasedProfit) {
+                fail.push({
+                    success: false,
+                    data: { id: data.transactionId },
+                    message: "Increased profit by cannot be empty"
+                });
+            } else {
+                const village = await Village.findOne({
+                    where: {
+                        village_name: {
+                            [Op.iLike]:
+                                data.village
+                        }
+                    }
+                });
+
+                if (!village) {
+                    fail.push({
+                        success: false,
+                        data: { id: data.transactionId },
+                        message: "village Id not available"
+                    });
+                } else {
+                    const obj = {
+                        village: village.id,
+                        reduced_chemical_pesticide: data.reducedChemicalPesticide,
+                        reduced_chemical_fertilizer: data.reducedChemicalFertilizer,
+                        reduced_water_use: data.reducedWater,
+                        increased_yield: data.increasedYield,
+                        reduced_input_costs: data.increasedInputCost,
+                        increased_profit: data.increasedProfit
+                    };
+                    const result = await VillageImpact.create(obj);
+                    pass.push({
+                        success: true,
+                        data: result,
+                        message: "Impact Data Added"
+                    });
+                }
+
+            }
+        }
+        res.sendSuccess(res, { pass, fail });
+    } catch (error: any) {
+        console.error(error);
+        return res.sendError(res, error.message);
+    }
+};
+
 export {
     uploadGinnerOrder,
     uploadStyleMark,
@@ -1139,5 +1235,6 @@ export {
     uploadVillage,
     uploadFarmer,
     uploadProcessorList,
-    uploadProcurementPrice
+    uploadProcurementPrice,
+    uploadImpactData
 }

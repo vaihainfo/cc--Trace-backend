@@ -6,7 +6,8 @@ import {
     uploadVillage,
     uploadFarmer,
     uploadProcessorList,
-    uploadProcurementPrice
+    uploadProcurementPrice,
+    uploadImpactData
 } from "../../controllers/upload-databases";
 
 import { Router } from "express";
@@ -21,5 +22,6 @@ router.post('/village', uploadVillage);
 router.post('/farmer', uploadFarmer);
 router.post('/processor-list', uploadProcessorList);
 router.post('/procurement-price', uploadProcurementPrice);
+router.post('/impact/data', uploadImpactData)
 
 export default router;  
