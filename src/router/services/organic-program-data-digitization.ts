@@ -1,4 +1,12 @@
 import {
+    createFarmGroupEvaluationData,
+    fetchFarmGroupEvaluationDataPagination,
+    countFarmerByBrandAndFarmGroup,
+    fetchFarmGroupEvaluationData,
+    updateFarmGroupEvaluationData,
+    deleteFarmGroupEvaluationData
+} from "../../controllers/organic-program-data-digitization/farm-group-evaluation-data";
+import {
     createIcsQuantityEstimation,
     fetchIcsQuantityEstimationPagination,
     fetchIcsQuantityEstimation,
@@ -29,6 +37,14 @@ import {
 import { Router } from "express";
 
 const router = Router();
+
+// farm-group-evaluation-data routes
+router.post("/farm-group-evaluation-data", createFarmGroupEvaluationData);
+router.get("/farm-group-evaluation-data", fetchFarmGroupEvaluationDataPagination);
+router.get("/farm-group-evaluation-data/farmer-count", countFarmerByBrandAndFarmGroup);
+router.get("/farm-group-evaluation-data/:id", fetchFarmGroupEvaluationData);
+router.put("/farm-group-evaluation-data", updateFarmGroupEvaluationData);
+router.delete("/farm-group-evaluation-data", deleteFarmGroupEvaluationData);
 
 // ics-quantity-estimation routes
 router.post("/ics-quantity-estimation", createIcsQuantityEstimation);
