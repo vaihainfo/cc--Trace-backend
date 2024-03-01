@@ -31,6 +31,7 @@ import KnitProcess from "../../models/knit-process.model";
 import KnitFabricSelection from "../../models/knit-fabric-selectiion.model";
 import ProcessorList from "../../models/processor-list.model";
 import { send_garment_mail } from "../send-emails";
+import GarmentFabricType from "../../models/garment_fabric_type.model";
 
 const fetchBrandQrGarmentSalesPagination = async (
   req: Request,
@@ -475,7 +476,7 @@ const fetchTransactionsAll = async (req: Request, res: Response) => {
     let result: any = await Promise.all([
       WeaverSales.findAll({
         where: {
-          status: { [Op.in] : [ 'Pending', "Pending for QR scanning"] },
+          status: { [Op.in]: ["Pending", "Pending for QR scanning"] },
           buyer_id: garmentId,
           ...whereCondition,
           ...weaverWhere,
@@ -487,7 +488,7 @@ const fetchTransactionsAll = async (req: Request, res: Response) => {
       }),
       KnitSales.findAll({
         where: {
-          status:  { [Op.in] : [ 'Pending', "Pending for QR scanning"] },
+          status: { [Op.in]: ["Pending", "Pending for QR scanning"] },
           buyer_id: garmentId,
           ...whereCondition,
           ...knitterWhere,
@@ -702,6 +703,20 @@ const createGarmentProcess = async (req: Request, res: Response) => {
         },
       }
     );
+    for await (let fabric of req.body.garmentfabrics) {
+      let data = {
+        process_id: garmentProcess.id,
+        garment_type: fabric.garmentType,
+        style_mark_no: fabric.styleMarkNo,
+        garment_size: fabric.garmentSize,
+        color: fabric.color,
+        no_of_pieces: fabric.noOfPieces,
+        no_of_boxes: fabric.noOfBoxes,
+        finished_garment_image: fabric.finishedGarmentImage,
+        sold_status: false,
+      };
+      const garmentFabric = await GarmentFabricType.create(data);
+    }
     if (req.body.chooseFabric && req.body.chooseFabric.length > 0) {
       for await (let obj of req.body.chooseFabric) {
         if (obj.processor === "knitter") {
@@ -1231,25 +1246,30 @@ const createGarmentSales = async (req: Request, res: Response) => {
     );
     if (req.body.chooseGarment && req.body.chooseGarment.length > 0) {
       for await (let obj of req.body.chooseGarment) {
-        let val = await GarmentProcess.findOne({ where: { id: obj.id } });
+        let val = await GarmentProcess.findOne({
+          where: { id: obj.process_id },
+        });
         if (val) {
-          let update = await GarmentProcess.update(
-            {
-              // qty_stock: val.dataValues.qty_stock - obj.qtyUsed,
-              qty_stock_weight:
-                val.dataValues.qty_stock_weight - obj.qtyUsedWeight,
-              qty_stock_length:
-                val.dataValues.qty_stock_length - obj.qtyUsedLength,
-            },
+          // let update = await GarmentProcess.update(
+          //   {
+          //     // qty_stock: val.dataValues.qty_stock - obj.qtyUsed,
+          //     qty_stock_weight:
+          //       val.dataValues.qty_stock_weight - obj.qtyUsedWeight,
+          //     qty_stock_length:
+          //       val.dataValues.qty_stock_length - obj.qtyUsedLength,
+          //   },
+          //   { where: { id: obj.process_id } }
+          // );
+          let updatee = await GarmentFabricType.update(
+            { sold_status: true },
             { where: { id: obj.id } }
           );
           await GarmentSelection.create({
-            garment_id: obj.id,
+            garment_id: obj.process_id,
             processor: obj.processor,
             sales_id: garmentSales.id,
-            // qty_used: obj.qtyUsed,
-            qty_used_length: obj.qtyUsedLength,
-            qty_used_weight: obj.qtyUsedWeight,
+            garment_type_id: obj.id,
+            qty_used: obj.qtyUsed,
           });
         }
       }
@@ -1492,7 +1512,7 @@ const chooseGarmentSales = async (req: Request, res: Response) => {
       },
     ];
 
-    const gin = await GarmentProcess.findAll({
+    const garmentProcess = await GarmentProcess.findAll({
       where: {
         ...whereCondition,
         [Op.or]: [
@@ -1503,7 +1523,66 @@ const chooseGarmentSales = async (req: Request, res: Response) => {
       },
       include: include,
     });
-    return res.sendSuccess(res, gin);
+
+    let data = [];
+    let qty :any;
+    let da:any;
+    for await (let row of garmentProcess) {
+      let list = [];
+
+      if (row) {
+        qty = await GarmentFabricType.findOne({
+          attributes: [
+            [
+              Sequelize.fn(
+                "COALESCE",
+                Sequelize.fn("SUM", Sequelize.col("no_of_pieces")),
+                0
+              ),
+              "no_of_pieces",
+            ],
+            [
+              Sequelize.fn(
+                "COALESCE",
+                Sequelize.fn("SUM", Sequelize.col("no_of_pieces")),
+                0
+              ),
+              "no_of_boxes",
+            ],
+          ],
+          where: { process_id: row.dataValues?.id },
+          group: ["process_id"],
+        });
+        da = await GarmentFabricType.findOne({
+          attributes: [
+            [
+              Sequelize.fn(
+                "COALESCE",
+                Sequelize.fn("SUM", Sequelize.col("no_of_pieces")),
+                0
+              ),
+              "no_of_pieces",
+            ],
+          ],
+          where: { process_id: row.dataValues?.id, sold_status: false },
+          group: ["process_id"],
+        });
+        list = await GarmentFabricType.findAll({
+          where: { process_id: row.dataValues?.id, sold_status: false },
+        });
+      }
+      if (list.length > 0) {
+        data.push({
+          ...row.dataValues,
+          garmentFabric: list,
+          total_no_of_boxes: qty.dataValues?.no_of_boxes,
+          total_no_of_pieces: qty.dataValues?.no_of_boxes,
+          total_no_of_pieces_stock: da.dataValues?.no_of_pieces,
+        });
+      }
+    }
+
+    return res.sendSuccess(res, data);
   } catch (error: any) {
     return res.sendError(res, error.message);
   }
@@ -1872,14 +1951,12 @@ const getChooseFabricFilters = async (req: Request, res: Response) => {
       whereCondition.status = {
         [Op.in]: ["Pending", "Pending for QR scanning"],
       };
-
     }
     if (status === "Sold") {
       whereCondition.buyer_id = garmentId;
       whereCondition.status = "Sold";
     }
 
-  
     if (knitterId) {
       const idArray: number[] = knitterId
         .split(",")

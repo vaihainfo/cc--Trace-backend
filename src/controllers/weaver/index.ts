@@ -22,6 +22,7 @@ import WeaverFabricSelection from "../../models/weaver-fabric-selection.model";
 import SpinProcess from "../../models/spin-process.model";
 import SpinProcessYarnSelection from "../../models/spin-process-yarn-seletions.model";
 import { send_weaver_mail } from "../send-emails";
+import WeaverFabric from "../../models/weaver_fabric.model";
 
 const createWeaverProcess = async (req: Request, res: Response) =>{
     try {
@@ -78,6 +79,17 @@ const createWeaverProcess = async (req: Request, res: Response) =>{
                     id: weaver.id
                 }
             });
+
+            for await (let fabric of req.body.fabrics) {
+                let data = {
+                  process_id: weaver.id,
+                  fabric_type: fabric.fabricType,
+                  fabric_gsm: fabric.fabricGsm,
+                  fabric_length: fabric.fabricLength,
+                  sold_status: false,
+                };
+                const fab = await WeaverFabric.create(data);
+              }
     
             if (req.body.chooseYarn && req.body.chooseYarn.length > 0) {
                 for await (let obj of req.body.chooseYarn) {
@@ -298,10 +310,21 @@ const createWeaverSales = async (req: Request, res: Response) => {
         });
         if (req.body.chooseFabric && req.body.chooseFabric.length > 0) {
             for await (let obj of req.body.chooseFabric) {
-                let val = await WeaverProcess.findOne({ where: { id: obj.id } });
+                let val = await WeaverProcess.findOne({ where: { id: obj.process_id } });
                 if (val) {
-                    let update = await WeaverProcess.update({ qty_stock: val.dataValues.qty_stock - obj.qtyUsed }, { where: { id: obj.id } });
-                    await WeaverFabricSelection.create({ fabric_id: obj.id, type: obj.type, sales_id: weaverSales.id, qty_used: obj.qtyUsed })
+                    let update = await WeaverProcess.update({ 
+                        qty_stock: val.dataValues.qty_stock - obj.qtyUsed }, { where: { id: obj.process_id } });
+                        let updatee = await WeaverFabric.update(
+                            { sold_status: true },
+                            { where: { id: obj.id } }
+                          );
+                    await WeaverFabricSelection.create({ 
+                        weaver_fabric :obj.id,
+                        fabric_id: obj.process_id, 
+                        type: obj.type, 
+                        sales_id: weaverSales.id, 
+                        qty_used: obj.qtyUsed 
+                    })
                 }
             }
         }
@@ -1330,6 +1353,94 @@ const getFabrics = async (req: Request, res: Response) => {
     res.sendSuccess(res, fabric);
 }
 
+const chooseWeaverFabric = async (req: Request, res: Response) => {
+    const { weaverId, programId, lotNo, reelLotNo, noOfRolls, fabricType }: any =
+      req.query;
+  
+    const whereCondition: any = {};
+    try {
+      if (weaverId) {
+        whereCondition.weaver_id = weaverId;
+      }
+  
+      if (programId) {
+        whereCondition.program_id = programId;
+      }
+      if (lotNo) {
+        const idArray: any[] = lotNo.split(",").map((id: any) => id);
+        whereCondition.batch_lot_no = { [Op.in]: idArray };
+      }
+      if (reelLotNo) {
+        const idArray: any[] = reelLotNo.split(",").map((id: any) => id);
+        whereCondition.reel_lot_no = { [Op.in]: idArray };
+      }
+      if (noOfRolls) {
+        const idArray: any[] = noOfRolls.split(",").map((id: any) => id);
+        whereCondition.no_of_rolls = { [Op.in]: idArray };
+      }
+      if (fabricType) {
+        const idArray: any[] = fabricType
+          .split(",")
+          .map((id: any) => parseInt(id, 10));
+        whereCondition.fabric_type = { [Op.overlap]: idArray };
+      }
+  
+      let include = [
+        {
+          model: Weaver,
+          as: "weaver",
+          attributes: ["id", "name"],
+        },
+        {
+          model: Program,
+          as: "program",
+          attributes: ["id", "program_name"],
+        },
+        // {
+        //     model: YarnCount,
+        //     as: "yarncount",
+        //     attributes: ['id', 'yarnCount_name']
+        // }
+      ];
+      whereCondition.qty_stock = { [Op.gt]: 0 };
+      //fetch data with pagination
+  
+      const process = await WeaverProcess.findAll({
+        where: whereCondition,
+        include: include,
+        order: [["id", "desc"]],
+      });
+  
+      let data = [];
+  
+      for await (let row of process) {
+        let list = [];
+  
+        if (row) {
+          list = await WeaverFabric.findAll({
+            where: { process_id: row.dataValues?.id,sold_status: false },
+            include: [
+              {
+                model: FabricType,
+                as: "fabric"
+              },
+            ]
+          });
+        }
+  
+        data.push({
+          ...row.dataValues,
+          fabrics: list,
+        });
+      }
+  
+      return res.sendSuccess(res, data);
+    } catch (error: any) {
+      return res.sendError(res, error.message);
+    }
+  };
+  
+
 export {
     createWeaverProcess,
     fetchWeaverProcessPagination,
@@ -1349,5 +1460,6 @@ export {
     getFabrics,
     fetchFabricReelLotNo,
     getChooseFabricFilters,
-    fetchWeaverSale
+    fetchWeaverSale,
+    chooseWeaverFabric
 }

@@ -128,7 +128,10 @@ const SpinSales = db.define('spin_sales', {
   },
   knitter_id: {
     type: DataTypes.INTEGER
-  }
+  },
+  price: {
+    type: DataTypes.DOUBLE
+  },
 });
 
 SpinSales.belongsTo(Spinner, {

@@ -713,6 +713,7 @@ const createSpinnerSales = async (req: Request, res: Response) => {
             invoice_file: req.body.invoiceFile,
             delivery_notes: req.body.deliveryNotes,
             qty_stock: req.body.totalQty,
+            price : req.body.price,
             status: 'Pending for QR scanning'
         };
 
@@ -955,7 +956,7 @@ const exportSpinnerSale = async (req: Request, res: Response) => {
         const headerRow = worksheet.addRow([
             "Sr No.", "Date", "Season",
             "Invoice No", "Spin Lot No", "Reel Lot No", "Yarn Type", "Yarn Count", "No of Boxes", "Buyer Name",
-            "Box ID", "Blend", "Blend Qty", "Total weight (Kgs)", "Program", "Vehicle No",
+            "Box ID", "Blend", "Blend Qty", "Total weight (Kgs)", "Price/Kg","Program", "Vehicle No",
             "Transcation via trader", "Agent Details"
         ]);
         headerRow.font = { bold: true };
@@ -1012,6 +1013,7 @@ const exportSpinnerSale = async (req: Request, res: Response) => {
                 blend: "",
                 blendqty: '',
                 total: item.total_qty,
+                price: item.price ? item.price : '',
                 program: item.program ? item.program.program_name : '',
                 vichle: item.vehicle_no ? item.vehicle_no : '',
                 transaction_via_trader: item.transaction_via_trader ? 'Yes' : 'No',
@@ -1049,12 +1051,12 @@ const deleteSpinnerSales = async (req: Request, res: Response) => {
             return res.sendError(res, 'Need Sales Id');
         }
         let yarn_selections = await SpinProcessYarnSelection.findAll({
-            attributes: ['id', 'spin_process_id', 'sales_id', 'no_of_box', 'qty_used'],
+            attributes: ['id','yarn_id', 'spin_process_id', 'sales_id', 'no_of_box', 'qty_used'],
             where: {
                 sales_id: req.body.id
             }
         })
-        yarn_selections.forEach((yarn: any) => {
+        yarn_selections.forEach(async (yarn: any) => {
             SpinProcess.update(
                 {
                     qty_stock: sequelize.literal(`qty_stock + ${yarn.qty_used}`),
@@ -1066,6 +1068,7 @@ const deleteSpinnerSales = async (req: Request, res: Response) => {
                     }
                 }
             );
+            await SpinYarn.update({ sold_status: false }, { where: { id: yarn.yarn_id } });
         });
 
         SpinSales.destroy({

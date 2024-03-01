@@ -7,7 +7,6 @@ import * as path from "path";
 import WeaverSales from "../../models/weaver-sales.model";
 import KnitSales from "../../models/knit-sales.model";
 import Program from "../../models/program.model";
-import FabricType from "../../models/fabric-type.model";
 import Weaver from "../../models/weaver.model";
 import Knitter from "../../models/knitter.model";
 import Fabric from "../../models/fabric.model";
@@ -25,6 +24,7 @@ import KnitFabricSelection from "../../models/knit-fabric-selectiion.model";
 import KnitProcess from "../../models/knit-process.model";
 import WeaverFabricSelection from "../../models/weaver-fabric-selection.model";
 import WeaverProcess from "../../models/weaver-process.model";
+import { encrypt, generateOnlyQrCode } from "../../provider/qrcode";
 
 /**
  * Dying Dashboard for fabric
@@ -296,6 +296,14 @@ const createDyingProcess = async (req: Request, res: Response) => {
       status: "Pending",
     };
     const sales = await DyingSales.create(data);
+    let uniqueFilename = `dying_qrcode_${Date.now()}.png`;
+    let da = encrypt(`dying,${sales.id}`);
+    let aa = await generateOnlyQrCode(da, uniqueFilename);
+    const dying = await DyingSales.update({ qr: uniqueFilename }, {
+        where: {
+            id: sales.id
+        }
+    });
     if (req.body.chooseFabric && req.body.chooseFabric.length > 0) {
       for await (let obj of req.body.chooseFabric) {
         if (obj.processor === "Knitter") {
@@ -929,6 +937,14 @@ const createWashingProcess = async (req: Request, res: Response) => {
       status: "Pending",
     };
     const sales = await WashingSales.create(data);
+    let uniqueFilename = `washing_qrcode_${Date.now()}.png`;
+    let da = encrypt(`washing,${sales.id}`);
+    let aa = await generateOnlyQrCode(da, uniqueFilename);
+    const washing = await WashingSales.update({ qr: uniqueFilename }, {
+        where: {
+            id: sales.id
+        }
+    });
     if (req.body.chooseFabric && req.body.chooseFabric.length > 0) {
       for await (let obj of req.body.chooseFabric) {
         if (obj.processor === "knitter") {
@@ -1452,6 +1468,14 @@ const createPrintingProcess = async (req: Request, res: Response) => {
       status: "Pending",
     };
     const sales = await PrintingSales.create(data);
+    let uniqueFilename = `printing_qrcode_${Date.now()}.png`;
+    let da = encrypt(`printing,${sales.id}`);
+    let aa = await generateOnlyQrCode(da, uniqueFilename);
+    const printing = await PrintingSales.update({ qr: uniqueFilename }, {
+        where: {
+            id: sales.id
+        }
+    });
     if (req.body.chooseFabric && req.body.chooseFabric.length > 0) {
       for await (let obj of req.body.chooseFabric) {
         let update = await WashingSales.update(
@@ -1995,6 +2019,14 @@ const createCompactingProcess = async (req: Request, res: Response) => {
       status: "Pending",
     };
     const sales = await CompactingSales.create(data);
+    let uniqueFilename = `compacting_qrcode_${Date.now()}.png`;
+    let da = encrypt(`compacting,${sales.id}`);
+    let aa = await generateOnlyQrCode(da, uniqueFilename);
+    const compacting = await CompactingSales.update({ qr: uniqueFilename }, {
+        where: {
+            id: sales.id
+        }
+    });
     if (req.body.chooseFabric && req.body.chooseFabric.length > 0) {
       for await (let obj of req.body.chooseFabric) {
         let dataa = { qty_stock: obj.totalQty - obj.qtyUsed };
