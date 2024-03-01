@@ -22,7 +22,8 @@ import {
     getSalesInvoice,
     chooseYarn,
     getInvoiceAndReelLotNo,
-    getYarnReelLotNo
+    getYarnReelLotNo,
+    getSpinnerProcessTracingChartData
 } from "../../controllers/spinner";
 
 import { Router } from "express";
@@ -53,5 +54,6 @@ router.get('/choose-yarn', chooseYarn);
 router.get('/sales-invoice', getSalesInvoice);
 router.get('/lint-invoice', getInvoiceAndReelLotNo);
 router.get('/yarn-reel-lot', getYarnReelLotNo);
+router.get('/tracing/chart', getSpinnerProcessTracingChartData);
 
 export default router;
