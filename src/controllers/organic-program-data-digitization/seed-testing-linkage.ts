@@ -213,6 +213,16 @@ const deleteSeedTestingLinkage = async (req: Request, res: Response) => {
     }
 }
 
+const createSeedTestingLinkageReport = async (req: Request, res: Response) => {
+    try {
+        const seedTestingLinkageReports = await SeedTestingLinkageReport.bulkCreate(req.body.reports);
+        res.sendSuccess(res, { message: 'Report uploaded!', seedTestingLinkageReports });
+    } catch (error) {
+        console.log(error);
+        return res.sendError(res, "ERR_INTERNAL_SERVER_ERROR");
+    }
+}
+
 const deleteSeedTestingLinkageReport = async (req: Request, res: Response) => {
     try {
         const seedTestingLinkageReport = await SeedTestingLinkageReport.destroy({
@@ -230,5 +240,6 @@ export {
     fetchSeedTestingLinkage,
     updateSeedTestingLinkage,
     deleteSeedTestingLinkage,
+    createSeedTestingLinkageReport,
     deleteSeedTestingLinkageReport
 }

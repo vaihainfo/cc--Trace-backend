@@ -19,6 +19,7 @@ import {
     fetchSeedTestingLinkage,
     updateSeedTestingLinkage,
     deleteSeedTestingLinkage,
+    createSeedTestingLinkageReport,
     deleteSeedTestingLinkageReport
 } from "../../controllers/organic-program-data-digitization/seed-testing-linkage";
 import {
@@ -59,6 +60,7 @@ router.get("/seed-testing-linkage", fetchSeedTestingLinkagePagination);
 router.get("/seed-testing-linkage/:id", fetchSeedTestingLinkage);
 router.put("/seed-testing-linkage", updateSeedTestingLinkage);
 router.delete("/seed-testing-linkage", deleteSeedTestingLinkage);
+router.post("/seed-testing-linkage-report", createSeedTestingLinkageReport);
 router.delete("/seed-testing-linkage-report", deleteSeedTestingLinkageReport);
 
 // seed-demand routes
