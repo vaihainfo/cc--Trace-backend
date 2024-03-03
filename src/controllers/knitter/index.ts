@@ -22,10 +22,12 @@ import KnitFabricSelection from "../../models/knit-fabric-selectiion.model";
 import SpinProcessYarnSelection from "../../models/spin-process-yarn-seletions.model";
 import SpinProcess from "../../models/spin-process.model";
 import { send_knitter_mail } from "../send-emails";
+import { _getSpinnerProcessTracingChartData } from '../spinner/index';
+import { formatDataFromKnitter } from '../../util/tracing-chart-data-formatter';
 
-const createKnitterProcess = async (req: Request, res: Response) =>{
-try {
-    let dyeing
+const createKnitterProcess = async (req: Request, res: Response) => {
+    try {
+        let dyeing
         if (req.body.dyeingRequired) {
             dyeing = await Dyeing.create({
                 processor_name: req.body.processorName,
@@ -305,11 +307,11 @@ const createKnitterrSales = async (req: Request, res: Response) => {
             }
         }
 
-        if(kniSale){
+        if (kniSale) {
             await send_knitter_mail(kniSale.id);
         }
 
-        return res.sendSuccess(res,  kniSale );
+        return res.sendSuccess(res, kniSale);
     } catch (error: any) {
         console.log(error)
         return res.sendError(res, error.meessage);
@@ -368,7 +370,7 @@ const fetchKnitterSalesPagination = async (req: Request, res: Response) => {
     try {
         if (searchTerm) {
             whereCondition[Op.or] = [
-// Search by order ref
+                // Search by order ref
                 { '$season.name$': { [Op.iLike]: `%${searchTerm}%` } },
                 { '$knitter.name$': { [Op.iLike]: `%${searchTerm}%` } },
                 { garment_order_ref: { [Op.iLike]: `%${searchTerm}%` } }, // Search by order ref
@@ -534,11 +536,11 @@ const fetchFabricReelLotNo = async (req: Request, res: Response) => {
 
         let prcs_date = new Date().toLocaleDateString().replace(/\//g, '');
         let number = count + 1;
-        let prcs_name = rows ? rows?.name.substring(0,3).toUpperCase() : '';
+        let prcs_name = rows ? rows?.name.substring(0, 3).toUpperCase() : '';
 
         let reelLotNo = "REEL-KNI-" + prcs_name + "-" + prcs_date + number;
 
-        return res.sendSuccess(res, {reelLotNo})
+        return res.sendSuccess(res, { reelLotNo })
 
     } catch (error: any) {
         return res.sendError(res, error.message);
@@ -588,7 +590,7 @@ const exportKnitterSale = async (req: Request, res: Response) => {
         // ]);
         const headerRow = worksheet.addRow([
             "Sr No.", "Date", "Season", "Sold To", "Program", "Garment Order Reference", "Brand Order Reference",
-            "Invoice No", "Batch Lot No","Quanitity in Kgs",
+            "Invoice No", "Batch Lot No", "Quanitity in Kgs",
             "Vehicle No", "Transcation via trader", "Agent Details"
         ]);
         headerRow.font = { bold: true };
@@ -633,7 +635,7 @@ const exportKnitterSale = async (req: Request, res: Response) => {
                 buyer_id: item.buyer ? item.buyer.name : item.dyingwashing ? item.dyingwashing.name : item.processor_name,
                 program: item.program ? item.program.program_name : '',
                 garment_order_ref: item.garment_order_ref ? item.garment_order_ref : '',
-                brand_order_ref: item.brand_order_ref ? item.brand_order_ref: '',
+                brand_order_ref: item.brand_order_ref ? item.brand_order_ref : '',
                 invoice: item.invoice_no ? item.invoice_no : '',
                 lotNo: item.batch_lot_no ? item.batch_lot_no : '',
                 total: item.total_yarn_qty,
@@ -718,8 +720,8 @@ const exportKnitterProcess = async (req: Request, res: Response) => {
         mergedCell.alignment = { horizontal: 'center', vertical: 'middle' };
         // Set bold font for header row
         const headerRow = worksheet.addRow([
-            "Sr No.", "Date", "Season","Finished Batch Lot No", "Fabric Reel Lot No", "Garment Order Reference", "Brand Order Reference", "Program",
-        "Job Details from garment", "Knit Fabric Type", "Fabric Net Weight in Kgs","Fabric GSM","Total Finished Fabric Net Weight in Kgs", "Total Yarn Utilized"
+            "Sr No.", "Date", "Season", "Finished Batch Lot No", "Fabric Reel Lot No", "Garment Order Reference", "Brand Order Reference", "Program",
+            "Job Details from garment", "Knit Fabric Type", "Fabric Net Weight in Kgs", "Fabric GSM", "Total Finished Fabric Net Weight in Kgs", "Total Yarn Utilized"
         ]);
         headerRow.font = { bold: true };
         let include = [
@@ -783,7 +785,7 @@ const exportKnitterProcess = async (req: Request, res: Response) => {
                 lotNo: item.batch_lot_no ? item.batch_lot_no : '',
                 reelLotNo: item.reel_lot_no ? item.reel_lot_no : '',
                 garment_order_ref: item.garment_order_ref ? item.garment_order_ref : '',
-                brand_order_ref: item.brand_order_ref ? item.brand_order_ref: '',
+                brand_order_ref: item.brand_order_ref ? item.brand_order_ref : '',
                 program: item.program ? item.program.program_name : '',
                 jobDetails: item.job_details_garment ? item.job_details_garment : '',
                 fabricType: fabricType,
@@ -848,11 +850,11 @@ const fetchKnitterDashBoard = async (req: Request, res: Response) => {
                 { '$yarncount.yarnCount_name$': { [Op.iLike]: `%${searchTerm}%` } },// Search season spinner name 
             ];
         }
-        if (status === 'Pending' ) {
+        if (status === 'Pending') {
             whereCondition.knitter_id = knitterId
-            whereCondition.status = { [Op.in]: [ 'Pending' , 'Pending for QR scanning'] }
-        } 
-        if(status === 'Sold') {
+            whereCondition.status = { [Op.in]: ['Pending', 'Pending for QR scanning'] }
+        }
+        if (status === 'Sold') {
             whereCondition.knitter_id = knitterId
             whereCondition.status = 'Sold';
         }
@@ -886,11 +888,12 @@ const fetchKnitterDashBoard = async (req: Request, res: Response) => {
         }
         if (reelLotNo) {
             const filterValues: any[] = reelLotNo
-              .split(",")
-              .map((value: any) => value.trim());
+                .split(",")
+                .map((value: any) => value.trim());
 
-            whereCondition[Op.or]= filterValues.map((value) => ({
-                reel_lot_no: {[Op.iLike]: `%${value}%`}}))
+            whereCondition[Op.or] = filterValues.map((value) => ({
+                reel_lot_no: { [Op.iLike]: `%${value}%` }
+            }))
         }
         if (yarnCount) {
             const idArray: number[] = yarnCount
@@ -1068,11 +1071,11 @@ const getSpinnerAndProgram = async (req: Request, res: Response) => {
             return res.sendError(res, 'Need  status');
         }
 
-        if (status === 'Pending' ) {
+        if (status === 'Pending') {
             whereCondition.knitter_id = knitterId
-            whereCondition.status = { [Op.in]: [ 'Pending' , 'Pending for QR scanning'] }
-        } 
-        if(status === 'Sold') {
+            whereCondition.status = { [Op.in]: ['Pending', 'Pending for QR scanning'] }
+        }
+        if (status === 'Sold') {
             whereCondition.knitter_id = knitterId
             whereCondition.status = 'Sold';
         }
@@ -1117,11 +1120,11 @@ const getInvoiceAndyarnType = async (req: Request, res: Response) => {
         if (!status) {
             return res.sendError(res, 'Need  status');
         }
-        if (status === 'Pending' ) {
+        if (status === 'Pending') {
             whereCondition.knitter_id = knitterId
-            whereCondition.status = { [Op.in]: [ 'Pending' , 'Pending for QR scanning'] }
-        } 
-        if(status === 'Sold') {
+            whereCondition.status = { [Op.in]: ['Pending', 'Pending for QR scanning'] }
+        }
+        if (status === 'Sold') {
             whereCondition.knitter_id = knitterId
             whereCondition.status = 'Sold';
         }
@@ -1143,16 +1146,16 @@ const getInvoiceAndyarnType = async (req: Request, res: Response) => {
             where: { ...whereCondition, reel_lot_no: { [Op.not]: null } },
         });
 
-        let salesId=ids.map((item: any) => item.dataValues.id)
+        let salesId = ids.map((item: any) => item.dataValues.id)
 
         let reelLot = await SpinProcessYarnSelection.findAll({
-            attributes: [[Sequelize.col('process.reel_lot_no'),'reel_lot_no']],
-            where: {sales_id: {[Op.in]:salesId}},
-            include:[
+            attributes: [[Sequelize.col('process.reel_lot_no'), 'reel_lot_no']],
+            where: { sales_id: { [Op.in]: salesId } },
+            include: [
                 {
                     model: SpinProcess,
                     as: 'process',
-                    where :{reel_lot_no : {[Op.not]: null}},
+                    where: { reel_lot_no: { [Op.not]: null } },
                     attributes: []
                 }
             ],
@@ -1201,7 +1204,7 @@ const getChooseFabricFilters = async (req: Request, res: Response) => {
             whereCondition.program_id = { [Op.in]: idArray };
         }
         whereCondition.qty_stock = { [Op.gt]: 0 }
-        
+
         const batchLotNo = await KnitProcess.findAll({
             attributes: ['batch_lot_no'],
             where: whereCondition,
@@ -1218,7 +1221,7 @@ const getChooseFabricFilters = async (req: Request, res: Response) => {
             group: ['no_of_rolls']
         });
 
-        res.sendSuccess(res, { batchLotNo,reelLot, noOfRolls });
+        res.sendSuccess(res, { batchLotNo, reelLot, noOfRolls });
     } catch (error: any) {
         return res.sendError(res, error.message);
     }
@@ -1257,6 +1260,39 @@ const getFabrics = async (req: Request, res: Response) => {
     res.sendSuccess(res, fabric);
 }
 
+const getKnitterProcessTracingChartData = async (req: Request, res: Response) => {
+    let query = req.query;
+    let include = [
+        {
+            model: Knitter,
+            as: "knitter",
+        }
+    ];
+    let knitters = await KnitProcess.findAll({
+        where: query,
+        include
+    });
+
+    knitters = await Promise.all(knitters.map(async (el: any) => {
+        el = el.toJSON();
+        el.spin = await SpinSales.findAll({
+            where: {
+                knitter_id: el.knitter.id
+            }
+        });
+        el.spinsCount = el.spin.length;
+        el.spinskIds = el.spin.map((el: any) => el.knitter_id);
+        console.log('spins received ', el.spin.length);
+        el.spin = await Promise.all(el.spin.map(async (el: any) => {
+            console.log('getting data for ', el.reel_lot_no);
+            return _getSpinnerProcessTracingChartData(el.reel_lot_no)
+        }));
+        return el;
+    }))
+    let key = Object.keys(req.query)[0];
+    res.sendSuccess(res, formatDataFromKnitter(req.query[key], knitters));
+}
+
 export {
     createKnitterProcess,
     fetchKnitterProcessPagination,
@@ -1275,5 +1311,6 @@ export {
     fetchKnitterSale,
     getFabrics,
     fetchFabricReelLotNo,
-    getChooseFabricFilters
+    getChooseFabricFilters,
+    getKnitterProcessTracingChartData
 }

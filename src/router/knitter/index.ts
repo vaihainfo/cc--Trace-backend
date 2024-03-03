@@ -16,7 +16,8 @@ import {
     fetchKnitterProcessPagination,
     fetchFabricReelLotNo,
     exportKnitterProcess,
-    getChooseFabricFilters
+    getChooseFabricFilters,
+    getKnitterProcessTracingChartData
 } from "../../controllers/knitter";
 
 import { Router } from "express";
@@ -40,5 +41,6 @@ router.get('/get-garments', getGarments);
 router.get('/get-fabrics', getFabrics);
 router.get('/get-reel-lot-no', fetchFabricReelLotNo);
 router.get('/get-fabric-filters', getChooseFabricFilters);
+router.get('/tracing/chart', getKnitterProcessTracingChartData);
 
 export default router;
