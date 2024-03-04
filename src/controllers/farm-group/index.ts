@@ -119,6 +119,8 @@ const updateFarmGroup = async (req: Request, res: Response) => {
       {
         brand_id: req.body.brandId,
         name: req.body.name,
+        latitude :  req.body.latitude,
+        longitude :  req.body.longitude,
       },
       {
         where: {

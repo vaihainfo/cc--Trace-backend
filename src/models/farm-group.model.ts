@@ -22,6 +22,12 @@ const FarmGroup = db.define('farm_groups', {
     allowNull: false,
     defaultValue: true,
   },
+  latitude: {
+    type: DataTypes.STRING
+  },
+  longitude: {
+    type: DataTypes.STRING
+  },
 });
 
 
