@@ -2203,14 +2203,18 @@ const garmentTraceabilityMap = async (req: Request, res: Response) => {
     ];
 
     //fetch data with pagination
-    const item = await GarmentSales.findOne({
+    let item = await GarmentSales.findOne({
       attributes:['id','date','fabric_order_ref','brand_order_ref','invoice_no','garment_size','style_mark_no','garment_type','color','total_no_of_boxes','total_no_of_pieces'],
       where: {id : salesId},
       include: include
     });
-    console.log(item)
-    let data :any;
-  
+    console.log(item ,'her')
+    let data :any= {};
+    let obj: any = {};
+    if(!item){
+      return res.sendSuccess(res, data);
+    }
+
       let process = await GarmentSelection.findAll({
         where: {
           sales_id: item.dataValues.id,
@@ -2634,7 +2638,7 @@ const garmentTraceabilityMap = async (req: Request, res: Response) => {
         });
       }
 
-      let obj: any = {};
+      
 
       //knitter and weaver data
       let knitdate =
@@ -3003,17 +3007,19 @@ const garmentTraceabilityMap = async (req: Request, res: Response) => {
         0
       );
 
-      data = {
-        ...item.dataValues,
-        ...obj,
-        // knitSales,
-        // weaverSales,
-        // spinSales,
-        // ginSales,
-        // transactions_ids,
-        // transactions
-      };
+     
     
+    
+    data = {
+      ...item.dataValues,
+      ...obj,
+      // knitSales,
+      // weaverSales,
+      // spinSales,
+      // ginSales,
+      // transactions_ids,
+      // transactions
+    };
 
     return res.sendSuccess(res, data);
   } catch (error: any) {
