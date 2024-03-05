@@ -716,7 +716,7 @@ const createGarmentProcess = async (req: Request, res: Response) => {
     const garmentProcess = await GarmentProcess.create(data);
     let uniqueFilename = `garment_process_qrcode_${Date.now()}.png`;
     let aa = await generateOnlyQrCode(
-      `${process.env.ADMIN_URL}/qrdetails/garmentprocess/${garmentProcess.id}`,
+      `${process.env.ADMIN_URL}/brand/qr-details/garmentprocess/${garmentProcess.id}`,
       uniqueFilename
     );
     const gin = await GarmentProcess.update(
@@ -1257,7 +1257,7 @@ const createGarmentSales = async (req: Request, res: Response) => {
     const garmentSales = await GarmentSales.create(data);
     let uniqueFilename = `garment_sales_qrcode_${Date.now()}.png`;
     let aa = await generateOnlyQrCode(
-      `${process.env.ADMIN_URL}/qr-details/garment-sales?id=${garmentSales.id}`,
+      `${process.env.ADMIN_URL}/brand/qr-details/garment-sales?id=${garmentSales.id}`,
       uniqueFilename
     );
     const gin = await GarmentSales.update(
@@ -2208,7 +2208,6 @@ const garmentTraceabilityMap = async (req: Request, res: Response) => {
       where: {id : salesId},
       include: include
     });
-    console.log(item ,'her')
     let data :any= {};
     let obj: any = {};
     if(!item){
