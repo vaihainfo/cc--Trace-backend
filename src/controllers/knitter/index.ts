@@ -23,75 +23,64 @@ import SpinProcessYarnSelection from "../../models/spin-process-yarn-seletions.m
 import SpinProcess from "../../models/spin-process.model";
 import { send_knitter_mail } from "../send-emails";
 import KnitFabric from "../../models/knit_fabric.model";
+import { _getSpinnerProcessTracingChartData } from '../spinner/index';
+import { formatDataFromKnitter } from '../../util/tracing-chart-data-formatter';
 
 const createKnitterProcess = async (req: Request, res: Response) => {
-  try {
-    let dyeing;
-    if (req.body.dyeingRequired) {
-      dyeing = await Dyeing.create({
-        processor_name: req.body.processorName,
-        dyeing_address: req.body.dyeingAddress,
-        process_name: req.body.processName,
-        yarn_delivered: req.body.yarnDelivered,
-        process_loss: req.body.processLoss,
-        net_yarn: req.body.processNetYarnQty,
-      });
-    }
+    try {
+        let dyeing
+        if (req.body.dyeingRequired) {
+            dyeing = await Dyeing.create({
+                processor_name: req.body.processorName,
+                dyeing_address: req.body.dyeingAddress,
+                process_name: req.body.processName,
+                yarn_delivered: req.body.yarnDelivered,
+                process_loss: req.body.processLoss,
+                net_yarn: req.body.processNetYarnQty,
+            });
+        }
 
-    const data = {
-      knitter_id: req.body.knitterId,
-      program_id: req.body.programId,
-      season_id: req.body.seasonId,
-      date: req.body.date,
-      garment_order_ref: req.body.garmentOrderRef,
-      brand_order_ref: req.body.brandOrderRef,
-      other_mix: req.body.blendChoosen,
-      cottonmix_type: req.body.cottonmixType ? req.body.cottonmixType : null,
-      cottonmix_qty: req.body.cottonmixQty ? req.body.cottonmixQty : null,
-      blend_material: req.body.blendMaterial,
-      blend_vendor: req.body.blendVendor,
-      yarn_qty: req.body.yarnQty,
-      additional_yarn_qty: req.body.additionalYarnQty,
-      total_yarn_qty: req.body.totalYarnQty,
-      fabric_type: req.body.fabricType,
-      fabric_gsm: req.body.fabricGsm,
-      fabric_weight: req.body.fabricWeight,
-      batch_lot_no: req.body.batchLotNo,
-      reel_lot_no: req.body.reelLotNo ? req.body.reelLotNo : null,
-      job_details_garment: req.body.jobDetailsGarment,
-      no_of_rolls: req.body.noOfRolls,
-      dyeing_required: req.body.dyeingRequired,
-      dyeing_id: dyeing ? dyeing.id : null,
-      qty_stock: req.body.totalFabricWeight,
-      physical_traceablity: req.body.physicalTraceablity,
-      total_fabric_weight: req.body.totalFabricWeight,
-      blend_invoice: req.body.blendInvoice,
-      blend_document: req.body.blendDocuments,
-      status: "Pending",
-    };
+        const data = {
+            knitter_id: req.body.knitterId,
+            program_id: req.body.programId,
+            season_id: req.body.seasonId,
+            date: req.body.date,
+            garment_order_ref: req.body.garmentOrderRef,
+            brand_order_ref: req.body.brandOrderRef,
+            other_mix: req.body.blendChoosen,
+            cottonmix_type: req.body.cottonmixType ? req.body.cottonmixType : null,
+            cottonmix_qty: req.body.cottonmixQty ? req.body.cottonmixQty : null,
+            blend_material: req.body.blendMaterial,
+            blend_vendor: req.body.blendVendor,
+            yarn_qty: req.body.yarnQty,
+            additional_yarn_qty: req.body.additionalYarnQty,
+            total_yarn_qty: req.body.totalYarnQty,
+            fabric_type: req.body.fabricType,
+            fabric_gsm: req.body.fabricGsm,
+            fabric_weight: req.body.fabricWeight,
+            batch_lot_no: req.body.batchLotNo,
+            reel_lot_no: req.body.reelLotNo ? req.body.reelLotNo : null,
+            job_details_garment: req.body.jobDetailsGarment,
+            no_of_rolls: req.body.noOfRolls,
+            dyeing_required: req.body.dyeingRequired,
+            dyeing_id: dyeing ? dyeing.id : null,
+            qty_stock: req.body.totalFabricWeight,
+            physical_traceablity: req.body.physicalTraceablity,
+            total_fabric_weight: req.body.totalFabricWeight,
+            blend_invoice: req.body.blendInvoice,
+            blend_document: req.body.blendDocuments,
+            status: 'Pending'
+        };
 
-    const knit = await KnitProcess.create(data);
-    let uniqueFilename = `knit_procees_qrcode_${Date.now()}.png`;
-    let da = encrypt(`Knitter,Process,${knit.id}`);
-    let aa = await generateOnlyQrCode(da, uniqueFilename);
-    const gin = await KnitProcess.update(
-      { qr: uniqueFilename },
-      {
-        where: {
-          id: knit.id,
-        },
-      }
-    );
-    for await (let fabric of req.body.fabrics) {
-      let data = {
-        process_id: knit.id,
-        fabric_type: fabric.fabricType,
-        fabric_gsm: fabric.fabricGsm,
-        fabric_weight: fabric.fabricWeight,
-        sold_status: false,
-      };
-      const yarns = await KnitFabric.create(data);
-    }
+        const knit = await KnitProcess.create(data);
+        let uniqueFilename = `knit_procees_qrcode_${Date.now()}.png`;
+        let da = encrypt(`Knitter,Process,${knit.id}`);
+        let aa = await generateOnlyQrCode(da, uniqueFilename);
+        const gin = await KnitProcess.update({ qr: uniqueFilename }, {
+            where: {
+                id: knit.id
+            }
+        });
 
     if (req.body.chooseYarn && req.body.chooseYarn.length > 0) {
       for await (let obj of req.body.chooseYarn) {
@@ -1381,6 +1370,39 @@ const chooseFabricProcess = async (req: Request, res: Response) => {
   }
 };
 
+const getKnitterProcessTracingChartData = async (req: Request, res: Response) => {
+    let query = req.query;
+    let include = [
+        {
+            model: Knitter,
+            as: "knitter",
+        }
+    ];
+    let knitters = await KnitProcess.findAll({
+        where: query,
+        include
+    });
+
+    knitters = await Promise.all(knitters.map(async (el: any) => {
+        el = el.toJSON();
+        el.spin = await SpinSales.findAll({
+            where: {
+                knitter_id: el.knitter.id
+            }
+        });
+        el.spinsCount = el.spin.length;
+        el.spinskIds = el.spin.map((el: any) => el.knitter_id);
+        console.log('spins received ', el.spin.length);
+        el.spin = await Promise.all(el.spin.map(async (el: any) => {
+            console.log('getting data for ', el.reel_lot_no);
+            return _getSpinnerProcessTracingChartData(el.reel_lot_no)
+        }));
+        return el;
+    }))
+    let key = Object.keys(req.query)[0];
+    res.sendSuccess(res, formatDataFromKnitter(req.query[key], knitters));
+}
+
 export {
   createKnitterProcess,
   fetchKnitterProcessPagination,
@@ -1401,4 +1423,5 @@ export {
   fetchFabricReelLotNo,
   getChooseFabricFilters,
   chooseFabricProcess,
+  getKnitterProcessTracingChartData
 };

@@ -23,6 +23,8 @@ import SpinProcess from "../../models/spin-process.model";
 import SpinProcessYarnSelection from "../../models/spin-process-yarn-seletions.model";
 import { send_weaver_mail } from "../send-emails";
 import WeaverFabric from "../../models/weaver_fabric.model";
+import { _getSpinnerProcessTracingChartData } from '../spinner/index';
+import { formatDataFromWeaver } from '../../util/tracing-chart-data-formatter';
 
 const createWeaverProcess = async (req: Request, res: Response) =>{
     try {
@@ -1440,6 +1442,38 @@ const chooseWeaverFabric = async (req: Request, res: Response) => {
     }
   };
   
+const getWeaverProcessTracingChartData = async (req: Request, res: Response) => {
+    let query = req.query;
+    let include = [
+        {
+            model: Weaver,
+            as: "weaver",
+        }
+    ];
+    let weavers = await WeaverProcess.findAll({
+        where: query,
+        include
+    });
+
+    weavers = await Promise.all(weavers.map(async (el: any) => {
+        el = el.toJSON();
+        el.spin = await SpinSales.findAll({
+            where: {
+                buyer_id: el.weaver.id
+            }
+        });
+        el.spinsCount = el.spin.length;
+        el.spinskIds = el.spin.map((el: any) => el.knitter_id);
+        console.log('spins received ', el.spin.length);
+        el.spin = await Promise.all(el.spin.map(async (el: any) => {
+            console.log('getting data for ', el.reel_lot_no);
+            return _getSpinnerProcessTracingChartData(el.reel_lot_no)
+        }));
+        return el;
+    }))
+    let key = Object.keys(req.query)[0];
+    res.sendSuccess(res, formatDataFromWeaver(req.query[key], weavers));
+}
 
 export {
     createWeaverProcess,
@@ -1461,5 +1495,6 @@ export {
     fetchFabricReelLotNo,
     getChooseFabricFilters,
     fetchWeaverSale,
-    chooseWeaverFabric
+    chooseWeaverFabric,
+    getWeaverProcessTracingChartData
 }

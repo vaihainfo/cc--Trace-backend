@@ -18,7 +18,8 @@ import {
     exportWeaverProcess,
     getChooseFabricFilters,
     fetchWeaverSale,
-    chooseWeaverFabric
+    chooseWeaverFabric,
+    getWeaverProcessTracingChartData
 } from "../../controllers/weaver";
 
 import { Router } from "express";
@@ -44,4 +45,6 @@ router.get('/get-fabrics', getFabrics);
 router.get('/get-reel-lot-no', fetchFabricReelLotNo);
 router.get('/get-fabric-filters', getChooseFabricFilters);
 router.get('/choose-fabric', chooseWeaverFabric);
+router.get('/tracing/chart', getWeaverProcessTracingChartData);
+
 export default router;

@@ -1826,8 +1826,7 @@ const getYarnReelLotNo = async (req: Request, res: Response) => {
     }
 };
 
-const getSpinnerProcessTracingChartData = async (req: Request, res: Response) => {
-    const { reelLotNo } = req.query;
+const _getSpinnerProcessTracingChartData = async (reelLotNo: any) => {
     let include = [
         {
             model: Spinner,
@@ -1890,8 +1889,15 @@ const getSpinnerProcessTracingChartData = async (req: Request, res: Response) =>
             return el;
         }))
         return el;
-    }))
-    res.sendSuccess(res, formatDataForSpinnerProcess(reelLotNo, spin));
+    }));
+
+    return formatDataForSpinnerProcess(reelLotNo, spin);
+}
+
+const getSpinnerProcessTracingChartData = async (req: Request, res: Response) => {
+    const {reelLotNo} = req.query;
+    const data = await _getSpinnerProcessTracingChartData(reelLotNo);
+    res.sendSuccess(res, data);
 }
 
 export {
@@ -1920,5 +1926,6 @@ export {
     chooseYarn,
     getInvoiceAndReelLotNo,
     getYarnReelLotNo,
-    getSpinnerProcessTracingChartData
+    getSpinnerProcessTracingChartData,
+    _getSpinnerProcessTracingChartData
 }
