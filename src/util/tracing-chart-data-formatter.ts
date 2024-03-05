@@ -61,7 +61,7 @@ export const formatDataForSpinnerProcess = (reelLotNo: any, data: any): any => {
 
     data[0].ginSales.forEach((el: any) => {
         const ginner_name = el.ginner.name;
-        const reel = el.reel_lot_no.split(',').map((el: any) => el.trim());
+        const reel = el.reel_lot_no?.split(',').map((el: any) => el.trim());
         const villages = getVillagesForGinSales(el);
         if (!groupData[ginner_name]) {
             groupData[ginner_name] = {
@@ -70,13 +70,13 @@ export const formatDataForSpinnerProcess = (reelLotNo: any, data: any): any => {
                 villages: []
             }
         };
-        reel.forEach((el:any) => {
+        reel?.forEach((el:any) => {
             if (!groupData[ginner_name].reels.includes(el)) {
                 groupData[ginner_name].reels.push(el)
             }
         })
 
-        villages.forEach((el:any) => {
+        villages?.forEach((el:any) => {
             if (!groupData[ginner_name].villages.includes(el)) {
                 groupData[ginner_name].villages.push(el)
             }
