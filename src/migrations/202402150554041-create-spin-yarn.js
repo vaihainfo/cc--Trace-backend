@@ -2,6 +2,7 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
+    await queryInterface.dropTable('spin_yarns');
     await queryInterface.createTable('spin_yarns', {
       id: {
         allowNull: false,
