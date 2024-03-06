@@ -18,17 +18,23 @@ import {
     exportKnitterProcess,
     getChooseFabricFilters,
     chooseFabricProcess,
-    getKnitterProcessTracingChartData
+    getKnitterProcessTracingChartData,
+    updateKnitterProcess,
+    updateKnitterrSales,
+    fetchKnitterProcess
 } from "../../controllers/knitter";
 
 import { Router } from "express";
 const router = Router();
 
 router.post('/process', createKnitterProcess);
+router.put('/process', updateKnitterProcess);
+router.get('/process/get-process', fetchKnitterProcess);
 router.get('/process', fetchKnitterProcessPagination);
 router.get('/', fetchKnitterSalesPagination);
 router.get('/get-sale', fetchKnitterSale);
 router.post('/', createKnitterrSales);
+router.put('/', updateKnitterrSales);
 router.delete('/', deleteKnitterSales);
 router.get('/export', exportKnitterSale);
 router.get('/export-process', exportKnitterProcess);

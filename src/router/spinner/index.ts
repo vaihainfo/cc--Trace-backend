@@ -23,7 +23,10 @@ import {
     chooseYarn,
     getInvoiceAndReelLotNo,
     getYarnReelLotNo,
-    getSpinnerProcessTracingChartData
+    getSpinnerProcessTracingChartData,
+    updateSpinProcess,
+    updateSpinnerSales,
+    fetchSpinnerSale
 } from "../../controllers/spinner";
 
 import { Router } from "express";
@@ -32,11 +35,13 @@ const router = Router();
 // Spinner Routes
 router.get('/', fetchSpinnerProcessPagination);
 router.post('/', createSpinnerProcess);
-router.put('/', updateSpinnerProcess);
+router.put('/', updateSpinProcess);
 router.get('/get-process', fetchSpinnerProcess);
 router.delete('/', deleteSpinnerProcess);
 router.get('/export', exportSpinnerProcess);
 router.get('/sales', fetchSpinSalesPagination);
+router.put('/sales', updateSpinnerSales);
+router.get('/sales/get-sale', fetchSpinnerSale);
 router.delete('/sales', deleteSpinnerSales);
 router.get('/comber-noil', fetchComberNoilPagination);
 router.post('/sales', createSpinnerSales);

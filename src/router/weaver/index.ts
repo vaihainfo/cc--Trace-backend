@@ -19,16 +19,22 @@ import {
     getChooseFabricFilters,
     fetchWeaverSale,
     chooseWeaverFabric,
-    getWeaverProcessTracingChartData
+    getWeaverProcessTracingChartData,
+    updateWeaverProcess,
+    fetchWeaverProcess,
+    updateWeaverSales
 } from "../../controllers/weaver";
 
 import { Router } from "express";
 const router = Router();
 
 router.post('/process', createWeaverProcess);
+router.put('/process', updateWeaverProcess);
 router.get('/process', fetchWeaverProcessPagination);
+router.get('/process/get-process', fetchWeaverProcess);
 router.get('/', fetchWeaverSalesPagination);
 router.post('/', createWeaverSales);
+router.put('/', updateWeaverSales);
 router.delete('/', deleteWeaverSales);
 router.get('/get-program', getWeaverProgram);
 router.get('/export', exportWeaverSale);

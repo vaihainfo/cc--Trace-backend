@@ -22,7 +22,10 @@ import {
     getChooseGarmentFilters,
     exportGarmentProcess,
     getBuyerProcessors,
-    garmentTraceabilityMap
+    garmentTraceabilityMap,
+    updateGarmentProcess,
+    fetchGarmentProcess,
+    updateGarmentSales
 } from "../../controllers/garment-sales";
 
 import { Router } from "express";
@@ -35,10 +38,13 @@ router.get('/dashboard', fetchTransactions);
 router.get('/dashboard-all', fetchTransactionsAll);
 router.post('/update-transaction', updateTransactionStatus);
 router.post('/process', createGarmentProcess);
+router.put('/process', updateGarmentProcess);
+router.get('/process/get-process', fetchGarmentProcess);
 router.get('/process', fetchGarmentProcessPagination);
 router.get('/choose-fabric', chooseFabricProcess);
 router.get('/choose-garment', chooseGarmentSales);
 router.post('/', createGarmentSales);
+router.put('/', updateGarmentSales);
 router.get('/', fetchGarmentSalesPagination);
 router.get('/export', exportGarmentSale);
 router.get('/export-process', exportGarmentProcess);

@@ -770,6 +770,48 @@ const createGarmentProcess = async (req: Request, res: Response) => {
   }
 };
 
+//create Garment Process
+const updateGarmentProcess = async (req: Request, res: Response) => {
+  try {
+    if (!req.body.id) {
+      return res.sendError(res, "need process id");
+    }
+    const data = {
+      date: req.body.date,
+      fabric_order_ref: req.body.fabricOrderRef,
+      brand_order_ref: req.body.brandOrderRef,
+      garment_type: req.body.garmentType,
+      style_mark_no: req.body.styleMarkNo,
+      garment_size: req.body.garmentSize,
+      color: req.body.color,
+      no_of_pieces: req.body.noOfPieces,
+      no_of_boxes: req.body.noOfBoxes,
+      finished_garment_image: req.body.finishedGarmentImage,
+    };
+    const garmentProcess = await GarmentProcess.update(data,{where  : {id :req.body.id}});
+    const destroy = await GarmentFabricType.destroy({where :{process_id :req.body.id}});
+    for await (let fabric of req.body.garmentfabrics) {
+      let data = {
+        process_id: req.body.id,
+        garment_type: fabric.garmentType,
+        style_mark_no: fabric.styleMarkNo,
+        garment_size: fabric.garmentSize,
+        color: fabric.color,
+        no_of_pieces: fabric.noOfPieces,
+        no_of_boxes: fabric.noOfBoxes,
+        finished_garment_image: fabric.finishedGarmentImage,
+        sold_status: false
+      };
+      const garmentFabric = await GarmentFabricType.create(data);
+    }
+
+    res.sendSuccess(res, garmentProcess);
+  } catch (error: any) {
+    console.log(error.message);
+    return res.sendError(res, error.meessage);
+  }
+};
+
 //fetch Garment Sales with filters
 const fetchGarmentProcessPagination = async (req: Request, res: Response) => {
   const searchTerm = req.query.search || "";
@@ -867,6 +909,52 @@ const fetchGarmentProcessPagination = async (req: Request, res: Response) => {
     return res.sendError(res, error.message);
   }
 };
+
+//fetch knitter Process by id
+const fetchGarmentProcess = async (req: Request, res: Response) => {
+  const { id } = req.query;
+  const whereCondition: any = {};
+  try {
+    if (!id) {
+      return res.sendError(res, "need process id");
+    }
+    whereCondition.id = id;
+
+    let include = [
+      {
+        model: Garment,
+        as: "garment",
+        attributes: ["id", "name", "address"],
+      },
+      {
+        model: Season,
+        as: "season",
+      },
+      {
+        model: Embroidering,
+        as: "embroidering",
+      },
+      {
+        model: Department,
+        as: "department",
+      },
+      {
+        model: Program,
+        as: "program",
+      },
+    ];
+    //fetch data with id
+    let rows = await GarmentProcess.findOne({
+      where: whereCondition,
+      include: include
+    });
+   
+    return res.sendSuccess(res, rows);
+  } catch (error: any) {
+    return res.sendError(res, error.message);
+  }
+};
+
 
 const exportGarmentProcess = async (req: Request, res: Response) => {
   const excelFilePath = path.join("./upload", "garment-process.xlsx");
@@ -1274,16 +1362,13 @@ const createGarmentSales = async (req: Request, res: Response) => {
           where: { id: obj.process_id },
         });
         if (val) {
-          // let update = await GarmentProcess.update(
-          //   {
-          //     // qty_stock: val.dataValues.qty_stock - obj.qtyUsed,
-          //     qty_stock_weight:
-          //       val.dataValues.qty_stock_weight - obj.qtyUsedWeight,
-          //     qty_stock_length:
-          //       val.dataValues.qty_stock_length - obj.qtyUsedLength,
-          //   },
-          //   { where: { id: obj.process_id } }
-          // );
+          let update = await GarmentProcess.update(
+            {
+              // qty_stock: val.dataValues.qty_stock - obj.qtyUsed,
+             status : 'Sold'
+            },
+            { where: { id: obj.process_id } }
+          );
           let updatee = await GarmentFabricType.update(
             { sold_status: true },
             { where: { id: obj.id } }
@@ -1306,6 +1391,35 @@ const createGarmentSales = async (req: Request, res: Response) => {
     res.sendSuccess(res, garmentSales);
   } catch (error: any) {
     console.log(error.message);
+    return res.sendError(res, error.meessage);
+  }
+};
+
+
+//update Garment Sale
+const updateGarmentSales = async (req: Request, res: Response) => {
+  try {
+    if (!req.body.id) {
+      return res.sendError(res, "need sales id");
+    }
+    const data = {
+      date: req.body.date ? req.body.date : undefined,
+      invoice_no: req.body.invoiceNo,
+      vehicle_no: req.body.vehicleNo
+    };
+    const kniSale = await GarmentSales.update(
+      data,
+      {
+        where: {
+          id: req.body.id,
+        },
+      }
+    );
+   
+
+    return res.sendSuccess(res, kniSale);
+  } catch (error: any) {
+    console.log(error);
     return res.sendError(res, error.meessage);
   }
 };
@@ -3035,7 +3149,10 @@ export {
   updateTransactionStatus,
   getProgram,
   createGarmentProcess,
+  updateGarmentProcess,
+  fetchGarmentProcess,
   createGarmentSales,
+  updateGarmentSales,
   fetchGarmentProcessPagination,
   fetchGarmentSalesPagination,
   chooseFabricProcess,

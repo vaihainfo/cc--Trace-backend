@@ -109,7 +109,31 @@ const createWeaverProcess = async (req: Request, res: Response) =>{
         }
     }
 
+const updateWeaverProcess = async (req: Request, res: Response) => {
+  try {
+    const data = {
+      date: req.body.date,
+      garment_order_ref: req.body.garmentOrderRef,
+      brand_order_ref: req.body.brandOrderRef,
+      fabric_gsm: req.body.fabricGsm,
+      batch_lot_no: req.body.batchLotNo,
+    };
 
+    const weaver = await WeaverProcess.update(data, {
+      where: { id: req.body.id },
+    });
+    for await (let fabric of req.body.fabrics) {
+      let data = {
+        fabric_gsm: fabric.fabricGsm,
+      };
+      const fab = await WeaverFabric.update(data, { where: { id: fabric.id } });
+    }
+    res.sendSuccess(res, { weaver });
+  } catch (error: any) {
+    console.log(error);
+    return res.sendError(res, error.meessage);
+  }
+};
 //fetch Weaver process by id
 const fetchWeaverProcessPagination = async (req: Request, res: Response) => {
     const searchTerm = req.query.search || "";
@@ -267,6 +291,58 @@ const fetchWeaverProcessPagination = async (req: Request, res: Response) => {
     }
 };
 
+//fetch Weaver Process by id
+const fetchWeaverProcess = async (req: Request, res: Response) => {
+    const { id } = req.query;
+    const whereCondition: any = {};
+    try {
+      if (!id) {
+        return res.sendError(res, "need process id");
+      }
+      whereCondition.id = id;
+  
+      let include = [
+        {
+            model: Weaver,
+            as: "weaver",
+            attributes: ['id', 'name', 'address']
+        },
+        {
+            model: Season,
+            as: "season",
+            attributes: ['id', 'name']
+        },
+        {
+            model: Program,
+            as: "program",
+            attributes: ['id', 'program_name']
+        },
+        {
+            model: Dyeing,
+            as: "dyeing",
+        },
+        {
+            model: YarnCount,
+            as: "yarncount",
+            attributes: ['id', 'yarnCount_name']
+        }
+      ];
+      //fetch data with pagination
+      let rows = await WeaverProcess.findOne({
+        where: whereCondition,
+        include: include
+      });
+      let fabrics = await WeaverFabric.findAll({where : {process_id : id}})
+
+      let data  = {...rows.dataValues ,fabrics};
+      return res.sendSuccess(res, data);
+    } catch (error: any) {
+      return res.sendError(res, error.message);
+    }
+  };
+
+
+
 //create Weaver Sale
 const createWeaverSales = async (req: Request, res: Response) => {
     try {
@@ -305,7 +381,7 @@ const createWeaverSales = async (req: Request, res: Response) => {
         let uniqueFilename = `weaver_sales_qrcode_${Date.now()}.png`;
         let da = encrypt(`Weaver,Sale,${weaverSales.id}`);
         let aa = await generateOnlyQrCode(da, uniqueFilename);
-        const gin = await WeaverSales.update({ qr: uniqueFilename }, {
+        const gin = await WeaverSales.update({ qr: uniqueFilename ,status: 'Sold'}, {
             where: {
                 id: weaverSales.id
             }
@@ -340,6 +416,34 @@ const createWeaverSales = async (req: Request, res: Response) => {
         return res.sendError(res, error.meessage);
     }
 }
+
+//update knitter Sale
+const updateWeaverSales = async (req: Request, res: Response) => {
+    try {
+      if (!req.body.id) {
+        return res.sendError(res, "need sales id");
+      }
+      const data = {
+        date: req.body.date ? req.body.date : undefined,
+        invoice_no: req.body.invoiceNo,
+        vehicle_no: req.body.vehicleNo
+      };
+      const weaverSale = await WeaverSales.update(
+        data,
+        {
+          where: {
+            id: req.body.id,
+          },
+        }
+      );
+     
+  
+      return res.sendSuccess(res, weaverSale);
+    } catch (error: any) {
+      console.log(error);
+      return res.sendError(res, error.meessage);
+    }
+  };
 
 //fetch Weaver Sales with filters
 const fetchWeaverSalesPagination = async (req: Request, res: Response) => {
@@ -859,52 +963,59 @@ const getWeaverDyeing = async (req: Request, res: Response) => {
 
 //fetch knitter Sale by id
 const fetchWeaverSale = async (req: Request, res: Response) => {
-    const { salesId } = req.query;
-    const whereCondition: any = {};
-    try {
-        if (!salesId) {
-            return res.sendError(res, "need sales id");
-        }
-        whereCondition.id = salesId;
-
-
-        let include = [
-            {
-                model: Weaver,
-                as: "weaver",
-                attributes: ['id', 'name', 'address']
-            },
-            {
-                model: Season,
-                as: "season",
-                attributes: ['id', 'name']
-            },
-            {
-                model: Program,
-                as: "program",
-                attributes: ['id', 'program_name']
-            },
-            {
-                model: Garment,
-                as: "buyer",
-                attributes: ['id', 'name', 'address']
-            },
-            {
-                model: Fabric,
-                as: "dyingwashing",
-                attributes: ['id', 'name', 'address']
-            }
-        ];
-        //fetch data with pagination
-        const rows = await WeaverSales.findOne({
-            where: whereCondition,
-            include: include
-        });
-        return res.sendSuccess(res, rows);
-
-    } catch (error: any) {
-        return res.sendError(res, error.message);
+  const { salesId } = req.query;
+  const whereCondition: any = {};
+  try {
+    if (!salesId) {
+      return res.sendError(res, "need sales id");
     }
+    whereCondition.id = salesId;
+
+    let include = [
+      {
+        model: Weaver,
+        as: "weaver",
+        attributes: ["id", "name", "address"],
+      },
+      {
+        model: Season,
+        as: "season",
+        attributes: ["id", "name"],
+      },
+      {
+        model: Program,
+        as: "program",
+        attributes: ["id", "program_name"],
+      },
+      {
+        model: Garment,
+        as: "buyer",
+        attributes: ["id", "name", "address"],
+      },
+      {
+        model: Fabric,
+        as: "dyingwashing",
+        attributes: ["id", "name", "address"],
+      },
+    ];
+    //fetch data with pagination
+    const rows = await WeaverSales.findOne({
+      where: whereCondition,
+      include: include,
+    });
+    let fabricType = [];
+
+    if (rows.dataValues?.fabric_type.length > 0) {
+      fabricType = await FabricType.findAll({
+        attributes: ["id", "fabricType_name"],
+        where: { id: { [Op.in]: rows.dataValues?.fabric_type } },
+      });
+    }
+    let data = {...rows.dataValues,fabricType}
+    return res.sendSuccess(res, data);
+  } catch (error: any) {
+    return res.sendError(res, error.message);
+  }
 };
 
 //fetch Weaver transaction with filters
@@ -1477,9 +1588,12 @@ const getWeaverProcessTracingChartData = async (req: Request, res: Response) => 
 
 export {
     createWeaverProcess,
+    updateWeaverProcess,
     fetchWeaverProcessPagination,
+    fetchWeaverProcess,
     exportWeaverProcess,
     createWeaverSales,
+    updateWeaverSales,
     fetchWeaverSalesPagination,
     fetchWeaverDashBoard,
     updateStatusWeaverSale,

@@ -124,6 +124,43 @@ const createSpinnerProcess = async (req: Request, res: Response) => {
     }
 }
 
+const updateSpinProcess = async(req: Request, res: Response) => {
+    try {
+        if (!req.body.id) {
+            return res.sendError(res, "Need Process Id");
+          }
+        const data = {
+            date: req.body.date,
+            yarn_type: req.body.yarnType,
+            yarn_count: req.body.yarnCount,
+            yarn_qty_produced: req.body.yarnQtyProduced,
+            yarn_realisation: req.body.yarnRealisation,
+            net_yarn_qty: req.body.netYarnQty,
+            comber_noil: req.body.comber_noil,
+            process_complete: req.body.processComplete,
+        };
+        const spin = await SpinProcess.update(data,
+            {
+                where: { id: req.body.id }
+            }
+        );
+        let yarn = SpinYarn.destroy({where: { process_id: req.body.id } })
+        for await (let yarn of req.body.yarns) {
+            let yarnData = {
+                process_id: req.body.id ,
+                yarn_count: yarn.yarnCount,
+                yarn_produced: yarn.yarnProduced,
+            }
+            const yarns = await SpinYarn.create(yarnData);
+        }
+
+        res.sendSuccess(res, { spin });
+    } catch (error: any) {
+        console.log(error);
+        return res.sendError(res, error.meessage);
+    }
+}
+ 
 const yarnId = async (id: any, date: any) => {
     let a = await sequelize.query(
         `SELECT CONCAT('YN-REE', UPPER(LEFT("country"."county_name", 2)), UPPER(LEFT("state"."state_name", 2)), UPPER("processor"."short_name")) as idprefix
@@ -327,7 +364,7 @@ const fetchSpinnerProcess = async (req: Request, res: Response) => {
             ]
         });
 
-        let data = [];
+        
         let yarncount = [];
 
         if (gin.dataValues?.yarn_count.length > 0) {
@@ -336,14 +373,10 @@ const fetchSpinnerProcess = async (req: Request, res: Response) => {
                 where: { id: { [Op.in]: gin.dataValues?.yarn_count } },
             });
         }
+        gin.yarncount  =yarncount
+       
 
-        data.push({
-            ...gin.dataValues,
-            yarncount,
-        });
-
-
-        return res.sendSuccess(res, data);
+        return res.sendSuccess(res, gin);
 
     } catch (error: any) {
         return res.sendError(res, error.message);
@@ -473,6 +506,8 @@ const updateSpinnerProcess = async (req: Request, res: Response) => {
         return res.sendError(res, error.meessage);
     }
 }
+
+
 
 const exportSpinnerProcess = async (req: Request, res: Response) => {
     const excelFilePath = path.join("./upload", "spinner-process.xlsx");
@@ -733,7 +768,7 @@ const createSpinnerSales = async (req: Request, res: Response) => {
 
         if (req.body.chooseYarn && req.body.chooseYarn.length > 0) {
             for await (let obj of req.body.chooseYarn) {
-                let update = await SpinProcess.update({ qty_stock: obj.totalQty - obj.qtyUsed }, { where: { id: obj.process_id } });
+                let update = await SpinProcess.update({ qty_stock: obj.totalQty - obj.qtyUsed, status :'Sold' }, { where: { id: obj.process_id } });
                 const spinYarnStatus = await SpinYarn.update({ sold_status: true }, { where: { id: obj.id } });
                 await SpinProcessYarnSelection.create({ spin_process_id: obj.process_id, yarn_id: obj.id, sales_id: spinSales.id, qty_used: obj.qtyUsed })
             }
@@ -749,6 +784,85 @@ const createSpinnerSales = async (req: Request, res: Response) => {
         return res.sendError(res, error.meessage);
     }
 }
+
+
+//update Spinner Sale
+const updateSpinnerSales = async (req: Request, res: Response) => {
+    try {
+        if (!req.body.id) {
+            return res.sendError(res, "Need Sales Id");
+        }
+        const data = {
+            date: req.body.date,
+            invoice_no: req.body.invoiceNo,
+            vehicle_no: req.body.vehicleNo,
+            invoice_file: req.body.invoiceFile,
+        };
+
+        const spinSales = await SpinSales.update(data ,{where :{id :req.body.id}});
+        res.sendSuccess(res, { spinSales });
+    } catch (error: any) {
+        console.error(error)
+        return res.sendError(res, error.meessage);
+    }
+}
+
+const fetchSpinnerSale = async (req: Request, res: Response) => {
+
+    const whereCondition: any = {};
+    try {
+        whereCondition.id = req.query.id;
+        let include = [
+            {
+                model: Spinner,
+                as: "spinner",
+                attributes: ['id', 'name']
+            },
+            {
+                model: Season,
+                as: "season",
+                attributes: ['id', 'name']
+            },
+            {
+                model: Program,
+                as: "program",
+                attributes: ['id', 'program_name']
+            },
+            {
+                model: YarnCount,
+                as: 'yarncount',
+                attributes: ['id', 'yarnCount_name']
+            },
+            {
+                model: Weaver,
+                as: "weaver",
+                attributes: ['id', 'name']
+            },
+            {
+                model: Knitter,
+                as: "knitter",
+                attributes: ['id', 'name']
+            }
+        ];
+        //fetch data with pagination
+
+        const gin = await SpinSales.findOne({
+            where: whereCondition,
+            include: include,
+            order: [
+                [
+                    'id', 'desc'
+                ]
+            ]
+        });
+
+
+        return res.sendSuccess(res, gin);
+
+    } catch (error: any) {
+        return res.sendError(res, error.message);
+    }
+};
 
 //fetch Spinner Sales with filters
 const fetchSpinSalesPagination = async (req: Request, res: Response) => {
@@ -1906,6 +2020,8 @@ export {
     exportSpinnerProcess,
     updateSpinnerProcess,
     createSpinnerSales,
+    updateSpinnerSales,
+    fetchSpinnerSale,
     fetchSpinSalesPagination,
     exportSpinnerSale,
     fetchSpinSalesDashBoard,
@@ -1920,6 +2036,7 @@ export {
     deleteSpinnerSales,
     getKnitterWeaver,
     fetchSpinnerProcess,
+    updateSpinProcess,
     getGinnerDashboard,
     chooseLint,
     getSalesInvoice,
