@@ -238,20 +238,9 @@ const fetchGinProcessPagination = async (req: Request, res: Response) => {
               ),
               "lint_quantity",
             ],
-            [
-              sequelize.fn(
-                "min",
-                Sequelize.literal('CAST("bale_no" AS DOUBLE PRECISION)')
-              ),
-              "pressno_from",
-            ],
-            [
-              sequelize.fn(
-                "max",
-                Sequelize.literal('CAST("bale_no" AS DOUBLE PRECISION)')
-              ),
-              "pressno_to",
-            ],
+            [sequelize.fn("min", sequelize.col("bale_no")), "pressno_from"],
+            [sequelize.fn("max", sequelize.col("bale_no")), "pressno_to"],
+           
           ],
           where: { process_id: row.dataValues.id },
         });
