@@ -1,12 +1,11 @@
 import { Request, Response } from "express";
 import GinProcess from "../../models/gin-process.model";
-import { Sequelize, Op, where } from "sequelize";
+import { Sequelize, Op } from "sequelize";
 import { encrypt, generateOnlyQrCode } from "../../provider/qrcode";
 import GinBale from "../../models/gin-bale.model";
 import Ginner from "../../models/ginner.model";
 import GinSales from "../../models/gin-sales.model";
 import * as ExcelJS from "exceljs";
-import * as fs from "fs";
 import * as path from "path";
 import Season from "../../models/season.model";
 import Program from "../../models/program.model";
@@ -22,9 +21,10 @@ import Farmer from "../../models/farmer.model";
 import { send_gin_mail } from "../send-emails";
 import FarmGroup from "../../models/farm-group.model";
 import { formatDataForGinnerProcess } from "../../util/tracing-chart-data-formatter";
-import Farm from "../../models/farm.model";
 import QualityParameter from "../../models/quality-parameter.model";
 import Brand from "../../models/brand.model";
+import PhysicalTraceabilityDataGinner from "../../models/physical-traceability-data-ginner.model";
+import PhysicalTraceabilityDataGinnerSample from "../../models/physical-traceability-data-ginner-sample.model";
 
 //create Ginner Process
 const createGinnerProcess = async (req: Request, res: Response) => {
@@ -35,6 +35,7 @@ const createGinnerProcess = async (req: Request, res: Response) => {
         return res.sendError(res, "Lot No already Exists");
       }
     }
+
     const data = {
       ginner_id: req.body.ginnerId,
       program_id: req.body.programId,
@@ -53,6 +54,7 @@ const createGinnerProcess = async (req: Request, res: Response) => {
       bale_process: req.body.baleProcess,
     };
     const ginprocess = await GinProcess.create(data);
+
     let uniqueFilename = `gin_procees_qrcode_${Date.now()}.png`;
     let da = encrypt(`${ginprocess.id}`);
     let aa = await generateOnlyQrCode(da, uniqueFilename);
@@ -64,6 +66,7 @@ const createGinnerProcess = async (req: Request, res: Response) => {
         },
       }
     );
+
     for await (const bale of req.body.bales) {
       let baleData = {
         process_id: ginprocess.id,
@@ -76,6 +79,7 @@ const createGinnerProcess = async (req: Request, res: Response) => {
         color_grade: bale.colorGrade,
       };
       const bales = await GinBale.create(baleData);
+
       let uniqueFilename = `gin_bale_qrcode_${Date.now()}.png`;
       let da = encrypt(`Ginner,Bale, ${bales.id}`);
       let aa = await generateOnlyQrCode(da, uniqueFilename);
@@ -84,10 +88,11 @@ const createGinnerProcess = async (req: Request, res: Response) => {
         {
           where: {
             id: bales.id,
-          },
+          }
         }
       );
     }
+
     for await (const cotton of req.body.chooseCotton) {
       let trans = await Transaction.findAll({
         where: {
@@ -98,6 +103,7 @@ const createGinnerProcess = async (req: Request, res: Response) => {
           qty_stock: { [Op.gt]: 0 },
         },
       });
+
       for await (const tran of trans) {
         let realQty = 0;
         if (cotton.qty_used > 0) {
@@ -121,6 +127,44 @@ const createGinnerProcess = async (req: Request, res: Response) => {
         }
       }
     }
+
+    if (req.body.enterPhysicalTraceability) {
+      const physicalTraceabilityData = {
+        end_date_of_DNA_marker_application: req.body.endDateOfDNAMarkerApplication,
+        date_sample_collection: req.body.dateSampleCollection,
+        data_of_sample_dispatch: req.body.dataOfSampleDispatch,
+        operator_name: req.body.operatorName,
+        cotton_connect_executive_name: req.body.cottonConnectExecutiveName,
+        expected_date_of_lint_sale: req.body.expectedDateOfLintSale,
+        physical_traceability_partner_id: req.body.physicalTraceabilityPartnerId,
+        gin_process_id: ginprocess.id,
+        ginner_id: req.body.ginnerId
+      };
+      const physicalTraceabilityDataGinner = await PhysicalTraceabilityDataGinner.create(physicalTraceabilityData);
+
+      for await (const weightAndBaleNumber of req.body.weightAndBaleNumber) {
+        let brand = await Brand.findOne({
+          where: { id: req.body.brandId }
+        });
+
+        const updatedCount = brand.dataValues.count + 1;
+        let physicalTraceabilityDataGinnerSampleData = {
+          physical_traceability_data_ginner_id: physicalTraceabilityDataGinner.id,
+          weight: weightAndBaleNumber.weight,
+          bale_no: weightAndBaleNumber.baleNumber,
+          original_sample_status: weightAndBaleNumber.originalSampleStatus,
+          code: `DNA${req.body.ginnerShortname}-${req.body.reelLotNno || ''}-${updatedCount}`,
+          sample_result: 0
+        };
+        await PhysicalTraceabilityDataGinnerSample.create(physicalTraceabilityDataGinnerSampleData);
+
+        await Brand.update(
+          { count: updatedCount },
+          { where: { id: brand.id } }
+        );
+      }
+    }
+
     res.sendSuccess(res, { ginprocess });
   } catch (error: any) {
     console.error(error);
@@ -256,13 +300,12 @@ const fetchGinProcessPagination = async (req: Request, res: Response) => {
           reel_press_no:
             row.dataValues.no_of_bales === 0
               ? ""
-              : `001-${
-                  row.dataValues.no_of_bales < 9
-                    ? `00${row.dataValues.no_of_bales}`
-                    : row.dataValues.no_of_bales < 99
-                    ? `0${row.dataValues.no_of_bales}`
-                    : row.dataValues.no_of_bales
-                }`,
+              : `001-${row.dataValues.no_of_bales < 9
+                ? `00${row.dataValues.no_of_bales}`
+                : row.dataValues.no_of_bales < 99
+                  ? `0${row.dataValues.no_of_bales}`
+                  : row.dataValues.no_of_bales
+              }`,
         });
       }
       return res.sendPaginationSuccess(res, sendData, count);
@@ -418,13 +461,12 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
       let reel_press_no =
         item.dataValues.no_of_bales === 0
           ? ""
-          : `001-${
-              item.dataValues.no_of_bales < 9
-                ? `00${item.dataValues.no_of_bales}`
-                : item.dataValues.no_of_bales < 99
-                ? `0${item.dataValues.no_of_bales}`
-                : item.dataValues.no_of_bales
-            }`;
+          : `001-${item.dataValues.no_of_bales < 9
+            ? `00${item.dataValues.no_of_bales}`
+            : item.dataValues.no_of_bales < 99
+              ? `0${item.dataValues.no_of_bales}`
+              : item.dataValues.no_of_bales
+          }`;
       const rowValues = Object.values({
         index: index + 1,
         createdDate: item.createdAt ? item.createdAt : "",
@@ -577,11 +619,9 @@ const deleteGinnerProcess = async (req: Request, res: Response) => {
       where: { "$bale.process_id$": req.body.id },
       include: [{ model: GinBale, as: "bale" }],
     });
+
     if (ids > 0) {
-      return res.sendError(
-        res,
-        "Unable to delete this process since some bales of this process was sold"
-      );
+      return res.sendError(res, "Unable to delete this process since some bales of this process was sold");
     } else {
       let cotton = await CottonSelection.findAll({
         where: { process_id: req.body.id },
@@ -605,11 +645,23 @@ const deleteGinnerProcess = async (req: Request, res: Response) => {
           process_id: req.body.id,
         },
       });
+
+      const physicalTraceabilityDataGinner = await PhysicalTraceabilityDataGinner.findOne({ where: { gin_process_id: req.body.id } });
+      if (physicalTraceabilityDataGinner) {
+        await PhysicalTraceabilityDataGinnerSample.destroy({
+          where: { physical_traceability_data_ginner_id: physicalTraceabilityDataGinner.id }
+        });
+        await PhysicalTraceabilityDataGinner.destroy({
+          where: { gin_process_id: req.body.id }
+        });
+      }
+
       await GinProcess.destroy({
         where: {
           id: req.body.id,
         },
       });
+
       return res.sendSuccess(res, {
         message: "Successfully deleted this process",
       });
@@ -1390,12 +1442,12 @@ const getReelBaleId = async (req: Request, res: Response) => {
     var baleid_prefix = result.dataValues.idprefix
       ? result.dataValues.idprefix
       : "";
-      let currentDate = new Date();
-      let day = String(currentDate.getUTCDate()).padStart(2, "0");
-      let month = String(currentDate.getUTCMonth() + 1).padStart(2, "0"); // UTC months are zero-indexed, so we add 1
-      let year = String(currentDate.getUTCFullYear());
-  
-      let prcs_date = day + month + year;
+    let currentDate = new Date();
+    let day = String(currentDate.getUTCDate()).padStart(2, "0");
+    let month = String(currentDate.getUTCMonth() + 1).padStart(2, "0"); // UTC months are zero-indexed, so we add 1
+    let year = String(currentDate.getUTCFullYear());
+
+    let prcs_date = day + month + year;
     var bale_no = baleCount ? Number(baleCount ?? 0) + 1 : 1;
     var reelbale_id = baleid_prefix + prcs_date + "/" + String(bale_no);
     res.sendSuccess(res, { id: reelbale_id });

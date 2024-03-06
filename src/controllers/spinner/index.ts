@@ -1,15 +1,12 @@
 import { Request, Response } from "express";
-
-import { Sequelize, Op, where } from "sequelize";
+import { Sequelize, Op } from "sequelize";
 import { encrypt, generateGinSalesHtml, generateOnlyQrCode } from "../../provider/qrcode";
 import * as ExcelJS from "exceljs";
-import * as fs from "fs";
 import * as path from "path";
 import Season from "../../models/season.model";
 import Program from "../../models/program.model";
 import Spinner from "../../models/spinner.model";
 import State from "../../models/state.model";
-import Country from "../../models/country.model";
 import sequelize from "../../util/dbConn";
 import Dyeing from "../../models/dyeing.model";
 import SpinProcess from "../../models/spin-process.model";
@@ -22,8 +19,6 @@ import Knitter from "../../models/knitter.model";
 import Weaver from "../../models/weaver.model";
 import LintSelections from "../../models/lint-seletions.model";
 import SpinProcessYarnSelection from "../../models/spin-process-yarn-seletions.model";
-import BaleSelection from "../../models/bale-selection.model";
-import GinBale from "../../models/gin-bale.model";
 import ComberSelection from "../../models/comber-selection.model";
 import { send_spin_mail } from "../send-emails";
 import SpinYarn from "../../models/spin-yarn.model";
@@ -32,15 +27,20 @@ import Village from "../../models/village.model";
 import Transaction from "../../models/transaction.model";
 import Farmer from "../../models/farmer.model";
 import { formatDataForSpinnerProcess } from '../../util/tracing-chart-data-formatter';
+import PhysicalTraceabilityDataSpinner from "../../models/physical-traceability-data-spinner.model";
+import Brand from "../../models/brand.model";
+import PhysicalTraceabilityDataSpinnerSample from "../../models/physical-traceability-data-spinner-sample.model";
+
 //create Spinner Process
 const createSpinnerProcess = async (req: Request, res: Response) => {
     try {
         let program = await Program.findOne({ where: { program_name: { [Op.iLike]: 'Reel' } } });
-        let abc
-        if (program.dataValues.id == req.body.programId) {
+        let abc;
+        if (program.dataValues.id === req.body.programId) {
             abc = await yarnId(req.body.spinnerId, req.body.date);
         }
-        let dyeing
+
+        let dyeing;
         if (req.body.dyeingRequired) {
             dyeing = await Dyeing.create({
                 processor_name: req.body.processorName,
@@ -117,6 +117,42 @@ const createSpinnerProcess = async (req: Request, res: Response) => {
                 let create = await ComberSelection.create({ qty_used: obj.qtyUsed, process_id: spin.id, yarn_id: obj.id })
             }
         }
+
+        if (req.body.enterPhysicalTraceability) {
+            const physicalTraceabilityData = {
+                date_sample_collection: req.body.dateSampleCollection,
+                data_of_sample_dispatch: req.body.dataOfSampleDispatch,
+                operator_name: req.body.operatorName,
+                expected_date_of_yarn_sale: req.body.expectedDateOfYarnSale,
+                physical_traceability_partner_id: req.body.physicalTraceabilityPartnerId,
+                spin_process_id: spin.id,
+                spinner_id: req.body.spinnerId
+            };
+            const physicalTraceabilityDataSpinner = await PhysicalTraceabilityDataSpinner.create(physicalTraceabilityData);
+
+            for await (const weightAndCone of req.body.weightAndCone) {
+                let brand = await Brand.findOne({
+                    where: { id: req.body.brandId }
+                });
+
+                const updatedCount = brand.dataValues.count + 1;
+                let physicalTraceabilityDataSpinnerSampleData = {
+                    physical_traceability_data_spinner_id: physicalTraceabilityDataSpinner.id,
+                    weight: weightAndCone.weight,
+                    cone: weightAndCone.cone,
+                    original_sample_status: weightAndCone.originalSampleStatus,
+                    code: `DNA${req.body.spinnerShortname}${abc ? '-' + abc : ''}-${updatedCount}`,
+                    sample_result: 0
+                };
+                await PhysicalTraceabilityDataSpinnerSample.create(physicalTraceabilityDataSpinnerSampleData);
+
+                await Brand.update(
+                    { count: updatedCount },
+                    { where: { id: brand.id } }
+                );
+            }
+        }
+
         res.sendSuccess(res, { spin });
     } catch (error: any) {
         console.log(error);
@@ -391,7 +427,8 @@ const fetchSpinnerProcess = async (req: Request, res: Response) => {
 
 const deleteSpinnerProcess = async (req: Request, res: Response) => {
     try {
-        let count = await SpinProcessYarnSelection.count({ where: { spin_process_id: req.body.id } })
+        let count = await SpinProcessYarnSelection.count({ where: { spin_process_id: req.body.id } });
+
         if (count > 0) {
             res.sendError(res, 'Unable to delete this process since some lint of this process was sold')
         } else {
@@ -421,6 +458,16 @@ const deleteSpinnerProcess = async (req: Request, res: Response) => {
                     process_id: req.body.id
                 },
             });
+
+            const physicalTraceabilityDataSpinner = await PhysicalTraceabilityDataSpinner.findOne({ where: { spin_process_id: req.body.id } });
+            if (physicalTraceabilityDataSpinner) {
+                await PhysicalTraceabilityDataSpinnerSample.destroy({
+                    where: { physical_traceability_data_spinner_id: physicalTraceabilityDataSpinner.id }
+                });
+                await PhysicalTraceabilityDataSpinner.destroy({
+                    where: { spin_process_id: req.body.id }
+                });
+            }
 
             const res3 = await SpinProcess.destroy({
                 where: {
@@ -891,7 +938,7 @@ const fetchSpinSalesPagination = async (req: Request, res: Response) => {
                 { '$knitter.name$': { [Op.iLike]: `%${searchTerm}%` } },
                 { '$season.name$': { [Op.iLike]: `%${searchTerm}%` } },
                 { '$program.program_name$': { [Op.iLike]: `%${searchTerm}%` } },
-                { '$yarncount.yarnCount_name$': { [Op.iLike]: `%${searchTerm}%` } },// Search season spinner name  
+                { '$yarncount.yarnCount_name$': { [Op.iLike]: `%${searchTerm}%` } },// Search season spinner name
             ];
         }
         if (spinnerId) {
@@ -1224,7 +1271,7 @@ const fetchSpinSalesDashBoard = async (req: Request, res: Response) => {
     try {
         if (searchTerm) {
             whereCondition[Op.or] = [
-                { lot_no: { [Op.iLike]: `%${searchTerm}%` } }, // Search by 
+                { lot_no: { [Op.iLike]: `%${searchTerm}%` } }, // Search by
                 { invoice_no: { [Op.iLike]: `%${searchTerm}%` } }, // Search by
                 { "$ginner.name$": { [Op.iLike]: `%${searchTerm}%` } }, // Search by
                 { '$program.program_name$': { [Op.iLike]: `%${searchTerm}%` } }, // Search by program
@@ -1411,7 +1458,7 @@ const exportSpinnerTransaction = async (req: Request, res: Response) => {
     try {
         if (searchTerm) {
             whereCondition[Op.or] = [
-                { lot_no: { [Op.iLike]: `%${searchTerm}%` } }, // Search by 
+                { lot_no: { [Op.iLike]: `%${searchTerm}%` } }, // Search by
                 { invoice_no: { [Op.iLike]: `%${searchTerm}%` } }, // Search by
                 { '$program.program_name$': { [Op.iLike]: `%${searchTerm}%` } }, // Search by program
                 { '$season.name$': { [Op.iLike]: `%${searchTerm}%` } }, // Search by crop Type
