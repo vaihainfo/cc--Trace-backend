@@ -5,6 +5,7 @@ import GinSales from "../../models/gin-sales.model";
 import Season from "../../models/season.model";
 import SpinProcess from "../../models/spin-process.model";
 import Ginner from "../../models/ginner.model";
+import Spinner from "../../models/spinner.model";
 
 
 
@@ -62,7 +63,8 @@ const getTopGinners = async (
 ) => {
   try {
     const reqData = await getQueryParams(req, res);
-    const ginnersData = await getTopGinnersData();
+    const where = getGinnerSalesWhereQuery(reqData);
+    const ginnersData = await getTopGinnersData(where);
     const data = getTopGinnersRes(ginnersData);
     return res.sendSuccess(res, data);
 
@@ -74,8 +76,43 @@ const getTopGinners = async (
   }
 };
 
-const getTopGinnersData = async (
+const getGinnerSalesWhereQuery = (
+  reqData: any
+) => {
+  const where: any = {
 
+  };
+
+  if (reqData?.program)
+    where.program_id = reqData.program;
+
+  // if (reqData?.brand)
+  //   where.brand_id = reqData.brand;
+
+  if (reqData?.season)
+    where.season_id = reqData.season;
+
+  if (reqData?.country)
+    where['$buyerdata.country_id$'] = reqData.country;
+
+  if (reqData?.state)
+    where['$buyerdata.state_id$'] = reqData.state;
+
+  if (reqData?.district)
+    where['$buyerdata.district_id$'] = reqData.district;
+
+  // if (reqData?.block)
+  //   where.block_id = reqData.block;
+
+  // if (reqData?.village)
+  //   where.village_id = reqData.village;
+
+
+  return where;
+};
+
+const getTopGinnersData = async (
+  where: any
 ) => {
 
   const result = await GinSales.findAll({
@@ -92,7 +129,12 @@ const getTopGinnersData = async (
       model: Season,
       as: 'season',
       attributes: []
+    }, {
+      model: Spinner,
+      as: 'season',
+      attributes: []
     }],
+    where,
     group: ['season.id', 'ginner.id']
   });
 
@@ -270,7 +312,7 @@ const getYarnProcuredSoldRes = (
   let yarnSold: any = [];
 
   for (const procuredSold of procuredSoldData) {
-   
+
     season.push(procuredSold.dataValues.seasonName);
     yarnProcured.push(formatNumber(procuredSold.dataValues.yarnProcured));
     yarnSold.push(formatNumber(procuredSold.dataValues.yarnSold));

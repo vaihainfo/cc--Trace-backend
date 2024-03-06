@@ -7,7 +7,6 @@ import District from "../../models/district.model";
 import Country from "../../models/country.model";
 import Farm from "../../models/farm.model";
 import Season from "../../models/season.model";
-import Transaction from "../../models/transaction.model";
 
 const getOverallArea = async (
   req: Request, res: Response
@@ -682,6 +681,60 @@ const getFarmerAllDataRes = (
 
 };
 
+
+const getFarmersByCountry = async (
+  req: Request, res: Response
+) => {
+  try {
+    const reqData = await getQueryParams(req, res);
+    const data = await getFarmersByCountryData(reqData.country);
+    return res.sendSuccess(res, data);
+
+  } catch (error: any) {
+    const code = error.errCode
+      ? error.errCode
+      : "ERR_INTERNAL_SERVER_ERROR";
+    return res.sendError(res, code);
+  }
+};
+
+
+const getFarmersByCountryData = async (
+  countryId: any
+) => {
+  const where: any = {
+    "$country.latitude$": {
+      [Op.not]: null
+    },
+    "$country.longitude$": {
+      [Op.not]: null
+    }
+  };
+
+  if (countryId) {
+    where.country_id = countryId;
+  }
+  const result = await Farmer.findAll({
+    attributes: [
+      [Sequelize.fn('SUM', Sequelize.col('farmers.agri_total_area')), 'area'],
+      [Sequelize.fn('count', Sequelize.col('farmers.id')), 'farmers'],
+      [Sequelize.col('country.county_name'), 'countryName'],
+      [Sequelize.col('country.latitude'), 'latitude'],
+      [Sequelize.col('country.longitude'), 'longitude']
+    ],
+    include: [{
+      model: Country,
+      as: 'country',
+      attributes: []
+    }],
+    where,
+    group: ['country.id']
+  });
+
+  return result;
+};
+
+
 export {
   getOverallArea,
   getOverallFarmer,
@@ -689,5 +742,6 @@ export {
   getTotalAcres,
   getEstimateAndProduction,
   farmerCountAndArea,
-  farmerAllData
+  farmerAllData,
+  getFarmersByCountry
 };

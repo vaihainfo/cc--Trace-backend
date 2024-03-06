@@ -18,6 +18,12 @@ const Country = db.define('countries',{
     allowNull: false,
     defaultValue: true,
   },
+  latitude: {
+    type: DataTypes.DOUBLE,
+  }, 
+  longitude: {
+    type: DataTypes.DOUBLE,
+  }
 });
 
 Country.associate = (models: any) => {
