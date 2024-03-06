@@ -3,8 +3,7 @@ import { Sequelize } from "sequelize";
 import * as yup from 'yup';
 import GinSales from "../../models/gin-sales.model";
 import Season from "../../models/season.model";
-import Transaction from "../../models/transaction.model";
-import GinProcess from "../../models/gin-process.model";
+import SpinProcess from "../../models/spin-process.model";
 import Ginner from "../../models/ginner.model";
 
 
@@ -120,80 +119,16 @@ const getTopGinnersRes = (
 };
 
 
-const getProcuredProcessed = async (
+const getLintProcuredProcessed = async (
   req: Request, res: Response
 ) => {
   try {
     const reqData = await getQueryParams(req, res);
-    const procuredProcessedData = await getProcuredProcessedData();
-    const data = getProcuredProcessedRes(procuredProcessedData);
-    return res.sendSuccess(res, data);
-
-  } catch (error: any) {
-    const code = error.errCode
-      ? error.errCode
-      : "ERR_INTERNAL_SERVER_ERROR";
-    return res.sendError(res, code);
-  }
-};
-
-
-const getProcuredProcessedRes = (
-  list: any[]
-) => {
-  const season: string[] = [];
-  const stock: number[] = [];
-  const procured: number[] = [];
-  for (const row of list) {
-    if (row.dataValues) {
-      season.push(row.dataValues.seasonName);
-      stock.push(formatNumber(row.dataValues.stock));
-      procured.push(formatNumber(row.dataValues.procured));
-    }
-  }
-
-  return {
-    season,
-    procured,
-    stock
-  };
-};
-
-
-const getProcuredProcessedData = async (
-
-) => {
-
-  const result = await Transaction.findAll({
-    attributes: [
-      [Sequelize.fn('SUM', Sequelize.col('qty_stock')), 'stock'],
-      [Sequelize.fn('SUM', Sequelize.literal('CAST(qty_purchased  as numeric)')), 'procured'],
-      [Sequelize.col('season.name'), 'seasonName'],
-      [Sequelize.col('season.id'), 'seasonId']
-    ],
-    include: [{
-      model: Season,
-      as: 'season',
-      attributes: []
-    }],
-    group: ['season.id']
-  });
-
-  return result;
-
-};
-
-
-const getLintProcuredSold = async (
-  req: Request, res: Response
-) => {
-  try {
-    const reqData = await getQueryParams(req, res);
-    const procuredData = await getLintProcuredData();
-    const soldData = await getLintSoldData();
-    const data = getLintProcuredSoldRes(
-      procuredData,
-      soldData
+    const lintProcuredData = await getLintProcuredData();
+    const lintProcessedData = await getLintProcessedData();
+    const data = getLintProcuredProcessedRes(
+      lintProcuredData,
+      lintProcessedData
     );
     return res.sendSuccess(res, data);
 
@@ -205,71 +140,72 @@ const getLintProcuredSold = async (
   }
 };
 
-const getLintProcuredSoldRes = (
-  procuredList: any[],
-  soldList: any[]
+
+const getLintProcuredProcessedRes = (
+  lintProcuredList: any[],
+  lintProcessedList: any[]
 ) => {
   let seasonIds: number[] = [];
 
-  procuredList.forEach((procured: any) => {
+  lintProcuredList.forEach((procured: any) => {
     if (procured.dataValues.seasonId)
       seasonIds.push(procured.dataValues.seasonId);
   });
 
-  soldList.forEach((sold: any) => {
-    if (!seasonIds.includes(sold.dataValues.seasonId))
-      seasonIds.push(sold.dataValues.seasonId);
+  lintProcessedList.forEach((processed: any) => {
+    if (!seasonIds.includes(processed.dataValues.seasonId))
+      seasonIds.push(processed.dataValues.seasonId);
   });
 
   seasonIds = seasonIds.sort((a, b) => a - b);
 
   let season: any = [];
-  let procured: any = [];
-  let sold: any = [];
+  let lintProcured: any = [];
+  let lintProcessed: any = [];
 
   for (const sessionId of seasonIds) {
-    const fProcured = procuredList.find((production: any) =>
+    const fProcured = lintProcuredList.find((production: any) =>
       production.dataValues.seasonId == sessionId
     );
-    const fSold = soldList.find((estimate: any) =>
+    const fProcessed = lintProcessedList.find((estimate: any) =>
       estimate.dataValues.seasonId == sessionId
     );
     let data = {
       seasonName: '',
-      procured: 0,
-      sold: 0
+      lintProcured: 0,
+      lintProcessed: 0
     };
     if (fProcured) {
       data.seasonName = fProcured.dataValues.seasonName;
-      data.procured = formatNumber(fProcured.dataValues.procured);
+      data.lintProcured = formatNumber(fProcured.dataValues.lintProcured);
     }
 
-    if (fSold) {
-      data.seasonName = fSold.dataValues.seasonName;
-      data.sold = formatNumber(fSold.dataValues.sold);
+    if (fProcessed) {
+      data.seasonName = fProcessed.dataValues.seasonName;
+      data.lintProcessed = formatNumber(fProcessed.dataValues.lintProcessed);
     }
 
     season.push(data.seasonName);
-    procured.push(data.procured);
-    sold.push(data.sold);
+    lintProcured.push(data.lintProcured);
+    lintProcessed.push(data.lintProcessed);
 
   }
 
   return {
     season,
-    procured,
-    sold
+    lintProcured,
+    lintProcessed
   };
-
 };
 
-const getLintSoldData = async (
+
+const getLintProcuredData = async (
 
 ) => {
 
   const result = await GinSales.findAll({
     attributes: [
-      [Sequelize.fn('SUM', Sequelize.col('no_of_bales')), 'sold'],
+      [Sequelize.fn('SUM', Sequelize.col('total_qty')), 'lintProcured'],
       [Sequelize.col('season.name'), 'seasonName'],
       [Sequelize.col('season.id'), 'seasonId']
     ],
@@ -285,13 +221,77 @@ const getLintSoldData = async (
 
 };
 
-const getLintProcuredData = async (
+const getLintProcessedData = async (
 
 ) => {
 
-  const result = await GinProcess.findAll({
+  const result = await SpinProcess.findAll({
     attributes: [
-      [Sequelize.fn('SUM', Sequelize.col('no_of_bales')), 'procured'],
+      [Sequelize.fn('SUM', Sequelize.col('total_qty')), 'lintProcessed'],
+      [Sequelize.col('season.name'), 'seasonName'],
+      [Sequelize.col('season.id'), 'seasonId']
+    ],
+    include: [{
+      model: Season,
+      as: 'season',
+      attributes: []
+    }],
+    group: ['season.id']
+  });
+
+  return result;
+
+};
+
+
+const getYarnProcuredSold = async (
+  req: Request, res: Response
+) => {
+  try {
+    const reqData = await getQueryParams(req, res);
+    const procuredSoldData = await getYarnProcuredSoldData();
+    const data = getYarnProcuredSoldRes(procuredSoldData);
+    return res.sendSuccess(res, data);
+
+  } catch (error: any) {
+    const code = error.errCode
+      ? error.errCode
+      : "ERR_INTERNAL_SERVER_ERROR";
+    return res.sendError(res, code);
+  }
+};
+
+const getYarnProcuredSoldRes = (
+  procuredSoldData: any[]
+) => {
+
+  let season: any = [];
+  let yarnProcured: any = [];
+  let yarnSold: any = [];
+
+  for (const procuredSold of procuredSoldData) {
+   
+    season.push(procuredSold.dataValues.seasonName);
+    yarnProcured.push(formatNumber(procuredSold.dataValues.yarnProcured));
+    yarnSold.push(formatNumber(procuredSold.dataValues.yarnSold));
+  }
+
+  return {
+    season,
+    yarnProcured,
+    yarnSold
+  };
+
+};
+
+const getYarnProcuredSoldData = async (
+
+) => {
+
+  const result = await SpinProcess.findAll({
+    attributes: [
+      [Sequelize.fn('SUM', Sequelize.col('net_yarn_qty')), 'yarnProcured'],
+      [Sequelize.literal('sum(net_yarn_qty) - sum(qty_stock)'), 'yarnSold'],
       [Sequelize.col('season.name'), 'seasonName'],
       [Sequelize.col('season.id'), 'seasonId']
     ],
@@ -312,29 +312,9 @@ const getLintProcuredDataByMonth = async (
 
 ) => {
 
-  const result = await GinProcess.findAll({
-    attributes: [
-      [Sequelize.fn('SUM', Sequelize.col('no_of_bales')), 'procured'],
-      [Sequelize.literal("date_part('Month', date)"), 'month']
-    ],
-    where: {
-      season_id: 22
-    },
-    group: ['month']
-  });
-
-  return result;
-
-};
-
-
-const getLintSoldDataByMonth = async (
-
-) => {
-
   const result = await GinSales.findAll({
     attributes: [
-      [Sequelize.fn('SUM', Sequelize.col('no_of_bales')), 'procured'],
+      [Sequelize.fn('SUM', Sequelize.col('total_qty')), 'lintProcured'],
       [Sequelize.literal("date_part('Month', date)"), 'month']
     ],
     where: {
@@ -347,14 +327,34 @@ const getLintSoldDataByMonth = async (
 
 };
 
-const getProcuredProcessedDataByMonth = async (
+
+const getLintProcessedDataByMonth = async (
 
 ) => {
 
-  const result = await Transaction.findAll({
+  const result = await SpinProcess.findAll({
     attributes: [
-      [Sequelize.fn('SUM', Sequelize.col('qty_stock')), 'stock'],
-      [Sequelize.fn('SUM', Sequelize.literal('CAST(qty_purchased  as numeric)')), 'procured'],
+      [Sequelize.fn('SUM', Sequelize.col('total_qty')), 'lintProcessed'],
+      [Sequelize.literal("date_part('Month', date)"), 'month']
+    ],
+    where: {
+      season_id: 22
+    },
+    group: ['month']
+  });
+
+  return result;
+
+};
+
+const getYarnProcuredSoldDataByMonth = async (
+
+) => {
+
+  const result = await SpinProcess.findAll({
+    attributes: [
+      [Sequelize.fn('SUM', Sequelize.col('net_yarn_qty')), 'yarnProcured'],
+      [Sequelize.literal('sum(net_yarn_qty) - sum(qty_stock)'), 'yarnSold'],
       [Sequelize.literal("date_part('Month', date)"), 'month'],
     ],
     include: [],
@@ -373,13 +373,13 @@ const getDataAll = async (
 ) => {
   try {
     const reqData = await getQueryParams(req, res);
-    const procuredData = await getLintProcuredDataByMonth();
-    const soldData = await getLintSoldDataByMonth();
-    const procuredProcessedData = await getProcuredProcessedDataByMonth();
+    const lintProcuredData = await getLintProcuredDataByMonth();
+    const lintSoldData = await getLintProcessedDataByMonth();
+    const yarnProcuredSoldData = await getYarnProcuredSoldDataByMonth();
     const data = getDataAllRes(
-      procuredData,
-      soldData,
-      procuredProcessedData
+      lintProcuredData,
+      lintSoldData,
+      yarnProcuredSoldData
     );
     return res.sendSuccess(res, data);
 
@@ -393,25 +393,25 @@ const getDataAll = async (
 
 
 const getDataAllRes = (
-  procuredList: any[],
-  soldList: any[],
-  cottonList: any[],
+  lintProcuredData: any[],
+  lintSoldData: any[],
+  yarnProcuredSoldData: any[],
 ) => {
   let monthList: number[] = [];
 
-  procuredList.forEach((procured: any) => {
+  lintProcuredData.forEach((procured: any) => {
     if (procured.dataValues.month)
       monthList.push(procured.dataValues.month);
   });
 
-  soldList.forEach((sold: any) => {
+  lintSoldData.forEach((sold: any) => {
     if (!monthList.includes(sold.dataValues.month))
       monthList.push(sold.dataValues.month);
   });
 
-  cottonList.forEach((cotton: any) => {
-    if (!monthList.includes(cotton.dataValues.month))
-      monthList.push(cotton.dataValues.month);
+  yarnProcuredSoldData.forEach((procuredSold: any) => {
+    if (!monthList.includes(procuredSold.dataValues.month))
+      monthList.push(procuredSold.dataValues.month);
   });
 
   monthList = monthList.sort((a, b) => a - b);
@@ -420,50 +420,50 @@ const getDataAllRes = (
     [key: string]: Array<string | number>;
   } = {
     month: [],
-    procured: [],
-    sold: [],
-    cottonProcured: [],
-    cottonStock: []
+    lintProcured: [],
+    lintProcessed: [],
+    yarnProcured: [],
+    yarnSold: []
   };
 
   for (const month of monthList) {
-    const fProcured = procuredList.find((production: any) =>
+    const fProcured = lintProcuredData.find((production: any) =>
       production.dataValues.month == month
     );
-    const fSold = soldList.find((estimate: any) =>
+    const fSold = lintSoldData.find((estimate: any) =>
       estimate.dataValues.month == month
     );
-    const fCotton = cottonList.find((cotton: any) =>
-      cotton.dataValues.month == month
+    const fProcuredSold = yarnProcuredSoldData.find((procuredSold: any) =>
+      procuredSold.dataValues.month == month
     );
 
     let data = {
       month: '',
-      procured: 0,
-      sold: 0,
-      cottonProcured: 0,
-      cottonStock: 0
+      lintProcured: 0,
+      lintProcessed: 0,
+      yarnProcured: 0,
+      yarnSold: 0
     };
     if (fProcured) {
       data.month = getMonthName(fProcured.dataValues.month);
-      data.procured = formatNumber(fProcured.dataValues.procured);
+      data.lintProcured = formatNumber(fProcured.dataValues.lintProcured);
     }
 
     if (fSold) {
       data.month = getMonthName(fSold.dataValues.month);
-      data.sold = formatNumber(fSold.dataValues.procured);
+      data.lintProcessed = formatNumber(fSold.dataValues.lintProcessed);
     }
-    if (fCotton) {
-      data.month = getMonthName(fCotton.dataValues.month);
-      data.cottonStock = (formatNumber(fCotton.dataValues.stock));
-      data.cottonProcured = (formatNumber(fCotton.dataValues.procured));
+    if (fProcuredSold) {
+      data.month = getMonthName(fProcuredSold.dataValues.month);
+      data.yarnSold = formatNumber(fProcuredSold.dataValues.yarnSold);
+      data.yarnProcured = formatNumber(fProcuredSold.dataValues.yarnProcured);
     }
 
     res.month.push(data.month);
-    res.procured.push(data.procured);
-    res.sold.push(data.sold);
-    res.cottonStock.push(data.cottonStock);
-    res.cottonProcured.push(data.cottonProcured);
+    res.lintProcured.push(data.lintProcured);
+    res.lintProcessed.push(data.lintProcessed);
+    res.yarnProcured.push(data.yarnSold);
+    res.yarnSold.push(data.yarnProcured);
 
   }
 
@@ -482,7 +482,7 @@ const getMonthName = (
 
 export {
   getTopGinners,
-  getProcuredProcessed,
-  getLintProcuredSold,
+  getLintProcuredProcessed,
+  getYarnProcuredSold,
   getDataAll
 };

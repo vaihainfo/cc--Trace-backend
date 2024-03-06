@@ -5,8 +5,8 @@ import { Router } from "express";
 const router = Router();
 
 router.get('/top/ginners', Dashboard.getTopGinners);
-router.get('/procured/processed', Dashboard.getProcuredProcessed);
-router.get('/lint/procured/sold', Dashboard.getLintProcuredSold);
+router.get('/lint/procured/processed', Dashboard.getLintProcuredProcessed);
+router.get('/yarn/procured/sold', Dashboard.getYarnProcuredSold);
 router.get('/data/get/all', Dashboard.getDataAll);
 
 export default router;

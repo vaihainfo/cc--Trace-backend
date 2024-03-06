@@ -77,6 +77,8 @@ import oldsalesRouter from './router/oldsales';
 import dashboardFarmerRouter from './router/dashboard/farmer';
 import dashboardGinnerRouter from './router/dashboard/ginner';
 import dashboardSpinnerRouter from './router/dashboard/spinner';
+import dashboardProcurementRouter from './router/dashboard/procurement';
+import dashboardProcessorRouter from './router/dashboard/processor';
 import { sendScheduledEmails } from "./controllers/email-management/scheduled-email.controller";
 
 const app = express();
@@ -178,6 +180,8 @@ app.use("/style-mark", styleMarkRouter);
 app.use("/dashboard/farmer", dashboardFarmerRouter)
 app.use("/dashboard/ginner", dashboardGinnerRouter)
 app.use("/dashboard/spinner", dashboardSpinnerRouter)
+app.use("/dashboard/procurement", dashboardProcurementRouter)
+app.use("/dashboard/processor", dashboardProcessorRouter)
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument, { customCss }));
 
 app.use(errorMiddleware);
