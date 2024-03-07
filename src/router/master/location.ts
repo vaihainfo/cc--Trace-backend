@@ -28,6 +28,7 @@ import updateVillageStatus from "../../controllers/locations/villages/update-vil
 import {
     exportCountry,    
   } from "../../controllers/export";
+import { checkCountry } from "../../controllers/locations/countries/get-country.controller";
 
 
 const router = Router();
@@ -35,6 +36,7 @@ const router = Router();
 router.use(accessControl);
 
 router.get("/get-countries", fetchCountries);
+router.post("/check-countries", checkCountry);
 router.post("/set-country", setCountry);
 router.post("/delete-country", deleteCountry);
 router.put("/update-country-status", updateCountryStatus);
