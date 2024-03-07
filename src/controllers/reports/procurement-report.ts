@@ -17,6 +17,7 @@ import * as ExcelJS from "exceljs";
 import * as path from "path";
 import UserApp from "../../models/users-app.model";
 import sequelize from "../../util/dbConn";
+import ExportData from "../../models/export-data-check.model";
 
 
 const fetchTransactionsReport = async (req: Request, res: Response) => {
@@ -245,6 +246,11 @@ const fetchSumOfQtyPurchasedByProgram = async (req: Request, res: Response) => {
 
 //Export the export details through excel file
 const exportProcurementReport = async (req: Request, res: Response) => {
+    // procurement_load
+    await ExportData.update({
+        procurement_load:true
+    },{where:{procurement_load:false}})
+    res.send({status:200,message:"export file processing"})
   const excelFilePath = path.join("./upload", "procurement-report.xlsx");
 
   try {
@@ -472,12 +478,20 @@ const exportProcurementReport = async (req: Request, res: Response) => {
 
     // Save the workbook
     await workbook.xlsx.writeFile(excelFilePath);
-    res.status(200).send({
-      success: true,
-      messgage: "File successfully Generated",
-      data: process.env.BASE_URL + "procurement-report.xlsx",
-    });
+    // res.status(200).send({
+    //   success: true,
+    //   messgage: "File successfully Generated",
+    //   data: process.env.BASE_URL + "procurement-report.xlsx",
+    // });
+    await ExportData.update({
+        procurement_load:false
+    },{where:{procurement_load:true}})
   } catch (error: any) {
+    (async()=>{
+        await ExportData.update({
+            procurement_load:false
+        },{where:{procurement_load:true}})
+    })()
     console.log(error)
     return res.sendError(res, error.message);
   }

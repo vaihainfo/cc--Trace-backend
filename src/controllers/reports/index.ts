@@ -220,17 +220,16 @@ const fetchBaleProcess = async (req: Request, res: Response) => {
 };
 
 const exportLoad=async(req: Request, res: Response)=>{
-    const loadData=await ExportData.findAll({
-        limit: 1,
-        where: {
-          //your where conditions, or without them if you need ANY entry
-        },
-        order: [ [ 'createdAt', 'DESC' ]]
+    const loadData=await ExportData.findOne({
+        order: [['createdAt', 'DESC']] // Assuming createdAt is the timestamp of insertion
       })
-      if(loadData){
+      
+      
+      if(loadData.dataValues.ginner_lint_bale_process_load){
         res.status(200).send({
             success: true,
             messgage: "File under processing", 
+            data:null
           });
       }else{
         res.status(200).send({
@@ -247,7 +246,7 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
         ginner_lint_bale_process_load:true
     },{where:{ginner_lint_bale_process_load:false}})
     res.send({status:200,message:"export file processing"})
-  const excelFilePath = path.join("./upload", "gin-bale-process.xlsx");
+  const excelFilePath = path.join('./upload', "gin-bale-process.xlsx")
   const searchTerm = req.query.search || "";
   const page = Number(req.query.page) || 1;
   const limit = Number(req.query.limit) || 10;
@@ -476,8 +475,13 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
     //   data: process.env.BASE_URL + "gin-bale-process.xlsx",
     // });
   } catch (error: any) {
+    (async()=>{
+        await ExportData.update({
+            ginner_lint_bale_process_load:false
+        },{where:{ginner_lint_bale_process_load:true}})
     console.error("Error appending data:", error);
     return res.sendError(res, error.message);
+})
   }
 };
 
@@ -578,6 +582,13 @@ const fetchPendingGinnerSales = async (req: Request, res: Response) => {
 };
 
 const exportPendingGinnerSales = async (req: Request, res: Response) => {
+    // ginner_pending_sales_load
+
+    await ExportData.update({
+        ginner_pending_sales_load:true
+    },{where:{ginner_pending_sales_load:false}})
+    res.send({status:200,message:"export file processing"})
+
   const excelFilePath = path.join(
     "./upload",
     "Ginner-pending-sales-report.xlsx"
@@ -715,14 +726,23 @@ const exportPendingGinnerSales = async (req: Request, res: Response) => {
 
     // Save the workbook
     await workbook.xlsx.writeFile(excelFilePath);
-    res.status(200).send({
-      success: true,
-      messgage: "File successfully Generated",
-      data: process.env.BASE_URL + "Ginner-pending-sales-report.xlsx",
-    });
+    // res.status(200).send({
+    //   success: true,
+    //   messgage: "File successfully Generated",
+    //   data: process.env.BASE_URL + "Ginner-pending-sales-report.xlsx",
+    // });
+    await ExportData.update({
+        ginner_pending_sales_load:false
+    },{where:{ginner_pending_sales_load:true}})
   } catch (error: any) {
+    (async()=>{
+        await ExportData.update({
+            ginner_pending_sales_load:false
+        },{where:{ginner_pending_sales_load:true}})
+        return res.sendError(res, error.message);
+    })()
     console.error("Error appending data:", error);
-    return res.sendError(res, error.message);
+   
   }
 };
 
@@ -908,6 +928,11 @@ const fetchGinSalesPagination = async (req: Request, res: Response) => {
 };
 
 const exportGinnerSales = async (req: Request, res: Response) => {
+    // export-gin-sales-report
+    await ExportData.update({
+        ginner_lint_bale_sale_load:true
+    },{where:{ginner_lint_bale_sale_load:false}})
+    res.send({status:200,message:"export file processing"})
   const excelFilePath = path.join("./upload", "Ginner-sales-report.xlsx");
   const searchTerm = req.query.search || "";
   const page = Number(req.query.page) || 1;
@@ -1152,14 +1177,22 @@ const exportGinnerSales = async (req: Request, res: Response) => {
 
     // Save the workbook
     await workbook.xlsx.writeFile(excelFilePath);
-    res.status(200).send({
-      success: true,
-      messgage: "File successfully Generated",
-      data: process.env.BASE_URL + "Ginner-sales-report.xlsx",
-    });
+    await ExportData.update({
+        ginner_lint_bale_sale_load:false
+    },{where:{ginner_lint_bale_sale_load:true}})
+    // res.status(200).send({
+    //   success: true,
+    //   messgage: "File successfully Generated",
+    //   data: process.env.BASE_URL + "Ginner-sales-report.xlsx",
+    // });
   } catch (error: any) {
+    (async()=>{
+        await ExportData.update({
+            ginner_lint_bale_sale_load:false
+        },{where:{ginner_lint_bale_sale_load:true}})
     console.error("Error appending data:", error);
     return res.sendError(res, error.message);
+})
   }
 };
 
@@ -1463,6 +1496,11 @@ const fetchSpinnerPendingBale = async (req: Request, res: Response) => {
 };
 
 const exportSpinnerBale = async (req: Request, res: Response) => {
+    // spinner_bale_receipt_load
+    await ExportData.update({
+        spinner_bale_receipt_load:true
+    },{where:{spinner_bale_receipt_load:false}})
+    res.send({status:200,message:"export file processing"})
   const excelFilePath = path.join(
     "./upload",
     "Spinner-bale-receipt-report.xlsx"
@@ -1692,18 +1730,32 @@ const exportSpinnerBale = async (req: Request, res: Response) => {
 
     // Save the workbook
     await workbook.xlsx.writeFile(excelFilePath);
-    res.status(200).send({
-      success: true,
-      messgage: "File successfully Generated",
-      data: process.env.BASE_URL + "Spinner-bale-receipt-report.xlsx",
-    });
+    // res.status(200).send({
+    //   success: true,
+    //   messgage: "File successfully Generated",
+    //   data: process.env.BASE_URL + "Spinner-bale-receipt-report.xlsx",
+    // });
+    await ExportData.update({
+        spinner_bale_receipt_load:false
+    },{where:{spinner_bale_receipt_load:true}})
   } catch (error: any) {
+    (async()=>{
+        await ExportData.update({
+            spinner_bale_receipt_load:false
+        },{where:{spinner_bale_receipt_load:true}})
+        return res.sendError(res, error.message);
+    })
     console.error("Error appending data:", error);
-    return res.sendError(res, error.message);
+   
   }
 };
 
 const exportPendingSpinnerBale = async (req: Request, res: Response) => {
+    // spinner_yarn_bales_load
+    await ExportData.update({
+        spinner_yarn_bales_load:true
+    },{where:{spinner_yarn_bales_load:false}})
+    res.send({status:200,message:"export file processing"})
   const excelFilePath = path.join(
     "./upload",
     "Spinner-Pending-Bales-Receipt-Report.xlsx"
@@ -1870,14 +1922,24 @@ const exportPendingSpinnerBale = async (req: Request, res: Response) => {
 
     // Save the workbook
     await workbook.xlsx.writeFile(excelFilePath);
-    res.status(200).send({
-      success: true,
-      messgage: "File successfully Generated",
-      data: process.env.BASE_URL + "Spinner-Pending-Bales-Receipt-Report.xlsx",
-    });
+    // res.status(200).send({
+    //   success: true,
+    //   messgage: "File successfully Generated",
+    //   data: process.env.BASE_URL + "Spinner-Pending-Bales-Receipt-Report.xlsx",
+    // });
+    await ExportData.update({
+        spinner_yarn_bales_load:false
+    },{where:{spinner_yarn_bales_load:true}})
   } catch (error: any) {
     console.error("Error appending data:", error);
-    return res.sendError(res, error.message);
+    (async()=>{
+        await ExportData.update({
+            spinner_yarn_bales_load:false
+        },{where:{spinner_yarn_bales_load:true}})
+        return res.sendError(res, error.message);
+    })()
+   
+   
   }
 };
 
@@ -2028,6 +2090,11 @@ const fetchSpinnerYarnProcessPagination = async (
 };
 
 const exportSpinnerYarnProcess = async (req: Request, res: Response) => {
+    // spinner_yarn_process_load
+    await ExportData.update({
+        spinner_yarn_process_load:true
+    },{where:{spinner_yarn_process_load:false}})
+    res.send({status:200,message:"export file processing"})
   const excelFilePath = path.join("./upload", "spinner-yarn-process.xlsx");
 
   const searchTerm = req.query.search || "";
@@ -2233,14 +2300,22 @@ const exportSpinnerYarnProcess = async (req: Request, res: Response) => {
 
     // Save the workbook
     await workbook.xlsx.writeFile(excelFilePath);
-    res.status(200).send({
-      success: true,
-      messgage: "File successfully Generated",
-      data: process.env.BASE_URL + "spinner-yarn-process.xlsx",
-    });
+    // res.status(200).send({
+    //   success: true,
+    //   messgage: "File successfully Generated",
+    //   data: process.env.BASE_URL + "spinner-yarn-process.xlsx",
+    // });
+    await ExportData.update({
+        spinner_yarn_process_load:false
+    },{where:{spinner_yarn_process_load:true}})
   } catch (error: any) {
+    (async()=>{    await ExportData.update({
+        spinner_yarn_process_load:false
+    },{where:{spinner_yarn_process_load:true}})
     console.error("Error appending data:", error);
     return res.sendError(res, error.message);
+})()
+
   }
 };
 
@@ -2414,6 +2489,12 @@ const fetchSpinSalesPagination = async (req: Request, res: Response) => {
 };
 
 const exportSpinnerSale = async (req: Request, res: Response) => {
+
+    // spinner_yarn_sales_load
+    await ExportData.update({
+        spinner_yarn_sales_load:true
+    },{where:{spinner_yarn_sales_load:false}})
+    res.send({status:200,message:"export file processing"})
   const excelFilePath = path.join("./upload", "spinner-yarn-sale.xlsx");
   const searchTerm = req.query.search || "";
   const page = Number(req.query.page) || 1;
@@ -2656,14 +2737,22 @@ const exportSpinnerSale = async (req: Request, res: Response) => {
 
     // Save the workbook
     await workbook.xlsx.writeFile(excelFilePath);
-    res.status(200).send({
-      success: true,
-      messgage: "File successfully Generated",
-      data: process.env.BASE_URL + "spinner-yarn-sale.xlsx",
-    });
+    // res.status(200).send({
+    //   success: true,
+    //   messgage: "File successfully Generated",
+    //   data: process.env.BASE_URL + "spinner-yarn-sale.xlsx",
+    // });
+    await ExportData.update({
+        spinner_yarn_sales_load:false
+    },{where:{spinner_yarn_sales_load:true}})
   } catch (error: any) {
+    (async()=>{
+    await ExportData.update({
+        spinner_yarn_sales_load:false
+    },{where:{spinner_yarn_sales_load:true}})
     console.error("Error appending data:", error);
     return res.sendError(res, error.message);
+})()
   }
 };
 
@@ -2844,6 +2933,11 @@ const fetchKnitterYarnPagination = async (req: Request, res: Response) => {
 };
 
 const exportKnitterYarn = async (req: Request, res: Response) => {
+    // knitter_yarn_receipt_load
+    await ExportData.update({
+        knitter_yarn_receipt_load:true
+    },{where:{knitter_yarn_receipt_load:false}})
+    res.send({status:200,message:"export file processing"})
   const excelFilePath = path.join("./upload", "knitter-yarn-receipt.xlsx");
   const searchTerm = req.query.search || "";
   const page = Number(req.query.page) || 1;
@@ -3068,12 +3162,20 @@ const exportKnitterYarn = async (req: Request, res: Response) => {
 
     // Save the workbook
     await workbook.xlsx.writeFile(excelFilePath);
-    res.status(200).send({
-      success: true,
-      messgage: "File successfully Generated",
-      data: process.env.BASE_URL + "knitter-yarn-receipt.xlsx",
-    });
+    // res.status(200).send({
+    //   success: true,
+    //   messgage: "File successfully Generated",
+    //   data: process.env.BASE_URL + "knitter-yarn-receipt.xlsx",
+    // });
+    await ExportData.update({
+        knitter_yarn_receipt_load:false
+    },{where:{knitter_yarn_receipt_load:true}})
   } catch (error: any) {
+    (async()=>{
+        await ExportData.update({
+            knitter_yarn_receipt_load:false
+        },{where:{knitter_yarn_receipt_load:true}})
+    })()
     console.error("Error appending data:", error);
     return res.sendError(res, error.message);
   }
@@ -3216,6 +3318,11 @@ const fetchKnitterYarnProcess = async (req: Request, res: Response) => {
 };
 
 const exportKnitterYarnProcess = async (req: Request, res: Response) => {
+    // knitter_yarn_process_load
+    await ExportData.update({
+        knitter_yarn_process_load:true
+    },{where:{knitter_yarn_process_load:false}})
+    res.send({status:200,message:"export file processing"})
   const excelFilePath = path.join("./upload", "knitter-yarn-process.xlsx");
   const searchTerm = req.query.search || "";
   const page = Number(req.query.page) || 1;
@@ -3408,12 +3515,20 @@ const exportKnitterYarnProcess = async (req: Request, res: Response) => {
 
     // Save the workbook
     await workbook.xlsx.writeFile(excelFilePath);
-    return res.status(200).send({
-      success: true,
-      messgage: "File successfully Generated",
-      data: process.env.BASE_URL + "knitter-yarn-process.xlsx",
-    });
+    // return res.status(200).send({
+    //   success: true,
+    //   messgage: "File successfully Generated",
+    //   data: process.env.BASE_URL + "knitter-yarn-process.xlsx",
+    // });
+    await ExportData.update({
+        knitter_yarn_process_load:false
+    },{where:{knitter_yarn_process_load:true}})
   } catch (error: any) {
+    (async()=>{
+        await ExportData.update({
+            knitter_yarn_process_load:false
+        },{where:{knitter_yarn_process_load:true}})
+    })()
     console.log(error);
     return res.sendError(res, error.message);
   }
@@ -3615,6 +3730,11 @@ const fetchKnitterSalesPagination = async (req: Request, res: Response) => {
 };
 
 const exportKnitterSale = async (req: Request, res: Response) => {
+    // knitter_fabric_sales_load
+    await ExportData.update({
+        knitter_fabric_sales_load:true
+    },{where:{knitter_fabric_sales_load:false}})
+    res.send({status:200,message:"export file processing"})
   const excelFilePath = path.join(
     "./upload",
     "knitter-fabric-sale-report.xlsx"
@@ -3859,12 +3979,20 @@ const exportKnitterSale = async (req: Request, res: Response) => {
 
     // Save the workbook
     await workbook.xlsx.writeFile(excelFilePath);
-    res.status(200).send({
-      success: true,
-      messgage: "File successfully Generated",
-      data: process.env.BASE_URL + "knitter-fabric-sale-report.xlsx",
-    });
+    // res.status(200).send({
+    //   success: true,
+    //   messgage: "File successfully Generated",
+    //   data: process.env.BASE_URL + "knitter-fabric-sale-report.xlsx",
+    // });
+    await ExportData.update({
+        knitter_fabric_sales_load:false
+    },{where:{knitter_fabric_sales_load:true}})
   } catch (error: any) {
+    (async()=>{
+        await ExportData.update({
+            knitter_fabric_sales_load:false
+        },{where:{knitter_fabric_sales_load:true}})
+    })()
     console.error("Error appending data:", error);
     return res.sendError(res, error.message);
   }
@@ -4046,6 +4174,11 @@ const fetchWeaverYarnPagination = async (req: Request, res: Response) => {
 };
 
 const exportWeaverYarn = async (req: Request, res: Response) => {
+    // weaver_yarn_receipt_load
+    await ExportData.update({
+        weaver_yarn_receipt_load:true
+    },{where:{weaver_yarn_receipt_load:false}})
+    res.send({status:200,message:"export file processing"})
   const excelFilePath = path.join("./upload", "weaver-yarn.xlsx");
   const searchTerm = req.query.search || "";
   const page = Number(req.query.page) || 1;
@@ -4272,12 +4405,20 @@ const exportWeaverYarn = async (req: Request, res: Response) => {
 
     // Save the workbook
     await workbook.xlsx.writeFile(excelFilePath);
-    res.status(200).send({
-      success: true,
-      messgage: "File successfully Generated",
-      data: process.env.BASE_URL + "weaver-yarn.xlsx",
-    });
+    // res.status(200).send({
+    //   success: true,
+    //   messgage: "File successfully Generated",
+    //   data: process.env.BASE_URL + "weaver-yarn.xlsx",
+    // });
+    await ExportData.update({
+        weaver_yarn_receipt_load:false
+    },{where:{weaver_yarn_receipt_load:true}})
   } catch (error: any) {
+    (async()=>{
+        await ExportData.update({
+            weaver_yarn_receipt_load:false
+        },{where:{weaver_yarn_receipt_load:true}})
+    })()
     console.error("Error appending data:", error);
     return res.sendError(res, error.message);
   }
@@ -4414,6 +4555,11 @@ const fetchWeaverYarnProcess = async (req: Request, res: Response) => {
 };
 
 const exportWeaverYarnProcess = async (req: Request, res: Response) => {
+    // weaver_yarn_process_load
+    await ExportData.update({
+        weaver_yarn_process_load:true
+    },{where:{weaver_yarn_process_load:false}})
+    res.send({status:200,message:"export file processing"})
   const excelFilePath = path.join("./upload", "weaver-yarn-process.xlsx");
   const searchTerm = req.query.search || "";
   const page = Number(req.query.page) || 1;
@@ -4600,14 +4746,23 @@ const exportWeaverYarnProcess = async (req: Request, res: Response) => {
 
     // Save the workbook
     await workbook.xlsx.writeFile(excelFilePath);
-    return res.status(200).send({
-      success: true,
-      messgage: "File successfully Generated",
-      data: process.env.BASE_URL + "weaver-yarn-process.xlsx",
-    });
+    // return res.status(200).send({
+    //   success: true,
+    //   messgage: "File successfully Generated",
+    //   data: process.env.BASE_URL + "weaver-yarn-process.xlsx",
+    // });
+    await ExportData.update({
+        weaver_yarn_process_load:false
+    },{where:{weaver_yarn_process_load:true}})
   } catch (error: any) {
     console.log(error);
-    return res.sendError(res, error.message);
+    (async()=>{
+        await ExportData.update({
+            weaver_yarn_process_load:false
+        },{where:{weaver_yarn_process_load:true}})
+        return res.sendError(res, error.message);
+    })()
+    
   }
 };
 
@@ -4820,6 +4975,11 @@ const fetchWeaverSalesPagination = async (req: Request, res: Response) => {
 };
 
 const exportWeaverSale = async (req: Request, res: Response) => {
+    // weaver_yarn_sales_load
+    await ExportData.update({
+        weaver_yarn_sales_load:true
+    },{where:{weaver_yarn_sales_load:false}})
+    res.send({status:200,message:"export file processing"})
   const excelFilePath = path.join("./upload", "weaver-fabric-sale-report.xlsx");
   try {
     const searchTerm = req.query.search || "";
@@ -5063,12 +5223,20 @@ const exportWeaverSale = async (req: Request, res: Response) => {
 
     // Save the workbook
     await workbook.xlsx.writeFile(excelFilePath);
-    res.status(200).send({
-      success: true,
-      messgage: "File successfully Generated",
-      data: process.env.BASE_URL + "weaver-fabric-sale-report.xlsx",
-    });
+    // res.status(200).send({
+    //   success: true,
+    //   messgage: "File successfully Generated",
+    //   data: process.env.BASE_URL + "weaver-fabric-sale-report.xlsx",
+    // });
+    await ExportData.update({
+        weaver_yarn_sales_load:false
+    },{where:{weaver_yarn_sales_load:true}})
   } catch (error: any) {
+    (async()=>{
+        await ExportData.update({
+            weaver_yarn_sales_load:false
+        },{where:{weaver_yarn_sales_load:true}})
+    })()
     console.error("Error appending data:", error);
     return res.sendError(res, error.message);
   }
@@ -5372,6 +5540,11 @@ const fetchGarmentFabricReceipt = async (req: Request, res: Response) => {
 };
 
 const exportGarmentFabricReceipt = async (req: Request, res: Response) => {
+    // garment_fabric_receipt_load
+    await ExportData.update({
+        garment_fabric_receipt_load:true
+    },{where:{garment_fabric_receipt_load:false}})
+    res.send({status:200,message:"export file processing"})
   const excelFilePath = path.join(
     "./upload",
     "garment-fabric-receipt-report.xlsx"
@@ -5722,12 +5895,20 @@ const exportGarmentFabricReceipt = async (req: Request, res: Response) => {
 
     // Save the workbook
     await workbook.xlsx.writeFile(excelFilePath);
-    res.status(200).send({
-      success: true,
-      messgage: "File successfully Generated",
-      data: process.env.BASE_URL + "garment-fabric-receipt-report.xlsx",
-    });
+    // res.status(200).send({
+    //   success: true,
+    //   messgage: "File successfully Generated",
+    //   data: process.env.BASE_URL + "garment-fabric-receipt-report.xlsx",
+    // });
+    await ExportData.update({
+        garment_fabric_receipt_load:false
+    },{where:{garment_fabric_receipt_load:true}})
   } catch (error: any) {
+    (async()=>{
+        await ExportData.update({
+            garment_fabric_receipt_load:false
+        },{where:{garment_fabric_receipt_load:true}})
+    })()
     console.error("Error appending data:", error);
     return res.sendError(res, error.message);
   }
@@ -5880,6 +6061,10 @@ const fetchGarmentFabricProcess = async (req: Request, res: Response) => {
 };
 
 const exportGarmentFabricProcess = async (req: Request, res: Response) => {
+
+    await ExportData.update({
+        garment_fabric_process_load:true
+    },{where:{garment_fabric_process_load:false}})
   const excelFilePath = path.join(
     "./upload",
     "garment-fabric-process-report.xlsx"
@@ -6066,12 +6251,20 @@ const exportGarmentFabricProcess = async (req: Request, res: Response) => {
 
     // Save the workbook
     await workbook.xlsx.writeFile(excelFilePath);
-    res.status(200).send({
-      success: true,
-      messgage: "File successfully Generated",
-      data: process.env.BASE_URL + "garment-fabric-process-report.xlsx",
-    });
+    // res.status(200).send({
+    //   success: true,
+    //   messgage: "File successfully Generated",
+    //   data: process.env.BASE_URL + "garment-fabric-process-report.xlsx",
+    // });
+    await ExportData.update({
+        garment_fabric_process_load:false
+    },{where:{garment_fabric_process_load:true}})
   } catch (error: any) {
+    (async()=>{
+        await ExportData.update({
+            garment_fabric_process_load:false
+        },{where:{garment_fabric_process_load:true}})
+    })()
     console.log(error);
     return res.sendError(res, error.message);
   }
@@ -6240,6 +6433,11 @@ const fetchGarmentSalesPagination = async (req: Request, res: Response) => {
 };
 
 const exportGarmentSales = async (req: Request, res: Response) => {
+    // garment_fabric_sales_load
+    await ExportData.update({
+        garment_fabric_sales_load:true
+    },{where:{garment_fabric_sales_load:false}})
+    res.send({status:200,message:"export file processing"})
   const excelFilePath = path.join(
     "./upload",
     "garment-fabric-sale-report.xlsx"
@@ -6453,13 +6651,21 @@ const exportGarmentSales = async (req: Request, res: Response) => {
 
     // Save the workbook
     await workbook.xlsx.writeFile(excelFilePath);
-    res.status(200).send({
-      success: true,
-      messgage: "File successfully Generated",
-      data: process.env.BASE_URL + "garment-fabric-sale-report.xlsx",
-    });
+    // res.status(200).send({
+    //   success: true,
+    //   messgage: "File successfully Generated",
+    //   data: process.env.BASE_URL + "garment-fabric-sale-report.xlsx",
+    // });
+    await ExportData.update({
+        garment_fabric_sales_load:false
+    },{where:{garment_fabric_sales_load:true}})
   } catch (error: any) {
     console.error("Error appending data:", error);
+    (async()=>{
+        await ExportData.update({
+            garment_fabric_sales_load:false
+        },{where:{garment_fabric_sales_load:true}})
+    })()
     return res.sendError(res, error.message);
   }
 };
@@ -6597,6 +6803,11 @@ const fetchQrCodeTrackPagination = async (req: Request, res: Response) => {
 };
 
 const exportQrCodeTrack = async (req: Request, res: Response) => {
+    // qr_code_tracker_load
+    await ExportData.update({
+        qr_code_tracker_load:true
+    },{where:{qr_code_tracker_load:false}})
+    res.send({status:200,message:"export file processing"})
   const excelFilePath = path.join("./upload", "barcode-report.xlsx");
   const searchTerm = req.query.search || "";
   const page = Number(req.query.page) || 1;
@@ -6732,12 +6943,20 @@ const exportQrCodeTrack = async (req: Request, res: Response) => {
 
     // Save the workbook
     await workbook.xlsx.writeFile(excelFilePath);
-    res.status(200).send({
-      success: true,
-      messgage: "File successfully Generated",
-      data: process.env.BASE_URL + "barcode-report.xlsx",
-    });
+    // res.status(200).send({
+    //   success: true,
+    //   messgage: "File successfully Generated",
+    //   data: process.env.BASE_URL + "barcode-report.xlsx",
+    // });
+    await ExportData.update({
+        qr_code_tracker_load:false
+    },{where:{qr_code_tracker_load:true}})
   } catch (error: any) {
+    (async()=>{
+        await ExportData.update({
+            qr_code_tracker_load:false
+        },{where:{qr_code_tracker_load:true}})
+    })()
     console.error("Error appending data:", error);
     return res.sendError(res, error.message);
   }
@@ -6967,7 +7186,13 @@ const fetchSpinnerSummaryPagination = async (req: Request, res: Response) => {
 };
 
 const exportSpinnerSummary = async (req: Request, res: Response) => {
+    // spinner_summary_load
   const excelFilePath = path.join("./upload", "spinner-summary.xlsx");
+
+  await ExportData.update({
+    spinner_summary_load:true
+},{where:{spinner_summary_load:false}})
+res.send({status:200,message:"export file processing"})
 
   const searchTerm = req.query.search || "";
   const { spinnerId, seasonId, programId, brandId, countryId }: any = req.query;
@@ -7223,14 +7448,22 @@ const exportSpinnerSummary = async (req: Request, res: Response) => {
 
     // Save the workbook
     await workbook.xlsx.writeFile(excelFilePath);
-    res.status(200).send({
-      success: true,
-      messgage: "File successfully Generated",
-      data: process.env.BASE_URL + "spinner-summary.xlsx",
-    });
+    // res.status(200).send({
+    //   success: true,
+    //   messgage: "File successfully Generated",
+    //   data: process.env.BASE_URL + "spinner-summary.xlsx",
+    // });
+    await ExportData.update({
+        spinner_summary_load:false
+    },{where:{spinner_summary_load:true}})
   } catch (error: any) {
+    (async()=>{
+        await ExportData.update({
+            spinner_summary_load:false
+        },{where:{spinner_summary_load:true}})
     console.error("Error appending data:", error);
     return res.sendError(res, error.message);
+})()
   }
 };
 
@@ -7470,6 +7703,11 @@ const fetchGinnerSummaryPagination = async (req: Request, res: Response) => {
 };
 
 const exportGinnerSummary = async (req: Request, res: Response) => {
+    
+    await ExportData.update({
+        ginner_summary_load:true
+    },{where:{ginner_summary_load:false}})
+    res.send({status:200,message:"export file processing"})
   const excelFilePath = path.join("./upload", "ginner-summary.xlsx");
 
   const searchTerm = req.query.search || "";
@@ -7737,14 +7975,23 @@ const exportGinnerSummary = async (req: Request, res: Response) => {
 
     // Save the workbook
     await workbook.xlsx.writeFile(excelFilePath);
-    res.status(200).send({
-      success: true,
-      messgage: "File successfully Generated",
-      data: process.env.BASE_URL + "ginner-summary.xlsx",
-    });
+    await ExportData.update({
+        ginner_summary_load:false
+    },{where:{ginner_summary_load:true}})
+    // res.status(200).send({
+    //   success: true,
+    //   messgage: "File successfully Generated",
+    //   data: process.env.BASE_URL + "ginner-summary.xlsx",
+    // });
   } catch (error: any) {
+    (async()=>{
+        await ExportData.update({
+            ginner_summary_load:false
+        },{where:{ginner_summary_load:true}})
+        return res.sendError(res, error.message);
+    })()
     console.error("Error appending data:", error);
-    return res.sendError(res, error.message);
+   
   }
 };
 
@@ -7890,6 +8137,12 @@ const fetchGinnerCottonStock = async (req: Request, res: Response) => {
 };
 
 const exportGinnerCottonStock = async (req: Request, res: Response) => {
+    // ginner_seed_cotton_load
+    await ExportData.update({
+        ginner_seed_cotton_load:true
+    },{where:{ginner_seed_cotton_load:false}})
+    res.send({status:200,message:"export file processing"})
+
   const excelFilePath = path.join(
     "./upload",
     "ginner-seed-cotton-stock-report.xlsx"
@@ -8070,14 +8323,23 @@ const exportGinnerCottonStock = async (req: Request, res: Response) => {
 
     // Save the workbook
     await workbook.xlsx.writeFile(excelFilePath);
-    res.status(200).send({
-      success: true,
-      messgage: "File successfully Generated",
-      data: process.env.BASE_URL + "ginner-seed-cotton-stock-report.xlsx",
-    });
+    // res.status(200).send({
+    //   success: true,
+    //   messgage: "File successfully Generated",
+    //   data: process.env.BASE_URL + "ginner-seed-cotton-stock-report.xlsx",
+    // });
+    await ExportData.update({
+        ginner_seed_cotton_load:false
+    },{where:{ginner_seed_cotton_load:true}})
   } catch (error: any) {
+    (async()=>{
+        await ExportData.update({
+            ginner_seed_cotton_load:false
+        },{where:{ginner_seed_cotton_load:true}})
+        return res.sendError(res, error.message);
+    })
     console.log(error);
-    return res.sendError(res, error.message);
+  
   }
 };
 
@@ -8296,6 +8558,11 @@ const fetchSpinnerLintCottonStock = async (req: Request, res: Response) => {
 };
 
 const exportSpinnerCottonStock = async (req: Request, res: Response) => {
+    // spinner_lint_cotton_stock_load
+    await ExportData.update({
+        spinner_lint_cotton_stock_load:true
+    },{where:{spinner_lint_cotton_stock_load:false}})
+    res.send({status:200,message:"export file processing"})
   const excelFilePath = path.join(
     "./upload",
     "spinner-lint-cotton-stock-report.xlsx"
@@ -8537,13 +8804,21 @@ const exportSpinnerCottonStock = async (req: Request, res: Response) => {
 
     // Save the workbook
     await workbook.xlsx.writeFile(excelFilePath);
-    res.status(200).send({
-      success: true,
-      messgage: "File successfully Generated",
-      data: process.env.BASE_URL + "spinner-lint-cotton-stock-report.xlsx",
-    });
+    await ExportData.update({
+        spinner_lint_cotton_stock_load:false
+    },{where:{spinner_lint_cotton_stock_load:true}})
+    // res.status(200).send({
+    //   success: true,
+    //   messgage: "File successfully Generated",
+    //   data: process.env.BASE_URL + "spinner-lint-cotton-stock-report.xlsx",
+    // });
   } catch (error: any) {
     console.log(error);
+    (async()=>{
+        await ExportData.update({
+            spinner_lint_cotton_stock_load:false
+        },{where:{spinner_lint_cotton_stock_load:true}})
+    })()
     return res.sendError(res, error.message);
   }
 };
@@ -8900,6 +9175,11 @@ const formatDecimal = (value: string | number): string | number => {
 };
 
 const exportPscpCottonProcurement = async (req: Request, res: Response) => {
+    // procurement_tracker_load
+    await ExportData.update({
+        procurement_tracker_load:true
+    },{where:{procurement_tracker_load:false}})
+    res.send({status:200,message:"export file processing"})
   const excelFilePath = path.join("./upload", "pscp-cotton-procurement.xlsx");
 
   const searchTerm = req.query.search || "";
@@ -9144,12 +9424,20 @@ const exportPscpCottonProcurement = async (req: Request, res: Response) => {
 
     // Save the workbook
     await workbook.xlsx.writeFile(excelFilePath);
-    res.status(200).send({
-      success: true,
-      messgage: "File successfully Generated",
-      data: process.env.BASE_URL + "pscp-cotton-procurement.xlsx",
-    });
+    // res.status(200).send({
+    //   success: true,
+    //   messgage: "File successfully Generated",
+    //   data: process.env.BASE_URL + "pscp-cotton-procurement.xlsx",
+    // });
+    await ExportData.update({
+        procurement_tracker_load:false
+    },{where:{procurement_tracker_load:true}})
   } catch (error: any) {
+    (async()=>{
+        await ExportData.update({
+            procurement_tracker_load:false
+        },{where:{procurement_tracker_load:true}})
+    })()
     console.error("Error appending data:", error);
     return res.sendError(res, error.message);
   }
@@ -9860,6 +10148,12 @@ const exportPscpProcurementLiveTracker = async (
   res: Response
 ) => {
   try {
+    // procurement_sell_live_tracker_load
+
+    await ExportData.update({
+        procurement_sell_live_tracker_load:true
+    },{where:{procurement_sell_live_tracker_load:false}})
+    res.send({status:200,message:"export file processing"})
     const excelFilePath = path.join(
       "./upload",
       "pscp-procurement-sell-live-tracker.xlsx"
@@ -10251,14 +10545,22 @@ const exportPscpProcurementLiveTracker = async (
 
     // Save the workbook
     await workbook.xlsx.writeFile(excelFilePath);
-    res.status(200).send({
-      success: true,
-      messgage: "File successfully Generated",
-      data: process.env.BASE_URL + "pscp-procurement-sell-live-tracker.xlsx",
-    });
+    // res.status(200).send({
+    //   success: true,
+    //   messgage: "File successfully Generated",
+    //   data: process.env.BASE_URL + "pscp-procurement-sell-live-tracker.xlsx",
+    // });
+    await ExportData.update({
+        procurement_sell_live_tracker_load:false
+    },{where:{procurement_sell_live_tracker_load:true}})
     // let ndata = data.length > 0 ? data.slice(offset, offset + limit) : [];
     // return res.sendPaginationSuccess(res, ndata, data.length > 0 ? data.length : 0);
   } catch (error: any) {
+    (async()=>{
+        await ExportData.update({
+            procurement_sell_live_tracker_load:false
+        },{where:{procurement_sell_live_tracker_load:true}})
+    })()
     console.error("Error appending data:", error);
     return res.sendError(res, error.message);
   }
@@ -11071,6 +11373,11 @@ const consolidatedTraceability = async (req: Request, res: Response) => {
 };
 
 const exportConsolidatedTraceability = async (req: Request, res: Response) => {
+    // consolidated_tracebality_load
+    await ExportData.update({
+        consolidated_tracebality_load:true
+    },{where:{consolidated_tracebality_load:false}})
+    res.send({status:200,message:"export file processing"})
   const excelFilePath = path.join(
     "./upload",
     "consolidated-traceabilty-report.xlsx"
@@ -12017,12 +12324,20 @@ const exportConsolidatedTraceability = async (req: Request, res: Response) => {
 
     // Save the workbook
     await workbook.xlsx.writeFile(excelFilePath);
-    res.status(200).send({
-      success: true,
-      messgage: "File successfully Generated",
-      data: process.env.BASE_URL + "consolidated-traceabilty-report.xlsx",
-    });
+    // res.status(200).send({
+    //   success: true,
+    //   messgage: "File successfully Generated",
+    //   data: process.env.BASE_URL + "consolidated-traceabilty-report.xlsx",
+    // });
+    await ExportData.update({
+        consolidated_tracebality_load:false
+    },{where:{consolidated_tracebality_load:true}})
   } catch (error: any) {
+    (async()=>{
+        await ExportData.update({
+            consolidated_tracebality_load:false
+        },{where:{consolidated_tracebality_load:true}})
+    })()
     console.log(error);
     return res.sendError(res, error.message);
   }
@@ -12406,6 +12721,11 @@ const exportSpinnerBackwardTraceability = async (
   req: Request,
   res: Response
 ) => {
+    // spinner_backward_tracebality_load
+    await ExportData.update({
+        spinner_backward_tracebality_load:true
+    },{where:{spinner_backward_tracebality_load:false}})
+    res.send({status:200,message:"export file processing"})
   const excelFilePath = path.join(
     "./upload",
     "spinner-backward-traceabilty-report.xlsx"
@@ -12873,12 +13193,21 @@ const exportSpinnerBackwardTraceability = async (
 
     // Save the workbook
     await workbook.xlsx.writeFile(excelFilePath);
-    res.status(200).send({
-      success: true,
-      messgage: "File successfully Generated",
-      data: process.env.BASE_URL + "spinner-backward-traceabilty-report.xlsx",
-    });
+    // res.status(200).send({
+    //   success: true,
+    //   messgage: "File successfully Generated",
+    //   data: process.env.BASE_URL + "spinner-backward-traceabilty-report.xlsx",
+    // });
+    await ExportData.update({
+        spinner_backward_tracebality_load:false
+    },{where:{spinner_backward_tracebality_load:true}})
+    
   } catch (error: any) {
+    (async()=>{
+        await ExportData.update({
+            spinner_backward_tracebality_load:false
+        },{where:{spinner_backward_tracebality_load:true}})
+    })()
     console.log(error);
     return res.sendError(res, error.message);
   }
@@ -13004,6 +13333,11 @@ const villageSeedCottonReport = async (req: Request, res: Response) => {
 };
 
 const exportVillageSeedCotton = async (req: Request, res: Response) => {
+    // village_seed_cotton_load
+    await ExportData.update({
+        village_seed_cotton_load:true
+    },{where:{village_seed_cotton_load:false}})
+    res.send({status:200,message:"export file processing"})
   const excelFilePath = path.join(
     "./upload",
     "village-seed-cotton-report.xlsx"
@@ -13167,12 +13501,20 @@ const exportVillageSeedCotton = async (req: Request, res: Response) => {
 
     // Save the workbook
     await workbook.xlsx.writeFile(excelFilePath);
-    res.status(200).send({
-      success: true,
-      messgage: "File successfully Generated",
-      data: process.env.BASE_URL + "village-seed-cotton-report.xlsx",
-    });
+    // res.status(200).send({
+    //   success: true,
+    //   messgage: "File successfully Generated",
+    //   data: process.env.BASE_URL + "village-seed-cotton-report.xlsx",
+    // });
+    await ExportData.update({
+        village_seed_cotton_load:false
+    },{where:{village_seed_cotton_load:true}})
   } catch (error: any) {
+    (async()=>{
+        await ExportData.update({
+            village_seed_cotton_load:false
+        },{where:{village_seed_cotton_load:true}})
+    })
     console.error(error);
     return res.sendError(res, error.message);
   }

@@ -5,6 +5,7 @@ import * as fs from "fs";
 import * as path from "path";
 import FailedRecords from "../../models/failed-records.model";
 import Season from "../../models/season.model";
+import ExportData from "../../models/export-data-check.model";
 
 const saveFailedRecord = async (data: any) => {
     try {
@@ -85,6 +86,11 @@ const fetchFailedRecords = async (req: Request, res: Response) => {
 }
 
 const exportFailedRecords = async (req: Request, res: Response) => {
+    // failes_procurement_load
+    await ExportData.update({
+        failes_procurement_load:true
+    },{where:{failes_procurement_load:false}})
+    res.send({status:200,message:"export file processing"})
     const excelFilePath = path.join("./upload", "failed-records.xlsx");
     const searchTerm = req.query.search || "";
     const page = Number(req.query.page) || 1;
@@ -178,12 +184,20 @@ const exportFailedRecords = async (req: Request, res: Response) => {
 
         // Save the workbook
         await workbook.xlsx.writeFile(excelFilePath);
-        res.status(200).send({
-            success: true,
-            messgage: "File successfully Generated",
-            data: process.env.BASE_URL + "failed-records.xlsx",
-        });
+        // res.status(200).send({
+        //     success: true,
+        //     messgage: "File successfully Generated",
+        //     data: process.env.BASE_URL + "failed-records.xlsx",
+        // });
+        await ExportData.update({
+            failes_procurement_load:false
+        },{where:{failes_procurement_load:true}})
     } catch (error: any) {
+        (async()=>{
+            await ExportData.update({
+                failes_procurement_load:false
+            },{where:{failes_procurement_load:true}})
+        })()
         console.log(error);
         return res.sendError(res, error.message);
     }
