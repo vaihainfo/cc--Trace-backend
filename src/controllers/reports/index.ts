@@ -1,4 +1,4 @@
-import { Op, Sequelize } from "sequelize";
+import { Op, Sequelize, where } from "sequelize";
 import { Request, Response } from "express";
 import GinProcess from "../../models/gin-process.model";
 import GinBale from "../../models/gin-bale.model";
@@ -50,6 +50,7 @@ import FarmGroup from "../../models/farm-group.model";
 import moment from "moment";
 import KnitFabric from "../../models/knit_fabric.model";
 import WeaverFabric from "../../models/weaver_fabric.model";
+import ExportData from "../../models/export-data-check.model";
 
 const fetchBaleProcess = async (req: Request, res: Response) => {
   const searchTerm = req.query.search || "";
@@ -218,7 +219,34 @@ const fetchBaleProcess = async (req: Request, res: Response) => {
   }
 };
 
+const exportLoad=async(req: Request, res: Response)=>{
+    const loadData=await ExportData.findAll({
+        limit: 1,
+        where: {
+          //your where conditions, or without them if you need ANY entry
+        },
+        order: [ [ 'createdAt', 'DESC' ]]
+      })
+      if(loadData){
+        res.status(200).send({
+            success: true,
+            messgage: "File under processing", 
+          });
+      }else{
+        res.status(200).send({
+            success: true,
+            messgage: "File successfully Generated",
+            data: process.env.BASE_URL + req?.body?.file_name,
+          });
+      }
+}
+
 const exportGinnerProcess = async (req: Request, res: Response) => {
+
+    await ExportData.update({
+        ginner_lint_bale_process_load:true
+    },{where:{ginner_lint_bale_process_load:false}})
+    res.send({status:200,message:"export file processing"})
   const excelFilePath = path.join("./upload", "gin-bale-process.xlsx");
   const searchTerm = req.query.search || "";
   const page = Number(req.query.page) || 1;
@@ -439,16 +467,21 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
 
     // Save the workbook
     await workbook.xlsx.writeFile(excelFilePath);
-    res.status(200).send({
-      success: true,
-      messgage: "File successfully Generated",
-      data: process.env.BASE_URL + "gin-bale-process.xlsx",
-    });
+    await ExportData.update({
+        ginner_lint_bale_process_load:false
+    },{where:{ginner_lint_bale_process_load:true}})
+    // res.status(200).send({
+    //   success: true,
+    //   messgage: "File successfully Generated",
+    //   data: process.env.BASE_URL + "gin-bale-process.xlsx",
+    // });
   } catch (error: any) {
     console.error("Error appending data:", error);
     return res.sendError(res, error.message);
   }
 };
+
+
 
 const fetchPendingGinnerSales = async (req: Request, res: Response) => {
   const searchTerm = req.query.search || "";
@@ -13149,6 +13182,7 @@ export {
   fetchBaleProcess,
   exportPendingGinnerSales,
   exportGinnerProcess,
+  exportLoad,
   fetchPendingGinnerSales,
   fetchGinSalesPagination,
   exportGinnerSales,
