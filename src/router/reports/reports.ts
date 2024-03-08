@@ -58,7 +58,8 @@ import {
     villageSeedCottonReport,
     exportVillageSeedCotton,
     spinnerBackwardTraceabiltyReport,
-    exportSpinnerBackwardTraceability
+    exportSpinnerBackwardTraceability,
+    exportLoad
 } from "../../controllers/reports";
 const router = Router();
 
@@ -77,6 +78,7 @@ router.get('/export-non-farmer-report', exportNonOrganicFarmerReport);
 router.get('/export-organic-farmer-report', exportOrganicFarmerReport);
 router.get('/get-bale-process-report', fetchBaleProcess);
 router.get('/export-bale-process-report', exportGinnerProcess);
+router.post("/check-export-load",exportLoad)
 router.get('/get-gin-sales-report', fetchGinSalesPagination);
 router.get('/get-gin-pending-sales-report', fetchPendingGinnerSales);
 router.get('/export-pending-sales-report', exportPendingGinnerSales);
