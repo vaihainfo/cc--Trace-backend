@@ -55,7 +55,7 @@ const getQueryParams = async (
   req: Request, res: Response
 ) => {
   try {
-    const {
+    let {
       program,
       brand,
       season,
@@ -77,6 +77,14 @@ const getQueryParams = async (
     await validator.validate(district);
     await validator.validate(block);
     await validator.validate(village);
+    if (!season) {
+      const seasonOne = await Season.findOne({
+        order: [
+          ['id', 'DESC']
+        ]
+      });
+      season = seasonOne.id;
+    }
 
     return {
       program,
