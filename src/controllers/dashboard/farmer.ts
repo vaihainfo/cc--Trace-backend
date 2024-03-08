@@ -27,46 +27,64 @@ const getOverallArea = async (
   }
 };
 
+
 const getOverAllData = async (
   where: any
 ) => {
-  try {
-    const moreThanTwo = await Farmer.count({
-      where: {
-        ...where,
+  const moreThanTwo = await Farm.count({
+    include: [
+      {
+        model: Farmer,
+        attributes: [],
+        as: "farmer",
         agri_total_area: {
           [Op.gt]: 2.5
         }
-      }
-    });
-    const lessThanOne = await Farmer.count({
-      where: {
-        ...where,
-        agri_total_area: {
-          [Op.lt]: 1
-        }
-      }
-    });
+      },
+    ],
+    where
+  });
+  const lessThanOne = await Farm.count({
+    include: [
+      {
+        model: Farmer,
+        attributes: [],
+        as: "farmer",
+        where: {
+          agri_total_area: {
+            [Op.lt]: 1
+          }
+        },
+      },
+    ],
+    where,
 
-    const moreThanOne = await Farmer.count({
-      where: {
-        ...where,
-        agri_total_area: {
-          [Op.gt]: 1,
-          [Op.lt]: 2.5
-        }
-      }
-    });
+  });
 
-    return {
-      moreThanOne,
-      lessThanOne,
-      moreThanTwo
-    };
-  }
-  catch (error) {
-    console.log(error);
-  }
+  const moreThanOne = await Farm.count({
+    include: [
+      {
+        model: Farmer,
+        attributes: [],
+        as: "farmer",
+        where: {
+          agri_total_area: {
+            [Op.gt]: 1,
+            [Op.lt]: 2.5
+          }
+        },
+      },
+    ],
+    where,
+
+  });
+
+  return {
+    moreThanOne,
+    lessThanOne,
+    moreThanTwo
+  };
+
 };
 
 const getOverAllDataQuery = (
@@ -77,28 +95,29 @@ const getOverAllDataQuery = (
   };
 
   if (reqData?.program)
-    where.program_id = reqData.program;
+    where['$farmer.program_id$'] = reqData.program;
 
   if (reqData?.brand)
-    where.brand_id = reqData.brand;
+    where['$farmer.brand_id$'] = reqData.brand;
 
-  // if (reqData?.season)
-  //   where[Op.and] = reqData.season;
+  if (reqData?.season)
+    where.season_id = reqData.season;
+  // where[Op.and] = reqData.season;
 
   if (reqData?.country)
-    where.country_id = reqData.country;
+    where['$farmer.country_id$'] = reqData.country;
 
   if (reqData?.state)
-    where.state_id = reqData.state;
+    where['$farmer.state_id$'] = reqData.state;
 
   if (reqData?.district)
-    where.district_id = reqData.district;
+    where['$farmer.district_id$'] = reqData.district;
 
   if (reqData?.block)
-    where.block_id = reqData.block;
+    where['$farmer.block_id$'] = reqData.block;
 
   if (reqData?.village)
-    where.village_id = reqData.village;
+    where['$farmer.village_id$'] = reqData.village;
 
   return where;
 };
@@ -215,33 +234,45 @@ const getAllFarmer = async (
 ) => {
 
   try {
-    if (where?.country_id)
-      where.country_id = where.country_id;
-    else
-      where.country_id = 29;
-    const stateCount = Farmer.findAll({
+    if (!where['$farmer.country_id$'])
+      where['$farmer.country_id$'] = 29;
+
+    const stateCount = Farm.findAll({
       attributes: [
-        [Sequelize.fn('COUNT', Sequelize.literal('"farmers"."state_id"')), 'farmerCount'],
+        [Sequelize.fn('COUNT', Sequelize.literal('"farmer"."state_id"')), 'farmerCount'],
+        [Sequelize.col('farmer.state.id'), 'state_id'],
+        [Sequelize.col('farmer.state.state_name'), 'state_name'],
+        [Sequelize.col('farmer.district.id'), 'district_id'],
+        [Sequelize.col('farmer.district.district_name'), 'district_name'],
+        [Sequelize.col('farmer.country.id'), 'country_id'],
+        [Sequelize.col('farmer.country.county_name'), 'country_name']
       ],
-      include: [
-        {
-          model: State,
-          as: 'state',
-          attributes: ['id', 'state_name'],
-        },
-        {
-          model: District,
-          as: 'district',
-          attributes: ['id', 'district_name'],
-        },
-        {
-          model: Country,
-          as: 'country',
-          attributes: ['id', 'county_name']
-        }
-      ],
+      include:
+      {
+        model: Farmer,
+        as: 'farmer',
+        attributes: [],
+
+        include: [
+          {
+            model: State,
+            as: 'state',
+            attributes: [],
+          },
+          {
+            model: District,
+            as: 'district',
+            attributes: [],
+          },
+          {
+            model: Country,
+            as: 'country',
+            attributes: []
+          }
+        ],
+      },
       where: where,
-      group: ['state.id', 'district.id', 'country.id']
+      group: ['farmer.state.id', 'farmer.district.id', 'farmer.country.id']
     });
 
     return stateCount;
@@ -251,6 +282,7 @@ const getAllFarmer = async (
   }
 };
 
+
 const getFarmerList = (farmersList: any) => {
   let country: any = [];
   let state: any = [];
@@ -258,46 +290,46 @@ const getFarmerList = (farmersList: any) => {
 
   farmersList.forEach((farmer: any) => {
     const findCountryId = country.findIndex((country: any) =>
-      country.id == farmer.dataValues.country.dataValues.id
+      country.id == farmer.dataValues.country_id
     );
 
     const findStateId = state.findIndex((state: any) =>
-      state.id == farmer.dataValues.state.dataValues.id
+      state.id == farmer.dataValues.state_id
     );
     const findDistrictId = district.findIndex((district: any) =>
-      district.id == farmer.dataValues.district.dataValues.id
+      district.id == farmer.dataValues.district_id
     );
 
     if (findCountryId == -1)
       country.push({
-        id: farmer.dataValues.country.dataValues.id,
-        name: farmer.dataValues.country.dataValues.county_name,
+        id: farmer.dataValues.country_id,
+        name: farmer.dataValues.country_name,
         count: Number(farmer.dataValues.farmerCount),
       });
     else
       if (country.length)
         country.forEach((country: any) => {
-          if (country.id == farmer.dataValues.country.dataValues.id)
+          if (country.id == farmer.dataValues.country_id)
             country.count = Number(country.count) + Number(farmer.dataValues.farmerCount);
         });
 
     if (findStateId == -1)
       state.push({
-        id: farmer.dataValues.state.dataValues.id,
-        name: farmer.dataValues.state.dataValues.state_name,
+        id: farmer.dataValues.state_id,
+        name: farmer.dataValues.state_name,
         count: Number(farmer.dataValues.farmerCount),
       });
     else
       if (state.length)
         state.forEach((state: any) => {
-          if (state.id == farmer.dataValues.state.dataValues.id)
+          if (state.id == farmer.dataValues.state_id)
             state.count = Number(state.count) + Number(farmer.dataValues.farmerCount);
         });
 
     if (findDistrictId == -1)
       district.push({
-        id: farmer.dataValues.district.dataValues.id,
-        name: farmer.dataValues.district.dataValues.district_name,
+        id: farmer.dataValues.district_id,
+        name: farmer.dataValues.district_name,
         count: Number(farmer.dataValues.farmerCount),
       });
   });
@@ -341,7 +373,6 @@ const getFarmerBySeasons = async (where: any) => {
         model: Farmer,
         as: 'farmer',
         attributes: [],
-        where: where
       },
       {
         model: Season,
@@ -402,7 +433,6 @@ const getAcreBySession = async (where: any) => {
         model: Farmer,
         as: 'farmer',
         attributes: [],
-        where: where
       },
       {
         model: Season,
@@ -410,6 +440,7 @@ const getAcreBySession = async (where: any) => {
         attributes: []
       }
     ],
+    where,
     group: ['season.id']
   });
 
@@ -452,7 +483,7 @@ const getEstimateAndProduction = async (
 
 };
 
-const getEstimateProductionBySeason = async (estimateProductionList: any) => {
+const getEstimateProductionBySeason = async (where: any) => {
 
   const estimateAndProduction = await Farm.findAll({
     attributes: [
@@ -471,6 +502,7 @@ const getEstimateProductionBySeason = async (estimateProductionList: any) => {
         attributes: ['id', 'name']
       }
     ],
+    where,
     group: ['season.id']
   });
 

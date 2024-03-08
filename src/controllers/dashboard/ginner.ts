@@ -7,6 +7,7 @@ import Spinner from "../../models/spinner.model";
 import Season from "../../models/season.model";
 import Transaction from "../../models/transaction.model";
 import GinProcess from "../../models/gin-process.model";
+import Ginner from "../../models/ginner.model";
 
 const getTopVillages = async (
   req: Request, res: Response
@@ -24,6 +25,61 @@ const getTopVillages = async (
     return res.sendError(res, code);
   }
 };
+
+
+const getOverAllDataQuery = (
+  reqData: any
+) => {
+  const where: any = {
+
+  };
+  // where.status = "Sold";
+
+  if (reqData?.program)
+    where.program_id = reqData.program;
+
+  if (reqData?.season)
+    where.season_id = reqData.season;
+
+  if (reqData?.country)
+    where['$ginner.country_id$'] = reqData.country;
+
+  if (reqData?.state)
+    where['$ginner.state_id$'] = reqData.state;
+
+  if (reqData?.district)
+    where['$ginner.district_id$'] = reqData.district;
+
+  return where;
+};
+
+
+const getTransactionDataQuery = (
+  reqData: any
+) => {
+  const where: any = {
+
+  };
+  where.status = "Sold";
+
+  if (reqData?.program)
+    where.program_id = reqData.program;
+
+  if (reqData?.season)
+    where.season_id = reqData.season;
+
+  if (reqData?.country)
+    where.country_id = reqData.country;
+
+  if (reqData?.state)
+    where.state_id = reqData.state;
+
+  if (reqData?.district)
+    where.district_id = reqData.district;
+
+  return where;
+};
+
 
 const getTopVillagesData = async (
 
@@ -131,7 +187,8 @@ const getTopSpinners = async (
 ) => {
   try {
     const reqData = await getQueryParams(req, res);
-    const spinnersData = await getTopSpinnersData();
+    const where = getOverAllDataQuery(reqData);
+    const spinnersData = await getTopSpinnersData(where);
     const data = getTopSpinnersRes(spinnersData);
     return res.sendSuccess(res, data);
 
@@ -144,7 +201,7 @@ const getTopSpinners = async (
 };
 
 const getTopSpinnersData = async (
-
+  where: any
 ) => {
 
   const result = await GinSales.findAll({
@@ -161,7 +218,12 @@ const getTopSpinnersData = async (
       model: Season,
       as: 'season',
       attributes: []
+    }, {
+      model: Ginner,
+      as: 'ginner',
+      attributes: []
     }],
+    where,
     group: ['season.id', 'buyerdata.id']
   });
 
@@ -193,7 +255,8 @@ const getProcuredProcessed = async (
 ) => {
   try {
     const reqData = await getQueryParams(req, res);
-    const procuredProcessedData = await getProcuredProcessedData();
+    const transactionWhere = getTransactionDataQuery(reqData);
+    const procuredProcessedData = await getProcuredProcessedData(transactionWhere);
     const data = getProcuredProcessedRes(procuredProcessedData);
     return res.sendSuccess(res, data);
 
@@ -229,7 +292,7 @@ const getProcuredProcessedRes = (
 
 
 const getProcuredProcessedData = async (
-
+  where: any
 ) => {
 
   const result = await Transaction.findAll({
@@ -244,6 +307,7 @@ const getProcuredProcessedData = async (
       as: 'season',
       attributes: []
     }],
+    where,
     group: ['season.id']
   });
 
@@ -257,8 +321,9 @@ const getLintProcuredSold = async (
 ) => {
   try {
     const reqData = await getQueryParams(req, res);
-    const procuredData = await getLintProcuredData();
-    const soldData = await getLintSoldData();
+    const where = getOverAllDataQuery(reqData);
+    const procuredData = await getLintProcuredData(where);
+    const soldData = await getLintSoldData(where);
     const data = getLintProcuredSoldRes(
       procuredData,
       soldData
@@ -332,9 +397,9 @@ const getLintProcuredSoldRes = (
 };
 
 const getLintSoldData = async (
-
+  where: any
 ) => {
-
+  where.status = "Sold";
   const result = await GinSales.findAll({
     attributes: [
       [Sequelize.fn('SUM', Sequelize.col('no_of_bales')), 'sold'],
@@ -345,7 +410,12 @@ const getLintSoldData = async (
       model: Season,
       as: 'season',
       attributes: []
+    }, {
+      model: Ginner,
+      as: 'ginner',
+      attributes: []
     }],
+    where,
     group: ['season.id']
   });
 
@@ -354,7 +424,7 @@ const getLintSoldData = async (
 };
 
 const getLintProcuredData = async (
-
+  where: any
 ) => {
 
   const result = await GinProcess.findAll({
@@ -367,7 +437,12 @@ const getLintProcuredData = async (
       model: Season,
       as: 'season',
       attributes: []
+    }, {
+      model: Ginner,
+      as: 'ginner',
+      attributes: []
     }],
+    where,
     group: ['season.id']
   });
 
@@ -377,7 +452,7 @@ const getLintProcuredData = async (
 
 
 const getLintProcuredDataByMonth = async (
-
+  where: any
 ) => {
 
   const result = await GinProcess.findAll({
@@ -385,9 +460,12 @@ const getLintProcuredDataByMonth = async (
       [Sequelize.fn('SUM', Sequelize.col('no_of_bales')), 'procured'],
       [Sequelize.literal("date_part('Month', date)"), 'month']
     ],
-    where: {
-      season_id: 22
-    },
+    include: [{
+      model: Ginner,
+      as: 'ginner',
+      attributes: []
+    }],
+    where: where,
     group: ['month']
   });
 
@@ -397,17 +475,20 @@ const getLintProcuredDataByMonth = async (
 
 
 const getLintSoldDataByMonth = async (
-
+  where: any
 ) => {
-
+  where.status = "Sold";
   const result = await GinSales.findAll({
     attributes: [
       [Sequelize.fn('SUM', Sequelize.col('no_of_bales')), 'procured'],
       [Sequelize.literal("date_part('Month', date)"), 'month']
     ],
-    where: {
-      season_id: 22
-    },
+    include: [{
+      model: Ginner,
+      as: 'ginner',
+      attributes: []
+    }],
+    where,
     group: ['month']
   });
 
@@ -416,7 +497,7 @@ const getLintSoldDataByMonth = async (
 };
 
 const getProcuredProcessedDataByMonth = async (
-
+  where: any
 ) => {
 
   const result = await Transaction.findAll({
@@ -426,9 +507,7 @@ const getProcuredProcessedDataByMonth = async (
       [Sequelize.literal("date_part('Month', date)"), 'month'],
     ],
     include: [],
-    where: {
-      season_id: 22
-    },
+    where,
     group: ['month']
   });
 
@@ -441,9 +520,11 @@ const getDataAll = async (
 ) => {
   try {
     const reqData = await getQueryParams(req, res);
-    const procuredData = await getLintProcuredDataByMonth();
-    const soldData = await getLintSoldDataByMonth();
-    const procuredProcessedData = await getProcuredProcessedDataByMonth();
+    const where = getOverAllDataQuery(reqData);
+    const transactionWhere = getTransactionDataQuery(reqData);
+    const procuredData = await getLintProcuredDataByMonth(where);
+    const soldData = await getLintSoldDataByMonth(where);
+    const procuredProcessedData = await getProcuredProcessedDataByMonth(transactionWhere);
     const data = getDataAllRes(
       procuredData,
       soldData,
