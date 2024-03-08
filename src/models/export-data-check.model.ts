@@ -114,5 +114,5 @@ const ExportData = db.define('export_data_checks', {
  
 });
 
-
+ExportData.sync();
 export default ExportData;
