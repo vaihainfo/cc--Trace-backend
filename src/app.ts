@@ -1,7 +1,7 @@
 /** Import .env */
 import dotenv from "dotenv";
 // dotenv.config({ path: '.env.local' });
-dotenv.config({ path: `.env.${process.env.NODE_ENV || "development"}` });
+dotenv.config({ path: `.env.${process.env.NODE_ENV || "local"}` });
 
 console.log(process.env.NODE_ENV);
 
@@ -167,8 +167,8 @@ app.use("/trader-process", traderProcessRouter);
 app.use("/fabric-process", fabricProcessRouter);
 app.use("/brand-interface", brandProcessRouter);
 app.use("/qr-app", qrApp);
-app.use("/datamigration",DatamigrationRouter);
-app.use("/failed-records",failedRouter);
+app.use("/datamigration", DatamigrationRouter);
+app.use("/failed-records", failedRouter);
 app.use("/oldsales", oldsalesRouter);
 app.use("/garment-type", garmentTypeRouter);
 app.use("/style-mark", styleMarkRouter);

@@ -130,4 +130,22 @@ const fetchVillages = async (req: Request, res: Response) => {
   }
 };
 
-export default fetchVillages;
+const checkVillages = async (req: Request, res: Response) => {
+  try {
+    const { blockId, villageName } = req.body;
+    let whereCondition: any = {}
+    if (req.body.id) {
+      whereCondition = { block_id: blockId, village_name: { [Op.iLike]: villageName }, id: { [Op.ne]: req.body.id } }
+    } else {
+      whereCondition = { block_id: blockId, village_name: { [Op.iLike]: villageName } }
+    }
+    let result = await Village.findOne({ where: whereCondition })
+
+    res.sendSuccess(res, result ? { exist: true } : { exist: false });
+  } catch (error: any) {
+    console.log(error)
+    return res.sendError(res, error.message);
+  }
+}
+
+export { fetchVillages, checkVillages };

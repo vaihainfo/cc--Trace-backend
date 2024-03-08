@@ -80,4 +80,22 @@ const fetchDistricts = async (req: Request, res: Response) => {
   }
 };
 
-export default fetchDistricts;
+const checkDistricts = async (req: Request, res: Response) => {
+  try {
+    const { stateId, districtName } = req.body;
+    let whereCondition: any = {}
+    if (req.body.id) {
+      whereCondition = { state_id: stateId, district_name: { [Op.iLike]: districtName }, id: { [Op.ne]: req.body.id } }
+    } else {
+      whereCondition = { state_id: stateId, district_name: { [Op.iLike]: districtName } }
+    }
+    let result = await District.findOne({ where: whereCondition })
+
+    res.sendSuccess(res, result ? { exist: true } : { exist: false });
+  } catch (error: any) {
+    console.log(error)
+    return res.sendError(res, error.message);
+  }
+}
+
+export { fetchDistricts, checkDistricts };

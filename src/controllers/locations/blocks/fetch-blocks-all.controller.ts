@@ -105,4 +105,22 @@ const fetchBlocks = async (req: Request, res: Response) => {
   }
 };
 
-export default fetchBlocks;
+const checkBlocks = async (req: Request, res: Response) => {
+  try {
+    const { districtId, blockName } = req.body;
+    let whereCondition: any = {}
+    if (req.body.id) {
+      whereCondition = { district_id: districtId, block_name: { [Op.iLike]: blockName }, id: { [Op.ne]: req.body.id } }
+    } else {
+      whereCondition = { district_id: districtId, block_name: { [Op.iLike]: blockName } }
+    }
+    let result = await Block.findOne({ where: whereCondition })
+
+    res.sendSuccess(res, result ? { exist: true } : { exist: false });
+  } catch (error: any) {
+    console.log(error)
+    return res.sendError(res, error.message);
+  }
+}
+
+export { fetchBlocks, checkBlocks };

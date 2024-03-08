@@ -109,6 +109,9 @@ const DyingSales = db.define('dying_sales', {
   accept_date: {
     type: DataTypes.DATE
   },
+  sales_type : {
+    type: DataTypes.STRING
+  },
   qr: {
     type: DataTypes.STRING
   },

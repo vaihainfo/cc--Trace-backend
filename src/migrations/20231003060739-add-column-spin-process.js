@@ -1,4 +1,4 @@
-'use strict';
+"use strict";
 
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
@@ -18,6 +18,6 @@ module.exports = {
      * Example:
      * await queryInterface.dropTable('users');
      */
-    await queryInterface.removeColumn('spin_processes', 'comber_noil_stock')
-  }
+    await queryInterface.removeColumn("spin_processes", "comber_noil_stock");
+  },
 };

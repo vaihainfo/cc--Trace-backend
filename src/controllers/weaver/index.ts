@@ -124,7 +124,7 @@ const updateWeaverProcess = async (req: Request, res: Response) => {
     });
     for await (let fabric of req.body.fabrics) {
       let data = {
-        fabric_gsm: fabric.fabricGsm,
+        fabric_gsm: fabric.fabric_gsm,
       };
       const fab = await WeaverFabric.update(data, { where: { id: fabric.id } });
     }

@@ -73,4 +73,22 @@ const fetchStates = async (req: Request, res: Response) => {
   }
 };
 
-export default fetchStates;
+const checkStates = async (req: Request, res: Response) => {
+  try {
+    const { countryId, stateName } = req.body;
+    let whereCondition: any = {}
+    if (req.body.id) {
+      whereCondition = { country_id: countryId, state_name: { [Op.iLike]: stateName }, id: { [Op.ne]: req.body.id } }
+    } else {
+      whereCondition = { country_id: countryId, state_name: { [Op.iLike]: stateName } }
+    }
+    let result = await State.findOne({ where: whereCondition })
+
+    res.sendSuccess(res, result ? { exist: true } : { exist: false });
+  } catch (error: any) {
+    console.log(error)
+    return res.sendError(res, error.message);
+  }
+}
+
+export { fetchStates, checkStates };

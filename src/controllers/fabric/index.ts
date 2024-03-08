@@ -293,6 +293,7 @@ const createDyingProcess = async (req: Request, res: Response) => {
       dye_invoice: req.body.dyeInvoice,
       invoice_files: req.body.invoiceFiles,
       other_docs: req.body.otherDocs,
+      sales_type :  req.body.salesType,
       status: "Pending",
     };
     const sales = await DyingSales.create(data);
@@ -934,6 +935,7 @@ const createWashingProcess = async (req: Request, res: Response) => {
       qty_stock: req.body.totalFabricQuantity,
       invoice_files: req.body.invoiceFiles,
       other_docs: req.body.otherDocs,
+      sales_type :  req.body.salesType,
       status: "Pending",
     };
     const sales = await WashingSales.create(data);
@@ -1465,6 +1467,7 @@ const createPrintingProcess = async (req: Request, res: Response) => {
       qty_stock: req.body.totalFabricQuantity,
       invoice_files: req.body.invoiceFiles,
       other_docs: req.body.otherDocs,
+      sales_type :  req.body.salesType,
       status: "Pending",
     };
     const sales = await PrintingSales.create(data);
@@ -2016,6 +2019,7 @@ const createCompactingProcess = async (req: Request, res: Response) => {
       invoice_files: req.body.invoiceFiles,
       other_docs: req.body.otherDocs,
       wash_type: req.body.wash_type,
+      sales_type :  req.body.salesType,
       status: "Pending",
     };
     const sales = await CompactingSales.create(data);

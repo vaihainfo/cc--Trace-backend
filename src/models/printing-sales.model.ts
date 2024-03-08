@@ -123,7 +123,10 @@ const PrintingSales = db.define('printing_sales', {
   },
   other_docs: {
     type: DataTypes.ARRAY(DataTypes.STRING)
-  }
+  },
+  sales_type : {
+    type: DataTypes.STRING
+  },
 });
 
 PrintingSales.belongsTo(Fabric, {
