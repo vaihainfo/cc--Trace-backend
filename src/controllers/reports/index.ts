@@ -220,28 +220,28 @@ const fetchBaleProcess = async (req: Request, res: Response) => {
 };
 
 const exportLoad=async(req: Request, res: Response)=>{
-    const data=await ExportData.findAll(
-        // {
-        // order: [['createdAt', 'DESC']] // Assuming createdAt is the timestamp of insertion
-    //   }
-      )
-      let loadData=data[0]
-      
-    //   loadData.dataValues.failes_procurement_load||
-      
-      if(loadData.dataValues.ginner_lint_bale_process_load ||loadData.dataValues.ginner_summary_load||loadData.dataValues.ginner_lint_bale_sale_load||loadData.dataValues.ginner_pending_sales_load||loadData.dataValues.ginner_seed_cotton_load||loadData.dataValues.spinner_summary_load||loadData.dataValues.spinner_bale_receipt_load||loadData.dataValues.spinner_yarn_process_load||loadData.dataValues.spinner_yarn_sales_load||loadData.dataValues.spinner_yarn_bales_load||loadData.dataValues.spinner_lint_cotton_stock_load||loadData.dataValues.knitter_yarn_receipt_load||loadData.dataValues.knitter_yarn_process_load||loadData.dataValues.knitter_fabric_sales_load||loadData.dataValues.weaver_yarn_receipt_load||loadData.dataValues.weaver_yarn_process_load||loadData.dataValues.weaver_yarn_sales_load||loadData.dataValues.garment_fabric_receipt_load||loadData.dataValues.garment_fabric_process_load||loadData.dataValues.garment_fabric_sales_load||loadData.dataValues.qr_code_tracker_load||loadData.dataValues.consolidated_tracebality_load || loadData.dataValues.spinner_backward_tracebality_load|| loadData.dataValues.village_seed_cotton_load|| loadData.dataValues.premium_validation_load|| loadData.dataValues.procurement_load||  loadData.dataValues.procurement_tracker_load|| loadData.dataValues.procurement_sell_live_tracker_load|| loadData.dataValues.qr_app_procurement_load ||loadData.dataValues.failed_farmer_load ){
-        res.status(200).send({
-            success: true,
-            messgage: "File under processing", 
-            data:null
-          });
-      }else{
-        res.status(200).send({
-            success: true,
-            messgage: "File successfully Generated",
-            data: process.env.BASE_URL + req?.body?.file_name,
-          });
-      }
+  const data=await ExportData.findAll(
+      // {
+      // order: [['createdAt', 'DESC']] // Assuming createdAt is the timestamp of insertion
+  //   }
+    )
+    let loadData=data[0]
+    
+  //   loadData.dataValues.failes_procurement_load||
+    
+    if(loadData.dataValues.ginner_lint_bale_process_load ||loadData.dataValues.ginner_summary_load||loadData.dataValues.ginner_lint_bale_sale_load||loadData.dataValues.ginner_pending_sales_load||loadData.dataValues.ginner_seed_cotton_load||loadData.dataValues.spinner_summary_load||loadData.dataValues.spinner_bale_receipt_load||loadData.dataValues.spinner_yarn_process_load||loadData.dataValues.spinner_yarn_sales_load||loadData.dataValues.spinner_yarn_bales_load||loadData.dataValues.spinner_lint_cotton_stock_load||loadData.dataValues.knitter_yarn_receipt_load||loadData.dataValues.knitter_yarn_process_load||loadData.dataValues.knitter_fabric_sales_load||loadData.dataValues.weaver_yarn_receipt_load||loadData.dataValues.weaver_yarn_process_load||loadData.dataValues.weaver_yarn_sales_load||loadData.dataValues.garment_fabric_receipt_load||loadData.dataValues.garment_fabric_process_load||loadData.dataValues.garment_fabric_sales_load||loadData.dataValues.qr_code_tracker_load||loadData.dataValues.consolidated_tracebality_load || loadData.dataValues.spinner_backward_tracebality_load|| loadData.dataValues.village_seed_cotton_load|| loadData.dataValues.premium_validation_load|| loadData.dataValues.procurement_load||  loadData.dataValues.procurement_tracker_load|| loadData.dataValues.procurement_sell_live_tracker_load|| loadData.dataValues.qr_app_procurement_load ||loadData.dataValues.failed_farmer_load ){
+      res.status(200).send({
+          success: true,
+          messgage: "File under processing", 
+          data:null
+        });
+    }else{
+      res.status(200).send({
+          success: true,
+          messgage: "File successfully Generated",
+          data: process.env.BASE_URL + req?.body?.file_name,
+        });
+    }
 }
 
 const exportGinnerProcess = async (req: Request, res: Response) => {
