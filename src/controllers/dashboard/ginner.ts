@@ -8,13 +8,14 @@ import Season from "../../models/season.model";
 import Transaction from "../../models/transaction.model";
 import GinProcess from "../../models/gin-process.model";
 import Ginner from "../../models/ginner.model";
+import GinBale from "../../models/gin-bale.model";
 
 const getTopVillages = async (
   req: Request, res: Response
 ) => {
   try {
     const reqData = await getQueryParams(req, res);
-    const villagesData = await getTopVillagesData();
+    const villagesData = await getTopVillagesData(reqData);
     const data = getTopVillagesRes(villagesData);
     return res.sendSuccess(res, data);
 
@@ -82,8 +83,31 @@ const getTransactionDataQuery = (
 
 
 const getTopVillagesData = async (
-
+  reqData: any
 ) => {
+
+  const whereList: string[] = [];
+
+  if (reqData?.program)
+    whereList.push('gp.program_id = ' + reqData.program);
+
+  if (reqData?.season)
+    whereList.push('gp.season_id = ' + reqData.season);
+
+  if (reqData?.country)
+    whereList.push('gi.country_id = ' + reqData.country);
+
+  if (reqData?.state)
+    whereList.push('gi.state_id = ' + reqData.state);
+
+  if (reqData?.district)
+    whereList.push('gi.district_id = ' + reqData.district);
+
+  let where: string | null = null;
+
+  if (whereList.length)
+    where = whereList.join(' AND ');
+
   const result = await sequelize.query(`
     select vl.id           as "villageId",
            vl.village_name as "villageName",
@@ -96,7 +120,8 @@ const getTopVillagesData = async (
           left join cotton_selections cs on cs.process_id = gp.id
           left join transactions tr on tr.id = cs.transaction_id
           left join villages vl on tr.village_id = vl.id
-    where se.id = 22
+          left join ginners gi on gp.ginner_id = gi.id
+    ${ where ? Sequelize.literal('where ' + where) : '' }
     group by vl.id, se.id
     limit 10
     `, { type: QueryTypes.SELECT });
