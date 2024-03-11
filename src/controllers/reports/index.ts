@@ -51,6 +51,14 @@ import moment from "moment";
 import KnitFabric from "../../models/knit_fabric.model";
 import WeaverFabric from "../../models/weaver_fabric.model";
 import ExportData from "../../models/export-data-check.model";
+import CompactingSales from "../../models/compacting-sales.model";
+import CompactingFabricSelections from "../../models/compacting-fabric-selection.model";
+import PrintingSales from "../../models/printing-sales.model";
+import PrintingFabricSelection from "../../models/printing-fabric-selection.model";
+import WashingSales from "../../models/washing-sales.model";
+import WashingFabricSelection from "../../models/washing-fabric-selection.model";
+import DyingSales from "../../models/dying-sales.model";
+import DyingFabricSelection from "../../models/dying-fabric-selection.model";
 
 const fetchBaleProcess = async (req: Request, res: Response) => {
   const searchTerm = req.query.search || "";
@@ -833,7 +841,7 @@ const fetchGinSalesPagination = async (req: Request, res: Response) => {
     //fetch data with pagination
     const nData: any = [];
 
-    const rows: any = await BaleSelection.findAll({
+    const {count, rows}: any = await BaleSelection.findAndCountAll({
       attributes: [
         [Sequelize.literal('"sales"."id"'), "sales_id"],
         [Sequelize.literal('"sales"."date"'), "date"],
@@ -903,7 +911,43 @@ const fetchGinSalesPagination = async (req: Request, res: Response) => {
         "sales.program.id",
       ],
       order: [["sales_id", "desc"]],
+      offset : offset,
+      limit: limit,
     });
+
+    let counts = await BaleSelection.count({
+      include: [
+        {
+          model: GinSales,
+          as: "sales",
+          include: include,
+          attributes: [],
+        },
+        {
+          model: GinBale,
+          attributes: [],
+          as: "bale",
+          include: [
+            {
+              model: GinProcess,
+              as: "ginprocess",
+              attributes: [],
+            },
+          ],
+        },
+      ],
+      where: whereCondition,
+      group: [
+        "bale.process_id",
+        "bale.ginprocess.id",
+        "sales.id",
+        "sales.season.id",
+        "sales.ginner.id",
+        "sales.buyerdata.id",
+        "sales.program.id",
+      ],
+    })
+    
 
     for await (let item of rows) {
       let qualityReport = await QualityParameter.findOne({
@@ -912,6 +956,7 @@ const fetchGinSalesPagination = async (req: Request, res: Response) => {
           ginner_id: item?.dataValues?.ginner_id,
           lot_no: item?.dataValues?.lot_no,
         },
+        raw : true
       });
 
       nData.push({
@@ -919,12 +964,10 @@ const fetchGinSalesPagination = async (req: Request, res: Response) => {
         quality_report: qualityReport ? qualityReport : null,
       });
     }
-
-    let result = nData.flat();
+    
     // Apply pagination to the combined result
-    let data = result.slice(offset, offset + limit);
 
-    return res.sendPaginationSuccess(res, data, rows.length);
+    return res.sendPaginationSuccess(res, nData, counts.length);
   } catch (error: any) {
     console.log(error);
     return res.sendError(res, error.message);
@@ -10709,7 +10752,196 @@ const consolidatedTraceability = async (req: Request, res: Response) => {
       let weaver_fabric_ids = fabric
         .filter((obj: any) => obj?.dataValues?.processor === "weaver")
         .map((obj: any) => obj?.dataValues?.fabric_id);
+      let compacting_fabric_ids = fabric
+        .filter((obj: any) => obj?.dataValues?.processor === "compacting")
+        .map((obj: any) => obj?.dataValues?.fabric_id);
+      let printing_fabric_ids = fabric
+        .filter((obj: any) => obj?.dataValues?.processor === "printing")
+        .map((obj: any) => obj?.dataValues?.fabric_id);
+      let washing_fabric_ids = fabric
+        .filter((obj: any) => obj?.dataValues?.processor === "washing")
+        .map((obj: any) => obj?.dataValues?.fabric_id);
+      let dying_fabric_ids = fabric
+        .filter((obj: any) => obj?.dataValues?.processor === "dying")
+        .map((obj: any) => obj?.dataValues?.fabric_id);
 
+      let compactingSales: any = [];
+      if (compacting_fabric_ids.length > 0) {
+        const rows = await CompactingSales.findAll({
+          attributes: [
+            "id",
+            "date",
+            "invoice_no",
+            "batch_lot_no",
+            "total_fabric_quantity",
+            "fabric_net_weight",
+            "buyer_id",
+          ],
+          include: [
+            {
+              model: Fabric,
+              as: "compacting",
+              attributes: ["id", "name"],
+            },
+          ],
+          where: {
+            id: {
+              [Op.in]: compacting_fabric_ids,
+            },
+          },
+          raw: true, // Return raw data
+        });
+
+        compactingSales = rows;
+        let selection = await CompactingFabricSelections.findAll({
+          where: {
+            sales_id: rows.map((obj: any) => obj.id),
+          },
+          raw: true,
+        });
+        let printing_fabric = selection
+          .filter((obj: any) => obj?.process_type === "Printing")
+          .map((obj: any) => obj?.process_id);
+        printing_fabric_ids = [...printing_fabric_ids, ...printing_fabric];
+        let washing_fabric = selection
+          .filter((obj: any) => obj?.process_type === "Washing")
+          .map((obj: any) => obj?.process_id);
+        washing_fabric_ids = [...washing_fabric_ids, ...washing_fabric];
+        let dying_fabric = selection
+          .filter((obj: any) => obj?.process_type === "Dying")
+          .map((obj: any) => obj?.process_id);
+        dying_fabric_ids = [...dying_fabric_ids, ...dying_fabric];
+      }
+
+      let printingSales: any = [];
+      if (printing_fabric_ids.length > 0) {
+        const rows = await PrintingSales.findAll({
+          attributes: [
+            "id",
+            "date",
+            "invoice_no",
+            "batch_lot_no",
+            "total_fabric_quantity",
+            "fabric_net_weight",
+            "buyer_id",
+          ],
+          include: [
+            {
+              model: Fabric,
+              as: "printing",
+              attributes: ["id", "name"],
+            },
+          ],
+          where: {
+            id: {
+              [Op.in]: printing_fabric_ids,
+            },
+          },
+          raw: true, // Return raw data
+        });
+
+        printingSales = rows;
+        let selection = await PrintingFabricSelection.findAll({
+          where: {
+            sales_id: rows.map((obj: any) => obj.id),
+          },
+          raw: true,
+        });
+        let washing_fabric = selection.map((obj: any) => obj?.process_id);
+        washing_fabric_ids = [...washing_fabric_ids, ...washing_fabric];
+      }
+
+      let washingSales: any = [];
+      if (washing_fabric_ids.length > 0) {
+        const rows = await WashingSales.findAll({
+          attributes: [
+            "id",
+            "date",
+            "invoice_no",
+            "batch_lot_no",
+            "total_fabric_quantity",
+            "fabric_net_weight",
+            "buyer_id",
+          ],
+          include: [
+            {
+              model: Fabric,
+              as: "washing",
+              attributes: ["id", "name"],
+            },
+          ],
+          where: {
+            id: {
+              [Op.in]: washing_fabric_ids,
+            },
+          },
+          raw: true, // Return raw data
+        });
+
+        washingSales = rows;
+        let selection = await WashingFabricSelection.findAll({
+          where: {
+            sales_id: rows.map((obj: any) => obj.id),
+          },
+          raw: true,
+        });
+        let knitter_fabric = selection
+          .filter((obj: any) => obj?.process_type === "knitter")
+          .map((obj: any) => obj?.process_id);
+        knit_fabric_ids = [...knit_fabric_ids, ...knitter_fabric];
+        let weaver_fabric = selection
+          .filter((obj: any) => obj?.process_type === "weaver")
+          .map((obj: any) => obj?.process_id);
+        weaver_fabric_ids = [...weaver_fabric_ids, ...weaver_fabric];
+        let dying_fabric = selection
+          .filter((obj: any) => obj?.process_type === "dying")
+          .map((obj: any) => obj?.process_id);
+        dying_fabric_ids = [...dying_fabric_ids, ...dying_fabric];
+      }
+
+      let dyingSales: any = [];
+      if (dying_fabric_ids.length > 0) {
+        const rows = await DyingSales.findAll({
+          attributes: [
+            "id",
+            "date",
+            "invoice_no",
+            "batch_lot_no",
+            "total_fabric_quantity",
+            "fabric_net_weight",
+            "buyer_id",
+          ],
+          include: [
+            {
+              model: Fabric,
+              as: "dying_fabric",
+              attributes: ["id", "name"],
+            },
+          ],
+          where: {
+            id: {
+              [Op.in]: dying_fabric_ids,
+            },
+          },
+          raw: true, // Return raw data
+        });
+
+        dyingSales = rows;
+        let selection = await DyingFabricSelection.findAll({
+          where: {
+            sales_id: rows.map((obj: any) => obj.id),
+          },
+          raw: true,
+        });
+        let knitter_fabric = selection
+          .filter((obj: any) => obj?.process_type === "knitter")
+          .map((obj: any) => obj?.process_id);
+        knit_fabric_ids = [...knit_fabric_ids, ...knitter_fabric];
+        let weaver_fabric = selection
+          .filter((obj: any) => obj?.process_type === "weaver")
+          .map((obj: any) => obj?.process_id);
+        weaver_fabric_ids = [...weaver_fabric_ids, ...weaver_fabric];
+      }
       let knitSales: any = [];
       let knit_yarn_ids: any = [];
 
@@ -11026,7 +11258,175 @@ const consolidatedTraceability = async (req: Request, res: Response) => {
       }
 
       let obj: any = {};
+      //compactingData
+      let compactingProcessorName =
+        compactingSales && compactingSales.length > 0
+          ? compactingSales
+              .map((val: any) => val['compacting.name'])
+              .filter((item: any) => item !== null && item !== undefined)
+          : [];
+      let compactingInv =
+        compactingSales && compactingSales.length > 0
+          ? compactingSales
+              .map((val: any) => val?.invoice_no)
+              .filter((item: any) => item !== null && item !== undefined)
+          : [];
+      let compactingbatchLotNo =
+        compactingSales && compactingSales.length > 0
+          ? compactingSales
+              .map((val: any) => val?.batch_lot_no)
+              .filter((item: any) => item !== null && item !== undefined)
+          : [];
+      let compactingTotalQuantity =
+        compactingSales && compactingSales.length > 0
+          ? compactingSales
+              .map((val: any) => val?.total_fabric_quantity)
+              .filter((item: any) => item !== null && item !== undefined)
+          : [];
+      let compactingFabricNetWeight =
+        compactingSales && compactingSales.length > 0
+          ? compactingSales
+              .map((val: any) => val?.fabric_net_weight)
+              .filter((item: any) => item !== null && item !== undefined)
+          : [];
+      obj.compacting_batch_lot_no = [...new Set(compactingbatchLotNo)];
+      obj.compacting_inv = [...new Set(compactingInv)];
+      obj.compacting_processor_name = [...new Set(compactingProcessorName)];
+      obj.compacting_total_quantity = compactingTotalQuantity.reduce(
+        (acc: any, value: any) => acc + value,
+        0
+      );
+      obj.compacting_net_weight = compactingFabricNetWeight.reduce(
+        (acc: any, value: any) => acc + value,
+        0
+      );
+      //printing Data
+      let printingProcessorName =
+        printingSales && printingSales.length > 0
+          ? printingSales
+              .map((val: any) => val['printing.name'])
+              .filter((item: any) => item !== null && item !== undefined)
+          : [];
+      let printingInv =
+        printingSales && printingSales.length > 0
+          ? printingSales
+              .map((val: any) => val?.invoice_no)
+              .filter((item: any) => item !== null && item !== undefined)
+          : [];
+      let printingbatchLotNo =
+        printingSales && printingSales.length > 0
+          ? printingSales
+              .map((val: any) => val?.batch_lot_no)
+              .filter((item: any) => item !== null && item !== undefined)
+          : [];
+      let printingTotalQuantity =
+        printingSales && printingSales.length > 0
+          ? printingSales
+              .map((val: any) => val?.total_fabric_quantity)
+              .filter((item: any) => item !== null && item !== undefined)
+          : [];
+      let printingFabricNetWeight =
+        printingSales && printingSales.length > 0
+          ? printingSales
+              .map((val: any) => val?.fabric_net_weight)
+              .filter((item: any) => item !== null && item !== undefined)
+          : [];
+      obj.printing_batch_lot_no = [...new Set(printingbatchLotNo)];
+      obj.printing_inv = [...new Set(printingInv)];
+      obj.printing_processor_name = [...new Set(printingProcessorName)];
+      obj.printing_total_quantity = printingTotalQuantity.reduce(
+        (acc: any, value: any) => acc + value,
+        0
+      );
+      obj.printing_net_weight = printingFabricNetWeight.reduce(
+        (acc: any, value: any) => acc + value,
+        0
+      );
 
+      //washing Data
+      let washingProcessorName =
+        washingSales && washingSales.length > 0
+          ? washingSales
+              .map((val: any) => val['washing.name'])
+              .filter((item: any) => item !== null && item !== undefined)
+          : [];
+      let washingInv =
+        washingSales && washingSales.length > 0
+          ? washingSales
+              .map((val: any) => val?.invoice_no)
+              .filter((item: any) => item !== null && item !== undefined)
+          : [];
+      let washingbatchLotNo =
+        washingSales && washingSales.length > 0
+          ? washingSales
+              .map((val: any) => val?.batch_lot_no)
+              .filter((item: any) => item !== null && item !== undefined)
+          : [];
+      let washingTotalQuantity =
+        washingSales && washingSales.length > 0
+          ? washingSales
+              .map((val: any) => val?.total_fabric_quantity)
+              .filter((item: any) => item !== null && item !== undefined)
+          : [];
+      let washingFabricNetWeight =
+        washingSales && washingSales.length > 0
+          ? washingSales
+              .map((val: any) => val?.fabric_net_weight)
+              .filter((item: any) => item !== null && item !== undefined)
+          : [];
+      obj.washing_batch_lot_no = [...new Set(washingbatchLotNo)];
+      obj.washing_inv = [...new Set(washingInv)];
+      obj.washing_processor_name = [...new Set(washingProcessorName)];
+      obj.washing_total_quantity = washingTotalQuantity.reduce(
+        (acc: any, value: any) => acc + value,
+        0
+      );
+      obj.washing_net_weight = washingFabricNetWeight.reduce(
+        (acc: any, value: any) => acc + value,
+        0
+      );
+      //Dying Data
+      let dyingProcessorName =
+      dyingSales && dyingSales.length > 0
+          ? dyingSales
+              .map((val: any) => val['dying_fabric.name'])
+              .filter((item: any) => item !== null && item !== undefined)
+          : [];
+      let dyingInv =
+      dyingSales && dyingSales.length > 0
+          ? dyingSales
+              .map((val: any) => val?.invoice_no)
+              .filter((item: any) => item !== null && item !== undefined)
+          : [];
+      let dyingbatchLotNo =
+      dyingSales && dyingSales.length > 0
+          ? dyingSales
+              .map((val: any) => val?.batch_lot_no)
+              .filter((item: any) => item !== null && item !== undefined)
+          : [];
+      let dyingTotalQuantity =
+      dyingSales && dyingSales.length > 0
+          ? dyingSales
+              .map((val: any) => val?.total_fabric_quantity)
+              .filter((item: any) => item !== null && item !== undefined)
+          : [];
+      let dyingFabricNetWeight =
+      dyingSales && dyingSales.length > 0
+          ? dyingSales
+              .map((val: any) => val?.fabric_net_weight)
+              .filter((item: any) => item !== null && item !== undefined)
+          : [];
+      obj.dying_batch_lot_no = [...new Set(dyingbatchLotNo)];
+      obj.dying_inv = [...new Set(dyingInv)];
+      obj.dying_processor_name = [...new Set(dyingProcessorName)];
+      obj.dying_total_quantity = dyingTotalQuantity.reduce(
+        (acc: any, value: any) => acc + value,
+        0
+      );
+      obj.dying_net_weight = dyingFabricNetWeight.reduce(
+        (acc: any, value: any) => acc + value,
+        0
+      );
       //knitter and weaver data
       let knitdate =
         knitSales && knitSales.length > 0
@@ -11442,6 +11842,26 @@ const exportConsolidatedTraceability = async (req: Request, res: Response) => {
       "Item Description",
       "No. of Boxes/Cartons",
       "No. of pieces",
+      "Dyeing Processor Name",
+      "Invoice No",
+      "Batch/Lot No",
+      "Dyed Fabric Qty",
+      "Finished Fabric Net weight",
+      "Printing Processor Name",
+      "Invoice No",
+      "Batch/Lot No",
+      "Printed Fabric Qty",
+      "Finished Fabric Net weight",
+      "Wahing Processor Name",
+      "Invoice No",
+      "Batch/Lot No",
+      "Washed Fabric Qty",
+      "Finished Fabric Net weight",
+      "Compacting Processor Name",
+      "Invoice No",
+      "Batch/Lot No",
+      "Compacted Fabric Qty",
+      "Finished Fabric Net weight",
       "Date of fabric sale",
       "Fabric processor Name",
       "Invoice Number",
@@ -11508,6 +11928,196 @@ const exportConsolidatedTraceability = async (req: Request, res: Response) => {
       let weaver_fabric_ids = fabric
         .filter((obj: any) => obj?.dataValues?.processor === "weaver")
         .map((obj: any) => obj?.dataValues?.fabric_id);
+        let compacting_fabric_ids = fabric
+        .filter((obj: any) => obj?.dataValues?.processor === "compacting")
+        .map((obj: any) => obj?.dataValues?.fabric_id);
+      let printing_fabric_ids = fabric
+        .filter((obj: any) => obj?.dataValues?.processor === "printing")
+        .map((obj: any) => obj?.dataValues?.fabric_id);
+      let washing_fabric_ids = fabric
+        .filter((obj: any) => obj?.dataValues?.processor === "washing")
+        .map((obj: any) => obj?.dataValues?.fabric_id);
+      let dying_fabric_ids = fabric
+        .filter((obj: any) => obj?.dataValues?.processor === "dying")
+        .map((obj: any) => obj?.dataValues?.fabric_id);
+
+      let compactingSales: any = [];
+      if (compacting_fabric_ids.length > 0) {
+        const rows = await CompactingSales.findAll({
+          attributes: [
+            "id",
+            "date",
+            "invoice_no",
+            "batch_lot_no",
+            "total_fabric_quantity",
+            "fabric_net_weight",
+            "buyer_id",
+          ],
+          include: [
+            {
+              model: Fabric,
+              as: "compacting",
+              attributes: ["id", "name"],
+            },
+          ],
+          where: {
+            id: {
+              [Op.in]: compacting_fabric_ids,
+            },
+          },
+          raw: true, // Return raw data
+        });
+
+        compactingSales = rows;
+        let selection = await CompactingFabricSelections.findAll({
+          where: {
+            sales_id: rows.map((obj: any) => obj.id),
+          },
+          raw: true,
+        });
+        let printing_fabric = selection
+          .filter((obj: any) => obj?.process_type === "Printing")
+          .map((obj: any) => obj?.process_id);
+        printing_fabric_ids = [...printing_fabric_ids, ...printing_fabric];
+        let washing_fabric = selection
+          .filter((obj: any) => obj?.process_type === "Washing")
+          .map((obj: any) => obj?.process_id);
+        washing_fabric_ids = [...washing_fabric_ids, ...washing_fabric];
+        let dying_fabric = selection
+          .filter((obj: any) => obj?.process_type === "Dying")
+          .map((obj: any) => obj?.process_id);
+        dying_fabric_ids = [...dying_fabric_ids, ...dying_fabric];
+      }
+
+      let printingSales: any = [];
+      if (printing_fabric_ids.length > 0) {
+        const rows = await PrintingSales.findAll({
+          attributes: [
+            "id",
+            "date",
+            "invoice_no",
+            "batch_lot_no",
+            "total_fabric_quantity",
+            "fabric_net_weight",
+            "buyer_id",
+          ],
+          include: [
+            {
+              model: Fabric,
+              as: "printing",
+              attributes: ["id", "name"],
+            },
+          ],
+          where: {
+            id: {
+              [Op.in]: printing_fabric_ids,
+            },
+          },
+          raw: true, // Return raw data
+        });
+
+        printingSales = rows;
+        let selection = await PrintingFabricSelection.findAll({
+          where: {
+            sales_id: rows.map((obj: any) => obj.id),
+          },
+          raw: true,
+        });
+        let washing_fabric = selection.map((obj: any) => obj?.process_id);
+        washing_fabric_ids = [...washing_fabric_ids, ...washing_fabric];
+      }
+
+      let washingSales: any = [];
+      if (washing_fabric_ids.length > 0) {
+        const rows = await WashingSales.findAll({
+          attributes: [
+            "id",
+            "date",
+            "invoice_no",
+            "batch_lot_no",
+            "total_fabric_quantity",
+            "fabric_net_weight",
+            "buyer_id",
+          ],
+          include: [
+            {
+              model: Fabric,
+              as: "washing",
+              attributes: ["id", "name"],
+            },
+          ],
+          where: {
+            id: {
+              [Op.in]: washing_fabric_ids,
+            },
+          },
+          raw: true, // Return raw data
+        });
+
+        washingSales = rows;
+        let selection = await WashingFabricSelection.findAll({
+          where: {
+            sales_id: rows.map((obj: any) => obj.id),
+          },
+          raw: true,
+        });
+        let knitter_fabric = selection
+          .filter((obj: any) => obj?.process_type === "knitter")
+          .map((obj: any) => obj?.process_id);
+        knit_fabric_ids = [...knit_fabric_ids, ...knitter_fabric];
+        let weaver_fabric = selection
+          .filter((obj: any) => obj?.process_type === "weaver")
+          .map((obj: any) => obj?.process_id);
+        weaver_fabric_ids = [...weaver_fabric_ids, ...weaver_fabric];
+        let dying_fabric = selection
+          .filter((obj: any) => obj?.process_type === "dying")
+          .map((obj: any) => obj?.process_id);
+        dying_fabric_ids = [...dying_fabric_ids, ...dying_fabric];
+      }
+
+      let dyingSales: any = [];
+      if (dying_fabric_ids.length > 0) {
+        const rows = await DyingSales.findAll({
+          attributes: [
+            "id",
+            "date",
+            "invoice_no",
+            "batch_lot_no",
+            "total_fabric_quantity",
+            "fabric_net_weight",
+            "buyer_id",
+          ],
+          include: [
+            {
+              model: Fabric,
+              as: "dying_fabric",
+              attributes: ["id", "name"],
+            },
+          ],
+          where: {
+            id: {
+              [Op.in]: dying_fabric_ids,
+            },
+          },
+          raw: true, // Return raw data
+        });
+
+        dyingSales = rows;
+        let selection = await DyingFabricSelection.findAll({
+          where: {
+            sales_id: rows.map((obj: any) => obj.id),
+          },
+          raw: true,
+        });
+        let knitter_fabric = selection
+          .filter((obj: any) => obj?.process_type === "knitter")
+          .map((obj: any) => obj?.process_id);
+        knit_fabric_ids = [...knit_fabric_ids, ...knitter_fabric];
+        let weaver_fabric = selection
+          .filter((obj: any) => obj?.process_type === "weaver")
+          .map((obj: any) => obj?.process_id);
+        weaver_fabric_ids = [...weaver_fabric_ids, ...weaver_fabric];
+      }
 
       let knitSales: any = [];
       let knit_yarn_ids: any = [];
@@ -11825,6 +12435,175 @@ const exportConsolidatedTraceability = async (req: Request, res: Response) => {
       }
 
       let obj: any = {};
+           //compactingData
+           let compactingProcessorName =
+           compactingSales && compactingSales.length > 0
+             ? compactingSales
+                 .map((val: any) => val['compacting.name'])
+                 .filter((item: any) => item !== null && item !== undefined)
+             : [];
+         let compactingInv =
+           compactingSales && compactingSales.length > 0
+             ? compactingSales
+                 .map((val: any) => val?.invoice_no)
+                 .filter((item: any) => item !== null && item !== undefined)
+             : [];
+         let compactingbatchLotNo =
+           compactingSales && compactingSales.length > 0
+             ? compactingSales
+                 .map((val: any) => val?.batch_lot_no)
+                 .filter((item: any) => item !== null && item !== undefined)
+             : [];
+         let compactingTotalQuantity =
+           compactingSales && compactingSales.length > 0
+             ? compactingSales
+                 .map((val: any) => val?.total_fabric_quantity)
+                 .filter((item: any) => item !== null && item !== undefined)
+             : [];
+         let compactingFabricNetWeight =
+           compactingSales && compactingSales.length > 0
+             ? compactingSales
+                 .map((val: any) => val?.fabric_net_weight)
+                 .filter((item: any) => item !== null && item !== undefined)
+             : [];
+         obj.compacting_batch_lot_no = [...new Set(compactingbatchLotNo)];
+         obj.compacting_inv = [...new Set(compactingInv)];
+         obj.compacting_processor_name = [...new Set(compactingProcessorName)];
+         obj.compacting_total_quantity = compactingTotalQuantity.reduce(
+           (acc: any, value: any) => acc + value,
+           0
+         );
+         obj.compacting_net_weight = compactingFabricNetWeight.reduce(
+           (acc: any, value: any) => acc + value,
+           0
+         );
+         //printing Data
+         let printingProcessorName =
+           printingSales && printingSales.length > 0
+             ? printingSales
+                 .map((val: any) => val['printing.name'])
+                 .filter((item: any) => item !== null && item !== undefined)
+             : [];
+         let printingInv =
+           printingSales && printingSales.length > 0
+             ? printingSales
+                 .map((val: any) => val?.invoice_no)
+                 .filter((item: any) => item !== null && item !== undefined)
+             : [];
+         let printingbatchLotNo =
+           printingSales && printingSales.length > 0
+             ? printingSales
+                 .map((val: any) => val?.batch_lot_no)
+                 .filter((item: any) => item !== null && item !== undefined)
+             : [];
+         let printingTotalQuantity =
+           printingSales && printingSales.length > 0
+             ? printingSales
+                 .map((val: any) => val?.total_fabric_quantity)
+                 .filter((item: any) => item !== null && item !== undefined)
+             : [];
+         let printingFabricNetWeight =
+           printingSales && printingSales.length > 0
+             ? printingSales
+                 .map((val: any) => val?.fabric_net_weight)
+                 .filter((item: any) => item !== null && item !== undefined)
+             : [];
+         obj.printing_batch_lot_no = [...new Set(printingbatchLotNo)];
+         obj.printing_inv = [...new Set(printingInv)];
+         obj.printing_processor_name = [...new Set(printingProcessorName)];
+         obj.printing_total_quantity = printingTotalQuantity.reduce(
+           (acc: any, value: any) => acc + value,
+           0
+         );
+         obj.printing_net_weight = printingFabricNetWeight.reduce(
+           (acc: any, value: any) => acc + value,
+           0
+         );
+   
+         //washing Data
+         let washingProcessorName =
+           washingSales && washingSales.length > 0
+             ? washingSales
+                 .map((val: any) => val['washing.name'])
+                 .filter((item: any) => item !== null && item !== undefined)
+             : [];
+         let washingInv =
+           washingSales && washingSales.length > 0
+             ? washingSales
+                 .map((val: any) => val?.invoice_no)
+                 .filter((item: any) => item !== null && item !== undefined)
+             : [];
+         let washingbatchLotNo =
+           washingSales && washingSales.length > 0
+             ? washingSales
+                 .map((val: any) => val?.batch_lot_no)
+                 .filter((item: any) => item !== null && item !== undefined)
+             : [];
+         let washingTotalQuantity =
+           washingSales && washingSales.length > 0
+             ? washingSales
+                 .map((val: any) => val?.total_fabric_quantity)
+                 .filter((item: any) => item !== null && item !== undefined)
+             : [];
+         let washingFabricNetWeight =
+           washingSales && washingSales.length > 0
+             ? washingSales
+                 .map((val: any) => val?.fabric_net_weight)
+                 .filter((item: any) => item !== null && item !== undefined)
+             : [];
+         obj.washing_batch_lot_no = [...new Set(washingbatchLotNo)];
+         obj.washing_inv = [...new Set(washingInv)];
+         obj.washing_processor_name = [...new Set(washingProcessorName)];
+         obj.washing_total_quantity = washingTotalQuantity.reduce(
+           (acc: any, value: any) => acc + value,
+           0
+         );
+         obj.washing_net_weight = washingFabricNetWeight.reduce(
+           (acc: any, value: any) => acc + value,
+           0
+         );
+         //Dying Data
+         let dyingProcessorName =
+         dyingSales && dyingSales.length > 0
+             ? dyingSales
+                 .map((val: any) => val['dying_fabric.name'])
+                 .filter((item: any) => item !== null && item !== undefined)
+             : [];
+         let dyingInv =
+         dyingSales && dyingSales.length > 0
+             ? dyingSales
+                 .map((val: any) => val?.invoice_no)
+                 .filter((item: any) => item !== null && item !== undefined)
+             : [];
+         let dyingbatchLotNo =
+         dyingSales && dyingSales.length > 0
+             ? dyingSales
+                 .map((val: any) => val?.batch_lot_no)
+                 .filter((item: any) => item !== null && item !== undefined)
+             : [];
+         let dyingTotalQuantity =
+         dyingSales && dyingSales.length > 0
+             ? dyingSales
+                 .map((val: any) => val?.total_fabric_quantity)
+                 .filter((item: any) => item !== null && item !== undefined)
+             : [];
+         let dyingFabricNetWeight =
+         dyingSales && dyingSales.length > 0
+             ? dyingSales
+                 .map((val: any) => val?.fabric_net_weight)
+                 .filter((item: any) => item !== null && item !== undefined)
+             : [];
+         obj.dying_batch_lot_no = [...new Set(dyingbatchLotNo)];
+         obj.dying_inv = [...new Set(dyingInv)];
+         obj.dying_processor_name = [...new Set(dyingProcessorName)];
+         obj.dying_total_quantity = dyingTotalQuantity.reduce(
+           (acc: any, value: any) => acc + value,
+           0
+         );
+         obj.dying_net_weight = dyingFabricNetWeight.reduce(
+           (acc: any, value: any) => acc + value,
+           0
+         );
 
       //knitter and weaver data
       let knitdate =
@@ -12193,6 +12972,65 @@ const exportConsolidatedTraceability = async (req: Request, res: Response) => {
         no_of_pieces: item.dataValues.total_no_of_pieces
           ? item.dataValues.total_no_of_pieces
           : 0,
+        dying_processor_name:
+          obj.dying_processor_name && obj.dying_processor_name.length > 0
+            ? obj.dying_processor_name.join(", ")
+            : "",
+        dying_inv:
+          obj.dying_inv && obj.dying_inv.length > 0
+            ? obj.dying_inv.join(", ")
+            : "",
+        dying_batch_lot_no:
+          obj.dying_batch_lot_no && obj.dying_batch_lot_no.length > 0
+            ? obj.dying_batch_lot_no.join(", ")
+            : "",
+        dying_total_quantity: obj.dying_total_quantity ?? "",
+        dying_net_weight: obj.dying_net_weight ?? "",
+
+        washing_processor_name:
+          obj.washing_processor_name && obj.washing_processor_name.length > 0
+            ? obj.washing_processor_name.join(", ")
+            : "",
+        washing_inv:
+          obj.washing_inv && obj.washing_inv.length > 0
+            ? obj.washing_inv.join(", ")
+            : "",
+        washing_batch_lot_no:
+          obj.washing_batch_lot_no && obj.washing_batch_lot_no.length > 0
+            ? obj.washing_batch_lot_no.join(", ")
+            : "",
+        washing_total_quantity: obj.washing_total_quantity ?? "",
+        washing_net_weight: obj.washing_net_weight ?? "",
+
+        printing_processor_name:
+          obj.printing_processor_name && obj.printing_processor_name.length > 0
+            ? obj.printing_processor_name.join(", ")
+            : "",
+        printing_inv:
+          obj.printing_inv && obj.printing_inv.length > 0
+            ? obj.printing_inv.join(", ")
+            : "",
+        printing_batch_lot_no:
+          obj.printing_batch_lot_no && obj.printing_batch_lot_no.length > 0
+            ? obj.printing_batch_lot_no.join(", ")
+            : "",
+        printing_total_quantity: obj.printing_total_quantity ?? "",
+        printing_net_weight: obj.printing_net_weight ?? "",
+        compacting_processor_name:
+          obj.compacting_processor_name &&
+          obj.compacting_processor_name.length > 0
+            ? obj.compacting_processor_name.join(", ")
+            : "",
+        compacting_inv:
+          obj.compacting_inv && obj.compacting_inv.length > 0
+            ? obj.compacting_inv.join(", ")
+            : "",
+        compacting_batch_lot_no:
+          obj.compacting_batch_lot_no && obj.compacting_batch_lot_no.length > 0
+            ? obj.compacting_batch_lot_no.join(", ")
+            : "",
+        compacting_total_quantity: obj.compacting_total_quantity ?? "",
+        compacting_net_weight: obj.compacting_net_weight ?? "",
         // fbrc_date: obj.fbrc_sale_date && obj.fbrc_sale_date.length > 0 ? obj.fbrc_sale_date.join(', ') : '',
         fbrc_date:
           obj.fbrc_sale_date && obj.fbrc_sale_date.length > 0
@@ -12219,7 +13057,7 @@ const exportConsolidatedTraceability = async (req: Request, res: Response) => {
         //   : 0,
         // total_fabric_weight: item.dataValues.total_fabric_weight
         //   ? item.dataValues.total_fabric_weight
-          // : 0,
+        // : 0,
         fbrc_net_length: obj.fbrc_weave_total_length
           ? obj.fbrc_weave_total_length
           : 0,
