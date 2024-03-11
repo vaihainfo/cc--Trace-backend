@@ -126,9 +126,26 @@ const deleteProgram = async (req: Request, res: Response) => {
     }
 }
 
+const checkPrograms = async (req: Request, res: Response) => {
+    try {
+        let whereCondition: any = {}
+        if (req.body.id) {
+            whereCondition = { program_name: { [Op.iLike]: req.body.programName }, id: { [Op.ne]: req.body.id } }
+        } else {
+            whereCondition = { program_name: { [Op.iLike]: req.body.programName } }
+        }
+        let result = await Program.findOne({ where: whereCondition })
+
+        res.sendSuccess(res, result ? { exist: true } : { exist: false });
+    } catch (error: any) {
+        console.log(error)
+        return res.sendError(res, error.message);
+    }
+}
 
 export {
     createProgram,
+    checkPrograms,
     createPrograms,
     fetchProgramPagination,
     updateProgram,

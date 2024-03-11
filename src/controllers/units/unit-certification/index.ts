@@ -127,9 +127,26 @@ const deleteUnitCertification = async (req: Request, res: Response) => {
     }
 }
 
+const checkUnitCertifications = async (req: Request, res: Response) => {
+    try {
+        let whereCondition: any = {}
+        if (req.body.id) {
+            whereCondition = { certification_name: { [Op.iLike]: req.body.certificationName }, id: { [Op.ne]: req.body.id } }
+        } else {
+            whereCondition = { certification_name: { [Op.iLike]: req.body.certificationName } }
+        }
+        let result = await UnitCertification.findOne({ where: whereCondition })
+
+        res.sendSuccess(res, result ? { exist: true } : { exist: false });
+    } catch (error: any) {
+        console.log(error)
+        return res.sendError(res, error.message);
+    }
+}
 
 export {
     createUnitCertification,
+    checkUnitCertifications,
     createUnitCertifications,
     fetchUnitCertificationPagination,
     updateUnitCertification,

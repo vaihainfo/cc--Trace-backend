@@ -127,9 +127,27 @@ const deleteLoomType = async (req: Request, res: Response) => {
     }
 }
 
+const checkLoomTypes = async (req: Request, res: Response) => {
+    try {
+        let whereCondition: any = {}
+        if (req.body.id) {
+            whereCondition = { name: { [Op.iLike]: req.body.name }, id: { [Op.ne]: req.body.id } }
+        } else {
+            whereCondition = { name: { [Op.iLike]: req.body.name } }
+        }
+        let result = await LoomType.findOne({ where: whereCondition })
+
+        res.sendSuccess(res, result ? { exist: true } : { exist: false });
+    } catch (error: any) {
+        console.log(error)
+        return res.sendError(res, error.message);
+    }
+}
+
 
 export {
     createLoomType,
+    checkLoomTypes,
     createLoomTypes,
     fetchLoomTypePagination,
     updateLoomType,

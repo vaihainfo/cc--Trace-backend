@@ -1,5 +1,6 @@
 import {
     fetchLoomTypePagination,
+    checkLoomTypes,
     createLoomType,
     createLoomTypes,
     updateLoomType,
@@ -14,6 +15,7 @@ router.use(accessControl)
 
 // Loom Type Routes
 router.get('/', fetchLoomTypePagination);
+router.post('/check-loom-types', checkLoomTypes);
 router.post('/', createLoomType);
 router.post('/multiple', createLoomTypes);
 router.put('/', updateLoomType);

@@ -120,9 +120,27 @@ const deleteProdCapacity = async (req: Request, res: Response) => {
     }
 }
 
+const checkProdCapacities = async (req: Request, res: Response) => {
+    try {
+        let whereCondition: any = {}
+        if (req.body.id) {
+            whereCondition = { name: { [Op.iLike]: req.body.name }, id: { [Op.ne]: req.body.id } }
+        } else {
+            whereCondition = { name: { [Op.iLike]: req.body.name } }
+        }
+        let result = await ProdCapacity.findOne({ where: whereCondition })
+
+        res.sendSuccess(res, result ? { exist: true } : { exist: false });
+    } catch (error: any) {
+        console.log(error)
+        return res.sendError(res, error.message);
+    }
+}
+
 
 export {
     createProdCapacity,
+    checkProdCapacities,
     createProdCapacities,
     fetchProdCapacityPagination,
     updateProdCapacity,

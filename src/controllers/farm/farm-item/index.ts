@@ -128,9 +128,27 @@ const deleteFarm = async (req: Request, res: Response) => {
     }
 }
 
+const checkFarms = async (req: Request, res: Response) => {
+    try {
+        let whereCondition: any = {}
+        if (req.body.id) {
+            whereCondition = { farmItem: { [Op.iLike]: req.body.farmItem }, id: { [Op.ne]: req.body.id } }
+        } else {
+            whereCondition = { farmItem: { [Op.iLike]: req.body.farmItem } }
+        }
+        let result = await FarmItem.findOne({ where: whereCondition })
+
+        res.sendSuccess(res, result ? { exist: true } : { exist: false });
+    } catch (error: any) {
+        console.log(error)
+        return res.sendError(res, error.message);
+    }
+}
+
 
 export {
     createFarm,
+    checkFarms,
     createFarms,
     fetchFarmsPagination,
     updateFarm,

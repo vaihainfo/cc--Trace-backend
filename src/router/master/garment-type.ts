@@ -1,4 +1,4 @@
-import { createGarmentType, createGarmentTypes, deleteGarmentType, fetchGarmentTypePagination, updateGarmentType, updateGarmentTypeStatus } from "../../controllers/garment-type";
+import { createGarmentType, checkGarmentTypes, createGarmentTypes, deleteGarmentType, fetchGarmentTypePagination, updateGarmentType, updateGarmentTypeStatus } from "../../controllers/garment-type";
 import accessControl from "../../middleware/access-control";
 import { Router } from "express";
 const router = Router();
@@ -7,6 +7,7 @@ const router = Router();
 
 // Department Routes
 router.get('/', fetchGarmentTypePagination);
+router.post('/check-garment-types', checkGarmentTypes);
 router.post('/', createGarmentType);
 router.post('/multiple', createGarmentTypes);
 router.put('/', updateGarmentType);

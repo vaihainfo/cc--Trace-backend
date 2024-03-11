@@ -364,8 +364,10 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
       offset: offset,
       limit: limit,
     });
+    console.log(count)
     // Append data to worksheet
     for await (const [index, item] of rows.entries()) {
+      console.log(index+1)
       let cotton = await CottonSelection.findAll({
         attributes: ["transaction_id"],
         where: { process_id: item.id },
@@ -1169,6 +1171,7 @@ const exportGinnerSales = async (req: Request, res: Response) => {
 
     // Append data to worksheet
     for await (const [index, item] of data.entries()) {
+
       const rowValues = Object.values({
         index: index + 1,
         date: item.dataValues.date ? item.dataValues.date : "",
@@ -1224,9 +1227,11 @@ const exportGinnerSales = async (req: Request, res: Response) => {
 
     // Save the workbook
     await workbook.xlsx.writeFile(excelFilePath);
-    await ExportData.update({
+    let a  = await ExportData.update({
         ginner_lint_bale_sale_load:false
     },{where:{ginner_lint_bale_sale_load:true}})
+    let dataa = await ExportData.findOne({where:{ginner_lint_bale_sale_load:false}})
+    console.log(dataa)
     // res.status(200).send({
     //   success: true,
     //   messgage: "File successfully Generated",
@@ -1333,7 +1338,7 @@ const fetchSpinnerBalePagination = async (req: Request, res: Response) => {
     //fetch data with pagination
     const nData: any = [];
 
-    const rows: any = await BaleSelection.findAll({
+    const {count, rows}: any = await BaleSelection.findAndCountAll({
       attributes: [
         [Sequelize.literal('"sales"."id"'), "sales_id"],
         [Sequelize.literal('"sales"."date"'), "date"],
@@ -1404,7 +1409,43 @@ const fetchSpinnerBalePagination = async (req: Request, res: Response) => {
         "sales.program.id",
       ],
       order: [["sales_id", "desc"]],
+      offset : offset,
+      limit: limit,
     });
+
+    let counts = await BaleSelection.count({
+      include: [
+        {
+          model: GinSales,
+          as: "sales",
+          include: include,
+          attributes: [],
+        },
+        {
+          model: GinBale,
+          attributes: [],
+          as: "bale",
+          include: [
+            {
+              model: GinProcess,
+              as: "ginprocess",
+              attributes: [],
+            },
+          ],
+        },
+      ],
+      group: [
+        "bale.process_id",
+        "bale.ginprocess.id",
+        "sales.id",
+        "sales.season.id",
+        "sales.ginner.id",
+        "sales.buyerdata.id",
+        "sales.program.id",
+      ],
+      where: whereCondition
+    })
+    
 
     for await (let item of rows) {
       let qualityReport = await QualityParameter.findOne({
@@ -1421,11 +1462,9 @@ const fetchSpinnerBalePagination = async (req: Request, res: Response) => {
       });
     }
 
-    let result = nData.flat();
-    // Apply pagination to the combined result
-    let data = result.slice(offset, offset + limit);
 
-    return res.sendPaginationSuccess(res, data, rows.length);
+
+    return res.sendPaginationSuccess(res, nData, counts.length);
   } catch (error: any) {
     console.log(error);
     return res.sendError(res, error.message);
@@ -1619,9 +1658,9 @@ const exportSpinnerBale = async (req: Request, res: Response) => {
     // Create the excel workbook file
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet("Sheet1");
-    worksheet.mergeCells("A1:T1");
+    worksheet.mergeCells("A1:M1");
     const mergedCell = worksheet.getCell("A1");
-    mergedCell.value = "CottonConnect | Ginner Bale Receipt Report";
+    mergedCell.value = "CottonConnect | Spinner Bale Receipt Report";
     mergedCell.font = { bold: true };
     mergedCell.alignment = { horizontal: "center", vertical: "middle" };
     // Set bold font for header row
@@ -1737,9 +1776,10 @@ const exportSpinnerBale = async (req: Request, res: Response) => {
     let result = rows.flat();
     // Apply pagination to the combined result
     let data = rows.slice(offset, offset + limit);
-
+    // console.log(data)
     // Append data to worksheet
     for await (const [index, item] of data.entries()) {
+      
       const rowValues = Object.values({
         index: index + 1,
         accept_date: item.dataValues.accept_date
@@ -1764,16 +1804,17 @@ const exportSpinnerBale = async (req: Request, res: Response) => {
         program: item.dataValues.program ? item.dataValues.program : "",
       });
       worksheet.addRow(rowValues);
+      console.log(index)
     }
     // Auto-adjust column widths based on content
-    worksheet.columns.forEach((column: any) => {
-      let maxCellLength = 0;
-      column.eachCell({ includeEmpty: true }, (cell: any) => {
-        const cellLength = (cell.value ? cell.value.toString() : "").length;
-        maxCellLength = Math.max(maxCellLength, cellLength);
-      });
-      column.width = Math.min(14, maxCellLength + 2); // Limit width to 30 characters
-    });
+    // worksheet.columns.forEach((column: any) => {
+    //   let maxCellLength = 0;
+    //   column.eachCell({ includeEmpty: true }, (cell: any) => {
+    //     const cellLength = (cell.value ? cell.value.toString() : "").length;
+    //     maxCellLength = Math.max(maxCellLength, cellLength);
+    //   });
+    //   column.width = Math.min(14, maxCellLength + 2); // Limit width to 30 characters
+    // });
 
     // Save the workbook
     await workbook.xlsx.writeFile(excelFilePath);

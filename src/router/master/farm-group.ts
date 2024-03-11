@@ -1,5 +1,6 @@
 import {
     createFarmGroup,
+    checkFarmGroups,
     createFarmGroups,
     fetchFarmGroupPagination,
     updateFarmGroup,
@@ -14,6 +15,7 @@ router.use(accessControl);
 
 // Farm Group Routes
 router.get('/', fetchFarmGroupPagination);
+router.post('/check-farm-groups', checkFarmGroups);
 router.post('/', createFarmGroup);
 router.post('/multiple', createFarmGroups);
 router.put('/', updateFarmGroup);

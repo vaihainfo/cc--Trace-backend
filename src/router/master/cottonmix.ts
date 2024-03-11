@@ -1,5 +1,6 @@
 import {
     fetchCottonMixPagination,
+    checkCottonMixs,
     createCottonMix,
     createCottonMixes,
     updateCottonMix,
@@ -14,6 +15,7 @@ router.use(accessControl);
 
 // Cottonmix Routes
 router.get('/', fetchCottonMixPagination);
+router.post('/check-cotton-mixs', checkCottonMixs);
 router.post('/', createCottonMix);
 router.post('/multiple', createCottonMixes);
 router.put('/', updateCottonMix);

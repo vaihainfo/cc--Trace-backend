@@ -162,9 +162,29 @@ const deleteIcsName = async (req: Request, res: Response) => {
     }
 }
 
+const checkIcsNames = async (req: Request, res: Response) => {
+    try {
+        let whereCondition: any = {}
+        if (req.body.id) {
+            whereCondition = {
+                farmGroup_id: req.body.formGroupId, ics_name: { [Op.iLike]: req.body.icsName }, id: { [Op.ne]: req.body.id }
+            }
+        } else {
+            whereCondition = { farmGroup_id: req.body.formGroupId, ics_name: { [Op.iLike]: req.body.icsName } }
+        }
+        let result = await ICS.findOne({ where: whereCondition })
+
+        res.sendSuccess(res, result ? { exist: true } : { exist: false });
+    } catch (error: any) {
+        console.log(error)
+        return res.sendError(res, error.message);
+    }
+}
+
 
 export {
     createIcsName,
+    checkIcsNames,
     createIcsNames,
     fetchIcsNamePagination,
     updateIcsName,

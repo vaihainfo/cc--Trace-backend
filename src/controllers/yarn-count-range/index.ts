@@ -124,9 +124,27 @@ const deleteYarnCount = async (req: Request, res: Response) => {
     }
 }
 
+const checkYarnCounts = async (req: Request, res: Response) => {
+    try {
+        let whereCondition: any = {}
+        if (req.body.id) {
+            whereCondition = { yarnCount_name: { [Op.iLike]: req.body.yarnCountName }, id: { [Op.ne]: req.body.id } }
+        } else {
+            whereCondition = { yarnCount_name: { [Op.iLike]: req.body.yarnCountName } }
+        }
+        let result = await YarnCount.findOne({ where: whereCondition })
+
+        res.sendSuccess(res, result ? { exist: true } : { exist: false });
+    } catch (error: any) {
+        console.log(error)
+        return res.sendError(res, error.message);
+    }
+}
+
 
 export {
     createYarnCount,
+    checkYarnCounts,
     createYarnCounts,
     fetchYarnCountPagination,
     updateYarnCount,

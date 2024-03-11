@@ -150,6 +150,23 @@ const deleteCrop = async (req: Request, res: Response) => {
     }
 }
 
+const checkCrops = async (req: Request, res: Response) => {
+    try {
+        let whereCondition: any = {}
+        if (req.body.id) {
+            whereCondition = { crop_name: { [Op.iLike]: req.body.cropName }, id: { [Op.ne]: req.body.id } }
+        } else {
+            whereCondition = { crop_name: { [Op.iLike]: req.body.cropName } }
+        }
+        let result = await Crop.findOne({ where: whereCondition })
+
+        res.sendSuccess(res, result ? { exist: true } : { exist: false });
+    } catch (error: any) {
+        console.log(error)
+        return res.sendError(res, error.message);
+    }
+}
+
 
 export {
     createCrop,
@@ -157,5 +174,6 @@ export {
     fetchCropsPagination,
     updateCrop,
     updateCropStatus,
-    deleteCrop
+    deleteCrop,
+    checkCrops
 };

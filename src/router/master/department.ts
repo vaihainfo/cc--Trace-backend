@@ -1,5 +1,6 @@
 import {
     createDepartment,
+    checkDepartments,
     createDepartments,
     updateDepartment,
     updateDepartmentStatus,
@@ -14,6 +15,7 @@ router.use(accessControl);
 
 // Department Routes
 router.get('/', fetchDepartmentPagination);
+router.post('/check-departments', checkDepartments);
 router.post('/', createDepartment);
 router.post('/multiple', createDepartments);
 router.put('/', updateDepartment);

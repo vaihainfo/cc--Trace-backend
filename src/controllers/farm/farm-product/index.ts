@@ -149,9 +149,27 @@ const deleteFarmProduct = async (req: Request, res: Response) => {
     }
 }
 
+const checkFarmProducts = async (req: Request, res: Response) => {
+    try {
+        let whereCondition: any = {}
+        if (req.body.id) {
+            whereCondition = { farmItem_id: req.body.farmItemId, farmProduct: { [Op.iLike]: req.body.farmProduct }, id: { [Op.ne]: req.body.id } }
+        } else {
+            whereCondition = { farmItem_id: req.body.farmItemId, farmProduct: { [Op.iLike]: req.body.farmProduct } }
+        }
+        let result = await FarmProduct.findOne({ where: whereCondition })
+
+        res.sendSuccess(res, result ? { exist: true } : { exist: false });
+    } catch (error: any) {
+        console.log(error)
+        return res.sendError(res, error.message);
+    }
+}
+
 
 export {
     createFarmProduct,
+    checkFarmProducts,
     createFarmProducts,
     fetchFarmProductPagination,
     updateFarmProduct,

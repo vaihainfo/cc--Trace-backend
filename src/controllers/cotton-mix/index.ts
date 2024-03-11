@@ -123,9 +123,26 @@ const deleteCottonMix = async (req: Request, res: Response) => {
     }
 }
 
+const checkCottonMixs = async (req: Request, res: Response) => {
+    try {
+        let whereCondition: any = {}
+        if (req.body.id) {
+            whereCondition = { cottonMix_name: { [Op.iLike]: req.body.cottonMixName }, id: { [Op.ne]: req.body.id } }
+        } else {
+            whereCondition = { cottonMix_name: { [Op.iLike]: req.body.cottonMixName } }
+        }
+        let result = await CottonMix.findOne({ where: whereCondition })
+
+        res.sendSuccess(res, result ? { exist: true } : { exist: false });
+    } catch (error: any) {
+        console.log(error)
+        return res.sendError(res, error.message);
+    }
+}
 
 export {
     createCottonMix,
+    checkCottonMixs,
     createCottonMixes,
     fetchCottonMixPagination,
     updateCottonMix,

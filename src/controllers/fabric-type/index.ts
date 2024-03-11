@@ -127,9 +127,26 @@ const deleteFebricType = async (req: Request, res: Response) => {
     }
 }
 
+const checkFabricTypes = async (req: Request, res: Response) => {
+    try {
+        let whereCondition: any = {}
+        if (req.body.id) {
+            whereCondition = { fabricType_name: { [Op.iLike]: req.body.fabricTypeName }, id: { [Op.ne]: req.body.id } }
+        } else {
+            whereCondition = { fabricType_name: { [Op.iLike]: req.body.fabricTypeName } }
+        }
+        let result = await FabricType.findOne({ where: whereCondition })
+
+        res.sendSuccess(res, result ? { exist: true } : { exist: false });
+    } catch (error: any) {
+        console.log(error)
+        return res.sendError(res, error.message);
+    }
+}
 
 export {
     createFabricType,
+    checkFabricTypes,
     createFabricTypes,
     fetchFebricTypePagination,
     updateFebricType,

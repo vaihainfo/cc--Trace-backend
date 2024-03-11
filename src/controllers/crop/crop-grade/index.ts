@@ -180,9 +180,27 @@ const deleteCropGrade = async (req: Request, res: Response) => {
     }
 }
 
+const checkCropGrades = async (req: Request, res: Response) => {
+    try {
+        let whereCondition: any = {}
+        if (req.body.id) {
+            whereCondition = { cropVariety_id: req.body.cropVarietyId, cropGrade: { [Op.iLike]: req.body.cropGrade }, id: { [Op.ne]: req.body.id } }
+        } else {
+            whereCondition = { cropVariety_id: req.body.cropVarietyId, cropGrade: { [Op.iLike]: req.body.cropGrade } }
+        }
+        let result = await CropGrade.findOne({ where: whereCondition })
+
+        res.sendSuccess(res, result ? { exist: true } : { exist: false });
+    } catch (error: any) {
+        console.log(error)
+        return res.sendError(res, error.message);
+    }
+}
+
 
 export {
     createCropGrade,
+    checkCropGrades,
     createCropGrades,
     fetchCropGradePagination,
     updateCropGrade,

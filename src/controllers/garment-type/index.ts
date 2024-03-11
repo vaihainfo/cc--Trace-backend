@@ -22,7 +22,7 @@ const createGarmentTypes = async (req: Request, res: Response) => {
     let pass = [];
     let fail = [];
     for await (const obj of req.body.garmentTypes) {
-      let result = await GarmentType.findOne({ where: { name: { [Op.iLike]: obj }} })
+      let result = await GarmentType.findOne({ where: { name: { [Op.iLike]: obj } } })
       if (result) {
         fail.push({ data: result });
       } else {
@@ -137,8 +137,26 @@ const deleteGarmentType = async (req: Request, res: Response) => {
   }
 };
 
+const checkGarmentTypes = async (req: Request, res: Response) => {
+  try {
+    let whereCondition: any = {}
+    if (req.body.id) {
+      whereCondition = { name: { [Op.iLike]: req.body.name }, id: { [Op.ne]: req.body.id } }
+    } else {
+      whereCondition = { name: { [Op.iLike]: req.body.name } }
+    }
+    let result = await GarmentType.findOne({ where: whereCondition })
+
+    res.sendSuccess(res, result ? { exist: true } : { exist: false });
+  } catch (error: any) {
+    console.log(error)
+    return res.sendError(res, error.message);
+  }
+}
+
 export {
   createGarmentType,
+  checkGarmentTypes,
   createGarmentTypes,
   fetchGarmentTypePagination,
   updateGarmentType,

@@ -22,7 +22,7 @@ const createStyleMarkNumbers = async (req: Request, res: Response) => {
     let pass = [];
     let fail = [];
     for await (const obj of req.body.styleMarkNos) {
-      let result = await StyleMark.findOne({ where: { style_mark_no: { [Op.iLike]: obj }} })
+      let result = await StyleMark.findOne({ where: { style_mark_no: { [Op.iLike]: obj } } })
       if (result) {
         fail.push({ data: result });
       } else {
@@ -137,8 +137,26 @@ const deleteStyleMark = async (req: Request, res: Response) => {
   }
 };
 
+const checkStyleMarkNumbers = async (req: Request, res: Response) => {
+  try {
+    let whereCondition: any = {}
+    if (req.body.id) {
+      whereCondition = { style_mark_no: { [Op.iLike]: req.body.name }, id: { [Op.ne]: req.body.id } }
+    } else {
+      whereCondition = { style_mark_no: { [Op.iLike]: req.body.name } }
+    }
+    let result = await StyleMark.findOne({ where: whereCondition })
+
+    res.sendSuccess(res, result ? { exist: true } : { exist: false });
+  } catch (error: any) {
+    console.log(error)
+    return res.sendError(res, error.message);
+  }
+}
+
 export {
-    createStyleMark,
+  createStyleMark,
+  checkStyleMarkNumbers,
   createStyleMarkNumbers,
   fetchStyleMarkPagination,
   updateStyleMark,

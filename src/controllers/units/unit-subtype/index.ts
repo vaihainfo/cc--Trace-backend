@@ -143,9 +143,27 @@ const deleteUnitSubType = async (req: Request, res: Response) => {
     }
 }
 
+const checkUnitSubTypes = async (req: Request, res: Response) => {
+    try {
+        let whereCondition: any = {}
+        if (req.body.id) {
+            whereCondition = { unitType_id: req.body.unitTypeId, unitSubType: { [Op.iLike]: req.body.unitSubType }, id: { [Op.ne]: req.body.id } }
+        } else {
+            whereCondition = { unitType_id: req.body.unitTypeId, unitSubType: { [Op.iLike]: req.body.unitSubType } }
+        }
+        let result = await UnitSubType.findOne({ where: whereCondition })
+
+        res.sendSuccess(res, result ? { exist: true } : { exist: false });
+    } catch (error: any) {
+        console.log(error)
+        return res.sendError(res, error.message);
+    }
+}
+
 
 export {
     createUnitSubType,
+    checkUnitSubTypes,
     createUnitSubTypes,
     fetchUnitSubTypePagination,
     updateUnitSubType,

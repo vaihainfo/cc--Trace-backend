@@ -179,9 +179,26 @@ const deleteCropType = async (req: Request, res: Response) => {
     }
 }
 
+const checkCropTypes = async (req: Request, res: Response) => {
+    try {
+        let whereCondition: any = {}
+        if (req.body.id) {
+            whereCondition = { crop_id: req.body.cropId, cropType_name: { [Op.iLike]: req.body.cropTypeName }, id: { [Op.ne]: req.body.id } }
+        } else {
+            whereCondition = { crop_id: req.body.cropId, cropType_name: { [Op.iLike]: req.body.cropTypeName } }
+        }
+        let result = await CropType.findOne({ where: whereCondition })
+
+        res.sendSuccess(res, result ? { exist: true } : { exist: false });
+    } catch (error: any) {
+        console.log(error)
+        return res.sendError(res, error.message);
+    }
+}
 
 export {
     createCropType,
+    checkCropTypes,
     createCropTypes,
     fetchCropTypePagination,
     updateCropType,

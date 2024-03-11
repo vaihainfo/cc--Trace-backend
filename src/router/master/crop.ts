@@ -6,11 +6,13 @@ import {
     deleteCrop,
     fetchCropsPagination,
     updateCrop,
-    updateCropStatus
+    updateCropStatus,
+    checkCrops
 } from "../../controllers/crop/crop-name";
 
 import {
     createCropType,
+    checkCropTypes,
     createCropTypes,
     deleteCropType,
     fetchCropTypePagination,
@@ -20,6 +22,7 @@ import {
 
 import {
     createCropVarieties,
+    checkCropVarietys,
     createCropVariety,
     deleteCropVariety,
     fetchCropVarietyPagination,
@@ -29,6 +32,7 @@ import {
 
 import {
     createCropGrade,
+    checkCropGrades,
     createCropGrades,
     deleteCropGrade,
     fetchCropGradePagination,
@@ -41,7 +45,7 @@ import accessControl from "../../middleware/access-control";
 router.get('/crop-name', fetchCropsPagination);
 
 router.use(accessControl)
-
+router.post('/check-crops', checkCrops);
 router.post('/crop-name', createCrop);
 router.post('/crop-name-multiple', createCrops);
 router.put('/crop-name', updateCrop);
@@ -51,6 +55,7 @@ router.delete('/crop-name', deleteCrop);
 // Crop Type Routes
 router.get('/crop-type', fetchCropTypePagination);
 router.post('/crop-type', createCropType);
+router.post('/check-crop-types', checkCropTypes);
 router.post('/crop-type-multiple', createCropTypes);
 router.put('/crop-type', updateCropType);
 router.put('/crop-type-status', updateCropTypeStatus);
@@ -59,6 +64,7 @@ router.delete('/crop-type', deleteCropType);
 
 // Crop Variety Routes
 router.get('/crop-variety', fetchCropVarietyPagination);
+router.post('/check-crop-variety', checkCropVarietys);
 router.post('/crop-variety', createCropVariety);
 router.post('/crop-variety-multiple', createCropVarieties);
 router.put('/crop-variety', updateCropVariety);
@@ -67,6 +73,7 @@ router.delete('/crop-variety', deleteCropVariety);
 
 // Crop Grade Routes
 router.get('/crop-grade', fetchCropGradePagination);
+router.post('/check-crop-grades', checkCropGrades);
 router.post('/crop-grade', createCropGrade);
 router.post('/crop-grade-multiple', createCropGrades);
 router.put('/crop-grade', updateCropGrade);

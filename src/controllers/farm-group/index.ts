@@ -42,7 +42,7 @@ const fetchFarmGroupPagination = async (req: Request, res: Response) => {
   const sortOrder = req.query.sort || "asc";
   const page = Number(req.query.page) || 1;
   const limit = Number(req.query.limit) || 10;
-  const {brandId, countryId}: any = req.query;
+  const { brandId, countryId }: any = req.query;
   const offset = (page - 1) * limit;
   const status = req.query.status || '';
   const whereCondition: any = {};
@@ -80,7 +80,7 @@ const fetchFarmGroupPagination = async (req: Request, res: Response) => {
           {
             model: Brand,
             as: "brand",
-            attributes: ["id", "brand_name", "address","countries_id"],
+            attributes: ["id", "brand_name", "address", "countries_id"],
           },
         ],
         offset: offset,
@@ -94,7 +94,7 @@ const fetchFarmGroupPagination = async (req: Request, res: Response) => {
           {
             model: Brand,
             as: "brand",
-            attributes: ["id", "brand_name", "address","countries_id"],
+            attributes: ["id", "brand_name", "address", "countries_id"],
           },
         ],
         order: [
@@ -119,8 +119,8 @@ const updateFarmGroup = async (req: Request, res: Response) => {
       {
         brand_id: req.body.brandId,
         name: req.body.name,
-        latitude :  req.body.latitude,
-        longitude :  req.body.longitude,
+        latitude: req.body.latitude,
+        longitude: req.body.longitude,
       },
       {
         where: {
@@ -165,8 +165,26 @@ const deleteFarmGroup = async (req: Request, res: Response) => {
   }
 };
 
+const checkFarmGroups = async (req: Request, res: Response) => {
+  try {
+    let whereCondition: any = {}
+    if (req.body.id) {
+      whereCondition = { brand_id: req.body.brandId, name: { [Op.iLike]: req.body.name }, id: { [Op.ne]: req.body.id } }
+    } else {
+      whereCondition = { brand_id: req.body.brandId, name: { [Op.iLike]: req.body.name } }
+    }
+    let result = await FarmGroup.findOne({ where: whereCondition })
+
+    res.sendSuccess(res, result ? { exist: true } : { exist: false });
+  } catch (error: any) {
+    console.log(error)
+    return res.sendError(res, error.message);
+  }
+}
+
 export {
   createFarmGroup,
+  checkFarmGroups,
   createFarmGroups,
   fetchFarmGroupPagination,
   updateFarmGroup,

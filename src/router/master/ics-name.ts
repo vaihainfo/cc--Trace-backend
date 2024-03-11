@@ -1,5 +1,6 @@
 import {
     createIcsName,
+    checkIcsNames,
     createIcsNames,
     fetchIcsNamePagination,
     updateIcsName,
@@ -14,6 +15,7 @@ router.use(accessControl);
 
 // ICS name Routes
 router.get('/', fetchIcsNamePagination);
+router.post('/check-ics-names', checkIcsNames);
 router.post('/', createIcsName);
 router.post('/multiple', createIcsNames);
 router.put('/', updateIcsName);

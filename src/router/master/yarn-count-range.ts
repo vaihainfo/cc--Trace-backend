@@ -1,5 +1,6 @@
 import {
     fetchYarnCountPagination,
+    checkYarnCounts,
     createYarnCount,
     createYarnCounts,
     updateYarnCount,
@@ -14,6 +15,7 @@ router.use(accessControl);
 
 // Yarn Count Routes
 router.get('/', fetchYarnCountPagination);
+router.post('/check-yarn-counts', checkYarnCounts);
 router.post('/', createYarnCount);
 router.post('/multiple', createYarnCounts);
 router.put('/', updateYarnCount);

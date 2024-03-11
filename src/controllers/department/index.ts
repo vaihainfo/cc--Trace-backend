@@ -129,9 +129,27 @@ const deleteDepartment = async (req: Request, res: Response) => {
     }
 }
 
+const checkDepartments = async (req: Request, res: Response) => {
+    try {
+        let whereCondition: any = {}
+        if (req.body.id) {
+            whereCondition = { dept_name: { [Op.iLike]: req.body.deptName }, id: { [Op.ne]: req.body.id } }
+        } else {
+            whereCondition = { dept_name: { [Op.iLike]: req.body.deptName } }
+        }
+        let result = await Department.findOne({ where: whereCondition })
+
+        res.sendSuccess(res, result ? { exist: true } : { exist: false });
+    } catch (error: any) {
+        console.log(error)
+        return res.sendError(res, error.message);
+    }
+}
+
 
 export {
     createDepartment,
+    checkDepartments,
     createDepartments,
     fetchDepartmentPagination,
     updateDepartment,

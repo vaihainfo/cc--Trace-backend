@@ -1,5 +1,6 @@
 import {
     createFarmProduct,
+    checkFarmProducts,
     createFarmProducts,
     deleteFarmProduct,
     fetchFarmProductPagination,
@@ -8,6 +9,7 @@ import {
 } from "../../controllers/farm/farm-product";
 import {
     createFarm,
+    checkFarms,
     createFarms,
     deleteFarm,
     fetchFarmsPagination,
@@ -22,6 +24,7 @@ router.use(accessControl);
 
 // Farm Item Routes
 router.get('/farm-item', fetchFarmsPagination);
+router.post('/check-farm-item', checkFarms);
 router.post('/farm-item', createFarm);
 router.post('/farm-item-multiple', createFarms);
 router.put('/farm-item', updateFarm);
@@ -33,6 +36,7 @@ router.delete('/farm-item', deleteFarm);
 // Farm Product Routes
 router.get('/farm-product', fetchFarmProductPagination);
 router.post('/farm-product', createFarmProduct);
+router.post('/check-farm-products', checkFarmProducts);
 router.post('/farm-product-multiple', createFarmProducts);
 router.put('/farm-product', updateFarmProduct);
 router.put('/farm-product-status', updateFarmProductStatus);

@@ -1,5 +1,6 @@
 import {
     fetchProgramPagination,
+    checkPrograms,
     createProgram,
     createPrograms,
     updateProgram,
@@ -14,6 +15,7 @@ router.use(accessControl);
 
 // Department Routes
 router.get('/', fetchProgramPagination);
+router.post('/check-programs', checkPrograms);
 router.post('/', createProgram);
 router.post('/multiple', createPrograms);
 router.put('/', updateProgram);

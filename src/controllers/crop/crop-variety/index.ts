@@ -176,9 +176,27 @@ const deleteCropVariety = async (req: Request, res: Response) => {
     }
 }
 
+const checkCropVarietys = async (req: Request, res: Response) => {
+    try {
+        let whereCondition: any = {}
+        if (req.body.id) {
+            whereCondition = { cropType_id: req.body.cropTypeId, cropVariety: { [Op.iLike]: req.body.cropVariety }, id: { [Op.ne]: req.body.id } }
+        } else {
+            whereCondition = { cropType_id: req.body.cropTypeId, cropVariety: { [Op.iLike]: req.body.cropVariety } }
+        }
+        let result = await CropVariety.findOne({ where: whereCondition })
+
+        res.sendSuccess(res, result ? { exist: true } : { exist: false });
+    } catch (error: any) {
+        console.log(error)
+        return res.sendError(res, error.message);
+    }
+}
+
 
 export {
     createCropVariety,
+    checkCropVarietys,
     createCropVarieties,
     fetchCropVarietyPagination,
     updateCropVariety,

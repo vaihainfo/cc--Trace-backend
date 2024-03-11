@@ -1,6 +1,7 @@
 import {
     fetchSeasonPagination,
     createSeason,
+    checkSeasons,
     updateSeason,
     updateSeasonStatus,
     deleteSeason
@@ -13,6 +14,7 @@ router.use(accessControl);
 
 // Season Routes
 router.get('/', fetchSeasonPagination);
+router.post('/check-seasons', checkSeasons);
 router.post('/', createSeason);
 router.put('/', updateSeason);
 router.put('/status', updateSeasonStatus);

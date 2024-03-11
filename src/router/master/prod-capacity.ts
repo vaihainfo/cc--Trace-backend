@@ -1,5 +1,6 @@
 import {
     fetchProdCapacityPagination,
+    checkProdCapacities,
     createProdCapacity,
     createProdCapacities,
     updateProdCapacity,
@@ -15,6 +16,7 @@ router.use(accessControl);
 
 // Production Capacity Routes
 router.get('/', fetchProdCapacityPagination);
+router.post('/check-prod-capacities', checkProdCapacities);
 router.post('/', createProdCapacity);
 router.post('/multiple', createProdCapacities);
 router.put('/', updateProdCapacity);
