@@ -24,7 +24,7 @@ import {
     getBuyerProcessors,
     updateGarmentProcess,
     fetchGarmentProcess,
-    updateGarmentSales
+    updateGarmentSales,
     getGarmentProcessTracingChartData
 } from "../../controllers/garment-sales";
 
