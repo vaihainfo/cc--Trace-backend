@@ -743,12 +743,12 @@ const getFarmersByCountryData = async (
   countryId: any
 ) => {
   const where: any = {
-    "$country.latitude$": {
-      [Op.not]: null
-    },
-    "$country.longitude$": {
-      [Op.not]: null
-    }
+    // "$country.latitude$": {
+    //   [Op.not]: null
+    // },
+    // "$country.longitude$": {
+    //   [Op.not]: null
+    // }
   };
 
   if (countryId) {
@@ -758,9 +758,9 @@ const getFarmersByCountryData = async (
     attributes: [
       [Sequelize.fn('SUM', Sequelize.col('farmers.agri_total_area')), 'area'],
       [Sequelize.fn('count', Sequelize.col('farmers.id')), 'farmers'],
-      [Sequelize.col('country.county_name'), 'countryName'],
-      [Sequelize.col('country.latitude'), 'latitude'],
-      [Sequelize.col('country.longitude'), 'longitude']
+      [Sequelize.col('country.county_name'), 'countryName']
+      // [Sequelize.col('country.latitude'), 'latitude'],
+      // [Sequelize.col('country.longitude'), 'longitude']
     ],
     include: [{
       model: Country,
