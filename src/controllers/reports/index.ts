@@ -421,7 +421,7 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
     });
     // Append data to worksheet
     for await (const [index, item] of rows.entries()) {
-      console.log(index,'index me hu')
+      // console.log(index,'index me hu')
       const cottonSelectionsForProcess = cottonSelections.filter((cotton:any) => cotton.dataValues.process_id === item.id);
       
       let bale = ginBales.find((obj:any) => obj.process_id == item.id);
