@@ -22,10 +22,10 @@ import {
     getChooseGarmentFilters,
     exportGarmentProcess,
     getBuyerProcessors,
-    garmentTraceabilityMap,
     updateGarmentProcess,
     fetchGarmentProcess,
     updateGarmentSales
+    getGarmentProcessTracingChartData
 } from "../../controllers/garment-sales";
 
 import { Router } from "express";
@@ -58,6 +58,6 @@ router.get('/get-brand', getBrands);
 router.get('/get-reel-lot-no', getGarmentReelLotNo);
 router.get('/get-choose-garment-filter', getChooseGarmentFilters);
 router.get('/get-buyer-processors', getBuyerProcessors);
-router.get('/get-map-tracebility', garmentTraceabilityMap);
+router.get('/tracing/chart', getGarmentProcessTracingChartData)
 
 export default router;

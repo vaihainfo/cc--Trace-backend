@@ -35,7 +35,8 @@ import {
     deletePrintingProcess,
     deleteCompactingProcess,
     getProcessName,
-    getBatchLot
+    getBatchLot,
+    getFabricProcessTracingChartData
 } from "../../controllers/fabric";
 
 import { Router } from "express";
@@ -85,5 +86,7 @@ router.delete('/delete-compacting-process', deleteCompactingProcess);
 
 router.get('/get-processors', getProcessName);
 router.get('/get-batch-lot', getBatchLot);
+router.get('/tracing/chart', getFabricProcessTracingChartData);
+
 
 export default router;
