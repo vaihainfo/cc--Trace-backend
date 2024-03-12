@@ -189,28 +189,35 @@ const getUserInfo = async (req: Request, res: Response) => {
 
 const processorLoginAdmin = async (req: Request, res: Response) => {
     try {
-        let userId: any
+        let userId: any;
+        let name = "Ginner"
         if (req.query.type === 'ginner') {
+            name = "Ginner"
             let ginner = await Ginner.findOne({ where: { id: req.query.ginnerId } });
             userId = ginner.dataValues.ginnerUser_id
         }
         if (req.query.type === 'spinner') {
+            name = "Spinner"
             let spinner = await Spinner.findOne({ where: { id: req.query.spinnerId } });
             userId = spinner.dataValues.spinnerUser_id
         }
         if (req.query.type === 'knitter') {
+            name = "Knitter"
             let knitter = await Knitter.findOne({ where: { id: req.query.knitterId } });
             userId = knitter.dataValues.knitterUser_id
         }
         if (req.query.type === 'weaver') {
+            name = "Weaver"
             let weaver = await Weaver.findOne({ where: { id: req.query.weaverId } });
             userId = weaver.dataValues.weaverUser_id
         }
         if (req.query.type === 'garment') {
+            name = "Garment"
             let garment = await Garment.findOne({ where: { id: req.query.garmentId } });
             userId = garment.dataValues.garmentUser_id
         }
         if (req.query.type === 'fabric') {
+            name = "Fabric"
             let fabric = await Fabric.findOne({ where: { id: req.query.fabricId } });
             userId = fabric.dataValues.fabricUser_id
         }
@@ -218,6 +225,13 @@ const processorLoginAdmin = async (req: Request, res: Response) => {
             let brand = await Brand.findOne({ where: { id: req.query.brandId } });
             userId = brand.dataValues.brandUser_id
         }
+        if(req.query.type !== 'brand') {
+            let role = await UserRole.findOne({where :{user_role : {[Op.iLike]:name}}});
+            if(role){
+                const userupdate = await User.update({role : role.dataValues.id},{ where: { id: userId } });
+            }
+        }
+        
         const user = await User.findOne({ where: { id: userId } });
         if (!user) {
             return res.sendError(res, "user not found");

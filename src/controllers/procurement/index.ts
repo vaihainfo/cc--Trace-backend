@@ -93,7 +93,7 @@ const fetchTransactions = async (req: Request, res: Response) => {
   const ginnerId: string = req.query.ginnerId as string;
   const farmerId: string = req.query.farmerId as string;
   const villageId: string = req.query.villageId as string;
-  const stateId: any = req.query.villageId;
+  const stateId: any = req.query.stateId;
   const { endDate, startDate, transactionVia }: any = req.query;
   const whereCondition: any = {};
 

@@ -133,13 +133,13 @@ const updateKnitterProcess = async (req: Request, res: Response) => {
       batch_lot_no: req.body.batchLotNo,
     };
 
-    const knit = await KnitProcess.update(data,{where  : {id :req.body.id}});
+    const knit = await KnitProcess.update(data, { where: { id: req.body.id } });
 
     for await (let fabric of req.body.fabrics) {
       let data = {
         fabric_gsm: fabric.fabric_gsm
       };
-      const yarns = await KnitFabric.update(data,{where  : {id :fabric.id}});;
+      const yarns = await KnitFabric.update(data, { where: { id: fabric.id } });;
     }
     res.sendSuccess(res, { knit });
   } catch (error: any) {
@@ -189,8 +189,8 @@ const fetchKnitterProcess = async (req: Request, res: Response) => {
       where: whereCondition,
       include: include
     });
-    let fabrics = await KnitFabric.findAll({where : {process_id : id}})
-    let data  = {...rows.dataValues ,fabrics}
+    let fabrics = await KnitFabric.findAll({ where: { process_id: id } })
+    let data = { ...rows.dataValues, fabrics }
     return res.sendSuccess(res, data);
   } catch (error: any) {
     return res.sendError(res, error.message);
@@ -400,7 +400,7 @@ const createKnitterrSales = async (req: Request, res: Response) => {
         let val = await KnitProcess.findOne({ where: { id: obj.process_id } });
         if (val) {
           let update = await KnitProcess.update(
-            { qty_stock: val.dataValues.qty_stock - obj.qtyUsed, status :'Sold'},
+            { qty_stock: val.dataValues.qty_stock - obj.qtyUsed, status: 'Sold' },
             { where: { id: obj.process_id } }
           );
           let updatee = await KnitFabric.update(
@@ -447,7 +447,7 @@ const updateKnitterrSales = async (req: Request, res: Response) => {
         },
       }
     );
-   
+
 
     return res.sendSuccess(res, kniSale);
   } catch (error: any) {
@@ -637,7 +637,7 @@ const fetchKnitterSale = async (req: Request, res: Response) => {
         where: { id: { [Op.in]: rows.dataValues?.fabric_type } },
       });
     }
-    let data = {...rows.dataValues,fabricType}
+    let data = { ...rows.dataValues, fabricType }
     return res.sendSuccess(res, data);
   } catch (error: any) {
     return res.sendError(res, error.message);
@@ -781,8 +781,8 @@ const exportKnitterSale = async (req: Request, res: Response) => {
         buyer_id: item.buyer
           ? item.buyer.name
           : item.dyingwashing
-          ? item.dyingwashing.name
-          : item.processor_name,
+            ? item.dyingwashing.name
+            : item.processor_name,
         program: item.program ? item.program.program_name : "",
         garment_order_ref: item.garment_order_ref ? item.garment_order_ref : "",
         brand_order_ref: item.brand_order_ref ? item.brand_order_ref : "",
@@ -985,6 +985,7 @@ const fetchKnitterDashBoard = async (req: Request, res: Response) => {
   const page = Number(req.query.page) || 1;
   const limit = Number(req.query.limit) || 10;
   const {
+    seasonId,
     knitterId,
     status,
     filter,
@@ -1029,6 +1030,12 @@ const fetchKnitterDashBoard = async (req: Request, res: Response) => {
     if (status === "Sold") {
       whereCondition.knitter_id = knitterId;
       whereCondition.status = "Sold";
+    }
+    if (seasonId) {
+      const idArray: number[] = seasonId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.season_id = { [Op.in]: idArray };
     }
     if (spinnerId) {
       const idArray: number[] = spinnerId

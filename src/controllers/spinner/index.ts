@@ -124,11 +124,11 @@ const createSpinnerProcess = async (req: Request, res: Response) => {
     }
 }
 
-const updateSpinProcess = async(req: Request, res: Response) => {
+const updateSpinProcess = async (req: Request, res: Response) => {
     try {
         if (!req.body.id) {
             return res.sendError(res, "Need Process Id");
-          }
+        }
         const data = {
             date: req.body.date,
             yarn_type: req.body.yarnType,
@@ -144,10 +144,10 @@ const updateSpinProcess = async(req: Request, res: Response) => {
                 where: { id: req.body.id }
             }
         );
-        let yarn = SpinYarn.destroy({where: { process_id: req.body.id } })
+        let yarn = SpinYarn.destroy({ where: { process_id: req.body.id } })
         for await (let yarn of req.body.yarns) {
             let yarnData = {
-                process_id: req.body.id ,
+                process_id: req.body.id,
                 yarn_count: yarn.yarnCount,
                 yarn_produced: yarn.yarnProduced,
             }
@@ -160,7 +160,7 @@ const updateSpinProcess = async(req: Request, res: Response) => {
         return res.sendError(res, error.meessage);
     }
 }
- 
+
 const yarnId = async (id: any, date: any) => {
     let a = await sequelize.query(
         `SELECT CONCAT('YN-REE', UPPER(LEFT("country"."county_name", 2)), UPPER(LEFT("state"."state_name", 2)), UPPER("processor"."short_name")) as idprefix
@@ -364,7 +364,7 @@ const fetchSpinnerProcess = async (req: Request, res: Response) => {
             ]
         });
 
-        
+
         let yarncount = [];
 
         if (gin.dataValues?.yarn_count.length > 0) {
@@ -373,8 +373,8 @@ const fetchSpinnerProcess = async (req: Request, res: Response) => {
                 where: { id: { [Op.in]: gin.dataValues?.yarn_count } },
             });
         }
-        gin.yarncount  =yarncount
-       
+        gin.yarncount = yarncount
+
 
         return res.sendSuccess(res, gin);
 
@@ -752,7 +752,7 @@ const createSpinnerSales = async (req: Request, res: Response) => {
             invoice_file: req.body.invoiceFile,
             delivery_notes: req.body.deliveryNotes,
             qty_stock: req.body.totalQty,
-            price : req.body.price,
+            price: req.body.price,
             status: 'Pending for QR scanning'
         };
 
@@ -768,7 +768,7 @@ const createSpinnerSales = async (req: Request, res: Response) => {
 
         if (req.body.chooseYarn && req.body.chooseYarn.length > 0) {
             for await (let obj of req.body.chooseYarn) {
-                let update = await SpinProcess.update({ qty_stock: obj.totalQty - obj.qtyUsed, status :'Sold' }, { where: { id: obj.process_id } });
+                let update = await SpinProcess.update({ qty_stock: obj.totalQty - obj.qtyUsed, status: 'Sold' }, { where: { id: obj.process_id } });
                 const spinYarnStatus = await SpinYarn.update({ sold_status: true }, { where: { id: obj.id } });
                 await SpinProcessYarnSelection.create({ spin_process_id: obj.process_id, yarn_id: obj.id, sales_id: spinSales.id, qty_used: obj.qtyUsed })
             }
@@ -799,7 +799,7 @@ const updateSpinnerSales = async (req: Request, res: Response) => {
             invoice_file: req.body.invoiceFile,
         };
 
-        const spinSales = await SpinSales.update(data ,{where :{id :req.body.id}});
+        const spinSales = await SpinSales.update(data, { where: { id: req.body.id } });
         res.sendSuccess(res, { spinSales });
     } catch (error: any) {
         console.error(error)
@@ -1074,7 +1074,7 @@ const exportSpinnerSale = async (req: Request, res: Response) => {
         const headerRow = worksheet.addRow([
             "Sr No.", "Date", "Season",
             "Invoice No", "Spin Lot No", "Reel Lot No", "Yarn Type", "Yarn Count", "No of Boxes", "Buyer Name",
-            "Box ID", "Blend", "Blend Qty", "Total weight (Kgs)", "Price/Kg","Program", "Vehicle No",
+            "Box ID", "Blend", "Blend Qty", "Total weight (Kgs)", "Price/Kg", "Program", "Vehicle No",
             "Transcation via trader", "Agent Details"
         ]);
         headerRow.font = { bold: true };
@@ -1169,7 +1169,7 @@ const deleteSpinnerSales = async (req: Request, res: Response) => {
             return res.sendError(res, 'Need Sales Id');
         }
         let yarn_selections = await SpinProcessYarnSelection.findAll({
-            attributes: ['id','yarn_id', 'spin_process_id', 'sales_id', 'no_of_box', 'qty_used'],
+            attributes: ['id', 'yarn_id', 'spin_process_id', 'sales_id', 'no_of_box', 'qty_used'],
             where: {
                 sales_id: req.body.id
             }
@@ -1212,7 +1212,7 @@ const fetchSpinSalesDashBoard = async (req: Request, res: Response) => {
     const searchTerm = req.query.search || "";
     const page = Number(req.query.page) || 1;
     const limit = Number(req.query.limit) || 10;
-    const { ginnerId, status, filter, programId, spinnerId }: any = req.query;
+    const { ginnerId, status, filter, programId, spinnerId, seasonId }: any = req.query;
     const offset = (page - 1) * limit;
     const whereCondition: any = {};
     try {
@@ -1248,6 +1248,13 @@ const fetchSpinSalesDashBoard = async (req: Request, res: Response) => {
                 .split(",")
                 .map((id: any) => parseInt(id, 10));
             whereCondition.program_id = { [Op.in]: idArray };
+        }
+
+        if (seasonId) {
+            const idArray: number[] = seasonId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition.season_id = { [Op.in]: idArray };
         }
 
         let include = [
@@ -2009,7 +2016,7 @@ const _getSpinnerProcessTracingChartData = async (reelLotNo: any) => {
 }
 
 const getSpinnerProcessTracingChartData = async (req: Request, res: Response) => {
-    const {reelLotNo} = req.query;
+    const { reelLotNo } = req.query;
     const data = await _getSpinnerProcessTracingChartData(reelLotNo);
     res.sendSuccess(res, data);
 }

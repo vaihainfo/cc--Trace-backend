@@ -364,78 +364,91 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
       offset: offset,
       limit: limit,
     });
-    console.log(count)
-    // Append data to worksheet
-    for await (const [index, item] of rows.entries()) {
-      console.log(index+1)
-      let cotton = await CottonSelection.findAll({
-        attributes: ["transaction_id"],
-        where: { process_id: item.id },
-      });
-      let village = [];
-      if (cotton.length > 0) {
-        village = await Transaction.findAll({
-          attributes: ["village_id"],
-          where: {
-            id: cotton.map((obj: any) => obj.dataValues.transaction_id),
-          },
+    const processIds = rows.map((process: any) => process.id);
+    const ginBales = await GinBale.findAll({
+      attributes: [
+        [
+          Sequelize.fn(
+            "SUM",
+            Sequelize.literal("CAST(weight AS DOUBLE PRECISION)")
+          ),
+          "lint_quantity",
+        ],
+        [sequelize.fn("min", sequelize.col("bale_no")), "pressno_from"],
+        [sequelize.fn("max", sequelize.col("bale_no")), "pressno_to"],
+        "process_id",
+      ],
+      raw: true,
+      where: { process_id: { [Op.in]: processIds } },
+      group: ["process_id"],
+    });
+
+    const cottonSelections = await CottonSelection.findAll({
+      include: [
+        {
+          model: Transaction,
           include: [
             {
               model: Village,
+              attributes: [],
               as: "village",
-              attributes: ["id", "village_name"],
             },
           ],
-          group: ["village_id", "village.id"],
-        });
-      }
-      let bale = await GinBale.findOne({
-        attributes: [
-          [
-            Sequelize.fn(
-              "SUM",
-              Sequelize.literal("CAST(weight AS DOUBLE PRECISION)")
-            ),
-            "lint_quantity",
-          ],
-          [sequelize.fn("min", sequelize.col("bale_no")), "pressno_from"],
-          [sequelize.fn("max", sequelize.col("bale_no")), "pressno_to"],
+          attributes: [],
+          as: "transaction",
+        },
+      ],
+      attributes: [
+        "process_id",
+        [sequelize.col("transaction.village.village_name"), "name"],
+      ],
+      where: { process_id: { [Op.in]: processIds } },
+    });
+    let soldData = await GinBale.findAll({
+      attributes: [
+        [Sequelize.fn("COUNT", Sequelize.col("id")), "soldBales"],
+        [
+          Sequelize.fn(
+            "SUM",
+            Sequelize.literal("CAST(weight AS DOUBLE PRECISION)")
+          ),
+          "lint_quantity_sold",
         ],
-        where: { process_id: item.id },
-      });
-
-      let soldBales = await GinBale.count({
-        where: { process_id: item.id, sold_status: true },
-      });
-
-      let soldLint = await GinBale.findOne({
-        attributes: [
-          [
-            Sequelize.fn(
-              "SUM",
-              Sequelize.literal("CAST(weight AS DOUBLE PRECISION)")
-            ),
-            "lint_quantity_sold",
-          ],
-        ],
-        where: { process_id: item.id, sold_status: true },
-      });
-
+        "process_id",
+      ],
+      group: ["process_id"],
+      where: { process_id: { [Op.in]: processIds }, sold_status: true },
+    });
+    // Append data to worksheet
+    for await (const [index, item] of rows.entries()) {
+      console.log(index,'index me hu')
+      const cottonSelectionsForProcess = cottonSelections.filter((cotton:any) => cotton.dataValues.process_id === item.id);
+      
+      let bale = ginBales.find((obj:any) => obj.process_id == item.id);
+      
+      let gin_press_no =
+      (bale?.pressno_from || "") +
+      "-" +
+      (bale?.pressno_to || "");
+    let lint_quantity =  bale?.lint_quantity ?? 0;
+    let reel_press_no =
+      (item?.no_of_bales ?? 0) === 0
+        ? ""
+        : `001-${
+          item.no_of_bales < 9
+              ? `00${item.no_of_bales}`
+              : item.no_of_bales < 99
+              ? `0${item.no_of_bales}`
+              : item.no_of_bales
+          }`;
+        let soldLint = soldData.find((obj:any) => obj.process_id == item.id);
+      let soldBales =soldLint?.dataValues?.soldBales ?? '0';
+      let soldlint  = soldLint?.dataValues?.lint_quantity_sold ?? '0'
       let lintStock =
-        Number(bale.dataValues.lint_quantity) -
-        Number(soldLint?.dataValues?.lint_quantity_sold);
-      let balesStock = Number(item?.no_of_bales) - Number(soldBales);
+        Number(lint_quantity) -
+        Number(soldlint);
+      let balesStock = Number(item?.no_of_bales ?? '0') - Number(soldBales);
 
-      let reel_press_no =
-        item.no_of_bales === 0
-          ? ""
-          : `001-${
-              item.no_of_bales < 9
-                ? `00${item.no_of_bales}`
-                : item.no_of_bales < 99
-                ? `0${item.no_of_bales}`
-                : item.no_of_bales
-            }`;
 
       const rowValues = Object.values({
         index: index + 1,
@@ -443,29 +456,24 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
         created_date: item.createdAt ? item.createdAt : "",
         season: item.season ? item.season.name : "",
         ginner: item.ginner ? item.ginner.name : "",
-        heap: "",
+        heap: item.heap_number ?  item.heap_number : '',
         lot_no: item.lot_no ? item.lot_no : "",
-        press_no: item.press_no ? item.press_no : "",
+        press_no: gin_press_no,
         reel_lot_no: item.reel_lot_no ? item.reel_lot_no : "",
         process_no: reel_press_no ? reel_press_no : "-",
-        noOfBales: item.no_of_bales ? item.no_of_bales : 0,
-        lint_qty: bale.dataValues.lint_quantity
-          ? bale.dataValues.lint_quantity
-          : 0,
+        noOfBales: item.no_of_bales ? item.no_of_bales : '0',
+        lint_qty: lint_quantity,
         seedConsmed: item.total_qty ? item.total_qty : "",
         got: item.gin_out_turn ? item.gin_out_turn : "",
-        lint_quantity_sold: soldLint.dataValues?.lint_quantity_sold
-          ? soldLint.dataValues?.lint_quantity_sold
-          : 0,
+        lint_quantity_sold: soldlint,
         sold_bales: soldBales,
-        lint_stock: lintStock && lintStock > 0 ? lintStock : 0,
-        bale_stock: balesStock && balesStock > 0 ? balesStock : 0,
+        lint_stock: lintStock && lintStock > 0 ? lintStock : '0',
+        bale_stock: balesStock && balesStock > 0 ? balesStock : '0',
         program: item.program ? item.program.program_name : "",
         village:
-          village.length > 0
-            ? village.map((obj: any) => obj.village.village_name).join(",")
-            : "",
+        [...new Set(cottonSelectionsForProcess.map((obj:any) => obj.dataValues.name))].join(", "),
       });
+      
       worksheet.addRow(rowValues);
     }
     // Auto-adjust column widths based on content
@@ -482,7 +490,7 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
     await workbook.xlsx.writeFile(excelFilePath);
     await ExportData.update({
         ginner_lint_bale_process_load:false
-    },{where:{ginner_lint_bale_process_load:true}})
+    },{where:{ginner_lint_bale_process_load:true}});
     // res.status(200).send({
     //   success: true,
     //   messgage: "File successfully Generated",

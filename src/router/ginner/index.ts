@@ -5,6 +5,7 @@ import {
     createGinnerProcess,
     createGinnerSales,
     fetchGinSalesPagination,
+    exportGinnerProcess,
     updateGinnerSales,
     exportGinnerSales,
     fetchGinSaleBale,
@@ -23,7 +24,8 @@ import {
     getGinnerProcessTracingChartData,
     updateGinnerProcess,
     updateGinnerSalesField,
-    fetchGinProcess
+    fetchGinProcess,
+    checkReport
 } from "../../controllers/ginner";
 
 
@@ -35,7 +37,7 @@ router.get('/', fetchGinProcessPagination);
 router.post('/', createGinnerProcess);
 router.put('/', updateGinnerProcess);
 router.get('/get-gin-process', fetchGinProcess);
-
+router.get('/export', exportGinnerProcess);
 router.delete('/', deleteGinnerProcess);
 router.get('/choose-cotton', chooseCotton);
 router.get('/fetch-bale', fetchGinBale);
@@ -59,5 +61,6 @@ router.get('/get-spinner', getSpinner);
 router.get('/get-village-farmer', getVillageAndFarmer);
 router.get('/export-ginner-transactions', exportGinnerProcurement);
 router.get('/tracing/chart', getGinnerProcessTracingChartData);
+router.get('/check-report', checkReport);
 
 export default router;

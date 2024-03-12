@@ -1,5 +1,6 @@
 import { DataTypes } from 'sequelize';
 import db from '../util/dbConn';
+import Transaction from './transaction.model';
 
 const CottonSelection = db.define('cotton_selections', {
   id: {
@@ -20,6 +21,11 @@ const CottonSelection = db.define('cotton_selections', {
     allowNull: false,
     type: DataTypes.DOUBLE
   }
+});
+
+CottonSelection.belongsTo(Transaction, {
+  foreignKey: "transaction_id",
+  as: "transaction",
 });
 
 CottonSelection.sync();
