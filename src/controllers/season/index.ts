@@ -27,9 +27,11 @@ const createSeason = async (req: Request, res: Response) => {
 const fetchSeasonPagination = async (req: Request, res: Response) => {
     const searchTerm = req.query.search || '';
     const sortOrder = req.query.sort || 'asc';
+    const sortName = req.query.sortName || 'name';
     const page = Number(req.query.page) || 1;
     const limit = Number(req.query.limit) || 10;
     const offset = (page - 1) * limit;
+
     try {
         //fetch data with pagination
         if (req.query.pagination === "true") {
@@ -38,7 +40,7 @@ const fetchSeasonPagination = async (req: Request, res: Response) => {
                     name: { [Op.iLike]: `%${searchTerm}%` },
                 },
                 order: [
-                    ['name', sortOrder], // Sort the results based on the 'username' field and the specified order
+                    [sortName, sortOrder], // Sort the results based on the 'username' field and the specified order
                 ],
                 offset: offset,
                 limit: limit
@@ -50,7 +52,7 @@ const fetchSeasonPagination = async (req: Request, res: Response) => {
                     name: { [Op.iLike]: `%${searchTerm}%` },
                 },
                 order: [
-                    ['name', sortOrder], // Sort the results based on the 'username' field and the specified order
+                    [sortName, sortOrder], // Sort the results based on the 'username' field and the specified order
                 ],
             });
             return res.sendSuccess(res, season);
