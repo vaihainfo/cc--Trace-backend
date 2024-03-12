@@ -25,7 +25,9 @@ import KnitFabricSelection from "../../models/knit-fabric-selectiion.model";
 import KnitProcess from "../../models/knit-process.model";
 import WeaverFabricSelection from "../../models/weaver-fabric-selection.model";
 import WeaverProcess from "../../models/weaver-process.model";
-
+import { _getSpinnerProcessTracingChartData } from '../spinner/index';
+import { formatDataFromWeaver, formartDataForFabric } from '../../util/tracing-chart-data-formatter';
+import SpinSales from '../../models/spin-sales.model';
 /**
  * Dying Dashboard for fabric
  */
@@ -483,8 +485,8 @@ const exportDyingProcess = async (req: Request, res: Response) => {
         buyer: item.buyer
           ? item.buyer.name
           : item.abuyer
-          ? item.abuyer.name
-          : item.processor_name,
+            ? item.abuyer.name
+            : item.processor_name,
         invoice: item.invoice_no ? item.invoice_no : "",
         order: item.batch_lot_no ? item.batch_lot_no : "",
         qty: item.total_fabric_quantity ? item.total_fabric_quantity : "",
@@ -563,12 +565,12 @@ const chooseDyingFabric = async (req: Request, res: Response) => {
       knitterWhere.knitter_id = { [Op.in]: idArray };
     }
 
-    if(weaverId && knitterId){
+    if (weaverId && knitterId) {
       const idArrayKnit: number[] = knitterId
         .split(",")
         .map((id: any) => parseInt(id, 10));
       knitterWhere.knitter_id = { [Op.in]: idArrayKnit };
-  
+
       const idArrayWeav: number[] = weaverId
         .split(",")
         .map((id: any) => parseInt(id, 10));
@@ -593,12 +595,13 @@ const chooseDyingFabric = async (req: Request, res: Response) => {
     // }
 
     if (lotNo) {
-        const filterValues: any[] = lotNo
-          .split(",")
-          .map((value: any) => value.trim());
+      const filterValues: any[] = lotNo
+        .split(",")
+        .map((value: any) => value.trim());
 
-        whereCondition[Op.or]= filterValues.map((value) => ({
-            batch_lot_no: {[Op.iLike]: `%${value}%`}}))
+      whereCondition[Op.or] = filterValues.map((value) => ({
+        batch_lot_no: { [Op.iLike]: `%${value}%` }
+      }))
     }
 
     let include = [
@@ -735,7 +738,7 @@ const fetchWashingTransactions = async (req: Request, res: Response) => {
           buyer_type: "Washing",
           fabric_id: fabricId,
           ...weaverWhere,
-        //   [Op.or]: [{ "$weaver.name$": { [Op.iLike]: `%${searchTerm}%` } }],
+          //   [Op.or]: [{ "$weaver.name$": { [Op.iLike]: `%${searchTerm}%` } }],
         },
         include: [
           ...include,
@@ -748,7 +751,7 @@ const fetchWashingTransactions = async (req: Request, res: Response) => {
           buyer_type: "Washing",
           fabric_id: fabricId,
           ...knitterWhere,
-        //   [Op.or]: [{ "$knitter.name$": { [Op.iLike]: `%${searchTerm}%` } }],
+          //   [Op.or]: [{ "$knitter.name$": { [Op.iLike]: `%${searchTerm}%` } }],
         },
         include: [
           ...include,
@@ -761,9 +764,9 @@ const fetchWashingTransactions = async (req: Request, res: Response) => {
           buyer_type: "Washing",
           fabric_id: fabricId,
           ...dyingWhere,
-        //   [Op.or]: [
-        //     { "$dying_fabric.name$": { [Op.iLike]: `%${searchTerm}%` } },
-        //   ],
+          //   [Op.or]: [
+          //     { "$dying_fabric.name$": { [Op.iLike]: `%${searchTerm}%` } },
+          //   ],
         },
         include: [
           ...include,
@@ -1061,23 +1064,23 @@ const chooseWashingFabric = async (req: Request, res: Response) => {
     }
 
 
-        // Helper function to add conditions based on filter values
-        const addFilterCondition = (whereObj: any, filterKey: string, arr: any ) => {
-          let idArray:number[] = arr ? arr.split(",").map((id: any) => parseInt(id, 10)) : [0];
-          if (idArray && idArray.length > 0) {
-              whereObj[filterKey] = { [Op.in]: idArray };
-          } else {
-              // If no filter value provided, set an impossible condition to filter out all data
-              whereObj[filterKey] = { [Op.in]: [0] };
-          }
-      };
-    
-      // Dynamically add conditions for each filter
-      if(knitterId || weaverId || dyingId){
-          addFilterCondition(knitterWhere, 'knitter_id', knitterId);
-          addFilterCondition(weaverWhere, 'weaver_id', weaverId);
-          addFilterCondition(dyingWhere, 'dying_id', dyingId);
+    // Helper function to add conditions based on filter values
+    const addFilterCondition = (whereObj: any, filterKey: string, arr: any) => {
+      let idArray: number[] = arr ? arr.split(",").map((id: any) => parseInt(id, 10)) : [0];
+      if (idArray && idArray.length > 0) {
+        whereObj[filterKey] = { [Op.in]: idArray };
+      } else {
+        // If no filter value provided, set an impossible condition to filter out all data
+        whereObj[filterKey] = { [Op.in]: [0] };
       }
+    };
+
+    // Dynamically add conditions for each filter
+    if (knitterId || weaverId || dyingId) {
+      addFilterCondition(knitterWhere, 'knitter_id', knitterId);
+      addFilterCondition(weaverWhere, 'weaver_id', weaverId);
+      addFilterCondition(dyingWhere, 'dying_id', dyingId);
+    }
 
     if (garmentOrderRef) {
       const idArray: any[] = garmentOrderRef.split(",").map((id: any) => id);
@@ -1093,12 +1096,13 @@ const chooseWashingFabric = async (req: Request, res: Response) => {
     // }
 
     if (lotNo) {
-        const filterValues: any[] = lotNo
-          .split(",")
-          .map((value: any) => value.trim());
+      const filterValues: any[] = lotNo
+        .split(",")
+        .map((value: any) => value.trim());
 
-        whereCondition[Op.or]= filterValues.map((value) => ({
-            batch_lot_no: {[Op.iLike]: `%${value}%`}}))
+      whereCondition[Op.or] = filterValues.map((value) => ({
+        batch_lot_no: { [Op.iLike]: `%${value}%` }
+      }))
     }
 
     let include = [
@@ -1239,8 +1243,8 @@ const exportWashingProcess = async (req: Request, res: Response) => {
         buyer: item.buyer
           ? item.buyer.name
           : item.abuyer
-          ? item.abuyer.name
-          : item.processor_name,
+            ? item.abuyer.name
+            : item.processor_name,
         invoice: item.invoice_no ? item.invoice_no : "",
         order: item.batch_lot_no ? item.batch_lot_no : "",
         qty: item.total_fabric_quantity ? item.total_fabric_quantity : "",
@@ -1688,8 +1692,8 @@ const exportPrintingProcess = async (req: Request, res: Response) => {
         buyer: item.buyer
           ? item.buyer.name
           : item.abuyer
-          ? item.abuyer.name
-          : item.processor_name,
+            ? item.abuyer.name
+            : item.processor_name,
         invoice: item.invoice_no ? item.invoice_no : "",
         order: item.batch_lot_no ? item.batch_lot_no : "",
         qty: item.total_fabric_quantity ? item.total_fabric_quantity : "",
@@ -1815,22 +1819,22 @@ const fetchCompactingTransactionSold = async (req: Request, res: Response) => {
     let printingWhere: any = {};
     let dyingWhere: any = {};
     let whereCondition: any = [
-        // Search by order ref
-        { garment_order_ref: { [Op.iLike]: `%${searchTerm}%` } }, // Search by order ref
-        { brand_order_ref: { [Op.iLike]: `%${searchTerm}%` } }, // Search by order ref
-        { batch_lot_no: { [Op.iLike]: `%${searchTerm}%` } },
-        { invoice_no: { [Op.iLike]: `%${searchTerm}%` } },
-        { "$program.program_name$": { [Op.iLike]: `%${searchTerm}%` } },
-        { processor_name: { [Op.iLike]: `%${searchTerm}%` } },
-        { processor_address: { [Op.iLike]: `%${searchTerm}%` } },
-      ];
+      // Search by order ref
+      { garment_order_ref: { [Op.iLike]: `%${searchTerm}%` } }, // Search by order ref
+      { brand_order_ref: { [Op.iLike]: `%${searchTerm}%` } }, // Search by order ref
+      { batch_lot_no: { [Op.iLike]: `%${searchTerm}%` } },
+      { invoice_no: { [Op.iLike]: `%${searchTerm}%` } },
+      { "$program.program_name$": { [Op.iLike]: `%${searchTerm}%` } },
+      { processor_name: { [Op.iLike]: `%${searchTerm}%` } },
+      { processor_address: { [Op.iLike]: `%${searchTerm}%` } },
+    ];
 
     if (!fabricId) {
       return res.sendError(res, "Need Fabric Id");
     }
 
     if (searchTerm) {
-        washingWhere[Op.or] = [
+      washingWhere[Op.or] = [
         ...whereCondition,
         { "$washing.name$": { [Op.iLike]: `%${searchTerm}%` } }
       ];
@@ -1858,7 +1862,7 @@ const fetchCompactingTransactionSold = async (req: Request, res: Response) => {
           status: "Sold",
           buyer_type: "Compacting",
           fabric_id: fabricId,
-        //   [Op.or]: [{ "$washing.name$": { [Op.iLike]: `%${searchTerm}%` } }],
+          //   [Op.or]: [{ "$washing.name$": { [Op.iLike]: `%${searchTerm}%` } }],
         },
         include: [
           ...include,
@@ -1871,7 +1875,7 @@ const fetchCompactingTransactionSold = async (req: Request, res: Response) => {
           status: "Sold",
           buyer_type: "Compacting",
           fabric_id: fabricId,
-        //   [Op.or]: [{ "$printing.name$": { [Op.iLike]: `%${searchTerm}%` } }],
+          //   [Op.or]: [{ "$printing.name$": { [Op.iLike]: `%${searchTerm}%` } }],
         },
         include: [
           ...include,
@@ -1884,9 +1888,9 @@ const fetchCompactingTransactionSold = async (req: Request, res: Response) => {
           status: "Sold",
           buyer_type: "Compacting",
           fabric_id: fabricId,
-        //   [Op.or]: [
-            // { "$dying_fabric.name$": { [Op.iLike]: `%${searchTerm}%` } },
-        //   ],
+          //   [Op.or]: [
+          // { "$dying_fabric.name$": { [Op.iLike]: `%${searchTerm}%` } },
+          //   ],
         },
         include: [
           ...include,
@@ -2121,23 +2125,23 @@ const chooseCompactingFabric = async (req: Request, res: Response) => {
       whereCondition.program_id = { [Op.in]: idArray };
     }
 
-     // Helper function to add conditions based on filter values
-     const addFilterCondition = (whereObj: any, filterKey: string, arr: any ) => {
-      let idArray:number[] = arr ? arr.split(",").map((id: any) => parseInt(id, 10)) : [0];
+    // Helper function to add conditions based on filter values
+    const addFilterCondition = (whereObj: any, filterKey: string, arr: any) => {
+      let idArray: number[] = arr ? arr.split(",").map((id: any) => parseInt(id, 10)) : [0];
       if (idArray && idArray.length > 0) {
-          whereObj[filterKey] = { [Op.in]: idArray };
+        whereObj[filterKey] = { [Op.in]: idArray };
       } else {
-          // If no filter value provided, set an impossible condition to filter out all data
-          whereObj[filterKey] = { [Op.in]: [0] };
+        // If no filter value provided, set an impossible condition to filter out all data
+        whereObj[filterKey] = { [Op.in]: [0] };
       }
-  };
+    };
 
-  // Dynamically add conditions for each filter
-  if(washingId || printingId || dyingId){
+    // Dynamically add conditions for each filter
+    if (washingId || printingId || dyingId) {
       addFilterCondition(washingWhere, 'washing_id', washingId);
       addFilterCondition(printingWhere, 'printing_id', printingId);
       addFilterCondition(dyingWhere, 'dying_id', dyingId);
-  }
+    }
 
     // if (washingId) {
     //   const idArray: number[] = washingId
@@ -2739,6 +2743,86 @@ const getBatchLot = async (req: Request, res: Response) => {
   }
 };
 
+const _getFabricProcessTracingChartData = async (type: any, query: any) => {
+  let Model;
+  let as: any;
+  switch (type) {
+    case 'dying': Model = DyingSales; as = 'dying_fabric'; break;
+    case 'printing': Model = PrintingSales; as = 'printing'; break;
+    case 'washing': Model = WashingSales; as = 'washing'; break;
+    case 'compacting': Model = CompactingSales; as = 'compacting'; break;
+  };
+
+  let fabrics = await Model.findAll({
+    where: query,
+    include: [
+      {
+        model: Fabric,
+        as
+      }
+    ]
+  });
+  console.log(fabrics.length, query);
+  fabrics = await Promise.all(fabrics.map(async (el: any) => {
+    el = el.toJSON();
+    let asRef: any = 'weaver';
+    let asRefKey: any = 'buyer_id';
+    el.weavKnit = await WeaverSales.findAll({
+      where: {
+        fabric_id: el[as].id
+      },
+      include: [
+        {
+          model: Weaver,
+          as: 'weaver'
+        }
+      ]
+    });
+    console.log(el.weavKnit.length);
+    if (el.weavKnit.length == 0) {
+      el.weavKnit = await KnitSales.findAll({
+        where: {
+          fabric_id: el[as].id
+        },
+        include: [
+          {
+            model: Knitter,
+            as: 'knitter'
+          }
+        ]
+      });
+      asRef = 'knitter';
+      asRefKey = 'knitter_id';
+    };
+    console.log(el.weavKnit.length);
+    el.weavKnit = await Promise.all(el.weavKnit.map(async (el: any) => {
+      el = el.toJSON();
+      el.spin = await SpinSales.findAll({
+        where: {
+          [asRefKey]: el[asRef].id
+        }
+      });
+      el.spinsCount = el.spin.length;
+      el.spinskIds = el.spin.map((el: any) => el.knitter_id);
+      el.spin = await Promise.all(el.spin.map(async (el: any) => {
+        return _getSpinnerProcessTracingChartData(el.reel_lot_no)
+      }));
+      return el;
+    }));
+    if (el.weavKnit.length != 0) {
+      console.log('chart data created');
+      el.weavKnitChart = formatDataFromWeaver(el.weavKnit[0][asRef].name, el.weavKnit);
+    };
+    return el;
+  }));
+  return formartDataForFabric(fabrics[0][as].name, fabrics);
+}
+
+const getFabricProcessTracingChartData = async (req: Request, res: Response) => {
+  const { type, ...query } = req.query;
+  res.send(await _getFabricProcessTracingChartData(type, query));
+}
+
 export {
   fetchDyingTransactions,
   getProgram,
@@ -2777,4 +2861,6 @@ export {
   deletePrintingProcess,
   getProcessName,
   getBatchLot,
+  getFabricProcessTracingChartData,
+  _getFabricProcessTracingChartData
 };

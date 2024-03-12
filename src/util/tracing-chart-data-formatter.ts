@@ -2,14 +2,14 @@ export const formatDataForGinnerProcess = (reelLotNo: any, data: any): any => {
     let treeData = {
         name: reelLotNo,
         type: 'cotton_image',
-        width: 200,
+        width: 300,
         height: 100,
         isRoot: true,
         children: data.map((el: any) => {
             return {
                 name: el.farm_name,
                 type: 'farm',
-                width: 200,
+                width: 300,
                 height: 40,
                 children: [
                     {
@@ -23,7 +23,7 @@ export const formatDataForGinnerProcess = (reelLotNo: any, data: any): any => {
                                 type: 'village',
                                 list: el.villages,
                                 intro: `${el.villages.length > 1 ? 'Multiple' : 'Single'} Village${el.villages.length > 1 ? 's' : ''} Seed Cotton Consumption for REEL Bale Lot`,
-                                width: 200,
+                                width: 300,
                                 height: el.villages.length * 40 + 60,
                             }
                         ]
@@ -50,7 +50,7 @@ export const formatDataForSpinnerProcess = (reelLotNo: any, data: any): any => {
     if (data.length == 0) return {
         name: reelLotNo,
         type: 'spinner_image',
-        width: 200,
+        width: 300,
         height: 100,
         isRoot: true,
     };
@@ -88,7 +88,7 @@ export const formatDataForSpinnerProcess = (reelLotNo: any, data: any): any => {
     let treeData = {
         name: reelLotNo,
         type: 'spinner_image',
-        width: 200,
+        width: 300,
         height: 100,
         isRoot: true,
         groupData,
@@ -96,7 +96,7 @@ export const formatDataForSpinnerProcess = (reelLotNo: any, data: any): any => {
             return {
                 name: el,
                 type: 'farm',
-                width: 200,
+                width: 300,
                 height: 40,
                 children: [
                     {
@@ -110,8 +110,8 @@ export const formatDataForSpinnerProcess = (reelLotNo: any, data: any): any => {
                                 type: 'ginner',
                                 list: groupData[el].reels,
                                 intro: ``,
-                                width: 200,
-                                height: groupData[el].reels.length * 40,
+                                width: 300,
+                                height: groupData[el].reels.length * 20 + 20,
                                 children: [
                                     {
                                         name: el,
@@ -124,8 +124,8 @@ export const formatDataForSpinnerProcess = (reelLotNo: any, data: any): any => {
                                                 type: 'village',
                                                 list: groupData[el].villages,
                                                 intro: `${groupData[el].villages.length > 1 ? 'Multiple' : 'Single'} Village${groupData[el].villages.length > 1 ? 's' : ''} Seed Cotton Consumption for REEL Bale Lot`,
-                                                width: 200,
-                                                height: groupData[el].villages.length * 40 + 60,
+                                                width: 300,
+                                                height: groupData[el].villages.length * 20 + 60,
                                             }
                                         ]
                                     }
@@ -144,7 +144,7 @@ export const formatDataFromKnitter = (title: any, data: any) : any => {
     let treeData = {
         name: title,
         type: 'knitter_image',
-        width: 200,
+        width: 300,
         height: 100,
         isRoot: true,
         children: data[0].spin.filter((el: any) => el.children)
@@ -157,10 +157,34 @@ export const formatDataFromWeaver = (title: any, data: any) : any => {
     let treeData = {
         name: title,
         type: 'weaver_image',
-        width: 200,
+        width: 300,
         height: 100,
         isRoot: true,
         children: data[0].spin.filter((el: any) => el.children)
+    };
+    return treeData;
+}
+
+export const formartDataForFabric = (title: any, data: any) : any => {
+    let treeData = {
+        name: title,
+        type: 'fabric_image',
+        width: 300,
+        height: 100,
+        isRoot: true,
+        children: data.filter((el: any) => el.weavKnit.length > 0).map((el: any) => el.weavKnitChart)
+    };
+    return treeData;
+}
+
+export const formatDataForGarment = (title: any, data: any) : any => {
+    let treeData = {
+        name: title,
+        type: 'garment_image',
+        width: 300,
+        height: 100,
+        isRoot: true,
+        children: data.map((el:any) => el.fabricChart)
     };
     return treeData;
 }

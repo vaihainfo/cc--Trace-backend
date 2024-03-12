@@ -31,6 +31,8 @@ import KnitProcess from "../../models/knit-process.model";
 import KnitFabricSelection from "../../models/knit-fabric-selectiion.model";
 import ProcessorList from "../../models/processor-list.model";
 import { send_garment_mail } from "../send-emails";
+import { _getFabricProcessTracingChartData } from '../fabric/index';
+import { formatDataForGarment } from '../../util/tracing-chart-data-formatter';
 
 const fetchBrandQrGarmentSalesPagination = async (
   req: Request,
@@ -475,7 +477,7 @@ const fetchTransactionsAll = async (req: Request, res: Response) => {
     let result: any = await Promise.all([
       WeaverSales.findAll({
         where: {
-          status: { [Op.in] : [ 'Pending', "Pending for QR scanning"] },
+          status: { [Op.in]: ['Pending', "Pending for QR scanning"] },
           buyer_id: garmentId,
           ...whereCondition,
           ...weaverWhere,
@@ -487,7 +489,7 @@ const fetchTransactionsAll = async (req: Request, res: Response) => {
       }),
       KnitSales.findAll({
         where: {
-          status:  { [Op.in] : [ 'Pending', "Pending for QR scanning"] },
+          status: { [Op.in]: ['Pending', "Pending for QR scanning"] },
           buyer_id: garmentId,
           ...whereCondition,
           ...knitterWhere,
@@ -1879,7 +1881,7 @@ const getChooseFabricFilters = async (req: Request, res: Response) => {
       whereCondition.status = "Sold";
     }
 
-  
+
     if (knitterId) {
       const idArray: number[] = knitterId
         .split(",")
@@ -2069,6 +2071,29 @@ const getBuyerProcessors = async (req: Request, res: Response) => {
   }
 };
 
+const getGarmentProcessTracingChartData = async (req: Request, res: Response) => {
+  const query = req.query;
+  let garments = await GarmentProcess.findAll({
+    where: query
+  });
+
+  garments = await Promise.all(garments.map(async (el: any) => {
+    el = el.toJSON();
+    let fabricChart: any;
+    let process: any = ['dying', 'printing', 'washing', 'compacting'];
+    for (var i = 0; i < process.length; i++) {
+      fabricChart = await _getFabricProcessTracingChartData('dying', {
+        buyer_id: el.garment_id
+      });
+      if (fabricChart) break;
+    };
+    el.fabricChart = fabricChart;
+    return el;
+  }));
+  let key = Object.keys(req.query)[0];
+  res.send(formatDataForGarment(req.query[key], garments));
+}
+
 export {
   fetchBrandQrGarmentSalesPagination,
   exportBrandQrGarmentSales,
@@ -2093,4 +2118,5 @@ export {
   getChooseGarmentFilters,
   exportGarmentProcess,
   getBuyerProcessors,
+  getGarmentProcessTracingChartData
 };
