@@ -381,7 +381,7 @@ const createWeaverSales = async (req: Request, res: Response) => {
         let uniqueFilename = `weaver_sales_qrcode_${Date.now()}.png`;
         let da = encrypt(`Weaver,Sale,${weaverSales.id}`);
         let aa = await generateOnlyQrCode(da, uniqueFilename);
-        const gin = await WeaverSales.update({ qr: uniqueFilename ,status: 'Sold'}, {
+        const gin = await WeaverSales.update({ qr: uniqueFilename }, {
             where: {
                 id: weaverSales.id
             }
@@ -391,7 +391,7 @@ const createWeaverSales = async (req: Request, res: Response) => {
                 let val = await WeaverProcess.findOne({ where: { id: obj.process_id } });
                 if (val) {
                     let update = await WeaverProcess.update({ 
-                        qty_stock: val.dataValues.qty_stock - obj.qtyUsed }, { where: { id: obj.process_id } });
+                        qty_stock: val.dataValues.qty_stock - obj.qtyUsed,status: 'Sold' }, { where: { id: obj.process_id } });
                         let updatee = await WeaverFabric.update(
                             { sold_status: true },
                             { where: { id: obj.id } }

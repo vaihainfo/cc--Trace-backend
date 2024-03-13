@@ -1259,7 +1259,19 @@ const getSpinnerAndProgram = async (req: Request, res: Response) => {
       ],
       group: ["program_id", "program.id"],
     });
-    res.sendSuccess(res, { spinner, program });
+    const season = await SpinSales.findAll({
+      attributes: ["season_id", "season.name"],
+      where: whereCondition,
+      include: [
+        {
+          model: Season,
+          as: "season",
+          attributes: ["id", "name"],
+        },
+      ],
+      group: ["season_id", "season.id"],
+    });
+    res.sendSuccess(res, { spinner, program, season });
   } catch (error: any) {
     return res.sendError(res, error.message);
   }
