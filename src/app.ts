@@ -88,7 +88,15 @@ const app = express();
 app.use(express.json({ limit: '2450mb' }));
 
 app.use(express.urlencoded({ extended: true }));
+var corsOptions = {
+  origin: function (origin: any, callback: any) {
+    callback(null, true);
+  },
+  credentials: true,
+};
 
+app.use(cors(corsOptions));
+app.use(setInterface);
 //check connection to database
 const connectToDb = async () => {
   const data=await sequelize.sync({ force: false })
@@ -169,15 +177,7 @@ cron.schedule("15 * * * * *", async () => {
   exportGinnerProcessSchedule();
 });
 
-var corsOptions = {
-  origin: function (origin: any, callback: any) {
-    callback(null, true);
-  },
-  credentials: true,
-};
 
-app.use(cors(corsOptions));
-app.use(setInterface);
 // app.use("/", (req: Request, res: Response) =>{
 //     console.log("object");
 //     res.json("ressss")
