@@ -1711,7 +1711,7 @@ const chooseGarmentSales = async (req: Request, res: Response) => {
             [
               Sequelize.fn(
                 "COALESCE",
-                Sequelize.fn("SUM", Sequelize.col("no_of_pieces")),
+                Sequelize.fn("SUM", Sequelize.col("no_of_boxes")),
                 0
               ),
               "no_of_boxes",
@@ -1743,7 +1743,7 @@ const chooseGarmentSales = async (req: Request, res: Response) => {
           ...row.dataValues,
           garmentFabric: list,
           total_no_of_boxes: qty.dataValues?.no_of_boxes,
-          total_no_of_pieces: qty.dataValues?.no_of_boxes,
+          total_no_of_pieces: qty.dataValues?.no_of_pieces,
           total_no_of_pieces_stock: da.dataValues?.no_of_pieces,
         });
       }
