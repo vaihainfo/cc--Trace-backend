@@ -250,7 +250,7 @@ app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument, { customC
 
 app.use(errorMiddleware);
 
-app.listen(5001, () => {
+app.listen(5000, () => {
   connectToDb();
   console.log(`[*] Server listening on Port ${5000}`);
 });
