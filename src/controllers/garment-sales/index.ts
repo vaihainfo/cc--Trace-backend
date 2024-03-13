@@ -750,22 +750,22 @@ const createGarmentProcess = async (req: Request, res: Response) => {
             { qty_stock: obj.totalQty - obj.qtyUsed },
             { where: { id: obj.id } }
           );
-        } else if(obj.processor === "weaver") {
+        } else if (obj.processor === "weaver") {
           let update = await WeaverSales.update(
             { qty_stock: obj.totalQty - obj.qtyUsed },
             { where: { id: obj.id } }
           );
-        } else if(obj.processor === "dying") {
+        } else if (obj.processor === "dying") {
           let update = await DyingSales.update(
             { qty_stock: obj.totalQty - obj.qtyUsed },
             { where: { id: obj.id } }
           );
-        } else if(obj.processor === "washing") {
+        } else if (obj.processor === "washing") {
           let update = await WashingSales.update(
             { qty_stock: obj.totalQty - obj.qtyUsed },
             { where: { id: obj.id } }
           );
-        } else if(obj.processor === "printing") {
+        } else if (obj.processor === "printing") {
           let update = await PrintingSales.update(
             { qty_stock: obj.totalQty - obj.qtyUsed },
             { where: { id: obj.id } }
@@ -810,8 +810,8 @@ const updateGarmentProcess = async (req: Request, res: Response) => {
       no_of_boxes: req.body.noOfBoxes,
       finished_garment_image: req.body.finishedGarmentImage,
     };
-    const garmentProcess = await GarmentProcess.update(data,{where  : {id :req.body.id}});
-    const destroy = await GarmentFabricType.destroy({where :{process_id :req.body.id}});
+    const garmentProcess = await GarmentProcess.update(data, { where: { id: req.body.id } });
+    const destroy = await GarmentFabricType.destroy({ where: { process_id: req.body.id } });
     for await (let fabric of req.body.garmentfabrics) {
       let data = {
         process_id: req.body.id,
@@ -970,7 +970,7 @@ const fetchGarmentProcess = async (req: Request, res: Response) => {
       where: whereCondition,
       include: include
     });
-   
+
     return res.sendSuccess(res, rows);
   } catch (error: any) {
     return res.sendError(res, error.message);
@@ -1138,6 +1138,7 @@ const chooseFabricProcess = async (req: Request, res: Response) => {
     garmentId,
     fabricType,
     programId,
+    seasonId,
     garmentOrderRef,
     brandOrderRef,
     invoiceNo,
@@ -1145,7 +1146,7 @@ const chooseFabricProcess = async (req: Request, res: Response) => {
     weaverId,
     knitterId,
     washingId,
-    dyingId, 
+    dyingId,
     printingId,
     compactingId
   }: any = req.query;
@@ -1174,7 +1175,12 @@ const chooseFabricProcess = async (req: Request, res: Response) => {
         .map((id: any) => parseInt(id, 10));
       whereCondition.program_id = { [Op.in]: idArray };
     }
-
+    if (seasonId) {
+      const idArray: number[] = seasonId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.season_id = { [Op.in]: idArray };
+    }
     // Helper function to add conditions based on filter values
     const addFilterCondition = (whereObj: any, filterKey: string, arr: any) => {
       let idArray: number[] = arr
@@ -1394,7 +1400,7 @@ const createGarmentSales = async (req: Request, res: Response) => {
           let update = await GarmentProcess.update(
             {
               // qty_stock: val.dataValues.qty_stock - obj.qtyUsed,
-             status : 'Sold'
+              status: 'Sold'
             },
             { where: { id: obj.process_id } }
           );
@@ -1444,7 +1450,7 @@ const updateGarmentSales = async (req: Request, res: Response) => {
         },
       }
     );
-   
+
 
     return res.sendSuccess(res, kniSale);
   } catch (error: any) {
@@ -1692,8 +1698,8 @@ const chooseGarmentSales = async (req: Request, res: Response) => {
     });
 
     let data = [];
-    let qty :any;
-    let da:any;
+    let qty: any;
+    let da: any;
     for await (let row of garmentProcess) {
       let list = [];
 
@@ -2101,9 +2107,9 @@ const getprocessName = async (req: Request, res: Response) => {
 };
 
 const getChooseFabricFilters = async (req: Request, res: Response) => {
-  const { weaverId, garmentId, 
+  const { weaverId, garmentId,
     status, knitterId,
-    dyingId,washingId, printingId,compactingId   }: any = req.query;
+    dyingId, washingId, printingId, compactingId }: any = req.query;
   const whereCondition: any = {};
   const knitterWhere: any = {};
   const dyingWhere: any = {};
@@ -2166,7 +2172,7 @@ const getChooseFabricFilters = async (req: Request, res: Response) => {
       const idArray: number[] = compactingId
         .split(",")
         .map((id: any) => parseInt(id, 10));
-        compactingWhere.compacting_id = { [Op.in]: idArray };
+      compactingWhere.compacting_id = { [Op.in]: idArray };
     }
 
     let knitIds = await KnitSales.findAll({
@@ -2218,25 +2224,25 @@ const getChooseFabricFilters = async (req: Request, res: Response) => {
     });
     let dying = await DyingSales.findAll({
       attributes: ["batch_lot_no"],
-      where:  { ...whereCondition, ...dyingWhere },
+      where: { ...whereCondition, ...dyingWhere },
       group: ["batch_lot_no"],
     })
     let washingLot = await WashingSales.findAll({
       attributes: ["batch_lot_no"],
-      where:  { ...whereCondition, ...washingWhere },
-      group:  ["batch_lot_no"]
+      where: { ...whereCondition, ...washingWhere },
+      group: ["batch_lot_no"]
     })
-    let printing= await PrintingSales.findAll({
+    let printing = await PrintingSales.findAll({
       attributes: ["batch_lot_no"],
-      where:  { ...whereCondition, ...printingWhere },
+      where: { ...whereCondition, ...printingWhere },
       group: ["batch_lot_no"],
     })
     let compactingLot = await CompactingSales.findAll({
       attributes: ["batch_lot_no"],
-      where:  { ...whereCondition, ...compactingWhere },
-      group:["batch_lot_no"],
+      where: { ...whereCondition, ...compactingWhere },
+      group: ["batch_lot_no"],
     })
-    let batchLot = [...weaveBatchLot, ...knitBatchLot,...dying,...washingLot,...printing,...compactingLot];
+    let batchLot = [...weaveBatchLot, ...knitBatchLot, ...dying, ...washingLot, ...printing, ...compactingLot];
     const uniqueBatchSet: any = new Set<any>(
       batchLot?.map((order: any) => JSON.stringify(order))
     );
@@ -2259,22 +2265,22 @@ const getChooseFabricFilters = async (req: Request, res: Response) => {
       }),
       DyingSales.findAll({
         attributes: ["brand_order_ref", "garment_order_ref"],
-        where:  { ...whereCondition, ...dyingWhere },
+        where: { ...whereCondition, ...dyingWhere },
         group: ["brand_order_ref", "garment_order_ref"],
       }),
       WashingSales.findAll({
         attributes: ["brand_order_ref", "garment_order_ref"],
-        where:  { ...whereCondition, ...washingWhere },
+        where: { ...whereCondition, ...washingWhere },
         group: ["brand_order_ref", "garment_order_ref"],
       }),
       PrintingSales.findAll({
         attributes: ["brand_order_ref", "garment_order_ref"],
-        where:  { ...whereCondition, ...printingWhere },
+        where: { ...whereCondition, ...printingWhere },
         group: ["brand_order_ref", "garment_order_ref"],
       }),
       CompactingSales.findAll({
         attributes: ["brand_order_ref", "garment_order_ref"],
-        where:  { ...whereCondition, ...compactingWhere },
+        where: { ...whereCondition, ...compactingWhere },
         group: ["brand_order_ref", "garment_order_ref"],
       })
     ]);
