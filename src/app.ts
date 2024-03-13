@@ -81,6 +81,7 @@ import dashboardProcurementRouter from './router/dashboard/procurement';
 import dashboardProcessorRouter from './router/dashboard/processor';
 import { sendScheduledEmails } from "./controllers/email-management/scheduled-email.controller";
 import ExportData from "./models/export-data-check.model";
+import { exportGinnerProcessSchedule } from "./controllers/reports";
 
 const app = express();
 
@@ -160,6 +161,12 @@ var cron = require('node-cron');
 cron.schedule('0 23 * * *', async () => {
   console.log('running a task once a day at 11 pm');
   sendScheduledEmails();
+});
+
+cron.schedule("15 * * * * *", async () => {
+    console.log("entry");
+    
+  exportGinnerProcessSchedule();
 });
 
 var corsOptions = {
@@ -243,7 +250,7 @@ app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument, { customC
 
 app.use(errorMiddleware);
 
-app.listen(5000, () => {
+app.listen(5001, () => {
   connectToDb();
   console.log(`[*] Server listening on Port ${5000}`);
 });
