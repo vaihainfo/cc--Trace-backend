@@ -252,29 +252,33 @@ const exportNonOrganicFarmerReport = async (req: Request, res: Response) => {
         let farmer: any
         let include = [
             {
-                model: Program, as: 'program'
+                model: Program, as: 'program',
+                attributes: ['id','program_name']
             },
             {
-                model: Brand, as: 'brand'
+                model: Brand, as: 'brand',
+                attributes:['brand_name','id']
             },
             {
-                model: FarmGroup, as: 'farmGroup'
+                model: Country, as: 'country',
+                attributes:['county_name','id']
             },
             {
-                model: Country, as: 'country'
+                model: Village, as: 'village',
+                attributes:['village_name','id']
             },
             {
-                model: Village, as: 'village'
+                model: State, as: 'state',
+                attributes:['state_name','id']
             },
             {
-                model: State, as: 'state'
+                model: District, as: 'district',
+                attributes:['district_name','id']
             },
             {
-                model: District, as: 'district'
+                model: Block, as: 'block',
+                attributes:['block_name','id']
             },
-            {
-                model: Block, as: 'block'
-            }
         ]
         if (req.query.pagination === "true") {
             const { count, rows } = await Farmer.findAndCountAll({
@@ -287,7 +291,9 @@ const exportNonOrganicFarmerReport = async (req: Request, res: Response) => {
         } else {
             farmer = await Farmer.findAll({
                 where: whereCondition,
-                include: include
+                include: include,
+                attributes:['firstName','lastName','code','id',
+                'agri_total_area','cotton_total_area','total_estimated_cotton'],
             });
         }
         // Append data to worksheet
@@ -440,28 +446,41 @@ const exportOrganicFarmerReport = async (req: Request, res: Response) => {
         let farmer: any
         let include = [
             {
-                model: Program, as: 'program'
+                model: Program, as: 'program',
+                attributes: ['id','program_name']
             },
             {
-                model: Brand, as: 'brand'
+                model: Brand, as: 'brand',
+                attributes:['brand_name','id']
             },
             {
-                model: FarmGroup, as: 'farmGroup'
+                model: FarmGroup, as: 'farmGroup',
+                attributes:['name','id']
             },
             {
-                model: Country, as: 'country'
+                model: Country, as: 'country',
+                attributes:['county_name','id']
             },
             {
-                model: Village, as: 'village'
+                model: Village, as: 'village',
+                attributes:['village_name','id']
             },
             {
-                model: State, as: 'state'
+                model: State, as: 'state',
+                attributes:['state_name','id']
             },
             {
-                model: District, as: 'district'
+                model: District, as: 'district',
+                attributes:['district_name','id']
             },
             {
-                model: Block, as: 'block'
+                model: Block, as: 'block',
+                attributes:['block_name','id']
+            },
+            {
+                model: ICS, as: 'ics',
+                attributes:['ics_name','id']
+
             }
         ]
         if (req.query.pagination === "true") {
@@ -474,6 +493,8 @@ const exportOrganicFarmerReport = async (req: Request, res: Response) => {
             farmer = rows;
         } else {
             farmer = await Farmer.findAll({
+                attributes:['firstName','lastName','tracenet_id','cert_status','id',
+                'agri_total_area','cotton_total_area','total_estimated_cotton'],
                 where: whereCondition,
                 include: include
             });
@@ -481,7 +502,6 @@ const exportOrganicFarmerReport = async (req: Request, res: Response) => {
 
         // Append data to worksheet
         for await (const [index, item] of farmer.entries()) {
-            const ics = await ICS.findOne({ where: { id: item.ics_id } });
             const rowValues = Object.values({
                 index: (index + 1),
                 farmerName: item.firstName + " " + item.lastName,
@@ -496,20 +516,20 @@ const exportOrganicFarmerReport = async (req: Request, res: Response) => {
                 totalArea: item ? item.agri_total_area : '',
                 cottonArea: item ? item.cotton_total_area : '',
                 totalEstimatedCotton: item ? item.total_estimated_cotton : '',
-                icsName: ics ? ics.ics_name : '',
+                icsName: item.ics ? item.ics.ics_name : '',
                 icsStatus: item.cert_status ? item.cert_status : '',
             });
             worksheet.addRow(rowValues);
         }
         // // Auto-adjust column widths based on content
-        worksheet.columns.forEach((column: any) => {
-            let maxCellLength = 0;
-            column.eachCell({ includeEmpty: true }, (cell: any) => {
-                const cellLength = (cell.value ? cell.value.toString() : '').length;
-                maxCellLength = Math.max(maxCellLength, cellLength);
-            });
-            column.width = Math.min(15, maxCellLength + 2); // Limit width to 30 characters
-        });
+        // worksheet.columns.forEach((column: any) => {
+        //     let maxCellLength = 0;
+        //     column.eachCell({ includeEmpty: true }, (cell: any) => {
+        //         const cellLength = (cell.value ? cell.value.toString() : '').length;
+        //         maxCellLength = Math.max(maxCellLength, cellLength);
+        //     });
+        //     column.width = Math.min(15, maxCellLength + 2); // Limit width to 30 characters
+        // });
 
         // Save the workbook
         await workbook.xlsx.writeFile(excelFilePath);

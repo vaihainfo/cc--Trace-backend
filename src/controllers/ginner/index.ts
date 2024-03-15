@@ -24,6 +24,7 @@ import FarmGroup from "../../models/farm-group.model";
 import { formatDataForGinnerProcess } from "../../util/tracing-chart-data-formatter";
 import Farm from "../../models/farm.model";
 import QualityParameter from "../../models/quality-parameter.model";
+import Brand from "../../models/brand.model";
 
 //create Ginner Process
 const createGinnerProcess = async (req: Request, res: Response) => {
@@ -1202,7 +1203,7 @@ const fetchGinSaleBale = async (req: Request, res: Response) => {
             {
               model: Ginner,
               as: "ginner",
-              attributes: ["id", "name", "address"],
+              attributes: ["id", "name", "address",'brand'],
             },
           ],
         },
@@ -1211,7 +1212,18 @@ const fetchGinSaleBale = async (req: Request, res: Response) => {
       offset: offset,
       limit: limit,
     });
-    return res.sendPaginationSuccess(res, rows, count);
+    let data = [ ]
+    for await(let obj of rows) {
+      if(obj.dataValues.sales.ginner) {
+        let brands = await Brand.findAll({
+          where : { id :obj.dataValues.sales.ginner.brand }
+        })
+        data.push({...obj.dataValues,brands})
+      }
+     
+     
+    }
+    return res.sendPaginationSuccess(res, data,count);
   } catch (error: any) {
     console.error(error);
     return res.sendError(res, error.meessage);
