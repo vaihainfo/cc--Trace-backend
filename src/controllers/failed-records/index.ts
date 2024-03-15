@@ -147,6 +147,7 @@ const exportFailedRecords = async (req: Request, res: Response) => {
 
         const { count, rows } = await FailedRecords.findAndCountAll({
             where: whereCondition,
+            attributes :['createdAt','type','farmer_code','farmer_name','reason'],
             include: [{
                 model: Season,
                 as: "season",
@@ -160,15 +161,16 @@ const exportFailedRecords = async (req: Request, res: Response) => {
         });
 
         // Append data to worksheet
-        for await (const [index, item] of rows.entries()) {
+        for (let i=0; i <count ; i++) {
+            
             const rowValues = Object.values({
-                index: index + 1,
-                date: item.createdAt ? item.createdAt : '',
-                type: item.type ? item.type : '',
-                season: item.season ? item.season.name : '',
-                code: item.farmer_code ? item.farmer_code : '',
-                name: item.farmer_name ? item.farmer_name : '',
-                reason: item.reason ? item.reason : '',
+                index: i + 1,
+                date: rows[i].createdAt ? rows[i].createdAt : '',
+                type: rows[i].type ? rows[i].type : '',
+                season: rows[i].season ? rows[i].season.name : '',
+                code: rows[i].farmer_code ? rows[i].farmer_code : '',
+                name: rows[i].farmer_name ? rows[i].farmer_name : '',
+                reason: rows[i].reason ? rows[i].reason : '',
             });
             worksheet.addRow(rowValues);
         }
