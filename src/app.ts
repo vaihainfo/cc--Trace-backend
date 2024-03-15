@@ -81,7 +81,7 @@ import dashboardProcurementRouter from './router/dashboard/procurement';
 import dashboardProcessorRouter from './router/dashboard/processor';
 import { sendScheduledEmails } from "./controllers/email-management/scheduled-email.controller";
 import ExportData from "./models/export-data-check.model";
-import { exportGinnerProcessSchedule } from "./controllers/reports";
+import { exportGinnerPendingSchedule, exportGinnerProcessSchedule, exportGinnerSalesSchedule, exportGinnerSeedCottonSchedule, exportGinnerySummarySchedule } from "./controllers/reports";
 
 const app = express();
 
@@ -171,10 +171,15 @@ cron.schedule('0 23 * * *', async () => {
   sendScheduledEmails();
 });
 
-cron.schedule("15 * * * * *", async () => {
+// cron.schedule("1 * * * * *", async () => {
+cron.schedule("*/3 * * * *", async () => {
     console.log("entry");
     
-  // exportGinnerProcessSchedule();
+  exportGinnerProcessSchedule();
+exportGinnerySummarySchedule()
+// exportGinnerSalesSchedule()
+exportGinnerPendingSchedule()
+exportGinnerSeedCottonSchedule()
 });
 
 

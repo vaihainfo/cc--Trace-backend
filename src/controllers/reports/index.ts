@@ -60,6 +60,10 @@ import WashingFabricSelection from "../../models/washing-fabric-selection.model"
 import DyingSales from "../../models/dying-sales.model";
 import DyingFabricSelection from "../../models/dying-fabric-selection.model";
 import ExportGinnerProcess from "../../models/export-ginner-lintbale-process.model";
+import ExportGinnerSummary from "../../models/export-ginner-summary.model";
+import ExportGinnerSale from "../../models/export-ginner-lintbale-sale.model";
+import ExportGinnerPending from "../../models/ginner-pending-sale.model";
+import ExportGinnerCottonStock from "../../models/ginner-seed-cotton-stock.model";
 
 const fetchBaleProcess = async (req: Request, res: Response) => {
   const searchTerm = req.query.search || "";
@@ -393,6 +397,8 @@ console.log(counts);
         brandId:item.ginner.brand[0]
     }
     // );
+    
+    
     arrayData.push(rowValues)
   }
   ExportGinnerProcess.bulkCreate(arrayData)
@@ -674,6 +680,70 @@ const fetchPendingGinnerSales = async (req: Request, res: Response) => {
   }
 };
 
+const exportGinnerPendingSchedule=async()=>{
+   let count= await ExportGinnerPending.count()
+    let include = [
+        {
+          model: Ginner,
+          as: "ginner",
+        },
+        {
+          model: Season,
+          as: "season",
+        },
+        {
+          model: Program,
+          as: "program",
+        },
+        {
+          model: Spinner,
+          as: "buyerdata",
+          attributes: ["id", "name"],
+        },
+      ];
+      const gin = await GinSales.findAll({
+        // where: whereCondition,
+        include: include,
+        offset:count,
+        limit:1
+      });
+const array=[]
+      for await (const [index, item] of gin.entries()) {
+        // console.log("item",item.ginner);
+        
+        const rowValues = {
+          index: index + 1,
+          date: item.date ? item.date : null,
+          season: item.season ? item.season.name : "",
+          ginner: item.ginner ? item.ginner.name : "",
+          invoice: item.invoice_no ? item.invoice_no : "",
+          buyer: item.buyerdata ? item.buyerdata.name : "",
+          lot_no: item.lot_no ? item.lot_no : "",
+          reel_lot_no: item.reel_lot_no ? item.reel_lot_no : "",
+          no_of_bales: item.no_of_bales ? item.no_of_bales : "",
+          press_no: item.press_no ? item.press_no : "",
+          rate: item.rate ? item.rate : "",
+          total_qty: item.total_qty ? item.total_qty : "",
+          program: item.program ? item.program.program_name : "",
+          status: item.status ? item.status : "",
+          countryId:item.ginner.country_id,
+          seasonId:item?.season_id,
+           ginnerId:item.ginner_id,
+           programId:item?.program_id,
+           brandId:item.ginner.brand[0]
+        };
+        // worksheet.addRow(rowValues);
+        // console.log(rowValues);
+        
+        array.push(rowValues)
+        
+        
+      }
+
+
+      await ExportGinnerPending.bulkCreate(array)
+}
+
 const exportPendingGinnerSales = async (req: Request, res: Response) => {
     // ginner_pending_sales_load
 
@@ -707,27 +777,27 @@ const exportPendingGinnerSales = async (req: Request, res: Response) => {
       const idArray: number[] = ginnerId
         .split(",")
         .map((id: any) => parseInt(id, 10));
-      whereCondition.ginner_id = { [Op.in]: idArray };
+      whereCondition.ginnerId = { [Op.in]: idArray };
     }
     if (brandId) {
       const idArray: number[] = brandId
         .split(",")
         .map((id: any) => parseInt(id, 10));
-      whereCondition["$ginner.brand$"] = { [Op.overlap]: idArray };
+      whereCondition.brand = { [Op.overlap]: idArray };
     }
 
     if (countryId) {
       const idArray: number[] = countryId
         .split(",")
         .map((id: any) => parseInt(id, 10));
-      whereCondition["$ginner.country_id$"] = { [Op.in]: idArray };
+      whereCondition.countryId = { [Op.in]: idArray };
     }
 
     if (seasonId) {
       const idArray: number[] = seasonId
         .split(",")
         .map((id: any) => parseInt(id, 10));
-      whereCondition.season_id = { [Op.in]: idArray };
+      whereCondition.seasonId = { [Op.in]: idArray };
     }
     whereCondition.status = "To be Submitted";
 
@@ -735,7 +805,7 @@ const exportPendingGinnerSales = async (req: Request, res: Response) => {
       const idArray: number[] = programId
         .split(",")
         .map((id: any) => parseInt(id, 10));
-      whereCondition.program_id = { [Op.in]: idArray };
+      whereCondition.programId = { [Op.in]: idArray };
     }
 
     // Create the excel workbook file
@@ -783,9 +853,9 @@ const exportPendingGinnerSales = async (req: Request, res: Response) => {
         attributes: ["id", "name"],
       },
     ];
-    const gin = await GinSales.findAll({
+    const gin = await ExportGinnerPending.findAll({
       where: whereCondition,
-      include: include,
+      
     });
     // Append data to worksheet
     for await (const [index, item] of gin.entries()) {
@@ -1054,6 +1124,162 @@ const fetchGinSalesPagination = async (req: Request, res: Response) => {
     return res.sendError(res, error.message);
   }
 };
+
+const   exportGinnerSalesSchedule=async()=>{
+    let include = [
+        {
+          model: Ginner,
+          as: "ginner",
+          attributes: [],
+        },
+        {
+          model: Season,
+          as: "season",
+          attributes: [],
+        },
+        {
+          model: Program,
+          as: "program",
+          attributes: [],
+        },
+        {
+          model: Spinner,
+          as: "buyerdata",
+          attributes: [],
+        },
+      ];
+      //fetch data with pagination
+  let count=await ExportGinnerSale.count()
+      const rows: any = await BaleSelection.findAll({
+        attributes: [
+          [Sequelize.literal('"sales"."id"'), "sales_id"],
+          [Sequelize.literal('"sales"."date"'), "date"],
+          [Sequelize.literal('"sales"."createdAt"'), "createdAt"],
+          [Sequelize.col('"sales"."season"."name"'), "season_name"],
+          [Sequelize.col('"sales"."ginner"."name"'), "ginner"],
+          [Sequelize.col('"sales"."ginner"."id"'), "ginnerId"],
+          [Sequelize.col('"sales"."ginner"."country_id"'), "countryId"],
+          [Sequelize.col('"sales"."ginner"."program_id"'), "programId"],
+          [Sequelize.col('"sales"."ginner"."brand"'), "brand"],
+          [Sequelize.col('"sales.season_id"'), "seasonId"],
+          [Sequelize.col('"sales"."program"."program_name"'), "program"],
+          [Sequelize.col('"sales"."buyerdata"."name"'), "buyerdata"],
+          [Sequelize.literal('"sales"."total_qty"'), "total_qty"],
+          [Sequelize.literal('"sales"."invoice_no"'), "invoice_no"],
+          [Sequelize.col('"bale"."ginprocess"."lot_no"'), "lot_no"],
+          [Sequelize.col('"bale"."ginprocess"."reel_lot_no"'), "reel_lot_no"],
+          [Sequelize.literal('"sales"."rate"'), "rate"],
+          [Sequelize.literal('"sales"."candy_rate"'), "candy_rate"],
+          [
+            Sequelize.fn(
+              "SUM",
+              Sequelize.literal('CAST("bale"."weight" AS DOUBLE PRECISION)')
+            ),
+            "lint_quantity",
+          ],
+          [
+            Sequelize.fn("COUNT", Sequelize.literal("DISTINCT bale_id")),
+            "no_of_bales",
+          ],
+          [Sequelize.literal('"sales"."sale_value"'), "sale_value"],
+          [Sequelize.literal('"sales"."press_no"'), "press_no"],
+          [Sequelize.literal('"sales"."qty_stock"'), "qty_stock"],
+          [Sequelize.literal('"sales"."weight_loss"'), "weight_loss"],
+          [Sequelize.literal('"sales"."invoice_file"'), "invoice_file"],
+          [Sequelize.literal('"sales"."vehicle_no"'), "vehicle_no"],
+          [Sequelize.literal('"sales"."transporter_name"'), "transporter_name"],
+          [Sequelize.literal('"sales"."transaction_agent"'), "transaction_agent"],
+          [Sequelize.literal('"sales"."status"'), "status"],
+        ],
+        // where: whereCondition,
+        include: [
+          {
+            model: GinSales,
+            as: "sales",
+            include: include,
+            attributes: [],
+          },
+          {
+            model: GinBale,
+            attributes: [],
+            as: "bale",
+            include: [
+              {
+                model: GinProcess,
+                as: "ginprocess",
+                attributes: [],
+              },
+            ],
+          },
+        ],
+        group: [
+          "bale.process_id",
+          "bale.ginprocess.id",
+          "sales.id",
+          "sales.season.id",
+          "sales.ginner.id",
+          "sales.buyerdata.id",
+          "sales.program.id",
+        ],
+        order: [["sales_id", "desc"]],
+        offset:count,
+        limit:2
+      });
+let array=[]
+      for await (const [index, item] of rows.entries()) {
+console.log("item",item);
+
+        const rowValues = {
+          index: index + 1,
+          date: item.dataValues.date ? item.dataValues.date : "",
+        //   created_at: item.dataValues?.createdAt ? item.dataValues?.createdAt : "",
+          season: item.dataValues?.season_name ? item.dataValues?.season_name : "",
+          ginner: item.dataValues?.ginner ? item.dataValues?.ginner : "",
+          invoice: item.dataValues?.invoice_no ? item.dataValues?.invoice_no : "",
+          buyer: item.dataValues?.buyerdata ? item.dataValues?.buyerdata : "",
+          heap: "",
+          lot_no: item.dataValues?.lot_no ? item.dataValues?.lot_no : "",
+          reel_lot_no: item.dataValues?.reel_lot_no
+            ? item.dataValues?.reel_lot_no
+            : "",
+          no_of_bales: item.dataValues?.no_of_bales
+            ? item.dataValues?.no_of_bales
+            : "",
+          press_no: item.dataValues?.press_no ? item.dataValues?.press_no : "",
+          rate: item.dataValues?.rate ? item.dataValues?.rate : "",
+          lint_quantity: item.dataValues?.lint_quantity
+            ? item.dataValues?.lint_quantity
+            : "",
+          sales_value: item.dataValues?.sale_value
+            ? item.dataValues?.sale_value
+            : "",
+          vehicle_no: item.dataValues?.vehicle_no
+            ? item.dataValues?.vehicle_no
+            : "",
+          transporter_name: item.dataValues?.transporter_name
+            ? item.dataValues?.transporter_name
+            : "",
+          program: item.dataValues?.program ? item.dataValues?.program : "",
+          agentDetails: item.dataValues?.transaction_agent
+            ? item.dataValues?.transaction_agent
+            : "NA",
+          status:
+            item.dataValues.status === "Sold"
+              ? "Sold"
+              : `Available [Stock : ${
+                  item.dataValues?.qty_stock ? item.dataValues?.qty_stock : 0
+                }]`,
+          
+
+        }
+        // worksheet.addRow(rowValues);
+        array.push(rowValues)
+        // console.log("row values",rowValues);
+        
+      }
+    //   await ExportGinnerSale.bulkCreate(array)
+
+}
 
 const exportGinnerSales = async (req: Request, res: Response) => {
     // export-gin-sales-report
@@ -7868,6 +8094,208 @@ const fetchGinnerSummaryPagination = async (req: Request, res: Response) => {
     return res.sendError(res, error.message);
   }
 };
+const exportGinnerySummarySchedule=async()=>{
+    const whereCondition: any = {};
+  const transactionWhere: any = {};
+  const ginBaleWhere: any = {};
+  const baleSelectionWhere: any = {};
+
+  const counts=await ExportGinnerSummary.count()
+
+    let rows = await Ginner.findAll({
+        // where: whereCondition,
+        // attributes: ["id", "name", "address"],
+        offset: counts,
+        limit: 10,
+      });
+
+      const arrayData=[]
+      for await (const [index, item] of rows.entries()) {
+        console.log("item",item);
+        
+        let obj: any = {};
+  
+        let [cottonProcured, cottonProcessed, lintProcured, lintSold]: any =
+          await Promise.all([
+            Transaction.findOne({
+              attributes: [
+                [
+                  sequelize.fn(
+                    "COALESCE",
+                    sequelize.fn(
+                      "SUM",
+                      Sequelize.literal("CAST(qty_purchased AS DOUBLE PRECISION)")
+                    ),
+                    0
+                  ),
+                  "qty",
+                ],
+              ],
+              where: {
+                ...transactionWhere,
+                mapped_ginner: item.id,
+              },
+            }),
+            Transaction.findOne({
+              attributes: [
+                [
+                  sequelize.fn(
+                    "COALESCE",
+                    sequelize.fn(
+                      "SUM",
+                      Sequelize.literal("CAST(qty_purchased AS DOUBLE PRECISION)")
+                    ),
+                    0
+                  ),
+                  "qty",
+                ],
+              ],
+              where: {
+                ...transactionWhere,
+                mapped_ginner: item.id,
+                status: "Sold",
+              },
+            }),
+            GinBale.findOne({
+              attributes: [
+                [
+                  sequelize.fn(
+                    "COALESCE",
+                    sequelize.fn(
+                      "SUM",
+                      sequelize.literal(
+                        'CAST("gin-bales"."weight" AS DOUBLE PRECISION)'
+                      )
+                    ),
+                    0
+                  ),
+                  "qty",
+                ],
+                [
+                  sequelize.fn(
+                    "COUNT",
+                    Sequelize.literal('DISTINCT "gin-bales"."id"')
+                  ),
+                  "bales_procured",
+                ],
+              ],
+              include: [
+                {
+                  model: GinProcess,
+                  as: "ginprocess",
+                  attributes: [],
+                },
+              ],
+              where: {
+                ...ginBaleWhere,
+                "$ginprocess.ginner_id$": item.id,
+              },
+              group: ["ginprocess.ginner_id"],
+            }),
+            BaleSelection.findOne({
+              attributes: [
+                [
+                  sequelize.fn(
+                    "COALESCE",
+                    sequelize.fn(
+                      "SUM",
+                      sequelize.literal(
+                        'CAST("bale"."weight" AS DOUBLE PRECISION)'
+                      )
+                    ),
+                    0
+                  ),
+                  "qty",
+                ],
+                [
+                  sequelize.fn("COUNT", Sequelize.literal("DISTINCT bale_id")),
+                  "bales_sold",
+                ],
+              ],
+              include: [
+                {
+                  model: GinSales,
+                  as: "sales",
+                  attributes: [],
+                },
+                {
+                  model: GinBale,
+                  as: "bale",
+                  attributes: [],
+                },
+              ],
+              where: {
+                ...baleSelectionWhere,
+                "$sales.ginner_id$": item.id,
+              },
+              group: ["sales.ginner_id"],
+            }),
+          ]);
+        obj.cottonProcuredKg = cottonProcured?.dataValues?.qty ?? 0;
+        obj.cottonProcessedKg = cottonProcessed?.dataValues?.qty ?? 0;
+        obj.cottonStockKg = cottonProcured
+          ? cottonProcured?.dataValues?.qty -
+            (cottonProcessed ? cottonProcessed?.dataValues?.qty : 0)
+          : 0;
+        obj.cottonProcuredMt = convert_kg_to_mt(
+          cottonProcured?.dataValues.qty ?? 0
+        );
+        obj.cottonProcessedeMt = convert_kg_to_mt(
+          cottonProcessed?.dataValues.qty ?? 0
+        );
+        obj.cottonStockMt = convert_kg_to_mt(
+          cottonProcured
+            ? cottonProcured?.dataValues?.qty -
+                (cottonProcessed ? cottonProcessed?.dataValues?.qty : 0)
+            : 0
+        );
+        obj.lintProcuredKg = lintProcured?.dataValues.qty ?? 0;
+        obj.lintProcuredMt = convert_kg_to_mt(lintProcured?.dataValues.qty ?? 0);
+        obj.lintSoldKg = lintSold?.dataValues.qty ?? 0;
+        obj.lintSoldMt = convert_kg_to_mt(lintSold?.dataValues.qty ?? 0);
+        obj.lintStockKg =
+          Number(obj.lintProcuredKg) > Number(obj.lintSoldKg)
+            ? Number(obj.lintProcuredKg) - Number(obj.lintSoldKg)
+            : 0;
+        obj.lintStockMt =
+          Number(obj.lintProcuredKg) > Number(obj.lintSoldKg)
+            ? Number(obj.lintProcuredMt) - Number(obj.lintSoldMt)
+            : 0;
+        obj.balesProduced = lintProcured?.dataValues?.bales_procured
+          ? Number(lintProcured?.dataValues?.bales_procured)
+          : 0;
+        obj.balesSold = lintSold?.dataValues?.bales_sold
+          ? Number(lintSold?.dataValues?.bales_sold)
+          : 0;
+        obj.balesStock =
+          obj.balesProduced > obj.balesSold
+            ? obj.balesProduced - obj.balesSold
+            : 0;
+  
+        const rowValues = {
+        //   index: index + 1,
+          name: item.name ? item.name : "",
+          cottonProcuredMt: obj.cottonProcuredMt,
+          cottonProcessedeMt: obj.cottonProcessedeMt,
+          cottonStockMt: obj.cottonStockMt,
+          lintProcuredMt: obj.lintProcuredMt,
+          lintSoldMt: obj.lintSoldMt,
+          lintStockMt: obj.lintStockMt,
+          balesProduced: obj.balesProduced,
+          balesSold: obj.balesSold,
+          balesStock: obj.balesStock,
+          countryId:item.country_id,
+          seasonId:item?.season_id??0,
+           ginnerId:item.ginnerUser_id[0],
+           programId:item.program_id[0],
+           brandId:item.brand[0]
+        }
+        // worksheet.addRow(rowValues);
+        arrayData.push(rowValues)
+        console.log('rowvalues',rowValues);
+      }
+      ExportGinnerSummary.bulkCreate(arrayData)
+}
 
 const exportGinnerSummary = async (req: Request, res: Response) => {
     
@@ -7909,23 +8337,23 @@ const exportGinnerSummary = async (req: Request, res: Response) => {
         .map((id: any) => parseInt(id, 10));
       whereCondition.country_id = { [Op.in]: idArray };
     }
-    if (programId) {
-      const idArray: number[] = programId
-        .split(",")
-        .map((id: any) => parseInt(id, 10));
-      transactionWhere.program_id = { [Op.in]: idArray };
-      ginBaleWhere["$ginprocess.program_id$"] = { [Op.in]: idArray };
-      baleSelectionWhere["$sales.program_id$"] = { [Op.in]: idArray };
-    }
+    // if (programId) {
+    //   const idArray: number[] = programId
+    //     .split(",")
+    //     .map((id: any) => parseInt(id, 10));
+    //   transactionWhere.program_id = { [Op.in]: idArray };
+    //   ginBaleWhere["$ginprocess.program_id$"] = { [Op.in]: idArray };
+    //   baleSelectionWhere["$sales.program_id$"] = { [Op.in]: idArray };
+    // }
 
-    if (seasonId) {
-      const idArray: number[] = seasonId
-        .split(",")
-        .map((id: any) => parseInt(id, 10));
-      transactionWhere.season_id = { [Op.in]: idArray };
-      ginBaleWhere["$ginprocess.season_id$"] = { [Op.in]: idArray };
-      baleSelectionWhere["$sales.season_id$"] = { [Op.in]: idArray };
-    }
+    // if (seasonId) {
+    //   const idArray: number[] = seasonId
+    //     .split(",")
+    //     .map((id: any) => parseInt(id, 10));
+    //   transactionWhere.season_id = { [Op.in]: idArray };
+    //   ginBaleWhere["$ginprocess.season_id$"] = { [Op.in]: idArray };
+    //   baleSelectionWhere["$sales.season_id$"] = { [Op.in]: idArray };
+    // }
 
     // Create the excel workbook file
     const workbook = new ExcelJS.Workbook();
@@ -7950,183 +8378,27 @@ const exportGinnerSummary = async (req: Request, res: Response) => {
       "Total bales in stock",
     ]);
     headerRow.font = { bold: true };
-    let rows = await Ginner.findAll({
+    let rows = await ExportGinnerSummary.findAll({
       where: whereCondition,
-      attributes: ["id", "name", "address"],
+    //   attributes: ["id", "name", "address"],
     });
     // Append data to worksheet
     for await (const [index, item] of rows.entries()) {
       let obj: any = {};
 
-      let [cottonProcured, cottonProcessed, lintProcured, lintSold]: any =
-        await Promise.all([
-          Transaction.findOne({
-            attributes: [
-              [
-                sequelize.fn(
-                  "COALESCE",
-                  sequelize.fn(
-                    "SUM",
-                    Sequelize.literal("CAST(qty_purchased AS DOUBLE PRECISION)")
-                  ),
-                  0
-                ),
-                "qty",
-              ],
-            ],
-            where: {
-              ...transactionWhere,
-              mapped_ginner: item.id,
-            },
-          }),
-          Transaction.findOne({
-            attributes: [
-              [
-                sequelize.fn(
-                  "COALESCE",
-                  sequelize.fn(
-                    "SUM",
-                    Sequelize.literal("CAST(qty_purchased AS DOUBLE PRECISION)")
-                  ),
-                  0
-                ),
-                "qty",
-              ],
-            ],
-            where: {
-              ...transactionWhere,
-              mapped_ginner: item.id,
-              status: "Sold",
-            },
-          }),
-          GinBale.findOne({
-            attributes: [
-              [
-                sequelize.fn(
-                  "COALESCE",
-                  sequelize.fn(
-                    "SUM",
-                    sequelize.literal(
-                      'CAST("gin-bales"."weight" AS DOUBLE PRECISION)'
-                    )
-                  ),
-                  0
-                ),
-                "qty",
-              ],
-              [
-                sequelize.fn(
-                  "COUNT",
-                  Sequelize.literal('DISTINCT "gin-bales"."id"')
-                ),
-                "bales_procured",
-              ],
-            ],
-            include: [
-              {
-                model: GinProcess,
-                as: "ginprocess",
-                attributes: [],
-              },
-            ],
-            where: {
-              ...ginBaleWhere,
-              "$ginprocess.ginner_id$": item.id,
-            },
-            group: ["ginprocess.ginner_id"],
-          }),
-          BaleSelection.findOne({
-            attributes: [
-              [
-                sequelize.fn(
-                  "COALESCE",
-                  sequelize.fn(
-                    "SUM",
-                    sequelize.literal(
-                      'CAST("bale"."weight" AS DOUBLE PRECISION)'
-                    )
-                  ),
-                  0
-                ),
-                "qty",
-              ],
-              [
-                sequelize.fn("COUNT", Sequelize.literal("DISTINCT bale_id")),
-                "bales_sold",
-              ],
-            ],
-            include: [
-              {
-                model: GinSales,
-                as: "sales",
-                attributes: [],
-              },
-              {
-                model: GinBale,
-                as: "bale",
-                attributes: [],
-              },
-            ],
-            where: {
-              ...baleSelectionWhere,
-              "$sales.ginner_id$": item.id,
-            },
-            group: ["sales.ginner_id"],
-          }),
-        ]);
-      obj.cottonProcuredKg = cottonProcured?.dataValues?.qty ?? 0;
-      obj.cottonProcessedKg = cottonProcessed?.dataValues?.qty ?? 0;
-      obj.cottonStockKg = cottonProcured
-        ? cottonProcured?.dataValues?.qty -
-          (cottonProcessed ? cottonProcessed?.dataValues?.qty : 0)
-        : 0;
-      obj.cottonProcuredMt = convert_kg_to_mt(
-        cottonProcured?.dataValues.qty ?? 0
-      );
-      obj.cottonProcessedeMt = convert_kg_to_mt(
-        cottonProcessed?.dataValues.qty ?? 0
-      );
-      obj.cottonStockMt = convert_kg_to_mt(
-        cottonProcured
-          ? cottonProcured?.dataValues?.qty -
-              (cottonProcessed ? cottonProcessed?.dataValues?.qty : 0)
-          : 0
-      );
-      obj.lintProcuredKg = lintProcured?.dataValues.qty ?? 0;
-      obj.lintProcuredMt = convert_kg_to_mt(lintProcured?.dataValues.qty ?? 0);
-      obj.lintSoldKg = lintSold?.dataValues.qty ?? 0;
-      obj.lintSoldMt = convert_kg_to_mt(lintSold?.dataValues.qty ?? 0);
-      obj.lintStockKg =
-        Number(obj.lintProcuredKg) > Number(obj.lintSoldKg)
-          ? Number(obj.lintProcuredKg) - Number(obj.lintSoldKg)
-          : 0;
-      obj.lintStockMt =
-        Number(obj.lintProcuredKg) > Number(obj.lintSoldKg)
-          ? Number(obj.lintProcuredMt) - Number(obj.lintSoldMt)
-          : 0;
-      obj.balesProduced = lintProcured?.dataValues?.bales_procured
-        ? Number(lintProcured?.dataValues?.bales_procured)
-        : 0;
-      obj.balesSold = lintSold?.dataValues?.bales_sold
-        ? Number(lintSold?.dataValues?.bales_sold)
-        : 0;
-      obj.balesStock =
-        obj.balesProduced > obj.balesSold
-          ? obj.balesProduced - obj.balesSold
-          : 0;
-
+      
       const rowValues = Object.values({
         index: index + 1,
         name: item.name ? item.name : "",
-        cottonProcuredMt: obj.cottonProcuredMt,
-        cottonProcessedeMt: obj.cottonProcessedeMt,
-        cottonStockMt: obj.cottonStockMt,
-        lintProcuredMt: obj.lintProcuredMt,
-        lintSoldMt: obj.lintSoldMt,
-        lintStockMt: obj.lintStockMt,
-        balesProduced: obj.balesProduced,
-        balesSold: obj.balesSold,
-        balesStock: obj.balesStock,
+        cottonProcuredMt: item.cottonProcuredMt,
+        cottonProcessedeMt: item.cottonProcessedeMt,
+        cottonStockMt: item.cottonStockMt,
+        lintProcuredMt: item.lintProcuredMt,
+        lintSoldMt: item.lintSoldMt,
+        lintStockMt: item.lintStockMt,
+        balesProduced: item.balesProduced,
+        balesSold: item.balesSold,
+        balesStock: item.balesStock,
       });
       worksheet.addRow(rowValues);
     }
@@ -8303,6 +8575,120 @@ const fetchGinnerCottonStock = async (req: Request, res: Response) => {
   }
 };
 
+const exportGinnerSeedCottonSchedule=async()=>{
+    const transactionWhere: any = {};
+    let result: any = [];
+
+    let include = [
+        {
+          model: Ginner,
+          as: "ginner",
+          attributes: [],
+        },
+        {
+          model: Season,
+          as: "season",
+          attributes: [],
+        },
+        {
+          model: Program,
+          as: "program",
+          attributes: [],
+        },
+      ];
+  
+      let rows = await GinProcess.findAll({
+        attributes: [
+          [Sequelize.literal('"ginner"."id"'), "ginner_id"],
+          [Sequelize.literal('"ginner"."name"'), "ginner_name"],
+          [Sequelize.literal('"season"."id"'), "season_id"],
+          [Sequelize.literal('"ginner"."program_id"'), "program_id"],
+          [Sequelize.literal('"ginner"."brand"'), "brand"],
+          [Sequelize.literal('"ginner"."country_id"'), "country_id"],
+          [Sequelize.col('"season"."name"'), "season_name"],
+          // [Sequelize.literal('"program"."program_name"'), 'program_name'],
+          [
+            sequelize.fn(
+              "COALESCE",
+              sequelize.fn("SUM", sequelize.col("total_qty")),
+              0
+            ),
+            "cotton_processed",
+          ],
+        ],
+        // where: whereCondition,
+        include: include,
+        group: ["ginner.id", "season.id"],
+        order: [["ginner_id", "desc"]],
+        offset:0,
+        limit:2,
+      });
+      console.log("rowa",rows);
+      
+      for await (let ginner of rows) {
+        let obj: any = {};
+        const cottonProcured = await Transaction.findOne({
+          attributes: [
+            [
+              sequelize.fn(
+                "COALESCE",
+                sequelize.fn(
+                  "SUM",
+                  Sequelize.literal("CAST(qty_purchased AS DOUBLE PRECISION)")
+                ),
+                0
+              ),
+              "cotton_procured",
+            ],
+            [
+              sequelize.fn(
+                "COALESCE",
+                sequelize.fn(
+                  "SUM",
+                  Sequelize.literal("CAST(qty_stock AS DOUBLE PRECISION)")
+                ),
+                0
+              ),
+              "cotton_stock",
+            ],
+          ],
+          where: {
+            ...transactionWhere,
+            mapped_ginner: ginner.ginner_id,
+            status: "Sold",
+          },
+        });
+  
+        obj.cotton_procured = cottonProcured?.dataValues?.cotton_procured ?? 0;
+        obj.cotton_stock = cottonProcured?.dataValues?.cotton_stock ?? 0;
+        result.push({ ...ginner?.dataValues, ...obj });
+      }
+const array=[]
+      for await (const [index, item] of result.entries()) {
+        
+        
+        const rowValues = {
+          
+          ginner: item.ginner_name ? item.ginner_name : "",
+          season: item.season_name ? item.season_name : "",
+          cotton_procured: item.cotton_procured ? item.cotton_procured : null,
+          cotton_processed: item.cotton_processed ? item.cotton_processed :null,
+          cotton_stock: item.cotton_stock ? item.cotton_stock : null,
+          countryId:item?.country_id,
+          ginnerId:item?.ginner_id,
+          programId:item?.program_id[0],
+          brandId:item?.brand[0],
+          seasonId:item?.season_id
+        };
+        // worksheet.addRow(rowValues);
+        array.push(rowValues)
+        console.log(rowValues);
+        
+        
+      }
+      ExportGinnerCottonStock.bulkCreate(array)
+
+}
 const exportGinnerCottonStock = async (req: Request, res: Response) => {
     // ginner_seed_cotton_load
     await ExportData.update({
@@ -8384,90 +8770,95 @@ const exportGinnerCottonStock = async (req: Request, res: Response) => {
     ]);
     headerRow.font = { bold: true };
 
-    let include = [
-      {
-        model: Ginner,
-        as: "ginner",
-        attributes: [],
-      },
-      {
-        model: Season,
-        as: "season",
-        attributes: [],
-      },
-      {
-        model: Program,
-        as: "program",
-        attributes: [],
-      },
-    ];
+    // let include = [
+    //   {
+    //     model: Ginner,
+    //     as: "ginner",
+    //     attributes: [],
+    //   },
+    //   {
+    //     model: Season,
+    //     as: "season",
+    //     attributes: [],
+    //   },
+    //   {
+    //     model: Program,
+    //     as: "program",
+    //     attributes: [],
+    //   },
+    // ];
 
-    let rows = await GinProcess.findAll({
-      attributes: [
-        [Sequelize.literal('"ginner"."id"'), "ginner_id"],
-        [Sequelize.literal('"ginner"."name"'), "ginner_name"],
-        [Sequelize.literal('"season"."id"'), "season_id"],
-        [Sequelize.col('"season"."name"'), "season_name"],
-        // [Sequelize.literal('"program"."program_name"'), 'program_name'],
-        [
-          sequelize.fn(
-            "COALESCE",
-            sequelize.fn("SUM", sequelize.col("total_qty")),
-            0
-          ),
-          "cotton_processed",
-        ],
-      ],
-      where: whereCondition,
-      include: include,
-      group: ["ginner.id", "season.id"],
-      order: [["ginner_id", "desc"]],
-    });
-    let result: any = [];
-    for await (let ginner of rows) {
-      let obj: any = {};
-      const cottonProcured = await Transaction.findOne({
-        attributes: [
-          [
-            sequelize.fn(
-              "COALESCE",
-              sequelize.fn(
-                "SUM",
-                Sequelize.literal("CAST(qty_purchased AS DOUBLE PRECISION)")
-              ),
-              0
-            ),
-            "cotton_procured",
-          ],
-          [
-            sequelize.fn(
-              "COALESCE",
-              sequelize.fn(
-                "SUM",
-                Sequelize.literal("CAST(qty_stock AS DOUBLE PRECISION)")
-              ),
-              0
-            ),
-            "cotton_stock",
-          ],
-        ],
-        where: {
-          ...transactionWhere,
-          mapped_ginner: ginner.ginner_id,
-          status: "Sold",
-        },
+    // let rows = await GinProcess.findAll({
+    //   attributes: [
+    //     [Sequelize.literal('"ginner"."id"'), "ginner_id"],
+    //     [Sequelize.literal('"ginner"."name"'), "ginner_name"],
+    //     [Sequelize.literal('"season"."id"'), "season_id"],
+    //     [Sequelize.col('"season"."name"'), "season_name"],
+    //     // [Sequelize.literal('"program"."program_name"'), 'program_name'],
+    //     [
+    //       sequelize.fn(
+    //         "COALESCE",
+    //         sequelize.fn("SUM", sequelize.col("total_qty")),
+    //         0
+    //       ),
+    //       "cotton_processed",
+    //     ],
+    //   ],
+    //   where: whereCondition,
+    //   include: include,
+    //   group: ["ginner.id", "season.id"],
+    //   order: [["ginner_id", "desc"]],
+    // });
+    // let result: any = [];
+    // for await (let ginner of rows) {
+    //   let obj: any = {};
+    //   const cottonProcured = await Transaction.findOne({
+    //     attributes: [
+    //       [
+    //         sequelize.fn(
+    //           "COALESCE",
+    //           sequelize.fn(
+    //             "SUM",
+    //             Sequelize.literal("CAST(qty_purchased AS DOUBLE PRECISION)")
+    //           ),
+    //           0
+    //         ),
+    //         "cotton_procured",
+    //       ],
+    //       [
+    //         sequelize.fn(
+    //           "COALESCE",
+    //           sequelize.fn(
+    //             "SUM",
+    //             Sequelize.literal("CAST(qty_stock AS DOUBLE PRECISION)")
+    //           ),
+    //           0
+    //         ),
+    //         "cotton_stock",
+    //       ],
+    //     ],
+    //     where: {
+    //       ...transactionWhere,
+    //       mapped_ginner: ginner.ginner_id,
+    //       status: "Sold",
+    //     },
+    //   });
+
+    //   obj.cotton_procured = cottonProcured?.dataValues?.cotton_procured ?? 0;
+    //   obj.cotton_stock = cottonProcured?.dataValues?.cotton_stock ?? 0;
+    //   result.push({ ...ginner?.dataValues, ...obj });
+    // }
+    // //fetch data with pagination
+
+    // let data = result.slice(offset, offset + limit);
+
+    let rows = await ExportGinnerCottonStock.findAll({
+        where: whereCondition,
+      //   attributes: ["id", "name", "address"],
       });
-
-      obj.cotton_procured = cottonProcured?.dataValues?.cotton_procured ?? 0;
-      obj.cotton_stock = cottonProcured?.dataValues?.cotton_stock ?? 0;
-      result.push({ ...ginner?.dataValues, ...obj });
-    }
-    //fetch data with pagination
-
-    let data = result.slice(offset, offset + limit);
-
+    
     // Append data to worksheet
-    for await (const [index, item] of data.entries()) {
+    for await (const [index, item] of rows.entries()) {
       const rowValues = Object.values({
         index: index + 1,
         ginner: item.ginner_name ? item.ginner_name : "",
@@ -14539,5 +14930,10 @@ export {
   exportSpinnerBackwardTraceability,
   villageSeedCottonReport,
   exportVillageSeedCotton,
-  exportGinnerProcessSchedule
+  exportGinnerProcessSchedule,
+  exportGinnerySummarySchedule,
+  exportGinnerSalesSchedule,
+  exportGinnerPendingSchedule,
+  exportGinnerSeedCottonSchedule
 };
+
