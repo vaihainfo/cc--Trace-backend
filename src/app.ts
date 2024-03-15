@@ -174,7 +174,7 @@ cron.schedule('0 23 * * *', async () => {
 cron.schedule("15 * * * * *", async () => {
     console.log("entry");
     
-  exportGinnerProcessSchedule();
+  // exportGinnerProcessSchedule();
 });
 
 
