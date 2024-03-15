@@ -8,7 +8,6 @@ import Season from "../../models/season.model";
 import Transaction from "../../models/transaction.model";
 import GinProcess from "../../models/gin-process.model";
 import Ginner from "../../models/ginner.model";
-import GinBale from "../../models/gin-bale.model";
 
 const getTopVillages = async (
   req: Request, res: Response
@@ -34,10 +33,13 @@ const getOverAllDataQuery = (
   const where: any = {
 
   };
-  // where.status = "Sold";
-
   if (reqData?.program)
     where.program_id = reqData.program;
+
+  if (reqData?.brand)
+    where['$ginner.brand$'] = {
+      [Op.contains]: Sequelize.literal(`ARRAY [${ reqData.brand }]`)
+    };
 
   if (reqData?.season)
     where.season_id = reqData.season;
@@ -66,17 +68,22 @@ const getTransactionDataQuery = (
   if (reqData?.program)
     where.program_id = reqData.program;
 
+    if (reqData?.brand)
+    where['$ginner.brand$'] = {
+      [Op.contains]: Sequelize.literal(`ARRAY [${ reqData.brand }]`)
+    };
+
   if (reqData?.season)
     where.season_id = reqData.season;
 
-  if (reqData?.country)
-    where.country_id = reqData.country;
+    if (reqData?.country)
+    where['$ginner.country_id$'] = reqData.country;
 
   if (reqData?.state)
-    where.state_id = reqData.state;
+    where['$ginner.state_id$'] = reqData.state;
 
   if (reqData?.district)
-    where.district_id = reqData.district;
+    where['$ginner.district_id$'] = reqData.district;
 
   return where;
 };
@@ -90,6 +97,9 @@ const getTopVillagesData = async (
 
   if (reqData?.program)
     whereList.push('gp.program_id = ' + reqData.program);
+
+  if (reqData?.brand)
+    whereList.push(reqData.brand + ' = any(gi.brand)');
 
   if (reqData?.season)
     whereList.push('gp.season_id = ' + reqData.season);
@@ -107,6 +117,7 @@ const getTopVillagesData = async (
 
   if (whereList.length)
     where = whereList.join(' AND ');
+  const query = Sequelize.literal('where ' + where);
 
   const result = await sequelize.query(`
     select vl.id           as "villageId",
@@ -121,7 +132,7 @@ const getTopVillagesData = async (
           left join transactions tr on tr.id = cs.transaction_id
           left join villages vl on tr.village_id = vl.id
           left join ginners gi on gp.ginner_id = gi.id
-    ${ where ? Sequelize.literal('where ' + where) : '' }
+    ${ where && query.val }
     group by vl.id, se.id
     limit 10
     `, { type: QueryTypes.SELECT });
@@ -331,6 +342,10 @@ const getProcuredProcessedData = async (
       model: Season,
       as: 'season',
       attributes: []
+    }, {
+      model: Ginner,
+      as: 'ginner',
+      attributes: []
     }],
     where,
     group: ['season.id']
@@ -531,7 +546,11 @@ const getProcuredProcessedDataByMonth = async (
       [Sequelize.fn('SUM', Sequelize.literal('CAST(qty_purchased  as numeric)')), 'procured'],
       [Sequelize.literal("date_part('Month', date)"), 'month'],
     ],
-    include: [],
+    include: [{
+      model: Ginner,
+      as: 'ginner',
+      attributes: []
+    }],
     where,
     group: ['month']
   });

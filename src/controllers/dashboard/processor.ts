@@ -113,13 +113,18 @@ const getSpinSalesWhereQuery = (
     if (reqData?.program)
         where.program_id = reqData.program;
 
-    // if (reqData?.brand)
-    //   where.brand_id = reqData.brand;
 
     if (reqData?.season)
         where.season_id = reqData.season;
 
     if (type == 'knitter') {
+
+
+        if (reqData?.brand)
+            where['$knitter.brand$'] = {
+                [Op.contains]: Sequelize.literal(`ARRAY [${ reqData.brand }]`)
+            };
+
 
         if (reqData?.country)
             where['$knitter.country_id$'] = reqData.country;
@@ -131,6 +136,13 @@ const getSpinSalesWhereQuery = (
             where['$knitter.district_id$'] = reqData.district;
 
     } else {
+
+
+        if (reqData?.brand)
+            where['$knitter.brand$'] = {
+                [Op.contains]: Sequelize.literal(`ARRAY [${ reqData.brand }]`)
+            };
+
         if (reqData?.country)
             where['$weaver.country_id$'] = reqData.country;
 
@@ -270,8 +282,10 @@ const getKnitterSalesWhereQuery = (
     if (reqData?.program)
         where.program_id = reqData.program;
 
-    // if (reqData?.brand)
-    //   where.brand_id = reqData.brand;
+    if (reqData?.brand)
+        where['$knitter.brand$'] = {
+            [Op.contains]: Sequelize.literal(`ARRAY [${ reqData.brand }]`)
+        };
 
     if (reqData?.country)
         where['$knitter.country_id$'] = reqData.country;
@@ -368,8 +382,10 @@ const getWeaverSalesWhereQuery = (
     if (reqData?.program)
         where.program_id = reqData.program;
 
-    // if (reqData?.brand)
-    //   where.brand_id = reqData.brand;
+    if (reqData?.brand)
+        where['$weaver.brand$'] = {
+            [Op.contains]: Sequelize.literal(`ARRAY [${ reqData.brand }]`)
+        };
 
     if (reqData?.country)
         where['$weaver.country_id$'] = reqData.country;
@@ -541,8 +557,10 @@ const getWeaverSalesGarmentWhereQuery = (
     if (reqData?.program)
         where.program_id = reqData.program;
 
-    // if (reqData?.brand)
-    //   where.brand_id = reqData.brand;
+    if (reqData?.brand)
+        where['$buyer.brand$'] = {
+            [Op.contains]: Sequelize.literal(`ARRAY [${ reqData.brand }]`)
+        };
 
     if (reqData?.country)
         where['$buyer.country_id$'] = reqData.country;
@@ -618,8 +636,10 @@ const getGarmentSalesWhereQuery = (
     if (reqData?.program)
         where.program_id = reqData.program;
 
-    // if (reqData?.brand)
-    //   where.brand_id = reqData.brand;
+    if (reqData?.brand)
+        where['$garment.brand$'] = {
+            [Op.contains]: Sequelize.literal(`ARRAY [${ reqData.brand }]`)
+        };
 
     if (reqData?.country)
         where['$garment.country_id$'] = reqData.country;
@@ -694,14 +714,16 @@ const getDyingSalesWhereQuery = (
     reqData: any
 ) => {
     const where: any = {
-       
+
     };
 
     if (reqData?.program)
         where.program_id = reqData.program;
 
-    // if (reqData?.brand)
-    //   where.brand_id = reqData.brand;
+    if (reqData?.brand)
+        where['$dying_fabric.brand$'] = {
+            [Op.contains]: Sequelize.literal(`ARRAY [${ reqData.brand }]`)
+        };
 
     if (reqData?.country)
         where['$dying_fabric.country_id$'] = reqData.country;
@@ -887,8 +909,10 @@ const getKnitSalesWhereQuery = (
     if (reqData?.program)
         where.program_id = reqData.program;
 
-    // if (reqData?.brand)
-    //   where.brand_id = reqData.brand;
+    if (reqData?.brand)
+        where['$dyingwashing.brand$'] = {
+            [Op.contains]: Sequelize.literal(`ARRAY [${ reqData.brand }]`)
+        };
 
     if (reqData?.country)
         where['$dyingwashing.country_id$'] = reqData.country;

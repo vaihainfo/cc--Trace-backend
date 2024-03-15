@@ -102,7 +102,6 @@ const getOverAllDataQuery = (
 
   if (reqData?.season)
     where.season_id = reqData.season;
-  // where[Op.and] = reqData.season;
 
   if (reqData?.country)
     where['$farmer.country_id$'] = reqData.country;
@@ -271,7 +270,7 @@ const getAllFarmer = async (
           }
         ],
       },
-      where: where,
+      where,
       group: ['farmer.state.id', 'farmer.district.id', 'farmer.country.id']
     });
 
@@ -468,6 +467,7 @@ const getEstimateAndProduction = async (
   try {
 
     const reqData = await getQueryParams(req, res);
+    reqData.season = undefined;
     const where = getOverAllDataQuery(reqData);
     const estimateProductionList = await getEstimateProductionBySeason(where);
     const data = getEstimateProductionList(estimateProductionList);
@@ -537,6 +537,7 @@ const farmerCountAndArea = async (
 ) => {
   try {
     const reqData = await getQueryParams(req, res);
+    reqData.season = undefined;
     const where = getOverAllDataQuery(reqData);
     const acresList = await getAcreBySession(where);
     const farmerCountList = await getFarmerBySeasons(where);
@@ -618,6 +619,7 @@ const farmerAllData = async (
 ) => {
   try {
     const reqData = await getQueryParams(req, res);
+    reqData.season = undefined;
     const where = getOverAllDataQuery(reqData);
     const acresList = await getAcreBySession(where);
     const farmerCountList = await getFarmerBySeasons(where);
@@ -727,7 +729,8 @@ const getFarmersByCountry = async (
 ) => {
   try {
     const reqData = await getQueryParams(req, res);
-    const data = await getFarmersByCountryData(reqData.country);
+    const where = getOverAllDataQuery(reqData);
+    const data = await getFarmersByCountryData(where);
     return res.sendSuccess(res, data);
 
   } catch (error: any) {
@@ -740,35 +743,35 @@ const getFarmersByCountry = async (
 
 
 const getFarmersByCountryData = async (
-  countryId: any
+  where: any
 ) => {
-  const where: any = {
-    "$country.latitude$": {
-      [Op.not]: null
-    },
-    "$country.longitude$": {
-      [Op.not]: null
-    }
+  where["$farmer.country.latitude$"] = {
+    [Op.not]: null
+  };
+  where["$farmer.country.longitude$"] = {
+    [Op.not]: null
   };
 
-  if (countryId) {
-    where.country_id = countryId;
-  }
-  const result = await Farmer.findAll({
+  const result = await Farm.findAll({
     attributes: [
-      [Sequelize.fn('SUM', Sequelize.col('farmers.agri_total_area')), 'area'],
-      [Sequelize.fn('count', Sequelize.col('farmers.id')), 'farmers'],
-      [Sequelize.col('country.county_name'), 'countryName'],
-      [Sequelize.col('country.latitude'), 'latitude'],
-      [Sequelize.col('country.longitude'), 'longitude']
+      [Sequelize.fn('SUM', Sequelize.col('farmer.agri_total_area')), 'area'],
+      [Sequelize.fn('count', Sequelize.col('farmer.id')), 'farmers'],
+      [Sequelize.col('farmer.country.county_name'), 'countryName'],
+      [Sequelize.col('farmer.country.latitude'), 'latitude'],
+      [Sequelize.col('farmer.country.longitude'), 'longitude']
     ],
     include: [{
-      model: Country,
-      as: 'country',
-      attributes: []
+      model: Farmer,
+      as: 'farmer',
+      attributes: [],
+      include: [{
+        model: Country,
+        as: 'country',
+        attributes: []
+      }]
     }],
     where,
-    group: ['country.id']
+    group: ['farmer.country.id']
   });
 
   return result;

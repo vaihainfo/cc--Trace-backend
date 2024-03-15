@@ -8,6 +8,7 @@ import Transaction from "../../models/transaction.model";
 import Season from "../../models/season.model";
 import GinProcess from "../../models/gin-process.model";
 import Ginner from "../../models/ginner.model";
+import { Op } from "sequelize";
 
 
 const getQueryParams = async (
@@ -93,8 +94,8 @@ const getFarmWhereQuery = (
   if (reqData?.program)
     where.program_id = reqData.program;
 
-  // if (reqData?.brand)
-  //   where.brand_id = reqData.brand;
+  if (reqData?.brand)
+    where['$farmer.brand_id$'] = reqData.brand;
 
   if (reqData?.season)
     where.season_id = reqData.season;
@@ -433,8 +434,10 @@ const getGinnerProcessWhereQuery = (
   if (reqData?.program)
     where.program_id = reqData.program;
 
-  // if (reqData?.brand)
-  //   where.brand_id = reqData.brand;
+  if (reqData?.brand)
+    where['$ginner.brand$'] = {
+      [Op.contains]: Sequelize.literal(`ARRAY [${ reqData.brand }]`)
+    };
 
   if (reqData?.season)
     where.season_id = reqData.season;

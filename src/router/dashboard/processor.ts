@@ -1,9 +1,10 @@
 import * as Dashboard from "../../controllers/dashboard/processor";
-
-
+import accessControl from "../../middleware/access-control";
 import { Router } from "express";
-const router = Router();
 
+
+const router = Router();
+router.use(accessControl);
 router.get('/knitter/yarn', Dashboard.getKnitterYarn);
 router.get('/knitter/fabric', Dashboard.getKnitterFabric);
 router.get('/weaver/yarn', Dashboard.getWeaverYarn);

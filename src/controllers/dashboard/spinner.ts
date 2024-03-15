@@ -6,6 +6,7 @@ import Season from "../../models/season.model";
 import SpinProcess from "../../models/spin-process.model";
 import Ginner from "../../models/ginner.model";
 import Spinner from "../../models/spinner.model";
+import { Op } from "sequelize";
 
 const getQueryParams = async (
   req: Request, res: Response
@@ -92,8 +93,10 @@ const getGinnerSalesWhereQuery = (
   if (reqData?.program)
     where.program_id = reqData.program;
 
-  // if (reqData?.brand)
-  //   where.brand_id = reqData.brand;
+  if (reqData?.brand)
+    where['$buyerdata.brand$'] = {
+      [Op.contains]: Sequelize.literal(`ARRAY [${ reqData.brand }]`)
+    };
 
   if (reqData?.season)
     where.season_id = reqData.season;
@@ -201,8 +204,10 @@ const getSpinnerProcessWhereQuery = (
   if (reqData?.program)
     where.program_id = reqData.program;
 
-  // if (reqData?.brand)
-  //   where.brand_id = reqData.brand;
+  if (reqData?.brand)
+    where['$spinner.brand$'] = {
+      [Op.contains]: Sequelize.literal(`ARRAY [${ reqData.brand }]`)
+    };
 
   if (reqData?.season)
     where.season_id = reqData.season;
