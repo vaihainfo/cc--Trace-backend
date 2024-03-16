@@ -148,13 +148,17 @@ const getQueryParams = async (
     await validator.validate(district);
     await validator.validate(block);
     await validator.validate(village);
-    if (!season) {
-      const seasonOne = await Season.findOne({
-        order: [
-          ['id', 'DESC']
-        ]
-      });
-      season = seasonOne.id;
+    // if (!season) {
+    //   const seasonOne = await Season.findOne({
+    //     order: [
+    //       ['id', 'DESC']
+    //     ]
+    //   });
+    //   season = seasonOne.id;
+    // }
+    const user = (req as any).user
+    if(user?.role == 3 && user?._id){
+      brand = user._id
     }
 
     return {
@@ -379,7 +383,9 @@ const getFarmerBySeasons = async (where: any) => {
         attributes: []
       }
     ],
-    where: where,
+    where,
+    order: [['seasonId', 'desc']],
+    limit: 3,
     group: ['season.id']
   });
 
@@ -439,6 +445,8 @@ const getAcreBySession = async (where: any) => {
         attributes: []
       }
     ],
+    order: [['seasonId', 'desc']],
+    limit: 3,
     where,
     group: ['season.id']
   });
@@ -467,7 +475,8 @@ const getEstimateAndProduction = async (
   try {
 
     const reqData = await getQueryParams(req, res);
-    reqData.season = undefined;
+    if (req.query.type == "2")
+      reqData.season = undefined;
     const where = getOverAllDataQuery(reqData);
     const estimateProductionList = await getEstimateProductionBySeason(where);
     const data = getEstimateProductionList(estimateProductionList);
@@ -488,7 +497,8 @@ const getEstimateProductionBySeason = async (where: any) => {
   const estimateAndProduction = await Farm.findAll({
     attributes: [
       [Sequelize.fn('SUM', Sequelize.col('farmer.total_estimated_cotton')), 'estimate'],
-      [Sequelize.fn('SUM', Sequelize.col('farmer.agri_estimated_prod')), 'production']
+      [Sequelize.fn('SUM', Sequelize.col('farmer.agri_estimated_prod')), 'production'],
+      [Sequelize.col('season.id'), 'seasonId']
     ],
     include: [
       {
@@ -502,6 +512,8 @@ const getEstimateProductionBySeason = async (where: any) => {
         attributes: ['id', 'name']
       }
     ],
+    order: [['seasonId', 'desc']],
+    limit: 3,
     where,
     group: ['season.id']
   });
@@ -658,7 +670,7 @@ const getFarmerAllDataRes = (
   });
 
   estimateProductionList.forEach((estimateProduction: any) => {
-    if (estimateProduction.dataValues.season.id)
+    if (!seasonIds.includes(estimateProduction.dataValues.season.id))
       seasonIds.push(estimateProduction.dataValues.season.id);
   });
 

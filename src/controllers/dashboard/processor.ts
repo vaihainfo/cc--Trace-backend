@@ -3,7 +3,6 @@ import { Sequelize, Op } from "sequelize";
 import * as yup from 'yup';
 import SpinSales from "../../models/spin-sales.model";
 import KnitSales from "../../models/knit-sales.model";
-import Fabric from "../../models/fabric.model";
 import Program from "../../models/program.model";
 import WeaverSales from "../../models/weaver-sales.model";
 import GarmentSales from "../../models/garment-sales.model";
@@ -11,10 +10,12 @@ import Garment from "../../models/garment.model";
 import Weaver from "../../models/weaver.model";
 import Knitter from "../../models/knitter.model";
 import DyingSales from "../../models/dying-sales.model";
-import Season from "../../models/season.model";
+import WashingSales from "../../models/washing-sales.model";
+import PrintingSales from "../../models/printing-sales.model";
 
 const getQueryParams = async (
-    req: Request, res: Response
+    req: Request, res: Response,
+    isBuyer = false,
 ) => {
     try {
         let {
@@ -26,6 +27,8 @@ const getQueryParams = async (
             district,
             block,
             village,
+            buyer,
+            fabric
         } = req.query;
         const validator = yup.string()
             .notRequired()
@@ -39,13 +42,15 @@ const getQueryParams = async (
         await validator.validate(district);
         await validator.validate(block);
         await validator.validate(village);
-        if (!season) {
-            const seasonOne = await Season.findOne({
-                order: [
-                    ['id', 'DESC']
-                ]
-            });
-            season = seasonOne.id;
+        if (isBuyer) {
+            const reqValidator = yup.string()
+                .required();
+            await reqValidator.validate(buyer);
+            await reqValidator.validate(fabric);
+        }
+        const user = (req as any).user
+        if(user?.role == 3 && user?._id){
+          brand = user._id
         }
 
         return {
@@ -57,6 +62,8 @@ const getQueryParams = async (
             district,
             block,
             village,
+            buyer,
+            fabric
         };
 
     } catch (error: any) {
@@ -314,13 +321,12 @@ const getKnitterFabricData = async (
         attributes: [
             [Sequelize.fn('SUM', Sequelize.col('total_fabric_weight')), 'fabricWeight'],
             [Sequelize.col('program.program_name'), 'programName'],
-            [Sequelize.col('dyingwashing.name'), 'fabricName'],
+            [Sequelize.literal(`(select FY."fabricType_name"
+                        from fabric_types FY
+                        where knit_sales.fabric_type @> ARRAY [FY.id]
+                        )`), 'fabricName'],
         ],
         include: [{
-            model: Fabric,
-            as: 'dyingwashing',
-            attributes: [],
-        }, {
             model: Program,
             as: 'program',
             attributes: [],
@@ -330,7 +336,7 @@ const getKnitterFabricData = async (
             attributes: [],
         }],
         where,
-        group: ['program.id', 'dyingwashing.id']
+        group: ['program.id', 'fabricName']
     });
 
     return estimateAndProduction;
@@ -414,13 +420,12 @@ const getWeaverFabricData = async (
         attributes: [
             [Sequelize.fn('SUM', Sequelize.col('total_fabric_length')), 'fabricWeight'],
             [Sequelize.col('program.program_name'), 'programName'],
-            [Sequelize.col('dyingwashing.name'), 'fabricName'],
+            [Sequelize.literal(`(select FY."fabricType_name"
+                             from fabric_types FY
+                             where weaver_sales.fabric_type @> ARRAY [FY.id]
+                             )`), 'fabricName'],
         ],
         include: [{
-            model: Fabric,
-            as: 'dyingwashing',
-            attributes: [],
-        }, {
             model: Program,
             as: 'program',
             attributes: [],
@@ -430,7 +435,7 @@ const getWeaverFabricData = async (
             attributes: [],
         }],
         where,
-        group: ['program.id', 'dyingwashing.id']
+        group: ['program.id', 'fabricName']
     });
 
     return estimateAndProduction;
@@ -667,13 +672,12 @@ const getGarmentInventoryData = async (
     const result = await GarmentSales.findAll({
         attributes: [
             [
-                Sequelize.fn('sum',
-                    Sequelize.literal('(select sum(piece) from unnest(no_of_pieces) as piece)')
-                ),
-                'fabricWeight'
+                Sequelize.fn('sum', Sequelize.col('total_no_of_pieces')), 'fabricWeight'
             ],
             [Sequelize.col('program.program_name'), 'programName'],
-            [Sequelize.col('garment.name'), 'fabricName'],
+            [Sequelize.literal(`(select type
+                FROM unnest("garment_sales".garment_type) as type
+                )`), 'fabricName'],
         ],
         include: [{
             model: Garment,
@@ -685,21 +689,21 @@ const getGarmentInventoryData = async (
             attributes: [],
         }],
         where,
-        group: ['program.id', 'garment.id']
+        group: ['program.id', 'fabricName']
     });
 
     return result;
 };
 
 
-const getFabricYarn = async (
+const getFabricInventory = async (
     req: Request, res: Response
 ) => {
     try {
         const reqData = await getQueryParams(req, res);
-        const where = getDyingSalesWhereQuery(reqData);
-        const yarnList = await getFabricYarnData(where);
-        const data = getSpinYarnRes(yarnList);
+        const dyingWhere = getDyingSalesWhereQuery(reqData);
+        const yarnList = await getFabricInventoryData(dyingWhere);
+        const data = getKnitterFabricRes(yarnList);
         return res.sendSuccess(res, data);
     } catch (error: any) {
         const code = error.errCode
@@ -708,6 +712,30 @@ const getFabricYarn = async (
         return res.sendError(res, code);
     }
 };
+
+
+const getFabricInventoryData = async (
+    where: any
+) => {
+
+    const result = await DyingSales.findAll({
+        attributes: [
+            [Sequelize.fn('SUM', Sequelize.col('total_fabric_quantity')), 'fabricWeight'],
+            [Sequelize.col('program.program_name'), 'programName'],
+            [Sequelize.literal("coalesce(fabric_type, 'unknown')"), 'fabricName'],
+        ],
+        include: [{
+            model: Program,
+            as: 'program',
+            attributes: [],
+        }],
+        where,
+        group: ['program.id', 'fabricName']
+    });
+
+    return result;
+};
+
 
 
 const getDyingSalesWhereQuery = (
@@ -761,11 +789,7 @@ const getFabricYarnData = async (
             model: Program,
             as: 'program',
             attributes: [],
-        }, {
-            model: Fabric,
-            as: 'dying_fabric',
-            attributes: [],
-        }],
+        },],
         where,
         group: ['program.id']
     });
@@ -774,7 +798,7 @@ const getFabricYarnData = async (
 };
 
 
-const getFabric = async (
+const getFabricType = async (
     req: Request, res: Response
 ) => {
     try {
@@ -887,10 +911,6 @@ const getWeaverSaleData = async (
             model: Program,
             as: 'program',
             attributes: [],
-        }, {
-            model: Fabric,
-            as: 'dyingwashing',
-            attributes: [],
         }],
         where,
         group: ['program.id']
@@ -947,17 +967,243 @@ const getKnitSaleData = async (
             model: Program,
             as: 'program',
             attributes: [],
-        }, {
-            model: Fabric,
-            as: 'dyingwashing',
-            attributes: [],
-        }],
+        },],
         where,
         group: ['program.id']
     });
 
     return result;
 };
+
+const getFabricByBuyerType = async (
+    req: Request, res: Response
+) => {
+    try {
+        const reqData = await getQueryParams(req, res, true);
+        const data = await getFabricByBuyerTypeData(
+            reqData.buyer,
+            reqData.fabric
+        );
+        const resData = getFabricByBuyerTypeRes(data);
+        return res.sendSuccess(res, resData);
+    } catch (error: any) {
+        const code = error.errCode
+            ? error.errCode
+            : "ERR_INTERNAL_SERVER_ERROR";
+        return res.sendError(res, code);
+    }
+};
+
+
+const getFabricByBuyerTypeRes = (
+    data: any
+) => {
+    let programIds: number[] = [];
+
+    data.weaverSales.forEach((sale: any) => {
+        if (!programIds.includes(sale.dataValues.programId))
+            programIds.push(sale.dataValues.programId);
+    });
+    data.knitSales.forEach((sale: any) => {
+        if (!programIds.includes(sale.dataValues.programId))
+            programIds.push(sale.dataValues.programId);
+    });
+    data.washingSales.forEach((sale: any) => {
+        if (!programIds.includes(sale.dataValues.programId))
+            programIds.push(sale.dataValues.programId);
+    });
+    data.dyingSales.forEach((sale: any) => {
+        if (!programIds.includes(sale.dataValues.programId))
+            programIds.push(sale.dataValues.programId);
+    });
+    data.printingSales.forEach((sale: any) => {
+        if (!programIds.includes(sale.dataValues.programId))
+            programIds.push(sale.dataValues.programId);
+    });
+
+    programIds = programIds.sort((a, b) => a - b);
+
+    let program: any = [];
+    let totalQty: any = [];
+    let stockQty: any = [];
+
+    for (const programId of programIds) {
+        const res = {
+            program: '',
+            sold: 0,
+            stock: 0
+        };
+
+        const fWeaver = data.weaverSales.find((sale: any) =>
+            sale.dataValues.programId == programId
+        );
+        if (fWeaver) {
+            res.program = fWeaver.dataValues.programName;
+            res.sold += formatNumber(fWeaver.dataValues.sold);
+            res.stock += formatNumber(fWeaver.dataValues.stock);
+        }
+
+        const fKnit = data.knitSales.find((sale: any) =>
+            sale.dataValues.programId == programId
+        );
+        if (fKnit) {
+            res.program = fKnit.dataValues.programName;
+            res.sold += formatNumber(fKnit.dataValues.sold);
+            res.stock += formatNumber(fKnit.dataValues.stock);
+        }
+
+        const fWashing = data.washingSales.find((sale: any) =>
+            sale.dataValues.programId == programId
+        );
+        if (fWashing) {
+            res.program = fWashing.dataValues.programName;
+            res.sold += formatNumber(fWashing.dataValues.sold);
+            res.stock += formatNumber(fWashing.dataValues.stock);
+        }
+
+        const fDying = data.dyingSales.find((sale: any) =>
+            sale.dataValues.programId == programId
+        );
+        if (fDying) {
+            res.program = fDying.dataValues.programName;
+            res.sold += formatNumber(fDying.dataValues.sold);
+            res.stock += formatNumber(fDying.dataValues.stock);
+        }
+
+        const fPrinting = data.printingSales.find((sale: any) =>
+            sale.dataValues.programId == programId
+        );
+        if (fPrinting) {
+            res.program = fPrinting.dataValues.programName;
+            res.sold += formatNumber(fPrinting.dataValues.sold);
+            res.stock += formatNumber(fPrinting.dataValues.stock);
+        }
+
+        program.push(res.program);
+        totalQty.push(res.sold);
+        stockQty.push(res.stock);
+
+    }
+
+    return {
+        program,
+        totalQty,
+        stockQty
+    };
+};
+
+const getFabricByBuyerTypeData = async (
+    buyer: any,
+    fabric: any
+) => {
+    const where = {
+        buyer_type: buyer,
+        fabric_id: fabric
+    };
+    const weaverSales = await WeaverSales.findAll({
+        attributes: [
+            [Sequelize.fn('SUM', Sequelize.col('total_fabric_length')), 'sold'],
+            [Sequelize.fn('SUM', Sequelize.col('qty_stock')), 'stock'],
+            [Sequelize.col('buyer_type'), 'buyerType'],
+            [Sequelize.col('program.program_name'), 'programName'],
+            [Sequelize.col('program.id'), 'programId'],
+        ],
+        include: [{
+            model: Program,
+            as: 'program',
+            attributes: [],
+        }],
+        where,
+        group: ['program.id', 'buyerType']
+    });
+
+    const knitSales = await KnitSales.findAll({
+        attributes: [
+            [Sequelize.fn('SUM', Sequelize.col('total_fabric_weight')), 'sold'],
+            [Sequelize.fn('SUM', Sequelize.col('qty_stock')), 'stock'],
+            [Sequelize.col('buyer_type'), 'buyerType'],
+            [Sequelize.col('program.program_name'), 'programName'],
+            [Sequelize.col('program.id'), 'programId'],
+        ],
+        include: [{
+            model: Program,
+            as: 'program',
+            attributes: [],
+        }],
+        where,
+        group: ['program.id', 'buyerType']
+    });
+
+    let washingSales: any[] = [];
+    if (['Printing', 'Compacting'].includes(buyer)) {
+        washingSales = await WashingSales.findAll({
+            attributes: [
+                [Sequelize.fn('SUM', Sequelize.col('total_fabric_quantity')), 'sold'],
+                [Sequelize.fn('SUM', Sequelize.col('qty_stock')), 'stock'],
+                [Sequelize.col('buyer_type'), 'buyerType'],
+                [Sequelize.col('program.program_name'), 'programName'],
+                [Sequelize.col('program.id'), 'programId'],
+            ],
+            include: [{
+                model: Program,
+                as: 'program',
+                attributes: [],
+            }],
+            where,
+            group: ['program.id', 'buyerType']
+        });
+    }
+    let dyingSales: any[] = [];
+
+    if (['Washing', 'Printing', 'Compacting'].includes(buyer)) {
+
+        dyingSales = await DyingSales.findAll({
+            attributes: [
+                [Sequelize.fn('SUM', Sequelize.col('total_fabric_quantity')), 'sold'],
+                [Sequelize.fn('SUM', Sequelize.col('qty_stock')), 'stock'],
+                [Sequelize.col('buyer_type'), 'buyerType'],
+                [Sequelize.col('program.program_name'), 'programName'],
+                [Sequelize.col('program.id'), 'programId'],
+            ],
+            include: [{
+                model: Program,
+                as: 'program',
+                attributes: [],
+            }],
+            where,
+            group: ['program.id', 'buyerType']
+        });
+    }
+    let printingSales: any[] = [];
+    if (['Compacting'].includes(buyer)) {
+        printingSales = await PrintingSales.findAll({
+            attributes: [
+                [Sequelize.fn('SUM', Sequelize.col('total_fabric_quantity')), 'sold'],
+                [Sequelize.fn('SUM', Sequelize.col('qty_stock')), 'stock'],
+                [Sequelize.col('buyer_type'), 'buyerType'],
+                [Sequelize.col('program.program_name'), 'programName'],
+                [Sequelize.col('program.id'), 'programId'],
+            ],
+            include: [{
+                model: Program,
+                as: 'program',
+                attributes: [],
+            }],
+            where,
+            group: ['program.id', 'buyerType']
+        });
+    }
+
+    return {
+        weaverSales,
+        knitSales,
+        washingSales,
+        dyingSales,
+        printingSales
+    };
+};
+
+
 
 
 
@@ -972,6 +1218,7 @@ export {
     getWeaverFabric,
     getGarmentFabric,
     getGarmentInventory,
-    getFabricYarn as getFabricInventory,
-    getFabric as getFabricType
+    getFabricInventory,
+    getFabricType,
+    getFabricByBuyerType
 };
