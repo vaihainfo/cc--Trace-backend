@@ -172,12 +172,10 @@ cron.schedule('0 23 * * *', async () => {
 });
 
 // cron.schedule("1 * * * * *", async () => {
-cron.schedule("*/3 * * * *", async () => {
-    console.log("entry");
-    
+    cron.schedule("*/3 * * * *", async () => {
   exportGinnerProcessSchedule();
 exportGinnerySummarySchedule()
-// exportGinnerSalesSchedule()
+exportGinnerSalesSchedule()
 exportGinnerPendingSchedule()
 exportGinnerSeedCottonSchedule()
 });

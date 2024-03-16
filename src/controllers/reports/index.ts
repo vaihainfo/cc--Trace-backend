@@ -1150,6 +1150,58 @@ const   exportGinnerSalesSchedule=async()=>{
       ];
       //fetch data with pagination
   let count=await ExportGinnerSale.count()
+
+//   const rows: any = await BaleSelection.findAll({
+//     include: [
+//       {
+//         model: GinSales,
+//         as: "sales",
+//         include: include, // Assuming include is defined elsewhere in your code
+//         attributes: [
+//           "id",
+//           "date",
+//           "createdAt",
+//           "season_id",
+//           "program_id",
+//           "total_qty",
+//           "invoice_no",
+//           "rate",
+//           "candy_rate",
+//           "sale_value",
+//           "press_no",
+//           "qty_stock",
+//           "weight_loss",
+//           "invoice_file",
+//           "vehicle_no",
+//           "transporter_name",
+//           "transaction_agent",
+//           "status",
+//           // Add any other attributes you need from the sales table
+//         ],
+//       },
+//       {
+//         model: GinBale,
+//         attributes: [],
+//         as: "bale",
+//         include: [
+//           {
+//             model: GinProcess,
+//             as: "ginprocess",
+//             attributes: [],
+//           },
+//         ],
+//       },
+//       {
+//         model: Ginner, // Assuming Ginner is the name of your ginner table model
+//         as: "ginner",
+//         attributes: ["id", "name", "country_id", "program_id", "brand"],
+//       },
+//     ],
+//     order: [["sales_id", "desc"]],
+//     offset: count,
+//     limit: 2,
+//   });
+  
       const rows: any = await BaleSelection.findAll({
         attributes: [
           [Sequelize.literal('"sales"."id"'), "sales_id"],
@@ -1207,10 +1259,16 @@ const   exportGinnerSalesSchedule=async()=>{
               {
                 model: GinProcess,
                 as: "ginprocess",
-                attributes: [],
+                // attributes: ["id", "name", "country_id", "program_id", "brand"],
+                attributes:[]
               },
             ],
           },
+        //   {
+        //     model: Ginner, // Assuming Ginner is the name of your ginner table model
+        //     as: "ginner",
+        //     attributes: [], // Include all desired attributes from ginner table here
+        //   },
         ],
         group: [
           "bale.process_id",
@@ -1223,16 +1281,18 @@ const   exportGinnerSalesSchedule=async()=>{
         ],
         order: [["sales_id", "desc"]],
         offset:count,
-        limit:2
+        limit:20
       });
+    //   console.log("rowa",rows);
+      
 let array=[]
       for await (const [index, item] of rows.entries()) {
-console.log("item",item);
+// console.log("item",item?.countryId,item?.programId,item?.brand);    
 
         const rowValues = {
           index: index + 1,
           date: item.dataValues.date ? item.dataValues.date : "",
-        //   created_at: item.dataValues?.createdAt ? item.dataValues?.createdAt : "",
+          created_at: item.dataValues?.createdAt ? item.dataValues?.createdAt : "", 
           season: item.dataValues?.season_name ? item.dataValues?.season_name : "",
           ginner: item.dataValues?.ginner ? item.dataValues?.ginner : "",
           invoice: item.dataValues?.invoice_no ? item.dataValues?.invoice_no : "",
@@ -1269,16 +1329,22 @@ console.log("item",item);
               : `Available [Stock : ${
                   item.dataValues?.qty_stock ? item.dataValues?.qty_stock : 0
                 }]`,
-          
+                countryId:item?.dataValues?.countryId??0,
+                seasonId:item?.dataValues?.season_id??0,
+                 ginnerId:item?.dataValues?.ginnerId,
+                 programId:item?.dataValues?.programId?item?.dataValues?.programId[0]:0,
+                 brandId:item?.dataValues?.brand?item?.dataValues?.brand[0]:0
 
         }
-        // worksheet.addRow(rowValues);
+//         // worksheet.addRow(rowValues);
         array.push(rowValues)
-        // console.log("row values",rowValues);
+//         // console.log("row values",rowValues);
         
-      }
+//       }
     //   await ExportGinnerSale.bulkCreate(array)
 
+}
+await ExportGinnerSale.bulkCreate(array)
 }
 
 const exportGinnerSales = async (req: Request, res: Response) => {
@@ -1313,36 +1379,36 @@ const exportGinnerSales = async (req: Request, res: Response) => {
       const idArray: number[] = ginnerId
         .split(",")
         .map((id: any) => parseInt(id, 10));
-      whereCondition["$sales.ginner_id$"] = { [Op.in]: idArray };
+      whereCondition.ginnerId = { [Op.in]: idArray };
     }
     if (brandId) {
       const idArray: number[] = brandId
         .split(",")
         .map((id: any) => parseInt(id, 10));
-      whereCondition["$sales.ginner.brand$"] = { [Op.overlap]: idArray };
+      whereCondition.brand = { [Op.overlap]: idArray };
     }
 
     if (countryId) {
       const idArray: number[] = countryId
         .split(",")
         .map((id: any) => parseInt(id, 10));
-      whereCondition["$sales.ginner.country_id$"] = { [Op.in]: idArray };
+      whereCondition.countryId = { [Op.in]: idArray };
     }
 
     if (seasonId) {
       const idArray: number[] = seasonId
         .split(",")
         .map((id: any) => parseInt(id, 10));
-      whereCondition["$sales.season_id$"] = { [Op.in]: idArray };
+      whereCondition.seasonId = { [Op.in]: idArray };
     }
 
-    whereCondition["$sales.status$"] = { [Op.ne]: "To be Submitted" };
+    whereCondition.status = { [Op.ne]: "To be Submitted" };
 
     if (programId) {
       const idArray: number[] = programId
         .split(",")
         .map((id: any) => parseInt(id, 10));
-      whereCondition["$sales.program_id$"] = { [Op.in]: idArray };
+      whereCondition.programId = { [Op.in]: idArray };
     }
 
     // Create the excel workbook file
@@ -1377,146 +1443,133 @@ const exportGinnerSales = async (req: Request, res: Response) => {
       "status",
     ]);
     headerRow.font = { bold: true };
-    let include = [
-      {
-        model: Ginner,
-        as: "ginner",
-        attributes: [],
-      },
-      {
-        model: Season,
-        as: "season",
-        attributes: [],
-      },
-      {
-        model: Program,
-        as: "program",
-        attributes: [],
-      },
-      {
-        model: Spinner,
-        as: "buyerdata",
-        attributes: [],
-      },
-    ];
-    //fetch data with pagination
+    // let include = [
+    //   {
+    //     model: Ginner,
+    //     as: "ginner",
+    //     attributes: [],
+    //   },
+    //   {
+    //     model: Season,
+    //     as: "season",
+    //     attributes: [],
+    //   },
+    //   {
+    //     model: Program,
+    //     as: "program",
+    //     attributes: [],
+    //   },
+    //   {
+    //     model: Spinner,
+    //     as: "buyerdata",
+    //     attributes: [],
+    //   },
+    // ];
+    // //fetch data with pagination
 
-    const rows: any = await BaleSelection.findAll({
-      attributes: [
-        [Sequelize.literal('"sales"."id"'), "sales_id"],
-        [Sequelize.literal('"sales"."date"'), "date"],
-        [Sequelize.literal('"sales"."createdAt"'), "createdAt"],
-        [Sequelize.col('"sales"."season"."name"'), "season_name"],
-        [Sequelize.col('"sales"."ginner"."name"'), "ginner"],
-        [Sequelize.col('"sales"."program"."program_name"'), "program"],
-        [Sequelize.col('"sales"."buyerdata"."name"'), "buyerdata"],
-        [Sequelize.literal('"sales"."total_qty"'), "total_qty"],
-        [Sequelize.literal('"sales"."invoice_no"'), "invoice_no"],
-        [Sequelize.col('"bale"."ginprocess"."lot_no"'), "lot_no"],
-        [Sequelize.col('"bale"."ginprocess"."reel_lot_no"'), "reel_lot_no"],
-        [Sequelize.literal('"sales"."rate"'), "rate"],
-        [Sequelize.literal('"sales"."candy_rate"'), "candy_rate"],
-        [
-          Sequelize.fn(
-            "SUM",
-            Sequelize.literal('CAST("bale"."weight" AS DOUBLE PRECISION)')
-          ),
-          "lint_quantity",
-        ],
-        [
-          Sequelize.fn("COUNT", Sequelize.literal("DISTINCT bale_id")),
-          "no_of_bales",
-        ],
-        [Sequelize.literal('"sales"."sale_value"'), "sale_value"],
-        [Sequelize.literal('"sales"."press_no"'), "press_no"],
-        [Sequelize.literal('"sales"."qty_stock"'), "qty_stock"],
-        [Sequelize.literal('"sales"."weight_loss"'), "weight_loss"],
-        [Sequelize.literal('"sales"."invoice_file"'), "invoice_file"],
-        [Sequelize.literal('"sales"."vehicle_no"'), "vehicle_no"],
-        [Sequelize.literal('"sales"."transporter_name"'), "transporter_name"],
-        [Sequelize.literal('"sales"."transaction_agent"'), "transaction_agent"],
-        [Sequelize.literal('"sales"."status"'), "status"],
-      ],
-      where: whereCondition,
-      include: [
-        {
-          model: GinSales,
-          as: "sales",
-          include: include,
-          attributes: [],
-        },
-        {
-          model: GinBale,
-          attributes: [],
-          as: "bale",
-          include: [
-            {
-              model: GinProcess,
-              as: "ginprocess",
-              attributes: [],
-            },
-          ],
-        },
-      ],
-      group: [
-        "bale.process_id",
-        "bale.ginprocess.id",
-        "sales.id",
-        "sales.season.id",
-        "sales.ginner.id",
-        "sales.buyerdata.id",
-        "sales.program.id",
-      ],
-      order: [["sales_id", "desc"]],
-    });
+    // const rows: any = await BaleSelection.findAll({
+    //   attributes: [
+    //     [Sequelize.literal('"sales"."id"'), "sales_id"],
+    //     [Sequelize.literal('"sales"."date"'), "date"],
+    //     [Sequelize.literal('"sales"."createdAt"'), "createdAt"],
+    //     [Sequelize.col('"sales"."season"."name"'), "season_name"],
+    //     [Sequelize.col('"sales"."ginner"."name"'), "ginner"],
+    //     [Sequelize.col('"sales"."program"."program_name"'), "program"],
+    //     [Sequelize.col('"sales"."buyerdata"."name"'), "buyerdata"],
+    //     [Sequelize.literal('"sales"."total_qty"'), "total_qty"],
+    //     [Sequelize.literal('"sales"."invoice_no"'), "invoice_no"],
+    //     [Sequelize.col('"bale"."ginprocess"."lot_no"'), "lot_no"],
+    //     [Sequelize.col('"bale"."ginprocess"."reel_lot_no"'), "reel_lot_no"],
+    //     [Sequelize.literal('"sales"."rate"'), "rate"],
+    //     [Sequelize.literal('"sales"."candy_rate"'), "candy_rate"],
+    //     [
+    //       Sequelize.fn(
+    //         "SUM",
+    //         Sequelize.literal('CAST("bale"."weight" AS DOUBLE PRECISION)')
+    //       ),
+    //       "lint_quantity",
+    //     ],
+    //     [
+    //       Sequelize.fn("COUNT", Sequelize.literal("DISTINCT bale_id")),
+    //       "no_of_bales",
+    //     ],
+    //     [Sequelize.literal('"sales"."sale_value"'), "sale_value"],
+    //     [Sequelize.literal('"sales"."press_no"'), "press_no"],
+    //     [Sequelize.literal('"sales"."qty_stock"'), "qty_stock"],
+    //     [Sequelize.literal('"sales"."weight_loss"'), "weight_loss"],
+    //     [Sequelize.literal('"sales"."invoice_file"'), "invoice_file"],
+    //     [Sequelize.literal('"sales"."vehicle_no"'), "vehicle_no"],
+    //     [Sequelize.literal('"sales"."transporter_name"'), "transporter_name"],
+    //     [Sequelize.literal('"sales"."transaction_agent"'), "transaction_agent"],
+    //     [Sequelize.literal('"sales"."status"'), "status"],
+    //   ],
+    //   where: whereCondition,
+    //   include: [
+    //     {
+    //       model: GinSales,
+    //       as: "sales",
+    //       include: include,
+    //       attributes: [],
+    //     },
+    //     {
+    //       model: GinBale,
+    //       attributes: [],
+    //       as: "bale",
+    //       include: [
+    //         {
+    //           model: GinProcess,
+    //           as: "ginprocess",
+    //           attributes: [],
+    //         },
+    //       ],
+    //     },
+    //   ],
+    //   group: [
+    //     "bale.process_id",
+    //     "bale.ginprocess.id",
+    //     "sales.id",
+    //     "sales.season.id",
+    //     "sales.ginner.id",
+    //     "sales.buyerdata.id",
+    //     "sales.program.id",
+    //   ],
+    //   order: [["sales_id", "desc"]],
+    // });
 
-    let result = rows.flat();
-    // Apply pagination to the combined result
-    let data = rows.slice(offset, offset + limit);
+    // let result = rows.flat();
+    // // Apply pagination to the combined result
+    // let data = rows.slice(offset, offset + limit);
+
+    const data=await ExportGinnerSale.findAll({
+        where: whereCondition,
+        
+      
+      })
 
     // Append data to worksheet
     for await (const [index, item] of data.entries()) {
 
       const rowValues = Object.values({
         index: index + 1,
-        date: item.dataValues.date ? item.dataValues.date : "",
-        created_at: item.dataValues.createdAt ? item.dataValues.createdAt : "",
-        season: item.dataValues.season_name ? item.dataValues.season_name : "",
-        ginner: item.dataValues.ginner ? item.dataValues.ginner : "",
-        invoice: item.dataValues.invoice_no ? item.dataValues.invoice_no : "",
-        buyer: item.dataValues.buyerdata ? item.dataValues.buyerdata : "",
+        date: item.date ? item.date : "",
+        created_at: item.createdAt ? item.createdAt : "",
+        season: item.season ,
+        ginner: item.ginner ,
+        invoice: item.invoice ,
+        buyer: item.buyer ,
         heap: "",
-        lot_no: item.dataValues.lot_no ? item.dataValues.lot_no : "",
-        reel_lot_no: item.dataValues.reel_lot_no
-          ? item.dataValues.reel_lot_no
-          : "",
-        no_of_bales: item.dataValues.no_of_bales
-          ? item.dataValues.no_of_bales
-          : "",
-        press_no: item.dataValues.press_no ? item.dataValues.press_no : "",
-        rate: item.dataValues.rate ? item.dataValues.rate : "",
-        lint_quantity: item.dataValues.lint_quantity
-          ? item.dataValues.lint_quantity
-          : "",
-        sales_value: item.dataValues.sale_value
-          ? item.dataValues.sale_value
-          : "",
-        vehicle_no: item.dataValues.vehicle_no
-          ? item.dataValues.vehicle_no
-          : "",
-        transporter_name: item.dataValues.transporter_name
-          ? item.dataValues.transporter_name
-          : "",
-        program: item.dataValues.program ? item.dataValues.program : "",
-        agentDetails: item.dataValues.transaction_agent
-          ? item.dataValues.transaction_agent
-          : "NA",
-        status:
-          item.dataValues.status === "Sold"
-            ? "Sold"
-            : `Available [Stock : ${
-                item.dataValues.qty_stock ? item.dataValues.qty_stock : 0
-              }]`,
+        lot_no: item.lot_no ,
+        reel_lot_no: item.reel_lot_no,
+        no_of_bales: item.no_of_bales,
+        press_no: item.press_no,
+        rate: item.rate,
+        lint_quantity: item.lint_quantity,
+        sales_value: item.sales_value,
+        vehicle_no: item.vehicle_no,
+        transporter_name: item.transporter_name,
+        program: item.program,
+        agentDetails: item.agentDetails,
+        status:item.status,
       });
       worksheet.addRow(rowValues);
     }
