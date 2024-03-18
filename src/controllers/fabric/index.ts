@@ -685,7 +685,7 @@ const deleteDyingProcess = async (req: Request, res: Response) => {
  */
 
 // Get SOld Transaction for Washing Dashboard
-const fetchWashingTransactions = async (req: Request, res: Response) => {
+const   fetchWashingTransactions = async (req: Request, res: Response) => {
   try {
     const searchTerm = req.query.search || "";
     const page = Number(req.query.page) || 1;
