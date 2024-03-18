@@ -186,8 +186,14 @@ const yarnId = async (id: any, date: any) => {
             spinner_id: id
         }
     })
+    
+    let currentDate = new Date();
+    let day = String(currentDate.getUTCDate()).padStart(2, "0");
+    let month = String(currentDate.getUTCMonth() + 1).padStart(2, "0"); // UTC months are zero-indexed, so we add 1
+    let year = String(currentDate.getUTCFullYear());
 
-    let prcs_date = new Date(date).toLocaleDateString().replace(/\//g, '');
+    let prcs_date = day + month + year;
+
     return a[0].idprefix + prcs_date + '/' + (((spin) ?? 1) + 1)
 }
 

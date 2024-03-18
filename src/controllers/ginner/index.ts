@@ -241,8 +241,7 @@ const fetchGinProcessPagination = async (req: Request, res: Response) => {
               "lint_quantity",
             ],
             [sequelize.fn("min", sequelize.col("bale_no")), "pressno_from"],
-            [sequelize.fn("max", sequelize.col("bale_no")), "pressno_to"],
-
+            [sequelize.fn("max", Sequelize.literal("LPAD(bale_no, 10, ' ')")), "pressno_to"],
           ],
           where: { process_id: row.dataValues.id },
         });
@@ -252,17 +251,18 @@ const fetchGinProcessPagination = async (req: Request, res: Response) => {
           gin_press_no:
             (bale.dataValues.pressno_from || "") +
             "-" +
-            (bale.dataValues.pressno_to || ""),
+            (bale.dataValues.pressno_to || "").trim(),
           lint_quantity: bale.dataValues.lint_quantity,
           reel_press_no:
             row.dataValues.no_of_bales === 0
               ? ""
-              : `001-${row.dataValues.no_of_bales < 9
-                ? `00${row.dataValues.no_of_bales}`
-                : row.dataValues.no_of_bales < 99
-                  ? `0${row.dataValues.no_of_bales}`
-                  : row.dataValues.no_of_bales
-              }`,
+              : `001-${
+                  row.dataValues.no_of_bales < 9
+                    ? `00${row.dataValues.no_of_bales}`
+                    : row.dataValues.no_of_bales < 99
+                    ? `0${row.dataValues.no_of_bales}`
+                    : row.dataValues.no_of_bales
+                }`,
         });
       }
       return res.sendPaginationSuccess(res, sendData, count);
@@ -282,54 +282,54 @@ const fetchGinProcessPagination = async (req: Request, res: Response) => {
 
 //Export the Ginner Sales details through excel file
 const exportGinnerProcess = async (req: Request, res: Response) => {
-    const excelFilePath = path.join("./upload", "ginner-process.xlsx");
-    const searchTerm = req.query.search || "";
-    const page = Number(req.query.page) || 1;
-    const limit = Number(req.query.limit) || 10;
-    const { ginnerId, seasonId, programId }: any = req.query;
-    const offset = (page - 1) * limit;
-    const whereCondition: any = {};
-    try {
-      if (searchTerm) {
-        whereCondition[Op.or] = [
-          { "$season.name$": { [Op.iLike]: `%${searchTerm}%` } },
-          { lot_no: { [Op.iLike]: `%${searchTerm}%` } },
-          { reel_lot_no: { [Op.iLike]: `%${searchTerm}%` } },
-          { press_no: { [Op.iLike]: `%${searchTerm}%` } },
-          { heap_number: { [Op.iLike]: `%${searchTerm}%` } },
-        ];
-      }
-      if (ginnerId) {
-        whereCondition.ginner_id = ginnerId;
-      }
-      if (seasonId) {
-        const idArray: number[] = seasonId
-          .split(",")
-          .map((id: any) => parseInt(id, 10));
-        whereCondition.season_id = { [Op.in]: idArray };
-      }
-  
-      if (programId) {
-        const idArray: number[] = programId
-          .split(",")
-          .map((id: any) => parseInt(id, 10));
-        whereCondition.program_id = { [Op.in]: idArray };
-      }
-  
-      let include = [
-        {
-          model: Ginner,
-          as: "ginner",
-        },
-        {
-          model: Season,
-          as: "season",
-        },
-        {
-          model: Program,
-          as: "program",
-        },
+  const excelFilePath = path.join("./upload", "ginner-process.xlsx");
+  const searchTerm = req.query.search || "";
+  const page = Number(req.query.page) || 1;
+  const limit = Number(req.query.limit) || 10;
+  const { ginnerId, seasonId, programId }: any = req.query;
+  const offset = (page - 1) * limit;
+  const whereCondition: any = {};
+  try {
+    if (searchTerm) {
+      whereCondition[Op.or] = [
+        { "$season.name$": { [Op.iLike]: `%${searchTerm}%` } },
+        { lot_no: { [Op.iLike]: `%${searchTerm}%` } },
+        { reel_lot_no: { [Op.iLike]: `%${searchTerm}%` } },
+        { press_no: { [Op.iLike]: `%${searchTerm}%` } },
+        { heap_number: { [Op.iLike]: `%${searchTerm}%` } },
       ];
+    }
+    if (ginnerId) {
+      whereCondition.ginner_id = ginnerId;
+    }
+    if (seasonId) {
+      const idArray: number[] = seasonId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.season_id = { [Op.in]: idArray };
+    }
+
+    if (programId) {
+      const idArray: number[] = programId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.program_id = { [Op.in]: idArray };
+    }
+
+    let include = [
+      {
+        model: Ginner,
+        as: "ginner",
+      },
+      {
+        model: Season,
+        as: "season",
+      },
+      {
+        model: Program,
+        as: "program",
+      },
+    ];
     // Create the excel workbook file
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet("Sheet1");
@@ -354,7 +354,7 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
       "Program",
       "Got",
       "Total Seed Cotton Consumed(kgs)",
-      "Village"
+      "Village",
     ]);
     headerRow.font = { bold: true };
     const gin = await GinProcess.findAll({
@@ -362,64 +362,69 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
       include: include,
       order: [["id", "desc"]],
     });
-      // Fetch associated data in bulk for better performance
-  const processIds = gin.map((process:any) => process.id);
-  // Fetch GinBale data for all gin processes in one query
-  const ginBales = await GinBale.findAll({
-    attributes: [
-      [
-        Sequelize.fn(
-          "SUM",
-          Sequelize.literal("CAST(weight AS DOUBLE PRECISION)")
-        ),
-        "lint_quantity",
+    // Fetch associated data in bulk for better performance
+    const processIds = gin.map((process: any) => process.id);
+    // Fetch GinBale data for all gin processes in one query
+    const ginBales = await GinBale.findAll({
+      attributes: [
+        [
+          Sequelize.fn(
+            "SUM",
+            Sequelize.literal("CAST(weight AS DOUBLE PRECISION)")
+          ),
+          "lint_quantity",
+        ],
+        [sequelize.fn("min", sequelize.col("bale_no")), "pressno_from"],
+        [sequelize.fn("max", Sequelize.literal("LPAD(bale_no, 10, ' ')")), "pressno_to"],
+        "process_id",
       ],
-      [sequelize.fn("min", sequelize.col("bale_no")), "pressno_from"],
-      [sequelize.fn("max", sequelize.col("bale_no")), "pressno_to"],
-      "process_id"
-    ],
-    raw : true,
-    where: { process_id: { [Op.in]: processIds } },
-    group: ["process_id"],
-  });
-  // Fetch associated CottonSelection and Transaction data in bulk
-const cottonSelections = await CottonSelection.findAll({
-  include : [{
-    model: Transaction,
-    include :[
-      {
-        model: Village,
-        attributes: [],
-        as: 'village'
-      }
-    ],
-    attributes: [],
-    as: 'transaction'
-  }],
-  attributes: ['process_id',[sequelize.col('transaction.village.village_name'), 'name']],
-  where: { process_id: { [Op.in]: processIds } },
-});
+      raw: true,
+      where: { process_id: { [Op.in]: processIds } },
+      group: ["process_id"],
+    });
+    // Fetch associated CottonSelection and Transaction data in bulk
+    const cottonSelections = await CottonSelection.findAll({
+      include: [
+        {
+          model: Transaction,
+          include: [
+            {
+              model: Village,
+              attributes: [],
+              as: "village",
+            },
+          ],
+          attributes: [],
+          as: "transaction",
+        },
+      ],
+      attributes: [
+        "process_id",
+        [sequelize.col("transaction.village.village_name"), "name"],
+      ],
+      where: { process_id: { [Op.in]: processIds } },
+    });
 
     // Append data to worksheet
     for await (const [index, item] of gin.entries()) {
-      const cottonSelectionsForProcess = cottonSelections.filter((cotton:any) => cotton.process_id === item.id);
-      
-      let bale = ginBales.find((obj:any) => obj.process_id == item.id);
+      const cottonSelectionsForProcess = cottonSelections.filter(
+        (cotton: any) => cotton.process_id === item.id
+      );
+
+      let bale = ginBales.find((obj: any) => obj.process_id == item.id);
       let gin_press_no =
-      (bale?.pressno_from || "") +
-      "-" +
-      (bale?.pressno_to || "");
-    let lint_quantity =  bale?.lint_quantity ?? 0;
-    let reel_press_no =
-      item.dataValues.no_of_bales === 0
-        ? ""
-        : `001-${
-          item.dataValues.no_of_bales < 9
-              ? `00${item.dataValues.no_of_bales}`
-              : item.dataValues.no_of_bales < 99
-              ? `0${item.dataValues.no_of_bales}`
-              : item.dataValues.no_of_bales
-          }`;
+        (bale?.pressno_from || "") + "-" + (bale?.pressno_to || "").trim();
+      let lint_quantity = bale?.lint_quantity ?? 0;
+      let reel_press_no =
+        item.dataValues.no_of_bales === 0
+          ? ""
+          : `001-${
+              item.dataValues.no_of_bales < 9
+                ? `00${item.dataValues.no_of_bales}`
+                : item.dataValues.no_of_bales < 99
+                ? `0${item.dataValues.no_of_bales}`
+                : item.dataValues.no_of_bales
+            }`;
       const rowValues = Object.values({
         index: index + 1,
         createdDate: item.createdAt ? item.createdAt : "",
@@ -428,14 +433,18 @@ const cottonSelections = await CottonSelection.findAll({
         lot: item.lot_no ? item.lot_no : "",
         gin_press_no: gin_press_no ? gin_press_no : "",
         reel_lot_no: item.reel_lot_no ? item.reel_lot_no : "",
-        heap_number : item.heap_number ? item.heap_number: "",
+        heap_number: item.heap_number ? item.heap_number : "",
         press_no: reel_press_no ? reel_press_no : "",
         no_of_bales: item.no_of_bales ? item.no_of_bales : "",
         lint_quantity: lint_quantity ? lint_quantity : "",
         program: item.program ? item.program.program_name : "",
         gin_out_turn: item.gin_out_turn ? item.gin_out_turn : "",
-        total_qty : item.total_qty ? item.total_qty : "",
-        a : [...new Set(cottonSelectionsForProcess.map((obj:any) => obj.dataValues.name))].join(", ")
+        total_qty: item.total_qty ? item.total_qty : "",
+        a: [
+          ...new Set(
+            cottonSelectionsForProcess.map((obj: any) => obj.dataValues.name)
+          ),
+        ].join(", "),
       });
       worksheet.addRow(rowValues);
     }
@@ -742,7 +751,7 @@ const chooseCotton = async (req: Request, res: Response) => {
           vlg_id: villageId,
           village: result.village,
           program: result.program,
-          season: result.season
+          season: result.season,
         };
       }
     });
@@ -1203,7 +1212,7 @@ const fetchGinSaleBale = async (req: Request, res: Response) => {
             {
               model: Ginner,
               as: "ginner",
-              attributes: ["id", "name", "address",'brand'],
+              attributes: ["id", "name", "address", "brand"],
             },
           ],
         },
@@ -1212,18 +1221,16 @@ const fetchGinSaleBale = async (req: Request, res: Response) => {
       offset: offset,
       limit: limit,
     });
-    let data = [ ]
-    for await(let obj of rows) {
-      if(obj.dataValues.sales.ginner) {
+    let data = [];
+    for await (let obj of rows) {
+      if (obj.dataValues.sales.ginner) {
         let brands = await Brand.findAll({
-          where : { id :obj.dataValues.sales.ginner.brand }
-        })
-        data.push({...obj.dataValues,brands})
+          where: { id: obj.dataValues.sales.ginner.brand },
+        });
+        data.push({ ...obj.dataValues, brands });
       }
-     
-     
     }
-    return res.sendPaginationSuccess(res, data,count);
+    return res.sendPaginationSuccess(res, data, count);
   } catch (error: any) {
     console.error(error);
     return res.sendError(res, error.meessage);
@@ -1383,7 +1390,12 @@ const getReelBaleId = async (req: Request, res: Response) => {
     var baleid_prefix = result.dataValues.idprefix
       ? result.dataValues.idprefix
       : "";
-    var prcs_date = new Date().toLocaleDateString().replace(/\//g, "");
+      let currentDate = new Date();
+      let day = String(currentDate.getUTCDate()).padStart(2, "0");
+      let month = String(currentDate.getUTCMonth() + 1).padStart(2, "0"); // UTC months are zero-indexed, so we add 1
+      let year = String(currentDate.getUTCFullYear());
+  
+      let prcs_date = day + month + year;
     var bale_no = baleCount ? Number(baleCount ?? 0) + 1 : 1;
     var reelbale_id = baleid_prefix + prcs_date + "/" + String(bale_no);
     res.sendSuccess(res, { id: reelbale_id });
@@ -1565,33 +1577,32 @@ const checkReport = async (req: Request, res: Response) => {
 
     let ginnerId = req.query.ginnerId;
     let report = await QualityParameter.findOne({
-      where: {ginner_id:ginnerId},
-      order :[ ['id','desc'] ]
-    })
+      where: { ginner_id: ginnerId },
+      order: [["id", "desc"]],
+    });
     if (!report) {
       let data = await GinProcess.findAll({
         where: {
-          ginner_id :ginnerId
+          ginner_id: ginnerId,
         },
       });
-      if(data.length >= 3){
-        return res.sendSuccess(res, {show : true});
+      if (data.length >= 3) {
+        return res.sendSuccess(res, { show: true });
       } else {
-        return res.sendSuccess(res, {show : false});
+        return res.sendSuccess(res, { show: false });
       }
     }
     let data = await GinProcess.findAll({
       where: {
         id: { [Op.gt]: report.dataValues.process_id },
-        ginner_id :ginnerId
+        ginner_id: ginnerId,
       },
     });
-    if(data.length >= 3){
-      res.sendSuccess(res, {show : true});
+    if (data.length >= 3) {
+      res.sendSuccess(res, { show: true });
     } else {
-      res.sendSuccess(res, {show : false});
+      res.sendSuccess(res, { show: false });
     }
-    
   } catch (error: any) {
     console.error(error);
     return res.sendError(res, error.meessage);
@@ -1624,5 +1635,5 @@ export {
   updateGinnerSalesField,
   fetchGinProcess,
   exportGinnerProcess,
-  checkReport
+  checkReport,
 };
