@@ -155,12 +155,12 @@ const getEstimateProductionByCountry = async (
     colName = 'village_name';
     model = Village;
   }
-  if (reqData.district) {
+  else if (reqData.district) {
     tableName = 'block';
     colName = 'block_name';
     model = Block;
   }
-  if (reqData.state) {
+  else if (reqData.state) {
     tableName = 'district';
     colName = 'district_name';
     model = District;

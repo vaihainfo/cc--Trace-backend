@@ -9,7 +9,7 @@ import Season from './season.model';
 import Garment from './garment.model';
 import Fabric from './fabric.model';
 
-const KnitSales = db.define('knit_sales', {
+const   KnitSales = db.define('knit_sales', {
   id: {
     type: DataTypes.INTEGER,
     autoIncrement: true,
