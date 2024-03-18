@@ -931,21 +931,25 @@ const deleteWeaverSales = async (req: Request, res: Response) => {
     if (!req.body.id) {
       return res.sendError(res, "Need Sales Id");
     }
-    let yarn_selections = await YarnSelection.findAll({
+    let yarn_selections = await WeaverFabricSelection.findAll({
       where: {
         sales_id: req.body.id,
       },
     });
     yarn_selections.forEach((yarn: any) => {
-      SpinSales.update(
+      WeaverProcess.update(
         {
           qty_stock: sequelize.literal(`qty_stock + ${yarn.qty_used}`),
         },
         {
           where: {
-            id: yarn.yarn_id,
+            id: yarn.fabric_id,
           },
         }
+      );
+      let updatee =  WeaverFabric.update(
+        { sold_status: false },
+        { where: { id: yarn.weaver_fabric } }
       );
     });
 
@@ -955,7 +959,7 @@ const deleteWeaverSales = async (req: Request, res: Response) => {
       },
     });
 
-    YarnSelection.destroy({
+    WeaverFabricSelection.destroy({
       where: {
         sales_id: req.body.id,
       },
