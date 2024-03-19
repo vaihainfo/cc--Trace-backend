@@ -25,6 +25,7 @@ import { send_weaver_mail } from "../send-emails";
 import WeaverFabric from "../../models/weaver_fabric.model";
 import { _getSpinnerProcessTracingChartData } from "../spinner/index";
 import { formatDataFromWeaver } from "../../util/tracing-chart-data-formatter";
+import Country from "../../models/country.model";
 
 const createWeaverProcess = async (req: Request, res: Response) => {
   try {
@@ -563,6 +564,11 @@ const fetchFabricReelLotNo = async (req: Request, res: Response) => {
     const rows = await Weaver.findOne({
       where: whereCondition,
       attributes: ["id", "name", "short_name"],
+      include: [{
+        model :Country,
+        as : 'country',
+        attributes :['id','county_name']
+      }]
     });
 
     let count = await WeaverProcess.count({
@@ -587,8 +593,8 @@ const fetchFabricReelLotNo = async (req: Request, res: Response) => {
     // let prcs_date = new Date().toLocaleDateString().replace(/\//g, '');
     let number = count + 1;
     let prcs_name = rows ? rows?.name.substring(0, 3).toUpperCase() : "";
-
-    let reelLotNo = "REEL-WEA-" + prcs_name + "-" + prcs_date + number;
+    let country = rows ? rows?.country?.county_name.substring(0, 2).toUpperCase() : "";
+    let reelLotNo = "REEL-WEA-" + prcs_name + "-" + country + "-" + prcs_date + number;
 
     return res.sendSuccess(res, { reelLotNo });
   } catch (error: any) {

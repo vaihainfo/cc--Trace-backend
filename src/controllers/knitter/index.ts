@@ -25,6 +25,7 @@ import { send_knitter_mail } from "../send-emails";
 import KnitFabric from "../../models/knit_fabric.model";
 import { _getSpinnerProcessTracingChartData } from "../spinner/index";
 import { formatDataFromKnitter } from "../../util/tracing-chart-data-formatter";
+import Country from "../../models/country.model";
 
 const createKnitterProcess = async (req: Request, res: Response) => {
   try {
@@ -659,6 +660,11 @@ const fetchFabricReelLotNo = async (req: Request, res: Response) => {
     const rows = await Knitter.findOne({
       where: whereCondition,
       attributes: ["id", "name", "short_name"],
+      include: [{
+        model :Country,
+        as : 'country',
+        attributes :['id','county_name']
+      }]
     });
 
     let count = await KnitProcess.count({
@@ -682,8 +688,8 @@ const fetchFabricReelLotNo = async (req: Request, res: Response) => {
 
     let number = count + 1;
     let prcs_name = rows ? rows?.name.substring(0, 3).toUpperCase() : "";
-
-    let reelLotNo = "REEL-KNI-" + prcs_name + "-" + prcs_date + "/" + number;
+    let country = rows ? rows?.country?.county_name.substring(0, 2).toUpperCase() : "";
+    let reelLotNo = "REEL-KNI-" + prcs_name + "-"+ country + "-" + prcs_date + "/" + number;
 
     return res.sendSuccess(res, { reelLotNo });
   } catch (error: any) {

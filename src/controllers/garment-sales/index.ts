@@ -1989,6 +1989,11 @@ const getGarmentReelLotNo = async (req: Request, res: Response) => {
     const rows = await Garment.findOne({
       where: whereCondition,
       attributes: ["id", "name", "short_name"],
+      include: [{
+        model :Country,
+        as : 'country',
+        attributes :['id','county_name']
+      }]
     });
 
     let count = await GarmentProcess.count({
@@ -2007,8 +2012,8 @@ const getGarmentReelLotNo = async (req: Request, res: Response) => {
     let prcs_date = new Date().toLocaleDateString().replace(/\//g, "");
     let number = count + 1;
     let prcs_name = rows ? rows?.name.substring(0, 3).toUpperCase() : "";
-
-    let reelLotNo = "REEL-GAR-" + prcs_name + "-" + prcs_date + number;
+    let country = rows ? rows?.country?.county_name.substring(0, 2).toUpperCase() : "";
+    let reelLotNo = "REEL-GAR-" + prcs_name  + "-" + country + "-" + prcs_date + number;
 
     return res.sendSuccess(res, { reelLotNo });
   } catch (error: any) {
