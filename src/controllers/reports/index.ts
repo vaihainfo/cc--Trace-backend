@@ -241,8 +241,10 @@ const exportLoad=async(req: Request, res: Response)=>{
     let loadData=data[0]
     
   //   loadData.dataValues.failes_procurement_load||
+  console.log(loadData.dataValues.ginner_seed_cotton_load,req?.body?.file_name==="ginner-seed-cotton-stock-report.xlsx");
+  
     
-    if(loadData.dataValues.ginner_lint_bale_process_load ||loadData.dataValues.ginner_summary_load||loadData.dataValues.ginner_lint_bale_sale_load||loadData.dataValues.ginner_pending_sales_load||loadData.dataValues.ginner_seed_cotton_load||loadData.dataValues.spinner_summary_load||loadData.dataValues.spinner_bale_receipt_load||loadData.dataValues.spinner_yarn_process_load||loadData.dataValues.spinner_yarn_sales_load||loadData.dataValues.spinner_yarn_bales_load||loadData.dataValues.spinner_lint_cotton_stock_load||loadData.dataValues.knitter_yarn_receipt_load||loadData.dataValues.knitter_yarn_process_load||loadData.dataValues.knitter_fabric_sales_load||loadData.dataValues.weaver_yarn_receipt_load||loadData.dataValues.weaver_yarn_process_load||loadData.dataValues.weaver_yarn_sales_load||loadData.dataValues.garment_fabric_receipt_load||loadData.dataValues.garment_fabric_process_load||loadData.dataValues.garment_fabric_sales_load||loadData.dataValues.qr_code_tracker_load||loadData.dataValues.consolidated_tracebality_load || loadData.dataValues.spinner_backward_tracebality_load|| loadData.dataValues.village_seed_cotton_load|| loadData.dataValues.premium_validation_load|| loadData.dataValues.procurement_load||  loadData.dataValues.procurement_tracker_load|| loadData.dataValues.procurement_sell_live_tracker_load|| loadData.dataValues.qr_app_procurement_load ||loadData.dataValues.failed_farmer_load ){
+    if((loadData.dataValues.ginner_lint_bale_process_load && req?.body?.file_name ==="gin-bale-process.xlsx") ||(loadData.dataValues.ginner_summary_load&& req?.body?.file_name ==="ginner-summary.xlsx")||(loadData.dataValues.ginner_lint_bale_sale_load&&req?.body?.file_name==="Ginner-sales-report.xlsx")||(loadData.dataValues.ginner_pending_sales_load&&req?.body?.file_name==="Ginner-pending-sales-report.xlsx")||(loadData.dataValues.ginner_seed_cotton_load&&req?.body?.file_name==="ginner-seed-cotton-stock-report.xlsx")||loadData.dataValues.spinner_summary_load||loadData.dataValues.spinner_bale_receipt_load||loadData.dataValues.spinner_yarn_process_load||loadData.dataValues.spinner_yarn_sales_load||loadData.dataValues.spinner_yarn_bales_load||loadData.dataValues.spinner_lint_cotton_stock_load||loadData.dataValues.knitter_yarn_receipt_load||loadData.dataValues.knitter_yarn_process_load||loadData.dataValues.knitter_fabric_sales_load||loadData.dataValues.weaver_yarn_receipt_load||loadData.dataValues.weaver_yarn_process_load||loadData.dataValues.weaver_yarn_sales_load||loadData.dataValues.garment_fabric_receipt_load||loadData.dataValues.garment_fabric_process_load||loadData.dataValues.garment_fabric_sales_load||loadData.dataValues.qr_code_tracker_load||loadData.dataValues.consolidated_tracebality_load || loadData.dataValues.spinner_backward_tracebality_load|| loadData.dataValues.village_seed_cotton_load|| loadData.dataValues.premium_validation_load|| loadData.dataValues.procurement_load||  loadData.dataValues.procurement_tracker_load|| loadData.dataValues.procurement_sell_live_tracker_load|| loadData.dataValues.qr_app_procurement_load ||loadData.dataValues.failed_farmer_load ){
       res.status(200).send({
           success: true,
           messgage: "File under processing", 
@@ -1551,25 +1553,25 @@ const exportGinnerSales = async (req: Request, res: Response) => {
 
       const rowValues = Object.values({
         index: index + 1,
-        date: item.date ? item.date : "",
-        created_at: item.createdAt ? item.createdAt : "",
-        season: item.season ,
-        ginner: item.ginner ,
-        invoice: item.invoice ,
-        buyer: item.buyer ,
+        date: item?.date ? item?.date : "",
+        created_at: item?.createdAt ? item?.createdAt : "",
+        season: item?.season ,
+        ginner: item?.ginner ,
+        invoice: item?.invoice ,
+        buyer: item?.buyer ,
         heap: "",
-        lot_no: item.lot_no ,
-        reel_lot_no: item.reel_lot_no,
-        no_of_bales: item.no_of_bales,
-        press_no: item.press_no,
-        rate: item.rate,
-        lint_quantity: item.lint_quantity,
-        sales_value: item.sales_value,
-        vehicle_no: item.vehicle_no,
-        transporter_name: item.transporter_name,
-        program: item.program,
-        agentDetails: item.agentDetails,
-        status:item.status,
+        lot_no: item?.lot_no ,
+        reel_lot_no: item?.reel_lot_no,
+        no_of_bales: item?.no_of_bales,
+        press_no: item?.press_no,
+        rate: item?.rate,
+        lint_quantity: item?.lint_quantity,
+        sales_value: item?.sales_value,
+        vehicle_no: item?.vehicle_no,
+        transporter_name: item?.transporter_name,
+        program: item?.program,
+        agentDetails: item?.agentDetails,
+        status:item?.status,
       });
       worksheet.addRow(rowValues);
     }
@@ -1588,8 +1590,8 @@ const exportGinnerSales = async (req: Request, res: Response) => {
     let a  = await ExportData.update({
         ginner_lint_bale_sale_load:false
     },{where:{ginner_lint_bale_sale_load:true}})
-    let dataa = await ExportData.findOne({where:{ginner_lint_bale_sale_load:false}})
-    console.log(dataa)
+    // let dataa = await ExportData.findOne({where:{ginner_lint_bale_sale_load:false}})
+    // console.log(dataa)
     // res.status(200).send({
     //   success: true,
     //   messgage: "File successfully Generated",
@@ -8772,36 +8774,36 @@ const exportGinnerCottonStock = async (req: Request, res: Response) => {
       const idArray: number[] = ginnerId
         .split(",")
         .map((id: any) => parseInt(id, 10));
-      whereCondition.ginner_id = { [Op.in]: idArray };
+      whereCondition.ginnerId = { [Op.in]: idArray };
     }
 
     if (brandId) {
       const idArray: number[] = brandId
         .split(",")
         .map((id: any) => parseInt(id, 10));
-      whereCondition["$ginner.brand$"] = { [Op.overlap]: idArray };
+      whereCondition.brandId = { [Op.overlap]: idArray };
     }
 
     if (countryId) {
       const idArray: number[] = countryId
         .split(",")
         .map((id: any) => parseInt(id, 10));
-      whereCondition["$ginner.country_id$"] = { [Op.in]: idArray };
+      whereCondition.countryId = { [Op.in]: idArray };
     }
 
     if (programId) {
       const idArray: number[] = programId
         .split(",")
         .map((id: any) => parseInt(id, 10));
-      transactionWhere.program_id = { [Op.in]: idArray };
-      whereCondition.program_id = { [Op.in]: idArray };
+      transactionWhere.programId = { [Op.in]: idArray };
+      whereCondition.programId = { [Op.in]: idArray };
     }
 
     if (seasonId) {
       const idArray: number[] = seasonId
         .split(",")
         .map((id: any) => parseInt(id, 10));
-      whereCondition.season_id = { [Op.in]: idArray };
+      whereCondition.seasonId = { [Op.in]: idArray };
     }
 
     // Create the excel workbook file
