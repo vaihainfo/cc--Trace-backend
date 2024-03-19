@@ -15,7 +15,8 @@ const getTopVillages = async (
 ) => {
   try {
     const reqData = await getQueryParams(req, res);
-    const villagesData = await getTopVillagesData(reqData);
+    const where = getTransactionDataQuery(reqData)
+    const villagesData = await getTopVillagesData(where);
     const data = getTopVillagesRes(villagesData);
     return res.sendSuccess(res, data);
 
@@ -115,7 +116,7 @@ const getTopVillagesData = async (
       as: 'village',
       attributes: []
     }],
-    //where,
+    where,
     order: [['total', 'desc']],
     limit: 10,
     group: ['village.id']

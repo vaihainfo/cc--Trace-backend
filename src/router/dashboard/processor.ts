@@ -4,7 +4,7 @@ import { Router } from "express";
 
 
 const router = Router();
-//router.use(accessControl);
+router.use(accessControl);
 router.get('/knitter/yarn', Dashboard.getKnitterYarn);
 router.get('/knitter/fabric', Dashboard.getKnitterFabric);
 router.get('/weaver/yarn', Dashboard.getWeaverYarn);
@@ -14,5 +14,6 @@ router.get('/garment/inventory', Dashboard.getGarmentInventory);
 router.get('/fabric/inventory', Dashboard.getFabricInventory);
 router.get('/fabric', Dashboard.getFabricType);
 router.get('/fabric/buyer/type', Dashboard.getFabricByBuyerType);
+router.get('/fabric/inventory/buyer/type', Dashboard.getFabricInventoryByBuyer);
 
 export default router;
