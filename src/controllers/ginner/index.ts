@@ -67,7 +67,7 @@ const createGinnerProcess = async (req: Request, res: Response) => {
     for await (const bale of req.body.bales) {
       let baleData = {
         process_id: ginprocess.id,
-        bale_no: bale.baleNo,
+        bale_no: String(bale.baleNo),
         weight: bale.weight,
         staple: bale.staple,
         mic: bale.mic,
