@@ -12,6 +12,7 @@ import Knitter from "../../models/knitter.model";
 import DyingSales from "../../models/dying-sales.model";
 import WashingSales from "../../models/washing-sales.model";
 import PrintingSales from "../../models/printing-sales.model";
+import Fabric from "../../models/fabric.model";
 
 const getQueryParams = async (
     req: Request, res: Response,
@@ -334,10 +335,10 @@ const getKnitterFabricData = async (
         attributes: [
             [Sequelize.fn('SUM', Sequelize.col('total_fabric_weight')), 'fabricWeight'],
             [Sequelize.col('program.program_name'), 'programName'],
-            [Sequelize.literal(`(select FY."fabricType_name"
+            [Sequelize.literal(`unnest(array(select FY."fabricType_name"
                         from fabric_types FY
                         where knit_sales.fabric_type @> ARRAY [FY.id]
-                        )`), 'fabricName'],
+                        ))`), 'fabricName'],
         ],
         include: [{
             model: Program,
@@ -430,10 +431,10 @@ const getWeaverFabricData = async (
         attributes: [
             [Sequelize.fn('SUM', Sequelize.col('total_fabric_length')), 'fabricWeight'],
             [Sequelize.col('program.program_name'), 'programName'],
-            [Sequelize.literal(`(select FY."fabricType_name"
+            [Sequelize.literal(`unnest(array(select FY."fabricType_name"
                              from fabric_types FY
                              where weaver_sales.fabric_type @> ARRAY [FY.id]
-                             )`), 'fabricName'],
+                             ))`), 'fabricName'],
         ],
         include: [{
             model: Program,
@@ -662,7 +663,7 @@ const getGarmentSalesWhereQuery = (
     if (reqData?.district)
         where['$garment.district_id$'] = reqData.district;
 
-        if (reqData?.garment)
+    if (reqData?.garment)
         where['$garment.id$'] = reqData.garment;
 
     return where;
@@ -679,9 +680,7 @@ const getGarmentInventoryData = async (
                 Sequelize.fn('sum', Sequelize.col('total_no_of_pieces')), 'fabricWeight'
             ],
             [Sequelize.col('program.program_name'), 'programName'],
-            [Sequelize.literal(`(select type
-                FROM unnest("garment_sales".garment_type) as type
-                )`), 'fabricName'],
+            [Sequelize.literal(`unnest("garment_sales".garment_type)`), 'fabricName'],
         ],
         include: [{
             model: Garment,
@@ -731,6 +730,10 @@ const getFabricInventoryData = async (
         include: [{
             model: Program,
             as: 'program',
+            attributes: [],
+        }, {
+            model: Fabric,
+            as: 'dying_fabric',
             attributes: [],
         }],
         where,
@@ -793,7 +796,11 @@ const getFabricYarnData = async (
             model: Program,
             as: 'program',
             attributes: [],
-        },],
+        }, {
+            model: Fabric,
+            as: 'dying_fabric',
+            attributes: [],
+        }],
         where,
         group: ['program.id']
     });
@@ -915,6 +922,10 @@ const getWeaverSaleData = async (
             model: Program,
             as: 'program',
             attributes: [],
+        }, {
+            model: Fabric,
+            as: 'dyingwashing',
+            attributes: [],
         }],
         where,
         group: ['program.id']
@@ -971,7 +982,11 @@ const getKnitSaleData = async (
             model: Program,
             as: 'program',
             attributes: [],
-        },],
+        }, {
+            model: Fabric,
+            as: 'dyingwashing',
+            attributes: [],
+        }],
         where,
         group: ['program.id']
     });
