@@ -601,12 +601,12 @@ const getFarmerCountAndAreaRes = (
     };
     if (fAcre) {
       data.seasonName = fAcre.dataValues.seasonName;
-      data.count = formatNumber(fAcre.dataValues.farmerCount);
+      data.count = formatNumber(fAcre.dataValues.acreCount);
     }
 
     if (fCount) {
       data.seasonName = fCount.dataValues.seasonName;
-      data.acre = formatNumber(fCount.dataValues.acreCount);
+      data.acre = formatNumber(fCount.dataValues.farmerCount);
     }
 
     season.push(data.seasonName);
