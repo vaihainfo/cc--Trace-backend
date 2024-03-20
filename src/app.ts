@@ -81,7 +81,7 @@ import dashboardProcurementRouter from './router/dashboard/procurement';
 import dashboardProcessorRouter from './router/dashboard/processor';
 import { sendScheduledEmails } from "./controllers/email-management/scheduled-email.controller";
 import ExportData from "./models/export-data-check.model";
-import { exportGinnerPendingSchedule, exportGinnerProcessSchedule, exportGinnerSalesSchedule, exportGinnerSeedCottonSchedule, exportGinnerySummarySchedule } from "./controllers/reports";
+import { exportGinnerPendingSchedule, exportGinnerProcessSchedule, exportGinnerSalesSchedule, exportGinnerSeedCottonSchedule, exportGinnerySummarySchedule, exportSpinnerBaleReceiptSchedule, exportSpinnerSummarySchedule } from "./controllers/reports";
 
 const app = express();
 
@@ -219,6 +219,10 @@ exportGinnerySummarySchedule()
 exportGinnerSalesSchedule()
 exportGinnerPendingSchedule()
 exportGinnerSeedCottonSchedule()
+
+//spinner
+// exportSpinnerSummarySchedule()
+exportSpinnerBaleReceiptSchedule()
 });
 
 

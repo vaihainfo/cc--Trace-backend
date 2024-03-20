@@ -63,7 +63,12 @@ const ExportSpinnerBaleReceipt = db.define('export_spinner_bale_receipts', {
  brandId:{
     allowNull: true,
     type: DataTypes.INTEGER,
- },ginnerId:{
+ },
+ spinnerId:{
+    allowNull: true,
+    type: DataTypes.INTEGER,
+ },
+ ginnerId:{
     allowNull: true,
     type: DataTypes.INTEGER,
  },seasonId:{
