@@ -1594,7 +1594,7 @@ const checkReport = async (req: Request, res: Response) => {
     }
     let data = await GinProcess.findAll({
       where: {
-        id: { [Op.gt]: report.dataValues.process_id },
+        createdAt: { [Op.gt]: report.dataValues.createdAt },
         ginner_id: ginnerId,
       },
     });
