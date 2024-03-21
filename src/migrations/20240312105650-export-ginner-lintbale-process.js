@@ -128,7 +128,7 @@ module.exports = {
       },
       village: {
         allowNull: true,
-        type: Sequelize.STRING,
+        type: Sequelize.STRING(1000),
       },
       createdAt: {
         allowNull: false,

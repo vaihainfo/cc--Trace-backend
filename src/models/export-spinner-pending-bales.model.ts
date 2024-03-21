@@ -52,7 +52,7 @@ const ExportSpinnerPendingBales = db.define('export_spinner_pending_bales', {
   },
   village:{
     allowNull: true,
-    type: DataTypes.STRING,
+    type: DataTypes.STRING(1000),
   },
   ginnerId:{
     allowNull: true,

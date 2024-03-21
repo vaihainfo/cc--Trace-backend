@@ -110,7 +110,7 @@ const ExportGinnerProcess = db.define('export_ginner_lintbale_processes', {
  },
  village:{
     allowNull: true,
-    type: DataTypes.STRING,
+    type: DataTypes.STRING(1000),
  }, createdAt: {
     allowNull: false,
     type: DataTypes.DATE,
