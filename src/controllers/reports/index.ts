@@ -9679,23 +9679,32 @@ const exportSpinnerLintCottonStockSchedule=async()=>{
 }
 
 const exportSpinnerCottonStock = async (req: Request, res: Response) => {
-    // spinner_lint_cotton_stock_load
-    await ExportData.update({
-        spinner_lint_cotton_stock_load:true
-    },{where:{spinner_lint_cotton_stock_load:false}})
-    res.send({status:200,message:"export file processing"})
-  const excelFilePath = path.join(
-    "./upload",
-    "spinner-lint-cotton-stock-report.xlsx"
-  );
-  const searchTerm = req.query.search || "";
-  const page = Number(req.query.page) || 1;
-  const limit = Number(req.query.limit) || 10;
-  const offset = (page - 1) * limit;
-  const { spinnerId, seasonId, programId, brandId, countryId }: any = req.query;
-  const whereCondition: any = {};
+  // spinner_lint_cotton_stock_load
+  // await ExportData.update({
+  //     spinner_lint_cotton_stock_load:true
+  // },{where:{spinner_lint_cotton_stock_load:false}})
+  // res.send({status:200,message:"export file processing"})
+const excelFilePath = path.join(
+  "./upload",
+  "excel-spinner-lint-cotton-stock-report.xlsx"
+);
+const searchTerm = req.query.search || "";
+const page = Number(req.query.page) || 1;
+const limit = Number(req.query.limit) || 10;
+const offset = (page - 1) * limit;
+const { exportType, spinnerId, seasonId, programId, brandId, countryId }: any = req.query;
+const whereCondition: any = {};
 
-  try {
+try {
+  if (exportType === "all") {
+
+    return res.status(200).send({
+      success: true,
+      messgage: "File successfully Generated",
+      data: process.env.BASE_URL + "spinner-lint-cotton-stock-report.xlsx",
+    });
+
+  } else {
     if (searchTerm) {
       whereCondition[Op.or] = [
         { "$spinprocess.spinner.name$": { [Op.iLike]: `%${searchTerm}%` } },
@@ -9715,14 +9724,18 @@ const exportSpinnerCottonStock = async (req: Request, res: Response) => {
       const idArray: number[] = brandId
         .split(",")
         .map((id: any) => parseInt(id, 10));
-      whereCondition["$spinprocess.spinner.brand$"] = { [Op.overlap]: idArray };
+      whereCondition["$spinprocess.spinner.brand$"] = {
+        [Op.overlap]: idArray,
+      };
     }
 
     if (countryId) {
       const idArray: number[] = countryId
         .split(",")
         .map((id: any) => parseInt(id, 10));
-      whereCondition["$spinprocess.spinner.country_id$"] = { [Op.in]: idArray };
+      whereCondition["$spinprocess.spinner.country_id$"] = {
+        [Op.in]: idArray,
+      };
     }
 
     if (programId) {
@@ -9761,85 +9774,156 @@ const exportSpinnerCottonStock = async (req: Request, res: Response) => {
     ]);
     headerRow.font = { bold: true };
 
-    // let include = [
-    //   {
-    //     model: Spinner,
-    //     as: "spinner",
-    //     attributes: [],
-    //   },
-    //   {
-    //     model: Season,
-    //     as: "season",
-    //     attributes: [],
-    //   },
-    //   {
-    //     model: Program,
-    //     as: "program",
-    //     attributes: [],
-    //   },
-    // ];
+    let include = [
+      {
+        model: Spinner,
+        as: "spinner",
+        attributes: [],
+      },
+      {
+        model: Season,
+        as: "season",
+        attributes: [],
+      },
+      {
+        model: Program,
+        as: "program",
+        attributes: [],
+      },
+    ];
 
-    // let rows = await LintSelections.findAll({
-    //   attributes: [
-    //     [Sequelize.col('"spinprocess"."spinner"."id"'), "spinner_id"],
-    //     [Sequelize.col('"spinprocess"."spinner"."name"'), "spinner_name"],
-    //     [Sequelize.col('"spinprocess"."season"."id"'), "season_id"],
-    //     [Sequelize.col('"spinprocess"."season"."name"'), "season_name"],
-    //     [
-    //       Sequelize.literal('MIN(DISTINCT "spinprocess"."batch_lot_no")'),
-    //       "batch_lot_no",
-    //     ],
-    //     //this for comma separator batchlotno
-    //     // [
-    //     //     Sequelize.literal('ARRAY_TO_STRING(ARRAY_AGG(DISTINCT "spinprocess"."batch_lot_no"), \', \')'),
-    //     //     'batch_lot_no'
-    //     // ],
-    //     [
-    //       sequelize.fn(
-    //         "COALESCE",
-    //         sequelize.fn("SUM", sequelize.col("qty_used")),
-    //         0
-    //       ),
-    //       "cotton_consumed",
-    //     ],
-    //   ],
-    //   where: whereCondition,
-    //   include: [
-    //     {
-    //       model: SpinProcess,
-    //       as: "spinprocess",
-    //       include: include,
-    //       attributes: [],
-    //     },
-    //     {
-    //       model: GinSales,
-    //       as: "ginsales",
-    //       attributes: [],
-    //     },
-    //   ],
-    //   group: ["spinprocess.spinner.id", "spinprocess.season.id"],
-    //   order: [["spinner_id", "desc"]],
-    // });
+    let rows = await LintSelections.findAll({
+      attributes: [
+        [Sequelize.col('"spinprocess"."spinner"."id"'), "spinner_id"],
+        [Sequelize.col('"spinprocess"."spinner"."name"'), "spinner_name"],
+        [Sequelize.col('"spinprocess"."season"."id"'), "season_id"],
+        [Sequelize.col('"spinprocess"."season"."name"'), "season_name"],
+        [
+          Sequelize.literal('MIN(DISTINCT "spinprocess"."batch_lot_no")'),
+          "batch_lot_no",
+        ],
+        [
+          sequelize.fn(
+            "COALESCE",
+            sequelize.fn("SUM", sequelize.col("qty_used")),
+            0
+          ),
+          "cotton_consumed",
+        ],
+      ],
+      where: whereCondition,
+      include: [
+        {
+          model: SpinProcess,
+          as: "spinprocess",
+          include: include,
+          attributes: [],
+        },
+        {
+          model: GinSales,
+          as: "ginsales",
+          attributes: [],
+        },
+      ],
+      group: ["spinprocess.spinner.id", "spinprocess.season.id"],
+      order: [["spinner_id", "desc"]],
+    });
 
-    // let ndata = [];
-    const {rows} =await ExportSpinnerLintStock.findAndCountAll({
-        where:whereCondition,
-        offset:offset,
-        limit:limit
-    })
-   
+    let ndata = [];
+    for await (let spinner of rows) {
+      let salesData = await BaleSelection.findAll({
+        attributes: [
+          [Sequelize.col('"sales"."invoice_no"'), "invoice_no"],
+          [Sequelize.col('"bale"."ginprocess"."reel_lot_no"'), "reel_lot_no"],
+        ],
+        where: {
+          "$sales.buyer$": spinner?.dataValues?.spinner_id,
+          "$sales.season_id$": spinner?.dataValues?.season_id,
+          "$sales.status$": "Sold",
+        },
+        include: [
+          {
+            model: GinSales,
+            as: "sales",
+            attributes: [],
+          },
+          {
+            model: GinBale,
+            as: "bale",
+            include: [
+              {
+                model: GinProcess,
+                as: "ginprocess",
+                attributes: [],
+              },
+            ],
+            attributes: [],
+          },
+        ],
+        group: ["sales.invoice_no", "bale.ginprocess.reel_lot_no"],
+      });
+
+      let procuredCotton = await GinSales.findOne({
+        attributes: [
+          [
+            sequelize.fn(
+              "COALESCE",
+              sequelize.fn("SUM", sequelize.col("total_qty")),
+              0
+            ),
+            "cotton_procured",
+          ],
+        ],
+        where: {
+          buyer: spinner?.dataValues?.spinner_id,
+          season_id: spinner?.dataValues?.season_id,
+          status: "Sold",
+        },
+      });
+
+      for await (let item of salesData) {
+        let stockData = {
+          spinner_id: spinner?.dataValues?.spinner_id,
+          spinner_name: spinner?.dataValues?.spinner_name,
+          season_id: spinner?.dataValues?.season_id,
+          season_name: spinner?.dataValues?.season_name,
+          batch_lot_no: spinner?.dataValues?.batch_lot_no,
+          reel_lot_no: item?.dataValues?.reel_lot_no,
+          invoice_no: item?.dataValues?.invoice_no,
+          cotton_procured: procuredCotton
+            ? procuredCotton?.dataValues?.cotton_procured
+            : 0,
+          cotton_consumed: spinner ? spinner?.dataValues?.cotton_consumed : 0,
+          cotton_stock:
+            Number(procuredCotton?.dataValues?.cotton_procured) >
+            Number(spinner?.dataValues?.cotton_consumed)
+              ? Number(procuredCotton?.dataValues?.cotton_procured) -
+                Number(spinner?.dataValues?.cotton_consumed)
+              : 0,
+        };
+        ndata.push(stockData);
+      }
+    }
+    let data = ndata.slice(offset, offset + limit);
+
+    // const {rows} =await ExportSpinnerLintStock.findAndCountAll({
+    //     where:whereCondition,
+    //     offset:offset,
+    //     limit:limit
+    // })
+
     // Append data to worksheet
-    for await (const [index, item] of rows.entries()) {
+    for await (const [index, item] of data.entries()) {
       const rowValues = Object.values({
         index: index + 1,
-        spinner: item?.spinner,
-        season: item?.season,
-        batch_lot_no: item?.batch_lot_no ? item?.batch_lot_no : "",
-        reel_lot_no: item?.reel_lot_no ? item?.reel_lot_no : "",
-        invoice_no: item?.invoice_no ? item?.invoice_no : "",
-        cotton_procured: item?.cotton_procured ? item?.cotton_procured : "",
-        cotton_consumed: item?.cotton_consumed ? item?.cotton_consumed : "",
-        cotton_stock: item?.cotton_stock ? item?.cotton_stock : "",
+        spinner: item.spinner_name ? item.spinner_name : "",
+        season: item.season_name ? item.season_name : "",
+        batch_lot_no: item.batch_lot_no ? item.batch_lot_no : "",
+        reel_lot_no: item.reel_lot_no ? item.reel_lot_no : "",
+        invoice_no: item.invoice_no ? item.invoice_no : "",
+        cotton_procured: item.cotton_procured ? item.cotton_procured : 0,
+        cotton_consumed: item.cotton_consumed ? item.cotton_consumed : 0,
+        cotton_stock: item.cotton_stock ? item.cotton_stock : 0,
       });
       worksheet.addRow(rowValues);
     }
@@ -9855,23 +9939,28 @@ const exportSpinnerCottonStock = async (req: Request, res: Response) => {
 
     // Save the workbook
     await workbook.xlsx.writeFile(excelFilePath);
-    await ExportData.update({
-        spinner_lint_cotton_stock_load:false
-    },{where:{spinner_lint_cotton_stock_load:true}})
-    // res.status(200).send({
-    //   success: true,
-    //   messgage: "File successfully Generated",
-    //   data: process.env.BASE_URL + "spinner-lint-cotton-stock-report.xlsx",
-    // });
-  } catch (error: any) {
-    console.log(error);
-    (async()=>{
-        await ExportData.update({
-            spinner_lint_cotton_stock_load:false
-        },{where:{spinner_lint_cotton_stock_load:true}})
-    })()
-    return res.sendError(res, error.message);
+    // await ExportData.update({
+    //     spinner_lint_cotton_stock_load:false
+    // },{where:{spinner_lint_cotton_stock_load:true}})
+    return res.status(200).send({
+      success: true,
+      messgage: "File successfully Generated",
+      data:
+        process.env.BASE_URL + "excel-spinner-lint-cotton-stock-report.xlsx",
+    });
   }
+} catch (error: any) {
+  console.log(error);
+  // (async () => {
+  //   await ExportData.update(
+  //     {
+  //       spinner_lint_cotton_stock_load: false,
+  //     },
+  //     { where: { spinner_lint_cotton_stock_load: true } }
+  //   );
+  // })();
+  return res.sendError(res, error.message);
+}
 };
 
 const fetchGarmentFabricPagination = async (req: Request, res: Response) => {

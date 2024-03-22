@@ -88,6 +88,7 @@ import organicProgramDataDigitizationRouter from './router/services/organic-prog
 import { sendScheduledEmails } from "./controllers/email-management/scheduled-email.controller";
 import ExportData from "./models/export-data-check.model";
 import { exportGinnerPendingSchedule, exportGinnerProcessSchedule, exportGinnerSalesSchedule, exportGinnerSeedCottonSchedule, exportGinnerySummarySchedule, exportSpinnerBaleReceiptSchedule, exportSpinnerLintCottonStockSchedule, exportSpinnerPendingBaleSchedule, exportSpinnerSummarySchedule, exportSpinnerYarnProcessSchedule, exportSpinnerYarnSalesSchedule } from "./controllers/reports";
+import { generateSpinnerLintCottonStock } from "./controllers/reports/export-cron";
 
 const app = express();
 
@@ -203,6 +204,7 @@ const connectToDb = async () => {
         await ExportData.create(usersSeedData);
         console.log("Seed data create  successfully ");
       }
+      generateSpinnerLintCottonStock();
     } catch (error) {
       console.error("Error seeding data:", error);
     }
@@ -216,6 +218,12 @@ var cron = require('node-cron');
 cron.schedule('0 23 * * *', async () => {
   console.log('running a task once a day at 11 pm');
   sendScheduledEmails();
+});
+
+cron.schedule('0 */3 * * *', async () => {
+  console.log('running a task for export after 3 Hours');
+  // sendScheduledEmails();
+  generateSpinnerLintCottonStock()
 });
 
 // cron.schedule("1 * * * * *", async () => {
