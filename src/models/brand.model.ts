@@ -56,6 +56,10 @@ const Brand = db.define('brands', {
   entity_limit: {
     type: DataTypes.DOUBLE,
     defaultValue: 0
+  },
+  count: {
+    type: DataTypes.INTEGER,
+    defaultValue: 0
   }
 });
 

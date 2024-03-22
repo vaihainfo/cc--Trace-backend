@@ -1,8 +1,7 @@
 import { Request, Response } from "express";
-import { Sequelize, Op, where } from "sequelize";
+import { Sequelize, Op } from "sequelize";
 import { encrypt, generateOnlyQrCode } from "../../provider/qrcode";
 import * as ExcelJS from "exceljs";
-import * as fs from "fs";
 import * as path from "path";
 import Season from "../../models/season.model";
 import Program from "../../models/program.model";
@@ -26,10 +25,13 @@ import KnitFabric from "../../models/knit_fabric.model";
 import { _getSpinnerProcessTracingChartData } from "../spinner/index";
 import { formatDataFromKnitter } from "../../util/tracing-chart-data-formatter";
 import Country from "../../models/country.model";
+import PhysicalTraceabilityDataKnitter from "../../models/physical-traceability-data-knitter.model";
+import Brand from "../../models/brand.model";
+import PhysicalTraceabilityDataKnitterSample from "../../models/physical-traceability-data-knitter-sample.model";
 
 const createKnitterProcess = async (req: Request, res: Response) => {
   try {
-    let dyeing;
+    let dyeing
     if (req.body.dyeingRequired) {
       dyeing = await Dyeing.create({
         processor_name: req.body.processorName,
@@ -70,7 +72,7 @@ const createKnitterProcess = async (req: Request, res: Response) => {
       total_fabric_weight: req.body.totalFabricWeight,
       blend_invoice: req.body.blendInvoice,
       blend_document: req.body.blendDocuments,
-      status: "Pending",
+      status: 'Pending'
     };
 
     const knit = await KnitProcess.create(data);
@@ -113,6 +115,42 @@ const createKnitterProcess = async (req: Request, res: Response) => {
         }
       }
     }
+
+    if (req.body.enterPhysicalTraceability) {
+      const physicalTraceabilityData = {
+        date_sample_collection: req.body.dateSampleCollection,
+        data_of_sample_dispatch: req.body.dataOfSampleDispatch,
+        operator_name: req.body.operatorName,
+        expected_date_of_fabric_sale: req.body.expectedDateOfFabricSale,
+        physical_traceability_partner_id: req.body.physicalTraceabilityPartnerId,
+        knit_process_id: knit.id,
+        knitter_id: req.body.knitterId
+      };
+      const physicalTraceabilityDataKnitter = await PhysicalTraceabilityDataKnitter.create(physicalTraceabilityData);
+
+      for await (const weightAndRoll of req.body.weightAndRoll) {
+        let brand = await Brand.findOne({
+          where: { id: req.body.brandId }
+        });
+
+        const updatedCount = brand.dataValues.count + 1;
+        let physicalTraceabilityDataKnitterSampleData = {
+          physical_traceability_data_knitter_id: physicalTraceabilityDataKnitter.id,
+          weight: weightAndRoll.weight,
+          roll: weightAndRoll.roll,
+          original_sample_status: weightAndRoll.originalSampleStatus,
+          code: `DNA${req.body.knitterShortname}-${req.body.batchLotNo || ''}-${updatedCount}`,
+          sample_result: 0
+        };
+        await PhysicalTraceabilityDataKnitterSample.create(physicalTraceabilityDataKnitterSampleData);
+
+        await Brand.update(
+          { count: updatedCount },
+          { where: { id: brand.id } }
+        );
+      }
+    }
+
     res.sendSuccess(res, { knit });
   } catch (error: any) {
     console.log(error);
@@ -400,10 +438,7 @@ const createKnitterrSales = async (req: Request, res: Response) => {
         let val = await KnitProcess.findOne({ where: { id: obj.process_id } });
         if (val) {
           let update = await KnitProcess.update(
-            {
-              qty_stock: val.dataValues.qty_stock - obj.qtyUsed,
-              status: "Sold",
-            },
+            { qty_stock: val.dataValues.qty_stock - obj.qtyUsed, status: 'Sold' },
             { where: { id: obj.process_id } }
           );
           let updatee = await KnitFabric.update(
@@ -460,7 +495,8 @@ const deleteKnitterSales = async (req: Request, res: Response) => {
     if (!req.body.id) {
       return res.sendError(res, "Need Sales Id");
     }
-    let yarn_selections = await KnitFabricSelection.findAll({
+
+    let yarn_selections = await KnitYarnSelection.findAll({
       where: {
         sales_id: req.body.id,
       },
@@ -476,7 +512,7 @@ const deleteKnitterSales = async (req: Request, res: Response) => {
           },
         }
       );
-      let updatee =  KnitFabric.update(
+      let updatee = KnitFabric.update(
         { sold_status: false },
         { where: { id: yarn.knit_fabric } }
       );
@@ -661,9 +697,9 @@ const fetchFabricReelLotNo = async (req: Request, res: Response) => {
       where: whereCondition,
       attributes: ["id", "name", "short_name"],
       include: [{
-        model :Country,
-        as : 'country',
-        attributes :['id','county_name']
+        model: Country,
+        as: 'country',
+        attributes: ['id', 'county_name']
       }]
     });
 
@@ -689,7 +725,7 @@ const fetchFabricReelLotNo = async (req: Request, res: Response) => {
     let number = count + 1;
     let prcs_name = rows ? rows?.name.substring(0, 3).toUpperCase() : "";
     let country = rows ? rows?.country?.county_name.substring(0, 2).toUpperCase() : "";
-    let reelLotNo = "REEL-KNI-" + prcs_name + "-"+ country + "-" + prcs_date + "/" + number;
+    let reelLotNo = "REEL-KNI-" + prcs_name + "-" + country + "-" + prcs_date + "/" + number;
 
     return res.sendSuccess(res, { reelLotNo });
   } catch (error: any) {
@@ -794,8 +830,8 @@ const exportKnitterSale = async (req: Request, res: Response) => {
         buyer_id: item.buyer
           ? item.buyer.name
           : item.dyingwashing
-          ? item.dyingwashing.name
-          : item.processor_name,
+            ? item.dyingwashing.name
+            : item.processor_name,
         program: item.program ? item.program.program_name : "",
         garment_order_ref: item.garment_order_ref ? item.garment_order_ref : "",
         brand_order_ref: item.brand_order_ref ? item.brand_order_ref : "",

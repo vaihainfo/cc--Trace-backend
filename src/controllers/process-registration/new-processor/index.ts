@@ -1,13 +1,8 @@
 import { Request, Response } from "express";
-import { Sequelize, Op } from "sequelize";
+import { Op } from "sequelize";
 import Ginner from "../../../models/ginner.model";
 import User from "../../../models/user.model";
 import hash from "../../../util/hash";
-import Country from "../../../models/country.model";
-import State from "../../../models/state.model";
-import Program from "../../../models/program.model";
-import UnitCertification from "../../../models/unit-certification.model";
-import Brand from "../../../models/brand.model";
 import UserRole from "../../../models/user-role.model";
 import Spinner from "../../../models/spinner.model";
 import Fabric from "../../../models/fabric.model";
@@ -15,7 +10,7 @@ import Garment from "../../../models/garment.model";
 import Trader from "../../../models/trader.model";
 import Weaver from "../../../models/weaver.model";
 import Knitter from "../../../models/knitter.model";
-
+import PhysicalPartner from "../../../models/physical-partner.model";
 
 const createProcessor = async (req: Request, res: Response) => {
     try {
@@ -36,6 +31,7 @@ const createProcessor = async (req: Request, res: Response) => {
             const result = await User.create(userData);
             userIds.push(result.id);
         }
+
         let mainData: any = [];
         let data = {
             name: req.body.name,
@@ -60,6 +56,7 @@ const createProcessor = async (req: Request, res: Response) => {
             certs: req.body.certs,
             contact_person: req.body.contactPerson,
         }
+
         if (req.body.processType.includes('Ginner')) {
             let obj = {
                 ...data,
@@ -74,6 +71,7 @@ const createProcessor = async (req: Request, res: Response) => {
             const result = await Ginner.create(obj);
             mainData.push(result);
         }
+
         if (req.body.processType.includes('Spinner')) {
             let obj = {
                 ...data,
@@ -83,10 +81,11 @@ const createProcessor = async (req: Request, res: Response) => {
                 yarn_type: req.body.yarnType,
                 spinnerUser_id: userIds,
             }
-            console.log(obj)
+
             const result = await Spinner.create(obj);
             mainData.push(result);
         }
+
         if (req.body.processType.includes('Knitter')) {
             let obj = {
                 ...data,
@@ -97,9 +96,11 @@ const createProcessor = async (req: Request, res: Response) => {
                 loss_from: req.body.KnitLossFrom,
                 loss_to: req.body.KnitLossTo,
             }
+
             const result = await Knitter.create(obj);
             mainData.push(result);
         }
+
         if (req.body.processType.includes('Weaver')) {
             let obj = {
                 ...data,
@@ -111,18 +112,22 @@ const createProcessor = async (req: Request, res: Response) => {
                 loss_from: req.body.weaverLossFrom,
                 loss_to: req.body.weaverLossTo,
             }
+
             const result = await Weaver.create(obj);
             mainData.push(result);
         }
+
         if (req.body.processType.includes('Trader')) {
             let obj = {
                 ...data,
                 traderUser_id: userIds,
                 material_trading: req.body.materialTrading,
             }
+
             const result = await Trader.create(obj);
             mainData.push(result);
         }
+
         if (req.body.processType.includes('Garment')) {
             let obj = {
                 ...data,
@@ -133,9 +138,11 @@ const createProcessor = async (req: Request, res: Response) => {
                 loss_from: req.body.garmentLossFrom,
                 loss_to: req.body.garmentLossTo,
             }
+
             const result = await Garment.create(obj);
             mainData.push(result);
         }
+
         if (req.body.processType.includes('Fabric')) {
             let obj = {
                 ...data,
@@ -146,7 +153,18 @@ const createProcessor = async (req: Request, res: Response) => {
                 loss_from: req.body.fabricLossFrom,
                 loss_to: req.body.fabricLossTo,
             }
+
             const result = await Fabric.create(obj);
+            mainData.push(result);
+        }
+
+        if (req.body.processType.includes('Physical_Partner')) {
+            let obj = {
+                ...data,
+                physicalPartnerUser_id: userIds
+            }
+
+            const result = await PhysicalPartner.create(obj);
             mainData.push(result);
         }
 
@@ -162,8 +180,10 @@ const fetchAllProcessor = async (req: Request, res: Response) => {
         if (!req.query.type) {
             return res.sendError(res, 'Need processor Type')
         }
+
         let userIds: any = [];
-        let result
+        let result;
+
         if (req.query.type === 'Ginner') {
             result = await Ginner.findOne({
                 where: {
@@ -171,10 +191,10 @@ const fetchAllProcessor = async (req: Request, res: Response) => {
                 }
             });
             if (result) {
-                userIds = result.ginnerUser_id
+                userIds = result.ginnerUser_id;
             }
-
         }
+
         if (req.query.type === 'Spinner') {
             result = await Spinner.findOne({
                 where: {
@@ -182,9 +202,10 @@ const fetchAllProcessor = async (req: Request, res: Response) => {
                 }
             });
             if (result) {
-                userIds = result.spinnerUser_id
+                userIds = result.spinnerUser_id;
             }
         }
+
         if (req.query.type === 'Weaver') {
             result = await Weaver.findOne({
                 where: {
@@ -192,7 +213,7 @@ const fetchAllProcessor = async (req: Request, res: Response) => {
                 }
             });
             if (result) {
-                userIds = result.weaverUser_id
+                userIds = result.weaverUser_id;
             }
         }
         if (req.query.type === 'Knitter') {
@@ -202,9 +223,10 @@ const fetchAllProcessor = async (req: Request, res: Response) => {
                 }
             });
             if (result) {
-                userIds = result.knitterUser_id
+                userIds = result.knitterUser_id;
             }
         }
+
         if (req.query.type === 'Garment') {
             result = await Garment.findOne({
                 where: {
@@ -212,9 +234,10 @@ const fetchAllProcessor = async (req: Request, res: Response) => {
                 }
             });
             if (result) {
-                userIds = result.garmentUser_id
+                userIds = result.garmentUser_id;
             }
         }
+
         if (req.query.type === 'Fabric') {
             result = await Fabric.findOne({
                 where: {
@@ -222,9 +245,10 @@ const fetchAllProcessor = async (req: Request, res: Response) => {
                 }
             });
             if (result) {
-                userIds = result.fabricUser_id
+                userIds = result.fabricUser_id;
             }
         }
+
         if (req.query.type === 'Trader') {
             result = await Trader.findOne({
                 where: {
@@ -232,11 +256,23 @@ const fetchAllProcessor = async (req: Request, res: Response) => {
                 }
             });
             if (result) {
-                userIds = result.traderUser_id
+                userIds = result.traderUser_id;
             }
         }
+
+        if (req.query.type === 'Physical_Partner') {
+            result = await PhysicalPartner.findOne({
+                where: {
+                    id: req.query.id
+                }
+            });
+            if (result) {
+                userIds = result.physicalPartnerUser_id;
+            }
+        }
+
         let userData = [];
-        let [ginner, spinner, weaver, knitter, garment, trader, fabric] = await Promise.all([
+        let [ginner, spinner, weaver, knitter, garment, trader, fabric, physical_partner] = await Promise.all([
             Ginner.findOne({ where: { ginnerUser_id: { [Op.overlap]: userIds } } }),
             Spinner.findOne({ where: { spinnerUser_id: { [Op.overlap]: userIds } } }),
             Weaver.findOne({ where: { weaverUser_id: { [Op.overlap]: userIds } } }),
@@ -244,7 +280,9 @@ const fetchAllProcessor = async (req: Request, res: Response) => {
             Garment.findOne({ where: { garmentUser_id: { [Op.overlap]: userIds } } }),
             Trader.findOne({ where: { traderUser_id: { [Op.overlap]: userIds } } }),
             Fabric.findOne({ where: { fabricUser_id: { [Op.overlap]: userIds } } }),
-        ])
+            PhysicalPartner.findOne({ where: { physicalPartnerUser_id: { [Op.overlap]: userIds } } }),
+        ]);
+
         if (result) {
             for await (let user of userIds) {
                 let us = await User.findOne({
@@ -258,10 +296,10 @@ const fetchAllProcessor = async (req: Request, res: Response) => {
                         }
                     ]
                 });
-                userData.push(us)
+                userData.push(us);
             }
         }
-        return res.sendSuccess(res, result ? { ginner, spinner, weaver, knitter, garment, trader, fabric, userData } : {});
+        return res.sendSuccess(res, result ? { ginner, spinner, weaver, knitter, garment, trader, fabric, physical_partner, userData } : {});
 
     } catch (error) {
         console.log(error);
@@ -292,6 +330,7 @@ const updateProcessor = async (req: Request, res: Response) => {
                 userIds.push(result.id);
             }
         }
+
         let mainData: any = [];
         let data = {
             name: req.body.name,
@@ -316,8 +355,8 @@ const updateProcessor = async (req: Request, res: Response) => {
             certs: req.body.certs,
             contact_person: req.body.contactPerson,
         }
-        if (req.body.processType.includes('Ginner')) {
 
+        if (req.body.processType.includes('Ginner')) {
             let obj = {
                 ...data,
                 outturn_range_from: req.body.outturnRangeFrom,
@@ -335,6 +374,7 @@ const updateProcessor = async (req: Request, res: Response) => {
                 mainData.push(result);
             }
         }
+
         if (req.body.processType.includes('Spinner')) {
             let obj = {
                 ...data,
@@ -351,8 +391,8 @@ const updateProcessor = async (req: Request, res: Response) => {
                 const result = await Spinner.create(obj);
                 mainData.push(result);
             }
-
         }
+
         if (req.body.processType.includes('Knitter')) {
             let obj = {
                 ...data,
@@ -371,6 +411,7 @@ const updateProcessor = async (req: Request, res: Response) => {
                 mainData.push(result);
             }
         }
+
         if (req.body.processType.includes('Weaver')) {
             let obj = {
                 ...data,
@@ -390,6 +431,7 @@ const updateProcessor = async (req: Request, res: Response) => {
                 mainData.push(result);
             }
         }
+
         if (req.body.processType.includes('Trader')) {
             let obj = {
                 ...data,
@@ -404,6 +446,7 @@ const updateProcessor = async (req: Request, res: Response) => {
                 mainData.push(result);
             }
         }
+
         if (req.body.processType.includes('Garment')) {
             let obj = {
                 ...data,
@@ -422,6 +465,7 @@ const updateProcessor = async (req: Request, res: Response) => {
                 mainData.push(result);
             }
         }
+
         if (req.body.processType.includes('Fabric')) {
             let obj = {
                 ...data,
@@ -437,6 +481,20 @@ const updateProcessor = async (req: Request, res: Response) => {
                 mainData.push(result);
             } else {
                 const result = await Fabric.create(obj);
+                mainData.push(result);
+            }
+        }
+
+        if (req.body.processType.includes('Physical_Partner')) {
+            let obj = {
+                ...data,
+                physicalPartnerUser_id: userIds
+            }
+            if (req.body.physicalPartnerId) {
+                const result = await PhysicalPartner.update(obj, { where: { id: req.body.physicalPartnerId } });
+                mainData.push(result);
+            } else {
+                const result = await PhysicalPartner.create(obj);
                 mainData.push(result);
             }
         }
@@ -462,6 +520,9 @@ const updateProcessor = async (req: Request, res: Response) => {
         if (req.body.deletedFabricId) {
             const result = await Fabric.update({ fabricUser_id: [] }, { where: { id: req.body.deletedFabricId } });
         }
+        if (req.body.deletedPhysicalPartnerId) {
+            const result = await PhysicalPartner.update({ physicalPartnerUser_id: [] }, { where: { id: req.body.deletedPhysicalPartnerId } });
+        }
 
         res.sendSuccess(res, mainData);
     } catch (error) {
@@ -472,83 +533,101 @@ const updateProcessor = async (req: Request, res: Response) => {
 
 const checkProcessorName = async (req: Request, res: Response) => {
     try {
-        let name = req.body.name
+        let name = req.body.name;
+
         if (req.body.ginnerId) {
             const result = await Ginner.findOne({ where: { name: { [Op.iLike]: name }, id: { [Op.ne]: req.body.ginnerId } } });
             if (result) {
-                return res.sendSuccess(res, { exist: true })
+                return res.sendSuccess(res, { exist: true });
             }
         } else {
             const result = await Ginner.findOne({ where: { name: { [Op.iLike]: name } } });
             if (result) {
-                return res.sendSuccess(res, { exist: true })
+                return res.sendSuccess(res, { exist: true });
             }
         }
+
         if (req.body.spinnerId) {
             const result = await Spinner.findOne({ where: { name: { [Op.iLike]: name }, id: { [Op.ne]: req.body.spinnerId } } });
-
             if (result) {
-                return res.sendSuccess(res, { exist: true })
+                return res.sendSuccess(res, { exist: true });
             }
         } else {
             const result = await Spinner.findOne({ where: { name: { [Op.iLike]: name } } });
             if (result) {
-                return res.sendSuccess(res, { exist: true })
+                return res.sendSuccess(res, { exist: true });
             }
         }
+
         if (req.body.knitterId) {
             const result = await Knitter.findOne({ where: { name: { [Op.iLike]: name }, id: { [Op.ne]: req.body.knitterId } } });
             if (result) {
-                return res.sendSuccess(res, { exist: true })
+                return res.sendSuccess(res, { exist: true });
             }
         } else {
             const result = await Knitter.findOne({ where: { name: { [Op.iLike]: name } } });
             if (result) {
-                return res.sendSuccess(res, { exist: true })
+                return res.sendSuccess(res, { exist: true });
             }
         }
+
         if (req.body.weaverId) {
             const result = await Weaver.findOne({ where: { name: { [Op.iLike]: name }, id: { [Op.ne]: req.body.weaverId } } });
             if (result) {
-                return res.sendSuccess(res, { exist: true })
+                return res.sendSuccess(res, { exist: true });
             }
         } else {
             const result = await Weaver.findOne({ where: { name: { [Op.iLike]: name } } });
             if (result) {
-                return res.sendSuccess(res, { exist: true })
+                return res.sendSuccess(res, { exist: true });
             }
         }
+
         if (req.body.garmentId) {
             const result = await Garment.findOne({ where: { name: { [Op.iLike]: name }, id: { [Op.ne]: req.body.garmentId } } });
             if (result) {
-                return res.sendSuccess(res, { exist: true })
+                return res.sendSuccess(res, { exist: true });
             }
         } else {
             const result = await Garment.findOne({ where: { name: { [Op.iLike]: name } } });
             if (result) {
-                return res.sendSuccess(res, { exist: true })
+                return res.sendSuccess(res, { exist: true });
             }
         }
+
         if (req.body.fabricId) {
             const result = await Fabric.findOne({ where: { name: { [Op.iLike]: name }, id: { [Op.ne]: req.body.fabricId } } });
             if (result) {
-                return res.sendSuccess(res, { exist: true })
+                return res.sendSuccess(res, { exist: true });
             }
         } else {
             const result = await Fabric.findOne({ where: { name: { [Op.iLike]: name } } });
             if (result) {
-                return res.sendSuccess(res, { exist: true })
+                return res.sendSuccess(res, { exist: true });
             }
         }
+
         if (req.body.traderId) {
             const result = await Trader.findOne({ where: { name: { [Op.iLike]: name }, id: { [Op.ne]: req.body.traderId } } });
             if (result) {
-                return res.sendSuccess(res, { exist: true })
+                return res.sendSuccess(res, { exist: true });
             }
         } else {
             const result = await Trader.findOne({ where: { name: { [Op.iLike]: name } } });
             if (result) {
-                return res.sendSuccess(res, { exist: true })
+                return res.sendSuccess(res, { exist: true });
+            }
+        }
+
+        if (req.body.physicalPartnerId) {
+            const result = await PhysicalPartner.findOne({ where: { name: { [Op.iLike]: name }, id: { [Op.ne]: req.body.physicalPartnerId } } });
+            if (result) {
+                return res.sendSuccess(res, { exist: true });
+            }
+        } else {
+            const result = await PhysicalPartner.findOne({ where: { name: { [Op.iLike]: name } } });
+            if (result) {
+                return res.sendSuccess(res, { exist: true });
             }
         }
 
