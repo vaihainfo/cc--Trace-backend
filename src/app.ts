@@ -219,15 +219,15 @@ cron.schedule('0 23 * * *', async () => {
 });
 
 // cron.schedule("1 * * * * *", async () => {
-cron.schedule("*/3 * * * *", async () => {
+    cron.schedule("*/3 * * * *", async () => {
   exportGinnerProcessSchedule();
-  exportGinnerySummarySchedule()
-  exportGinnerSalesSchedule()
-  exportGinnerPendingSchedule()
-  exportGinnerSeedCottonSchedule()
+exportGinnerySummarySchedule()
+exportGinnerSalesSchedule()
+exportGinnerPendingSchedule()
+exportGinnerSeedCottonSchedule()
 
 // // //spinner
-// // // exportSpinnerSummarySchedule()
+exportSpinnerSummarySchedule()
 exportSpinnerBaleReceiptSchedule()
 exportSpinnerYarnProcessSchedule()
 exportSpinnerYarnSalesSchedule()

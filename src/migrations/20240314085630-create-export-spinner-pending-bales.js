@@ -64,7 +64,7 @@ module.exports = {
       },
       village: {
         allowNull: true,
-        type: Sequelize.STRING(1000),
+        type: Sequelize.STRING,
       },
       ginnerId: {
         allowNull: true,
