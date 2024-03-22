@@ -204,7 +204,7 @@ const connectToDb = async () => {
         await ExportData.create(usersSeedData);
         console.log("Seed data create  successfully ");
       }
-      generateSpinnerLintCottonStock();
+      // generateSpinnerLintCottonStock();
     } catch (error) {
       console.error("Error seeding data:", error);
     }
