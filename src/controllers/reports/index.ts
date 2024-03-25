@@ -69,6 +69,7 @@ import ExportSpinnerYarnProcess from "../../models/export-spinner-yarn-process.m
 import ExportSpinnerYarnSales from "../../models/export-spinner-yarn-sales.model";
 import ExportSpinnerPendingBales from "../../models/export-spinner-pending-bales.model";
 import ExportSpinnerLintStock from "../../models/export-spinner-lint-stock.model";
+import ExportSpinnerSummary from "../../models/export-spinner-summary.model";
 
 const fetchBaleProcess = async (req: Request, res: Response) => {
   const searchTerm = req.query.search || "";
@@ -397,11 +398,11 @@ console.log(counts);
         village.length > 0
           ? village.map((obj: any) => obj.village.village_name).join(",")
           : "",
-       countryId:item.ginner.country_id,
-       seasonId:item.season.id,
-        ginnerId:item.ginner.id,
-        programId:item.program.id,
-        brandId:item.ginner.brand[0]
+       countryId:item?.ginner?.country_id??0,
+       seasonId:item?.season?.id??0,
+        ginnerId:item?.ginner?.id??0,
+        programId:item?.program.id??0,
+        brandId:item?.ginner?.brand?.length?item?.ginner?.brand[0]:0
     }
     // );
     
@@ -733,11 +734,11 @@ const array=[]
           total_qty: item.total_qty ? item.total_qty : "",
           program: item.program ? item.program.program_name : "",
           status: item.status ? item.status : "",
-          countryId:item.ginner.country_id,
-          seasonId:item?.season_id,
-           ginnerId:item.ginner_id,
-           programId:item?.program_id,
-           brandId:item.ginner.brand[0]
+          countryId:item.ginner.country_id??0,
+          seasonId:item?.season_id??0,
+           ginnerId:item?.ginner_id??0,
+           programId:item?.program_id??0,
+           brandId:item?.ginner?.brand?.length?item?.ginner?.brand[0]:0
         };
         // worksheet.addRow(rowValues);
         // console.log(rowValues);
@@ -1346,9 +1347,9 @@ let array=[]
                 }]`,
                 countryId:item?.dataValues?.countryId??0,
                 seasonId:item?.dataValues?.season_id??0,
-                 ginnerId:item?.dataValues?.ginnerId,
-                 programId:item?.dataValues?.programId?item?.dataValues?.programId[0]:0,
-                 brandId:item?.dataValues?.brand?item?.dataValues?.brand[0]:0
+                 ginnerId:item?.dataValues?.ginnerId??0,
+                 programId:item?.dataValues?.programId?.length?item?.dataValues?.programId[0]:0,
+                 brandId:item?.dataValues?.brand?.length?item?.dataValues?.brand[0]:0
 
         }
 //         // worksheet.addRow(rowValues);
@@ -2085,11 +2086,11 @@ const exportSpinnerBaleReceiptSchedule=async()=>{
             : "",
           program: item.dataValues.program ? item.dataValues.program : "",
           countryId:item.dataValues?.countryId,
-          brandId:item.dataValues?.brand?item.dataValues?.brand[0]:0,
-        ginnerId:item?.dataValues?.ginnerId,
-        programId:item?.dataValues?.programId?item?.dataValues?.programId[0]:0,
-        seasonId:item?.dataValues?.seasonId,
-        spinnerId:item?.dataValues?.spinnerId
+          brandId:item.dataValues?.brand?.length?item.dataValues?.brand[0]:0,
+        ginnerId:item?.dataValues?.ginnerId??0,
+        programId:item?.dataValues?.programId?.length?item?.dataValues?.programId[0]:0,
+        seasonId:item?.dataValues?.seasonId??0,
+        spinnerId:item?.dataValues?.spinnerId??0
         };
         // worksheet.addRow(rowValues);
         // console.log(rowValues)
@@ -2416,11 +2417,11 @@ const exportSpinnerPendingBaleSchedule=async()=>{
           actual_qty: item.total_qty ? item.total_qty : "",
           program: item.program ? item.program.program_name : "",
           village: item.vehicle_no ? item.vehicle_no : "",
-          countryId:item?.ginner?.country_id,
-          seasonId:item?.season_id,
-brandId:item?.ginner?.brand?item?.ginner?.brand[0]:0,
-programId:item?.ginner?.program_id?item?.ginner?.program_id[0]:0,
-spinnerId:item?.buyerdata?.id
+          countryId:item?.ginner?.country_id??0,
+          seasonId:item?.season_id??0,
+brandId:item?.ginner?.brand?.length?item?.ginner?.brand[0]:0,
+programId:item?.ginner?.program_id?.length?item?.ginner?.program_id[0]:0,
+spinnerId:item?.buyerdata?.id??0
         };
         console.log("rowValues",rowValues);
         array.push(rowValues)
@@ -2853,11 +2854,11 @@ const exportSpinnerYarnProcessSchedule=async()=>{
           total: item.net_yarn_qty,
           yarn_sold: yarnSold ? yarnSold?.dataValues?.yarn_sold : 0,
           yarn_stock: item.qty_stock ? item.qty_stock : 0,
-          countryId:item?.spinner?.country_id,
-          seasonId:item?.season_id,
+          countryId:item?.spinner?.country_id??0,
+          seasonId:item?.season_id??0,
           brandId:item?.spinner?.brand?item?.spinner?.brand[0]:0,
-          spinnerId:item?.spinner?.id,
-          programId:item?.program_id
+          spinnerId:item?.spinner?.id??0,
+          programId:item?.program_id??0
         };
         
         array.push(rowValues)
@@ -3334,11 +3335,11 @@ const exportSpinnerYarnSalesSchedule=async()=>{
           agent: item.dataValues.transaction_agent
             ? item.dataValues.transaction_agent
             : "",
-            countryId:item?.dataValues?.countryId,
-            programId:item?.dataValues?.programId[0],
-            brandId:item?.dataValues?.brandId[0],
-            spinnerId:item?.dataValues?.spinner_id,
-            seasonId:item?.dataValues?.season_id
+            countryId:item?.dataValues?.countryId??0,
+            programId:item?.dataValues?.programId?.length?item?.dataValues?.programId[0]:0,
+            brandId:item?.dataValues?.brandId?.length?item?.dataValues?.brandId[0]:0,
+            spinnerId:item?.dataValues?.spinner_id??0,
+            seasonId:item?.dataValues?.season_id??0
         };
         // worksheet.addRow(rowValues);
         array.push(rowValues)
@@ -7944,11 +7945,16 @@ const exportSpinnerSummarySchedule=async()=>{
   const spinSalesCondition: any = {};
   const spinProcessCondition: any = {};
 
+let count =await ExportSpinnerSummary.count()
+
     let rows = await Spinner.findAll({
         // where: whereCondition,
-        attributes: ["id", "name", "address"],
+        attributes: ["id", "name", "address","country_id","program_id","brand"],
+        offset:count,
+        limit:10
       });
       // Append data to worksheet
+      let array=[]
       for await (const [index, item] of rows.entries()) {
         let obj: any = {};
         let wheree: any = {};
@@ -8109,6 +8115,7 @@ const exportSpinnerSummarySchedule=async()=>{
         obj.yarnProcuredMT = convert_kg_to_mt(obj.yarnProcuredKG);
         obj.yarnStockMT = convert_kg_to_mt(obj.yarnStockKG);
   
+  
         const rowValues = {
           index: index + 1,
           name: item.name ? item.name : "",
@@ -8119,11 +8126,17 @@ const exportSpinnerSummarySchedule=async()=>{
           yarn_procured: obj.yarnProcuredMT,
           yarn_sold: obj.yarnSoldMT,
           yarn_stock: obj.yarnStockMT,
+          countryId:item?.country_id??0,
+          programId:item?.program_id?.length? item?.program_id[0]:0,
+          brandId:item?.brand?.length?item?.brand[0]:0,
+          spinnerId:item?.id??0,
+        //   seasonId:
         };
-        console.log("row values",rowValues);
         
+        array.push(rowValues)
         // worksheet.addRow(rowValues);
       }
+      await ExportSpinnerSummary.bulkCreate(array)
 }
 
 const exportSpinnerSummary = async (req: Request, res: Response) => {
@@ -8199,181 +8212,24 @@ res.send({status:200,message:"export file processing"})
       "Yarn stock in MT",
     ]);
     headerRow.font = { bold: true };
-    let rows = await Spinner.findAll({
-      where: whereCondition,
-      attributes: ["id", "name", "address"],
-    });
+
+    const {rows}=await ExportSpinnerSummary.findAndCountAll({where:whereCondition})    
     // Append data to worksheet
     for await (const [index, item] of rows.entries()) {
       let obj: any = {};
       let wheree: any = {};
-      if (seasonId) {
-        const idArray: number[] = seasonId
-          .split(",")
-          .map((id: any) => parseInt(id, 10));
-        wheree.season_id = { [Op.in]: idArray };
-        lintCondition["$spinprocess.season_id$"] = { [Op.in]: idArray };
-      }
-
-      let [
-        lint_cotton_procured,
-        lint_cotton_procured_pending,
-        lint_consumed,
-        yarnProcured,
-        yarnSold,
-      ] = await Promise.all([
-        GinSales.findOne({
-          attributes: [
-            [
-              sequelize.fn(
-                "COALESCE",
-                sequelize.fn("SUM", sequelize.col("total_qty")),
-                0
-              ),
-              "lint_cotton_procured",
-            ],
-            [
-              sequelize.fn(
-                "COALESCE",
-                sequelize.fn("SUM", sequelize.col("qty_stock")),
-                0
-              ),
-              "lint_cotton_stock",
-            ],
-          ],
-          where: {
-            ...wheree,
-            ...ginSalesCondition,
-            buyer: item.id,
-            status: "Sold",
-          },
-        }),
-        GinSales.findOne({
-          attributes: [
-            [
-              sequelize.fn(
-                "COALESCE",
-                sequelize.fn("SUM", sequelize.col("total_qty")),
-                0
-              ),
-              "lint_cotton_procured_pending",
-            ],
-          ],
-          where: {
-            ...wheree,
-            ...ginSalesCondition,
-            buyer: item.id,
-            status: "Pending for QR scanning",
-          },
-        }),
-        LintSelections.findOne({
-          attributes: [
-            [
-              sequelize.fn(
-                "COALESCE",
-                sequelize.fn("SUM", sequelize.col("qty_used")),
-                0
-              ),
-              "lint_cotton_consumed",
-            ],
-          ],
-          include: [
-            {
-              model: SpinProcess,
-              as: "spinprocess",
-              attributes: [],
-            },
-          ],
-          where: {
-            ...lintCondition,
-            "$spinprocess.spinner_id$": item.id,
-          },
-          group: ["spinprocess.spinner_id"],
-        }),
-        SpinProcess.findOne({
-          attributes: [
-            [
-              sequelize.fn(
-                "COALESCE",
-                sequelize.fn("SUM", sequelize.col("net_yarn_qty")),
-                0
-              ),
-              "yarn_procured",
-            ],
-            [
-              sequelize.fn(
-                "COALESCE",
-                sequelize.fn("SUM", sequelize.col("qty_stock")),
-                0
-              ),
-              "yarn_stock",
-            ],
-          ],
-          where: {
-            ...wheree,
-            ...spinProcessCondition,
-            spinner_id: item.id,
-          },
-        }),
-        SpinSales.findOne({
-          attributes: [
-            [
-              sequelize.fn(
-                "COALESCE",
-                sequelize.fn("SUM", sequelize.col("total_qty")),
-                0
-              ),
-              "yarn_sold",
-            ],
-          ],
-          where: {
-            ...wheree,
-            ...spinSalesCondition,
-            spinner_id: item.id,
-          },
-        }),
-      ]);
-
-      obj.lintCottonProcuredKG = lint_cotton_procured
-        ? lint_cotton_procured?.dataValues.lint_cotton_procured ?? 0
-        : 0;
-      obj.lintCottonProcuredPendingKG = lint_cotton_procured_pending
-        ? lint_cotton_procured_pending?.dataValues
-            .lint_cotton_procured_pending ?? 0
-        : 0;
-      obj.lintConsumedKG = lint_consumed
-        ? lint_consumed?.dataValues.lint_cotton_consumed ?? 0
-        : 0;
-      obj.lintStockKG = lint_cotton_procured
-        ? lint_cotton_procured?.dataValues.lint_cotton_stock ?? 0
-        : 0;
-      obj.yarnProcuredKG = yarnProcured
-        ? yarnProcured?.dataValues.yarn_procured ?? 0
-        : 0;
-      obj.yarnSoldKG = yarnSold ? yarnSold.dataValues.yarn_sold ?? 0 : 0;
-      obj.yarnStockKG = yarnProcured
-        ? yarnProcured?.dataValues.yarn_stock ?? 0
-        : 0;
-      obj.lintCottonProcuredMT = convert_kg_to_mt(obj.lintCottonProcuredKG);
-      obj.lintCottonProcuredPendingMT = convert_kg_to_mt(
-        obj.lintCottonProcuredPendingKG
-      );
-      obj.lintConsumedMT = convert_kg_to_mt(obj.lintConsumedKG);
-      obj.lintStockMT = convert_kg_to_mt(obj.lintStockKG);
-      obj.yarnSoldMT = convert_kg_to_mt(obj.yarnSoldKG);
-      obj.yarnProcuredMT = convert_kg_to_mt(obj.yarnProcuredKG);
-      obj.yarnStockMT = convert_kg_to_mt(obj.yarnStockKG);
+     
 
       const rowValues = Object.values({
         index: index + 1,
         name: item.name ? item.name : "",
-        lint_cotton_procured: obj.lintCottonProcuredMT,
-        lint_cotton_procured_pending: obj.lintCottonProcuredPendingMT,
-        lint_consumed: obj.lintConsumedMT,
-        balance_lint_cotton: obj.lintStockMT,
-        yarn_procured: obj.yarnProcuredMT,
-        yarn_sold: obj.yarnSoldMT,
-        yarn_stock: obj.yarnStockMT,
+        lint_cotton_procured:item?.lint_cotton_procured,
+        lint_cotton_procured_pending: item?.lint_cotton_procured_pending,
+        lint_consumed: item?.lint_consumed,
+        balance_lint_cotton: item?.balance_lint_cotton,
+        yarn_procured: item?.yarn_procured,
+        yarn_sold: item?.yarn_sold,
+        yarn_stock: item?.yarn_stock,
       });
       worksheet.addRow(rowValues);
     }
@@ -8834,9 +8690,9 @@ const exportGinnerySummarySchedule=async()=>{
           balesStock: obj.balesStock,
           countryId:item.country_id,
           seasonId:item?.season_id??0,
-           ginnerId:item.ginnerUser_id[0],
-           programId:item.program_id[0],
-           brandId:item.brand[0]
+           ginnerId:item?.ginnerUser_id?.length?item?.ginnerUser_id[0]:0,
+           programId:item?.program_id?.length?item?.program_id[0]:0,
+           brandId:item?.brand?.length?item?.brand[0]:0
         }
         // worksheet.addRow(rowValues);
         arrayData.push(rowValues)
@@ -9222,11 +9078,11 @@ const array=[]
           cotton_procured: item.cotton_procured ? item.cotton_procured : null,
           cotton_processed: item.cotton_processed ? item.cotton_processed :null,
           cotton_stock: item.cotton_stock ? item.cotton_stock : null,
-          countryId:item?.country_id,
-          ginnerId:item?.ginner_id,
-          programId:item?.program_id[0],
-          brandId:item?.brand[0],
-          seasonId:item?.season_id
+          countryId:item?.country_id??0,
+          ginnerId:item?.ginner_id??0,
+          programId:item?.program_id?.length?item?.program_id[0]:0,
+          brandId:item?.brand?.length?item?.brand[0]:0,
+          seasonId:item?.season_id??0
         };
         // worksheet.addRow(rowValues);
         array.push(rowValues)
@@ -9807,11 +9663,11 @@ const exportSpinnerLintCottonStockSchedule=async()=>{
                 ? Number(procuredCotton?.dataValues?.cotton_procured) -
                   Number(spinner?.dataValues?.cotton_consumed)
                 : 0,
-            countryId:spinner?.dataValues?.country_id,
-            spinnerId:spinner?.dataValues?.spinner_id,
-            brandId:spinner?.dataValues?.brand?spinner?.dataValues?.brand[0]:0,
-            programId:spinner?.dataValues?.program_id,
-            seasonId:spinner?.dataValues?.season_id,
+            countryId:spinner?.dataValues?.country_id??0,
+            spinnerId:spinner?.dataValues?.spinner_id??0,
+            brandId:spinner?.dataValues?.brand?.length?spinner?.dataValues?.brand[0]:0,
+            programId:spinner?.dataValues?.program_id??0,
+            seasonId:spinner?.dataValues?.season_id??0,
           };
           ndata.push(stockData);
           
@@ -9823,23 +9679,32 @@ const exportSpinnerLintCottonStockSchedule=async()=>{
 }
 
 const exportSpinnerCottonStock = async (req: Request, res: Response) => {
-    // spinner_lint_cotton_stock_load
-    await ExportData.update({
-        spinner_lint_cotton_stock_load:true
-    },{where:{spinner_lint_cotton_stock_load:false}})
-    res.send({status:200,message:"export file processing"})
-  const excelFilePath = path.join(
-    "./upload",
-    "spinner-lint-cotton-stock-report.xlsx"
-  );
-  const searchTerm = req.query.search || "";
-  const page = Number(req.query.page) || 1;
-  const limit = Number(req.query.limit) || 10;
-  const offset = (page - 1) * limit;
-  const { spinnerId, seasonId, programId, brandId, countryId }: any = req.query;
-  const whereCondition: any = {};
+  // spinner_lint_cotton_stock_load
+  // await ExportData.update({
+  //     spinner_lint_cotton_stock_load:true
+  // },{where:{spinner_lint_cotton_stock_load:false}})
+  // res.send({status:200,message:"export file processing"})
+const excelFilePath = path.join(
+  "./upload",
+  "excel-spinner-lint-cotton-stock-report.xlsx"
+);
+const searchTerm = req.query.search || "";
+const page = Number(req.query.page) || 1;
+const limit = Number(req.query.limit) || 10;
+const offset = (page - 1) * limit;
+const { exportType, spinnerId, seasonId, programId, brandId, countryId }: any = req.query;
+const whereCondition: any = {};
 
-  try {
+try {
+  if (exportType === "all") {
+
+    return res.status(200).send({
+      success: true,
+      messgage: "File successfully Generated",
+      data: process.env.BASE_URL + "spinner-lint-cotton-stock-report.xlsx",
+    });
+
+  } else {
     if (searchTerm) {
       whereCondition[Op.or] = [
         { "$spinprocess.spinner.name$": { [Op.iLike]: `%${searchTerm}%` } },
@@ -9859,14 +9724,18 @@ const exportSpinnerCottonStock = async (req: Request, res: Response) => {
       const idArray: number[] = brandId
         .split(",")
         .map((id: any) => parseInt(id, 10));
-      whereCondition["$spinprocess.spinner.brand$"] = { [Op.overlap]: idArray };
+      whereCondition["$spinprocess.spinner.brand$"] = {
+        [Op.overlap]: idArray,
+      };
     }
 
     if (countryId) {
       const idArray: number[] = countryId
         .split(",")
         .map((id: any) => parseInt(id, 10));
-      whereCondition["$spinprocess.spinner.country_id$"] = { [Op.in]: idArray };
+      whereCondition["$spinprocess.spinner.country_id$"] = {
+        [Op.in]: idArray,
+      };
     }
 
     if (programId) {
@@ -9905,85 +9774,156 @@ const exportSpinnerCottonStock = async (req: Request, res: Response) => {
     ]);
     headerRow.font = { bold: true };
 
-    // let include = [
-    //   {
-    //     model: Spinner,
-    //     as: "spinner",
-    //     attributes: [],
-    //   },
-    //   {
-    //     model: Season,
-    //     as: "season",
-    //     attributes: [],
-    //   },
-    //   {
-    //     model: Program,
-    //     as: "program",
-    //     attributes: [],
-    //   },
-    // ];
+    let include = [
+      {
+        model: Spinner,
+        as: "spinner",
+        attributes: [],
+      },
+      {
+        model: Season,
+        as: "season",
+        attributes: [],
+      },
+      {
+        model: Program,
+        as: "program",
+        attributes: [],
+      },
+    ];
 
-    // let rows = await LintSelections.findAll({
-    //   attributes: [
-    //     [Sequelize.col('"spinprocess"."spinner"."id"'), "spinner_id"],
-    //     [Sequelize.col('"spinprocess"."spinner"."name"'), "spinner_name"],
-    //     [Sequelize.col('"spinprocess"."season"."id"'), "season_id"],
-    //     [Sequelize.col('"spinprocess"."season"."name"'), "season_name"],
-    //     [
-    //       Sequelize.literal('MIN(DISTINCT "spinprocess"."batch_lot_no")'),
-    //       "batch_lot_no",
-    //     ],
-    //     //this for comma separator batchlotno
-    //     // [
-    //     //     Sequelize.literal('ARRAY_TO_STRING(ARRAY_AGG(DISTINCT "spinprocess"."batch_lot_no"), \', \')'),
-    //     //     'batch_lot_no'
-    //     // ],
-    //     [
-    //       sequelize.fn(
-    //         "COALESCE",
-    //         sequelize.fn("SUM", sequelize.col("qty_used")),
-    //         0
-    //       ),
-    //       "cotton_consumed",
-    //     ],
-    //   ],
-    //   where: whereCondition,
-    //   include: [
-    //     {
-    //       model: SpinProcess,
-    //       as: "spinprocess",
-    //       include: include,
-    //       attributes: [],
-    //     },
-    //     {
-    //       model: GinSales,
-    //       as: "ginsales",
-    //       attributes: [],
-    //     },
-    //   ],
-    //   group: ["spinprocess.spinner.id", "spinprocess.season.id"],
-    //   order: [["spinner_id", "desc"]],
-    // });
+    let rows = await LintSelections.findAll({
+      attributes: [
+        [Sequelize.col('"spinprocess"."spinner"."id"'), "spinner_id"],
+        [Sequelize.col('"spinprocess"."spinner"."name"'), "spinner_name"],
+        [Sequelize.col('"spinprocess"."season"."id"'), "season_id"],
+        [Sequelize.col('"spinprocess"."season"."name"'), "season_name"],
+        [
+          Sequelize.literal('MIN(DISTINCT "spinprocess"."batch_lot_no")'),
+          "batch_lot_no",
+        ],
+        [
+          sequelize.fn(
+            "COALESCE",
+            sequelize.fn("SUM", sequelize.col("qty_used")),
+            0
+          ),
+          "cotton_consumed",
+        ],
+      ],
+      where: whereCondition,
+      include: [
+        {
+          model: SpinProcess,
+          as: "spinprocess",
+          include: include,
+          attributes: [],
+        },
+        {
+          model: GinSales,
+          as: "ginsales",
+          attributes: [],
+        },
+      ],
+      group: ["spinprocess.spinner.id", "spinprocess.season.id"],
+      order: [["spinner_id", "desc"]],
+    });
 
-    // let ndata = [];
-    const {rows} =await ExportSpinnerLintStock.findAndCountAll({
-        where:whereCondition,
-        offset:offset,
-        limit:limit
-    })
-   
+    let ndata = [];
+    for await (let spinner of rows) {
+      let salesData = await BaleSelection.findAll({
+        attributes: [
+          [Sequelize.col('"sales"."invoice_no"'), "invoice_no"],
+          [Sequelize.col('"bale"."ginprocess"."reel_lot_no"'), "reel_lot_no"],
+        ],
+        where: {
+          "$sales.buyer$": spinner?.dataValues?.spinner_id,
+          "$sales.season_id$": spinner?.dataValues?.season_id,
+          "$sales.status$": "Sold",
+        },
+        include: [
+          {
+            model: GinSales,
+            as: "sales",
+            attributes: [],
+          },
+          {
+            model: GinBale,
+            as: "bale",
+            include: [
+              {
+                model: GinProcess,
+                as: "ginprocess",
+                attributes: [],
+              },
+            ],
+            attributes: [],
+          },
+        ],
+        group: ["sales.invoice_no", "bale.ginprocess.reel_lot_no"],
+      });
+
+      let procuredCotton = await GinSales.findOne({
+        attributes: [
+          [
+            sequelize.fn(
+              "COALESCE",
+              sequelize.fn("SUM", sequelize.col("total_qty")),
+              0
+            ),
+            "cotton_procured",
+          ],
+        ],
+        where: {
+          buyer: spinner?.dataValues?.spinner_id,
+          season_id: spinner?.dataValues?.season_id,
+          status: "Sold",
+        },
+      });
+
+      for await (let item of salesData) {
+        let stockData = {
+          spinner_id: spinner?.dataValues?.spinner_id,
+          spinner_name: spinner?.dataValues?.spinner_name,
+          season_id: spinner?.dataValues?.season_id,
+          season_name: spinner?.dataValues?.season_name,
+          batch_lot_no: spinner?.dataValues?.batch_lot_no,
+          reel_lot_no: item?.dataValues?.reel_lot_no,
+          invoice_no: item?.dataValues?.invoice_no,
+          cotton_procured: procuredCotton
+            ? procuredCotton?.dataValues?.cotton_procured
+            : 0,
+          cotton_consumed: spinner ? spinner?.dataValues?.cotton_consumed : 0,
+          cotton_stock:
+            Number(procuredCotton?.dataValues?.cotton_procured) >
+            Number(spinner?.dataValues?.cotton_consumed)
+              ? Number(procuredCotton?.dataValues?.cotton_procured) -
+                Number(spinner?.dataValues?.cotton_consumed)
+              : 0,
+        };
+        ndata.push(stockData);
+      }
+    }
+    let data = ndata.slice(offset, offset + limit);
+
+    // const {rows} =await ExportSpinnerLintStock.findAndCountAll({
+    //     where:whereCondition,
+    //     offset:offset,
+    //     limit:limit
+    // })
+
     // Append data to worksheet
-    for await (const [index, item] of rows.entries()) {
+    for await (const [index, item] of data.entries()) {
       const rowValues = Object.values({
         index: index + 1,
-        spinner: item?.spinner,
-        season: item?.season,
-        batch_lot_no: item?.batch_lot_no ? item?.batch_lot_no : "",
-        reel_lot_no: item?.reel_lot_no ? item?.reel_lot_no : "",
-        invoice_no: item?.invoice_no ? item?.invoice_no : "",
-        cotton_procured: item?.cotton_procured ? item?.cotton_procured : "",
-        cotton_consumed: item?.cotton_consumed ? item?.cotton_consumed : "",
-        cotton_stock: item?.cotton_stock ? item?.cotton_stock : "",
+        spinner: item.spinner_name ? item.spinner_name : "",
+        season: item.season_name ? item.season_name : "",
+        batch_lot_no: item.batch_lot_no ? item.batch_lot_no : "",
+        reel_lot_no: item.reel_lot_no ? item.reel_lot_no : "",
+        invoice_no: item.invoice_no ? item.invoice_no : "",
+        cotton_procured: item.cotton_procured ? item.cotton_procured : 0,
+        cotton_consumed: item.cotton_consumed ? item.cotton_consumed : 0,
+        cotton_stock: item.cotton_stock ? item.cotton_stock : 0,
       });
       worksheet.addRow(rowValues);
     }
@@ -9999,23 +9939,28 @@ const exportSpinnerCottonStock = async (req: Request, res: Response) => {
 
     // Save the workbook
     await workbook.xlsx.writeFile(excelFilePath);
-    await ExportData.update({
-        spinner_lint_cotton_stock_load:false
-    },{where:{spinner_lint_cotton_stock_load:true}})
-    // res.status(200).send({
-    //   success: true,
-    //   messgage: "File successfully Generated",
-    //   data: process.env.BASE_URL + "spinner-lint-cotton-stock-report.xlsx",
-    // });
-  } catch (error: any) {
-    console.log(error);
-    (async()=>{
-        await ExportData.update({
-            spinner_lint_cotton_stock_load:false
-        },{where:{spinner_lint_cotton_stock_load:true}})
-    })()
-    return res.sendError(res, error.message);
+    // await ExportData.update({
+    //     spinner_lint_cotton_stock_load:false
+    // },{where:{spinner_lint_cotton_stock_load:true}})
+    return res.status(200).send({
+      success: true,
+      messgage: "File successfully Generated",
+      data:
+        process.env.BASE_URL + "excel-spinner-lint-cotton-stock-report.xlsx",
+    });
   }
+} catch (error: any) {
+  console.log(error);
+  // (async () => {
+  //   await ExportData.update(
+  //     {
+  //       spinner_lint_cotton_stock_load: false,
+  //     },
+  //     { where: { spinner_lint_cotton_stock_load: true } }
+  //   );
+  // })();
+  return res.sendError(res, error.message);
+}
 };
 
 const fetchGarmentFabricPagination = async (req: Request, res: Response) => {
