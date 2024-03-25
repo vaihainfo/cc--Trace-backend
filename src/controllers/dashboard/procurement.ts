@@ -13,6 +13,7 @@ import Season from "../../models/season.model";
 import GinProcess from "../../models/gin-process.model";
 import Ginner from "../../models/ginner.model";
 import { Op } from "sequelize";
+import moment from "moment";
 
 
 
@@ -666,18 +667,18 @@ const getMonthDate = (
   from: string,
   to: string
 ) => {
-  const start = new Date(from);
-  const end = new Date(to);
+  let start = moment(from).utc();
+  const end = moment(to).utc();
   const monthList: {
     month: number,
     year: number;
   }[] = [];
-  while (start < end) {
+  while (end.diff(start, 'days') > 0  ) {
     monthList.push({
-      month: start.getMonth(),
-      year: start.getFullYear()
+      month: start.month(),
+      year: start.year()
     });
-    start.setMonth(start.getMonth() + 1);
+    start = start.add(1, 'month');
   }
   return monthList;
 };
