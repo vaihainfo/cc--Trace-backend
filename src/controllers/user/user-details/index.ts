@@ -245,6 +245,11 @@ const processorLoginAdmin = async (req: Request, res: Response) => {
             let fabric = await Fabric.findOne({ where: { id: req.query.fabricId } });
             userId = fabric.dataValues.fabricUser_id;
         }
+        if (req.query.type === 'physical-partner') {
+            name = "Physical_Partner";
+            let physicalPartner = await PhysicalPartner.findOne({ where: { id: req.query.physicalPartnerId } });
+            userId = physicalPartner.dataValues.physicalPartnerUser_id;
+        }
         if (req.query.type === 'brand') {
             let brand = await Brand.findOne({ where: { id: req.query.brandId } });
             userId = brand.dataValues.brandUser_id;
