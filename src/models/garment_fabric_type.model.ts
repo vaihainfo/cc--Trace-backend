@@ -9,7 +9,7 @@ const GarmentFabricType = db.define('garment_fabric_types', {
     allowNull: false,
     primaryKey: true
   },
-  process_id : {
+  process_id: {
     type: DataTypes.INTEGER
   },
   garment_type: {
@@ -25,16 +25,19 @@ const GarmentFabricType = db.define('garment_fabric_types', {
     type: DataTypes.DOUBLE
   },
   color: {
-    type:  DataTypes.STRING
+    type: DataTypes.STRING
   },
   no_of_pieces: {
-    type:  DataTypes.DOUBLE
+    type: DataTypes.DOUBLE
+  },
+  no_of_pieces_stock: {
+    type: DataTypes.DOUBLE
   },
   finished_garment_image: {
     type: DataTypes.STRING
   },
-  sold_status :{
-    type : DataTypes.BOOLEAN
+  sold_status: {
+    type: DataTypes.BOOLEAN
   }
 });
 

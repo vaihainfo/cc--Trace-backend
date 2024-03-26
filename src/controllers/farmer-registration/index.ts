@@ -120,7 +120,9 @@ const fetchFarmerPagination = async (req: Request, res: Response) => {
         .map((id: any) => parseInt(id, 10));
       whereCondition["$farmer.farmGroup_id$"] = { [Op.in]: idArray };
     }
+
     if (countryId) {
+
       const idArray: number[] = countryId
         .split(",")
         .map((id: any) => parseInt(id, 10));

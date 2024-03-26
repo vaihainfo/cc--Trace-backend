@@ -736,6 +736,7 @@ const createGarmentProcess = async (req: Request, res: Response) => {
         garment_size: fabric.garmentSize,
         color: fabric.color,
         no_of_pieces: fabric.noOfPieces,
+        no_of_pieces_stock: fabric.noOfPieces,
         no_of_boxes: fabric.noOfBoxes,
         finished_garment_image: fabric.finishedGarmentImage,
         sold_status: false,
@@ -1434,15 +1435,31 @@ const createGarmentSales = async (req: Request, res: Response) => {
         if (val) {
           let update = await GarmentProcess.update(
             {
-              // qty_stock: val.dataValues.qty_stock - obj.qtyUsed,
+              qty_stock: val.dataValues.qty_stock - obj.qtyUsed,
               status: 'Sold'
             },
             { where: { id: obj.process_id } }
           );
-          let updatee = await GarmentFabricType.update(
-            { sold_status: true },
-            { where: { id: obj.id } }
-          );
+
+          const GarmentFabric = await GarmentFabricType.findOne({ where: { id: obj.id } });
+
+          let updateFabric = {}
+          if (GarmentFabric.no_of_pieces_stock - obj.qtyUsed <= 0) {
+            updateFabric = {
+              sold_status: true,
+              no_of_pieces_stock: 0
+            }
+          } else {
+            updateFabric = {
+              no_of_pieces_stock: GarmentFabric.no_of_pieces_stock - obj.qtyUsed
+            }
+          }
+
+          const GarmentYarnStatus = await GarmentFabricType.update(updateFabric, { where: { id: obj.id } });
+          // let updatee = await GarmentFabricType.update(
+          //   { sold_status: true },
+          //   { where: { id: obj.id } }
+          // );
           await GarmentSelection.create({
             garment_id: obj.process_id,
             processor: obj.processor,
@@ -1730,6 +1747,7 @@ const chooseGarmentSales = async (req: Request, res: Response) => {
         ],
       },
       include: include,
+      order: [["id", "desc"]],
     });
 
     let data = [];
@@ -1744,7 +1762,7 @@ const chooseGarmentSales = async (req: Request, res: Response) => {
             [
               Sequelize.fn(
                 "COALESCE",
-                Sequelize.fn("SUM", Sequelize.col("no_of_pieces")),
+                Sequelize.fn("SUM", Sequelize.col("no_of_pieces_stock")),
                 0
               ),
               "no_of_pieces",
@@ -1766,7 +1784,7 @@ const chooseGarmentSales = async (req: Request, res: Response) => {
             [
               Sequelize.fn(
                 "COALESCE",
-                Sequelize.fn("SUM", Sequelize.col("no_of_pieces")),
+                Sequelize.fn("SUM", Sequelize.col("no_of_pieces_stock")),
                 0
               ),
               "no_of_pieces",
@@ -1777,6 +1795,7 @@ const chooseGarmentSales = async (req: Request, res: Response) => {
         });
         list = await GarmentFabricType.findAll({
           where: { process_id: row.dataValues?.id, sold_status: false },
+          order: [["id", "desc"]],
         });
       }
       if (list.length > 0) {

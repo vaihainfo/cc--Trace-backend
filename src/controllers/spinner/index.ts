@@ -94,6 +94,7 @@ const createSpinnerProcess = async (req: Request, res: Response) => {
                 process_id: spin.id,
                 yarn_count: yarn.yarnCount,
                 yarn_produced: yarn.yarnProduced,
+                yarn_qty_stock: yarn.yarnProduced
             }
 
             const yarns = await SpinYarn.create(yarnData);
@@ -222,7 +223,7 @@ const yarnId = async (id: any, date: any) => {
             spinner_id: id
         }
     })
-    
+
     let currentDate = new Date();
     let day = String(currentDate.getUTCDate()).padStart(2, "0");
     let month = String(currentDate.getUTCMonth() + 1).padStart(2, "0"); // UTC months are zero-indexed, so we add 1
@@ -809,6 +810,16 @@ const createSpinnerSales = async (req: Request, res: Response) => {
             status: 'Pending for QR scanning'
         };
 
+        if (req.body.chooseYarn && req.body.chooseYarn.length > 0) {
+            for await (let obj of req.body.chooseYarn) {
+                const spinYarnData = await SpinYarn.findOne({ where: { id: obj.id }, raw: true });
+                console.log(spinYarnData)
+                if (obj.qtyUsed > spinYarnData.yarn_qty_stock) {
+                    return res.sendError(res, 'Requested quantity exceeds available stock')
+                }
+            }
+        }
+
         const spinSales = await SpinSales.create(data);
         let uniqueFilename = `spin_sales_qrcode_${Date.now()}.png`;
         let da = encrypt(`Spinner,Sale,${spinSales.id}`);
@@ -822,7 +833,20 @@ const createSpinnerSales = async (req: Request, res: Response) => {
         if (req.body.chooseYarn && req.body.chooseYarn.length > 0) {
             for await (let obj of req.body.chooseYarn) {
                 let update = await SpinProcess.update({ qty_stock: obj.totalQty - obj.qtyUsed, status: 'Sold' }, { where: { id: obj.process_id } });
-                const spinYarnStatus = await SpinYarn.update({ sold_status: true }, { where: { id: obj.id } });
+                const spinYarnData = await SpinYarn.findOne({ where: { id: obj.id } });
+
+                let updateyarns = {}
+                if (spinYarnData.yarn_qty_stock - obj.qtyUsed <= 0) {
+                    updateyarns = {
+                        sold_status: true,
+                        yarn_qty_stock: 0
+                    }
+                } else {
+                    updateyarns = {
+                        yarn_qty_stock: spinYarnData.yarn_qty_stock - obj.qtyUsed
+                    }
+                }
+                const spinYarnStatus = await SpinYarn.update(updateyarns, { where: { id: obj.id } });
                 await SpinProcessYarnSelection.create({ spin_process_id: obj.process_id, yarn_id: obj.id, sales_id: spinSales.id, qty_used: obj.qtyUsed })
             }
         }
@@ -1239,7 +1263,14 @@ const deleteSpinnerSales = async (req: Request, res: Response) => {
                     }
                 }
             );
-            await SpinYarn.update({ sold_status: false }, { where: { id: yarn.yarn_id } });
+            const spinYarnData = await SpinYarn.findOne({ where: { id: yarn.yarn_id } });
+            if (spinYarnData) {
+                await SpinYarn.update(
+                    { sold_status: false, yarn_qty_stock: +spinYarnData.yarn_qty_stock + +yarn.qty_used },
+                    { where: { id: yarn.yarn_id } }
+                );
+            }
+            // await SpinYarn.update({ sold_status: false }, { where: { id: yarn.yarn_id } });
         });
 
         SpinSales.destroy({
@@ -1799,6 +1830,7 @@ const chooseYarn = async (req: Request, res: Response) => {
         if (spinnerId) {
             whereCondition.spinner_id = spinnerId;
         }
+
         if (seasonId) {
             const idArray: number[] = seasonId
                 .split(",")
@@ -1832,7 +1864,8 @@ const chooseYarn = async (req: Request, res: Response) => {
             attributes: [
                 [Sequelize.col('"spinprocess"."season"."id"'), 'season_id'],
                 [Sequelize.col('"spinprocess"."season"."name"'), 'season_name'],
-                [Sequelize.fn('SUM', Sequelize.col('yarn_produced')), 'available_yarn']
+                // [Sequelize.fn('SUM', Sequelize.col('yarn_produced')), 'available_yarn']
+                [Sequelize.fn('SUM', Sequelize.col('yarn_qty_stock')), 'available_yarn']
             ],
             include: [{
                 model: SpinProcess,
@@ -1841,6 +1874,8 @@ const chooseYarn = async (req: Request, res: Response) => {
                 where: whereCondition,
                 include: include,
             }],
+            order: [["id", "desc"]],
+            where: { sold_status: false },
             group: ["spinprocess.season.id", "spinprocess.season_id"]
         })
 
@@ -1853,7 +1888,7 @@ const chooseYarn = async (req: Request, res: Response) => {
         //     ],
         //     group: ["season.id", "season_id"]
         // });
-        console.log(result);
+
         let list = [];
         for await (let item of result) {
             let items = await SpinProcess.findAll({
@@ -1880,7 +1915,8 @@ const chooseYarn = async (req: Request, res: Response) => {
                 const lot_details = await SpinYarn.findAll({
                     attributes: [
                         [sequelize.fn('SUM', Sequelize.col('"spinprocess"."net_yarn_qty"')), 'total_yarn'],
-                        [sequelize.fn('SUM', Sequelize.col('"spin_yarns"."yarn_produced"')), 'qty_stock'],
+                        [sequelize.fn('SUM', Sequelize.col('"spin_yarns"."yarn_produced"')), 'yarn_produced'],
+                        [sequelize.fn('SUM', Sequelize.col('"spin_yarns"."yarn_qty_stock"')), 'qty_stock'],
                         // Add other attributes here...
                     ],
                     where: {
@@ -1894,6 +1930,7 @@ const chooseYarn = async (req: Request, res: Response) => {
                             where: { id: row?.dataValues?.id },
                         },
                     ],
+                    order: [["id", "desc"]],
                     group: ['spinprocess.id', 'spinprocess.batch_lot_no', 'spinprocess.reel_lot_no'],
                 });
 
@@ -1905,6 +1942,7 @@ const chooseYarn = async (req: Request, res: Response) => {
                             as: 'yarncount',
                             attributes: ['id', 'yarnCount_name'],
                         }],
+                        order: [["id", "desc"]],
                         where: {
                             process_id: row?.dataValues?.id,
                             sold_status: false
@@ -1921,6 +1959,7 @@ const chooseYarn = async (req: Request, res: Response) => {
 
             list.push({ ...item.dataValues, data: data });
         }
+
         return res.sendSuccess(res, list);
 
     } catch (error: any) {

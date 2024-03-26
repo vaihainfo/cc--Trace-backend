@@ -94,6 +94,7 @@ const createKnitterProcess = async (req: Request, res: Response) => {
         fabric_type: fabric.fabricType,
         fabric_gsm: fabric.fabricGsm,
         fabric_weight: fabric.fabricWeight,
+        fabric_weight_stock: fabric.fabricWeight,
         sold_status: false,
       };
       const yarns = await KnitFabric.create(data);
@@ -441,10 +442,24 @@ const createKnitterrSales = async (req: Request, res: Response) => {
             { qty_stock: val.dataValues.qty_stock - obj.qtyUsed, status: 'Sold' },
             { where: { id: obj.process_id } }
           );
-          let updatee = await KnitFabric.update(
-            { sold_status: true },
-            { where: { id: obj.id } }
-          );
+          const knitFabData = await KnitFabric.findOne({ where: { id: obj.id } });
+          let updateFabrics = {}
+          if (knitFabData.fabric_weight_stock - obj.qtyUsed <= 0) {
+            updateFabrics = {
+              sold_status: true,
+              fabric_weight_stock: 0
+            }
+          } else {
+            updateFabrics = {
+              fabric_weight_stock: knitFabData.fabric_weight_stock - obj.qtyUsed
+            }
+          }
+          const KnitFabricStatus = await KnitFabric.update(updateFabrics, { where: { id: obj.id } });
+
+          // let updatee = await KnitFabric.update(
+          //   { sold_status: true },
+          //   { where: { id: obj.id } }
+          // );
           await KnitFabricSelection.create({
             knit_fabric: obj.id,
             fabric_id: obj.process_id,
@@ -496,12 +511,15 @@ const deleteKnitterSales = async (req: Request, res: Response) => {
       return res.sendError(res, "Need Sales Id");
     }
 
-    let yarn_selections = await KnitYarnSelection.findAll({
+    let yarn_selections = await KnitFabricSelection.findAll({
       where: {
         sales_id: req.body.id,
       },
+      row: true,
     });
-    yarn_selections.forEach((yarn: any) => {
+
+
+    for await (let yarn of yarn_selections) {
       KnitProcess.update(
         {
           qty_stock: sequelize.literal(`qty_stock + ${yarn.qty_used}`),
@@ -512,11 +530,19 @@ const deleteKnitterSales = async (req: Request, res: Response) => {
           },
         }
       );
-      let updatee = KnitFabric.update(
-        { sold_status: false },
-        { where: { id: yarn.knit_fabric } }
-      );
-    });
+      const knitFabData = await KnitFabric.findOne({ where: { id: yarn.knit_fabric } });
+
+      if (knitFabData) {
+        let updatee = KnitFabric.update(
+          { sold_status: false, fabric_weight_stock: Number(knitFabData.fabric_weight_stock) + Number(yarn.qty_used) },
+          { where: { id: yarn.knit_fabric } }
+        );
+      }
+      // let updatee =  KnitFabric.update(
+      //   { sold_status: false },
+      //   { where: { id: yarn.knit_fabric } }
+      // );
+    }
 
     KnitSales.destroy({
       where: {
@@ -1552,6 +1578,7 @@ const chooseFabricProcess = async (req: Request, res: Response) => {
               as: "fabric",
             },
           ],
+          order: [["id", "desc"]],
         });
       }
 

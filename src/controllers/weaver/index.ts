@@ -91,6 +91,7 @@ const createWeaverProcess = async (req: Request, res: Response) => {
         fabric_type: fabric.fabricType,
         fabric_gsm: fabric.fabricGsm,
         fabric_length: fabric.fabricLength,
+        fabric_length_stock: fabric.fabricLength,
         sold_status: false,
       };
       const fab = await WeaverFabric.create(data);
@@ -421,13 +422,27 @@ const createWeaverSales = async (req: Request, res: Response) => {
       for await (let obj of req.body.chooseFabric) {
         let val = await WeaverProcess.findOne({ where: { id: obj.process_id } });
         if (val) {
-          let update = await WeaverProcess.update({
-            qty_stock: val.dataValues.qty_stock - obj.qtyUsed
-          }, { where: { id: obj.process_id } });
-          let updatee = await WeaverFabric.update(
-            { sold_status: true },
-            { where: { id: obj.id } }
+          let update = await WeaverProcess.update(
+            {
+              qty_stock: val.dataValues.qty_stock - obj.qtyUsed,
+              status: "Sold",
+            },
+            { where: { id: obj.process_id } }
           );
+          const Fabrics = await WeaverFabric.findOne({ where: { id: obj.id } });
+
+          let updateyarns = {}
+          if (Fabrics.fabric_length_stock - obj.qtyUsed <= 0) {
+            updateyarns = {
+              sold_status: true,
+              fabric_length_stock: 0
+            }
+          } else {
+            updateyarns = {
+              fabric_length_stock: Fabrics.fabric_length_stock - obj.qtyUsed
+            }
+          }
+          const spinYarnStatus = await WeaverFabric.update(updateyarns, { where: { id: obj.id } });
           await WeaverFabricSelection.create({
             weaver_fabric: obj.id,
             fabric_id: obj.process_id,
@@ -736,14 +751,18 @@ const exportWeaverSale = async (req: Request, res: Response) => {
 
       const rowValues = Object.values({
         index: index + 1,
-        date: item.date ? item.date : '',
-        season: item.season ? item.season.name : '',
-        buyer_id: item.buyer ? item.buyer.name : item.dyingwashing ? item.dyingwashing.name : item.processor_name,
-        program: item.program ? item.program.program_name : '',
-        garment_order_ref: item.garment_order_ref ? item.garment_order_ref : '',
-        brand_order_ref: item.brand_order_ref ? item.brand_order_ref : '',
-        invoice: item.invoice_no ? item.invoice_no : '',
-        lotNo: item.batch_lot_no ? item.batch_lot_no : '',
+        date: item.date ? item.date : "",
+        season: item.season ? item.season.name : "",
+        buyer_id: item.buyer
+          ? item.buyer.name
+          : item.dyingwashing
+            ? item.dyingwashing.name
+            : item.processor_name,
+        program: item.program ? item.program.program_name : "",
+        garment_order_ref: item.garment_order_ref ? item.garment_order_ref : "",
+        brand_order_ref: item.brand_order_ref ? item.brand_order_ref : "",
+        invoice: item.invoice_no ? item.invoice_no : "",
+        lotNo: item.batch_lot_no ? item.batch_lot_no : "",
         total: item.total_yarn_qty,
         vichle: item.vehicle_no ? item.vehicle_no : '',
         transaction_via_trader: item.transaction_via_trader ? 'Yes' : 'No',
@@ -947,10 +966,17 @@ const deleteWeaverSales = async (req: Request, res: Response) => {
           },
         }
       );
-      let updatee = WeaverFabric.update(
-        { sold_status: false },
-        { where: { id: yarn.weaver_fabric } }
-      );
+      const fabrics = WeaverFabric.findOne({ where: { id: yarn.yarn_id } });
+      if (fabrics) {
+        WeaverFabric.update(
+          { sold_status: false, fabric_length_stock: +fabrics.fabric_length_stock + +yarn.qty_used },
+          { where: { id: yarn.weaver_fabric } }
+        );
+      }
+      // let updatee = WeaverFabric.update(
+      //   { sold_status: false },
+      //   { where: { id: yarn.weaver_fabric } }
+      // );
     });
 
     WeaverSales.destroy({
@@ -1557,7 +1583,8 @@ const chooseWeaverFabric = async (req: Request, res: Response) => {
               model: FabricType,
               as: "fabric"
             },
-          ]
+          ],
+          order: [["id", "desc"]],
         });
       }
 

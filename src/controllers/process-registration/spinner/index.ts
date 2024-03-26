@@ -217,6 +217,8 @@ const fetchSpinner = async (req: Request, res: Response) => {
         return res.sendSuccess(res, result ? { ...result.dataValues, userData, programs, unitCerts, brands, yarnCount } : null);
 
     } catch (error) {
+        console.log("------------", error);
+
         return res.sendError(res, "ERR_INTERNAL_SERVER_ERROR");
     }
 }
