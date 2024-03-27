@@ -1874,7 +1874,6 @@ const chooseYarn = async (req: Request, res: Response) => {
                 where: whereCondition,
                 include: include,
             }],
-            order: [["id", "desc"]],
             where: { sold_status: false },
             group: ["spinprocess.season.id", "spinprocess.season_id"]
         })
@@ -1930,7 +1929,6 @@ const chooseYarn = async (req: Request, res: Response) => {
                             where: { id: row?.dataValues?.id },
                         },
                     ],
-                    order: [["id", "desc"]],
                     group: ['spinprocess.id', 'spinprocess.batch_lot_no', 'spinprocess.reel_lot_no'],
                 });
 

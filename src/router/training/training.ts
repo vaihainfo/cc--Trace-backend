@@ -5,7 +5,7 @@ import accessControl from "../../middleware/access-control";
 
 const router = Router();
 
-router.use(accessControl)
+// router.use(accessControl)
 
 router.get('/get-trainings', fetchTrainings);
 router.get('/get-training', fetchTraining);
