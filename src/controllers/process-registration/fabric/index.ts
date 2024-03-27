@@ -146,9 +146,9 @@ const fetchFabricPagination = async (req: Request, res: Response) => {
             });
             return res.sendSuccess(res, result);
         }
-    } catch (error) {
+    } catch (error: any) {
         console.log(error);
-        return res.sendError(res, "NOT_ABLE_TO_GET_FABRIC");
+        return res.sendError(res, error.message);
     }
 }
 
@@ -194,9 +194,9 @@ const fetchFabric = async (req: Request, res: Response) => {
         };
         return res.sendSuccess(res, fabricInfo);
 
-    } catch (error) {
+    } catch (error: any) {
         console.log(error);
-        return res.sendError(res, "NOT_ABLE_TO_GET_FABRIC");
+        return res.sendError(res, error.message);
     }
 }
 

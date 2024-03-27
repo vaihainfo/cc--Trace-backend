@@ -169,9 +169,9 @@ const createProcessor = async (req: Request, res: Response) => {
         }
 
         res.sendSuccess(res, mainData);
-    } catch (error) {
+    } catch (error: any) {
         console.log(error);
-        return res.sendError(res, "ERR_NOT_ABLE_CREATE_PROCESSOR");
+        return res.sendError(res, error.message);
     }
 }
 
@@ -301,9 +301,9 @@ const fetchAllProcessor = async (req: Request, res: Response) => {
         }
         return res.sendSuccess(res, result ? { ginner, spinner, weaver, knitter, garment, trader, fabric, physical_partner, userData } : {});
 
-    } catch (error) {
+    } catch (error: any) {
         console.log(error);
-        return res.sendError(res, "ERR_NOT_ABLE_FETCH_PROCESSOR");
+        return res.sendError(res, error.message);
     }
 }
 
@@ -525,9 +525,9 @@ const updateProcessor = async (req: Request, res: Response) => {
         }
 
         res.sendSuccess(res, mainData);
-    } catch (error) {
+    } catch (error: any) {
         console.log(error);
-        return res.sendError(res, "ERR_NOT_ABLE_UPDATE_PROCESSOR");
+        return res.sendError(res, error.message);
     }
 }
 
@@ -632,9 +632,9 @@ const checkProcessorName = async (req: Request, res: Response) => {
         }
 
         res.sendSuccess(res, { exist: false });
-    } catch (error) {
+    } catch (error: any) {
         console.log(error);
-        return res.sendError(res, "ERR_NOT_ABLE_UPDATE_PROCESSOR");
+        return res.sendError(res, error.message);
     }
 }
 
