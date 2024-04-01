@@ -106,8 +106,8 @@ const getTopFabricRes = (
   const name: string[] = [];
   const count: number[] = [];
   for (const row of list) {
-    if (row.dataValues) {
-      name.push(row.dataValues.name ?? '-');
+    if (row.dataValues && row.dataValues.name) {
+      name.push(row.dataValues.name);
       count.push(formatNumber(row.dataValues.total));
     }
   }
