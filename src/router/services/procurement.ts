@@ -1,7 +1,11 @@
 import { createTransaction, deleteBulkTransactions, deleteTransaction, exportProcurement, cottonData, fetchTransactionById, fetchTransactions, updateTransaction, uploadTransactionBulk, allVillageCottonData, fetchTransactionsBySeasonAndFarmer } from "../../controllers/procurement";
 // import { createLinenDetails, fetchlinenDetails } from "../../controllers/linen-details";
+import accessControl from "../../middleware/access-control";
 import { Router } from "express";
+
 const router = Router();
+
+router.use(accessControl);
 
 // Farmer & farm Routes
 router.get('/get-transactions', fetchTransactions);

@@ -61,7 +61,11 @@ import {
     exportSpinnerBackwardTraceability,
     exportLoad
 } from "../../controllers/reports";
+import accessControl from "../../middleware/access-control";
+
 const router = Router();
+
+router.use(accessControl);
 
 // Transaction Report Route
 router.get('/get-transactions', fetchTransactionsReport);

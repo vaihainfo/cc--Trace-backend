@@ -28,9 +28,12 @@ import {
     getGarmentProcessTracingChartData,
     garmentTraceabilityMap
 } from "../../controllers/garment-sales";
-
+import accessControl from "../../middleware/access-control";
 import { Router } from "express";
+
 const router = Router();
+
+router.use(accessControl);
 
 // Garment Sales Routes
 // router.get('/brand', fetchBrandQrGarmentSalesPagination);

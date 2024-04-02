@@ -10,9 +10,12 @@ import {
     reportNationalQualityParameter,
     reporProcessorWiseParameter
 } from "../../controllers/quality-parameter";
-
+import accessControl from "../../middleware/access-control";
 import { Router } from "express";
+
 const router = Router();
+
+router.use(accessControl);
 
 // Garment Sales Routes
 router.post('/', createQualityParameter);

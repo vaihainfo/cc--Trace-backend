@@ -28,9 +28,12 @@ import {
     updateSpinnerSales,
     fetchSpinnerSale
 } from "../../controllers/spinner";
-
+import accessControl from "../../middleware/access-control";
 import { Router } from "express";
+
 const router = Router();
+
+router.use(accessControl);
 
 // Spinner Routes
 router.get('/', fetchSpinnerProcessPagination);

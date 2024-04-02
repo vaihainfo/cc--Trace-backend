@@ -38,10 +38,12 @@ import {
     getBatchLot,
     getFabricProcessTracingChartData
 } from "../../controllers/fabric";
-
+import accessControl from "../../middleware/access-control";
 import { Router } from "express";
 
 const router = Router();
+
+router.use(accessControl);
 
 router.get('/dying-dashboard', fetchDyingTransactions);
 router.get('/dying-dashboard-all', fetchDyingTransactionsAll);

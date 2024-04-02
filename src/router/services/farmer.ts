@@ -15,9 +15,12 @@ import {
   dashboardGraph,
   fetchFarmerPecurement
 } from "../../controllers/farmer-registration";
-
+import accessControl from "../../middleware/access-control";
 import { Router } from "express";
+
 const router = Router();
+
+router.use(accessControl);
 
 // Farmer & farm Routes
 router.get("/", fetchFarmerPagination);
