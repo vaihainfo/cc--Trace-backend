@@ -21,6 +21,9 @@ const SpinYarn = db.define('spin_yarns', {
   yarn_produced: {
     type: DataTypes.DOUBLE
   },
+  yarn_qty_stock: {
+    type: DataTypes.DOUBLE
+  },
   qr: {
     type: DataTypes.STRING
   },

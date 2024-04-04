@@ -79,10 +79,10 @@ module.exports = {
         allowNull: true,
         type: Sequelize.INTEGER,
       },
-      spinnerId: {
-        allowNull: true,
-        type: Sequelize.INTEGER,
-      },
+      // spinnerId: {
+      //   allowNull: true,
+      //   type: Sequelize.INTEGER,
+      // },
       seasonId: {
         allowNull: true,
         type: Sequelize.INTEGER,

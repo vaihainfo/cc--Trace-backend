@@ -22,6 +22,9 @@ const KnitFabric = db.define('knit_fabrics', {
   fabric_weight : {
     type: DataTypes.DOUBLE
   },
+  fabric_weight_stock: {
+    type: DataTypes.DOUBLE
+  },
   sold_status :{
     type : DataTypes.BOOLEAN
   }

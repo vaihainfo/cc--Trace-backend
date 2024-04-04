@@ -10,6 +10,7 @@ import SpinSales from "../../models/spin-sales.model";
 import Knitter from "../../models/knitter.model";
 import Weaver from "../../models/weaver.model";
 import { Op } from "sequelize";
+import moment from "moment";
 
 const getQueryParams = async (
   req: Request, res: Response
@@ -105,7 +106,7 @@ const getTopFabricRes = (
   const name: string[] = [];
   const count: number[] = [];
   for (const row of list) {
-    if (row.dataValues) {
+    if (row.dataValues && row.dataValues.name) {
       name.push(row.dataValues.name);
       count.push(formatNumber(row.dataValues.total));
     }
@@ -124,7 +125,12 @@ const getTopFabricData = async (
   const result = await SpinSales.findAll({
     attributes: [
       [Sequelize.fn('SUM', Sequelize.col('total_qty')), 'total'],
-      [Sequelize.literal('case when knitter.id is not null then knitter.name else weaver.name end'), 'name']
+      [Sequelize.literal(`case 
+        when knitter.id is not null 
+          then knitter.name 
+        when weaver.id is not null 
+          then weaver.name 
+        else processor_name end`), 'name']
     ],
     include: [{
       model: Spinner,
@@ -142,7 +148,7 @@ const getTopFabricData = async (
     where,
     order: [['total', 'desc']],
     limit: 10,
-    group: ['knitter.id', 'weaver.id']
+    group: ['knitter.id', 'weaver.id', 'processor_name',]
   });
 
   return result;
@@ -191,18 +197,13 @@ const getTopGinnersData = async (
   const result = await GinSales.findAll({
     attributes: [
       [Sequelize.fn('SUM', Sequelize.col('gin_sales.total_qty')), 'total'],
-      [Sequelize.col('season.name'), 'seasonName'],
       [Sequelize.col('ginner.name'), 'ginnerName']
     ],
     include: [{
       model: Ginner,
       as: 'ginner',
       attributes: []
-    }, {
-      model: Season,
-      as: 'season',
-      attributes: []
-    }, {
+    },  {
       model: Spinner,
       as: 'buyerdata',
       attributes: []
@@ -210,7 +211,7 @@ const getTopGinnersData = async (
     where,
     order: [['total', 'desc']],
     limit: 10,
-    group: ['season.id', 'ginner.id']
+    group: [ 'ginner.id']
   });
 
   return result;
@@ -658,18 +659,18 @@ const getMonthDate = (
   from: string,
   to: string
 ) => {
-  const start = new Date(from);
-  const end = new Date(to);
+  let start = moment(from).utc();
+  const end = moment(to).utc();
   const monthList: {
     month: number,
     year: number;
   }[] = [];
-  while (start < end) {
+  while (end.diff(start, 'days') > 0  ) {
     monthList.push({
-      month: start.getMonth(),
-      year: start.getFullYear()
+      month: start.month(),
+      year: start.year()
     });
-    start.setMonth(start.getMonth() + 1);
+    start = start.add(1, 'month');
   }
   return monthList;
 };

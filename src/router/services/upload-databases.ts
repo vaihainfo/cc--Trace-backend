@@ -9,10 +9,12 @@ import {
     uploadProcurementPrice,
     uploadImpactData
 } from "../../controllers/upload-databases";
-
+import accessControl from "../../middleware/access-control";
 import { Router } from "express";
+
 const router = Router();
 
+router.use(accessControl);
 // Upload databases Routes
 router.post('/ginner-order', uploadGinnerOrder);
 router.post('/style-mark', uploadStyleMark);

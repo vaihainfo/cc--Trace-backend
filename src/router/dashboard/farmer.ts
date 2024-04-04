@@ -2,9 +2,10 @@ import * as Dashboard from "../../controllers/dashboard/farmer";
 import accessControl from "../../middleware/access-control";
 import { Router } from "express";
 
-
 const router = Router();
+
 router.use(accessControl);
+
 router.get('/area/overall', Dashboard.getOverallArea);
 router.get('/overall', Dashboard.getOverallFarmer);
 router.get('/count', Dashboard.getFarmerCount);

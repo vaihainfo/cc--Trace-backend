@@ -2,14 +2,11 @@ import { Request, Response } from "express";
 import { Sequelize, Op } from "sequelize";
 import GarmentSales from "../../models/garment-sales.model";
 import * as ExcelJS from "exceljs";
-import * as fs from "fs";
 import * as path from "path";
 import Brand from "../../models/brand.model";
-import sequelize from "../../util/dbConn";
 import WeaverSales from "../../models/weaver-sales.model";
 import KnitSales from "../../models/knit-sales.model";
 import Program from "../../models/program.model";
-import FabricType from "../../models/fabric-type.model";
 import Weaver from "../../models/weaver.model";
 import Knitter from "../../models/knitter.model";
 import Garment from "../../models/garment.model";
@@ -52,12 +49,13 @@ import GinBale from "../../models/gin-bale.model";
 import CottonSelection from "../../models/cotton-selection.model";
 import Country from "../../models/country.model";
 import District from "../../models/district.model";
-import WeaverFabric from "../../models/weaver_fabric.model";
-import KnitFabric from "../../models/knit_fabric.model";
 import SpinProcess from "../../models/spin-process.model";
 import CottonMix from "../../models/cotton-mix.model";
 import { _getFabricProcessTracingChartData } from '../fabric/index';
 import { formatDataForGarment } from '../../util/tracing-chart-data-formatter';
+import PhysicalTraceabilityDataGarment from "../../models/physical-traceability-data-garment.model";
+import PhysicalTraceabilityDataGarmentSample from "../../models/physical-traceability-data-garment-sample.model";
+import FabricType from "../../models/fabric-type.model";
 
 const fetchBrandQrGarmentSalesPagination = async (
   req: Request,
@@ -729,6 +727,7 @@ const createGarmentProcess = async (req: Request, res: Response) => {
         },
       }
     );
+
     for await (let fabric of req.body.garmentfabrics) {
       let data = {
         process_id: garmentProcess.id,
@@ -737,12 +736,14 @@ const createGarmentProcess = async (req: Request, res: Response) => {
         garment_size: fabric.garmentSize,
         color: fabric.color,
         no_of_pieces: fabric.noOfPieces,
+        no_of_pieces_stock: fabric.noOfPieces,
         no_of_boxes: fabric.noOfBoxes,
         finished_garment_image: fabric.finishedGarmentImage,
         sold_status: false,
       };
       const garmentFabric = await GarmentFabricType.create(data);
     }
+
     if (req.body.chooseFabric && req.body.chooseFabric.length > 0) {
       for await (let obj of req.body.chooseFabric) {
         if (obj.processor === "knitter") {
@@ -782,6 +783,41 @@ const createGarmentProcess = async (req: Request, res: Response) => {
           sales_id: garmentProcess.id,
           qty_used: obj.qtyUsed,
         });
+      }
+    }
+
+    if (req.body.enterPhysicalTraceability) {
+      const physicalTraceabilityData = {
+        date_sample_collection: req.body.dateSampleCollection,
+        data_of_sample_dispatch: req.body.dataOfSampleDispatch,
+        operator_name: req.body.operatorName,
+        expected_date_of_garment_sale: req.body.expectedDateOfGarmentSale,
+        physical_traceability_partner_id: req.body.physicalTraceabilityPartnerId,
+        garm_process_id: garmentProcess.id,
+        garment_id: req.body.garmentId
+      };
+      const physicalTraceabilityDataGarment = await PhysicalTraceabilityDataGarment.create(physicalTraceabilityData);
+
+      for await (const weightAndCone of req.body.weightAndCone) {
+        let brand = await Brand.findOne({
+          where: { id: req.body.brandId }
+        });
+
+        const updatedCount = brand.dataValues.count + 1;
+        let physicalTraceabilityDataGarmentSampleData = {
+          physical_traceability_data_garment_id: physicalTraceabilityDataGarment.id,
+          weight: weightAndCone.weight,
+          cone: weightAndCone.cone,
+          original_sample_status: weightAndCone.originalSampleStatus,
+          code: `DNA${req.body.garmentShortname}${req.body?.reelLotNo ? '-' + req.body.reelLotNo : ''}-${updatedCount}`,
+          sample_result: 0
+        };
+        await PhysicalTraceabilityDataGarmentSample.create(physicalTraceabilityDataGarmentSampleData);
+
+        await Brand.update(
+          { count: updatedCount },
+          { where: { id: brand.id } }
+        );
       }
     }
 
@@ -1399,15 +1435,31 @@ const createGarmentSales = async (req: Request, res: Response) => {
         if (val) {
           let update = await GarmentProcess.update(
             {
-              // qty_stock: val.dataValues.qty_stock - obj.qtyUsed,
+              qty_stock: val.dataValues.qty_stock - obj.qtyUsed,
               status: 'Sold'
             },
             { where: { id: obj.process_id } }
           );
-          let updatee = await GarmentFabricType.update(
-            { sold_status: true },
-            { where: { id: obj.id } }
-          );
+
+          const GarmentFabric = await GarmentFabricType.findOne({ where: { id: obj.id } });
+
+          let updateFabric = {}
+          if (GarmentFabric.no_of_pieces_stock - obj.qtyUsed <= 0) {
+            updateFabric = {
+              sold_status: true,
+              no_of_pieces_stock: 0
+            }
+          } else {
+            updateFabric = {
+              no_of_pieces_stock: GarmentFabric.no_of_pieces_stock - obj.qtyUsed
+            }
+          }
+
+          const GarmentYarnStatus = await GarmentFabricType.update(updateFabric, { where: { id: obj.id } });
+          // let updatee = await GarmentFabricType.update(
+          //   { sold_status: true },
+          //   { where: { id: obj.id } }
+          // );
           await GarmentSelection.create({
             garment_id: obj.process_id,
             processor: obj.processor,
@@ -1695,6 +1747,7 @@ const chooseGarmentSales = async (req: Request, res: Response) => {
         ],
       },
       include: include,
+      order: [["id", "desc"]],
     });
 
     let data = [];
@@ -1709,7 +1762,7 @@ const chooseGarmentSales = async (req: Request, res: Response) => {
             [
               Sequelize.fn(
                 "COALESCE",
-                Sequelize.fn("SUM", Sequelize.col("no_of_pieces")),
+                Sequelize.fn("SUM", Sequelize.col("no_of_pieces_stock")),
                 0
               ),
               "no_of_pieces",
@@ -1731,7 +1784,7 @@ const chooseGarmentSales = async (req: Request, res: Response) => {
             [
               Sequelize.fn(
                 "COALESCE",
-                Sequelize.fn("SUM", Sequelize.col("no_of_pieces")),
+                Sequelize.fn("SUM", Sequelize.col("no_of_pieces_stock")),
                 0
               ),
               "no_of_pieces",
@@ -1742,6 +1795,7 @@ const chooseGarmentSales = async (req: Request, res: Response) => {
         });
         list = await GarmentFabricType.findAll({
           where: { process_id: row.dataValues?.id, sold_status: false },
+          order: [["id", "desc"]],
         });
       }
       if (list.length > 0) {
@@ -1990,9 +2044,9 @@ const getGarmentReelLotNo = async (req: Request, res: Response) => {
       where: whereCondition,
       attributes: ["id", "name", "short_name"],
       include: [{
-        model :Country,
-        as : 'country',
-        attributes :['id','county_name']
+        model: Country,
+        as: 'country',
+        attributes: ['id', 'county_name']
       }]
     });
 
@@ -2013,7 +2067,7 @@ const getGarmentReelLotNo = async (req: Request, res: Response) => {
     let number = count + 1;
     let prcs_name = rows ? rows?.name.substring(0, 3).toUpperCase() : "";
     let country = rows ? rows?.country?.county_name.substring(0, 2).toUpperCase() : "";
-    let reelLotNo = "REEL-GAR-" + prcs_name  + "-" + country + "-" + prcs_date + number;
+    let reelLotNo = "REEL-GAR-" + prcs_name + "-" + country + "-" + prcs_date + number;
 
     return res.sendSuccess(res, { reelLotNo });
   } catch (error: any) {
@@ -2421,22 +2475,22 @@ const getGarmentProcessTracingChartData = async (req: Request, res: Response) =>
 
 
 const garmentTraceabilityMap = async (req: Request, res: Response) => {
-  const { salesId}: any = req.query;
+  const { salesId }: any = req.query;
   try {
-    if(!salesId) {
+    if (!salesId) {
       return res.sendError(res, "Need Sales Id ");
     }
-    let include = [ 
+    let include = [
       {
-        model:Brand,
-        as:'buyer',
-        attributes: ['id','brand_name']
+        model: Brand,
+        as: 'buyer',
+        attributes: ['id', 'brand_name']
       },
       {
         model: Garment,
         as: "garment",
-        attributes: ["id", "name", "address",'longitude','latitude','org_logo','org_photo'],
-        include :[ {
+        attributes: ["id", "name", "address", 'longitude', 'latitude', 'org_logo', 'org_photo'],
+        include: [{
           model: Country,
           as: "country",
         },
@@ -2453,811 +2507,811 @@ const garmentTraceabilityMap = async (req: Request, res: Response) => {
 
     //fetch data with pagination
     let item = await GarmentSales.findOne({
-      attributes:['id','date','fabric_order_ref','brand_order_ref','invoice_no','garment_size','style_mark_no','garment_type','color','total_no_of_boxes','total_no_of_pieces'],
-      where: {id : salesId},
+      attributes: ['id', 'date', 'fabric_order_ref', 'brand_order_ref', 'invoice_no', 'garment_size', 'style_mark_no', 'garment_type', 'color', 'total_no_of_boxes', 'total_no_of_pieces'],
+      where: { id: salesId },
       include: include
     });
-    let data :any= {};
+    let data: any = {};
     let obj: any = {};
-    if(!item){
+    if (!item) {
       return res.sendSuccess(res, data);
     }
 
-      let process = await GarmentSelection.findAll({
-        where: {
-          sales_id: item.dataValues.id,
-        },
-        attributes: ["id", "garment_id", "sales_id"],
-      });
+    let process = await GarmentSelection.findAll({
+      where: {
+        sales_id: item.dataValues.id,
+      },
+      attributes: ["id", "garment_id", "sales_id"],
+    });
 
-      const processIds = process
-        ? process.map((obj: any) => obj.dataValues.garment_id)
-        : [];
-      let fabric = await FabricSelection.findAll({
-        where: {
-          sales_id: processIds,
-        },
-        attributes: ["id", "fabric_id", "processor"],
-      });
+    const processIds = process
+      ? process.map((obj: any) => obj.dataValues.garment_id)
+      : [];
+    let fabric = await FabricSelection.findAll({
+      where: {
+        sales_id: processIds,
+      },
+      attributes: ["id", "fabric_id", "processor"],
+    });
 
-      let knit_fabric_ids = fabric
-        .filter((obj: any) => obj?.dataValues?.processor === "knitter")
-        .map((obj: any) => obj?.dataValues?.fabric_id);
-      let weaver_fabric_ids = fabric
-        .filter((obj: any) => obj?.dataValues?.processor === "weaver")
-        .map((obj: any) => obj?.dataValues?.fabric_id);
+    let knit_fabric_ids = fabric
+      .filter((obj: any) => obj?.dataValues?.processor === "knitter")
+      .map((obj: any) => obj?.dataValues?.fabric_id);
+    let weaver_fabric_ids = fabric
+      .filter((obj: any) => obj?.dataValues?.processor === "weaver")
+      .map((obj: any) => obj?.dataValues?.fabric_id);
 
-      let knitSales: any = [];
-      let knit_yarn_ids: any = [];
-      let knit_jobDetails = [];
-      let knit_fabric_gsm = []
-      if (knit_fabric_ids.length > 0) {
-        const rows = await KnitSales.findAll({
-          attributes: [
-            "id",
-            "date",
-            "garment_order_ref",
-            "brand_order_ref",
-            "invoice_no",
-            "batch_lot_no",
-            "total_yarn_qty",
-            "fabric_type",
-            "total_fabric_weight",
-            "reel_lot_no",
-            "knitter_id",
-          ],
-          include: [
-            {
-              model: Knitter,
-              as: "knitter",
-              attributes: ["id", "name", "address",'longitude','latitude','org_logo','org_photo'],
-              include :[ {
-                model: Country,
-                as: "country",
-              },
-              {
-                model: State,
-                as: "state",
-              },
-              {
-                model: District,
-                as: "district",
-              }]
-            }
-          ],
-          where: {
-            id: {
-              [Op.in]: knit_fabric_ids,
-            },
-          },
-          // raw: true // Return raw data
-        });
-
-        for await (let row of rows) {
-          let fabrictypes: any = [];
-          if (
-            row.dataValues?.fabric_type &&
-            row.dataValues?.fabric_type.length > 0
-          ) {
-            fabrictypes = await FabricType.findAll({
-              where: {
-                id: {
-                  [Op.in]: row.dataValues.fabric_type,
-                },
-              },
-              attributes: ["id", "fabricType_name"],
-            });
-          }
-          knitSales.push({
-            ...row.dataValues,
-            fabrictypes,
-          });
-        }
-        let knitProcess = await KnitFabricSelection.findAll({
-          where: {
-            sales_id: rows.map((obj: any) => obj.id),
-          },
-          attributes: ["id", "fabric_id", "sales_id"],
-          include :[ {
-            model: KnitProcess,
-            as: "process",
-          }]
-        });
-        knit_jobDetails = knitProcess.map((obj:any) => obj?.dataValues?.process?.job_details_garment);
-        knit_fabric_gsm = knitProcess.map((obj:any) => obj?.dataValues?.process?.fabric_gsm);
-        let knitYarn = await KnitYarnSelection.findAll({
-          where: {
-            sales_id: knitProcess.map((obj: any) => obj.dataValues.fabric_id),
-          },
-          attributes: ["id", "yarn_id"],
-        });
-        knit_yarn_ids = knitYarn.map((obj: any) => obj.dataValues.yarn_id);
-      }
-
-      let weaverSales: any = [];
-      let weave_yarn_ids: any = [];
-      let jobDetails = [];
-      let fabric_gsm = []
-      if (weaver_fabric_ids.length > 0) {
-        const rows = await WeaverSales.findAll({
-          attributes: [
-            "id",
-            "date",
-            "garment_order_ref",
-            "brand_order_ref",
-            "invoice_no",
-            "batch_lot_no",
-            "total_yarn_qty",
-            "fabric_type",
-            "total_fabric_length",
-            "reel_lot_no",
-            "weaver_id",
-          ],
-          include: [
-            {
-              model: Weaver,
-              as: "weaver",
-              attributes: ["id", "name", "address",'longitude','latitude','org_logo','org_photo'],
-              include :[ {
-                model: Country,
-                as: "country",
-              },
-              {
-                model: State,
-                as: "state",
-              },
-              {
-                model: District,
-                as: "district",
-              }]
-            }
-          ],
-          where: {
-            id: {
-              [Op.in]: weaver_fabric_ids,
-            },
-          },
-          raw: true, // Return raw data
-        });
-
-        for await (let row of rows) {
-          let fabrictypes: any = [];
-          if (
-            row.dataValues?.fabric_type &&
-            row.dataValues?.fabric_type.length > 0
-          ) {
-            fabrictypes = await FabricType.findAll({
-              where: {
-                id: {
-                  [Op.in]: row.dataValues.fabric_type,
-                },
-              },
-              attributes: ["id", "fabricType_name"],
-            });
-          }
-          weaverSales.push({
-            ...row.dataValues,
-            fabrictypes,
-          });
-        }
-
-        let weaveProcess = await WeaverFabricSelection.findAll({
-          where: {
-            sales_id: rows.map((obj: any) => obj.id),
-          },
-          attributes: ["id", "fabric_id", "sales_id"],
-          include : [{
-            model :WeaverProcess,
-            as : 'process'
-          }]
-        });
-        jobDetails = weaveProcess.map((obj:any) => obj?.dataValues?.process?.job_details_garment);
-        fabric_gsm = weaveProcess.map((obj:any) => obj?.dataValues?.process?.fabric_gsm);
-        let weaverYarn = await YarnSelection.findAll({
-          where: {
-            sales_id: weaveProcess.map((obj: any) => obj.id),
-          },
-          attributes: ["id", "yarn_id"],
-         
-        });
-        weave_yarn_ids = weaverYarn.map((obj: any) => obj.dataValues.yarn_id);
-      }
-      let spinSales: any = [];
-      let spnr_lint_ids: any = [];
-      let blendqty = [];
-      let blendtype = []
-      if (weave_yarn_ids.length > 0 || knit_yarn_ids.length > 0) {
-        spinSales = await SpinSales.findAll({
-          attributes: [
-            "id",
-            "date",
-            "buyer_type",
-            "buyer_id",
-            "knitter_id",
-            "invoice_no",
-            "batch_lot_no",
-            "total_qty",
-            "no_of_boxes",
-            "box_ids",
-            "yarn_type",
-            "yarn_count",
-            "reel_lot_no",
-            "spinner_id",
-          ],
-          include: [
-            {
-              model: Spinner,
-              as: "spinner",
-              attributes: ["id", "name", "address",'longitude','latitude','org_logo','org_photo'],
-              include :[ {
-                model: Country,
-                as: "country",
-              },
-              {
-                model: State,
-                as: "state",
-              },
-              {
-                model: District,
-                as: "district",
-              }]
-            },
-            {
-              model: YarnCount,
-              as: "yarncount",
-              attributes: ["yarnCount_name"],
-            },
-          ],
-          where: {
-            id: {
-              [Op.in]: [...weave_yarn_ids, ...knit_yarn_ids],
-            },
-          },
-        });
-        let spinSaleProcess = await SpinProcessYarnSelection.findAll({
-          where: {
-            sales_id: spinSales.map((obj: any) => obj.dataValues.id),
-          },
-          attributes: ["id", "spin_process_id"],
-        });
-        let spinProcess = await LintSelections.findAll({
-          where: {
-            process_id: spinSaleProcess.map(
-              (obj: any) => obj?.dataValues?.spin_process_id
-            ),
-          },
-          include:[{
-            as :'spinprocess',
-            model: SpinProcess
-          }],
-          attributes: ["id", "lint_id"],
-        });
-        blendqty = spinProcess.map((obj: any) => obj?.dataValues?.spinprocess?.dataValues?.cottonmix_qty);
-        let blend = spinProcess.map((obj: any) => obj?.dataValues?.spinprocess?.dataValues?.cottonmix_type);
-        if(blend.length > 0) {
-          blendtype = await CottonMix.findAll({
-            attributes: ['id','cottonMix_name'],
-            where: {
-              id : blend.flat()
-            }
-           })
-        }
-     
-        spnr_lint_ids = spinProcess.map((obj: any) => obj?.dataValues?.lint_id);
-      }
-
-      let ginSales: any = [];
-      let gin_process_ids: any = [];
-      let transactions_ids: any = [];
-
-      if (spnr_lint_ids.length > 0) {
-        ginSales = await GinSales.findAll({
-          attributes: [
-            "id",
-            "date",
-            "buyer",
-            "invoice_no",
-            "lot_no",
-            "total_qty",
-            "no_of_bales",
-            "press_no",
-            "reel_lot_no",
-            "ginner_id",
-            "rate"
-          ],
-          include: [
-            {
-              model: Ginner,
-              as: "ginner",
-              attributes: ["id", "name", "address",'longitude','latitude','org_logo','org_photo'],
-              include :[ {
-                model: Country,
-                as: "country",
-              },
-              {
-                model: State,
-                as: "state",
-              },
-              {
-                model: District,
-                as: "district",
-              }]
-            }
-          ],
-          where: {
-            id: {
-              [Op.in]: spnr_lint_ids,
-            },
-          },
-        });
-
-        let ginBaleId = await BaleSelection.findAll({
-          where: {
-            sales_id: ginSales.map((obj: any) => obj.dataValues.id),
-          },
-          attributes: ["id", "bale_id"],
-        });
-
-        let ginProcessIds = await GinBale.findAll({
-          where: {
-            id: ginBaleId.map((obj: any) => obj.dataValues.bale_id),
-          },
-          attributes: ["id", "process_id"],
-        });
-        gin_process_ids = ginProcessIds.map(
-          (obj: any) => obj.dataValues.process_id
-        );
-      }
-
-      if (gin_process_ids.length > 0) {
-        let cottornIds = await CottonSelection.findAll({
-          where: {
-            process_id: gin_process_ids,
-          },
-          attributes: ["id", "transaction_id"],
-        });
-        transactions_ids = cottornIds.map(
-          (obj: any) => obj.dataValues.transaction_id
-        );
-      }
-
-      let transactions: any = [];
-      if (transactions_ids.length > 0) {
-        transactions = await Transaction.findAll({
-          attributes: [
-            "id",
-            "date",
-            "state_id",
-            "village_id",
-            "farmer_id",
-            "farm_id",
-            "program_id",
-            "qty_purchased",
-          ],
-          where: {
-            id: {
-              [Op.in]: transactions_ids,
-            },
-          },
-          include: [
-            {
-              model: Village,
-              as: "village",
-              attributes: ["id", "village_name"],
+    let knitSales: any = [];
+    let knit_yarn_ids: any = [];
+    let knit_jobDetails = [];
+    let knit_fabric_gsm = []
+    if (knit_fabric_ids.length > 0) {
+      const rows = await KnitSales.findAll({
+        attributes: [
+          "id",
+          "date",
+          "garment_order_ref",
+          "brand_order_ref",
+          "invoice_no",
+          "batch_lot_no",
+          "total_yarn_qty",
+          "fabric_type",
+          "total_fabric_weight",
+          "reel_lot_no",
+          "knitter_id",
+        ],
+        include: [
+          {
+            model: Knitter,
+            as: "knitter",
+            attributes: ["id", "name", "address", 'longitude', 'latitude', 'org_logo', 'org_photo'],
+            include: [{
+              model: Country,
+              as: "country",
             },
             {
               model: State,
               as: "state",
-              attributes: ["id", "state_name"],
             },
             {
               model: District,
               as: "district",
-              attributes: ["id", "district_name"],
+            }]
+          }
+        ],
+        where: {
+          id: {
+            [Op.in]: knit_fabric_ids,
+          },
+        },
+        // raw: true // Return raw data
+      });
+
+      for await (let row of rows) {
+        let fabrictypes: any = [];
+        if (
+          row.dataValues?.fabric_type &&
+          row.dataValues?.fabric_type.length > 0
+        ) {
+          fabrictypes = await FabricType.findAll({
+            where: {
+              id: {
+                [Op.in]: row.dataValues.fabric_type,
+              },
+            },
+            attributes: ["id", "fabricType_name"],
+          });
+        }
+        knitSales.push({
+          ...row.dataValues,
+          fabrictypes,
+        });
+      }
+      let knitProcess = await KnitFabricSelection.findAll({
+        where: {
+          sales_id: rows.map((obj: any) => obj.id),
+        },
+        attributes: ["id", "fabric_id", "sales_id"],
+        include: [{
+          model: KnitProcess,
+          as: "process",
+        }]
+      });
+      knit_jobDetails = knitProcess.map((obj: any) => obj?.dataValues?.process?.job_details_garment);
+      knit_fabric_gsm = knitProcess.map((obj: any) => obj?.dataValues?.process?.fabric_gsm);
+      let knitYarn = await KnitYarnSelection.findAll({
+        where: {
+          sales_id: knitProcess.map((obj: any) => obj.dataValues.fabric_id),
+        },
+        attributes: ["id", "yarn_id"],
+      });
+      knit_yarn_ids = knitYarn.map((obj: any) => obj.dataValues.yarn_id);
+    }
+
+    let weaverSales: any = [];
+    let weave_yarn_ids: any = [];
+    let jobDetails = [];
+    let fabric_gsm = []
+    if (weaver_fabric_ids.length > 0) {
+      const rows = await WeaverSales.findAll({
+        attributes: [
+          "id",
+          "date",
+          "garment_order_ref",
+          "brand_order_ref",
+          "invoice_no",
+          "batch_lot_no",
+          "total_yarn_qty",
+          "fabric_type",
+          "total_fabric_length",
+          "reel_lot_no",
+          "weaver_id",
+        ],
+        include: [
+          {
+            model: Weaver,
+            as: "weaver",
+            attributes: ["id", "name", "address", 'longitude', 'latitude', 'org_logo', 'org_photo'],
+            include: [{
+              model: Country,
+              as: "country",
             },
             {
-              model: Farmer,
-              as: "farmer",
-              attributes: [
-                "id",
-                "farmGroup_id",
-                "firstName",
-                "lastName",
-                "code",
-              ],
-              include: [
-                {
-                  model: FarmGroup,
-                  as: "farmGroup"
-                },
-              ],
+              model: State,
+              as: "state",
             },
             {
-              model: Program,
-              as: "program",
-              attributes: ["id", "program_name"],
+              model: District,
+              as: "district",
+            }]
+          }
+        ],
+        where: {
+          id: {
+            [Op.in]: weaver_fabric_ids,
+          },
+        },
+        raw: true, // Return raw data
+      });
+
+      for await (let row of rows) {
+        let fabrictypes: any = [];
+        if (
+          row.dataValues?.fabric_type &&
+          row.dataValues?.fabric_type.length > 0
+        ) {
+          fabrictypes = await FabricType.findAll({
+            where: {
+              id: {
+                [Op.in]: row.dataValues.fabric_type,
+              },
             },
-            {
-              model: Ginner,
-              as: "ginner",
-              attributes: ["id", "name", "address"],
-            },
-          ],
+            attributes: ["id", "fabricType_name"],
+          });
+        }
+        weaverSales.push({
+          ...row.dataValues,
+          fabrictypes,
         });
       }
 
-      
+      let weaveProcess = await WeaverFabricSelection.findAll({
+        where: {
+          sales_id: rows.map((obj: any) => obj.id),
+        },
+        attributes: ["id", "fabric_id", "sales_id"],
+        include: [{
+          model: WeaverProcess,
+          as: 'process'
+        }]
+      });
+      jobDetails = weaveProcess.map((obj: any) => obj?.dataValues?.process?.job_details_garment);
+      fabric_gsm = weaveProcess.map((obj: any) => obj?.dataValues?.process?.fabric_gsm);
+      let weaverYarn = await YarnSelection.findAll({
+        where: {
+          sales_id: weaveProcess.map((obj: any) => obj.id),
+        },
+        attributes: ["id", "yarn_id"],
 
-      //knitter and weaver data
-      let knitdate =
-        knitSales && knitSales.length > 0
-          ? knitSales
-              .map((val: any) => moment(val?.date).format("DD-MM-YYYY"))
-              .filter((item: any) => item !== null && item !== undefined)
-          : [];
-      let weaverdate =
-        weaverSales && weaverSales.length > 0
-          ? weaverSales
-              .map((val: any) => moment(val?.date).format("DD-MM-YYYY"))
-              .filter((item: any) => item !== null && item !== undefined)
-          : [];
-      let knitName =
-        knitSales && knitSales.length > 0
-          ? knitSales
-              .map((val: any) => val?.knitter)
-              .filter((item: any) => item !== null && item !== undefined)
-          : [];
-      let weaverName =
-        weaverSales && weaverSales.length > 0
-          ? weaverSales
-              .map((val: any) => val?.weaver)
-              .filter((item: any) => item !== null && item !== undefined)
-          : [];
-      let knitInvoice =
-        knitSales && knitSales.length > 0
-          ? knitSales
-              .map((val: any) => val?.invoice_no)
-              .filter((item: any) => item !== null && item !== undefined)
-          : [];
-      let weaverInvoice =
-        weaverSales && weaverSales.length > 0
-          ? weaverSales
-              .map((val: any) => val?.invoice_no)
-              .filter((item: any) => item !== null && item !== undefined)
-          : [];
-      let knitLot =
-        knitSales && knitSales.length > 0
-          ? knitSales
-              .map((val: any) => val?.batch_lot_no)
-              .filter((item: any) => item !== null && item !== undefined)
-          : [];
-      let weaverLot =
-        weaverSales && weaverSales.length > 0
-          ? weaverSales
-              .map((val: any) => val?.batch_lot_no)
-              .filter((item: any) => item !== null && item !== undefined)
-          : [];
-      let knitReelLot =
-        knitSales && knitSales.length > 0
-          ? knitSales
-              .map((val: any) => val?.reel_lot_no)
-              .filter((item: any) => item !== null && item !== undefined)
-          : [];
-      let knitGarmentRefNumber =
-          knitSales && knitSales.length > 0
-            ? knitSales
-                .map((val: any) => val?.garment_order_ref)
-                .filter((item: any) => item !== null && item !== undefined)
-            : [];
-      let knitbrandtRefNumber =
-            knitSales && knitSales.length > 0
-              ? knitSales
-                  .map((val: any) => val?.brand_order_ref)
-                  .filter((item: any) => item !== null && item !== undefined)
-              : [];
-      let weaverReelLot =
-        weaverSales && weaverSales.length > 0
-          ? weaverSales
-              .map((val: any) => val?.reel_lot_no)
-              .filter((item: any) => item !== null && item !== undefined)
-          : [];
-      let weaverGarmentRefNumber =
-          weaverSales && weaverSales.length > 0
-            ? weaverSales
-                .map((val: any) => val?.garment_order_ref)
-                .filter((item: any) => item !== null && item !== undefined)
-            : [];
-      let weaverbrandtRefNumber =
-            knitSales && knitSales.length > 0
-              ? knitSales
-                  .map((val: any) => val?.brand_order_ref)
-                  .filter((item: any) => item !== null && item !== undefined)
-              : [];
-      let knitFabricTypes =
-        knitSales && knitSales.length > 0
-          ? knitSales
-              .flatMap((val: any) =>
-                val?.fabrictypes
-                  ? val.fabrictypes.map(
-                      (fabricType: any) => fabricType?.fabricType_name
-                    )
-                  : []
+      });
+      weave_yarn_ids = weaverYarn.map((obj: any) => obj.dataValues.yarn_id);
+    }
+    let spinSales: any = [];
+    let spnr_lint_ids: any = [];
+    let blendqty = [];
+    let blendtype = []
+    if (weave_yarn_ids.length > 0 || knit_yarn_ids.length > 0) {
+      spinSales = await SpinSales.findAll({
+        attributes: [
+          "id",
+          "date",
+          "buyer_type",
+          "buyer_id",
+          "knitter_id",
+          "invoice_no",
+          "batch_lot_no",
+          "total_qty",
+          "no_of_boxes",
+          "box_ids",
+          "yarn_type",
+          "yarn_count",
+          "reel_lot_no",
+          "spinner_id",
+        ],
+        include: [
+          {
+            model: Spinner,
+            as: "spinner",
+            attributes: ["id", "name", "address", 'longitude', 'latitude', 'org_logo', 'org_photo'],
+            include: [{
+              model: Country,
+              as: "country",
+            },
+            {
+              model: State,
+              as: "state",
+            },
+            {
+              model: District,
+              as: "district",
+            }]
+          },
+          {
+            model: YarnCount,
+            as: "yarncount",
+            attributes: ["yarnCount_name"],
+          },
+        ],
+        where: {
+          id: {
+            [Op.in]: [...weave_yarn_ids, ...knit_yarn_ids],
+          },
+        },
+      });
+      let spinSaleProcess = await SpinProcessYarnSelection.findAll({
+        where: {
+          sales_id: spinSales.map((obj: any) => obj.dataValues.id),
+        },
+        attributes: ["id", "spin_process_id"],
+      });
+      let spinProcess = await LintSelections.findAll({
+        where: {
+          process_id: spinSaleProcess.map(
+            (obj: any) => obj?.dataValues?.spin_process_id
+          ),
+        },
+        include: [{
+          as: 'spinprocess',
+          model: SpinProcess
+        }],
+        attributes: ["id", "lint_id"],
+      });
+      blendqty = spinProcess.map((obj: any) => obj?.dataValues?.spinprocess?.dataValues?.cottonmix_qty);
+      let blend = spinProcess.map((obj: any) => obj?.dataValues?.spinprocess?.dataValues?.cottonmix_type);
+      if (blend.length > 0) {
+        blendtype = await CottonMix.findAll({
+          attributes: ['id', 'cottonMix_name'],
+          where: {
+            id: blend.flat()
+          }
+        })
+      }
+
+      spnr_lint_ids = spinProcess.map((obj: any) => obj?.dataValues?.lint_id);
+    }
+
+    let ginSales: any = [];
+    let gin_process_ids: any = [];
+    let transactions_ids: any = [];
+
+    if (spnr_lint_ids.length > 0) {
+      ginSales = await GinSales.findAll({
+        attributes: [
+          "id",
+          "date",
+          "buyer",
+          "invoice_no",
+          "lot_no",
+          "total_qty",
+          "no_of_bales",
+          "press_no",
+          "reel_lot_no",
+          "ginner_id",
+          "rate"
+        ],
+        include: [
+          {
+            model: Ginner,
+            as: "ginner",
+            attributes: ["id", "name", "address", 'longitude', 'latitude', 'org_logo', 'org_photo'],
+            include: [{
+              model: Country,
+              as: "country",
+            },
+            {
+              model: State,
+              as: "state",
+            },
+            {
+              model: District,
+              as: "district",
+            }]
+          }
+        ],
+        where: {
+          id: {
+            [Op.in]: spnr_lint_ids,
+          },
+        },
+      });
+
+      let ginBaleId = await BaleSelection.findAll({
+        where: {
+          sales_id: ginSales.map((obj: any) => obj.dataValues.id),
+        },
+        attributes: ["id", "bale_id"],
+      });
+
+      let ginProcessIds = await GinBale.findAll({
+        where: {
+          id: ginBaleId.map((obj: any) => obj.dataValues.bale_id),
+        },
+        attributes: ["id", "process_id"],
+      });
+      gin_process_ids = ginProcessIds.map(
+        (obj: any) => obj.dataValues.process_id
+      );
+    }
+
+    if (gin_process_ids.length > 0) {
+      let cottornIds = await CottonSelection.findAll({
+        where: {
+          process_id: gin_process_ids,
+        },
+        attributes: ["id", "transaction_id"],
+      });
+      transactions_ids = cottornIds.map(
+        (obj: any) => obj.dataValues.transaction_id
+      );
+    }
+
+    let transactions: any = [];
+    if (transactions_ids.length > 0) {
+      transactions = await Transaction.findAll({
+        attributes: [
+          "id",
+          "date",
+          "state_id",
+          "village_id",
+          "farmer_id",
+          "farm_id",
+          "program_id",
+          "qty_purchased",
+        ],
+        where: {
+          id: {
+            [Op.in]: transactions_ids,
+          },
+        },
+        include: [
+          {
+            model: Village,
+            as: "village",
+            attributes: ["id", "village_name"],
+          },
+          {
+            model: State,
+            as: "state",
+            attributes: ["id", "state_name"],
+          },
+          {
+            model: District,
+            as: "district",
+            attributes: ["id", "district_name"],
+          },
+          {
+            model: Farmer,
+            as: "farmer",
+            attributes: [
+              "id",
+              "farmGroup_id",
+              "firstName",
+              "lastName",
+              "code",
+            ],
+            include: [
+              {
+                model: FarmGroup,
+                as: "farmGroup"
+              },
+            ],
+          },
+          {
+            model: Program,
+            as: "program",
+            attributes: ["id", "program_name"],
+          },
+          {
+            model: Ginner,
+            as: "ginner",
+            attributes: ["id", "name", "address"],
+          },
+        ],
+      });
+    }
+
+
+
+    //knitter and weaver data
+    let knitdate =
+      knitSales && knitSales.length > 0
+        ? knitSales
+          .map((val: any) => moment(val?.date).format("DD-MM-YYYY"))
+          .filter((item: any) => item !== null && item !== undefined)
+        : [];
+    let weaverdate =
+      weaverSales && weaverSales.length > 0
+        ? weaverSales
+          .map((val: any) => moment(val?.date).format("DD-MM-YYYY"))
+          .filter((item: any) => item !== null && item !== undefined)
+        : [];
+    let knitName =
+      knitSales && knitSales.length > 0
+        ? knitSales
+          .map((val: any) => val?.knitter)
+          .filter((item: any) => item !== null && item !== undefined)
+        : [];
+    let weaverName =
+      weaverSales && weaverSales.length > 0
+        ? weaverSales
+          .map((val: any) => val?.weaver)
+          .filter((item: any) => item !== null && item !== undefined)
+        : [];
+    let knitInvoice =
+      knitSales && knitSales.length > 0
+        ? knitSales
+          .map((val: any) => val?.invoice_no)
+          .filter((item: any) => item !== null && item !== undefined)
+        : [];
+    let weaverInvoice =
+      weaverSales && weaverSales.length > 0
+        ? weaverSales
+          .map((val: any) => val?.invoice_no)
+          .filter((item: any) => item !== null && item !== undefined)
+        : [];
+    let knitLot =
+      knitSales && knitSales.length > 0
+        ? knitSales
+          .map((val: any) => val?.batch_lot_no)
+          .filter((item: any) => item !== null && item !== undefined)
+        : [];
+    let weaverLot =
+      weaverSales && weaverSales.length > 0
+        ? weaverSales
+          .map((val: any) => val?.batch_lot_no)
+          .filter((item: any) => item !== null && item !== undefined)
+        : [];
+    let knitReelLot =
+      knitSales && knitSales.length > 0
+        ? knitSales
+          .map((val: any) => val?.reel_lot_no)
+          .filter((item: any) => item !== null && item !== undefined)
+        : [];
+    let knitGarmentRefNumber =
+      knitSales && knitSales.length > 0
+        ? knitSales
+          .map((val: any) => val?.garment_order_ref)
+          .filter((item: any) => item !== null && item !== undefined)
+        : [];
+    let knitbrandtRefNumber =
+      knitSales && knitSales.length > 0
+        ? knitSales
+          .map((val: any) => val?.brand_order_ref)
+          .filter((item: any) => item !== null && item !== undefined)
+        : [];
+    let weaverReelLot =
+      weaverSales && weaverSales.length > 0
+        ? weaverSales
+          .map((val: any) => val?.reel_lot_no)
+          .filter((item: any) => item !== null && item !== undefined)
+        : [];
+    let weaverGarmentRefNumber =
+      weaverSales && weaverSales.length > 0
+        ? weaverSales
+          .map((val: any) => val?.garment_order_ref)
+          .filter((item: any) => item !== null && item !== undefined)
+        : [];
+    let weaverbrandtRefNumber =
+      knitSales && knitSales.length > 0
+        ? knitSales
+          .map((val: any) => val?.brand_order_ref)
+          .filter((item: any) => item !== null && item !== undefined)
+        : [];
+    let knitFabricTypes =
+      knitSales && knitSales.length > 0
+        ? knitSales
+          .flatMap((val: any) =>
+            val?.fabrictypes
+              ? val.fabrictypes.map(
+                (fabricType: any) => fabricType?.fabricType_name
               )
-              .filter((item: any) => item !== null && item !== undefined)
-          : [];
-      let weaverFabricTypes =
-        weaverSales && weaverSales.length > 0
-          ? weaverSales
-              .flatMap((val: any) =>
-                val?.fabrictypes
-                  ? val.fabrictypes.map(
-                      (fabricType: any) => fabricType?.fabricType_name
-                    )
-                  : []
+              : []
+          )
+          .filter((item: any) => item !== null && item !== undefined)
+        : [];
+    let weaverFabricTypes =
+      weaverSales && weaverSales.length > 0
+        ? weaverSales
+          .flatMap((val: any) =>
+            val?.fabrictypes
+              ? val.fabrictypes.map(
+                (fabricType: any) => fabricType?.fabricType_name
               )
-              .filter((item: any) => item !== null && item !== undefined)
-          : [];
-      let knitTotalFabricWeight =
-        knitSales && knitSales.length > 0
-          ? knitSales
-              .map((val: any) => val?.total_fabric_weight)
-              .filter((item: any) => item !== null && item !== undefined)
-          : [];
-      let weaverTotalFabricLength =
-        weaverSales && weaverSales.length > 0
-          ? weaverSales
-              .map((val: any) => val?.total_fabric_length)
-              .filter((item: any) => item !== null && item !== undefined)
-          : [];
-      let knitTotalQty =
-        knitSales && knitSales.length > 0
-          ? knitSales
-              .map((val: any) => val?.total_yarn_qty)
-              .filter((item: any) => item !== null && item !== undefined)
-          : [];
-      let weaverTotalQty =
-        weaverSales && weaverSales.length > 0
-          ? weaverSales
-              .map((val: any) => val?.total_yarn_qty)
-              .filter((item: any) => item !== null && item !== undefined)
-          : [];
+              : []
+          )
+          .filter((item: any) => item !== null && item !== undefined)
+        : [];
+    let knitTotalFabricWeight =
+      knitSales && knitSales.length > 0
+        ? knitSales
+          .map((val: any) => val?.total_fabric_weight)
+          .filter((item: any) => item !== null && item !== undefined)
+        : [];
+    let weaverTotalFabricLength =
+      weaverSales && weaverSales.length > 0
+        ? weaverSales
+          .map((val: any) => val?.total_fabric_length)
+          .filter((item: any) => item !== null && item !== undefined)
+        : [];
+    let knitTotalQty =
+      knitSales && knitSales.length > 0
+        ? knitSales
+          .map((val: any) => val?.total_yarn_qty)
+          .filter((item: any) => item !== null && item !== undefined)
+        : [];
+    let weaverTotalQty =
+      weaverSales && weaverSales.length > 0
+        ? weaverSales
+          .map((val: any) => val?.total_yarn_qty)
+          .filter((item: any) => item !== null && item !== undefined)
+        : [];
 
-      obj.fbrc_sale_date = [...new Set([...knitdate, ...weaverdate])];
-      obj.fbrc_job_details = [...new Set([...jobDetails.flat(),...knit_jobDetails.flat()])];
-      obj.fbrc_fabric_gsm = [...new Set([...fabric_gsm.flat(),...knit_fabric_gsm.flat()])];
-      obj.fbrc_name = [...new Set([...knitName, ...weaverName])];
-      obj.fbrc_invoice_no = [...new Set([...knitInvoice, ...weaverInvoice])];
-      obj.fbrc_lot_no = [...new Set([...knitLot, ...weaverLot])];
-      obj.fbrc_reel_lot_no = [...new Set([...knitReelLot, ...weaverReelLot])];
-      obj.fbrc_garment_order_ref =  [...new Set([...knitGarmentRefNumber, ...weaverGarmentRefNumber])];
-      obj.fbrc_brand_order_ref =  [...new Set([...knitbrandtRefNumber, ...weaverbrandtRefNumber])];
-      obj.fbrc_fabric_type = [
-        ...new Set([...knitFabricTypes, ...weaverFabricTypes]),
-      ];
-      obj.fbrc_weave_total_length = weaverTotalFabricLength.reduce(
-        (acc: any, value: any) => acc + value,
-        0
-      );
-      obj.fbrc_knit_total_weight = knitTotalFabricWeight.reduce(
-        (acc: any, value: any) => acc + value,
-        0
-      );
-      obj.fbrc_total_qty = [...knitTotalQty, ...weaverTotalQty].reduce(
-        (acc: any, value: any) => acc + value,
-        0
-      );
+    obj.fbrc_sale_date = [...new Set([...knitdate, ...weaverdate])];
+    obj.fbrc_job_details = [...new Set([...jobDetails.flat(), ...knit_jobDetails.flat()])];
+    obj.fbrc_fabric_gsm = [...new Set([...fabric_gsm.flat(), ...knit_fabric_gsm.flat()])];
+    obj.fbrc_name = [...new Set([...knitName, ...weaverName])];
+    obj.fbrc_invoice_no = [...new Set([...knitInvoice, ...weaverInvoice])];
+    obj.fbrc_lot_no = [...new Set([...knitLot, ...weaverLot])];
+    obj.fbrc_reel_lot_no = [...new Set([...knitReelLot, ...weaverReelLot])];
+    obj.fbrc_garment_order_ref = [...new Set([...knitGarmentRefNumber, ...weaverGarmentRefNumber])];
+    obj.fbrc_brand_order_ref = [...new Set([...knitbrandtRefNumber, ...weaverbrandtRefNumber])];
+    obj.fbrc_fabric_type = [
+      ...new Set([...knitFabricTypes, ...weaverFabricTypes]),
+    ];
+    obj.fbrc_weave_total_length = weaverTotalFabricLength.reduce(
+      (acc: any, value: any) => acc + value,
+      0
+    );
+    obj.fbrc_knit_total_weight = knitTotalFabricWeight.reduce(
+      (acc: any, value: any) => acc + value,
+      0
+    );
+    obj.fbrc_total_qty = [...knitTotalQty, ...weaverTotalQty].reduce(
+      (acc: any, value: any) => acc + value,
+      0
+    );
 
-      //spinner data
-      let spindate =
-        spinSales && spinSales.length > 0
-          ? spinSales
-              .map((val: any) => moment(val?.date).format("DD-MM-YYYY"))
-              .filter((item: any) => item !== null && item !== undefined)
-          : [];
-      let spinName =
-        spinSales && spinSales.length > 0
-          ? spinSales
-              .map((val: any) => val?.spinner)
-              .filter((item: any) => item !== null && item !== undefined)
-          : [];
-      let spinInvoice =
-        spinSales && spinSales.length > 0
-          ? spinSales
-              .map((val: any) => val?.invoice_no)
-              .filter((item: any) => item !== null && item !== undefined)
-          : [];
-      let spinLot =
-        spinSales && spinSales.length > 0
-          ? spinSales
-              .map((val: any) => val?.batch_lot_no)
-              .filter((item: any) => item !== null && item !== undefined)
-          : [];
-      let spinReelLot =
-        spinSales && spinSales.length > 0
-          ? spinSales
-              .map((val: any) => val?.reel_lot_no)
-              .filter((item: any) => item !== null && item !== undefined)
-          : [];
-      let spinYarnCount =
-        spinSales && spinSales.length > 0
-          ? spinSales
-              .map((val: any) => val?.yarncount?.yarnCount_name)
-              .filter((item: any) => item !== null && item !== undefined)
-          : [];
-      let spinYarnType =
-        spinSales && spinSales.length > 0
-          ? spinSales
-              .map((val: any) => val?.yarn_type)
-              .filter((item: any) => item !== null && item !== undefined)
-          : [];
-      let spinBoxIds =
-        spinSales && spinSales.length > 0
-          ? spinSales
-              .map((val: any) => val?.box_ids)
-              .filter((item: any) => item !== null && item !== undefined)
-          : [];
-      let spinNoOfBoxes =
-        spinSales && spinSales.length > 0
-          ? spinSales
-              .map((val: any) => val?.no_of_boxes)
-              .filter((item: any) => item !== null && item !== undefined)
-          : [];
-      let spinTotalQty =
-        spinSales && spinSales.length > 0
-          ? spinSales
-              .map((val: any) => val?.total_qty)
-              .filter((item: any) => item !== null && item !== undefined)
-          : [];
+    //spinner data
+    let spindate =
+      spinSales && spinSales.length > 0
+        ? spinSales
+          .map((val: any) => moment(val?.date).format("DD-MM-YYYY"))
+          .filter((item: any) => item !== null && item !== undefined)
+        : [];
+    let spinName =
+      spinSales && spinSales.length > 0
+        ? spinSales
+          .map((val: any) => val?.spinner)
+          .filter((item: any) => item !== null && item !== undefined)
+        : [];
+    let spinInvoice =
+      spinSales && spinSales.length > 0
+        ? spinSales
+          .map((val: any) => val?.invoice_no)
+          .filter((item: any) => item !== null && item !== undefined)
+        : [];
+    let spinLot =
+      spinSales && spinSales.length > 0
+        ? spinSales
+          .map((val: any) => val?.batch_lot_no)
+          .filter((item: any) => item !== null && item !== undefined)
+        : [];
+    let spinReelLot =
+      spinSales && spinSales.length > 0
+        ? spinSales
+          .map((val: any) => val?.reel_lot_no)
+          .filter((item: any) => item !== null && item !== undefined)
+        : [];
+    let spinYarnCount =
+      spinSales && spinSales.length > 0
+        ? spinSales
+          .map((val: any) => val?.yarncount?.yarnCount_name)
+          .filter((item: any) => item !== null && item !== undefined)
+        : [];
+    let spinYarnType =
+      spinSales && spinSales.length > 0
+        ? spinSales
+          .map((val: any) => val?.yarn_type)
+          .filter((item: any) => item !== null && item !== undefined)
+        : [];
+    let spinBoxIds =
+      spinSales && spinSales.length > 0
+        ? spinSales
+          .map((val: any) => val?.box_ids)
+          .filter((item: any) => item !== null && item !== undefined)
+        : [];
+    let spinNoOfBoxes =
+      spinSales && spinSales.length > 0
+        ? spinSales
+          .map((val: any) => val?.no_of_boxes)
+          .filter((item: any) => item !== null && item !== undefined)
+        : [];
+    let spinTotalQty =
+      spinSales && spinSales.length > 0
+        ? spinSales
+          .map((val: any) => val?.total_qty)
+          .filter((item: any) => item !== null && item !== undefined)
+        : [];
 
-      obj.spnr_sale_date = [...new Set(spindate)];
-      obj.spnr_name = [...new Set(spinName)];
-      obj.spnr_invoice_no = [...new Set(spinInvoice)];
-      obj.spnr_lot_no = [...new Set(spinLot)];
-      obj.spnr_reel_lot_no = [...new Set(spinReelLot)];
-      obj.spnr_yarn_type = [...new Set(spinYarnType)];
-      obj.spnr_yarn_count = [...new Set(spinYarnCount)];
-      obj.spnr_box_ids = [...new Set(spinBoxIds)];
-      obj.blendqty =  blendqty.flat();
-      obj.blendtype =  blendtype.flat()
-      obj.spnr_no_of_boxes = spinNoOfBoxes.reduce(
-        (acc: any, value: any) => acc + value,
-        0
-      );
-      obj.spnr_total_qty = spinTotalQty.reduce(
-        (acc: any, value: any) => acc + value,
-        0
-      );
+    obj.spnr_sale_date = [...new Set(spindate)];
+    obj.spnr_name = [...new Set(spinName)];
+    obj.spnr_invoice_no = [...new Set(spinInvoice)];
+    obj.spnr_lot_no = [...new Set(spinLot)];
+    obj.spnr_reel_lot_no = [...new Set(spinReelLot)];
+    obj.spnr_yarn_type = [...new Set(spinYarnType)];
+    obj.spnr_yarn_count = [...new Set(spinYarnCount)];
+    obj.spnr_box_ids = [...new Set(spinBoxIds)];
+    obj.blendqty = blendqty.flat();
+    obj.blendtype = blendtype.flat()
+    obj.spnr_no_of_boxes = spinNoOfBoxes.reduce(
+      (acc: any, value: any) => acc + value,
+      0
+    );
+    obj.spnr_total_qty = spinTotalQty.reduce(
+      (acc: any, value: any) => acc + value,
+      0
+    );
 
-      //ginner data
-      let gindate =
-        ginSales && ginSales.length > 0
-          ? ginSales
-              .map((val: any) => moment(val?.date).format("DD-MM-YYYY"))
-              .filter((item: any) => item !== null && item !== undefined)
-          : [];
-      let ginrate =
-          ginSales && ginSales.length > 0
-            ? ginSales
-                .map((val: any) => val?.rate)
-                .filter((item: any) => item !== null && item !== undefined)
-            : [];
-      let ginName =
-        ginSales && ginSales.length > 0
-          ? ginSales
-              .map((val: any) => val?.ginner)
-              .filter((item: any) => item !== null && item !== undefined)
-          : [];
-      let ginInvoice =
-        ginSales && ginSales.length > 0
-          ? ginSales
-              .map((val: any) => val?.invoice_no)
-              .filter((item: any) => item !== null && item !== undefined)
-          : [];
-      let ginLot =
-        ginSales && ginSales.length > 0
-          ? ginSales
-              .map((val: any) => val?.lot_no)
-              .filter((item: any) => item !== null && item !== undefined)
-          : [];
-      let ginReelLot =
-        ginSales && ginSales.length > 0
-          ? ginSales
-              .map((val: any) => val?.reel_lot_no)
-              .filter((item: any) => item !== null && item !== undefined)
-          : [];
-      let ginPressNo =
-        ginSales && ginSales.length > 0
-          ? ginSales
-              .map((val: any) => val?.press_no)
-              .filter((item: any) => item !== null && item !== undefined)
-          : [];
-      let ginNoOfBales =
-        ginSales && ginSales.length > 0
-          ? ginSales
-              .map((val: any) => val?.no_of_bales)
-              .filter((item: any) => item !== null && item !== undefined)
-          : [];
-      let ginTotalQty =
-        ginSales && ginSales.length > 0
-          ? ginSales
-              .map((val: any) => val?.total_qty)
-              .filter((item: any) => item !== null && item !== undefined)
-          : [];
+    //ginner data
+    let gindate =
+      ginSales && ginSales.length > 0
+        ? ginSales
+          .map((val: any) => moment(val?.date).format("DD-MM-YYYY"))
+          .filter((item: any) => item !== null && item !== undefined)
+        : [];
+    let ginrate =
+      ginSales && ginSales.length > 0
+        ? ginSales
+          .map((val: any) => val?.rate)
+          .filter((item: any) => item !== null && item !== undefined)
+        : [];
+    let ginName =
+      ginSales && ginSales.length > 0
+        ? ginSales
+          .map((val: any) => val?.ginner)
+          .filter((item: any) => item !== null && item !== undefined)
+        : [];
+    let ginInvoice =
+      ginSales && ginSales.length > 0
+        ? ginSales
+          .map((val: any) => val?.invoice_no)
+          .filter((item: any) => item !== null && item !== undefined)
+        : [];
+    let ginLot =
+      ginSales && ginSales.length > 0
+        ? ginSales
+          .map((val: any) => val?.lot_no)
+          .filter((item: any) => item !== null && item !== undefined)
+        : [];
+    let ginReelLot =
+      ginSales && ginSales.length > 0
+        ? ginSales
+          .map((val: any) => val?.reel_lot_no)
+          .filter((item: any) => item !== null && item !== undefined)
+        : [];
+    let ginPressNo =
+      ginSales && ginSales.length > 0
+        ? ginSales
+          .map((val: any) => val?.press_no)
+          .filter((item: any) => item !== null && item !== undefined)
+        : [];
+    let ginNoOfBales =
+      ginSales && ginSales.length > 0
+        ? ginSales
+          .map((val: any) => val?.no_of_bales)
+          .filter((item: any) => item !== null && item !== undefined)
+        : [];
+    let ginTotalQty =
+      ginSales && ginSales.length > 0
+        ? ginSales
+          .map((val: any) => val?.total_qty)
+          .filter((item: any) => item !== null && item !== undefined)
+        : [];
 
-      obj.gnr_sale_date = [...new Set(gindate)];
-      obj.gnr_name = [...new Set(ginName)];
-      obj.gnr_invoice_no = [...new Set(ginInvoice)];
-      obj.gnr_rate = [...new Set(ginrate)];
-      obj.gnr_lot_no = [...new Set(ginLot)];
-      obj.gnr_reel_lot_no = [...new Set(ginReelLot)];
-      obj.gnr_press_no = [...new Set(ginPressNo)];
-      obj.gnr_no_of_bales = ginNoOfBales.reduce(
-        (acc: any, value: any) => acc + value,
-        0
-      );
-      obj.gnr_total_qty = ginTotalQty.reduce(
-        (acc: any, value: any) => acc + value,
-        0
-      );
+    obj.gnr_sale_date = [...new Set(gindate)];
+    obj.gnr_name = [...new Set(ginName)];
+    obj.gnr_invoice_no = [...new Set(ginInvoice)];
+    obj.gnr_rate = [...new Set(ginrate)];
+    obj.gnr_lot_no = [...new Set(ginLot)];
+    obj.gnr_reel_lot_no = [...new Set(ginReelLot)];
+    obj.gnr_press_no = [...new Set(ginPressNo)];
+    obj.gnr_no_of_bales = ginNoOfBales.reduce(
+      (acc: any, value: any) => acc + value,
+      0
+    );
+    obj.gnr_total_qty = ginTotalQty.reduce(
+      (acc: any, value: any) => acc + value,
+      0
+    );
 
-      //transaction data
-      let frmrTransactionIds =
-        transactions && transactions.length > 0
-          ? transactions
-              .map((val: any) => val?.id)
-              .filter((item: any) => item !== null && item !== undefined)
-          : [];
-      let frmrdate =
-        transactions && transactions.length > 0
-          ? transactions
-              .map((val: any) => moment(val?.date).format("DD-MM-YYYY"))
-              .filter((item: any) => item !== null && item !== undefined)
-          : [];
-      let frmrFarmGroupName =
-        transactions && transactions.length > 0
-          ? transactions
-              .map((val: any) => { return {...val?.farmer?.farmGroup.dataValues ,district: val?.district.dataValues,state: val?.state.dataValues}})
-              .filter((item: any) => item !== null && item !== undefined)
-          : [];
-      let frmrVillages =
-        transactions && transactions.length > 0
-          ? transactions
-              .map((val: any) => val?.village?.village_name)
-              .filter((item: any) => item !== null && item !== undefined)
-          : [];
-      let frmrStates =
-        transactions && transactions.length > 0
-          ? transactions
-              .map((val: any) => val?.state?.state_name)
-              .filter((item: any) => item !== null && item !== undefined)
-          : [];
-      let frmrPrograms =
-        transactions && transactions.length > 0
-          ? transactions
-              .map((val: any) => val?.program?.program_name)
-              .filter((item: any) => item !== null && item !== undefined)
-          : [];
-      let frmrQtyPurchased =
-        transactions && transactions.length > 0
-          ? transactions
-              .map((val: any) => Number(val?.qty_purchased))
-              .filter((item: any) => item !== null && item !== undefined)
-          : [];
+    //transaction data
+    let frmrTransactionIds =
+      transactions && transactions.length > 0
+        ? transactions
+          .map((val: any) => val?.id)
+          .filter((item: any) => item !== null && item !== undefined)
+        : [];
+    let frmrdate =
+      transactions && transactions.length > 0
+        ? transactions
+          .map((val: any) => moment(val?.date).format("DD-MM-YYYY"))
+          .filter((item: any) => item !== null && item !== undefined)
+        : [];
+    let frmrFarmGroupName =
+      transactions && transactions.length > 0
+        ? transactions
+          .map((val: any) => { return { ...val?.farmer?.farmGroup.dataValues, district: val?.district.dataValues, state: val?.state.dataValues } })
+          .filter((item: any) => item !== null && item !== undefined)
+        : [];
+    let frmrVillages =
+      transactions && transactions.length > 0
+        ? transactions
+          .map((val: any) => val?.village?.village_name)
+          .filter((item: any) => item !== null && item !== undefined)
+        : [];
+    let frmrStates =
+      transactions && transactions.length > 0
+        ? transactions
+          .map((val: any) => val?.state?.state_name)
+          .filter((item: any) => item !== null && item !== undefined)
+        : [];
+    let frmrPrograms =
+      transactions && transactions.length > 0
+        ? transactions
+          .map((val: any) => val?.program?.program_name)
+          .filter((item: any) => item !== null && item !== undefined)
+        : [];
+    let frmrQtyPurchased =
+      transactions && transactions.length > 0
+        ? transactions
+          .map((val: any) => Number(val?.qty_purchased))
+          .filter((item: any) => item !== null && item !== undefined)
+        : [];
 
-      obj.frmr_transactions_id = [...new Set(frmrTransactionIds)];
-      obj.frmr_sale_date = [...new Set(frmrdate)];
-      obj.frmr_farm_group = [...new Set(frmrFarmGroupName)];
-      obj.frmr_villages = [...new Set(frmrVillages)];
-      obj.frmr_states = [...new Set(frmrStates)];
-      obj.frmr_programs = [...new Set(frmrPrograms)];
-      obj.frmr_total_qty_purchased = frmrQtyPurchased.reduce(
-        (acc: any, value: any) => acc + value,
-        0
-      );
+    obj.frmr_transactions_id = [...new Set(frmrTransactionIds)];
+    obj.frmr_sale_date = [...new Set(frmrdate)];
+    obj.frmr_farm_group = [...new Set(frmrFarmGroupName)];
+    obj.frmr_villages = [...new Set(frmrVillages)];
+    obj.frmr_states = [...new Set(frmrStates)];
+    obj.frmr_programs = [...new Set(frmrPrograms)];
+    obj.frmr_total_qty_purchased = frmrQtyPurchased.reduce(
+      (acc: any, value: any) => acc + value,
+      0
+    );
 
-     
-    
-    
+
+
+
     data = {
       ...item.dataValues,
       ...obj,

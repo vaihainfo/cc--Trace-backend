@@ -61,9 +61,9 @@ const createSpinner = async (req: Request, res: Response) => {
         }
         const spinner = await Spinner.create(brandData);
         res.sendSuccess(res, spinner);
-    } catch (error) {
+    } catch (error: any) {
         console.log(error);
-        return res.sendError(res, "ERR_INTERNAL_SERVER_ERROR");
+        return res.sendError(res, error.message);
     }
 }
 
@@ -150,9 +150,9 @@ const fetchSpinnerPagination = async (req: Request, res: Response) => {
             });
             return res.sendSuccess(res, cooperative);
         }
-    } catch (error) {
+    } catch (error: any) {
         console.log(error);
-        return res.sendError(res, "ERR_INTERNAL_SERVER_ERROR");
+        return res.sendError(res, error.message);
     }
 }
 
@@ -216,8 +216,9 @@ const fetchSpinner = async (req: Request, res: Response) => {
         }
         return res.sendSuccess(res, result ? { ...result.dataValues, userData, programs, unitCerts, brands, yarnCount } : null);
 
-    } catch (error) {
-        return res.sendError(res, "ERR_INTERNAL_SERVER_ERROR");
+    } catch (error: any) {
+        console.log(error);
+        return res.sendError(res, error.message);
     }
 }
 
@@ -271,8 +272,8 @@ const updateSpinner = async (req: Request, res: Response) => {
         }
         const spinner = await Spinner.update(brandData, { where: { id: req.body.id } });
         res.sendSuccess(res, spinner);
-    } catch (error) {
-        return res.sendError(res, "ERR_INTERNAL_SERVER_ERROR");
+    } catch (error: any) {
+        return res.sendError(res, error.message);
     }
 }
 

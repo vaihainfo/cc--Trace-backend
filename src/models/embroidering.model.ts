@@ -1,7 +1,7 @@
-import { DataTypes  } from 'sequelize';
-import db  from '../util/dbConn';
+import { DataTypes } from 'sequelize';
+import db from '../util/dbConn';
 
-const Embroidering = db.define('embroiderings',{
+const Embroidering = db.define('embroiderings', {
   id: {
     type: DataTypes.INTEGER,
     autoIncrement: true,

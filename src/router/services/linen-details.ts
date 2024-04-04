@@ -1,8 +1,12 @@
 
 
 import { createLinenDetails, exportLinenTransactions, fetchCountry, fetchSumOfWeightBylinen, fetchlinenDetails } from "../../controllers/linen-details";
+import accessControl from "../../middleware/access-control";
 import { Router } from "express";
+
 const router = Router();
+
+router.use(accessControl);
 
 // Farmer & farm Routes
 router.get('/get-linens', fetchlinenDetails);

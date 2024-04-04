@@ -43,6 +43,8 @@ import knitterRouter from './router/settings/knitter';
 import weaverRouter from './router/settings/weaver';
 import garmentRouter from './router/settings/garment';
 import traderRouter from './router/settings/trader';
+import physicalPartnerRouter from './router/settings/physical-partner';
+import physicalTraceabilityRouter from './router/physical-traceability';
 import deviceRouter from './router/settings/device';
 import scopeCertRouter from './router/services/scope-cert';
 import farmerRouter from './router/services/farmer';
@@ -79,9 +81,14 @@ import dashboardGinnerRouter from './router/dashboard/ginner';
 import dashboardSpinnerRouter from './router/dashboard/spinner';
 import dashboardProcurementRouter from './router/dashboard/procurement';
 import dashboardProcessorRouter from './router/dashboard/processor';
+import labMasterRouter from './router/master/lab-master';
+import seedCompanyRouter from './router/master/seed-company';
+import cropCurrentSeasonRouter from './router/master/crop-current-season';
+import organicProgramDataDigitizationRouter from './router/services/organic-program-data-digitization';
 import { sendScheduledEmails } from "./controllers/email-management/scheduled-email.controller";
 import ExportData from "./models/export-data-check.model";
-import { exportGinnerPendingSchedule, exportGinnerProcessSchedule, exportGinnerSalesSchedule, exportGinnerSeedCottonSchedule, exportGinnerySummarySchedule, exportSpinnerBaleReceiptSchedule, exportSpinnerSummarySchedule, exportSpinnerYarnProcessSchedule, exportSpinnerYarnSalesSchedule } from "./controllers/reports";
+import { exportGinnerPendingSchedule, exportGinnerProcessSchedule, exportGinnerSalesSchedule, exportGinnerSeedCottonSchedule, exportGinnerySummarySchedule, exportSpinnerBaleReceiptSchedule, exportSpinnerLintCottonStockSchedule, exportSpinnerPendingBaleSchedule, exportSpinnerSummarySchedule, exportSpinnerYarnProcessSchedule, exportSpinnerYarnSalesSchedule } from "./controllers/reports";
+import { generateSpinnerLintCottonStock } from "./controllers/reports/export-cron";
 
 const app = express();
 
@@ -99,9 +106,9 @@ app.use(cors(corsOptions));
 app.use(setInterface);
 //check connection to database
 const connectToDb = async () => {
-  const data=await sequelize.sync({ force: false })
-  console.log("data",data);
-  
+  const data = await sequelize.sync({ force: false })
+  console.log("data", data);
+
   try {
     await sequelize.authenticate();
 
@@ -109,97 +116,98 @@ const connectToDb = async () => {
     console.log("Database Connected successfully.");
 
     try {
-        // Insert seed data into the User table
-    
-        const data = await ExportData.findAll();
-        if (data?.length) {
-          console.log("Seed data already fetched ");
-          const usersSeedData = {
-            ginner_lint_bale_process_load: false,
-            ginner_summary_load: false,
-            ginner_lint_bale_sale_load: false,
-            ginner_pending_sales_load: false,
-            ginner_seed_cotton_load: false,
-            spinner_summary_load: false,
-            spinner_bale_receipt_load: false,
-            spinner_yarn_process_load: false,
-            spinner_yarn_sales_load: false,
-            spinner_yarn_bales_load: false,
-            spinner_lint_cotton_stock_load: false,
-            knitter_yarn_receipt_load: false,
-            knitter_yarn_process_load: false,
-            knitter_fabric_sales_load: false,
-            weaver_yarn_receipt_load: false,
-            weaver_yarn_process_load: false,
-            weaver_yarn_sales_load: false,
-            garment_fabric_receipt_load: false,
-            garment_fabric_process_load: false,
-            garment_fabric_sales_load: false,
-            qr_code_tracker_load: false,
-            consolidated_tracebality_load: false,
-            spinner_backward_tracebality_load: false,
-            village_seed_cotton_load: false,
-            premium_validation_load: false,
-            procurement_load: false,
-            failes_procurement_load: false,
-            procurement_tracker_load: false,
-            procurement_sell_live_tracker_load: false,
-            qr_app_procurement_load: false,
-            organic_farmer_load: false,
-            non_organic_farmer_load: false,
-            failed_farmer_load: false,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-          };
-    
+      // Insert seed data into the User table
+
+      const data = await ExportData.findAll();
+      if (data?.length) {
+        console.log("Seed data already fetched ");
+        const usersSeedData = {
+          ginner_lint_bale_process_load: false,
+          ginner_summary_load: false,
+          ginner_lint_bale_sale_load: false,
+          ginner_pending_sales_load: false,
+          ginner_seed_cotton_load: false,
+          spinner_summary_load: false,
+          spinner_bale_receipt_load: false,
+          spinner_yarn_process_load: false,
+          spinner_yarn_sales_load: false,
+          spinner_yarn_bales_load: false,
+          spinner_lint_cotton_stock_load: false,
+          knitter_yarn_receipt_load: false,
+          knitter_yarn_process_load: false,
+          knitter_fabric_sales_load: false,
+          weaver_yarn_receipt_load: false,
+          weaver_yarn_process_load: false,
+          weaver_yarn_sales_load: false,
+          garment_fabric_receipt_load: false,
+          garment_fabric_process_load: false,
+          garment_fabric_sales_load: false,
+          qr_code_tracker_load: false,
+          consolidated_tracebality_load: false,
+          spinner_backward_tracebality_load: false,
+          village_seed_cotton_load: false,
+          premium_validation_load: false,
+          procurement_load: false,
+          failes_procurement_load: false,
+          procurement_tracker_load: false,
+          procurement_sell_live_tracker_load: false,
+          qr_app_procurement_load: false,
+          organic_farmer_load: false,
+          non_organic_farmer_load: false,
+          failed_farmer_load: false,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        };
+
         //   await ExportData.update(usersSeedData,where:{id:1});
         const updateResult = await ExportData.update(usersSeedData, { where: { id: 1 } });
 
-        } else {
-          const usersSeedData = {
-            ginner_lint_bale_process_load: false,
-            ginner_summary_load: false,
-            ginner_lint_bale_sale_load: false,
-            ginner_pending_sales_load: false,
-            ginner_seed_cotton_load: false,
-            spinner_summary_load: false,
-            spinner_bale_receipt_load: false,
-            spinner_yarn_process_load: false,
-            spinner_yarn_sales_load: false,
-            spinner_yarn_bales_load: false,
-            spinner_lint_cotton_stock_load: false,
-            knitter_yarn_receipt_load: false,
-            knitter_yarn_process_load: false,
-            knitter_fabric_sales_load: false,
-            weaver_yarn_receipt_load: false,
-            weaver_yarn_process_load: false,
-            weaver_yarn_sales_load: false,
-            garment_fabric_receipt_load: false,
-            garment_fabric_process_load: false,
-            garment_fabric_sales_load: false,
-            qr_code_tracker_load: false,
-            consolidated_tracebality_load: false,
-            spinner_backward_tracebality_load: false,
-            village_seed_cotton_load: false,
-            premium_validation_load: false,
-            procurement_load: false,
-            failes_procurement_load: false,
-            procurement_tracker_load: false,
-            procurement_sell_live_tracker_load: false,
-            qr_app_procurement_load: false,
-            organic_farmer_load: false,
-            non_organic_farmer_load: false,
-            failed_farmer_load: false,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-          };
-    
-          await ExportData.create(usersSeedData);
-          console.log("Seed data create  successfully ");
-        }
-      } catch (error) {
-        console.error("Error seeding data:", error);
+      } else {
+        const usersSeedData = {
+          ginner_lint_bale_process_load: false,
+          ginner_summary_load: false,
+          ginner_lint_bale_sale_load: false,
+          ginner_pending_sales_load: false,
+          ginner_seed_cotton_load: false,
+          spinner_summary_load: false,
+          spinner_bale_receipt_load: false,
+          spinner_yarn_process_load: false,
+          spinner_yarn_sales_load: false,
+          spinner_yarn_bales_load: false,
+          spinner_lint_cotton_stock_load: false,
+          knitter_yarn_receipt_load: false,
+          knitter_yarn_process_load: false,
+          knitter_fabric_sales_load: false,
+          weaver_yarn_receipt_load: false,
+          weaver_yarn_process_load: false,
+          weaver_yarn_sales_load: false,
+          garment_fabric_receipt_load: false,
+          garment_fabric_process_load: false,
+          garment_fabric_sales_load: false,
+          qr_code_tracker_load: false,
+          consolidated_tracebality_load: false,
+          spinner_backward_tracebality_load: false,
+          village_seed_cotton_load: false,
+          premium_validation_load: false,
+          procurement_load: false,
+          failes_procurement_load: false,
+          procurement_tracker_load: false,
+          procurement_sell_live_tracker_load: false,
+          qr_app_procurement_load: false,
+          organic_farmer_load: false,
+          non_organic_farmer_load: false,
+          failed_farmer_load: false,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        };
+
+        await ExportData.create(usersSeedData);
+        console.log("Seed data create  successfully ");
       }
+      // generateSpinnerLintCottonStock();
+    } catch (error) {
+      console.error("Error seeding data:", error);
+    }
   } catch (error) {
     console.error("Unable to connect to the database:", error);
   }
@@ -212,6 +220,12 @@ cron.schedule('0 23 * * *', async () => {
   sendScheduledEmails();
 });
 
+cron.schedule('0 */3 * * *', async () => {
+  console.log('running a task for export after 3 Hours');
+  // sendScheduledEmails();
+  generateSpinnerLintCottonStock()
+});
+
 // cron.schedule("1 * * * * *", async () => {
     cron.schedule("*/3 * * * *", async () => {
   exportGinnerProcessSchedule();
@@ -220,13 +234,13 @@ exportGinnerSalesSchedule()
 exportGinnerPendingSchedule()
 exportGinnerSeedCottonSchedule()
 
-// //spinner
-// // exportSpinnerSummarySchedule()
+// // //spinner
+exportSpinnerSummarySchedule()
 exportSpinnerBaleReceiptSchedule()
 exportSpinnerYarnProcessSchedule()
-
 exportSpinnerYarnSalesSchedule()
-// exportSpinnerPendingBaleSchedule()
+exportSpinnerPendingBaleSchedule()
+exportSpinnerLintCottonStockSchedule()
 });
 
 
@@ -264,6 +278,8 @@ app.use("/knitter", knitterRouter);
 app.use("/weaver", weaverRouter);
 app.use("/garment", garmentRouter);
 app.use("/trader", traderRouter);
+app.use("/physical-partner", physicalPartnerRouter);
+app.use("/physical-traceability", physicalTraceabilityRouter);
 app.use("/farmer", farmerRouter);
 app.use("/organic-integrity", organicRouter);
 app.use("/device", deviceRouter);
@@ -298,6 +314,10 @@ app.use("/dashboard/ginner", dashboardGinnerRouter)
 app.use("/dashboard/spinner", dashboardSpinnerRouter)
 app.use("/dashboard/procurement", dashboardProcurementRouter)
 app.use("/dashboard/processor", dashboardProcessorRouter)
+app.use("/lab-master", labMasterRouter);
+app.use("/seed-company", seedCompanyRouter);
+app.use("/crop-current-season", cropCurrentSeasonRouter);
+app.use("/organic-program-data-digitization", organicProgramDataDigitizationRouter);
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument, { customCss }));
 
 app.use(errorMiddleware);

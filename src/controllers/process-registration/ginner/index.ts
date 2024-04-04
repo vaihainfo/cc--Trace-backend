@@ -61,9 +61,9 @@ const createGinner = async (req: Request, res: Response) => {
         }
         const result = await Ginner.create(data);
         res.sendSuccess(res, result);
-    } catch (error) {
+    } catch (error: any) {
         console.log(error);
-        return res.sendError(res, "ERR_INTERNAL_SERVER_ERROR");
+        return res.sendError(res, error.message);
     }
 }
 
@@ -161,9 +161,9 @@ const fetchGinnerPagination = async (req: Request, res: Response) => {
             });
             return res.sendSuccess(res, result);
         }
-    } catch (error) {
+    } catch (error: any) {
         console.log(error);
-        return res.sendError(res, "ERR_INTERNAL_SERVER_ERROR");
+        return res.sendError(res, error.message);
     }
 }
 
@@ -219,9 +219,9 @@ const fetchGinner = async (req: Request, res: Response) => {
         }
         return res.sendSuccess(res, result ? { ...result.dataValues, userData, programs, unitCerts, brands } : null);
 
-    } catch (error) {
+    } catch (error: any) {
         console.log(error);
-        return res.sendError(res, "ERR_INTERNAL_SERVER_ERROR");
+        return res.sendError(res, error.message);
     }
 }
 
@@ -276,9 +276,9 @@ const updateGinner = async (req: Request, res: Response) => {
         }
         const result = await Ginner.update(data, { where: { id: req.body.id } });
         res.sendSuccess(res, result);
-    } catch (error) {
+    } catch (error: any) {
         console.log(error);
-        return res.sendError(res, "ERR_INTERNAL_SERVER_ERROR");
+        return res.sendError(res, error.message);
     }
 }
 
@@ -292,6 +292,7 @@ const deleteGinner = async (req: Request, res: Response) => {
         });
         res.sendSuccess(res, { ginner });
     } catch (error: any) {
+        console.log(error);
         return res.sendError(res, error.message);
     }
 }
@@ -314,6 +315,7 @@ const checkGinner = async (req: Request, res: Response) => {
         });
         res.sendSuccess(res, result ? { exist: true } : { exist: false });
     } catch (error: any) {
+        console.log(error);
         return res.sendError(res, error.message);
     }
 }

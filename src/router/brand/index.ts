@@ -8,10 +8,12 @@ import {
     getCountries,
     updateStatusBrandSale
 } from "../../controllers/brand";
-
-
+import accessControl from "../../middleware/access-control";
 import { Router } from "express";
+
 const router = Router();
+
+router.use(accessControl);
 
 // Ginner Routes
 router.get('/organic-cotton-overview', organicCottonOverview);

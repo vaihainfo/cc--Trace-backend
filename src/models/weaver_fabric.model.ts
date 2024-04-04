@@ -10,7 +10,7 @@ const WeaverFabric = db.define('weaver_fabrics', {
     allowNull: false,
     primaryKey: true
   },
-  process_id : {
+  process_id: {
     type: DataTypes.INTEGER
   },
   fabric_type: {
@@ -19,11 +19,14 @@ const WeaverFabric = db.define('weaver_fabrics', {
   fabric_gsm: {
     type: DataTypes.STRING
   },
-  fabric_length : {
+  fabric_length: {
     type: DataTypes.DOUBLE
   },
-  sold_status :{
-    type : DataTypes.BOOLEAN
+  fabric_length_stock: {
+    type: DataTypes.DOUBLE
+  },
+  sold_status: {
+    type: DataTypes.BOOLEAN
   }
 });
 

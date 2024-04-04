@@ -146,9 +146,9 @@ const fetchGarmentPagination = async (req: Request, res: Response) => {
             });
             return res.sendSuccess(res, result);
         }
-    } catch (error) {
+    } catch (error: any) {
         console.log(error);
-        return res.sendError(res, "ERR_INTERNAL_SERVER_ERROR");
+        return res.sendError(res, error.message);
     }
 }
 
@@ -189,9 +189,9 @@ const fetchGarment = async (req: Request, res: Response) => {
         }
         return res.sendSuccess(res, result ? { ...result.dataValues, userData } : null);
 
-    } catch (error) {
+    } catch (error: any) {
         console.log(error);
-        return res.sendError(res, "ERR_INTERNAL_SERVER_ERROR");
+        return res.sendError(res, error.message);
     }
 }
 

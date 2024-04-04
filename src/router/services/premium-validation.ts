@@ -13,10 +13,12 @@ import {
     fetchValidation,
     fetchProcuredData
 } from "../../controllers/validation-project";
-
+import accessControl from "../../middleware/access-control";
 import { Router } from "express";
+
 const router = Router();
 
+router.use(accessControl);
 // Farmer Premium Validation
 router.get('/farmer', fetchValidationFarmerPagination);
 router.post('/farmer', createValidationFarmer);

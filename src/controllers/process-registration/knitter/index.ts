@@ -145,9 +145,9 @@ const fetchKnitterPagination = async (req: Request, res: Response) => {
             });
             return res.sendSuccess(res, result);
         }
-    } catch (error) {
+    } catch (error: any) {
         console.log(error);
-        return res.sendError(res, "ERR_INTERNAL_SERVER_ERROR");
+        return res.sendError(res, error.message);
     }
 }
 
@@ -188,9 +188,9 @@ const fetchKnitter = async (req: Request, res: Response) => {
         }
         return res.sendSuccess(res, result ? { ...result.dataValues, userData } : null);
 
-    } catch (error) {
+    } catch (error: any) {
         console.log(error);
-        return res.sendError(res, "ERR_INTERNAL_SERVER_ERROR");
+        return res.sendError(res, error.message);
     }
 }
 
@@ -261,6 +261,7 @@ const deleteKnitter = async (req: Request, res: Response) => {
         });
         res.sendSuccess(res, { knitter });
     } catch (error: any) {
+        console.log(error);
         return res.sendError(res, error.message);
     }
 }
@@ -283,6 +284,7 @@ const checkKnitter = async (req: Request, res: Response) => {
         });
         res.sendSuccess(res, result ? { exist: true } : { exist: false });
     } catch (error: any) {
+        console.log(error);
         return res.sendError(res, error.message);
     }
 }

@@ -16,6 +16,7 @@ import GinSales from "../../models/gin-sales.model";
 const createQualityParameter = async (req: Request, res: Response) => {
     try {
         let result: any = []
+        console.log(req.body.testReport)
         for await (const quality of req.body.testReport) {
             const data = {
                 ginner_id: quality.ginnerId ? quality.ginnerId : undefined,

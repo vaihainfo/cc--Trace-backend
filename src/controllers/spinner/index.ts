@@ -1,15 +1,12 @@
 import { Request, Response } from "express";
-
-import { Sequelize, Op, where } from "sequelize";
+import { Sequelize, Op } from "sequelize";
 import { encrypt, generateGinSalesHtml, generateOnlyQrCode } from "../../provider/qrcode";
 import * as ExcelJS from "exceljs";
-import * as fs from "fs";
 import * as path from "path";
 import Season from "../../models/season.model";
 import Program from "../../models/program.model";
 import Spinner from "../../models/spinner.model";
 import State from "../../models/state.model";
-import Country from "../../models/country.model";
 import sequelize from "../../util/dbConn";
 import Dyeing from "../../models/dyeing.model";
 import SpinProcess from "../../models/spin-process.model";
@@ -22,8 +19,6 @@ import Knitter from "../../models/knitter.model";
 import Weaver from "../../models/weaver.model";
 import LintSelections from "../../models/lint-seletions.model";
 import SpinProcessYarnSelection from "../../models/spin-process-yarn-seletions.model";
-import BaleSelection from "../../models/bale-selection.model";
-import GinBale from "../../models/gin-bale.model";
 import ComberSelection from "../../models/comber-selection.model";
 import { send_spin_mail } from "../send-emails";
 import SpinYarn from "../../models/spin-yarn.model";
@@ -32,15 +27,20 @@ import Village from "../../models/village.model";
 import Transaction from "../../models/transaction.model";
 import Farmer from "../../models/farmer.model";
 import { formatDataForSpinnerProcess } from '../../util/tracing-chart-data-formatter';
+import PhysicalTraceabilityDataSpinner from "../../models/physical-traceability-data-spinner.model";
+import Brand from "../../models/brand.model";
+import PhysicalTraceabilityDataSpinnerSample from "../../models/physical-traceability-data-spinner-sample.model";
+
 //create Spinner Process
 const createSpinnerProcess = async (req: Request, res: Response) => {
     try {
         let program = await Program.findOne({ where: { program_name: { [Op.iLike]: 'Reel' } } });
-        let abc
-        if (program.dataValues.id == req.body.programId) {
+        let abc;
+        if (program.dataValues.id === req.body.programId) {
             abc = await yarnId(req.body.spinnerId, req.body.date);
         }
-        let dyeing
+
+        let dyeing;
         if (req.body.dyeingRequired) {
             dyeing = await Dyeing.create({
                 processor_name: req.body.processorName,
@@ -94,6 +94,7 @@ const createSpinnerProcess = async (req: Request, res: Response) => {
                 process_id: spin.id,
                 yarn_count: yarn.yarnCount,
                 yarn_produced: yarn.yarnProduced,
+                yarn_qty_stock: yarn.yarnProduced
             }
 
             const yarns = await SpinYarn.create(yarnData);
@@ -117,6 +118,42 @@ const createSpinnerProcess = async (req: Request, res: Response) => {
                 let create = await ComberSelection.create({ qty_used: obj.qtyUsed, process_id: spin.id, yarn_id: obj.id })
             }
         }
+
+        if (req.body.enterPhysicalTraceability) {
+            const physicalTraceabilityData = {
+                date_sample_collection: req.body.dateSampleCollection,
+                data_of_sample_dispatch: req.body.dataOfSampleDispatch,
+                operator_name: req.body.operatorName,
+                expected_date_of_yarn_sale: req.body.expectedDateOfYarnSale,
+                physical_traceability_partner_id: req.body.physicalTraceabilityPartnerId,
+                spin_process_id: spin.id,
+                spinner_id: req.body.spinnerId
+            };
+            const physicalTraceabilityDataSpinner = await PhysicalTraceabilityDataSpinner.create(physicalTraceabilityData);
+
+            for await (const weightAndCone of req.body.weightAndCone) {
+                let brand = await Brand.findOne({
+                    where: { id: req.body.brandId }
+                });
+
+                const updatedCount = brand.dataValues.count + 1;
+                let physicalTraceabilityDataSpinnerSampleData = {
+                    physical_traceability_data_spinner_id: physicalTraceabilityDataSpinner.id,
+                    weight: weightAndCone.weight,
+                    cone: weightAndCone.cone,
+                    original_sample_status: weightAndCone.originalSampleStatus,
+                    code: `DNA${req.body.spinnerShortname}${abc ? '-' + abc : ''}-${updatedCount}`,
+                    sample_result: 0
+                };
+                await PhysicalTraceabilityDataSpinnerSample.create(physicalTraceabilityDataSpinnerSampleData);
+
+                await Brand.update(
+                    { count: updatedCount },
+                    { where: { id: brand.id } }
+                );
+            }
+        }
+
         res.sendSuccess(res, { spin });
     } catch (error: any) {
         console.log(error);
@@ -186,7 +223,7 @@ const yarnId = async (id: any, date: any) => {
             spinner_id: id
         }
     })
-    
+
     let currentDate = new Date();
     let day = String(currentDate.getUTCDate()).padStart(2, "0");
     let month = String(currentDate.getUTCMonth() + 1).padStart(2, "0"); // UTC months are zero-indexed, so we add 1
@@ -391,7 +428,8 @@ const fetchSpinnerProcess = async (req: Request, res: Response) => {
 
 const deleteSpinnerProcess = async (req: Request, res: Response) => {
     try {
-        let count = await SpinProcessYarnSelection.count({ where: { spin_process_id: req.body.id } })
+        let count = await SpinProcessYarnSelection.count({ where: { spin_process_id: req.body.id } });
+
         if (count > 0) {
             res.sendError(res, 'Unable to delete this process since some lint of this process was sold')
         } else {
@@ -421,6 +459,16 @@ const deleteSpinnerProcess = async (req: Request, res: Response) => {
                     process_id: req.body.id
                 },
             });
+
+            const physicalTraceabilityDataSpinner = await PhysicalTraceabilityDataSpinner.findOne({ where: { spin_process_id: req.body.id } });
+            if (physicalTraceabilityDataSpinner) {
+                await PhysicalTraceabilityDataSpinnerSample.destroy({
+                    where: { physical_traceability_data_spinner_id: physicalTraceabilityDataSpinner.id }
+                });
+                await PhysicalTraceabilityDataSpinner.destroy({
+                    where: { spin_process_id: req.body.id }
+                });
+            }
 
             const res3 = await SpinProcess.destroy({
                 where: {
@@ -762,6 +810,16 @@ const createSpinnerSales = async (req: Request, res: Response) => {
             status: 'Pending for QR scanning'
         };
 
+        if (req.body.chooseYarn && req.body.chooseYarn.length > 0) {
+            for await (let obj of req.body.chooseYarn) {
+                const spinYarnData = await SpinYarn.findOne({ where: { id: obj.id }, raw: true });
+                console.log(spinYarnData)
+                if (obj.qtyUsed > spinYarnData.yarn_qty_stock) {
+                    return res.sendError(res, 'Requested quantity exceeds available stock')
+                }
+            }
+        }
+
         const spinSales = await SpinSales.create(data);
         let uniqueFilename = `spin_sales_qrcode_${Date.now()}.png`;
         let da = encrypt(`Spinner,Sale,${spinSales.id}`);
@@ -775,7 +833,20 @@ const createSpinnerSales = async (req: Request, res: Response) => {
         if (req.body.chooseYarn && req.body.chooseYarn.length > 0) {
             for await (let obj of req.body.chooseYarn) {
                 let update = await SpinProcess.update({ qty_stock: obj.totalQty - obj.qtyUsed, status: 'Sold' }, { where: { id: obj.process_id } });
-                const spinYarnStatus = await SpinYarn.update({ sold_status: true }, { where: { id: obj.id } });
+                const spinYarnData = await SpinYarn.findOne({ where: { id: obj.id } });
+
+                let updateyarns = {}
+                if (spinYarnData.yarn_qty_stock - obj.qtyUsed <= 0) {
+                    updateyarns = {
+                        sold_status: true,
+                        yarn_qty_stock: 0
+                    }
+                } else {
+                    updateyarns = {
+                        yarn_qty_stock: spinYarnData.yarn_qty_stock - obj.qtyUsed
+                    }
+                }
+                const spinYarnStatus = await SpinYarn.update(updateyarns, { where: { id: obj.id } });
                 await SpinProcessYarnSelection.create({ spin_process_id: obj.process_id, yarn_id: obj.id, sales_id: spinSales.id, qty_used: obj.qtyUsed })
             }
         }
@@ -891,7 +962,7 @@ const fetchSpinSalesPagination = async (req: Request, res: Response) => {
                 { '$knitter.name$': { [Op.iLike]: `%${searchTerm}%` } },
                 { '$season.name$': { [Op.iLike]: `%${searchTerm}%` } },
                 { '$program.program_name$': { [Op.iLike]: `%${searchTerm}%` } },
-                { '$yarncount.yarnCount_name$': { [Op.iLike]: `%${searchTerm}%` } },// Search season spinner name  
+                { '$yarncount.yarnCount_name$': { [Op.iLike]: `%${searchTerm}%` } },// Search season spinner name
             ];
         }
         if (spinnerId) {
@@ -1192,7 +1263,14 @@ const deleteSpinnerSales = async (req: Request, res: Response) => {
                     }
                 }
             );
-            await SpinYarn.update({ sold_status: false }, { where: { id: yarn.yarn_id } });
+            const spinYarnData = await SpinYarn.findOne({ where: { id: yarn.yarn_id } });
+            if (spinYarnData) {
+                await SpinYarn.update(
+                    { sold_status: false, yarn_qty_stock: +spinYarnData.yarn_qty_stock + +yarn.qty_used },
+                    { where: { id: yarn.yarn_id } }
+                );
+            }
+            // await SpinYarn.update({ sold_status: false }, { where: { id: yarn.yarn_id } });
         });
 
         SpinSales.destroy({
@@ -1224,7 +1302,7 @@ const fetchSpinSalesDashBoard = async (req: Request, res: Response) => {
     try {
         if (searchTerm) {
             whereCondition[Op.or] = [
-                { lot_no: { [Op.iLike]: `%${searchTerm}%` } }, // Search by 
+                { lot_no: { [Op.iLike]: `%${searchTerm}%` } }, // Search by
                 { invoice_no: { [Op.iLike]: `%${searchTerm}%` } }, // Search by
                 { "$ginner.name$": { [Op.iLike]: `%${searchTerm}%` } }, // Search by
                 { '$program.program_name$': { [Op.iLike]: `%${searchTerm}%` } }, // Search by program
@@ -1411,7 +1489,7 @@ const exportSpinnerTransaction = async (req: Request, res: Response) => {
     try {
         if (searchTerm) {
             whereCondition[Op.or] = [
-                { lot_no: { [Op.iLike]: `%${searchTerm}%` } }, // Search by 
+                { lot_no: { [Op.iLike]: `%${searchTerm}%` } }, // Search by
                 { invoice_no: { [Op.iLike]: `%${searchTerm}%` } }, // Search by
                 { '$program.program_name$': { [Op.iLike]: `%${searchTerm}%` } }, // Search by program
                 { '$season.name$': { [Op.iLike]: `%${searchTerm}%` } }, // Search by crop Type
@@ -1752,6 +1830,7 @@ const chooseYarn = async (req: Request, res: Response) => {
         if (spinnerId) {
             whereCondition.spinner_id = spinnerId;
         }
+
         if (seasonId) {
             const idArray: number[] = seasonId
                 .split(",")
@@ -1785,7 +1864,8 @@ const chooseYarn = async (req: Request, res: Response) => {
             attributes: [
                 [Sequelize.col('"spinprocess"."season"."id"'), 'season_id'],
                 [Sequelize.col('"spinprocess"."season"."name"'), 'season_name'],
-                [Sequelize.fn('SUM', Sequelize.col('yarn_produced')), 'available_yarn']
+                // [Sequelize.fn('SUM', Sequelize.col('yarn_produced')), 'available_yarn']
+                [Sequelize.fn('SUM', Sequelize.col('yarn_qty_stock')), 'available_yarn']
             ],
             include: [{
                 model: SpinProcess,
@@ -1794,6 +1874,7 @@ const chooseYarn = async (req: Request, res: Response) => {
                 where: whereCondition,
                 include: include,
             }],
+            where: { sold_status: false },
             group: ["spinprocess.season.id", "spinprocess.season_id"]
         })
 
@@ -1806,7 +1887,7 @@ const chooseYarn = async (req: Request, res: Response) => {
         //     ],
         //     group: ["season.id", "season_id"]
         // });
-        console.log(result);
+
         let list = [];
         for await (let item of result) {
             let items = await SpinProcess.findAll({
@@ -1833,7 +1914,8 @@ const chooseYarn = async (req: Request, res: Response) => {
                 const lot_details = await SpinYarn.findAll({
                     attributes: [
                         [sequelize.fn('SUM', Sequelize.col('"spinprocess"."net_yarn_qty"')), 'total_yarn'],
-                        [sequelize.fn('SUM', Sequelize.col('"spin_yarns"."yarn_produced"')), 'qty_stock'],
+                        [sequelize.fn('SUM', Sequelize.col('"spin_yarns"."yarn_produced"')), 'yarn_produced'],
+                        [sequelize.fn('SUM', Sequelize.col('"spin_yarns"."yarn_qty_stock"')), 'qty_stock'],
                         // Add other attributes here...
                     ],
                     where: {
@@ -1858,6 +1940,7 @@ const chooseYarn = async (req: Request, res: Response) => {
                             as: 'yarncount',
                             attributes: ['id', 'yarnCount_name'],
                         }],
+                        order: [["id", "desc"]],
                         where: {
                             process_id: row?.dataValues?.id,
                             sold_status: false
@@ -1874,6 +1957,7 @@ const chooseYarn = async (req: Request, res: Response) => {
 
             list.push({ ...item.dataValues, data: data });
         }
+
         return res.sendSuccess(res, list);
 
     } catch (error: any) {

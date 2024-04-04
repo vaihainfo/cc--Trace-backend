@@ -5,7 +5,7 @@ import fs from "fs";
 import path from "path";
 
 const process = require("process");
-const env = process.env.NODE_ENV || "development";
+const env = process.env.NODE_ENV || "local";
 const config = require("../conf/config");
 // import config from '../conf/config'
 const db: any = {};

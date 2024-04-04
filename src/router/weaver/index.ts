@@ -24,9 +24,12 @@ import {
     fetchWeaverProcess,
     updateWeaverSales
 } from "../../controllers/weaver";
-
+import accessControl from "../../middleware/access-control";
 import { Router } from "express";
+
 const router = Router();
+
+router.use(accessControl);
 
 router.post('/process', createWeaverProcess);
 router.put('/process', updateWeaverProcess);
