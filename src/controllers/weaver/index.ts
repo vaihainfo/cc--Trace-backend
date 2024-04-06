@@ -413,7 +413,7 @@ const createWeaverSales = async (req: Request, res: Response) => {
     let uniqueFilename = `weaver_sales_qrcode_${Date.now()}.png`;
     let da = encrypt(`Weaver,Sale,${weaverSales.id}`);
     let aa = await generateOnlyQrCode(da, uniqueFilename);
-    const gin = await WeaverSales.update({ qr: uniqueFilename, status: 'Sold' }, {
+    const gin = await WeaverSales.update({ qr: uniqueFilename }, {
       where: {
         id: weaverSales.id
       }
