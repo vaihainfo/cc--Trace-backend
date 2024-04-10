@@ -78,10 +78,10 @@ const SpinSales = db.define('spin_sales', {
     type: DataTypes.STRING
   },
   yarn_type: {
-    type: DataTypes.STRING
+    type: DataTypes.ARRAY(DataTypes.TEXT)
   },
   yarn_count: {
-    type: DataTypes.DOUBLE
+    type: DataTypes.ARRAY(DataTypes.INTEGER)
   },
   invoice_no: {
     allowNull: false,

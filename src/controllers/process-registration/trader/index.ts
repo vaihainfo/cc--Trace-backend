@@ -243,6 +243,36 @@ const updateTrader = async (req: Request, res: Response) => {
 
 const deleteTrader = async (req: Request, res: Response) => {
     try {
+        const trade = await Trader.findOne({
+            where: {
+                id: req.body.id
+            },
+        });
+
+        const user = await User.findOne({
+            where: {
+                id: trade.traderUser_id
+            },
+        });
+
+        const userRole = await UserRole.findOne({
+            where: Sequelize.where(
+                Sequelize.fn('LOWER', Sequelize.col('user_role')),
+                'trader'
+            )
+        });
+
+
+        const updatedProcessRole = user.process_role.filter((roleId: any) => roleId !== userRole.id);
+
+        if (updatedProcessRole.length > 0) {
+            const updatedUser = await await user.update({
+                process_role: updatedProcessRole,
+                role: updatedProcessRole[0]
+            });
+        } else {
+            await user.destroy();
+        }
         const trader = await Trader.destroy({
             where: {
                 id: req.body.id

@@ -254,6 +254,36 @@ const updateKnitter = async (req: Request, res: Response) => {
 
 const deleteKnitter = async (req: Request, res: Response) => {
     try {
+        const knit = await Knitter.findOne({
+            where: {
+                id: req.body.id
+            },
+        });
+
+        const user = await User.findOne({
+            where: {
+                id: knit.knitterUser_id
+            },
+        });
+
+        const userRole = await UserRole.findOne({
+            where: Sequelize.where(
+                Sequelize.fn('LOWER', Sequelize.col('user_role')),
+                'knitter'
+            )
+        });
+
+
+        const updatedProcessRole = user.process_role.filter((roleId: any) => roleId !== userRole.id);
+
+        if (updatedProcessRole.length > 0) {
+            const updatedUser = await await user.update({
+                process_role: updatedProcessRole,
+                role: updatedProcessRole[0]
+            });
+        } else {
+            await user.destroy();
+        }
         const knitter = await Knitter.destroy({
             where: {
                 id: req.body.id

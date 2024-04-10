@@ -98,6 +98,9 @@ const getKnitterYarn = async (
         const reqData = await getQueryParams(req, res);
         const where = getSpinSalesWhereQuery(reqData, 'knitter');
         const yarnList = await getSpinYarnData('knitter', where);
+
+        console.log("yarnList=-------",yarnList)
+        
         const data = getSpinYarnRes(yarnList);
         return res.sendSuccess(res, data);
     } catch (error: any) {
@@ -206,7 +209,7 @@ const getSpinYarnData = async (
 
     const estimateAndProduction = await SpinSales.findAll({
         attributes: [
-            [Sequelize.fn('SUM', Sequelize.col('yarn_count')), 'totalQty'],
+            [Sequelize.fn('SUM', Sequelize.col('total_qty')), 'totalQty'],
             [Sequelize.fn('SUM', Sequelize.col('qty_stock')), 'stockQty'],
             [Sequelize.col('program.id'), 'programId'],
             [Sequelize.col('program.program_name'), 'programName'],

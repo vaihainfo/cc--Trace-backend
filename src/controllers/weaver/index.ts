@@ -201,7 +201,7 @@ const fetchWeaverProcessPagination = async (req: Request, res: Response) => {
         { blend_material: { [Op.iLike]: `%${searchTerm}%` } },
         { blend_vendor: { [Op.iLike]: `%${searchTerm}%` } },
         { "$program.program_name$": { [Op.iLike]: `%${searchTerm}%` } },
-        { "$yarncount.yarnCount_name$": { [Op.iLike]: `%${searchTerm}%` } },
+        // { "$yarncount.yarnCount_name$": { [Op.iLike]: `%${searchTerm}%` } },
         { "$weaver.name$": { [Op.iLike]: `%${searchTerm}%` } },
         { "$dyeing.processor_name$": { [Op.iLike]: `%${searchTerm}%` } },
         { "$dyeing.process_name$": { [Op.iLike]: `%${searchTerm}%` } },
@@ -261,11 +261,11 @@ const fetchWeaverProcessPagination = async (req: Request, res: Response) => {
         model: Dyeing,
         as: "dyeing",
       },
-      {
-        model: YarnCount,
-        as: "yarncount",
-        attributes: ["id", "yarnCount_name"],
-      },
+      // {
+      //   model: YarnCount,
+      //   as: "yarncount",
+      //   attributes: ["id", "yarnCount_name"],
+      // },
     ];
     //fetch data with pagination
     if (req.query.pagination === "true") {
@@ -355,11 +355,11 @@ const fetchWeaverProcess = async (req: Request, res: Response) => {
         model: Dyeing,
         as: "dyeing",
       },
-      {
-        model: YarnCount,
-        as: "yarncount",
-        attributes: ['id', 'yarnCount_name']
-      }
+      // {
+      //   model: YarnCount,
+      //   as: "yarncount",
+      //   attributes: ['id', 'yarnCount_name']
+      // }
     ];
     //fetch data with pagination
     let rows = await WeaverProcess.findOne({
@@ -813,7 +813,7 @@ const exportWeaverProcess = async (req: Request, res: Response) => {
         { blend_material: { [Op.iLike]: `%${searchTerm}%` } },
         { blend_vendor: { [Op.iLike]: `%${searchTerm}%` } },
         { '$program.program_name$': { [Op.iLike]: `%${searchTerm}%` } },
-        { '$yarncount.yarnCount_name$': { [Op.iLike]: `%${searchTerm}%` } },
+        // { '$yarncount.yarnCount_name$': { [Op.iLike]: `%${searchTerm}%` } },
         { '$weaver.name$': { [Op.iLike]: `%${searchTerm}%` } },
         { '$dyeing.processor_name$': { [Op.iLike]: `%${searchTerm}%` } },
         { '$dyeing.process_name$': { [Op.iLike]: `%${searchTerm}%` } },
@@ -869,11 +869,11 @@ const exportWeaverProcess = async (req: Request, res: Response) => {
         model: Dyeing,
         as: "dyeing",
       },
-      {
-        model: YarnCount,
-        as: "yarncount",
-        attributes: ['id', 'yarnCount_name']
-      }
+      // {
+      //   model: YarnCount,
+      //   as: "yarncount",
+      //   attributes: ['id', 'yarnCount_name']
+      // }
     ];;
 
 
@@ -1078,6 +1078,7 @@ const fetchWeaverDashBoard = async (req: Request, res: Response) => {
   const { weaverId, status, filter, programId, spinnerId, invoice, lotNo, yarnCount, yarnType, reelLotNo }: any = req.query;
   const offset = (page - 1) * limit;
   const whereCondition: any = {};
+  const yarnTypeArray = yarnType?.split(',')?.map((item:any) => item.trim()); 
   try {
     if (!weaverId) {
       return res.sendError(res, 'Need Weaver Id ');
@@ -1092,12 +1093,12 @@ const fetchWeaverDashBoard = async (req: Request, res: Response) => {
         { box_ids: { [Op.iLike]: `%${searchTerm}%` } }, // Search by batch lot number
         { batch_lot_no: { [Op.iLike]: `%${searchTerm}%` } }, // Search by batch lot number
         { invoice_no: { [Op.iLike]: `%${searchTerm}%` } }, // Search by invoice number
-        { yarn_type: { [Op.iLike]: `%${searchTerm}%` } }, // Search by invoice number
+        // { yarn_type: { [Op.iLike]: `%${searchTerm}%` } }, 
         { vehicle_no: { [Op.iLike]: `%${searchTerm}%` } }, // Search by invoice number
         { '$program.program_name$': { [Op.iLike]: `%${searchTerm}%` } }, // Search by program
         { '$season.name$': { [Op.iLike]: `%${searchTerm}%` } }, // Search season name
         { '$spinner.name$': { [Op.iLike]: `%${searchTerm}%` } },// Search season spinner name
-        { '$yarncount.yarnCount_name$': { [Op.iLike]: `%${searchTerm}%` } },// Search season spinner name
+        // { '$yarncount.yarnCount_name$': { [Op.iLike]: `%${searchTerm}%` } },
       ];
     }
     if (status === 'Pending') {
@@ -1150,14 +1151,12 @@ const fetchWeaverDashBoard = async (req: Request, res: Response) => {
       const idArray: number[] = yarnCount
         .split(",")
         .map((id: any) => parseInt(id, 10));
-      whereCondition.yarn_count = { [Op.in]: idArray };
+      whereCondition.yarn_count = { [Op.contains]: idArray };
     }
     if (yarnType) {
-      const idArray: any[] = yarnType
-        .split(",")
-        .map((id: any) => id);
-      whereCondition.yarn_type = { [Op.in]: idArray };
-    }
+      whereCondition.yarn_type = { [Op.contains]: yarnTypeArray }; 
+  }
+
 
     let include = [
       {
@@ -1172,11 +1171,11 @@ const fetchWeaverDashBoard = async (req: Request, res: Response) => {
         model: Program,
         as: "program",
       },
-      {
-        model: YarnCount,
-        as: 'yarncount',
-        attributes: ['id', 'yarnCount_name']
-      },
+      // {
+      //   model: YarnCount,
+      //   as: 'yarncount',
+      //   attributes: ['id', 'yarnCount_name']
+      // },
     ];
     //fetch data with pagination
     if (req.query.pagination === "true") {
@@ -1191,7 +1190,24 @@ const fetchWeaverDashBoard = async (req: Request, res: Response) => {
         offset: offset,
         limit: limit,
       });
-      return res.sendPaginationSuccess(res, rows, count);
+      let data = [];
+
+      for await (let row of rows) {
+          let yarncount = [];
+
+          if (row.dataValues?.yarn_count.length > 0) {
+              yarncount = await YarnCount.findAll({
+                  attributes: ["id", "yarnCount_name"],
+                  where: { id: { [Op.in]: row.dataValues?.yarn_count } }
+              });
+          }
+
+          data.push({
+              ...row.dataValues,
+              yarncount
+          })
+      }
+      return res.sendPaginationSuccess(res, data, count);
     } else {
       const gin = await SpinSales.findAll({
         where: whereCondition,
@@ -1202,7 +1218,24 @@ const fetchWeaverDashBoard = async (req: Request, res: Response) => {
           ]
         ]
       });
-      return res.sendSuccess(res, gin);
+      let data = [];
+
+      for await (let row of gin) {
+          let yarncount = [];
+
+          if (row.dataValues?.yarn_count.length > 0) {
+              yarncount = await YarnCount.findAll({
+                  attributes: ["id", "yarnCount_name"],
+                  where: { id: { [Op.in]: row.dataValues?.yarn_count } }
+              });
+          }
+
+          data.push({
+              ...row.dataValues,
+              yarncount
+          })
+      }
+      return res.sendSuccess(res, data);
     }
   } catch (error: any) {
     console.log(error)
@@ -1412,24 +1445,32 @@ const getInvoiceAndyarnType = async (req: Request, res: Response) => {
       group: ['process.reel_lot_no']
     });
 
-    const yarncount = await SpinSales.findAll({
+    const yarncountData = await SpinSales.findAll({
       attributes: ['yarn_count'],
       where: whereCondition,
-      include: [
-        {
-          model: YarnCount,
-          as: 'yarncount',
-          attributes: ['id', 'yarnCount_name']
-        }
-      ],
-      group: ['yarn_count', 'yarncount.id']
+      group: ['yarn_count'],
     });
-    const yarn_type = await SpinSales.findAll({
-      attributes: ['yarn_type'],
+
+    const checkyarnData = yarncountData.map((item:any)=> item.yarn_count).flat();
+    const yarnCounts = await YarnCount.findAll({      
+      attributes: ["id", "yarnCount_name"],         
+      where: {  
+        id: { 
+          [Op.in]: checkyarnData
+        } 
+      }, 
+    });
+
+    const yarn_type_fetch = await SpinSales.findAll({
+      attributes: ["yarn_type"],
       where: whereCondition,
-      group: ['yarn_type']
+      group: ["yarn_type"],
     });
-    res.sendSuccess(res, { invoice, reelLot, yarn_type, yarncount });
+    const yarn_type = yarn_type_fetch.map((item:any, i:any)=> {
+      return {yarn_type:  [...new Set(item.yarn_type)] }
+    })
+
+    res.sendSuccess(res, { invoice, reelLot, yarn_type,  yarncount: yarnCounts });
   } catch (error: any) {
     return res.sendError(res, error.message);
   }

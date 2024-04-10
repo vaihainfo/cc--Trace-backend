@@ -2756,11 +2756,11 @@ const garmentTraceabilityMap = async (req: Request, res: Response) => {
               as: "district",
             }]
           },
-          {
-            model: YarnCount,
-            as: "yarncount",
-            attributes: ["yarnCount_name"],
-          },
+          // {
+          //   model: YarnCount,
+          //   as: "yarncount",
+          //   attributes: ["yarnCount_name"],
+          // },
         ],
         where: {
           id: {

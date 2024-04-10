@@ -255,6 +255,36 @@ const updateGarment = async (req: Request, res: Response) => {
 
 const deleteGarment = async (req: Request, res: Response) => {
     try {
+        const garm = await Garment.findOne({
+            where: {
+                id: req.body.id
+            },
+        });
+
+        const user = await User.findOne({
+            where: {
+                id: garm.garmentUser_id
+            },
+        });
+
+        const userRole = await UserRole.findOne({
+            where: Sequelize.where(
+                Sequelize.fn('LOWER', Sequelize.col('user_role')),
+                'garment'
+            )
+        });
+
+
+        const updatedProcessRole = user.process_role.filter((roleId: any) => roleId !== userRole.id);
+
+        if (updatedProcessRole.length > 0) {
+            const updatedUser = await await user.update({
+                process_role: updatedProcessRole,
+                role: updatedProcessRole[0]
+            });
+        } else {
+            await user.destroy();
+        }
         const garment = await Garment.destroy({
             where: {
                 id: req.body.id

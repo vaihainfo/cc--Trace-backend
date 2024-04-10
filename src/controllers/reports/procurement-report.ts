@@ -247,16 +247,25 @@ const fetchSumOfQtyPurchasedByProgram = async (req: Request, res: Response) => {
 //Export the export details through excel file
 const exportProcurementReport = async (req: Request, res: Response) => {
     // procurement_load
-    await ExportData.update({
-        procurement_load:true
-    },{where:{procurement_load:false}})
-    res.send({status:200,message:"export file processing"})
-  const excelFilePath = path.join("./upload", "procurement-report.xlsx");
+  const excelFilePath = path.join("./upload", "excel-procurement-report.xlsx");
 
   try {
     const searchTerm = req.query.search || "";
     let whereCondition: any = {};
-    const { status, countryId, stateId, brandId, farmGroupId, seasonId, programId, ginnerId, startDate, endDate }: any = req.query;
+    const { exportType, status, countryId, stateId, brandId, farmGroupId, seasonId, programId, ginnerId, startDate, endDate }: any = req.query;
+    const page = Number(req.query.page) || 1;
+    const limit = Number(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+
+    if (exportType === "all") {
+      return res.status(200).send({
+        success: true,
+        messgage: "File successfully Generated",
+        data: process.env.BASE_URL + "procurement-report.xlsx",
+      });
+
+    } else {
+
     if (countryId) {
       const idArray: number[] = countryId
         .split(",")
@@ -335,6 +344,7 @@ const exportProcurementReport = async (req: Request, res: Response) => {
         { "$season.name$": { [Op.iLike]: `%${searchTerm}%` } },
       ];
     }
+
     // Create the excel workbook file
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet("Sheet1");
@@ -437,7 +447,9 @@ const exportProcurementReport = async (req: Request, res: Response) => {
         [
           'id', 'desc'
         ]
-      ]
+      ],
+      offset: offset,
+      limit: limit,
     });
 
     // Append data to worksheet
@@ -478,20 +490,13 @@ const exportProcurementReport = async (req: Request, res: Response) => {
 
     // Save the workbook
     await workbook.xlsx.writeFile(excelFilePath);
-    // res.status(200).send({
-    //   success: true,
-    //   messgage: "File successfully Generated",
-    //   data: process.env.BASE_URL + "procurement-report.xlsx",
-    // });
-    await ExportData.update({
-        procurement_load:false
-    },{where:{procurement_load:true}})
+    res.status(200).send({
+      success: true,
+      messgage: "File successfully Generated",
+      data: process.env.BASE_URL + "excel-procurement-report.xlsx",
+    });
+  }
   } catch (error: any) {
-    (async()=>{
-        await ExportData.update({
-            procurement_load:false
-        },{where:{procurement_load:true}})
-    })()
     console.log(error)
     return res.sendError(res, error.message);
   }

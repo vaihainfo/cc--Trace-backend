@@ -905,11 +905,11 @@ const fetchSpinnerSale = async (req: Request, res: Response) => {
                 as: "program",
                 attributes: ['id', 'program_name']
             },
-            {
-                model: YarnCount,
-                as: 'yarncount',
-                attributes: ['id', 'yarnCount_name']
-            },
+            // {
+            //     model: YarnCount,
+            //     as: 'yarncount',
+            //     attributes: ['id', 'yarnCount_name']
+            // },
             {
                 model: Weaver,
                 as: "weaver",
@@ -933,8 +933,17 @@ const fetchSpinnerSale = async (req: Request, res: Response) => {
             ]
         });
 
+        let yarnType = [];
 
-        return res.sendSuccess(res, gin);
+        if (gin.dataValues?.yarn_count.length > 0) {
+            yarnType = await YarnCount.findAll({
+            attributes: ["id", "yarnCount_name"],
+            where: { id: { [Op.in]: gin.dataValues?.yarn_count } },
+          });
+        }
+        let data = { ...gin.dataValues, yarnType };
+
+        return res.sendSuccess(res, data);
 
     } catch (error: any) {
         return res.sendError(res, error.message);
@@ -949,6 +958,7 @@ const fetchSpinSalesPagination = async (req: Request, res: Response) => {
     const { spinnerId, seasonId, programId, knitterId, weaverId, yarnType, type }: any = req.query;
     const offset = (page - 1) * limit;
     const whereCondition: any = {};
+    const yarnTypeArray = yarnType.split(',').map((item:any) => item.trim()); 
     try {
         if (searchTerm) {
             whereCondition[Op.or] = [
@@ -956,13 +966,13 @@ const fetchSpinSalesPagination = async (req: Request, res: Response) => {
                 { invoice_no: { [Op.iLike]: `%${searchTerm}%` } },
                 { batch_lot_no: { [Op.iLike]: `%${searchTerm}%` } },
                 { reel_lot_no: { [Op.iLike]: `%${searchTerm}%` } },
-                { yarn_type: { [Op.iLike]: `%${searchTerm}%` } },
+                // { yarn_type: { [Op.iLike]: `%${searchTerm}%` } },
                 { vehicle_no: { [Op.iLike]: `%${searchTerm}%` } },
                 { '$weaver.name$': { [Op.iLike]: `%${searchTerm}%` } },
                 { '$knitter.name$': { [Op.iLike]: `%${searchTerm}%` } },
                 { '$season.name$': { [Op.iLike]: `%${searchTerm}%` } },
                 { '$program.program_name$': { [Op.iLike]: `%${searchTerm}%` } },
-                { '$yarncount.yarnCount_name$': { [Op.iLike]: `%${searchTerm}%` } },// Search season spinner name
+                // { '$yarncount.yarnCount_name$': { [Op.iLike]: `%${searchTerm}%` } },
             ];
         }
         if (spinnerId) {
@@ -1003,12 +1013,11 @@ const fetchSpinSalesPagination = async (req: Request, res: Response) => {
                 .map((id: any) => parseInt(id, 10));
             whereCondition.buyer_id = { [Op.in]: idArray };
         }
+        
         if (yarnType) {
-            const idArray: any[] = yarnType
-                .split(",")
-                .map((id: any) => id);
-            whereCondition.yarn_type = { [Op.in]: idArray };
+            whereCondition.yarn_type = { [Op.contains]: yarnTypeArray }; 
         }
+
 
         let include = [
             {
@@ -1026,11 +1035,11 @@ const fetchSpinSalesPagination = async (req: Request, res: Response) => {
                 as: "program",
                 attributes: ['id', 'program_name']
             },
-            {
-                model: YarnCount,
-                as: 'yarncount',
-                attributes: ['id', 'yarnCount_name']
-            },
+            // {
+            //     model: YarnCount,
+            //     as: 'yarncount',
+            //     attributes: ['id', 'yarnCount_name']
+            // },
             {
                 model: Weaver,
                 as: "weaver",
@@ -1042,6 +1051,7 @@ const fetchSpinSalesPagination = async (req: Request, res: Response) => {
                 attributes: ['id', 'name']
             }
         ];
+
         //fetch data with pagination
         if (req.query.pagination === "true") {
             const { count, rows } = await SpinSales.findAndCountAll({
@@ -1055,7 +1065,24 @@ const fetchSpinSalesPagination = async (req: Request, res: Response) => {
                 offset: offset,
                 limit: limit,
             });
-            return res.sendPaginationSuccess(res, rows, count);
+
+            let data = [];
+
+            for await (let row of rows) {
+              const yarncount = await YarnCount.findAll({
+                where: {
+                  id: {
+                    [Op.in]: row.dataValues.yarn_count,
+                  },
+                },
+                attributes: ["id", "yarnCount_name"],
+              });
+              data.push({
+                ...row.dataValues,
+                yarncount,
+              });
+            }
+            return res.sendPaginationSuccess(res, data, count);
         } else {
             const gin = await SpinSales.findAll({
                 where: whereCondition,
@@ -1066,7 +1093,23 @@ const fetchSpinSalesPagination = async (req: Request, res: Response) => {
                     ]
                 ]
             });
-            return res.sendSuccess(res, gin);
+            let data = [];
+
+            for await (let row of gin) {
+              const yarncount = await YarnCount.findAll({
+                where: {
+                  id: {
+                    [Op.in]: row.dataValues.yarn_count,
+                  },
+                },
+                attributes: ["id", "yarnCount_name"],
+              });
+              data.push({
+                ...row.dataValues,
+                yarncount,
+              });
+            }
+            return res.sendSuccess(res, data);
         }
     } catch (error: any) {
         return res.sendError(res, error.message);
@@ -1082,17 +1125,26 @@ const exportSpinnerSale = async (req: Request, res: Response) => {
     const { spinnerId, seasonId, programId, knitterId, weaverId, yarnType, type }: any = req.query;
     const offset = (page - 1) * limit;
     const whereCondition: any = {};
+    const yarnTypeArray = yarnType.split(',').map((item:any) => item.trim()); 
     try {
         if (searchTerm) {
             whereCondition[Op.or] = [
                 { order_ref: { [Op.iLike]: `%${searchTerm}%` } },
                 { invoice_no: { [Op.iLike]: `%${searchTerm}%` } },
                 { reel_lot_no: { [Op.iLike]: `%${searchTerm}%` } },
-                { yarn_type: { [Op.iLike]: `%${searchTerm}%` } },
+                // { yarn_type: { [Op.iLike]: `%${searchTerm}%` } },
                 { '$weaver.name$': { [Op.iLike]: `%${searchTerm}%` } },
                 { '$knitter.name$': { [Op.iLike]: `%${searchTerm}%` } },
                 { '$season.name$': { [Op.iLike]: `%${searchTerm}%` } },
                 { '$program.program_name$': { [Op.iLike]: `%${searchTerm}%` } },
+                {
+                    yarn_type: {
+                        [Op.contains]: yarnTypeArray, // Check if yarn_type array contains any search term
+                        [Op.or]: yarnTypeArray.map((term:any) => ({
+                            [Op.iLike]: `%${term}%` // Apply iLike condition individually for each search term
+                        }))
+                    }
+                }
             ];
         }
         if (spinnerId) {
@@ -1134,11 +1186,9 @@ const exportSpinnerSale = async (req: Request, res: Response) => {
             whereCondition.buyer_id = { [Op.in]: idArray };
         }
         if (yarnType) {
-            const idArray: any[] = yarnType
-                .split(",")
-                .map((id: any) => id);
-            whereCondition.yarn_type = { [Op.in]: idArray };
+            whereCondition.yarn_type = { [Op.contains]: yarnTypeArray }; 
         }
+        
         // Create the excel workbook file
         const workbook = new ExcelJS.Workbook();
         const worksheet = workbook.addWorksheet("Sheet1");
@@ -1176,10 +1226,10 @@ const exportSpinnerSale = async (req: Request, res: Response) => {
                 model: Knitter,
                 as: "knitter",
             },
-            {
-                model: YarnCount,
-                as: "yarncount"
-            }
+            // {
+            //     model: YarnCount,
+            //     as: "yarncount"
+            // }
         ];
         const gin = await SpinSales.findAll({
             where: whereCondition,
@@ -1192,6 +1242,20 @@ const exportSpinnerSale = async (req: Request, res: Response) => {
         });
         // Append data to worksheet
         for await (const [index, item] of gin.entries()) {
+            let yarnCount : string = "";
+            let yarnTypeData: string = "";
+      
+            if (item.yarn_count && item.yarn_count.length > 0) {
+              let type = await YarnCount.findAll({
+                where: { id: { [Op.in]: item.yarn_count } },
+              });
+              for (let i of type) {
+                yarnCount += `${i.yarnCount_name},`;
+              }
+            }
+      
+            yarnTypeData =
+              item?.yarn_type?.length > 0 ? item?.yarn_type.join(",") : "";
 
             const rowValues = Object.values({
                 index: index + 1,
@@ -1200,8 +1264,8 @@ const exportSpinnerSale = async (req: Request, res: Response) => {
                 invoice: item.invoice_no ? item.invoice_no : '',
                 lotNo: item.batch_lot_no ? item.batch_lot_no : '',
                 reelLot: item.reel_lot_no ? item.reel_lot_no : '',
-                yarnType: item.yarn_type ? item.yarn_type : '',
-                count: item.yarncount ? item.yarncount.yarnCount_name : '',
+                yarnType: yarnTypeData ? yarnTypeData : '',
+                count: yarnCount ? yarnCount : '',
                 boxes: item.no_of_boxes ? item.no_of_boxes : '',
                 buyer_id: item.kniter ? item.kniter.name : item.weaver ? item.weaver.name : item.processor_name,
                 boxId: item.box_ids ? item.box_ids : '',

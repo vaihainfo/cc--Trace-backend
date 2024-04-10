@@ -88,7 +88,7 @@ import organicProgramDataDigitizationRouter from './router/services/organic-prog
 import { sendScheduledEmails } from "./controllers/email-management/scheduled-email.controller";
 import ExportData from "./models/export-data-check.model";
 import { exportGinnerPendingSchedule, exportGinnerProcessSchedule, exportGinnerSalesSchedule, exportGinnerSeedCottonSchedule, exportGinnerySummarySchedule, exportSpinnerBaleReceiptSchedule, exportSpinnerLintCottonStockSchedule, exportSpinnerPendingBaleSchedule, exportSpinnerSummarySchedule, exportSpinnerYarnProcessSchedule, exportSpinnerYarnSalesSchedule } from "./controllers/reports";
-import { generateSpinnerLintCottonStock } from "./controllers/reports/export-cron";
+import { generateNonOrganicFarmerReport, generateOrganicFarmerReport, generateSpinnerLintCottonStock, exportReportsOnebyOne } from "./controllers/reports/export-cron";
 
 const app = express();
 
@@ -107,104 +107,105 @@ app.use(setInterface);
 //check connection to database
 const connectToDb = async () => {
   const data = await sequelize.sync({ force: false })
-  console.log("data", data);
-
   try {
     await sequelize.authenticate();
-
-
     console.log("Database Connected successfully.");
-
     try {
       // Insert seed data into the User table
 
-      const data = await ExportData.findAll();
-      if (data?.length) {
-        console.log("Seed data already fetched ");
-        const usersSeedData = {
-          ginner_lint_bale_process_load: false,
-          ginner_summary_load: false,
-          ginner_lint_bale_sale_load: false,
-          ginner_pending_sales_load: false,
-          ginner_seed_cotton_load: false,
-          spinner_summary_load: false,
-          spinner_bale_receipt_load: false,
-          spinner_yarn_process_load: false,
-          spinner_yarn_sales_load: false,
-          spinner_yarn_bales_load: false,
-          spinner_lint_cotton_stock_load: false,
-          knitter_yarn_receipt_load: false,
-          knitter_yarn_process_load: false,
-          knitter_fabric_sales_load: false,
-          weaver_yarn_receipt_load: false,
-          weaver_yarn_process_load: false,
-          weaver_yarn_sales_load: false,
-          garment_fabric_receipt_load: false,
-          garment_fabric_process_load: false,
-          garment_fabric_sales_load: false,
-          qr_code_tracker_load: false,
-          consolidated_tracebality_load: false,
-          spinner_backward_tracebality_load: false,
-          village_seed_cotton_load: false,
-          premium_validation_load: false,
-          procurement_load: false,
-          failes_procurement_load: false,
-          procurement_tracker_load: false,
-          procurement_sell_live_tracker_load: false,
-          qr_app_procurement_load: false,
-          organic_farmer_load: false,
-          non_organic_farmer_load: false,
-          failed_farmer_load: false,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        };
+      // const data = await ExportData.findAll();
+      // if (data?.length) {
+      //   console.log("Seed data already fetched ");
+      //   const usersSeedData = {
+      //     ginner_lint_bale_process_load: false,
+      //     ginner_summary_load: false,
+      //     ginner_lint_bale_sale_load: false,
+      //     ginner_pending_sales_load: false,
+      //     ginner_seed_cotton_load: false,
+      //     spinner_summary_load: false,
+      //     spinner_bale_receipt_load: false,
+      //     spinner_yarn_process_load: false,
+      //     spinner_yarn_sales_load: false,
+      //     spinner_yarn_bales_load: false,
+      //     spinner_lint_cotton_stock_load: false,
+      //     knitter_yarn_receipt_load: false,
+      //     knitter_yarn_process_load: false,
+      //     knitter_fabric_sales_load: false,
+      //     weaver_yarn_receipt_load: false,
+      //     weaver_yarn_process_load: false,
+      //     weaver_yarn_sales_load: false,
+      //     garment_fabric_receipt_load: false,
+      //     garment_fabric_process_load: false,
+      //     garment_fabric_sales_load: false,
+      //     qr_code_tracker_load: false,
+      //     consolidated_tracebality_load: false,
+      //     spinner_backward_tracebality_load: false,
+      //     village_seed_cotton_load: false,
+      //     premium_validation_load: false,
+      //     procurement_load: false,
+      //     failes_procurement_load: false,
+      //     procurement_tracker_load: false,
+      //     procurement_sell_live_tracker_load: false,
+      //     qr_app_procurement_load: false,
+      //     organic_farmer_load: false,
+      //     non_organic_farmer_load: false,
+      //     failed_farmer_load: false,
+      //     createdAt: new Date(),
+      //     updatedAt: new Date(),
+      //   };
 
-        //   await ExportData.update(usersSeedData,where:{id:1});
-        const updateResult = await ExportData.update(usersSeedData, { where: { id: 1 } });
+      //   //   await ExportData.update(usersSeedData,where:{id:1});
+      //   const updateResult = await ExportData.update(usersSeedData, { where: { id: 1 } });
 
-      } else {
-        const usersSeedData = {
-          ginner_lint_bale_process_load: false,
-          ginner_summary_load: false,
-          ginner_lint_bale_sale_load: false,
-          ginner_pending_sales_load: false,
-          ginner_seed_cotton_load: false,
-          spinner_summary_load: false,
-          spinner_bale_receipt_load: false,
-          spinner_yarn_process_load: false,
-          spinner_yarn_sales_load: false,
-          spinner_yarn_bales_load: false,
-          spinner_lint_cotton_stock_load: false,
-          knitter_yarn_receipt_load: false,
-          knitter_yarn_process_load: false,
-          knitter_fabric_sales_load: false,
-          weaver_yarn_receipt_load: false,
-          weaver_yarn_process_load: false,
-          weaver_yarn_sales_load: false,
-          garment_fabric_receipt_load: false,
-          garment_fabric_process_load: false,
-          garment_fabric_sales_load: false,
-          qr_code_tracker_load: false,
-          consolidated_tracebality_load: false,
-          spinner_backward_tracebality_load: false,
-          village_seed_cotton_load: false,
-          premium_validation_load: false,
-          procurement_load: false,
-          failes_procurement_load: false,
-          procurement_tracker_load: false,
-          procurement_sell_live_tracker_load: false,
-          qr_app_procurement_load: false,
-          organic_farmer_load: false,
-          non_organic_farmer_load: false,
-          failed_farmer_load: false,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        };
+      // } else {
+      //   const usersSeedData = {
+      //     ginner_lint_bale_process_load: false,
+      //     ginner_summary_load: false,
+      //     ginner_lint_bale_sale_load: false,
+      //     ginner_pending_sales_load: false,
+      //     ginner_seed_cotton_load: false,
+      //     spinner_summary_load: false,
+      //     spinner_bale_receipt_load: false,
+      //     spinner_yarn_process_load: false,
+      //     spinner_yarn_sales_load: false,
+      //     spinner_yarn_bales_load: false,
+      //     spinner_lint_cotton_stock_load: false,
+      //     knitter_yarn_receipt_load: false,
+      //     knitter_yarn_process_load: false,
+      //     knitter_fabric_sales_load: false,
+      //     weaver_yarn_receipt_load: false,
+      //     weaver_yarn_process_load: false,
+      //     weaver_yarn_sales_load: false,
+      //     garment_fabric_receipt_load: false,
+      //     garment_fabric_process_load: false,
+      //     garment_fabric_sales_load: false,
+      //     qr_code_tracker_load: false,
+      //     consolidated_tracebality_load: false,
+      //     spinner_backward_tracebality_load: false,
+      //     village_seed_cotton_load: false,
+      //     premium_validation_load: false,
+      //     procurement_load: false,
+      //     failes_procurement_load: false,
+      //     procurement_tracker_load: false,
+      //     procurement_sell_live_tracker_load: false,
+      //     qr_app_procurement_load: false,
+      //     organic_farmer_load: false,
+      //     non_organic_farmer_load: false,
+      //     failed_farmer_load: false,
+      //     createdAt: new Date(),
+      //     updatedAt: new Date(),
+      //   };
 
-        await ExportData.create(usersSeedData);
-        console.log("Seed data create  successfully ");
-      }
+      //   await ExportData.create(usersSeedData);
+      //   console.log("Seed data create  successfully ");
+      // }
       // generateSpinnerLintCottonStock();
+
+      exportReportsOnebyOne();
+
+      const used = process.memoryUsage();
+      console.log(`Memory usage: ${JSON.stringify(used)}`);
+
     } catch (error) {
       console.error("Error seeding data:", error);
     }
@@ -220,29 +221,12 @@ cron.schedule('0 23 * * *', async () => {
   sendScheduledEmails();
 });
 
-cron.schedule('0 */3 * * *', async () => {
-  console.log('running a task for export after 3 Hours');
+cron.schedule('0 */6 * * *', async () => {
+  // cron.schedule('* * * * *', async () => {
+  console.log('running a task for export after 6 Hours');
+  exportReportsOnebyOne();
   // sendScheduledEmails();
-  generateSpinnerLintCottonStock()
 });
-
-// cron.schedule("1 * * * * *", async () => {
-    cron.schedule("*/3 * * * *", async () => {
-  exportGinnerProcessSchedule();
-exportGinnerySummarySchedule()
-exportGinnerSalesSchedule()
-exportGinnerPendingSchedule()
-exportGinnerSeedCottonSchedule()
-
-// // //spinner
-exportSpinnerSummarySchedule()
-exportSpinnerBaleReceiptSchedule()
-exportSpinnerYarnProcessSchedule()
-exportSpinnerYarnSalesSchedule()
-exportSpinnerPendingBaleSchedule()
-exportSpinnerLintCottonStockSchedule()
-});
-
 
 // app.use("/", (req: Request, res: Response) =>{
 //     console.log("object");

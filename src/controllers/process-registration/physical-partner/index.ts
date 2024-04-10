@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { Op } from "sequelize";
+import { Op, Sequelize } from "sequelize";
 import PhysicalPartner from "../../../models/physical-partner.model";
 import Country from "../../../models/country.model";
 import District from "../../../models/district.model";
@@ -153,6 +153,36 @@ const fetchPhysicalPartner = async (req: Request, res: Response) => {
 
 const deletePhysicalPartner = async (req: Request, res: Response) => {
     try {
+        const partner = await PhysicalPartner.findOne({
+            where: {
+                id: req.body.id
+            },
+        });
+
+        const user = await User.findOne({
+            where: {
+                id: partner.physicalPartnerUser_id
+            },
+        });
+
+        const userRole = await UserRole.findOne({
+            where: Sequelize.where(
+                Sequelize.fn('LOWER', Sequelize.col('user_role')),
+                'physical_partner'
+            )
+        });
+
+
+        const updatedProcessRole = user.process_role.filter((roleId: any) => roleId !== userRole.id);
+
+        if (updatedProcessRole.length > 0) {
+            const updatedUser = await await user.update({
+                process_role: updatedProcessRole,
+                role: updatedProcessRole[0]
+            });
+        } else {
+            await user.destroy();
+        }
         const physicalPartner = await PhysicalPartner.destroy({
             where: {
                 id: req.body.id

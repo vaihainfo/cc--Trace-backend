@@ -279,6 +279,36 @@ const updateSpinner = async (req: Request, res: Response) => {
 
 const deleteSpinner = async (req: Request, res: Response) => {
     try {
+        const sinn = await Spinner.findOne({
+            where: {
+                id: req.body.id
+            },
+        });
+
+        const user = await User.findOne({
+            where: {
+                id: sinn.spinnerUser_id
+            },
+        });
+
+        const userRole = await UserRole.findOne({
+            where: Sequelize.where(
+                Sequelize.fn('LOWER', Sequelize.col('user_role')),
+                'spinner'
+            )
+        });
+
+
+        const updatedProcessRole = user.process_role.filter((roleId: any) => roleId !== userRole.id);
+
+        if (updatedProcessRole.length > 0) {
+            const updatedUser = await await user.update({
+                process_role: updatedProcessRole,
+                role: updatedProcessRole[0]
+            });
+        } else {
+            await user.destroy();
+        }
         const spinner = await Spinner.destroy({
             where: {
                 id: req.body.id
