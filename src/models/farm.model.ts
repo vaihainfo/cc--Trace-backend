@@ -50,6 +50,36 @@ const Farm = db.define('farms', {
     cotton_transacted: {
         type: DataTypes.DECIMAL,
         defaultValue: 0
+    },
+    cluster: {
+        type: DataTypes.STRING,
+        allowNull: true,
+        defaultValue: null
+    },
+    seed_packet_quantity: {
+        type: DataTypes.STRING,
+        allowNull: true,
+        defaultValue: null
+    },
+    variety: {
+        type: DataTypes.STRING,
+        allowNull: true,
+        defaultValue: null
+    },
+    lot_no: {
+        type: DataTypes.STRING,
+        allowNull: true,
+        defaultValue: null
+    },
+    distribution_date: {
+        type: DataTypes.DATE,
+        allowNull: true,
+        defaultValue: null
+    },
+    source_of_seed: {
+        type: DataTypes.STRING,
+        allowNull: true,
+        defaultValue: null
     }
 });
 
