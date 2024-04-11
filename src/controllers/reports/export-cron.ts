@@ -73,10 +73,20 @@ import ExportGinnerPending from "../../models/ginner-pending-sale.model";
 import ExportGinnerCottonStock from "../../models/ginner-seed-cotton-stock.model";
 
 
-const exportReportsOnebyOne = async () => {
+const exportReportsTameTaking = async () => {
   //call all export reports one by one on every cron
   await generateOrganicFarmerReport();
   await generateNonOrganicFarmerReport();
+  await generateProcurementReport(); // taking time
+  await generateAgentTransactions();
+  await generateGinnerProcess(); // taking time
+  await generateSpinnerLintCottonStock();
+
+  console.log('TameTaking Cron Job Completed to execute all reports.');
+}
+
+const exportReportsOnebyOne = async () => {
+  //call all export reports one by one on every cron
   await generateFaildReport("Farmer");
   await generateFaildReport("Procurement");
 
@@ -96,12 +106,6 @@ const exportReportsOnebyOne = async () => {
   await generateSpinnerYarnProcess();
   await generateSpinnerSale();
   await generatePendingSpinnerBale();
-  await generateSpinnerLintCottonStock();
-
-  // Time Taking Reports will execute in last
-  await generateProcurementReport(); // taking time
-  await generateAgentTransactions();
-  await generateGinnerProcess(); // taking time
 
   console.log('Cron Job Completed to execute all reports.');
 }
@@ -245,17 +249,17 @@ const generateSpinnerLintCottonStock = async () => {
         status: "Sold",
       },
     });
-    for await (let  [index, item] of salesData.entries()) {
-      let cotton_procured= procuredCotton
-          ? procuredCotton?.dataValues?.cotton_procured
+    for await (let [index, item] of salesData.entries()) {
+      let cotton_procured = procuredCotton
+        ? procuredCotton?.dataValues?.cotton_procured
+        : 0;
+      let cotton_consumed = spinner ? spinner?.dataValues?.cotton_consumed : 0;
+      let cotton_stock =
+        Number(procuredCotton?.dataValues?.cotton_procured) >
+          Number(spinner?.dataValues?.cotton_consumed)
+          ? Number(procuredCotton?.dataValues?.cotton_procured) -
+          Number(spinner?.dataValues?.cotton_consumed)
           : 0;
-      let cotton_consumed= spinner ? spinner?.dataValues?.cotton_consumed : 0;
-      let cotton_stock=
-          Number(procuredCotton?.dataValues?.cotton_procured) >
-            Number(spinner?.dataValues?.cotton_consumed)
-            ? Number(procuredCotton?.dataValues?.cotton_procured) -
-            Number(spinner?.dataValues?.cotton_consumed)
-            : 0;
 
       const rowValues = Object.values({
         index: index + 1,
@@ -790,6 +794,7 @@ const generateProcurementReport = async () => {
     console.error("Error generating procurement report:", error);
   }
 };
+
 
 const generatePscpCottonProcurement = async () => {
   const batchSize = 5000; // Number of records to fetch per batch
@@ -2612,16 +2617,16 @@ const generateSpinnerSummary = async () => {
     }
 
     // Save the workbook
-  await workbook.commit()
-        .then(() => {
-          // Rename the temporary file to the final filename
-          fs.renameSync("./upload/spinner-summary-test.xlsx", './upload/spinner-summary.xlsx');
-          console.log('====== Spinner Summary Report Generated. =======');
-        })
-        .catch(error => {
-          console.log('Failed to generate Spinner Summary Report.');
-          throw error;
-        });
+    await workbook.commit()
+      .then(() => {
+        // Rename the temporary file to the final filename
+        fs.renameSync("./upload/spinner-summary-test.xlsx", './upload/spinner-summary.xlsx');
+        console.log('====== Spinner Summary Report Generated. =======');
+      })
+      .catch(error => {
+        console.log('Failed to generate Spinner Summary Report.');
+        throw error;
+      });
 
   } catch (error: any) {
     console.log(error);
@@ -2812,17 +2817,17 @@ const generateSpinnerBale = async () => {
     }
 
     // Save the workbook
-     // Save the workbook
+    // Save the workbook
     await workbook.commit()
-    .then(() => {
-      // Rename the temporary file to the final filename
-      fs.renameSync("./upload/Spinner-bale-receipt-report-test.xlsx", './upload/Spinner-bale-receipt-report.xlsx');
-      console.log('====== Spinner Bale Receipt Report Generated. =======');
-    })
-    .catch(error => {
-      console.log('Failed to generate Spinner Bale Receipt Report.');
-      throw error;
-    });
+      .then(() => {
+        // Rename the temporary file to the final filename
+        fs.renameSync("./upload/Spinner-bale-receipt-report-test.xlsx", './upload/Spinner-bale-receipt-report.xlsx');
+        console.log('====== Spinner Bale Receipt Report Generated. =======');
+      })
+      .catch(error => {
+        console.log('Failed to generate Spinner Bale Receipt Report.');
+        throw error;
+      });
   } catch (error: any) {
     console.error("Error appending data:", error);
 
@@ -3007,15 +3012,15 @@ const generateSpinnerYarnProcess = async () => {
 
     // Save the workbook
     await workbook.commit()
-    .then(() => {
-      // Rename the temporary file to the final filename
-      fs.renameSync("./upload/spinner-yarn-process-test.xlsx", './upload/spinner-yarn-process.xlsx');
-      console.log('====== Spinner Yarn Process Report Generated. =======');
-    })
-    .catch(error => {
-      console.log('Failed to generate Spinner Yarn Process Report.');
-      throw error;
-    });
+      .then(() => {
+        // Rename the temporary file to the final filename
+        fs.renameSync("./upload/spinner-yarn-process-test.xlsx", './upload/spinner-yarn-process.xlsx');
+        console.log('====== Spinner Yarn Process Report Generated. =======');
+      })
+      .catch(error => {
+        console.log('Failed to generate Spinner Yarn Process Report.');
+        throw error;
+      });
   } catch (error: any) {
     console.error("Error appending data:", error);
   }
@@ -3241,15 +3246,15 @@ const generateSpinnerSale = async () => {
 
     // Save the workbook
     await workbook.commit()
-    .then(() => {
-      // Rename the temporary file to the final filename
-      fs.renameSync("./upload/spinner-yarn-sale-test.xlsx", './upload/spinner-yarn-sale.xlsx');
-      console.log('====== Spinner Yarn Sales Report Generated. =======');
-    })
-    .catch(error => {
-      console.log('Failed to generate Spinner Yarn Sales Report.');
-      throw error;
-    });
+      .then(() => {
+        // Rename the temporary file to the final filename
+        fs.renameSync("./upload/spinner-yarn-sale-test.xlsx", './upload/spinner-yarn-sale.xlsx');
+        console.log('====== Spinner Yarn Sales Report Generated. =======');
+      })
+      .catch(error => {
+        console.log('Failed to generate Spinner Yarn Sales Report.');
+        throw error;
+      });
   } catch (error: any) {
     console.log(error)
   }
@@ -3377,15 +3382,15 @@ const generatePendingSpinnerBale = async () => {
 
     // Save the workbook
     await workbook.commit()
-    .then(() => {
-      // Rename the temporary file to the final filename
-      fs.renameSync("./upload/Spinner-Pending-Bales-Receipt-Report-test.xlsx", './upload/Spinner-Pending-Bales-Receipt-Report.xlsx');
-      console.log('====== Spinner Pending Bales Receipt Report Generated. =======');
-    })
-    .catch(error => {
-      console.log('Failed to generate Spinner Pending Bales Receipt Report.');
-      throw error;
-    });
+      .then(() => {
+        // Rename the temporary file to the final filename
+        fs.renameSync("./upload/Spinner-Pending-Bales-Receipt-Report-test.xlsx", './upload/Spinner-Pending-Bales-Receipt-Report.xlsx');
+        console.log('====== Spinner Pending Bales Receipt Report Generated. =======');
+      })
+      .catch(error => {
+        console.log('Failed to generate Spinner Pending Bales Receipt Report.');
+        throw error;
+      });
   } catch (error: any) {
     console.log(error)
   }
@@ -3409,4 +3414,4 @@ function convert_kg_to_mt(number: any) {
   return (number / 1000).toFixed(2);
 }
 
-export { generateSpinnerLintCottonStock, generateOrganicFarmerReport, generateNonOrganicFarmerReport, exportReportsOnebyOne };
+export { exportReportsTameTaking, exportReportsOnebyOne };
