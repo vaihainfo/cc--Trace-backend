@@ -192,7 +192,6 @@ const generateSpinnerLintCottonStock = async () => {
       },
     ],
     group: ["spinprocess.spinner.id", "spinprocess.season.id"],
-    order: [["spinner_id", "desc"]],
   });
 
   let ndata = [];
@@ -363,7 +362,7 @@ const generateOrganicFarmerReport = async () => {
       for await (const [index, item] of farmer.entries()) {
         const rowValues = Object.values({
           index: (offset + index + 1),
-          farmerName: item.firstName + " " + item.lastName,
+          farmerName: item.firstName + " " + `${item.lastName ? item.lastName : ""}`,
           farmGroup: item.farmGroup.name,
           tranid: item.tracenet_id,
           village: item.village.village_name,
@@ -466,7 +465,7 @@ const generateNonOrganicFarmerReport = async () => {
       for await (const [index, item] of farmers.entries()) {
         const rowValues = [
           offset + index + 1,
-          `${item.firstName} ${item.lastName}`,
+          `${item.firstName} ${item.lastName ? item.lastName : ""}`,
           item.code,
           item.village?.village_name || '',
           item.block?.block_name || '',
@@ -632,7 +631,7 @@ const generateProcurementReport = async () => {
           index + offset + 1,
           transaction.dataValues.date ? transaction.dataValues.date.toString() : '',
           transaction.dataValues.farmer_code ? transaction.dataValues.farmer_code : '',
-          transaction.dataValues.farmer ? transaction.dataValues.farmer.firstName + ' ' + transaction.dataValues.farmer.lastName : transaction.dataValues.farmer_name,
+          transaction.dataValues.farmer ? transaction.dataValues.farmer.firstName + ' ' + `${transaction.dataValues.farmer.lastName ? transaction.dataValues.farmer.lastName : ""}` : transaction.dataValues.farmer_name,
           transaction.dataValues.season ? transaction.dataValues.season.name : '',
           transaction.dataValues.country ? transaction.dataValues.country.county_name : '',
           transaction.dataValues.state ? transaction.dataValues.state.state_name : '',
@@ -722,7 +721,6 @@ const generateProcurementReport = async () => {
             as: "agent"
           },
         ],
-        order: [['id', 'desc']],
         offset: offset,
         limit: batchSize
       });
@@ -1517,7 +1515,7 @@ const generateAgentTransactions = async () => {
           index: index + offset + 1,
           date: moment(item.date).format('DD/MM/YYYY'),
           farmerCode: item.farmer ? item.farmer?.code : "",
-          farmerName: item.farmer ? item.farmer?.firstName + ' ' + item.farmer?.lastName : "",
+          farmerName: item.farmer ? item.farmer?.firstName + ' ' + `${item.farmer?.lastName ? item.farmer?.lastName : ""}` : "",
           season: item.season ? item.season.name : "",
           country: item.country ? item.country.county_name : "",
           state: item.state ? item.state.state_name : "",

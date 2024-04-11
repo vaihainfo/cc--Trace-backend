@@ -679,6 +679,7 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
       const { count, rows } = await GinProcess.findAndCountAll({
         where: whereCondition,
         include: include,
+        order: [["id", "desc"]],
         offset: offset,
         limit: limit,
       });

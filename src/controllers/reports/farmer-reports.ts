@@ -139,6 +139,7 @@ const fetchFarmerReportPagination = async (req: Request, res: Response) => {
     //fetch data with pagination
     const { count, rows } = await Farmer.findAndCountAll({
       where: whereCondition,
+      order: [["id", "desc"]],
       include: include,
       offset: offset,
       limit: limit,
@@ -315,6 +316,7 @@ const exportNonOrganicFarmerReport = async (req: Request, res: Response) => {
     if (req.query.pagination === "true") {
       const { count, rows } = await Farmer.findAndCountAll({
         where: whereCondition,
+        order: [["id", "desc"]],
         include: include,
         offset: offset,
         limit: limit,
@@ -339,7 +341,7 @@ const exportNonOrganicFarmerReport = async (req: Request, res: Response) => {
     for await (const [index, item] of farmer.entries()) {
       const rowValues = Object.values({
         index: index + 1,
-        farmerName: item.firstName + " " + item.lastName,
+        farmerName: item.firstName + " " + `${item.lastName ? item.lastName : ""}`,
         Code: item.code,
         village: item.village.village_name,
         block: item.block.block_name,
@@ -555,6 +557,7 @@ const exportOrganicFarmerReport = async (req: Request, res: Response) => {
       if (req.query.pagination === "true") {
         const { count, rows } = await Farmer.findAndCountAll({
           where: whereCondition,
+          order: [["id", "desc"]],
           include: include,
           offset: offset,
           limit: limit,
@@ -581,7 +584,7 @@ const exportOrganicFarmerReport = async (req: Request, res: Response) => {
       for await (const [index, item] of farmer.entries()) {
         const rowValues = Object.values({
           index: index + 1,
-          farmerName: item.firstName + " " + item.lastName,
+          farmerName: item.firstName + " " + `${item.lastName ? item.lastName : ""}`,
           farmGroup: item.farmGroup.name,
           tranid: item.tracenet_id,
           village: item.village.village_name,
