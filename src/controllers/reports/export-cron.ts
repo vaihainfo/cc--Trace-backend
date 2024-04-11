@@ -613,184 +613,6 @@ const generateFaildReport = async (type: string) => {
 //----------------------------------------- Procurement Reports ------------------------//
 
 
-// const generateProcurementReport = async () => {
-//   try {
-//     const batchSize = 5000; // Number of transactions to fetch per batch
-//     const maxRowsPerWorksheet = 500000; // Maximum number of rows per worksheet in Excel
-
-//     const workbook = new ExcelJS.stream.xlsx.WorkbookWriter({
-//       stream: fs.createWriteStream("./upload/procurement-report-test.xlsx")
-//     });
-
-//     let worksheetIndex = 0;
-//     let offset = 0;
-//     // Function to write a batch of transactions to the worksheet
-//     const writeBatchToWorksheet = (transactions: any, worksheet: any) => {
-//       for (const [index, transaction] of transactions.entries()) {
-//         worksheet.addRow([
-//           index + offset + 1,
-//           transaction.dataValues.date ? transaction.dataValues.date.toString() : '',
-//           transaction.dataValues.farmer_code ? transaction.dataValues.farmer_code : '',
-//           transaction.dataValues.farmer ? transaction.dataValues.farmer.firstName + ' ' + `${transaction.dataValues.farmer.lastName ? transaction.dataValues.farmer.lastName : ""}` : transaction.dataValues.farmer_name,
-//           transaction.dataValues.season ? transaction.dataValues.season.name : '',
-//           transaction.dataValues.country ? transaction.dataValues.country.county_name : '',
-//           transaction.dataValues.state ? transaction.dataValues.state.state_name : '',
-//           transaction.dataValues.district ? transaction.dataValues.district.district_name : '',
-//           transaction.dataValues.block ? transaction.dataValues.block.block_name : '',
-//           transaction.dataValues.village ? transaction.dataValues.village.village_name : '',
-//           transaction.dataValues.id ? transaction.dataValues.id : '',
-//           transaction.dataValues.qty_purchased ? transaction.dataValues.qty_purchased : '',
-//           transaction.dataValues.farm ? (Number(transaction.dataValues.farm.total_estimated_cotton) > Number(transaction.dataValues.farm.cotton_transacted) ? Number(transaction.dataValues.farm.total_estimated_cotton) - Number(transaction.dataValues.farm.cotton_transacted) : 0) : 0,
-//           transaction.dataValues.rate ? transaction.dataValues.rate : '',
-//           transaction.dataValues.program ? transaction.dataValues.program.program_name : '',
-//           transaction.dataValues.vehicle ? transaction.dataValues.vehicle : '',
-//           transaction.dataValues.payment_method ? transaction.dataValues.payment_method : '',
-//           transaction.dataValues.ginner ? transaction.dataValues.ginner.name : '',
-//           transaction.dataValues.agent ? transaction.dataValues.agent.firstName : "",
-//         ]).commit();
-//       }
-//       offset += batchSize
-//     };
-
-//     while (true) {
-//       // Fetch a batch of transactions
-//       const transactions = await Transaction.findAll({
-//         attributes: ['date', 'farmer_code', 'qty_purchased', 'rate', 'id', 'vehicle', 'payment_method'],
-//         where: { status: 'Sold' },
-//         include: [
-//           {
-//             model: Village,
-//             as: "village",
-//             attributes: ['id', 'village_name']
-//           },
-//           {
-//             model: Block,
-//             as: "block",
-//             attributes: ['id', 'block_name']
-//           },
-//           {
-//             model: District,
-//             as: "district",
-//             attributes: ['id', 'district_name']
-//           },
-//           {
-//             model: State,
-//             as: "state",
-//             attributes: ['id', 'state_name']
-//           },
-//           {
-//             model: Country,
-//             as: "country",
-//             attributes: ['id', 'county_name']
-//           },
-//           {
-//             model: Farmer,
-//             as: "farmer",
-//           },
-//           {
-//             model: Program,
-//             as: "program",
-//             attributes: ['id', 'program_name']
-//           },
-//           {
-//             model: Brand,
-//             as: "brand",
-//             attributes: ['id', 'brand_name']
-//           },
-//           {
-//             model: Ginner,
-//             as: "ginner",
-//             attributes: ['id', 'name', 'address']
-//           },
-//           {
-//             model: CropGrade,
-//             as: "grade",
-//             attributes: ['id', 'cropGrade']
-//           },
-//           {
-//             model: Season,
-//             as: "season",
-//             attributes: ['id', 'name']
-//           },
-//           {
-//             model: Farm,
-//             as: "farm"
-//           },
-//           {
-//             model: UserApp,
-//             as: "agent"
-//           },
-//         ],
-//         offset: offset,
-//         limit: batchSize
-//       });
-
-//       if (transactions.length === 0) {
-//         // No more transactions to fetch, exit the loop
-//         break;
-//       }
-
-//       if (offset % maxRowsPerWorksheet === 0) {
-//         worksheetIndex++;
-//       }
-
-//       // Get the current worksheet or create a new one if necessary
-//       let currentWorksheet = workbook.getWorksheet(`Procurement Report ${worksheetIndex}`);
-//       if (!currentWorksheet) {
-//         currentWorksheet = workbook.addWorksheet(`Procurement Report ${worksheetIndex}`);
-
-//         if (worksheetIndex == 1) {
-//           currentWorksheet.mergeCells('A1:O1');
-//           const mergedCell = currentWorksheet.getCell('A1');
-//           mergedCell.value = 'Cotton Connect | Procurement Report';
-//           mergedCell.font = { bold: true };
-//           mergedCell.alignment = { horizontal: 'center', vertical: 'middle' };
-//         }
-//         // Set bold font for header row
-
-//         currentWorksheet.addRow([
-//           "Sr No.",
-//           "Date",
-//           "Farmer Name",
-//           "Farmer Code",
-//           "Season",
-//           "Country",
-//           "State",
-//           "District",
-//           "Block",
-//           "Village",
-//           "Transaction Id",
-//           "Quantity Purchased (Kgs)",
-//           "Available Cotton(Kgs)",
-//           "Price/Kg (Local Currency)",
-//           "Program",
-//           "Transport Vehicle No",
-//           "Payment Method",
-//           "Ginner Name",
-//           "Agent",
-//         ]);
-//       }
-
-//       // Write transactions to the current worksheet
-//       writeBatchToWorksheet(transactions, currentWorksheet);
-//     }
-
-//     await workbook.commit()
-//       .then(() => {
-//         // Rename the temporary file to the final filename
-//         fs.renameSync("./upload/procurement-report-test.xlsx", './upload/procurement-report.xlsx');
-//         console.log('Procurement report generation completed.');
-//       })
-//       .catch(error => {
-//         console.log('Failed generation?.');
-//         throw error;
-//       });
-
-//   } catch (error) {
-//     console.error("Error generating procurement report:", error);
-//   }
-// };
-
 const generateProcurementReport = async () => {
   try {
     const batchSize = 5000; // Number of transactions to fetch per batch
@@ -800,19 +622,16 @@ const generateProcurementReport = async () => {
       stream: fs.createWriteStream("./upload/procurement-report-test.xlsx")
     });
 
-    let worksheetIndex = 1;
-    let transactionCount = 0;
-    let Count = 0;
-    let index = 0;
-
+    let worksheetIndex = 0;
+    let offset = 0;
     // Function to write a batch of transactions to the worksheet
-    const writeBatchToWorksheet = async (transactions: any, worksheet: any) => {
-      return Promise.all(transactions.map(async (transaction: any) => {
-        await worksheet.addRow([
-          index + 1,
+    const writeBatchToWorksheet = (transactions: any, worksheet: any) => {
+      for (const [index, transaction] of transactions.entries()) {
+        worksheet.addRow([
+          index + offset + 1,
           transaction.dataValues.date ? transaction.dataValues.date.toString() : '',
           transaction.dataValues.farmer_code ? transaction.dataValues.farmer_code : '',
-          transaction.dataValues.farmer ? transaction.dataValues.farmer.firstName + ' ' + transaction.dataValues.farmer.lastName : transaction.dataValues.farmer_name,
+          transaction.dataValues.farmer ? transaction.dataValues.farmer.firstName + ' ' + `${transaction.dataValues.farmer.lastName ? transaction.dataValues.farmer.lastName : ""}` : transaction.dataValues.farmer_name,
           transaction.dataValues.season ? transaction.dataValues.season.name : '',
           transaction.dataValues.country ? transaction.dataValues.country.county_name : '',
           transaction.dataValues.state ? transaction.dataValues.state.state_name : '',
@@ -828,14 +647,13 @@ const generateProcurementReport = async () => {
           transaction.dataValues.payment_method ? transaction.dataValues.payment_method : '',
           transaction.dataValues.ginner ? transaction.dataValues.ginner.name : '',
           transaction.dataValues.agent ? transaction.dataValues.agent.firstName : "",
-        ]);
-        transactionCount++;
-        Count++;
-        index++;
-      }));
+        ]).commit();
+      }
+      offset += batchSize
     };
 
-    const processBatch = async (offset: any) => {
+    while (true) {
+      // Fetch a batch of transactions
       const transactions = await Transaction.findAll({
         attributes: ['date', 'farmer_code', 'qty_purchased', 'rate', 'id', 'vehicle', 'payment_method'],
         where: { status: 'Sold' },
@@ -903,26 +721,33 @@ const generateProcurementReport = async () => {
             as: "agent"
           },
         ],
-        order: [['id', 'desc']],
         offset: offset,
         limit: batchSize
       });
 
       if (transactions.length === 0) {
-        return; // No more transactions to process
+        // No more transactions to fetch, exit the loop
+        break;
       }
 
-      // Create a new worksheet if the current one is full
-      if (Count == maxRowsPerWorksheet) {
+      if (offset % maxRowsPerWorksheet === 0) {
         worksheetIndex++;
-        Count = 0;
       }
 
       // Get the current worksheet or create a new one if necessary
       let currentWorksheet = workbook.getWorksheet(`Procurement Report ${worksheetIndex}`);
       if (!currentWorksheet) {
         currentWorksheet = workbook.addWorksheet(`Procurement Report ${worksheetIndex}`);
-        // Add headers to the new worksheet
+
+        if (worksheetIndex == 1) {
+          currentWorksheet.mergeCells('A1:O1');
+          const mergedCell = currentWorksheet.getCell('A1');
+          mergedCell.value = 'Cotton Connect | Procurement Report';
+          mergedCell.font = { bold: true };
+          mergedCell.alignment = { horizontal: 'center', vertical: 'middle' };
+        }
+        // Set bold font for header row
+
         currentWorksheet.addRow([
           "Sr No.",
           "Date",
@@ -947,17 +772,8 @@ const generateProcurementReport = async () => {
       }
 
       // Write transactions to the current worksheet
-      await writeBatchToWorksheet(transactions, currentWorksheet);
-
-      // Process the next batch
-      await processBatch(offset + batchSize);
-    };
-
-    // Start processing batches
-    await processBatch(0);
-
-    console.log('Total transactions processed:', transactionCount);
-    console.log('Writing data to Excel file...');
+      writeBatchToWorksheet(transactions, currentWorksheet);
+    }
 
     await workbook.commit()
       .then(() => {
