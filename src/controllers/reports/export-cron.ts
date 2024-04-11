@@ -75,33 +75,33 @@ import ExportGinnerCottonStock from "../../models/ginner-seed-cotton-stock.model
 
 const exportReportsOnebyOne = async () => {
   //call all export reports one by one on every cron
-  await generateOrganicFarmerReport();
-  await generateNonOrganicFarmerReport();
-  await generateFaildReport("Farmer");
-  await generateFaildReport("Procurement");
+  // await generateOrganicFarmerReport();
+  // await generateNonOrganicFarmerReport();
+  // await generateFaildReport("Farmer");
+  // await generateFaildReport("Procurement");
 
   // Procurement Reports 
-  await generatePscpCottonProcurement();
-  await generatePscpProcurementLiveTracker();
+  // await generatePscpCottonProcurement();
+  // await generatePscpProcurementLiveTracker();
 
   // Ginner Reports 
-  await generateGinnerSummary();
-  await generateGinnerSales();
-  await generatePendingGinnerSales();
-  await generateGinnerCottonStock();
+  // await generateGinnerSummary();
+  // await generateGinnerSales();
+  // await generatePendingGinnerSales();
+  // await generateGinnerCottonStock();
 
   //spinner Reports
-  await generateSpinnerSummary();
-  await generateSpinnerBale();
-  await generateSpinnerYarnProcess();
-  await generateSpinnerSale();
-  await generatePendingSpinnerBale();
-  await generateSpinnerLintCottonStock();
+  // await generateSpinnerSummary();
+  // await generateSpinnerBale();
+  // await generateSpinnerYarnProcess();
+  // await generateSpinnerSale();
+  // await generatePendingSpinnerBale();
+  // await generateSpinnerLintCottonStock();
 
   // Time Taking Reports will execute in last
   await generateProcurementReport(); // taking time
-  await generateAgentTransactions();
-  await generateGinnerProcess(); // taking time
+  // await generateAgentTransactions();
+  // await generateGinnerProcess(); // taking time
 
   console.log('Cron Job Completed to execute all reports.');
 }
@@ -245,17 +245,17 @@ const generateSpinnerLintCottonStock = async () => {
         status: "Sold",
       },
     });
-    for await (let  [index, item] of salesData.entries()) {
-      let cotton_procured= procuredCotton
-          ? procuredCotton?.dataValues?.cotton_procured
+    for await (let [index, item] of salesData.entries()) {
+      let cotton_procured = procuredCotton
+        ? procuredCotton?.dataValues?.cotton_procured
+        : 0;
+      let cotton_consumed = spinner ? spinner?.dataValues?.cotton_consumed : 0;
+      let cotton_stock =
+        Number(procuredCotton?.dataValues?.cotton_procured) >
+          Number(spinner?.dataValues?.cotton_consumed)
+          ? Number(procuredCotton?.dataValues?.cotton_procured) -
+          Number(spinner?.dataValues?.cotton_consumed)
           : 0;
-      let cotton_consumed= spinner ? spinner?.dataValues?.cotton_consumed : 0;
-      let cotton_stock=
-          Number(procuredCotton?.dataValues?.cotton_procured) >
-            Number(spinner?.dataValues?.cotton_consumed)
-            ? Number(procuredCotton?.dataValues?.cotton_procured) -
-            Number(spinner?.dataValues?.cotton_consumed)
-            : 0;
 
       const rowValues = Object.values({
         index: index + 1,
@@ -613,6 +613,184 @@ const generateFaildReport = async (type: string) => {
 //----------------------------------------- Procurement Reports ------------------------//
 
 
+// const generateProcurementReport = async () => {
+//   try {
+//     const batchSize = 5000; // Number of transactions to fetch per batch
+//     const maxRowsPerWorksheet = 500000; // Maximum number of rows per worksheet in Excel
+
+//     const workbook = new ExcelJS.stream.xlsx.WorkbookWriter({
+//       stream: fs.createWriteStream("./upload/procurement-report-test.xlsx")
+//     });
+
+//     let worksheetIndex = 0;
+//     let offset = 0;
+//     // Function to write a batch of transactions to the worksheet
+//     const writeBatchToWorksheet = (transactions: any, worksheet: any) => {
+//       for (const [index, transaction] of transactions.entries()) {
+//         worksheet.addRow([
+//           index + offset + 1,
+//           transaction.dataValues.date ? transaction.dataValues.date.toString() : '',
+//           transaction.dataValues.farmer_code ? transaction.dataValues.farmer_code : '',
+//           transaction.dataValues.farmer ? transaction.dataValues.farmer.firstName + ' ' + `${transaction.dataValues.farmer.lastName ? transaction.dataValues.farmer.lastName : ""}` : transaction.dataValues.farmer_name,
+//           transaction.dataValues.season ? transaction.dataValues.season.name : '',
+//           transaction.dataValues.country ? transaction.dataValues.country.county_name : '',
+//           transaction.dataValues.state ? transaction.dataValues.state.state_name : '',
+//           transaction.dataValues.district ? transaction.dataValues.district.district_name : '',
+//           transaction.dataValues.block ? transaction.dataValues.block.block_name : '',
+//           transaction.dataValues.village ? transaction.dataValues.village.village_name : '',
+//           transaction.dataValues.id ? transaction.dataValues.id : '',
+//           transaction.dataValues.qty_purchased ? transaction.dataValues.qty_purchased : '',
+//           transaction.dataValues.farm ? (Number(transaction.dataValues.farm.total_estimated_cotton) > Number(transaction.dataValues.farm.cotton_transacted) ? Number(transaction.dataValues.farm.total_estimated_cotton) - Number(transaction.dataValues.farm.cotton_transacted) : 0) : 0,
+//           transaction.dataValues.rate ? transaction.dataValues.rate : '',
+//           transaction.dataValues.program ? transaction.dataValues.program.program_name : '',
+//           transaction.dataValues.vehicle ? transaction.dataValues.vehicle : '',
+//           transaction.dataValues.payment_method ? transaction.dataValues.payment_method : '',
+//           transaction.dataValues.ginner ? transaction.dataValues.ginner.name : '',
+//           transaction.dataValues.agent ? transaction.dataValues.agent.firstName : "",
+//         ]).commit();
+//       }
+//       offset += batchSize
+//     };
+
+//     while (true) {
+//       // Fetch a batch of transactions
+//       const transactions = await Transaction.findAll({
+//         attributes: ['date', 'farmer_code', 'qty_purchased', 'rate', 'id', 'vehicle', 'payment_method'],
+//         where: { status: 'Sold' },
+//         include: [
+//           {
+//             model: Village,
+//             as: "village",
+//             attributes: ['id', 'village_name']
+//           },
+//           {
+//             model: Block,
+//             as: "block",
+//             attributes: ['id', 'block_name']
+//           },
+//           {
+//             model: District,
+//             as: "district",
+//             attributes: ['id', 'district_name']
+//           },
+//           {
+//             model: State,
+//             as: "state",
+//             attributes: ['id', 'state_name']
+//           },
+//           {
+//             model: Country,
+//             as: "country",
+//             attributes: ['id', 'county_name']
+//           },
+//           {
+//             model: Farmer,
+//             as: "farmer",
+//           },
+//           {
+//             model: Program,
+//             as: "program",
+//             attributes: ['id', 'program_name']
+//           },
+//           {
+//             model: Brand,
+//             as: "brand",
+//             attributes: ['id', 'brand_name']
+//           },
+//           {
+//             model: Ginner,
+//             as: "ginner",
+//             attributes: ['id', 'name', 'address']
+//           },
+//           {
+//             model: CropGrade,
+//             as: "grade",
+//             attributes: ['id', 'cropGrade']
+//           },
+//           {
+//             model: Season,
+//             as: "season",
+//             attributes: ['id', 'name']
+//           },
+//           {
+//             model: Farm,
+//             as: "farm"
+//           },
+//           {
+//             model: UserApp,
+//             as: "agent"
+//           },
+//         ],
+//         offset: offset,
+//         limit: batchSize
+//       });
+
+//       if (transactions.length === 0) {
+//         // No more transactions to fetch, exit the loop
+//         break;
+//       }
+
+//       if (offset % maxRowsPerWorksheet === 0) {
+//         worksheetIndex++;
+//       }
+
+//       // Get the current worksheet or create a new one if necessary
+//       let currentWorksheet = workbook.getWorksheet(`Procurement Report ${worksheetIndex}`);
+//       if (!currentWorksheet) {
+//         currentWorksheet = workbook.addWorksheet(`Procurement Report ${worksheetIndex}`);
+
+//         if (worksheetIndex == 1) {
+//           currentWorksheet.mergeCells('A1:O1');
+//           const mergedCell = currentWorksheet.getCell('A1');
+//           mergedCell.value = 'Cotton Connect | Procurement Report';
+//           mergedCell.font = { bold: true };
+//           mergedCell.alignment = { horizontal: 'center', vertical: 'middle' };
+//         }
+//         // Set bold font for header row
+
+//         currentWorksheet.addRow([
+//           "Sr No.",
+//           "Date",
+//           "Farmer Name",
+//           "Farmer Code",
+//           "Season",
+//           "Country",
+//           "State",
+//           "District",
+//           "Block",
+//           "Village",
+//           "Transaction Id",
+//           "Quantity Purchased (Kgs)",
+//           "Available Cotton(Kgs)",
+//           "Price/Kg (Local Currency)",
+//           "Program",
+//           "Transport Vehicle No",
+//           "Payment Method",
+//           "Ginner Name",
+//           "Agent",
+//         ]);
+//       }
+
+//       // Write transactions to the current worksheet
+//       writeBatchToWorksheet(transactions, currentWorksheet);
+//     }
+
+//     await workbook.commit()
+//       .then(() => {
+//         // Rename the temporary file to the final filename
+//         fs.renameSync("./upload/procurement-report-test.xlsx", './upload/procurement-report.xlsx');
+//         console.log('Procurement report generation completed.');
+//       })
+//       .catch(error => {
+//         console.log('Failed generation?.');
+//         throw error;
+//       });
+
+//   } catch (error) {
+//     console.error("Error generating procurement report:", error);
+//   }
+// };
+
 const generateProcurementReport = async () => {
   try {
     const batchSize = 5000; // Number of transactions to fetch per batch
@@ -622,16 +800,19 @@ const generateProcurementReport = async () => {
       stream: fs.createWriteStream("./upload/procurement-report-test.xlsx")
     });
 
-    let worksheetIndex = 0;
-    let offset = 0;
+    let worksheetIndex = 1;
+    let transactionCount = 0;
+    let Count = 0;
+    let index = 0;
+
     // Function to write a batch of transactions to the worksheet
-    const writeBatchToWorksheet = (transactions: any, worksheet: any) => {
-      for (const [index, transaction] of transactions.entries()) {
-        worksheet.addRow([
-          index + offset + 1,
+    const writeBatchToWorksheet = async (transactions: any, worksheet: any) => {
+      return Promise.all(transactions.map(async (transaction: any) => {
+        await worksheet.addRow([
+          index + 1,
           transaction.dataValues.date ? transaction.dataValues.date.toString() : '',
           transaction.dataValues.farmer_code ? transaction.dataValues.farmer_code : '',
-          transaction.dataValues.farmer ? transaction.dataValues.farmer.firstName + ' ' + `${transaction.dataValues.farmer.lastName ? transaction.dataValues.farmer.lastName : ""}` : transaction.dataValues.farmer_name,
+          transaction.dataValues.farmer ? transaction.dataValues.farmer.firstName + ' ' + transaction.dataValues.farmer.lastName : transaction.dataValues.farmer_name,
           transaction.dataValues.season ? transaction.dataValues.season.name : '',
           transaction.dataValues.country ? transaction.dataValues.country.county_name : '',
           transaction.dataValues.state ? transaction.dataValues.state.state_name : '',
@@ -647,13 +828,14 @@ const generateProcurementReport = async () => {
           transaction.dataValues.payment_method ? transaction.dataValues.payment_method : '',
           transaction.dataValues.ginner ? transaction.dataValues.ginner.name : '',
           transaction.dataValues.agent ? transaction.dataValues.agent.firstName : "",
-        ]).commit();
-      }
-      offset += batchSize
+        ]);
+        transactionCount++;
+        Count++;
+        index++;
+      }));
     };
 
-    while (true) {
-      // Fetch a batch of transactions
+    const processBatch = async (offset: any) => {
       const transactions = await Transaction.findAll({
         attributes: ['date', 'farmer_code', 'qty_purchased', 'rate', 'id', 'vehicle', 'payment_method'],
         where: { status: 'Sold' },
@@ -721,33 +903,26 @@ const generateProcurementReport = async () => {
             as: "agent"
           },
         ],
+        order: [['id', 'desc']],
         offset: offset,
         limit: batchSize
       });
 
       if (transactions.length === 0) {
-        // No more transactions to fetch, exit the loop
-        break;
+        return; // No more transactions to process
       }
 
-      if (offset % maxRowsPerWorksheet === 0) {
+      // Create a new worksheet if the current one is full
+      if (Count == maxRowsPerWorksheet) {
         worksheetIndex++;
+        Count = 0;
       }
 
       // Get the current worksheet or create a new one if necessary
       let currentWorksheet = workbook.getWorksheet(`Procurement Report ${worksheetIndex}`);
       if (!currentWorksheet) {
         currentWorksheet = workbook.addWorksheet(`Procurement Report ${worksheetIndex}`);
-
-        if (worksheetIndex == 1) {
-          currentWorksheet.mergeCells('A1:O1');
-          const mergedCell = currentWorksheet.getCell('A1');
-          mergedCell.value = 'Cotton Connect | Procurement Report';
-          mergedCell.font = { bold: true };
-          mergedCell.alignment = { horizontal: 'center', vertical: 'middle' };
-        }
-        // Set bold font for header row
-
+        // Add headers to the new worksheet
         currentWorksheet.addRow([
           "Sr No.",
           "Date",
@@ -772,8 +947,17 @@ const generateProcurementReport = async () => {
       }
 
       // Write transactions to the current worksheet
-      writeBatchToWorksheet(transactions, currentWorksheet);
-    }
+      await writeBatchToWorksheet(transactions, currentWorksheet);
+
+      // Process the next batch
+      await processBatch(offset + batchSize);
+    };
+
+    // Start processing batches
+    await processBatch(0);
+
+    console.log('Total transactions processed:', transactionCount);
+    console.log('Writing data to Excel file...');
 
     await workbook.commit()
       .then(() => {
@@ -790,6 +974,7 @@ const generateProcurementReport = async () => {
     console.error("Error generating procurement report:", error);
   }
 };
+
 
 const generatePscpCottonProcurement = async () => {
   const batchSize = 5000; // Number of records to fetch per batch
@@ -2612,16 +2797,16 @@ const generateSpinnerSummary = async () => {
     }
 
     // Save the workbook
-  await workbook.commit()
-        .then(() => {
-          // Rename the temporary file to the final filename
-          fs.renameSync("./upload/spinner-summary-test.xlsx", './upload/spinner-summary.xlsx');
-          console.log('====== Spinner Summary Report Generated. =======');
-        })
-        .catch(error => {
-          console.log('Failed to generate Spinner Summary Report.');
-          throw error;
-        });
+    await workbook.commit()
+      .then(() => {
+        // Rename the temporary file to the final filename
+        fs.renameSync("./upload/spinner-summary-test.xlsx", './upload/spinner-summary.xlsx');
+        console.log('====== Spinner Summary Report Generated. =======');
+      })
+      .catch(error => {
+        console.log('Failed to generate Spinner Summary Report.');
+        throw error;
+      });
 
   } catch (error: any) {
     console.log(error);
@@ -2812,17 +2997,17 @@ const generateSpinnerBale = async () => {
     }
 
     // Save the workbook
-     // Save the workbook
+    // Save the workbook
     await workbook.commit()
-    .then(() => {
-      // Rename the temporary file to the final filename
-      fs.renameSync("./upload/Spinner-bale-receipt-report-test.xlsx", './upload/Spinner-bale-receipt-report.xlsx');
-      console.log('====== Spinner Bale Receipt Report Generated. =======');
-    })
-    .catch(error => {
-      console.log('Failed to generate Spinner Bale Receipt Report.');
-      throw error;
-    });
+      .then(() => {
+        // Rename the temporary file to the final filename
+        fs.renameSync("./upload/Spinner-bale-receipt-report-test.xlsx", './upload/Spinner-bale-receipt-report.xlsx');
+        console.log('====== Spinner Bale Receipt Report Generated. =======');
+      })
+      .catch(error => {
+        console.log('Failed to generate Spinner Bale Receipt Report.');
+        throw error;
+      });
   } catch (error: any) {
     console.error("Error appending data:", error);
 
@@ -3007,15 +3192,15 @@ const generateSpinnerYarnProcess = async () => {
 
     // Save the workbook
     await workbook.commit()
-    .then(() => {
-      // Rename the temporary file to the final filename
-      fs.renameSync("./upload/spinner-yarn-process-test.xlsx", './upload/spinner-yarn-process.xlsx');
-      console.log('====== Spinner Yarn Process Report Generated. =======');
-    })
-    .catch(error => {
-      console.log('Failed to generate Spinner Yarn Process Report.');
-      throw error;
-    });
+      .then(() => {
+        // Rename the temporary file to the final filename
+        fs.renameSync("./upload/spinner-yarn-process-test.xlsx", './upload/spinner-yarn-process.xlsx');
+        console.log('====== Spinner Yarn Process Report Generated. =======');
+      })
+      .catch(error => {
+        console.log('Failed to generate Spinner Yarn Process Report.');
+        throw error;
+      });
   } catch (error: any) {
     console.error("Error appending data:", error);
   }
@@ -3241,15 +3426,15 @@ const generateSpinnerSale = async () => {
 
     // Save the workbook
     await workbook.commit()
-    .then(() => {
-      // Rename the temporary file to the final filename
-      fs.renameSync("./upload/spinner-yarn-sale-test.xlsx", './upload/spinner-yarn-sale.xlsx');
-      console.log('====== Spinner Yarn Sales Report Generated. =======');
-    })
-    .catch(error => {
-      console.log('Failed to generate Spinner Yarn Sales Report.');
-      throw error;
-    });
+      .then(() => {
+        // Rename the temporary file to the final filename
+        fs.renameSync("./upload/spinner-yarn-sale-test.xlsx", './upload/spinner-yarn-sale.xlsx');
+        console.log('====== Spinner Yarn Sales Report Generated. =======');
+      })
+      .catch(error => {
+        console.log('Failed to generate Spinner Yarn Sales Report.');
+        throw error;
+      });
   } catch (error: any) {
     console.log(error)
   }
@@ -3377,15 +3562,15 @@ const generatePendingSpinnerBale = async () => {
 
     // Save the workbook
     await workbook.commit()
-    .then(() => {
-      // Rename the temporary file to the final filename
-      fs.renameSync("./upload/Spinner-Pending-Bales-Receipt-Report-test.xlsx", './upload/Spinner-Pending-Bales-Receipt-Report.xlsx');
-      console.log('====== Spinner Pending Bales Receipt Report Generated. =======');
-    })
-    .catch(error => {
-      console.log('Failed to generate Spinner Pending Bales Receipt Report.');
-      throw error;
-    });
+      .then(() => {
+        // Rename the temporary file to the final filename
+        fs.renameSync("./upload/Spinner-Pending-Bales-Receipt-Report-test.xlsx", './upload/Spinner-Pending-Bales-Receipt-Report.xlsx');
+        console.log('====== Spinner Pending Bales Receipt Report Generated. =======');
+      })
+      .catch(error => {
+        console.log('Failed to generate Spinner Pending Bales Receipt Report.');
+        throw error;
+      });
   } catch (error: any) {
     console.log(error)
   }
