@@ -201,7 +201,7 @@ const connectToDb = async () => {
       // }
       // generateSpinnerLintCottonStock();
 
-      exportReportsOnebyOne();
+      // exportReportsOnebyOne();
 
       const used = process.memoryUsage();
       console.log(`Memory usage: ${JSON.stringify(used)}`);
@@ -221,9 +221,9 @@ cron.schedule('0 23 * * *', async () => {
   sendScheduledEmails();
 });
 
-cron.schedule('0 */6 * * *', async () => {
+cron.schedule('0 */8 * * *', async () => {
   // cron.schedule('* * * * *', async () => {
-  console.log('running a task for export after 6 Hours');
+  console.log('running a task for export after 8 Hours');
   exportReportsOnebyOne();
   // sendScheduledEmails();
 });

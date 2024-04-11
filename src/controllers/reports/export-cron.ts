@@ -75,33 +75,33 @@ import ExportGinnerCottonStock from "../../models/ginner-seed-cotton-stock.model
 
 const exportReportsOnebyOne = async () => {
   //call all export reports one by one on every cron
-  // await generateOrganicFarmerReport();
-  // await generateNonOrganicFarmerReport();
-  // await generateFaildReport("Farmer");
-  // await generateFaildReport("Procurement");
+  await generateOrganicFarmerReport();
+  await generateNonOrganicFarmerReport();
+  await generateFaildReport("Farmer");
+  await generateFaildReport("Procurement");
 
   // Procurement Reports 
-  // await generatePscpCottonProcurement();
-  // await generatePscpProcurementLiveTracker();
+  await generatePscpCottonProcurement();
+  await generatePscpProcurementLiveTracker();
 
   // Ginner Reports 
-  // await generateGinnerSummary();
-  // await generateGinnerSales();
-  // await generatePendingGinnerSales();
-  // await generateGinnerCottonStock();
+  await generateGinnerSummary();
+  await generateGinnerSales();
+  await generatePendingGinnerSales();
+  await generateGinnerCottonStock();
 
   //spinner Reports
-  // await generateSpinnerSummary();
-  // await generateSpinnerBale();
-  // await generateSpinnerYarnProcess();
-  // await generateSpinnerSale();
-  // await generatePendingSpinnerBale();
-  // await generateSpinnerLintCottonStock();
+  await generateSpinnerSummary();
+  await generateSpinnerBale();
+  await generateSpinnerYarnProcess();
+  await generateSpinnerSale();
+  await generatePendingSpinnerBale();
+  await generateSpinnerLintCottonStock();
 
   // Time Taking Reports will execute in last
   await generateProcurementReport(); // taking time
-  // await generateAgentTransactions();
-  // await generateGinnerProcess(); // taking time
+  await generateAgentTransactions();
+  await generateGinnerProcess(); // taking time
 
   console.log('Cron Job Completed to execute all reports.');
 }
