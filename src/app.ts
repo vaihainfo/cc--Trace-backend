@@ -252,11 +252,11 @@ cron.schedule('0 2 * * *', async () => {
 
 // ---------------------hostinger--------------------------------//
 
-// cron.schedule('0 13 * * *', async () => {
-//   console.log('Running a task at 1 pm IST');
-//   // Add your task for 1 am IST here
-//   exportReportsTameTaking();
-// });
+cron.schedule('0 13 * * *', async () => {
+  console.log('Running a task at 1 pm IST');
+  // Add your task for 1 am IST here
+  exportReportsTameTaking();
+});
 
 // cron.schedule('0 */8 * * *', async () => {
 //   // cron.schedule('* * * * *', async () => {
