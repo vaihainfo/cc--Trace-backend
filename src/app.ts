@@ -88,7 +88,7 @@ import organicProgramDataDigitizationRouter from './router/services/organic-prog
 import { sendScheduledEmails } from "./controllers/email-management/scheduled-email.controller";
 import ExportData from "./models/export-data-check.model";
 import { exportGinnerPendingSchedule, exportGinnerProcessSchedule, exportGinnerSalesSchedule, exportGinnerSeedCottonSchedule, exportGinnerySummarySchedule, exportSpinnerBaleReceiptSchedule, exportSpinnerLintCottonStockSchedule, exportSpinnerPendingBaleSchedule, exportSpinnerSummarySchedule, exportSpinnerYarnProcessSchedule, exportSpinnerYarnSalesSchedule } from "./controllers/reports";
-import { generateNonOrganicFarmerReport, generateOrganicFarmerReport, generateSpinnerLintCottonStock, exportReportsOnebyOne } from "./controllers/reports/export-cron";
+import { exportReportsTameTaking, exportReportsOnebyOne } from "./controllers/reports/export-cron";
 
 const app = express();
 
@@ -205,6 +205,7 @@ const connectToDb = async () => {
 
       const used = process.memoryUsage();
       console.log(`Memory usage: ${JSON.stringify(used)}`);
+      console.log("date:", new Date())
 
     } catch (error) {
       console.error("Error seeding data:", error);
@@ -221,12 +222,48 @@ cron.schedule('0 23 * * *', async () => {
   sendScheduledEmails();
 });
 
-cron.schedule('0 */8 * * *', async () => {
-  // cron.schedule('* * * * *', async () => {
-  console.log('running a task for export after 8 Hours');
+cron.schedule('0 8 * * *', async () => {
+  console.log('Running a task at 8 am IST');
+  // Add your task for 8 am IST here
   exportReportsOnebyOne();
-  // sendScheduledEmails();
+
 });
+
+// Schedule cron job for 4 pm in India time (UTC+5:30)
+cron.schedule('0 16 * * *', async () => {
+  console.log('Running a task at 4 pm IST');
+  // Add your task for 4 pm IST here
+  exportReportsOnebyOne();
+});
+
+// Schedule cron job for 12 am (midnight) in India time (UTC+5:30)
+cron.schedule('0 0 * * *', async () => {
+  console.log('Running a task at 12 am IST');
+  // Add your task for 12 am IST here
+  exportReportsOnebyOne();
+});
+
+// Schedule cron job for 2 am in India time (UTC+5:30)
+cron.schedule('0 2 * * *', async () => {
+  console.log('Running a task at 2 am IST');
+  // Add your task for 2 am IST here
+  exportReportsTameTaking();
+});
+
+// ---------------------hostinger--------------------------------//
+
+// cron.schedule('0 13 * * *', async () => {
+//   console.log('Running a task at 1 pm IST');
+//   // Add your task for 1 am IST here
+//   exportReportsTameTaking();
+// });
+
+// cron.schedule('0 */8 * * *', async () => {
+//   // cron.schedule('* * * * *', async () => {
+//   console.log('running a task for export after 8 Hours');
+//   exportReportsOnebyOne();
+//   // sendScheduledEmails();
+// });
 
 // app.use("/", (req: Request, res: Response) =>{
 //     console.log("object");

@@ -73,10 +73,20 @@ import ExportGinnerPending from "../../models/ginner-pending-sale.model";
 import ExportGinnerCottonStock from "../../models/ginner-seed-cotton-stock.model";
 
 
-const exportReportsOnebyOne = async () => {
+const exportReportsTameTaking = async () => {
   //call all export reports one by one on every cron
   await generateOrganicFarmerReport();
   await generateNonOrganicFarmerReport();
+  await generateProcurementReport(); // taking time
+  await generateAgentTransactions();
+  await generateGinnerProcess(); // taking time
+  await generateSpinnerLintCottonStock();
+
+  console.log('TameTaking Cron Job Completed to execute all reports.');
+}
+
+const exportReportsOnebyOne = async () => {
+  //call all export reports one by one on every cron
   await generateFaildReport("Farmer");
   await generateFaildReport("Procurement");
 
@@ -96,12 +106,6 @@ const exportReportsOnebyOne = async () => {
   await generateSpinnerYarnProcess();
   await generateSpinnerSale();
   await generatePendingSpinnerBale();
-  await generateSpinnerLintCottonStock();
-
-  // Time Taking Reports will execute in last
-  await generateProcurementReport(); // taking time
-  await generateAgentTransactions();
-  await generateGinnerProcess(); // taking time
 
   console.log('Cron Job Completed to execute all reports.');
 }
@@ -3410,4 +3414,4 @@ function convert_kg_to_mt(number: any) {
   return (number / 1000).toFixed(2);
 }
 
-export { generateSpinnerLintCottonStock, generateOrganicFarmerReport, generateNonOrganicFarmerReport, exportReportsOnebyOne };
+export { exportReportsTameTaking, exportReportsOnebyOne };
