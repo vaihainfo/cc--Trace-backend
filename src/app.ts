@@ -210,7 +210,7 @@ const connectToDb = async () => {
       console.log(`Memory usage: ${JSON.stringify(used)}`);
       console.log("Current Server Time", moment());
       console.log("Time Zone", serverTimezone);
-      console.log("Offset IST", IST_offset);
+      console.log("Offset IST", differenceInMinutes);
 
     } catch (error) {
       console.error("Error seeding data:", error);
@@ -224,55 +224,70 @@ var cron = require('node-cron');
 
 
 const serverTimezone = moment.tz.guess();
-
-// Convert server's timezone to Indian Standard Time (IST)
 const IST = 'Asia/Kolkata';
-const IST_offset = moment.tz(serverTimezone).utcOffset() - moment.tz(IST).utcOffset();
 
-// cron.schedule(`0 ${23 + IST_offset} * * *`, async () => {
-//   console.log('running a task once a day at 11 pm');
-//   sendScheduledEmails();
-// });
+const IST_to_Denver_offset = moment().tz(serverTimezone).utcOffset();
+  const IST_to_India_offset = moment().tz(IST).utcOffset();
+  const differenceInMinutes = IST_to_Denver_offset-IST_to_India_offset;
+  const differenceInHours = Math.round(differenceInMinutes / 60);
+  
+const checkTimeDiff = (cronTime:number,differenceInHours:number) => {
+  let newCronTime;
+  if (differenceInHours<0) {
+    newCronTime = (cronTime + differenceInHours) % 24;
+    newCronTime = newCronTime > 0 ? newCronTime : 24 + newCronTime;
+  }else{
+    newCronTime = (cronTime - differenceInHours) % 24;
+    newCronTime = newCronTime > 0 ? newCronTime : 24 + newCronTime;
+  }
+  return newCronTime>=24?0:newCronTime;
+}
 
-// cron.schedule(`0 ${8 + IST_offset} * * *`, async () => {
-//   console.log('Running a task at 8 am IST');
-//   // Add your task for 8 am IST here
-//   exportReportsOnebyOne();
 
-// });
-// // Schedule cron job for 4 pm in India time (UTC+5:30)
-// cron.schedule(`0 ${16 + IST_offset} * * *`, async () => {
-//   console.log('Running a task at 4 pm IST');
-//   // Add your task for 4 pm IST here
-//   exportReportsOnebyOne();
-// });
+cron.schedule(`0 ${checkTimeDiff(23,differenceInHours)} * * *`, async () => {
+  console.log('running a task once a day at 11 pm');
+  sendScheduledEmails();
+});
 
-// // Schedule cron job for 12 am (midnight) in India time (UTC+5:30)
-// cron.schedule(`0 ${0 + IST_offset} * * *`, async () => {
-//   console.log('Running a task at 12 am IST');
-//   // Add your task for 12 am IST here
-//   exportReportsOnebyOne();
-// });
+cron.schedule(`0 ${checkTimeDiff(8,differenceInHours)} * * *`, async () => {
+  console.log('Running a task at 8 am IST');
+  // Add your task for 8 am IST here
+  exportReportsOnebyOne();
 
-// // Schedule cron job for 2 am in India time (UTC+5:30)
-// cron.schedule(`0 ${2 + IST_offset} * * *`, async () => {
-//   console.log('Running a task at 2 am IST');
-//   // Add your task for 2 am IST here
-//   exportReportsTameTaking();
-// });
+});
+// Schedule cron job for 4 pm in India time (UTC+5:30)
+cron.schedule(`0 ${checkTimeDiff(16,differenceInHours)} * * *`, async () => {
+  console.log('Running a task at 4 pm IST');
+  // Add your task for 4 pm IST here
+  exportReportsOnebyOne();
+});
 
-// // ---------------------hostinger--------------------------------//
+// Schedule cron job for 12 am (midnight) in India time (UTC+5:30)
+cron.schedule(`0 ${checkTimeDiff(0,differenceInHours)} * * *`, async () => {
+  console.log('Running a task at 12 am IST');
+  // Add your task for 12 am IST here
+  exportReportsOnebyOne();
+});
 
-// cron.schedule( `0 ${13 + IST_offset} * * *`, async () => {
-//   console.log('Running a task at 1 pm IST');
-//   // Add your task for 1 am IST here
-//   exportReportsTameTaking();
-// });
+// Schedule cron job for 2 am in India time (UTC+5:30)
+cron.schedule(`0 ${checkTimeDiff(2,differenceInHours)} * * *`, async () => {
+  console.log('Running a task at 2 am IST');
+  // Add your task for 2 am IST here
+  exportReportsTameTaking();
+});
 
-// // Schedule the cron job to run at 1 AM IST
-// cron.schedule(`0 ${14 + IST_offset} * * *`, () => {
-//   console.log(`Cron job scheduled in server's timezone (${serverTimezone}) to run at IST`);
-// });
+// ---------------------hostinger--------------------------------//
+
+cron.schedule( `0 ${checkTimeDiff(13,differenceInHours)} * * *`, async () => {
+  console.log('Running a task at 1 pm IST');
+  // Add your task for 1 am IST here
+  exportReportsTameTaking();
+});
+
+// Schedule the cron job to run at 1 AM IST
+cron.schedule(`25 ${checkTimeDiff(19,differenceInHours)} * * *`, () => {
+  console.log(`Cron job scheduled in server's timezone (${serverTimezone}) to run at IST`);
+});
 
 
 
