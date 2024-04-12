@@ -285,7 +285,7 @@ cron.schedule( `0 ${checkTimeDiff(13,differenceInHours)} * * *`, async () => {
 });
 
 // Schedule the cron job to run at 1 AM IST
-cron.schedule(`25 ${checkTimeDiff(19,differenceInHours)} * * *`, () => {
+cron.schedule(`3 ${checkTimeDiff(19,differenceInHours)} * * *`, () => {
   console.log(`Cron job scheduled in server's timezone (${serverTimezone}) to run at IST`);
 });
 
