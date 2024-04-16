@@ -76,7 +76,7 @@ const createGinnerProcess = async (req: Request, res: Response) => {
         mic: bale.mic,
         strength: bale.strength,
         trash: bale.trash,
-        color_grade: bale.colorGrade,
+        color_grade: bale.colorGrade
       };
       const bales = await GinBale.create(baleData);
 
@@ -1042,7 +1042,10 @@ const updateGinnerSales = async (req: Request, res: Response) => {
         });
         if (bale) {
           await GinBale.update(
-            { weight: obj.newWeight },
+            { 
+              old_weight: Sequelize.literal('weight'),  
+              weight: obj.newWeight 
+            },
             { where: { id: bale.dataValues.id } }
           );
         }
@@ -1222,7 +1225,19 @@ const fetchGinSale = async (req: Request, res: Response) => {
       where: whereCondition,
       include: include,
     });
-    return res.sendSuccess(res, gin);
+
+    const baleData = await BaleSelection.findAll({
+      where:  {
+        sales_id: gin.id,
+      },
+      include: [{ model: GinBale,  as: "bale" }],    
+    });
+
+    const response = {
+      gin,
+      bale: baleData?.map((item:any)=> item.bale),
+    };
+    return res.sendSuccess(res, response);
   } catch (error: any) {
     console.error(error);
     return res.sendError(res, error.meessage);

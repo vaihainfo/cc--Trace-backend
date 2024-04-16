@@ -95,6 +95,14 @@ const User = db.define('users', {
   process_role: {
     type: DataTypes.ARRAY(DataTypes.INTEGER),
   },
+  otp: {
+    type: DataTypes.STRING,
+    allowNull: true,
+},
+  expiry: {
+    type: DataTypes.DATE,
+    allowNull: true,
+},
 });
 
 User.associate = (models: any) => {

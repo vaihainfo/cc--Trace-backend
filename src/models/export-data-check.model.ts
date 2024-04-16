@@ -2,7 +2,6 @@ import { DataTypes } from 'sequelize';
 import db from '../util/dbConn';
 
 
-
 const ExportData = db.define('export_data_checks', {
   id: {
     type: DataTypes.INTEGER,

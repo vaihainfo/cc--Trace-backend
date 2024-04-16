@@ -17,7 +17,6 @@ import * as ExcelJS from "exceljs";
 import * as path from "path";
 import UserApp from "../../models/users-app.model";
 import sequelize from "../../util/dbConn";
-import ExportData from "../../models/export-data-check.model";
 
 
 const fetchTransactionsReport = async (req: Request, res: Response) => {

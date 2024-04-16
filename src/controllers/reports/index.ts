@@ -59,17 +59,6 @@ import WashingSales from "../../models/washing-sales.model";
 import WashingFabricSelection from "../../models/washing-fabric-selection.model";
 import DyingSales from "../../models/dying-sales.model";
 import DyingFabricSelection from "../../models/dying-fabric-selection.model";
-import ExportGinnerProcess from "../../models/export-ginner-lintbale-process.model";
-import ExportGinnerSummary from "../../models/export-ginner-summary.model";
-import ExportGinnerSale from "../../models/export-ginner-lintbale-sale.model";
-import ExportGinnerPending from "../../models/ginner-pending-sale.model";
-import ExportGinnerCottonStock from "../../models/ginner-seed-cotton-stock.model";
-import ExportSpinnerBaleReceipt from "../../models/export-spinner-bale-receipt.model";
-import ExportSpinnerYarnProcess from "../../models/export-spinner-yarn-process.model";
-import ExportSpinnerYarnSales from "../../models/export-spinner-yarn-sales.model";
-import ExportSpinnerPendingBales from "../../models/export-spinner-pending-bales.model";
-import ExportSpinnerLintStock from "../../models/export-spinner-lint-stock.model";
-import ExportSpinnerSummary from "../../models/export-spinner-summary.model";
 
 const fetchBaleProcess = async (req: Request, res: Response) => {
   const searchTerm = req.query.search || "";
@@ -262,157 +251,6 @@ const exportLoad = async (req: Request, res: Response) => {
       data: process.env.BASE_URL + req?.body?.file_name,
     });
   }
-}
-
-
-const exportGinnerProcessSchedule = async () => {
-  const limit = 10;
-  const offset = 0;
-  try {
-    let include = [
-      {
-        model: Ginner,
-        as: "ginner",
-      },
-      {
-        model: Season,
-        as: "season",
-      },
-      {
-        model: Program,
-        as: "program",
-      },
-    ];
-    const counts = await ExportGinnerProcess.count()
-    console.log(counts);
-
-    const { count, rows } = await GinProcess.findAndCountAll({
-      //   where: whereCondition,
-      include: include,
-      offset: counts,
-      limit: limit,
-    });
-
-    const arrayData = []
-
-    for await (const [index, item] of rows.entries()) {
-      let cotton = await CottonSelection.findAll({
-        attributes: ["transaction_id"],
-        where: { process_id: item.id },
-      });
-      let village = [];
-      if (cotton?.length > 0) {
-        village = await Transaction.findAll({
-          attributes: ["village_id"],
-          where: {
-            id: cotton.map((obj: any) => obj.dataValues.transaction_id),
-          },
-          include: [
-            {
-              model: Village,
-              as: "village",
-              attributes: ["id", "village_name"],
-            },
-          ],
-          group: ["village_id", "village.id"],
-        });
-      }
-      let bale = await GinBale.findOne({
-        attributes: [
-          [
-            Sequelize.fn(
-              "SUM",
-              Sequelize.literal("CAST(weight AS DOUBLE PRECISION)")
-            ),
-            "lint_quantity",
-          ],
-          [sequelize.fn("min", sequelize.col("bale_no")), "pressno_from"],
-          [sequelize.fn("max", sequelize.col("bale_no")), "pressno_to"],
-        ],
-        where: { process_id: item.id },
-      });
-
-      let soldBales = await GinBale.count({
-        where: { process_id: item.id, sold_status: true },
-      });
-
-      let soldLint = await GinBale.findOne({
-        attributes: [
-          [
-            Sequelize.fn(
-              "SUM",
-              Sequelize.literal("CAST(weight AS DOUBLE PRECISION)")
-            ),
-            "lint_quantity_sold",
-          ],
-        ],
-        where: { process_id: item.id, sold_status: true },
-      });
-
-      let lintStock =
-        Number(bale.dataValues.lint_quantity) -
-        Number(soldLint?.dataValues?.lint_quantity_sold);
-      let balesStock = Number(item?.no_of_bales) - Number(soldBales);
-
-      let reel_press_no =
-        item.no_of_bales === 0
-          ? ""
-          : `001-${item.no_of_bales < 9
-            ? `00${item.no_of_bales}`
-            : item.no_of_bales < 99
-              ? `0${item.no_of_bales}`
-              : item.no_of_bales
-          }`;
-
-
-
-      const rowValues =
-      // Object.values(
-      {
-        index: index + 1,
-        date: item.date ? item.date : "",
-        created_date: item.createdAt ? item.createdAt : "",
-        season: item.season ? item.season.name : "",
-        ginner: item.ginner ? item.ginner.name : "",
-        heap: "",
-        lot_no: item.lot_no ? item.lot_no : "",
-        press_no: item.press_no ? item.press_no : "",
-        reel_lot_no: item.reel_lot_no ? item.reel_lot_no : "",
-        process_no: reel_press_no ? reel_press_no : "-",
-        noOfBales: item.no_of_bales ? item.no_of_bales : 0,
-        lint_qty: bale.dataValues.lint_quantity
-          ? bale.dataValues.lint_quantity
-          : 0,
-        seedConsmed: item.total_qty ? item.total_qty : "",
-        got: item.gin_out_turn ? item.gin_out_turn : "",
-        lint_quantity_sold: soldLint.dataValues?.lint_quantity_sold
-          ? soldLint.dataValues?.lint_quantity_sold
-          : 0,
-        sold_bales: soldBales,
-        lint_stock: lintStock && lintStock > 0 ? lintStock : 0,
-        bale_stock: balesStock && balesStock > 0 ? balesStock : 0,
-        program: item.program ? item.program.program_name : "",
-        village:
-          village.length > 0
-            ? village.map((obj: any) => obj.village.village_name).join(",")
-            : "",
-        countryId: item?.ginner?.country_id ?? 0,
-        seasonId: item?.season?.id ?? 0,
-        ginnerId: item?.ginner?.id ?? 0,
-        programId: item?.program.id ?? 0,
-        brandId: item?.ginner?.brand?.length ? item?.ginner?.brand[0] : 0
-      }
-      // );
-
-
-      arrayData.push(rowValues)
-    }
-    ExportGinnerProcess.bulkCreate(arrayData)
-  } catch (err) {
-    console.log("err", err);
-
-  }
-
 }
 
 // const exportGinnerProcess = async (req: Request, res: Response) => {
@@ -915,69 +753,6 @@ const fetchPendingGinnerSales = async (req: Request, res: Response) => {
   }
 };
 
-const exportGinnerPendingSchedule = async () => {
-  let count = await ExportGinnerPending.count()
-  let include = [
-    {
-      model: Ginner,
-      as: "ginner",
-    },
-    {
-      model: Season,
-      as: "season",
-    },
-    {
-      model: Program,
-      as: "program",
-    },
-    {
-      model: Spinner,
-      as: "buyerdata",
-      attributes: ["id", "name"],
-    },
-  ];
-  const gin = await GinSales.findAll({
-    // where: whereCondition,
-    include: include,
-    offset: count,
-    limit: 1
-  });
-  const array = []
-  for await (const [index, item] of gin.entries()) {
-    // console.log("item",item.ginner);
-
-    const rowValues = {
-      index: index + 1,
-      date: item.date ? item.date : null,
-      season: item.season ? item.season.name : "",
-      ginner: item.ginner ? item.ginner.name : "",
-      invoice: item.invoice_no ? item.invoice_no : "",
-      buyer: item.buyerdata ? item.buyerdata.name : "",
-      lot_no: item.lot_no ? item.lot_no : "",
-      reel_lot_no: item.reel_lot_no ? item.reel_lot_no : "",
-      no_of_bales: item.no_of_bales ? item.no_of_bales : "",
-      press_no: item.press_no ? item.press_no : "",
-      rate: item.rate ? item.rate : "",
-      total_qty: item.total_qty ? item.total_qty : "",
-      program: item.program ? item.program.program_name : "",
-      status: item.status ? item.status : "",
-      countryId: item.ginner.country_id ?? 0,
-      seasonId: item?.season_id ?? 0,
-      ginnerId: item?.ginner_id ?? 0,
-      programId: item?.program_id ?? 0,
-      brandId: item?.ginner?.brand?.length ? item?.ginner?.brand[0] : 0
-    };
-    // worksheet.addRow(rowValues);
-    // console.log(rowValues);
-
-    array.push(rowValues)
-
-
-  }
-
-
-  await ExportGinnerPending.bulkCreate(array)
-}
 
 const exportPendingGinnerSales = async (req: Request, res: Response) => {
 
@@ -1333,226 +1108,6 @@ const fetchGinSalesPagination = async (req: Request, res: Response) => {
   }
 };
 
-const exportGinnerSalesSchedule = async () => {
-  let include = [
-    {
-      model: Ginner,
-      as: "ginner",
-      attributes: [],
-    },
-    {
-      model: Season,
-      as: "season",
-      attributes: [],
-    },
-    {
-      model: Program,
-      as: "program",
-      attributes: [],
-    },
-    {
-      model: Spinner,
-      as: "buyerdata",
-      attributes: [],
-    },
-  ];
-  //fetch data with pagination
-  let count = await ExportGinnerSale.count()
-
-  //   const rows: any = await BaleSelection.findAll({
-  //     include: [
-  //       {
-  //         model: GinSales,
-  //         as: "sales",
-  //         include: include, // Assuming include is defined elsewhere in your code
-  //         attributes: [
-  //           "id",
-  //           "date",
-  //           "createdAt",
-  //           "season_id",
-  //           "program_id",
-  //           "total_qty",
-  //           "invoice_no",
-  //           "rate",
-  //           "candy_rate",
-  //           "sale_value",
-  //           "press_no",
-  //           "qty_stock",
-  //           "weight_loss",
-  //           "invoice_file",
-  //           "vehicle_no",
-  //           "transporter_name",
-  //           "transaction_agent",
-  //           "status",
-  //           // Add any other attributes you need from the sales table
-  //         ],
-  //       },
-  //       {
-  //         model: GinBale,
-  //         attributes: [],
-  //         as: "bale",
-  //         include: [
-  //           {
-  //             model: GinProcess,
-  //             as: "ginprocess",
-  //             attributes: [],
-  //           },
-  //         ],
-  //       },
-  //       {
-  //         model: Ginner, // Assuming Ginner is the name of your ginner table model
-  //         as: "ginner",
-  //         attributes: ["id", "name", "country_id", "program_id", "brand"],
-  //       },
-  //     ],
-  //     order: [["sales_id", "desc"]],
-  //     offset: count,
-  //     limit: 2,
-  //   });
-
-  const rows: any = await BaleSelection.findAll({
-    attributes: [
-      [Sequelize.literal('"sales"."id"'), "sales_id"],
-      [Sequelize.literal('"sales"."date"'), "date"],
-      [Sequelize.literal('"sales"."createdAt"'), "createdAt"],
-      [Sequelize.col('"sales"."season"."name"'), "season_name"],
-      [Sequelize.col('"sales"."ginner"."name"'), "ginner"],
-      [Sequelize.col('"sales"."ginner"."id"'), "ginnerId"],
-      [Sequelize.col('"sales"."ginner"."country_id"'), "countryId"],
-      [Sequelize.col('"sales"."ginner"."program_id"'), "programId"],
-      [Sequelize.col('"sales"."ginner"."brand"'), "brand"],
-      [Sequelize.col('"sales.season_id"'), "seasonId"],
-      [Sequelize.col('"sales"."program"."program_name"'), "program"],
-      [Sequelize.col('"sales"."buyerdata"."name"'), "buyerdata"],
-      [Sequelize.literal('"sales"."total_qty"'), "total_qty"],
-      [Sequelize.literal('"sales"."invoice_no"'), "invoice_no"],
-      [Sequelize.col('"bale"."ginprocess"."lot_no"'), "lot_no"],
-      [Sequelize.col('"bale"."ginprocess"."reel_lot_no"'), "reel_lot_no"],
-      [Sequelize.literal('"sales"."rate"'), "rate"],
-      [Sequelize.literal('"sales"."candy_rate"'), "candy_rate"],
-      [
-        Sequelize.fn(
-          "SUM",
-          Sequelize.literal('CAST("bale"."weight" AS DOUBLE PRECISION)')
-        ),
-        "lint_quantity",
-      ],
-      [
-        Sequelize.fn("COUNT", Sequelize.literal("DISTINCT bale_id")),
-        "no_of_bales",
-      ],
-      [Sequelize.literal('"sales"."sale_value"'), "sale_value"],
-      [Sequelize.literal('"sales"."press_no"'), "press_no"],
-      [Sequelize.literal('"sales"."qty_stock"'), "qty_stock"],
-      [Sequelize.literal('"sales"."weight_loss"'), "weight_loss"],
-      [Sequelize.literal('"sales"."invoice_file"'), "invoice_file"],
-      [Sequelize.literal('"sales"."vehicle_no"'), "vehicle_no"],
-      [Sequelize.literal('"sales"."transporter_name"'), "transporter_name"],
-      [Sequelize.literal('"sales"."transaction_agent"'), "transaction_agent"],
-      [Sequelize.literal('"sales"."status"'), "status"],
-    ],
-    // where: whereCondition,
-    include: [
-      {
-        model: GinSales,
-        as: "sales",
-        include: include,
-        attributes: [],
-      },
-      {
-        model: GinBale,
-        attributes: [],
-        as: "bale",
-        include: [
-          {
-            model: GinProcess,
-            as: "ginprocess",
-            // attributes: ["id", "name", "country_id", "program_id", "brand"],
-            attributes: []
-          },
-        ],
-      },
-      //   {
-      //     model: Ginner, // Assuming Ginner is the name of your ginner table model
-      //     as: "ginner",
-      //     attributes: [], // Include all desired attributes from ginner table here
-      //   },
-    ],
-    group: [
-      "bale.process_id",
-      "bale.ginprocess.id",
-      "sales.id",
-      "sales.season.id",
-      "sales.ginner.id",
-      "sales.buyerdata.id",
-      "sales.program.id",
-    ],
-    order: [["sales_id", "desc"]],
-    offset: count,
-    limit: 20
-  });
-  //   console.log("rowa",rows);
-
-  let array = []
-  for await (const [index, item] of rows.entries()) {
-    // console.log("item",item?.countryId,item?.programId,item?.brand);    
-
-    const rowValues = {
-      index: index + 1,
-      date: item.dataValues.date ? item.dataValues.date : "",
-      created_at: item.dataValues?.createdAt ? item.dataValues?.createdAt : "",
-      season: item.dataValues?.season_name ? item.dataValues?.season_name : "",
-      ginner: item.dataValues?.ginner ? item.dataValues?.ginner : "",
-      invoice: item.dataValues?.invoice_no ? item.dataValues?.invoice_no : "",
-      buyer: item.dataValues?.buyerdata ? item.dataValues?.buyerdata : "",
-      heap: "",
-      lot_no: item.dataValues?.lot_no ? item.dataValues?.lot_no : "",
-      reel_lot_no: item.dataValues?.reel_lot_no
-        ? item.dataValues?.reel_lot_no
-        : "",
-      no_of_bales: item.dataValues?.no_of_bales
-        ? item.dataValues?.no_of_bales
-        : "",
-      press_no: item.dataValues?.press_no ? item.dataValues?.press_no : "",
-      rate: item.dataValues?.rate ? item.dataValues?.rate : "",
-      lint_quantity: item.dataValues?.lint_quantity
-        ? item.dataValues?.lint_quantity
-        : "",
-      sales_value: item.dataValues?.sale_value
-        ? item.dataValues?.sale_value
-        : "",
-      vehicle_no: item.dataValues?.vehicle_no
-        ? item.dataValues?.vehicle_no
-        : "",
-      transporter_name: item.dataValues?.transporter_name
-        ? item.dataValues?.transporter_name
-        : "",
-      program: item.dataValues?.program ? item.dataValues?.program : "",
-      agentDetails: item.dataValues?.transaction_agent
-        ? item.dataValues?.transaction_agent
-        : "NA",
-      status:
-        item.dataValues.status === "Sold"
-          ? "Sold"
-          : `Available [Stock : ${item.dataValues?.qty_stock ? item.dataValues?.qty_stock : 0
-          }]`,
-      countryId: item?.dataValues?.countryId ?? 0,
-      seasonId: item?.dataValues?.season_id ?? 0,
-      ginnerId: item?.dataValues?.ginnerId ?? 0,
-      programId: item?.dataValues?.programId?.length ? item?.dataValues?.programId[0] : 0,
-      brandId: item?.dataValues?.brand?.length ? item?.dataValues?.brand[0] : 0
-
-    }
-    //         // worksheet.addRow(rowValues);
-    array.push(rowValues)
-    //         // console.log("row values",rowValues);
-
-    //       }
-    //   await ExportGinnerSale.bulkCreate(array)
-
-  }
-  await ExportGinnerSale.bulkCreate(array)
-}
 
 // const exportGinnerSales = async (req: Request, res: Response) => {
 //   // export-gin-sales-report
@@ -2318,150 +1873,6 @@ const fetchSpinnerPendingBale = async (req: Request, res: Response) => {
   }
 };
 
-const exportSpinnerBaleReceiptSchedule = async () => {
-
-  let include = [
-    {
-      model: Ginner,
-      as: "ginner",
-      attributes: [],
-    },
-    {
-      model: Season,
-      as: "season",
-      attributes: [],
-    },
-    {
-      model: Program,
-      as: "program",
-      attributes: [],
-    },
-    {
-      model: Spinner,
-      as: "buyerdata",
-      attributes: [],
-    },
-  ];
-  //fetch data with pagination
-  let count = await ExportSpinnerBaleReceipt.count()
-
-
-  const rows: any = await BaleSelection.findAll({
-    attributes: [
-      [Sequelize.literal('"sales"."id"'), "sales_id"],
-      [Sequelize.literal('"sales"."date"'), "date"],
-      [Sequelize.literal('"sales"."accept_date"'), "accept_date"],
-      [Sequelize.col('"sales"."season"."name"'), "season_name"],
-      [Sequelize.col('"sales"."ginner"."name"'), "ginner"],
-      [Sequelize.col('"sales"."ginner"."id"'), "ginnerId"],
-      [Sequelize.col('"sales"."ginner"."country_id"'), "countryId"],
-      [Sequelize.col('"sales"."ginner"."program_id"'), "programId"],
-      [Sequelize.col('"sales"."ginner"."brand"'), "brand"],
-      [Sequelize.col('"sales"."program"."program_name"'), "program"],
-      [Sequelize.col('"sales"."buyerdata"."name"'), "spinner"],
-      [Sequelize.col('"sales"."buyerdata"."id"'), "spinnerId"],
-      [Sequelize.col('"sales.season_id"'), "seasonId"],
-      [Sequelize.literal('"sales"."total_qty"'), "total_qty"],
-      [Sequelize.literal('"sales"."invoice_no"'), "invoice_no"],
-      [Sequelize.col('"bale"."ginprocess"."lot_no"'), "lot_no"],
-      [Sequelize.col('"bale"."ginprocess"."reel_lot_no"'), "reel_lot_no"],
-      [Sequelize.literal('"sales"."rate"'), "rate"],
-      [Sequelize.literal('"sales"."candy_rate"'), "candy_rate"],
-      [
-        Sequelize.fn(
-          "SUM",
-          Sequelize.literal('CAST("bale"."weight" AS DOUBLE PRECISION)')
-        ),
-        "lint_quantity",
-      ],
-      [
-        Sequelize.fn("COUNT", Sequelize.literal("DISTINCT bale_id")),
-        "no_of_bales",
-      ],
-      [Sequelize.literal('"sales"."sale_value"'), "sale_value"],
-      [Sequelize.literal('"sales"."press_no"'), "press_no"],
-      [Sequelize.literal('"sales"."qty_stock"'), "qty_stock"],
-      [Sequelize.literal('"sales"."weight_loss"'), "weight_loss"],
-      [Sequelize.literal('"sales"."invoice_file"'), "invoice_file"],
-      [Sequelize.literal('"sales"."vehicle_no"'), "vehicle_no"],
-      [Sequelize.literal('"sales"."transporter_name"'), "transporter_name"],
-      [Sequelize.literal('"sales"."transaction_agent"'), "transaction_agent"],
-      [Sequelize.literal('"sales"."status"'), "status"],
-    ],
-    //   where: whereCondition,
-    include: [
-      {
-        model: GinSales,
-        as: "sales",
-        include: include,
-        attributes: [],
-      },
-      {
-        model: GinBale,
-        attributes: [],
-        as: "bale",
-        include: [
-          {
-            model: GinProcess,
-            as: "ginprocess",
-            attributes: [],
-          },
-        ],
-      },
-    ],
-    group: [
-      "bale.process_id",
-      "bale.ginprocess.id",
-      "sales.id",
-      "sales.season.id",
-      "sales.ginner.id",
-      "sales.buyerdata.id",
-      "sales.program.id",
-    ],
-    order: [["sales_id", "desc"]],
-    offset: count,
-    limit: 20
-  });
-  let array = []
-  for await (const [index, item] of rows.entries()) {
-
-
-    const rowValues = {
-      index: index + 1,
-      accept_date: item.dataValues.accept_date
-        ? item.dataValues.accept_date
-        : "",
-      date: item.dataValues.date ? item.dataValues.date : "",
-      season: item.dataValues.season_name ? item.dataValues.season_name : "",
-      spinner: item.dataValues.spinner ? item.dataValues.spinner : "",
-      ginner: item.dataValues.ginner ? item.dataValues.ginner : "",
-      invoice: item.dataValues.invoice_no ? item.dataValues.invoice_no : "",
-      lot_no: item.dataValues.lot_no ? item.dataValues.lot_no : "",
-      reel_lot_no: item.dataValues.reel_lot_no
-        ? item.dataValues.reel_lot_no
-        : "",
-      press_no: item.dataValues.press_no ? item.dataValues.press_no : "",
-      no_of_bales: item.dataValues.no_of_bales
-        ? item.dataValues.no_of_bales
-        : "",
-      lint_quantity: item.dataValues.lint_quantity
-        ? item.dataValues.lint_quantity
-        : "",
-      program: item.dataValues.program ? item.dataValues.program : "",
-      countryId: item.dataValues?.countryId,
-      brandId: item.dataValues?.brand?.length ? item.dataValues?.brand[0] : 0,
-      ginnerId: item?.dataValues?.ginnerId ?? 0,
-      programId: item?.dataValues?.programId?.length ? item?.dataValues?.programId[0] : 0,
-      seasonId: item?.dataValues?.seasonId ?? 0,
-      spinnerId: item?.dataValues?.spinnerId ?? 0
-    };
-    // worksheet.addRow(rowValues);
-    // console.log(rowValues)
-    array.push(rowValues)
-  }
-  await ExportSpinnerBaleReceipt.bulkCreate(array)
-}
-
 const exportSpinnerBale = async (req: Request, res: Response) => {
   // spinner_bale_receipt_load
   const excelFilePath = path.join(
@@ -2719,72 +2130,6 @@ const exportSpinnerBale = async (req: Request, res: Response) => {
     return res.sendError(res, error.message);
   }
 };
-
-const exportSpinnerPendingBaleSchedule = async () => {
-
-
-  let include = [
-    {
-      model: Ginner,
-      as: "ginner",
-    },
-    {
-      model: Season,
-      as: "season",
-    },
-    {
-      model: Program,
-      as: "program",
-    },
-    {
-      model: Spinner,
-      as: "buyerdata",
-      attributes: ["id", "name"],
-    },
-  ];
-  const count = await ExportSpinnerPendingBales.count()
-
-  const { rows } = await GinSales.findAndCountAll({
-    //   where: whereCondition,
-    include: include,
-    offset: count,
-    limit: 2,
-  });
-  // rows = rows;
-  //   console.log("rows",rows);
-
-  let array = []
-  // Append data to worksheet
-  for await (const [index, item] of rows.entries()) {
-    // console.log("item",item);
-
-    const rowValues = {
-      index: index + 1,
-      date: item.date ? item.date : "",
-      season: item.season ? item.season.name : "",
-      buyer: item.buyerdata ? item.buyerdata.name : "",
-      ginner: item.ginner ? item.ginner.name : "",
-      invoice: item.invoice_no ? item.invoice_no : "",
-      no_of_bales: item.no_of_bales ? item.no_of_bales : "",
-      lot_no: item.lot_no ? item.lot_no : "",
-      reel_lot_no: item.reel_lot_no ? item.reel_lot_no : "",
-      total_qty: item.total_qty ? item.total_qty : "",
-      actual_qty: item.total_qty ? item.total_qty : "",
-      program: item.program ? item.program.program_name : "",
-      village: item.vehicle_no ? item.vehicle_no : "",
-      countryId: item?.ginner?.country_id ?? 0,
-      seasonId: item?.season_id ?? 0,
-      brandId: item?.ginner?.brand?.length ? item?.ginner?.brand[0] : 0,
-      programId: item?.ginner?.program_id?.length ? item?.ginner?.program_id[0] : 0,
-      spinnerId: item?.buyerdata?.id ?? 0
-    };
-    console.log("rowValues", rowValues);
-    array.push(rowValues)
-    // worksheet.addRow(rowValues);
-  }
-  await ExportSpinnerPendingBales.bulkCreate(array)
-
-}
 
 const exportPendingSpinnerBale = async (req: Request, res: Response) => {
   // spinner_yarn_bales_load
@@ -3113,132 +2458,7 @@ const fetchSpinnerYarnProcessPagination = async (
   }
 };
 
-const exportSpinnerYarnProcessSchedule = async () => {
 
-
-  let include = [
-    {
-      model: Spinner,
-      as: "spinner",
-      attributes: ["id", "name", "country_id", "brand"],
-    },
-    {
-      model: Season,
-      attributes: ["id", "name"],
-      as: "season",
-    },
-    {
-      model: Program,
-      as: "program",
-      attributes: ["id", "program_name"],
-    },
-    // {
-    //     model: YarnCount,
-    //     as: "yarncount",
-    //     attributes: ["id","yarnCount_name"]
-    // }
-  ];
-  let count = await ExportSpinnerYarnProcess.count()
-
-
-  const { rows } = await SpinProcess.findAndCountAll({
-    // where: whereCondition,
-    include: include,
-    order: [["id", "desc"]],
-    offset: count,
-    limit: 10,
-  });
-  let array = []
-  // Append data to worksheet
-  for await (const [index, item] of rows.entries()) {
-    let blendValue = "";
-    let blendqty = "";
-    let yarncount = "";
-
-    if (item.cottonmix_type && item.cottonmix_type.length > 0) {
-      let blend = await CottonMix.findAll({
-        where: { id: { [Op.in]: item.cottonmix_type } },
-      });
-      for (let bl of blend) {
-        blendValue += `${bl.cottonMix_name},`;
-      }
-      for (let obj of item.cottonmix_qty) {
-        blendqty += `${obj},`;
-      }
-    }
-
-    if (item.yarn_count && item.yarn_count.length > 0) {
-      let yarn = await YarnCount.findAll({
-        attributes: ["id", "yarnCount_name"],
-        where: { id: { [Op.in]: item.yarn_count } },
-      });
-      yarncount = yarn
-        .map((yrn: any) => yrn.dataValues.yarnCount_name)
-        .join(",");
-    }
-
-    let cottonConsumed = await LintSelections.findOne({
-      attributes: [
-        [
-          sequelize.fn(
-            "COALESCE",
-            sequelize.fn("SUM", sequelize.col("qty_used")),
-            0
-          ),
-          "cotton_consumed",
-        ],
-      ],
-      where: { process_id: item.dataValues.id },
-      group: ["process_id"],
-    });
-
-    let yarnSold = await SpinProcessYarnSelection.findOne({
-      attributes: [
-        [
-          sequelize.fn(
-            "COALESCE",
-            sequelize.fn("SUM", sequelize.col("qty_used")),
-            0
-          ),
-          "yarn_sold",
-        ],
-      ],
-      where: { spin_process_id: item.dataValues.id },
-    });
-    //   console.log("items",item,item?.brand?.id);
-
-    const rowValues = {
-      date: item.date ? item.date : "",
-      season: item.season ? item.season.name : "",
-      spinner: item.spinner ? item.spinner.name : "",
-      lotNo: item.batch_lot_no ? item.batch_lot_no : "",
-      reel_lot_no: item.reel_lot_no ? item.reel_lot_no : "",
-      yarnType: item.yarn_type ? item.yarn_type : "",
-      count: yarncount ? yarncount : "",
-      resa: item.yarn_realisation ? item.yarn_realisation : "",
-      comber: item.comber_noil ? item.comber_noil : "",
-      blend: blendValue,
-      blendqty: blendqty,
-      cotton_consumed: cottonConsumed
-        ? cottonConsumed?.dataValues?.cotton_consumed
-        : 0,
-      program: item.program ? item.program.program_name : "",
-      total: item.net_yarn_qty,
-      yarn_sold: yarnSold ? yarnSold?.dataValues?.yarn_sold : 0,
-      yarn_stock: item.qty_stock ? item.qty_stock : 0,
-      countryId: item?.spinner?.country_id ?? 0,
-      seasonId: item?.season_id ?? 0,
-      brandId: item?.spinner?.brand ? item?.spinner?.brand[0] : 0,
-      spinnerId: item?.spinner?.id ?? 0,
-      programId: item?.program_id ?? 0
-    };
-
-    array.push(rowValues)
-    // worksheet.addRow(rowValues);
-
-  }
-  ExportSpinnerYarnProcess.bulkCreate(array)
-}
 const exportSpinnerYarnProcess = async (req: Request, res: Response) => {
   // spinner_yarn_process_load
   const excelFilePath = path.join("./upload", "excel-spinner-yarn-process.xlsx");
@@ -3660,157 +2880,6 @@ const fetchSpinSalesPagination = async (req: Request, res: Response) => {
     return res.sendError(res, error.message);
   }
 };
-
-const exportSpinnerYarnSalesSchedule = async () => {
-
-  let include = [
-    {
-      model: Spinner,
-      as: "spinner",
-      attributes: ["id", "name", "country_id", "program_id", "brand"],
-    },
-    {
-      model: Season,
-      as: "season",
-      attributes: ["id", "name"],
-    },
-    {
-      model: Program,
-      as: "program",
-      attributes: ["id", "program_name"],
-    },
-    {
-      model: YarnCount,
-      as: "yarncount",
-      attributes: ["id", "yarnCount_name"],
-    },
-    {
-      model: Weaver,
-      as: "weaver",
-      attributes: ["id", "name"],
-    },
-    {
-      model: Knitter,
-      as: "knitter",
-      attributes: ["id", "name"],
-    },
-  ];
-  let count = await ExportSpinnerYarnSales.count()
-  const { rows }: any = await SpinProcessYarnSelection.findAndCountAll(
-    {
-      attributes: [
-        [Sequelize.literal('"sales"."id"'), "sales_id"],
-        [Sequelize.literal('"sales"."date"'), "date"],
-        [Sequelize.col('"sales"."season"."name"'), "season_name"],
-        [Sequelize.col('"sales"."season"."id"'), "season_id"],
-        [Sequelize.col('"sales"."spinner"."id"'), "spinner_id"],
-        [Sequelize.col('"sales"."spinner"."name"'), "spinner"],
-        [Sequelize.col('"sales"."spinner"."country_id"'), "countryId"],
-        [Sequelize.col('"sales"."spinner"."program_id"'), "programId"],
-        [Sequelize.col('"sales"."spinner"."brand"'), "brandId"],
-        [Sequelize.col('"sales"."spinner"."country_id"'), "countryId"],
-        [Sequelize.col('"sales"."program"."program_name"'), "program"],
-        [Sequelize.col('"sales"."order_ref"'), "order_ref"],
-        [Sequelize.col('"sales"."buyer_type"'), "buyer_type"],
-        [Sequelize.col('"sales"."buyer_id"'), "buyer_id"],
-        [Sequelize.col('"sales"."knitter_id"'), "knitter_id"],
-        [Sequelize.col('"sales"."knitter"."name'), "knitter"],
-        [Sequelize.col('"sales"."weaver"."name'), "weaver"],
-        [Sequelize.literal('"sales"."total_qty"'), "total_qty"],
-        [Sequelize.literal('"sales"."invoice_no"'), "invoice_no"],
-        [Sequelize.literal('"sales"."batch_lot_no"'), "batch_lot_no"],
-        [Sequelize.literal('"process"."reel_lot_no"'), "reel_lot_no"],
-        [Sequelize.literal('"sales"."no_of_boxes"'), "no_of_boxes"],
-        [Sequelize.literal('"sales"."price"'), "price"],
-        // [Sequelize.literal('"process"."qty_used"'), 'yarn_weight'],
-        [Sequelize.literal("qty_used"), "yarn_weight"],
-        [Sequelize.literal('"sales"."box_ids"'), "box_ids"],
-        [Sequelize.literal('"sales"."yarn_type"'), "yarn_type"],
-        [Sequelize.literal('"sales"."yarn_count"'), "yarn_count"],
-        // [
-        //   Sequelize.col('"sales"."yarncount".yarnCount_name'),
-        //   "yarnCount_name",
-        // ],
-        [Sequelize.literal('"sales"."quality_doc"'), "quality_doc"],
-        [Sequelize.literal('"sales"."tc_files"'), "tc_files"],
-        [Sequelize.literal('"sales"."contract_file"'), "contract_file"],
-        [Sequelize.literal('"sales"."invoice_file"'), "invoice_file"],
-        [Sequelize.literal('"sales"."delivery_notes"'), "delivery_notes"],
-        [Sequelize.literal('"sales"."transporter_name"'), "transporter_name"],
-        [Sequelize.literal('"sales"."vehicle_no"'), "vehicle_no"],
-        [Sequelize.literal('"sales"."qr"'), "qr"],
-        [
-          Sequelize.literal('"sales"."transaction_agent"'),
-          "transaction_agent",
-        ],
-        [Sequelize.literal('"sales"."qty_stock"'), "qty_stock"],
-        [Sequelize.literal('"sales"."status"'), "status"],
-      ],
-      //   where: whereCondition,
-      include: [
-        {
-          model: SpinSales,
-          as: "sales",
-          include: include,
-          attributes: [],
-        },
-        {
-          model: SpinProcess,
-          attributes: [],
-          as: "process",
-        },
-      ],
-      order: [["sales_id", "desc"]],
-      offset: count,
-      limit: 10,
-    }
-  );
-  let array = []
-  // Append data to worksheet
-  for await (const [index, item] of rows.entries()) {
-    console.log("item", item);
-
-    const rowValues = {
-      date: item.dataValues.date ? item.dataValues.date : "",
-      season: item.dataValues.season_name ? item.dataValues.season_name : "",
-      spinner: item.dataValues.spinner ? item.dataValues.spinner : "",
-      buyer_id: item.dataValues.weaver
-        ? item.dataValues.weaver
-        : item.dataValues.knitter
-          ? item.dataValues.knitter
-          : "",
-      invoice: item.dataValues.invoice_no ? item.dataValues.invoice_no : "",
-      order_ref: item.dataValues.order_ref ? item.dataValues.order_ref : "",
-      lotNo: item.dataValues.batch_lot_no ? item.dataValues.batch_lot_no : "",
-      reelLot: item.dataValues.reel_lot_no ? item.dataValues.reel_lot_no : "",
-      yarnType: item.dataValues.yarn_type ? item.dataValues.yarn_type : "",
-      count: item.dataValues.yarnCount_name
-        ? item.dataValues.yarnCount_name
-        : "",
-      boxes: item.dataValues.no_of_boxes ? item.dataValues.no_of_boxes : "",
-      boxId: item.dataValues.box_ids ? item.dataValues.box_ids : "",
-      price: item.dataValues.price ? item.dataValues.price : "",
-      total: item.dataValues.yarn_weight ? item.dataValues.yarn_weight : 0,
-      transporter_name: item.dataValues.transporter_name
-        ? item.dataValues.transporter_name
-        : "",
-      vehicle_no: item.dataValues.vehicle_no
-        ? item.dataValues.vehicle_no
-        : "",
-      agent: item.dataValues.transaction_agent
-        ? item.dataValues.transaction_agent
-        : "",
-      countryId: item?.dataValues?.countryId ?? 0,
-      programId: item?.dataValues?.programId?.length ? item?.dataValues?.programId[0] : 0,
-      brandId: item?.dataValues?.brandId?.length ? item?.dataValues?.brandId[0] : 0,
-      spinnerId: item?.dataValues?.spinner_id ?? 0,
-      seasonId: item?.dataValues?.season_id ?? 0
-    };
-    // worksheet.addRow(rowValues);
-    array.push(rowValues)
-  }
-  await ExportSpinnerYarnSales.bulkCreate(array)
-}
 
 const exportSpinnerSale = async (req: Request, res: Response) => {
 
@@ -8577,206 +7646,6 @@ const fetchSpinnerSummaryPagination = async (req: Request, res: Response) => {
   }
 };
 
-const exportSpinnerSummarySchedule = async () => {
-
-  const ginSalesCondition: any = {};
-  const spinSalesCondition: any = {};
-  const spinProcessCondition: any = {};
-
-  let count = await ExportSpinnerSummary.count()
-
-  let rows = await Spinner.findAll({
-    // where: whereCondition,
-    attributes: ["id", "name", "address", "country_id", "program_id", "brand"],
-    offset: count,
-    limit: 10
-  });
-  // Append data to worksheet
-  let array = []
-  for await (const [index, item] of rows.entries()) {
-    let obj: any = {};
-    let wheree: any = {};
-    // if (seasonId) {
-    //   const idArray: number[] = seasonId
-    //     .split(",")
-    //     .map((id: any) => parseInt(id, 10));
-    //   wheree.season_id = { [Op.in]: idArray };
-    //   lintCondition["$spinprocess.season_id$"] = { [Op.in]: idArray };
-    // }
-
-    let [
-      lint_cotton_procured,
-      lint_cotton_procured_pending,
-      lint_consumed,
-      yarnProcured,
-      yarnSold,
-    ] = await Promise.all([
-      GinSales.findOne({
-        attributes: [
-          [
-            sequelize.fn(
-              "COALESCE",
-              sequelize.fn("SUM", sequelize.col("total_qty")),
-              0
-            ),
-            "lint_cotton_procured",
-          ],
-          [
-            sequelize.fn(
-              "COALESCE",
-              sequelize.fn("SUM", sequelize.col("qty_stock")),
-              0
-            ),
-            "lint_cotton_stock",
-          ],
-        ],
-        where: {
-          ...wheree,
-          ...ginSalesCondition,
-          buyer: item.id,
-          status: "Sold",
-        },
-      }),
-      GinSales.findOne({
-        attributes: [
-          [
-            sequelize.fn(
-              "COALESCE",
-              sequelize.fn("SUM", sequelize.col("total_qty")),
-              0
-            ),
-            "lint_cotton_procured_pending",
-          ],
-        ],
-        where: {
-          ...wheree,
-          ...ginSalesCondition,
-          buyer: item.id,
-          status: "Pending for QR scanning",
-        },
-      }),
-      LintSelections.findOne({
-        attributes: [
-          [
-            sequelize.fn(
-              "COALESCE",
-              sequelize.fn("SUM", sequelize.col("qty_used")),
-              0
-            ),
-            "lint_cotton_consumed",
-          ],
-        ],
-        include: [
-          {
-            model: SpinProcess,
-            as: "spinprocess",
-            attributes: [],
-          },
-        ],
-        where: {
-          //   ...lintCondition,
-          "$spinprocess.spinner_id$": item.id,
-        },
-        group: ["spinprocess.spinner_id"],
-      }),
-      SpinProcess.findOne({
-        attributes: [
-          [
-            sequelize.fn(
-              "COALESCE",
-              sequelize.fn("SUM", sequelize.col("net_yarn_qty")),
-              0
-            ),
-            "yarn_procured",
-          ],
-          [
-            sequelize.fn(
-              "COALESCE",
-              sequelize.fn("SUM", sequelize.col("qty_stock")),
-              0
-            ),
-            "yarn_stock",
-          ],
-        ],
-        where: {
-          ...wheree,
-          ...spinProcessCondition,
-          spinner_id: item.id,
-        },
-      }),
-      SpinSales.findOne({
-        attributes: [
-          [
-            sequelize.fn(
-              "COALESCE",
-              sequelize.fn("SUM", sequelize.col("total_qty")),
-              0
-            ),
-            "yarn_sold",
-          ],
-        ],
-        where: {
-          ...wheree,
-          ...spinSalesCondition,
-          spinner_id: item.id,
-        },
-      }),
-    ]);
-
-    obj.lintCottonProcuredKG = lint_cotton_procured
-      ? lint_cotton_procured?.dataValues.lint_cotton_procured ?? 0
-      : 0;
-    obj.lintCottonProcuredPendingKG = lint_cotton_procured_pending
-      ? lint_cotton_procured_pending?.dataValues
-        .lint_cotton_procured_pending ?? 0
-      : 0;
-    obj.lintConsumedKG = lint_consumed
-      ? lint_consumed?.dataValues.lint_cotton_consumed ?? 0
-      : 0;
-    obj.lintStockKG = lint_cotton_procured
-      ? lint_cotton_procured?.dataValues.lint_cotton_stock ?? 0
-      : 0;
-    obj.yarnProcuredKG = yarnProcured
-      ? yarnProcured?.dataValues.yarn_procured ?? 0
-      : 0;
-    obj.yarnSoldKG = yarnSold ? yarnSold.dataValues.yarn_sold ?? 0 : 0;
-    obj.yarnStockKG = yarnProcured
-      ? yarnProcured?.dataValues.yarn_stock ?? 0
-      : 0;
-    obj.lintCottonProcuredMT = convert_kg_to_mt(obj.lintCottonProcuredKG);
-    obj.lintCottonProcuredPendingMT = convert_kg_to_mt(
-      obj.lintCottonProcuredPendingKG
-    );
-    obj.lintConsumedMT = convert_kg_to_mt(obj.lintConsumedKG);
-    obj.lintStockMT = convert_kg_to_mt(obj.lintStockKG);
-    obj.yarnSoldMT = convert_kg_to_mt(obj.yarnSoldKG);
-    obj.yarnProcuredMT = convert_kg_to_mt(obj.yarnProcuredKG);
-    obj.yarnStockMT = convert_kg_to_mt(obj.yarnStockKG);
-
-
-    const rowValues = {
-      index: index + 1,
-      name: item.name ? item.name : "",
-      lint_cotton_procured: obj.lintCottonProcuredMT,
-      lint_cotton_procured_pending: obj.lintCottonProcuredPendingMT,
-      lint_consumed: obj.lintConsumedMT,
-      balance_lint_cotton: obj.lintStockMT,
-      yarn_procured: obj.yarnProcuredMT,
-      yarn_sold: obj.yarnSoldMT,
-      yarn_stock: obj.yarnStockMT,
-      countryId: item?.country_id ?? 0,
-      programId: item?.program_id?.length ? item?.program_id[0] : 0,
-      brandId: item?.brand?.length ? item?.brand[0] : 0,
-      spinnerId: item?.id ?? 0,
-      //   seasonId:
-    };
-
-    array.push(rowValues)
-    // worksheet.addRow(rowValues);
-  }
-  await ExportSpinnerSummary.bulkCreate(array)
-}
-
 const exportSpinnerSummary = async (req: Request, res: Response) => {
   // spinner_summary_load
   const excelFilePath = path.join("./upload", "excel-spinner-summary.xlsx");
@@ -9303,208 +8172,7 @@ const fetchGinnerSummaryPagination = async (req: Request, res: Response) => {
     return res.sendError(res, error.message);
   }
 };
-const exportGinnerySummarySchedule = async () => {
-  const whereCondition: any = {};
-  const transactionWhere: any = {};
-  const ginBaleWhere: any = {};
-  const baleSelectionWhere: any = {};
 
-  const counts = await ExportGinnerSummary.count()
-
-  let rows = await Ginner.findAll({
-    // where: whereCondition,
-    // attributes: ["id", "name", "address"],
-    offset: counts,
-    limit: 10,
-  });
-
-  const arrayData = []
-  for await (const [index, item] of rows.entries()) {
-    console.log("item", item);
-
-    let obj: any = {};
-
-    let [cottonProcured, cottonProcessed, lintProcured, lintSold]: any =
-      await Promise.all([
-        Transaction.findOne({
-          attributes: [
-            [
-              sequelize.fn(
-                "COALESCE",
-                sequelize.fn(
-                  "SUM",
-                  Sequelize.literal("CAST(qty_purchased AS DOUBLE PRECISION)")
-                ),
-                0
-              ),
-              "qty",
-            ],
-          ],
-          where: {
-            ...transactionWhere,
-            mapped_ginner: item.id,
-          },
-        }),
-        Transaction.findOne({
-          attributes: [
-            [
-              sequelize.fn(
-                "COALESCE",
-                sequelize.fn(
-                  "SUM",
-                  Sequelize.literal("CAST(qty_purchased AS DOUBLE PRECISION)")
-                ),
-                0
-              ),
-              "qty",
-            ],
-          ],
-          where: {
-            ...transactionWhere,
-            mapped_ginner: item.id,
-            status: "Sold",
-          },
-        }),
-        GinBale.findOne({
-          attributes: [
-            [
-              sequelize.fn(
-                "COALESCE",
-                sequelize.fn(
-                  "SUM",
-                  sequelize.literal(
-                    'CAST("gin-bales"."weight" AS DOUBLE PRECISION)'
-                  )
-                ),
-                0
-              ),
-              "qty",
-            ],
-            [
-              sequelize.fn(
-                "COUNT",
-                Sequelize.literal('DISTINCT "gin-bales"."id"')
-              ),
-              "bales_procured",
-            ],
-          ],
-          include: [
-            {
-              model: GinProcess,
-              as: "ginprocess",
-              attributes: [],
-            },
-          ],
-          where: {
-            ...ginBaleWhere,
-            "$ginprocess.ginner_id$": item.id,
-          },
-          group: ["ginprocess.ginner_id"],
-        }),
-        BaleSelection.findOne({
-          attributes: [
-            [
-              sequelize.fn(
-                "COALESCE",
-                sequelize.fn(
-                  "SUM",
-                  sequelize.literal(
-                    'CAST("bale"."weight" AS DOUBLE PRECISION)'
-                  )
-                ),
-                0
-              ),
-              "qty",
-            ],
-            [
-              sequelize.fn("COUNT", Sequelize.literal("DISTINCT bale_id")),
-              "bales_sold",
-            ],
-          ],
-          include: [
-            {
-              model: GinSales,
-              as: "sales",
-              attributes: [],
-            },
-            {
-              model: GinBale,
-              as: "bale",
-              attributes: [],
-            },
-          ],
-          where: {
-            ...baleSelectionWhere,
-            "$sales.ginner_id$": item.id,
-          },
-          group: ["sales.ginner_id"],
-        }),
-      ]);
-    obj.cottonProcuredKg = cottonProcured?.dataValues?.qty ?? 0;
-    obj.cottonProcessedKg = cottonProcessed?.dataValues?.qty ?? 0;
-    obj.cottonStockKg = cottonProcured
-      ? cottonProcured?.dataValues?.qty -
-      (cottonProcessed ? cottonProcessed?.dataValues?.qty : 0)
-      : 0;
-    obj.cottonProcuredMt = convert_kg_to_mt(
-      cottonProcured?.dataValues.qty ?? 0
-    );
-    obj.cottonProcessedeMt = convert_kg_to_mt(
-      cottonProcessed?.dataValues.qty ?? 0
-    );
-    obj.cottonStockMt = convert_kg_to_mt(
-      cottonProcured
-        ? cottonProcured?.dataValues?.qty -
-        (cottonProcessed ? cottonProcessed?.dataValues?.qty : 0)
-        : 0
-    );
-    obj.lintProcuredKg = lintProcured?.dataValues.qty ?? 0;
-    obj.lintProcuredMt = convert_kg_to_mt(lintProcured?.dataValues.qty ?? 0);
-    obj.lintSoldKg = lintSold?.dataValues.qty ?? 0;
-    obj.lintSoldMt = convert_kg_to_mt(lintSold?.dataValues.qty ?? 0);
-    obj.lintStockKg =
-      Number(obj.lintProcuredKg) > Number(obj.lintSoldKg)
-        ? Number(obj.lintProcuredKg) - Number(obj.lintSoldKg)
-        : 0;
-    obj.lintStockMt =
-      Number(obj.lintProcuredKg) > Number(obj.lintSoldKg)
-        ? Number(obj.lintProcuredMt) - Number(obj.lintSoldMt)
-        : 0;
-    obj.balesProduced = lintProcured?.dataValues?.bales_procured
-      ? Number(lintProcured?.dataValues?.bales_procured)
-      : 0;
-    obj.balesSold = lintSold?.dataValues?.bales_sold
-      ? Number(lintSold?.dataValues?.bales_sold)
-      : 0;
-    obj.balesStock =
-      obj.balesProduced > obj.balesSold
-        ? obj.balesProduced - obj.balesSold
-        : 0;
-
-    const rowValues = {
-      //   index: index + 1,
-      name: item.name ? item.name : "",
-      cottonProcuredMt: obj.cottonProcuredMt,
-      cottonProcessedeMt: obj.cottonProcessedeMt,
-      cottonStockMt: obj.cottonStockMt,
-      lintProcuredMt: obj.lintProcuredMt,
-      lintSoldMt: obj.lintSoldMt,
-      lintStockMt: obj.lintStockMt,
-      balesProduced: obj.balesProduced,
-      balesSold: obj.balesSold,
-      balesStock: obj.balesStock,
-      countryId: item.country_id,
-      seasonId: item?.season_id ?? 0,
-      ginnerId: item?.ginnerUser_id?.length ? item?.ginnerUser_id[0] : 0,
-      programId: item?.program_id?.length ? item?.program_id[0] : 0,
-      brandId: item?.brand?.length ? item?.brand[0] : 0
-    }
-    // worksheet.addRow(rowValues);
-    arrayData.push(rowValues)
-    console.log('rowvalues', rowValues);
-  }
-  ExportGinnerSummary.bulkCreate(arrayData)
-}
 
 // const exportGinnerSummary = async (req: Request, res: Response) => {
 //   const excelFilePath = path.join("./upload", "excel-ginner-summary.xlsx");
@@ -9996,120 +8664,6 @@ const fetchGinnerCottonStock = async (req: Request, res: Response) => {
   }
 };
 
-const exportGinnerSeedCottonSchedule = async () => {
-  const transactionWhere: any = {};
-  let result: any = [];
-
-  let include = [
-    {
-      model: Ginner,
-      as: "ginner",
-      attributes: [],
-    },
-    {
-      model: Season,
-      as: "season",
-      attributes: [],
-    },
-    {
-      model: Program,
-      as: "program",
-      attributes: [],
-    },
-  ];
-
-  let rows = await GinProcess.findAll({
-    attributes: [
-      [Sequelize.literal('"ginner"."id"'), "ginner_id"],
-      [Sequelize.literal('"ginner"."name"'), "ginner_name"],
-      [Sequelize.literal('"season"."id"'), "season_id"],
-      [Sequelize.literal('"ginner"."program_id"'), "program_id"],
-      [Sequelize.literal('"ginner"."brand"'), "brand"],
-      [Sequelize.literal('"ginner"."country_id"'), "country_id"],
-      [Sequelize.col('"season"."name"'), "season_name"],
-      // [Sequelize.literal('"program"."program_name"'), 'program_name'],
-      [
-        sequelize.fn(
-          "COALESCE",
-          sequelize.fn("SUM", sequelize.col("total_qty")),
-          0
-        ),
-        "cotton_processed",
-      ],
-    ],
-    // where: whereCondition,
-    include: include,
-    group: ["ginner.id", "season.id"],
-    order: [["ginner_id", "desc"]],
-    offset: 0,
-    limit: 2,
-  });
-  console.log("rowa", rows);
-
-  for await (let ginner of rows) {
-    let obj: any = {};
-    const cottonProcured = await Transaction.findOne({
-      attributes: [
-        [
-          sequelize.fn(
-            "COALESCE",
-            sequelize.fn(
-              "SUM",
-              Sequelize.literal("CAST(qty_purchased AS DOUBLE PRECISION)")
-            ),
-            0
-          ),
-          "cotton_procured",
-        ],
-        [
-          sequelize.fn(
-            "COALESCE",
-            sequelize.fn(
-              "SUM",
-              Sequelize.literal("CAST(qty_stock AS DOUBLE PRECISION)")
-            ),
-            0
-          ),
-          "cotton_stock",
-        ],
-      ],
-      where: {
-        ...transactionWhere,
-        mapped_ginner: ginner.ginner_id,
-        status: "Sold",
-      },
-    });
-
-    obj.cotton_procured = cottonProcured?.dataValues?.cotton_procured ?? 0;
-    obj.cotton_stock = cottonProcured?.dataValues?.cotton_stock ?? 0;
-    result.push({ ...ginner?.dataValues, ...obj });
-  }
-  const array = []
-  for await (const [index, item] of result.entries()) {
-
-
-    const rowValues = {
-
-      ginner: item.ginner_name ? item.ginner_name : "",
-      season: item.season_name ? item.season_name : "",
-      cotton_procured: item.cotton_procured ? item.cotton_procured : null,
-      cotton_processed: item.cotton_processed ? item.cotton_processed : null,
-      cotton_stock: item.cotton_stock ? item.cotton_stock : null,
-      countryId: item?.country_id ?? 0,
-      ginnerId: item?.ginner_id ?? 0,
-      programId: item?.program_id?.length ? item?.program_id[0] : 0,
-      brandId: item?.brand?.length ? item?.brand[0] : 0,
-      seasonId: item?.season_id ?? 0
-    };
-    // worksheet.addRow(rowValues);
-    array.push(rowValues)
-    console.log(rowValues);
-
-
-  }
-  ExportGinnerCottonStock.bulkCreate(array)
-
-}
 const exportGinnerCottonStock = async (req: Request, res: Response) => {
   const excelFilePath = path.join(
     "./upload",
@@ -10524,163 +9078,6 @@ const fetchSpinnerLintCottonStock = async (req: Request, res: Response) => {
   }
 };
 
-
-const exportSpinnerLintCottonStockSchedule = async () => {
-  let include = [
-    {
-      model: Spinner,
-      as: "spinner",
-      attributes: [],
-    },
-    {
-      model: Season,
-      as: "season",
-      attributes: [],
-    },
-    {
-      model: Program,
-      as: "program",
-      attributes: [],
-    },
-  ];
-
-  let count = await ExportSpinnerLintStock.count()
-  let rows = await LintSelections.findAll({
-    attributes: [
-      [Sequelize.col('"spinprocess"."spinner"."id"'), "spinner_id"],
-      [Sequelize.col('"spinprocess"."spinner"."name"'), "spinner_name"],
-      [Sequelize.col('"spinprocess"."season"."id"'), "season_id"],
-      [Sequelize.col('"spinprocess"."season"."name"'), "season_name"],
-      [Sequelize.col('"spinprocess"."program_id"'), "program_id"],
-      [Sequelize.col('"spinprocess"."spinner"."brand"'), "brand"],
-      [Sequelize.col('"spinprocess"."spinner"."country_id"'), "country_id"],
-      [
-        Sequelize.literal('MIN(DISTINCT "spinprocess"."batch_lot_no")'),
-        "batch_lot_no",
-      ],
-      //this for comma separator batchlotno
-      // [
-      //     Sequelize.literal('ARRAY_TO_STRING(ARRAY_AGG(DISTINCT "spinprocess"."batch_lot_no"), \', \')'),
-      //     'batch_lot_no'
-      // ],
-      [
-        sequelize.fn(
-          "COALESCE",
-          sequelize.fn("SUM", sequelize.col("qty_used")),
-          0
-        ),
-        "cotton_consumed",
-      ],
-    ],
-    // where: whereCondition,
-    include: [
-      {
-        model: SpinProcess,
-        as: "spinprocess",
-        include: include,
-        attributes: [],
-      },
-      {
-        model: GinSales,
-        as: "ginsales",
-        attributes: [],
-      },
-    ],
-    group: ["spinprocess.spinner.id", "spinprocess.season.id", "spinprocess.program_id"],
-    order: [["spinner_id", "desc"]],
-    offset: count,
-    limit: 4,
-  });
-
-  let ndata = [];
-  for await (let spinner of rows) {
-    // console.log("spinner",spinner);
-
-    let salesData = await BaleSelection.findAll({
-      attributes: [
-        [Sequelize.col('"sales"."invoice_no"'), "invoice_no"],
-        [Sequelize.col('"bale"."ginprocess"."reel_lot_no"'), "reel_lot_no"],
-      ],
-      where: {
-        "$sales.buyer$": spinner?.dataValues?.spinner_id,
-        "$sales.season_id$": spinner?.dataValues?.season_id,
-        "$sales.status$": "Sold",
-      },
-      include: [
-        {
-          model: GinSales,
-          as: "sales",
-          attributes: [],
-        },
-        {
-          model: GinBale,
-          as: "bale",
-          include: [
-            {
-              model: GinProcess,
-              as: "ginprocess",
-              attributes: [],
-            },
-          ],
-          attributes: [],
-        },
-      ],
-      group: ["sales.invoice_no", "bale.ginprocess.reel_lot_no"],
-    });
-
-    let procuredCotton = await GinSales.findOne({
-      attributes: [
-        [
-          sequelize.fn(
-            "COALESCE",
-            sequelize.fn("SUM", sequelize.col("total_qty")),
-            0
-          ),
-          "cotton_procured",
-        ],
-      ],
-      where: {
-        buyer: spinner?.dataValues?.spinner_id,
-        season_id: spinner?.dataValues?.season_id,
-        status: "Sold",
-      },
-    });
-
-    for await (let item of salesData) {
-
-
-      let stockData = {
-        // spinner_id: spinner?.dataValues?.spinner_id,
-        spinner: spinner?.dataValues?.spinner_name,
-        // season_id: spinner?.dataValues?.season_id,
-        season: spinner?.dataValues?.season_name,
-        batch_lot_no: spinner?.dataValues?.batch_lot_no,
-        reel_lot_no: item?.dataValues?.reel_lot_no,
-        invoice_no: item?.dataValues?.invoice_no,
-        cotton_procured: procuredCotton
-          ? procuredCotton?.dataValues?.cotton_procured
-          : 0,
-        cotton_consumed: spinner ? spinner?.dataValues?.cotton_consumed : 0,
-        cotton_stock:
-          Number(procuredCotton?.dataValues?.cotton_procured) >
-            Number(spinner?.dataValues?.cotton_consumed)
-            ? Number(procuredCotton?.dataValues?.cotton_procured) -
-            Number(spinner?.dataValues?.cotton_consumed)
-            : 0,
-        countryId: spinner?.dataValues?.country_id ?? 0,
-        spinnerId: spinner?.dataValues?.spinner_id ?? 0,
-        brandId: spinner?.dataValues?.brand?.length ? spinner?.dataValues?.brand[0] : 0,
-        programId: spinner?.dataValues?.program_id ?? 0,
-        seasonId: spinner?.dataValues?.season_id ?? 0,
-      };
-      ndata.push(stockData);
-
-
-    }
-    await ExportSpinnerLintStock.bulkCreate(ndata)
-  }
-
-}
 
 const exportSpinnerCottonStock = async (req: Request, res: Response) => {
   const excelFilePath = path.join(
@@ -13170,7 +11567,7 @@ const consolidatedTraceability = async (req: Request, res: Response) => {
       let spnr_lint_ids: any = [];
 
       if (weave_yarn_ids.length > 0 || knit_yarn_ids.length > 0) {
-        spinSales = await SpinSales.findAll({
+        const rows = await SpinSales.findAll({
           attributes: [
             "id",
             "date",
@@ -13193,11 +11590,11 @@ const consolidatedTraceability = async (req: Request, res: Response) => {
               as: "spinner",
               attributes: ["id", "name"],
             },
-            {
-              model: YarnCount,
-              as: "yarncount",
-              attributes: ["yarnCount_name"],
-            },
+            // {
+            //   model: YarnCount,
+            //   as: "yarncount",
+            //   attributes: ["yarnCount_name"],
+            // },
           ],
           where: {
             id: {
@@ -13205,12 +11602,33 @@ const consolidatedTraceability = async (req: Request, res: Response) => {
             },
           },
         });
+
+        for await (let row of rows) {
+            let yarncountList = [];
+            if (row.dataValues?.yarn_count && row.dataValues?.yarn_count.length > 0) {
+                yarncountList = await YarnCount.findAll({
+                    where: {
+                        id: {
+                            [Op.in]: row.dataValues.yarn_count,
+                        },
+                    },
+                    attributes: ["yarnCount_name"],
+                });
+            }
+           const yarncount =  yarncountList?.map((obj: any) => obj.dataValues.yarnCount_name);
+            spinSales.push({
+                ...row.dataValues,
+                yarncount
+            });
+        }
+
         let spinSaleProcess = await SpinProcessYarnSelection.findAll({
           where: {
-            sales_id: spinSales.map((obj: any) => obj.dataValues.id),
+            sales_id: rows?.map((obj: any) => obj.dataValues.id),
           },
           attributes: ["id", "spin_process_id"],
         });
+
         let spinProcess = await LintSelections.findAll({
           where: {
             process_id: spinSaleProcess.map(
@@ -13677,10 +12095,11 @@ const consolidatedTraceability = async (req: Request, res: Response) => {
             .map((val: any) => val?.reel_lot_no)
             .filter((item: any) => item !== null && item !== undefined)
           : [];
+
       let spinYarnCount =
         spinSales && spinSales.length > 0
           ? spinSales
-            .map((val: any) => val?.yarncount?.yarnCount_name)
+            .map((val: any) => val?.yarncount)
             .filter((item: any) => item !== null && item !== undefined)
           : [];
       let spinYarnType =
@@ -13844,19 +12263,19 @@ const consolidatedTraceability = async (req: Request, res: Response) => {
         (acc: any, value: any) => acc + value,
         0
       );
-
+      
       data.push({
         ...item.dataValues,
         ...obj,
-        // knitSales,
-        // weaverSales,
-        // spinSales,
-        // ginSales,
-        // transactions_ids,
-        // transactions
+        knitSales,
+        weaverSales,
+        spinSales,
+        ginSales,
+        transactions_ids,
+        transactions
       });
     }
-
+  
     return res.sendPaginationSuccess(res, data, count);
   } catch (error: any) {
     console.log(error);
@@ -13866,14 +12285,16 @@ const consolidatedTraceability = async (req: Request, res: Response) => {
 
 const exportConsolidatedTraceability = async (req: Request, res: Response) => {
   // consolidated_tracebality_load
-  await ExportData.update({
-    consolidated_tracebality_load: true
-  }, { where: { consolidated_tracebality_load: false } })
-  res.send({ status: 200, message: "export file processing" })
+  // await ExportData.update({
+  //   consolidated_tracebality_load: true
+  // }, { where: { consolidated_tracebality_load: false } })
+  // res.send({ status: 200, message: "export file processing" })
+
   const excelFilePath = path.join(
     "./upload",
     "consolidated-traceabilty-report.xlsx"
   );
+  
   const whereCondition: any = {};
   const { garmentId, brandId, styleMarkNo, garmentType }: any = req.query;
   let baseurl = process.env.BASE_URL;
@@ -14347,7 +12768,7 @@ const exportConsolidatedTraceability = async (req: Request, res: Response) => {
       let spnr_lint_ids: any = [];
 
       if (weave_yarn_ids.length > 0 || knit_yarn_ids.length > 0) {
-        spinSales = await SpinSales.findAll({
+        const rows = await SpinSales.findAll({
           attributes: [
             "id",
             "date",
@@ -14370,11 +12791,6 @@ const exportConsolidatedTraceability = async (req: Request, res: Response) => {
               as: "spinner",
               attributes: ["id", "name"],
             },
-            {
-              model: YarnCount,
-              as: "yarncount",
-              attributes: ["yarnCount_name"],
-            },
           ],
           where: {
             id: {
@@ -14382,9 +12798,30 @@ const exportConsolidatedTraceability = async (req: Request, res: Response) => {
             },
           },
         });
+
+        for await (let row of rows) {
+          let yarncountList = [];
+          if (row.dataValues?.yarn_count && row.dataValues?.yarn_count.length > 0) {
+              yarncountList = await YarnCount.findAll({
+                  where: {
+                      id: {
+                          [Op.in]: row.dataValues.yarn_count,
+                      },
+                  },
+                  attributes: ["yarnCount_name"],
+              });
+          }
+         const yarncount =  yarncountList?.map((obj: any) => obj.dataValues.yarnCount_name);
+          spinSales.push({
+              ...row.dataValues,
+              yarncount
+          });
+      }
+
+
         let spinSaleProcess = await SpinProcessYarnSelection.findAll({
           where: {
-            sales_id: spinSales.map((obj: any) => obj.dataValues.id),
+            sales_id: rows.map((obj: any) => obj.dataValues.id),
           },
           attributes: ["id", "spin_process_id"],
         });
@@ -14858,7 +13295,7 @@ const exportConsolidatedTraceability = async (req: Request, res: Response) => {
       let spinYarnCount =
         spinSales && spinSales.length > 0
           ? spinSales
-            .map((val: any) => val?.yarncount?.yarnCount_name)
+            .map((val: any) => val?.yarncount)
             .filter((item: any) => item !== null && item !== undefined)
           : [];
       let spinYarnType =
@@ -15236,7 +13673,7 @@ const exportConsolidatedTraceability = async (req: Request, res: Response) => {
           obj.frmr_programs && obj.frmr_programs.length > 0
             ? obj.frmr_programs.join(", ")
             : "",
-      });
+          });
       worksheet.addRow(rowValues);
     }
     // Set the width for the S No. column
@@ -15251,23 +13688,23 @@ const exportConsolidatedTraceability = async (req: Request, res: Response) => {
       });
       column.width = Math.min(30, maxCellLength + 2); // Limit width to 30 characters
     });
-
+    
     // Save the workbook
     await workbook.xlsx.writeFile(excelFilePath);
-    // res.status(200).send({
-    //   success: true,
-    //   messgage: "File successfully Generated",
-    //   data: process.env.BASE_URL + "consolidated-traceabilty-report.xlsx",
-    // });
-    await ExportData.update({
-      consolidated_tracebality_load: false
-    }, { where: { consolidated_tracebality_load: true } })
+    res.status(200).send({
+      success: true,
+      messgage: "File successfully Generated",
+      data: process.env.BASE_URL + "consolidated-traceabilty-report.xlsx",
+    });
+    // await ExportData.update({
+    //   consolidated_tracebality_load: false
+    // }, { where: { consolidated_tracebality_load: true } })
   } catch (error: any) {
-    (async () => {
-      await ExportData.update({
-        consolidated_tracebality_load: false
-      }, { where: { consolidated_tracebality_load: true } })
-    })()
+    // (async () => {
+    //   await ExportData.update({
+    //     consolidated_tracebality_load: false
+    //   }, { where: { consolidated_tracebality_load: true } })
+    // })()
     console.log(error);
     return res.sendError(res, error.message);
   }
@@ -15755,11 +14192,11 @@ const exportSpinnerBackwardTraceability = async (
         as: "program",
         attributes: ["id", "program_name"],
       },
-      {
-        model: YarnCount,
-        as: "yarncount",
-        attributes: ["id", "yarnCount_name"],
-      },
+      // {
+      //   model: YarnCount,
+      //   as: "yarncount",
+      //   attributes: ["id", "yarnCount_name"],
+      // },
       {
         model: Weaver,
         as: "weaver",
@@ -16506,17 +14943,6 @@ export {
   spinnerBackwardTraceabiltyReport,
   exportSpinnerBackwardTraceability,
   villageSeedCottonReport,
-  exportVillageSeedCotton,
-  exportGinnerProcessSchedule,
-  exportGinnerySummarySchedule,
-  exportGinnerSalesSchedule,
-  exportGinnerPendingSchedule,
-  exportGinnerSeedCottonSchedule,
-  exportSpinnerSummarySchedule,
-  exportSpinnerBaleReceiptSchedule,
-  exportSpinnerYarnProcessSchedule,
-  exportSpinnerYarnSalesSchedule,
-  exportSpinnerPendingBaleSchedule,
-  exportSpinnerLintCottonStockSchedule
+  exportVillageSeedCotton
 };
 

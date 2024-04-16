@@ -87,8 +87,10 @@ import cropCurrentSeasonRouter from './router/master/crop-current-season';
 import organicProgramDataDigitizationRouter from './router/services/organic-program-data-digitization';
 import { sendScheduledEmails } from "./controllers/email-management/scheduled-email.controller";
 import ExportData from "./models/export-data-check.model";
-import { exportGinnerPendingSchedule, exportGinnerProcessSchedule, exportGinnerSalesSchedule, exportGinnerSeedCottonSchedule, exportGinnerySummarySchedule, exportSpinnerBaleReceiptSchedule, exportSpinnerLintCottonStockSchedule, exportSpinnerPendingBaleSchedule, exportSpinnerSummarySchedule, exportSpinnerYarnProcessSchedule, exportSpinnerYarnSalesSchedule } from "./controllers/reports";
 import { exportReportsTameTaking, exportReportsOnebyOne } from "./controllers/reports/export-cron";
+import moment from "moment";
+import 'moment-timezone';
+
 
 const app = express();
 
@@ -110,106 +112,13 @@ const connectToDb = async () => {
   try {
     await sequelize.authenticate();
     console.log("Database Connected successfully.");
-    try {
-      // Insert seed data into the User table
-
-      // const data = await ExportData.findAll();
-      // if (data?.length) {
-      //   console.log("Seed data already fetched ");
-      //   const usersSeedData = {
-      //     ginner_lint_bale_process_load: false,
-      //     ginner_summary_load: false,
-      //     ginner_lint_bale_sale_load: false,
-      //     ginner_pending_sales_load: false,
-      //     ginner_seed_cotton_load: false,
-      //     spinner_summary_load: false,
-      //     spinner_bale_receipt_load: false,
-      //     spinner_yarn_process_load: false,
-      //     spinner_yarn_sales_load: false,
-      //     spinner_yarn_bales_load: false,
-      //     spinner_lint_cotton_stock_load: false,
-      //     knitter_yarn_receipt_load: false,
-      //     knitter_yarn_process_load: false,
-      //     knitter_fabric_sales_load: false,
-      //     weaver_yarn_receipt_load: false,
-      //     weaver_yarn_process_load: false,
-      //     weaver_yarn_sales_load: false,
-      //     garment_fabric_receipt_load: false,
-      //     garment_fabric_process_load: false,
-      //     garment_fabric_sales_load: false,
-      //     qr_code_tracker_load: false,
-      //     consolidated_tracebality_load: false,
-      //     spinner_backward_tracebality_load: false,
-      //     village_seed_cotton_load: false,
-      //     premium_validation_load: false,
-      //     procurement_load: false,
-      //     failes_procurement_load: false,
-      //     procurement_tracker_load: false,
-      //     procurement_sell_live_tracker_load: false,
-      //     qr_app_procurement_load: false,
-      //     organic_farmer_load: false,
-      //     non_organic_farmer_load: false,
-      //     failed_farmer_load: false,
-      //     createdAt: new Date(),
-      //     updatedAt: new Date(),
-      //   };
-
-      //   //   await ExportData.update(usersSeedData,where:{id:1});
-      //   const updateResult = await ExportData.update(usersSeedData, { where: { id: 1 } });
-
-      // } else {
-      //   const usersSeedData = {
-      //     ginner_lint_bale_process_load: false,
-      //     ginner_summary_load: false,
-      //     ginner_lint_bale_sale_load: false,
-      //     ginner_pending_sales_load: false,
-      //     ginner_seed_cotton_load: false,
-      //     spinner_summary_load: false,
-      //     spinner_bale_receipt_load: false,
-      //     spinner_yarn_process_load: false,
-      //     spinner_yarn_sales_load: false,
-      //     spinner_yarn_bales_load: false,
-      //     spinner_lint_cotton_stock_load: false,
-      //     knitter_yarn_receipt_load: false,
-      //     knitter_yarn_process_load: false,
-      //     knitter_fabric_sales_load: false,
-      //     weaver_yarn_receipt_load: false,
-      //     weaver_yarn_process_load: false,
-      //     weaver_yarn_sales_load: false,
-      //     garment_fabric_receipt_load: false,
-      //     garment_fabric_process_load: false,
-      //     garment_fabric_sales_load: false,
-      //     qr_code_tracker_load: false,
-      //     consolidated_tracebality_load: false,
-      //     spinner_backward_tracebality_load: false,
-      //     village_seed_cotton_load: false,
-      //     premium_validation_load: false,
-      //     procurement_load: false,
-      //     failes_procurement_load: false,
-      //     procurement_tracker_load: false,
-      //     procurement_sell_live_tracker_load: false,
-      //     qr_app_procurement_load: false,
-      //     organic_farmer_load: false,
-      //     non_organic_farmer_load: false,
-      //     failed_farmer_load: false,
-      //     createdAt: new Date(),
-      //     updatedAt: new Date(),
-      //   };
-
-      //   await ExportData.create(usersSeedData);
-      //   console.log("Seed data create  successfully ");
-      // }
-      // generateSpinnerLintCottonStock();
-
-      // exportReportsOnebyOne();
 
       const used = process.memoryUsage();
       console.log(`Memory usage: ${JSON.stringify(used)}`);
-      console.log("date:", new Date())
+      console.log("Current Server Time", moment());
+      console.log("Time Zone", serverTimezone);
+      console.log("Offset IST", differenceInMinutes);
 
-    } catch (error) {
-      console.error("Error seeding data:", error);
-    }
   } catch (error) {
     console.error("Unable to connect to the database:", error);
   }
@@ -217,34 +126,54 @@ const connectToDb = async () => {
 
 var cron = require('node-cron');
 
-cron.schedule('0 23 * * *', async () => {
+const serverTimezone = moment.tz.guess();
+const IST = 'Asia/Kolkata';
+
+const IST_to_Denver_offset = moment().tz(serverTimezone).utcOffset();
+const IST_to_India_offset = moment().tz(IST).utcOffset();
+const differenceInMinutes = IST_to_Denver_offset-IST_to_India_offset;
+const differenceInHours = Math.round(differenceInMinutes / 60);
+  
+const checkTimeDiff = (cronTime:number,differenceInHours:number) => {
+  let newCronTime;
+  if (differenceInHours<0) {
+    newCronTime = (cronTime + differenceInHours) % 24;
+    newCronTime = newCronTime > 0 ? newCronTime : 24 + newCronTime;
+  }else{
+    newCronTime = (cronTime - differenceInHours) % 24;
+    newCronTime = newCronTime > 0 ? newCronTime : 24 + newCronTime;
+  }
+  return newCronTime>=24?0:newCronTime;
+}
+
+
+cron.schedule(`0 ${checkTimeDiff(23,differenceInHours)} * * *`, async () => {
   console.log('running a task once a day at 11 pm');
   sendScheduledEmails();
 });
 
-cron.schedule('0 8 * * *', async () => {
+cron.schedule(`0 ${checkTimeDiff(8,differenceInHours)} * * *`, async () => {
   console.log('Running a task at 8 am IST');
   // Add your task for 8 am IST here
   exportReportsOnebyOne();
 
 });
-
 // Schedule cron job for 4 pm in India time (UTC+5:30)
-cron.schedule('0 16 * * *', async () => {
+cron.schedule(`0 ${checkTimeDiff(16,differenceInHours)} * * *`, async () => {
   console.log('Running a task at 4 pm IST');
   // Add your task for 4 pm IST here
   exportReportsOnebyOne();
 });
 
 // Schedule cron job for 12 am (midnight) in India time (UTC+5:30)
-cron.schedule('0 0 * * *', async () => {
+cron.schedule(`0 ${checkTimeDiff(0,differenceInHours)} * * *`, async () => {
   console.log('Running a task at 12 am IST');
   // Add your task for 12 am IST here
   exportReportsOnebyOne();
 });
 
 // Schedule cron job for 2 am in India time (UTC+5:30)
-cron.schedule('0 2 * * *', async () => {
+cron.schedule(`0 ${checkTimeDiff(2,differenceInHours)} * * *`, async () => {
   console.log('Running a task at 2 am IST');
   // Add your task for 2 am IST here
   exportReportsTameTaking();
@@ -252,18 +181,17 @@ cron.schedule('0 2 * * *', async () => {
 
 // ---------------------hostinger--------------------------------//
 
-cron.schedule('0 13 * * *', async () => {
+cron.schedule( `0 ${checkTimeDiff(13,differenceInHours)} * * *`, async () => {
   console.log('Running a task at 1 pm IST');
   // Add your task for 1 am IST here
   exportReportsTameTaking();
 });
 
-// cron.schedule('0 */8 * * *', async () => {
-//   // cron.schedule('* * * * *', async () => {
-//   console.log('running a task for export after 8 Hours');
-//   exportReportsOnebyOne();
-//   // sendScheduledEmails();
-// });
+// Schedule the cron job to run at 1 AM IST
+cron.schedule(`25 ${checkTimeDiff(19,differenceInHours)} * * *`, () => {
+  console.log(`Cron job scheduled in server's timezone (${serverTimezone}) to run at IST`);
+});
+
 
 // app.use("/", (req: Request, res: Response) =>{
 //     console.log("object");
