@@ -2721,7 +2721,7 @@ const garmentTraceabilityMap = async (req: Request, res: Response) => {
     let blendqty = [];
     let blendtype = []
     if (weave_yarn_ids.length > 0 || knit_yarn_ids.length > 0) {
-      spinSales = await SpinSales.findAll({
+      const rows = await SpinSales.findAll({
         attributes: [
           "id",
           "date",
@@ -2768,9 +2768,28 @@ const garmentTraceabilityMap = async (req: Request, res: Response) => {
           },
         },
       });
+
+      for await (let row of rows) {
+        let yarncountList = [];
+        if (row.dataValues?.yarn_count && row.dataValues?.yarn_count.length > 0) {
+            yarncountList = await YarnCount.findAll({
+                where: {
+                    id: {
+                        [Op.in]: row.dataValues.yarn_count,
+                    },
+                },
+                attributes: ["yarnCount_name"],
+            });
+        }
+       const yarncount =  yarncountList?.map((obj: any) => obj.dataValues.yarnCount_name);
+        spinSales.push({
+            ...row.dataValues,
+            yarncount
+        });
+    }
       let spinSaleProcess = await SpinProcessYarnSelection.findAll({
         where: {
-          sales_id: spinSales.map((obj: any) => obj.dataValues.id),
+          sales_id: rows.map((obj: any) => obj.dataValues.id),
         },
         attributes: ["id", "spin_process_id"],
       });
@@ -3135,7 +3154,7 @@ const garmentTraceabilityMap = async (req: Request, res: Response) => {
     let spinYarnCount =
       spinSales && spinSales.length > 0
         ? spinSales
-          .map((val: any) => val?.yarncount?.yarnCount_name)
+          .map((val: any) => val?.yarncount)
           .filter((item: any) => item !== null && item !== undefined)
         : [];
     let spinYarnType =

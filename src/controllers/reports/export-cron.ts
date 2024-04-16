@@ -66,11 +66,6 @@ import DyingFabricSelection from "../../models/dying-fabric-selection.model";
 import UserApp from "../../models/users-app.model";
 import CropGrade from "../../models/crop-grade.model";
 import FailedRecords from "../../models/failed-records.model";
-import ExportGinnerSummary from "../../models/export-ginner-summary.model";
-import ExportGinnerProcess from "../../models/export-ginner-lintbale-process.model";
-import ExportGinnerSale from "../../models/export-ginner-lintbale-sale.model";
-import ExportGinnerPending from "../../models/ginner-pending-sale.model";
-import ExportGinnerCottonStock from "../../models/ginner-seed-cotton-stock.model";
 
 
 const exportReportsTameTaking = async () => {

@@ -28,10 +28,10 @@ const sendForgotEmail = (link: any, email: string) => {
     });
 }
 
-const sendEmail = (html: any, email: any, subject: any, cc?: any, attachment?: any) => {
+const sendEmail = (html: any, email: any, subject: any, from?:any, cc?: any, attachment?: any) => {
     return new Promise((resolve, reject) => {
     const message = {
-        from: process.env.SENDER_EMAIL_ADDRESS,
+        from: from?from:process.env.SENDER_EMAIL_ADDRESS,
         to: email,
         subject: subject,
         html: html,
