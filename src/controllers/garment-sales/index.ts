@@ -2756,11 +2756,6 @@ const garmentTraceabilityMap = async (req: Request, res: Response) => {
               as: "district",
             }]
           },
-          // {
-          //   model: YarnCount,
-          //   as: "yarncount",
-          //   attributes: ["yarnCount_name"],
-          // },
         ],
         where: {
           id: {
@@ -2786,6 +2781,7 @@ const garmentTraceabilityMap = async (req: Request, res: Response) => {
             ...row.dataValues,
             yarncount
         });
+
     }
       let spinSaleProcess = await SpinProcessYarnSelection.findAll({
         where: {
