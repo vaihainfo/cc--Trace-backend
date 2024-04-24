@@ -22,6 +22,10 @@ import Weaver from "../../models/weaver.model";
 import GarmentSales from "../../models/garment-sales.model";
 import Garment from "../../models/garment.model";
 import FabricSelection from "../../models/fabric-selections.model";
+import GinProcess from "../../models/gin-process.model";
+import SpinProcess from "../../models/spin-process.model";
+import BaleSelection from "../../models/bale-selection.model";
+import GinBale from "../../models/gin-bale.model";
 
 const createBrand = async (req: Request, res: Response) => {
     try {
@@ -355,6 +359,76 @@ const organicCottonOverview = async (req: Request, res: Response) => {
         return res.sendError(res, error.message);
     }
 }
+
+const organicCottonSpecialUsersOverview = async (req: Request, res: Response) => {
+    try {
+        let brandId = req.query.brandId;
+        let seasonId = req.query.seasonId;
+        if (!brandId) {
+            return res.sendError(res, 'NEED_BRAND_ID')
+        }
+        let whereCondition: any = {};
+        if (req.query.seasonId) {
+            whereCondition.season_id = req.query.seasonId
+        }
+
+
+        let total_lint_procured = await sumbrandginnerProcured(brandId, seasonId);
+        let total_lint_sold = await sumbrandginnerSales(brandId, seasonId);
+        let total_lint_stock = await sumbrandginnerStock(brandId, seasonId);
+        let total_yarn_procured = await sumbrandspinnerYarnProcured(brandId, seasonId);
+        let total_yarn_sold = await sumbrandspinnerYarnSales(brandId, seasonId);
+        let total_yarn_stock = await sumbrandspinnerYarnStock(brandId, seasonId);
+
+        res.sendSuccess(res, {
+            total_lint_procured: total_lint_procured ? total_lint_procured : 0,
+            total_lint_sold: total_lint_sold ? total_lint_sold : 0,
+            total_lint_stock: total_lint_stock ? total_lint_stock : 0,
+            total_yarn_procured: total_yarn_procured ? total_yarn_procured : 0,
+            total_yarn_sold: total_yarn_sold ? total_yarn_sold : 0,
+            total_yarn_stock: total_yarn_stock ? total_yarn_stock : 0,
+        });
+    } catch (error: any) {
+        return res.sendError(res, error.message);
+    }
+}
+
+const sumbrandginnerProcured = async (brandId: any, seasonId: any) => {
+    try {
+        let whereCondition: any = {}
+        if (seasonId) {
+            whereCondition.season_id = seasonId
+        }
+        const ginnerList = await GinProcess.findAll({
+            where: {
+                ...whereCondition,
+                // status: 'Pending for QR scanning',
+                '$ginner.brand$': { [Op.contains]: [Number(brandId)] }
+            },
+            attributes: [
+                [Sequelize.fn('COALESCE', Sequelize.fn('SUM', Sequelize.col('total_qty')), 0), 'total_procured_lint_mt'],
+            ],
+            include: [
+                {
+                    model: Ginner,
+                    as: 'ginner',
+                    attributes: [],
+                }
+            ],
+            group: ['ginner_id', "ginner.id"]
+        });
+        let cottonQty = 0;
+        ginnerList.forEach((value: any) => {
+            cottonQty = value.dataValues.total_procured_lint_mt;
+        });
+
+        return cottonQty / 1000;
+    } catch (error) {
+        console.log(error);
+    }
+}
+
+
 const sumbrandginnerSales = async (brandId: any, seasonId: any) => {
     try {
         let whereCondition: any = {}
@@ -390,6 +464,159 @@ const sumbrandginnerSales = async (brandId: any, seasonId: any) => {
     }
 }
 
+function convert_kg_to_mt(number: any) {
+    return (number / 1000).toFixed(2);
+  }
+  const sumbrandginnerStock = async (brandId: any, seasonId: any) => {
+    try {
+        let whereCondition: any = {};
+        const ginBaleWhere: any = {};
+        const baleSelectionWhere: any = {};
+        if (seasonId) {
+            const idArray: number[] = seasonId
+              .split(",")
+              .map((id: any) => parseInt(id, 10));
+            ginBaleWhere["$ginprocess.season_id$"] = { [Op.in]: idArray };
+            baleSelectionWhere["$sales.season_id$"] = { [Op.in]: idArray };
+          }
+
+        const { count, rows } = await Ginner.findAndCountAll({
+            where: {
+                ...whereCondition,
+                brand: { [Op.contains]: [Number(brandId)] }
+            },
+        });
+
+        let result: any[] = [];
+
+        for await (const ginner of rows) {
+            const [lintProcured, lintSold]: any = await Promise.all([
+                GinBale.findOne({
+                    attributes: [
+                        [
+                            sequelize.fn(
+                                "COALESCE",
+                                sequelize.fn(
+                                    "SUM",
+                                    sequelize.literal(
+                                        'CAST("gin-bales"."weight" AS DOUBLE PRECISION)'
+                                    )
+                                ),
+                                0
+                            ),
+                            "qty",
+                        ],
+                        [
+                            sequelize.fn(
+                                "COUNT",
+                                Sequelize.literal('DISTINCT "gin-bales"."id"')
+                            ),
+                            "bales_procured",
+                        ],
+                    ],
+                    include: [
+                        {
+                            model: GinProcess,
+                            as: "ginprocess",
+                            attributes: [],
+                        },
+                    ],
+                    where: {
+                        ...ginBaleWhere,
+                        "$ginprocess.ginner_id$": ginner.id,
+                    },
+                    group: ["ginprocess.ginner_id"],
+                }),
+                BaleSelection.findOne({
+                    attributes: [
+                        [
+                            sequelize.fn(
+                                "COALESCE",
+                                sequelize.fn(
+                                    "SUM",
+                                    sequelize.literal(
+                                        'CAST("bale"."weight" AS DOUBLE PRECISION)'
+                                    )
+                                ),
+                                0
+                            ),
+                            "qty",
+                        ],
+                        [
+                            sequelize.fn("COUNT", Sequelize.literal("DISTINCT bale_id")),
+                            "bales_sold",
+                        ],
+                    ],
+                    include: [
+                        {
+                            model: GinSales,
+                            as: "sales",
+                            attributes: [],
+                        },
+                        {
+                            model: GinBale,
+                            as: "bale",
+                            attributes: [],
+                        },
+                    ],
+                    where: {
+                        ...baleSelectionWhere,
+                        "$sales.ginner_id$": ginner.id,
+                    },
+                    group: ["sales.ginner_id"],
+                }),
+            ]);
+
+            const obj: any = {
+                lintProcuredMt: convert_kg_to_mt(lintProcured?.dataValues.qty ?? 0),
+                lintSoldMt: convert_kg_to_mt(lintSold?.dataValues.qty ?? 0),
+            };
+
+            obj.lintStockMt =
+                Number(obj.lintProcuredMt) > Number(obj.lintSoldMt)
+                    ? Number(obj.lintProcuredMt) - Number(obj.lintSoldMt)
+                    : 0;
+
+            result.push({ ...obj, ginner });
+        }
+
+        let cottonQty = 0;
+
+        result.forEach((value: any) => {
+            cottonQty += value.lintStockMt;
+        });
+
+        return cottonQty;
+    } catch (error:any) {
+        throw new Error('Error in sumbrandginnerStock function: ' + error.message);
+    }
+};
+const sumbrandspinnerYarnProcured = async (brandId: any, seasonId: any) => {
+    try {
+
+        let data = await SpinProcess.findAll({
+            attributes: [
+                [Sequelize.literal('COALESCE(SUM(net_yarn_qty), 0)'), 'total_yarn_procured_mt']
+            ],
+            include: [
+                { model: Spinner, as: 'spinner', attributes: [] },
+            ],
+            where: {
+                '$spinner.brand$': { [Op.contains]: [Number(brandId)] }
+            },
+            group: ['spinner.brand']
+        })
+        let cottonQty = 0;
+        data.forEach((value: any) => {
+            cottonQty = value.dataValues.total_yarn_procured_mt;
+        });
+
+        return cottonQty / 1000
+    } catch (error) {
+        console.log(error);
+    }
+}
+
 const sumbrandspinnerYarnSales = async (brandId: any, seasonId: any) => {
     try {
 
@@ -415,6 +642,33 @@ const sumbrandspinnerYarnSales = async (brandId: any, seasonId: any) => {
         console.log(error);
     }
 }
+
+const sumbrandspinnerYarnStock = async (brandId: any, seasonId: any) => {
+    try {
+
+        let data = await SpinProcess.findAll({
+            attributes: [
+                [Sequelize.literal('COALESCE(SUM(qty_stock), 0)'), 'qty_stock_yarn_mt']
+            ],
+            include: [
+                { model: Spinner, as: 'spinner', attributes: [] },
+            ],
+            where: {
+                '$spinner.brand$': { [Op.contains]: [Number(brandId)] }
+            },
+            group: ['spinner.brand']
+        })
+        let cottonQty = 0;
+        data.forEach((value: any) => {
+            cottonQty = value.dataValues.qty_stock_yarn_mt;
+        });
+
+        return cottonQty / 1000
+    } catch (error) {
+        console.log(error);
+    }
+}
+
 const sumbrandknitterFabricSales = async (brandId: any, seasonId: any) => {
     try {
 
@@ -1012,6 +1266,7 @@ export {
     updateBrand,
     checkBrand,
     organicCottonOverview,
+    organicCottonSpecialUsersOverview,
     fetchBrandTransactionsPagination,
     updateStatusBrandSale,
     productionUpdate,

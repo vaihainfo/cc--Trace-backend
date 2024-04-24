@@ -59,13 +59,15 @@ import {
     exportVillageSeedCotton,
     spinnerBackwardTraceabiltyReport,
     exportSpinnerBackwardTraceability,
-    exportLoad
+    exportLoad,
+    spinnerProcessBackwardTraceabiltyReport,
+    exportSpinProcessBackwardfTraceabilty
 } from "../../controllers/reports";
 import accessControl from "../../middleware/access-control";
 
 const router = Router();
 
-router.use(accessControl);
+// router.use(accessControl);
 
 // Transaction Report Route
 router.get('/get-transactions', fetchTransactionsReport);
@@ -139,5 +141,8 @@ router.get('/export-spinner-traceability-report', exportSpinnerBackwardTraceabil
 
 router.get('/get-village-seed-cotton-report', villageSeedCottonReport);
 router.get('/export-village-seed-cotton-report', exportVillageSeedCotton);
+
+router.get('/get-spin-process-backward-traceability-report', spinnerProcessBackwardTraceabiltyReport);
+router.get('/export-spin-process-backward-traceability-report', exportSpinProcessBackwardfTraceabilty);
 
 export default router;  

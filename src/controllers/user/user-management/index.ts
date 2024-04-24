@@ -35,7 +35,7 @@ const createUser = async (req: Request, res: Response) => {
     district_id: req.body.districtsId || null,
     block_id: req.body.blocksId || null,
     village_id: req.body.villagesId || null,
-    brand_mapped: req.body.brandsId || null,
+    brand_mapped: req.body.specialBrand ? [Number(req.body.specialBrand)] : req.body.brandsId || null,
     ticketApproveAccess: req.body.ticketApproveAccess || null,
     ticketCountryAccess: req.body.ticketCountryAccess || null,
     ticketAccessOnly: req.body.ticketAccessOnly || null,
@@ -162,7 +162,7 @@ const updateUser = async (req: Request, res: Response) => {
     district_id: req.body.districtsId || null,
     block_id: req.body.blocksId || null,
     village_id: req.body.villagesId || null,
-    brand_mapped: req.body.brandsId || null,
+    brand_mapped: req.body.specialBrand ? [Number(req.body.specialBrand)] : req.body.brandsId || null,
     isManagementUser: req.body.isManagementUser ? true : false,
   };
   try {

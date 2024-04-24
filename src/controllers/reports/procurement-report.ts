@@ -33,6 +33,8 @@ const fetchTransactionsReport = async (req: Request, res: Response) => {
   const seasonId: string = req.query.seasonId as string;
   const programId: string = req.query.programId as string;
   const ginnerId: string = req.query.ginnerId as string;
+  
+  const { endDate, startDate }: any = req.query;
 
   const whereCondition: any = {};
 
@@ -77,6 +79,13 @@ const fetchTransactionsReport = async (req: Request, res: Response) => {
       whereCondition.mapped_ginner = { [Op.in]: idArray };
     }
 
+    if (startDate && endDate) {
+      const startOfDay = new Date(startDate);
+      startOfDay.setUTCHours(0, 0, 0, 0);
+      const endOfDay = new Date(endDate);
+      endOfDay.setUTCHours(23, 59, 59, 999);
+      whereCondition.createdAt = { [Op.between]: [startOfDay, endOfDay] }
+  }
     // apply search
     if (searchTerm) {
       whereCondition[Op.or] = [

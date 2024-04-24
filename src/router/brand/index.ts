@@ -6,7 +6,8 @@ import {
     styleMarkNo,
     getProgram,
     getCountries,
-    updateStatusBrandSale
+    updateStatusBrandSale,
+    organicCottonSpecialUsersOverview
 } from "../../controllers/brand";
 import accessControl from "../../middleware/access-control";
 import { Router } from "express";
@@ -17,6 +18,7 @@ router.use(accessControl);
 
 // Ginner Routes
 router.get('/organic-cotton-overview', organicCottonOverview);
+router.get('/organic-cotton-special-users', organicCottonSpecialUsersOverview);
 router.get('/transactions', fetchBrandTransactionsPagination);
 router.put('/update-transaction', updateStatusBrandSale);
 router.get('/production-update', productionUpdate);

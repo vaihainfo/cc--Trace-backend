@@ -36,7 +36,7 @@ const fetchOrganicIntegrityPagination = async (req: Request, res: Response) => {
     const searchTerm = req.query.search || '';
     const page = Number(req.query.page) || 1;
     const limit = Number(req.query.limit) || 10;
-    const { brandId, farmGroupId, icsId }: any = req.query;
+    const { brandId, farmGroupId, icsId, seasonId, ginnerId }: any = req.query;
     const offset = (page - 1) * limit;
     const whereCondition: any = {}
     try {
@@ -68,6 +68,14 @@ const fetchOrganicIntegrityPagination = async (req: Request, res: Response) => {
                 .map((id: any) => parseInt(id, 10));
             whereCondition.ics_id = { [Op.in]: idArray };
         }
+     
+        if (ginnerId) {
+            const idArray: number[] = ginnerId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition.ginner_id = { [Op.in]: idArray };
+        }
+        
         let include = [
             {
                 model: FarmGroup, as: 'farmGroup'

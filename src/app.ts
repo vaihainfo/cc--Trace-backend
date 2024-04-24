@@ -118,7 +118,6 @@ const connectToDb = async () => {
       console.log("Current Server Time", moment());
       console.log("Time Zone", serverTimezone);
       console.log("Offset IST", differenceInMinutes);
-
   } catch (error) {
     console.error("Unable to connect to the database:", error);
   }

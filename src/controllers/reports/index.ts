@@ -64,7 +64,7 @@ const fetchBaleProcess = async (req: Request, res: Response) => {
   const searchTerm = req.query.search || "";
   const page = Number(req.query.page) || 1;
   const limit = Number(req.query.limit) || 10;
-  const { ginnerId, seasonId, programId, brandId, countryId }: any = req.query;
+  const { ginnerId, seasonId, programId, brandId, countryId, startDate, endDate}: any = req.query;
   const offset = (page - 1) * limit;
   const whereCondition: any = {};
   try {
@@ -113,6 +113,14 @@ const fetchBaleProcess = async (req: Request, res: Response) => {
         .map((id: any) => parseInt(id, 10));
       whereCondition.program_id = { [Op.in]: idArray };
     }
+
+    if (startDate && endDate) {
+      const startOfDay = new Date(startDate);
+      startOfDay.setUTCHours(0, 0, 0, 0);
+      const endOfDay = new Date(endDate);
+      endOfDay.setUTCHours(23, 59, 59, 999);
+      whereCondition.createdAt = { [Op.between]: [startOfDay, endOfDay] }
+  }
 
     let include = [
       {
@@ -236,9 +244,7 @@ const exportLoad = async (req: Request, res: Response) => {
 
   //   loadData.dataValues.failes_procurement_load||
 
-
-
-  if ((loadData.dataValues.ginner_lint_bale_process_load && req?.body?.file_name === "gin-bale-process.xlsx") || (loadData.dataValues.ginner_summary_load && req?.body?.file_name === "ginner-summary.xlsx") || (loadData.dataValues.ginner_lint_bale_sale_load && req?.body?.file_name === "Ginner-sales-report.xlsx") || (loadData.dataValues.ginner_pending_sales_load && req?.body?.file_name === "Ginner-pending-sales-report.xlsx") || (loadData.dataValues.ginner_seed_cotton_load && req?.body?.file_name === "ginner-seed-cotton-stock-report.xlsx") || (loadData.dataValues.spinner_summary_load && req?.body?.file_name === "spinner-summary.xlsx") || (loadData.dataValues.spinner_bale_receipt_load && req?.body?.file_name === "Spinner-bale-receipt-report.xlsx") || (loadData.dataValues.spinner_yarn_process_load && req?.body?.file_name === "spinner-yarn-process.xlsx") || (loadData.dataValues.spinner_yarn_sales_load && req?.body?.file_name === "spinner-yarn-sale.xlsx") || (loadData.dataValues.spinner_yarn_bales_load && req?.body?.file_name === "Spinner-Pending-Bales-Receipt-Report.xlsx") || (loadData.dataValues.spinner_lint_cotton_stock_load && req?.body?.file_name === "spinner-lint-cotton-stock-report.xlsx") || (loadData.dataValues.knitter_yarn_receipt_load && req?.body?.file_name === "knitter-yarn-receipt.xlsx") || (loadData.dataValues.knitter_yarn_process_load && req?.body?.file_name === "knitter-yarn-process.xlsx") || (loadData.dataValues.knitter_fabric_sales_load && req?.body?.file_name === "knitter-fabric-sale-report.xlsx") || (loadData.dataValues.weaver_yarn_receipt_load && req?.body.file_name === "weaver-yarn.xlsx") || (loadData.dataValues.weaver_yarn_process_load && req?.body?.file_name === "weaver-yarn-process.xls") || (loadData.dataValues.weaver_yarn_sales_load && req?.body?.file_name === "weaver-fabric-sale-report.xlsx") || (loadData.dataValues.garment_fabric_receipt_load && req?.body?.file_name === "garment-fabric-receipt-report.xlsx") || (loadData.dataValues.garment_fabric_process_load && req?.body?.file_name === "garment-fabric-process-report.xlsx") || (loadData.dataValues.garment_fabric_sales_load && req?.body?.file_name === "garment-fabric-sale-report.xlsx") || (loadData.dataValues.qr_code_tracker_load && req?.body?.file_name === "barcode-report.xlsx") || (loadData.dataValues.consolidated_tracebality_load && req?.body?.file_name === "consolidated-traceabilty-report.xlsx") || (loadData.dataValues.spinner_backward_tracebality_load && req.body?.file_name === "spinner-backward-traceabilty-report.xlsx") || (loadData.dataValues.village_seed_cotton_load && req?.body?.file_name === "agent-transactions.xlsx") || loadData.dataValues.premium_validation_load || (loadData.dataValues.procurement_load && req?.body?.file_name === "procurement-report.xlsx") || (loadData.dataValues.procurement_tracker_load && req?.body?.file_name === "pscp-cotton-procurement.xlsx") || (loadData.dataValues.procurement_sell_live_tracker_load && req?.body?.file_name === "pscp-cotton-procurement.xlsx") || (loadData.dataValues.qr_app_procurement_load && req?.body?.file_name === "agent-transactions.xlsx") || (loadData.dataValues.failed_farmer_load && req?.body?.file_name === "failed-records.xlsx")) {
+  if ((loadData.dataValues.ginner_lint_bale_process_load && req?.body?.file_name === "gin-bale-process.xlsx") || (loadData.dataValues.ginner_summary_load && req?.body?.file_name === "ginner-summary.xlsx") || (loadData.dataValues.ginner_lint_bale_sale_load && req?.body?.file_name === "Ginner-sales-report.xlsx") || (loadData.dataValues.ginner_pending_sales_load && req?.body?.file_name === "Ginner-pending-sales-report.xlsx") || (loadData.dataValues.ginner_seed_cotton_load && req?.body?.file_name === "ginner-seed-cotton-stock-report.xlsx") || (loadData.dataValues.spinner_summary_load && req?.body?.file_name === "spinner-summary.xlsx") || (loadData.dataValues.spinner_bale_receipt_load && req?.body?.file_name === "Spinner-bale-receipt-report.xlsx") || (loadData.dataValues.spinner_yarn_process_load && req?.body?.file_name === "spinner-yarn-process.xlsx") || (loadData.dataValues.spinner_yarn_sales_load && req?.body?.file_name === "spinner-yarn-sale.xlsx") || (loadData.dataValues.spinner_yarn_bales_load && req?.body?.file_name === "Spinner-Pending-Bales-Receipt-Report.xlsx") || (loadData.dataValues.spinner_lint_cotton_stock_load && req?.body?.file_name === "spinner-lint-cotton-stock-report.xlsx") || (loadData.dataValues.knitter_yarn_receipt_load && req?.body?.file_name === "knitter-yarn-receipt.xlsx") || (loadData.dataValues.knitter_yarn_process_load && req?.body?.file_name === "knitter-yarn-process.xlsx") || (loadData.dataValues.knitter_fabric_sales_load && req?.body?.file_name === "knitter-fabric-sale-report.xlsx") || (loadData.dataValues.weaver_yarn_receipt_load && req?.body.file_name === "weaver-yarn.xlsx") || (loadData.dataValues.weaver_yarn_process_load && req?.body?.file_name === "weaver-yarn-process.xls") || (loadData.dataValues.weaver_yarn_sales_load && req?.body?.file_name === "weaver-fabric-sale-report.xlsx") || (loadData.dataValues.garment_fabric_receipt_load && req?.body?.file_name === "garment-fabric-receipt-report.xlsx") || (loadData.dataValues.garment_fabric_process_load && req?.body?.file_name === "garment-fabric-process-report.xlsx") || (loadData.dataValues.garment_fabric_sales_load && req?.body?.file_name === "garment-fabric-sale-report.xlsx") || (loadData.dataValues.qr_code_tracker_load && req?.body?.file_name === "barcode-report.xlsx") || (loadData.dataValues.consolidated_tracebality_load && req?.body?.file_name === "consolidated-traceabilty-report.xlsx") || (loadData.dataValues.spinner_backward_tracebality_load && req.body?.file_name === "spinner-backward-traceabilty-report.xlsx") || (loadData.dataValues.village_seed_cotton_load && req?.body?.file_name === "village-seed-cotton-report.xlsx") || loadData.dataValues.premium_validation_load || (loadData.dataValues.procurement_load && req?.body?.file_name === "procurement-report.xlsx") || (loadData.dataValues.procurement_tracker_load && req?.body?.file_name === "pscp-cotton-procurement.xlsx") || (loadData.dataValues.procurement_sell_live_tracker_load && req?.body?.file_name === "pscp-cotton-procurement.xlsx") || (loadData.dataValues.qr_app_procurement_load && req?.body?.file_name === "agent-transactions.xlsx") || (loadData.dataValues.failed_farmer_load && req?.body?.file_name === "failed-records.xlsx")) {
     res.status(200).send({
       success: true,
       messgage: "File under processing",
@@ -428,7 +434,7 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
   const searchTerm = req.query.search || "";
   const page = Number(req.query.page) || 1;
   const limit = Number(req.query.limit) || 10;
-  const { exportType, ginnerId, seasonId, programId, brandId, countryId }: any = req.query;
+  const { exportType, ginnerId, seasonId, programId, brandId, countryId, startDate, endDate }: any = req.query;
   const offset = (page - 1) * limit;
   const whereCondition: any = {};
   try {
@@ -479,8 +485,16 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
           .map((id: any) => parseInt(id, 10));
         whereCondition.ginner_id = { [Op.in]: idArray };
       }
-
-      if (programId) {
+     
+      if (startDate && endDate) {
+        const startOfDay = new Date(startDate);
+        startOfDay.setUTCHours(0, 0, 0, 0);
+        const endOfDay = new Date(endDate);
+        endOfDay.setUTCHours(23, 59, 59, 999);
+        whereCondition.createdAt = { [Op.between]: [startOfDay, endOfDay] }
+    }
+     
+    if (programId) {
         const idArray: number[] = programId
           .split(",")
           .map((id: any) => parseInt(id, 10));
@@ -664,7 +678,7 @@ const fetchPendingGinnerSales = async (req: Request, res: Response) => {
   const page = Number(req.query.page) || 1;
   const limit = Number(req.query.limit) || 10;
   const status = req.query.status || "To be Submitted";
-  const { ginnerId, seasonId, programId, brandId, countryId }: any = req.query;
+  const { ginnerId, seasonId, programId, brandId, countryId, startDate, endDate }: any = req.query;
   const offset = (page - 1) * limit;
   const whereCondition: any = {};
   try {
@@ -704,6 +718,15 @@ const fetchPendingGinnerSales = async (req: Request, res: Response) => {
         .map((id: any) => parseInt(id, 10));
       whereCondition.season_id = { [Op.in]: idArray };
     }
+
+    if (startDate && endDate) {
+      const startOfDay = new Date(startDate);
+      startOfDay.setUTCHours(0, 0, 0, 0);
+      const endOfDay = new Date(endDate);
+      endOfDay.setUTCHours(23, 59, 59, 999);
+      whereCondition.createdAt = { [Op.between]: [startOfDay, endOfDay] }
+  }
+
     if (status === "To be Submitted") {
       whereCondition.status = "To be Submitted";
     } else {
@@ -762,7 +785,7 @@ const exportPendingGinnerSales = async (req: Request, res: Response) => {
   );
   const searchTerm = req.query.search || "";
   const status = req.query.status || "To be Submitted";
-  const { exportType, ginnerId, seasonId, programId, brandId, countryId }: any = req.query;
+  const { exportType, ginnerId, seasonId, programId, brandId, countryId, startDate, endDate }: any = req.query;
   const whereCondition: any = {};
   const page = Number(req.query.page) || 1;
   const limit = Number(req.query.limit) || 10;
@@ -823,6 +846,13 @@ const exportPendingGinnerSales = async (req: Request, res: Response) => {
           .map((id: any) => parseInt(id, 10));
         whereCondition.program_id = { [Op.in]: idArray };
       }
+      if (startDate && endDate) {
+        const startOfDay = new Date(startDate);
+        startOfDay.setUTCHours(0, 0, 0, 0);
+        const endOfDay = new Date(endDate);
+        endOfDay.setUTCHours(23, 59, 59, 999);
+        whereCondition.createdAt = { [Op.between]: [startOfDay, endOfDay] }
+    }
 
       // Create the excel workbook file
       const workbook = new ExcelJS.Workbook();
@@ -930,7 +960,7 @@ const fetchGinSalesPagination = async (req: Request, res: Response) => {
   const searchTerm = req.query.search || "";
   const page = Number(req.query.page) || 1;
   const limit = Number(req.query.limit) || 10;
-  const { ginnerId, seasonId, programId, brandId, countryId }: any = req.query;
+  const { ginnerId, seasonId, programId, brandId, countryId, startDate, endDate }: any = req.query;
   const offset = (page - 1) * limit;
   const whereCondition: any = {};
   try {
@@ -974,6 +1004,14 @@ const fetchGinSalesPagination = async (req: Request, res: Response) => {
         .map((id: any) => parseInt(id, 10));
       whereCondition["$sales.season_id$"] = { [Op.in]: idArray };
     }
+
+    if (startDate && endDate) {
+      const startOfDay = new Date(startDate);
+      startOfDay.setUTCHours(0, 0, 0, 0);
+      const endOfDay = new Date(endDate);
+      endOfDay.setUTCHours(23, 59, 59, 999);
+      whereCondition.createdAt = { [Op.between]: [startOfDay, endOfDay] }
+  }
 
     whereCondition["$sales.status$"] = { [Op.ne]: "To be Submitted" };
 
@@ -1372,7 +1410,7 @@ const exportGinnerSales = async (req: Request, res: Response) => {
   const searchTerm = req.query.search || "";
   const page = Number(req.query.page) || 1;
   const limit = Number(req.query.limit) || 10;
-  const { exportType, ginnerId, seasonId, programId, brandId, countryId }: any = req.query;
+  const { exportType, ginnerId, seasonId, programId, brandId, countryId, startDate, endDate }: any = req.query;
   const offset = (page - 1) * limit;
   const whereCondition: any = {};
   try {
@@ -1423,7 +1461,13 @@ const exportGinnerSales = async (req: Request, res: Response) => {
           .map((id: any) => parseInt(id, 10));
         whereCondition["$sales.season_id$"] = { [Op.in]: idArray };
       }
-  
+      if (startDate && endDate) {
+        const startOfDay = new Date(startDate);
+        startOfDay.setUTCHours(0, 0, 0, 0);
+        const endOfDay = new Date(endDate);
+        endOfDay.setUTCHours(23, 59, 59, 999);
+        whereCondition.createdAt = { [Op.between]: [startOfDay, endOfDay] }
+    }
       whereCondition["$sales.status$"] = { [Op.ne]: "To be Submitted" };
   
       if (programId) {
@@ -1579,7 +1623,7 @@ const fetchSpinnerBalePagination = async (req: Request, res: Response) => {
   const searchTerm = req.query.search || "";
   const page = Number(req.query.page) || 1;
   const limit = Number(req.query.limit) || 10;
-  const { ginnerId, spinnerId, seasonId, programId, brandId, countryId }: any =
+  const { ginnerId, spinnerId, seasonId, programId, brandId, countryId, startDate, endDate }: any =
     req.query;
   const offset = (page - 1) * limit;
   const whereCondition: any = {};
@@ -1631,6 +1675,14 @@ const fetchSpinnerBalePagination = async (req: Request, res: Response) => {
       whereCondition["$sales.season_id$"] = { [Op.in]: idArray };
     }
 
+    if (startDate && endDate) {
+      const startOfDay = new Date(startDate);
+      startOfDay.setUTCHours(0, 0, 0, 0);
+      const endOfDay = new Date(endDate);
+      endOfDay.setUTCHours(23, 59, 59, 999);
+      whereCondition.createdAt = { [Op.between]: [startOfDay, endOfDay] }
+  }
+
     whereCondition["$sales.status$"] = "Sold";
 
     if (programId) {
@@ -1669,6 +1721,7 @@ const fetchSpinnerBalePagination = async (req: Request, res: Response) => {
       attributes: [
         [Sequelize.literal('"sales"."id"'), "sales_id"],
         [Sequelize.literal('"sales"."date"'), "date"],
+        [Sequelize.literal('"sales"."createdAt"'), "createdAt"],
         [Sequelize.literal('"sales"."accept_date"'), "accept_date"],
         [Sequelize.col('"sales"."season"."name"'), "season_name"],
         [Sequelize.col('"sales"."ginner"."id"'), "ginner_id"],
@@ -1767,7 +1820,7 @@ const fetchSpinnerPendingBale = async (req: Request, res: Response) => {
   const page = Number(req.query.page) || 1;
   const limit = Number(req.query.limit) || 10;
   const status = req.query.status || "To be Submitted";
-  const { ginnerId, spinnerId, seasonId, programId, brandId, countryId }: any =
+  const { ginnerId, spinnerId, seasonId, programId, brandId, countryId, startDate, endDate }: any =
     req.query;
   const offset = (page - 1) * limit;
   const whereCondition: any = {};
@@ -1823,6 +1876,14 @@ const fetchSpinnerPendingBale = async (req: Request, res: Response) => {
         .map((id: any) => parseInt(id, 10));
       whereCondition.season_id = { [Op.in]: idArray };
     }
+
+    if (startDate && endDate) {
+      const startOfDay = new Date(startDate);
+      startOfDay.setUTCHours(0, 0, 0, 0);
+      const endOfDay = new Date(endDate);
+      endOfDay.setUTCHours(23, 59, 59, 999);
+      whereCondition.createdAt = { [Op.between]: [startOfDay, endOfDay] }
+  }
 
     whereCondition.total_qty = {
       [Op.gt]: 0,
@@ -1883,7 +1944,7 @@ const exportSpinnerBale = async (req: Request, res: Response) => {
   const searchTerm = req.query.search || "";
   const page = Number(req.query.page) || 1;
   const limit = Number(req.query.limit) || 10;
-  const {exportType, ginnerId, spinnerId, seasonId, programId, brandId, countryId }: any =
+  const {exportType, ginnerId, spinnerId, seasonId, programId, brandId, countryId, startDate, endDate }: any =
     req.query;
   const offset = (page - 1) * limit;
   const whereCondition: any = {};
@@ -1943,6 +2004,14 @@ const exportSpinnerBale = async (req: Request, res: Response) => {
         .map((id: any) => parseInt(id, 10));
       whereCondition["$sales.season_id$"] = { [Op.in]: idArray };
     }
+
+    if (startDate && endDate) {
+      const startOfDay = new Date(startDate);
+      startOfDay.setUTCHours(0, 0, 0, 0);
+      const endOfDay = new Date(endDate);
+      endOfDay.setUTCHours(23, 59, 59, 999);
+      whereCondition.createdAt = { [Op.between]: [startOfDay, endOfDay] }
+  }
 
     whereCondition["$sales.status$"] = "Sold";
 
@@ -2141,7 +2210,7 @@ const exportPendingSpinnerBale = async (req: Request, res: Response) => {
   const page = Number(req.query.page) || 1;
   const limit = Number(req.query.limit) || 10;
   const pagination = req.query.pagination;
-  const { exportType, ginnerId, spinnerId, seasonId, programId, brandId, countryId }: any =
+  const { exportType, ginnerId, spinnerId, seasonId, programId, brandId, countryId, startDate, endDate }: any =
     req.query;
   const offset = (page - 1) * limit;
   const whereCondition: any = {};
@@ -2202,6 +2271,15 @@ const exportPendingSpinnerBale = async (req: Request, res: Response) => {
         .map((id: any) => parseInt(id, 10));
       whereCondition.season_id = { [Op.in]: idArray };
     }
+
+    if (startDate && endDate) {
+      const startOfDay = new Date(startDate);
+      startOfDay.setUTCHours(0, 0, 0, 0);
+      const endOfDay = new Date(endDate);
+      endOfDay.setUTCHours(23, 59, 59, 999);
+      whereCondition.createdAt = { [Op.between]: [startOfDay, endOfDay] }
+  }
+
     whereCondition.total_qty = {
       [Op.gt]: 0,
     };
@@ -2318,7 +2396,7 @@ const fetchSpinnerYarnProcessPagination = async (
   const searchTerm = req.query.search || "";
   const page = Number(req.query.page) || 1;
   const limit = Number(req.query.limit) || 10;
-  const { spinnerId, seasonId, programId, brandId, countryId }: any = req.query;
+  const { spinnerId, seasonId, programId, brandId, countryId, startDate, endDate }: any = req.query;
   const offset = (page - 1) * limit;
   const whereCondition: any = {};
   try {
@@ -2368,7 +2446,13 @@ const fetchSpinnerYarnProcessPagination = async (
         .map((id: any) => parseInt(id, 10));
       whereCondition.program_id = { [Op.in]: idArray };
     }
-
+    if (startDate && endDate) {
+      const startOfDay = new Date(startDate);
+      startOfDay.setUTCHours(0, 0, 0, 0);
+      const endOfDay = new Date(endDate);
+      endOfDay.setUTCHours(23, 59, 59, 999);
+      whereCondition.createdAt = { [Op.between]: [startOfDay, endOfDay] }
+  }
     let include = [
       {
         model: Spinner,
@@ -2466,7 +2550,7 @@ const exportSpinnerYarnProcess = async (req: Request, res: Response) => {
   const searchTerm = req.query.search || "";
   const page = Number(req.query.page) || 1;
   const limit = Number(req.query.limit) || 10;
-  const { exportType, spinnerId, seasonId, programId, brandId, countryId }: any = req.query;
+  const { exportType, spinnerId, seasonId, programId, brandId, countryId, startDate, endDate }: any = req.query;
   const offset = (page - 1) * limit;
   const whereCondition: any = {};
   try {
@@ -2526,6 +2610,14 @@ const exportSpinnerYarnProcess = async (req: Request, res: Response) => {
       whereCondition.program_id = { [Op.in]: idArray };
     }
 
+    if (startDate && endDate) {
+      const startOfDay = new Date(startDate);
+      startOfDay.setUTCHours(0, 0, 0, 0);
+      const endOfDay = new Date(endDate);
+      endOfDay.setUTCHours(23, 59, 59, 999);
+      whereCondition.createdAt = { [Op.between]: [startOfDay, endOfDay] }
+  }
+
     // Create the excel workbook file
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet("Sheet1");
@@ -2545,10 +2637,10 @@ const exportSpinnerYarnProcess = async (req: Request, res: Response) => {
       "Yarn Type",
       "Yarn Count",
       "Yarn Realisation %",
-      "Comber Noil(Kgs)",
+      "Comber Noil Consumption(Kgs)",
       "Blend Material",
       "Blend Quantity (Kgs)",
-      "Total Seed cotton consumed (Kgs)",
+      "Total Lint cotton consumed (Kgs)",
       "Program",
       "Total Yarn weight (Kgs)",
       "Total yarn sold (Kgs)",
@@ -2653,7 +2745,7 @@ const exportSpinnerYarnProcess = async (req: Request, res: Response) => {
         yarnType: item.yarn_type ? item.yarn_type : "",
         count: yarncount ? yarncount : "",
         resa: item.yarn_realisation ? item.yarn_realisation : "",
-        comber: item.comber_noil ? item.comber_noil : "",
+        comber: item?.comber_noil > item?.comber_noil_stock ? item.comber_noil - item.comber_noil_stock : "",
         blend: blendValue,
         blendqty: blendqty,
         cotton_consumed: cottonConsumed
@@ -2696,7 +2788,7 @@ const fetchSpinSalesPagination = async (req: Request, res: Response) => {
   const searchTerm = req.query.search || "";
   const page = Number(req.query.page) || 1;
   const limit = Number(req.query.limit) || 10;
-  const { spinnerId, seasonId, programId, brandId, countryId }: any = req.query;
+  const { spinnerId, seasonId, programId, brandId, countryId, startDate, endDate }: any = req.query;
   const offset = (page - 1) * limit;
   const whereCondition: any = {};
   try {
@@ -2755,6 +2847,14 @@ const fetchSpinSalesPagination = async (req: Request, res: Response) => {
       whereCondition["$sales.program_id$"] = { [Op.in]: idArray };
     }
 
+    if (startDate && endDate) {
+      const startOfDay = new Date(startDate);
+      startOfDay.setUTCHours(0, 0, 0, 0);
+      const endOfDay = new Date(endDate);
+      endOfDay.setUTCHours(23, 59, 59, 999);
+      whereCondition.createdAt = { [Op.between]: [startOfDay, endOfDay] }
+  }
+
     let include = [
       {
         model: Spinner,
@@ -2794,6 +2894,7 @@ const fetchSpinSalesPagination = async (req: Request, res: Response) => {
         attributes: [
           [Sequelize.literal('"sales"."id"'), "sales_id"],
           [Sequelize.literal('"sales"."date"'), "date"],
+          [Sequelize.literal('"sales"."createdAt"'), "createdAt"],
           [Sequelize.col('"sales"."season"."name"'), "season_name"],
           [Sequelize.col('"sales"."season"."id"'), "season_id"],
           [Sequelize.col('"sales"."spinner"."id"'), "spinner_id"],
@@ -2888,7 +2989,7 @@ const exportSpinnerSale = async (req: Request, res: Response) => {
   const searchTerm = req.query.search || "";
   const page = Number(req.query.page) || 1;
   const limit = Number(req.query.limit) || 10;
-  const { exportType, spinnerId, seasonId, programId, brandId, countryId }: any = req.query;
+  const { exportType, spinnerId, seasonId, programId, brandId, countryId, startDate, endDate }: any = req.query;
   const offset = (page - 1) * limit;
   const whereCondition: any = {};
   try {
@@ -2956,6 +3057,13 @@ const exportSpinnerSale = async (req: Request, res: Response) => {
         .map((id: any) => parseInt(id, 10));
       whereCondition["$sales.program_id$"] = { [Op.in]: idArray };
     }
+    if (startDate && endDate) {
+      const startOfDay = new Date(startDate);
+      startOfDay.setUTCHours(0, 0, 0, 0);
+      const endOfDay = new Date(endDate);
+      endOfDay.setUTCHours(23, 59, 59, 999);
+      whereCondition.createdAt = { [Op.between]: [startOfDay, endOfDay] }
+  }
 
       // Create the excel workbook file
       const workbook = new ExcelJS.Workbook();
@@ -3170,7 +3278,7 @@ const fetchKnitterYarnPagination = async (req: Request, res: Response) => {
   const searchTerm = req.query.search || "";
   const page = Number(req.query.page) || 1;
   const limit = Number(req.query.limit) || 10;
-  const { knitterId, spinnerId, seasonId, programId, brandId, countryId }: any =
+  const { knitterId, spinnerId, seasonId, programId, brandId, countryId, startDate, endDate }: any =
     req.query;
   const offset = (page - 1) * limit;
   const whereCondition: any = {};
@@ -3226,6 +3334,15 @@ const fetchKnitterYarnPagination = async (req: Request, res: Response) => {
         .map((id: any) => parseInt(id, 10));
       whereCondition["$sales.program_id$"] = { [Op.in]: idArray };
     }
+
+    if (startDate && endDate) {
+      const startOfDay = new Date(startDate);
+      startOfDay.setUTCHours(0, 0, 0, 0);
+      const endOfDay = new Date(endDate);
+      endOfDay.setUTCHours(23, 59, 59, 999);
+      whereCondition.createdAt = { [Op.between]: [startOfDay, endOfDay] }
+  }
+
     whereCondition["$sales.knitter_id$"] = { [Op.ne]: null };
     whereCondition["$sales.status$"] = "Sold";
 
@@ -3276,6 +3393,7 @@ const fetchKnitterYarnPagination = async (req: Request, res: Response) => {
           [Sequelize.literal('"sales"."id"'), "sales_id"],
           [Sequelize.literal('"sales"."date"'), "date"],
           [Sequelize.literal('"sales"."accept_date"'), "accept_date"],
+          [Sequelize.literal('"sales"."createdAt"'), "createdAt"],
           [Sequelize.col('"sales"."season"."name"'), "season_name"],
           [Sequelize.col('"sales"."season"."id"'), "season_id"],
           [Sequelize.col('"sales"."spinner"."id"'), "spinner_id"],
@@ -3367,7 +3485,7 @@ const exportKnitterYarn = async (req: Request, res: Response) => {
   const searchTerm = req.query.search || "";
   const page = Number(req.query.page) || 1;
   const limit = Number(req.query.limit) || 10;
-  const { knitterId, spinnerId, seasonId, programId, brandId, countryId }: any =
+  const { knitterId, spinnerId, seasonId, programId, brandId, countryId, startDate, endDate }: any =
     req.query;
   const offset = (page - 1) * limit;
   const whereCondition: any = {};
@@ -3432,6 +3550,14 @@ const exportKnitterYarn = async (req: Request, res: Response) => {
         .map((id: any) => parseInt(id, 10));
       whereCondition["$sales.knitter_id$"] = { [Op.in]: idArray };
     }
+
+    if (startDate && endDate) {
+      const startOfDay = new Date(startDate);
+      startOfDay.setUTCHours(0, 0, 0, 0);
+      const endOfDay = new Date(endDate);
+      endOfDay.setUTCHours(23, 59, 59, 999);
+      whereCondition.createdAt = { [Op.between]: [startOfDay, endOfDay] }
+  }
     // Create the excel workbook file
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet("Sheet1");
@@ -3626,6 +3752,8 @@ const fetchKnitterYarnProcess = async (req: Request, res: Response) => {
     brandId,
     countryId,
     fabricType,
+    startDate,
+    endDate
   }: any = req.query;
   const offset = (page - 1) * limit;
   const whereCondition: any = {};
@@ -3686,6 +3814,14 @@ const fetchKnitterYarnProcess = async (req: Request, res: Response) => {
         .map((id: any) => parseInt(id, 10));
       whereCondition.fabric_type = { [Op.overlap]: idArray };
     }
+
+    if (startDate && endDate) {
+      const startOfDay = new Date(startDate);
+      startOfDay.setUTCHours(0, 0, 0, 0);
+      const endOfDay = new Date(endDate);
+      endOfDay.setUTCHours(23, 59, 59, 999);
+      whereCondition.createdAt = { [Op.between]: [startOfDay, endOfDay] }
+  }
 
     let include = [
       {
@@ -3768,6 +3904,8 @@ const exportKnitterYarnProcess = async (req: Request, res: Response) => {
     brandId,
     countryId,
     fabricType,
+    startDate,
+    endDate
   }: any = req.query;
   const offset = (page - 1) * limit;
   const whereCondition: any = {};
@@ -3828,7 +3966,13 @@ const exportKnitterYarnProcess = async (req: Request, res: Response) => {
         .map((id: any) => parseInt(id, 10));
       whereCondition.fabric_type = { [Op.overlap]: idArray };
     }
-
+    if (startDate && endDate) {
+      const startOfDay = new Date(startDate);
+      startOfDay.setUTCHours(0, 0, 0, 0);
+      const endOfDay = new Date(endDate);
+      endOfDay.setUTCHours(23, 59, 59, 999);
+      whereCondition.createdAt = { [Op.between]: [startOfDay, endOfDay] }
+  }
     // Create the excel workbook file
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet("Sheet1");
@@ -3980,6 +4124,8 @@ const fetchKnitterSalesPagination = async (req: Request, res: Response) => {
     brandId,
     countryId,
     fabricType,
+    startDate,
+    endDate
   }: any = req.query;
   const offset = (page - 1) * limit;
   const whereCondition: any = {};
@@ -4042,6 +4188,13 @@ const fetchKnitterSalesPagination = async (req: Request, res: Response) => {
         .map((id: any) => parseInt(id, 10));
       whereCondition["$process.fabric_type$"] = { [Op.overlap]: idArray };
     }
+    if (startDate && endDate) {
+      const startOfDay = new Date(startDate);
+      startOfDay.setUTCHours(0, 0, 0, 0);
+      const endOfDay = new Date(endDate);
+      endOfDay.setUTCHours(23, 59, 59, 999);
+      whereCondition.createdAt = { [Op.between]: [startOfDay, endOfDay] }
+  }
 
     let include = [
       {
@@ -4185,6 +4338,8 @@ const exportKnitterSale = async (req: Request, res: Response) => {
       brandId,
       countryId,
       fabricType,
+      startDate,
+      endDate
     }: any = req.query;
     const offset = (page - 1) * limit;
     const whereCondition: any = {};
@@ -4246,6 +4401,14 @@ const exportKnitterSale = async (req: Request, res: Response) => {
         .map((id: any) => parseInt(id, 10));
       whereCondition["$process.fabric_type$"] = { [Op.overlap]: idArray };
     }
+
+    if (startDate && endDate) {
+      const startOfDay = new Date(startDate);
+      startOfDay.setUTCHours(0, 0, 0, 0);
+      const endOfDay = new Date(endDate);
+      endOfDay.setUTCHours(23, 59, 59, 999);
+      whereCondition.createdAt = { [Op.between]: [startOfDay, endOfDay] }
+  }
 
     // Create the excel workbook file
     const workbook = new ExcelJS.Workbook();
@@ -4437,7 +4600,7 @@ const fetchWeaverYarnPagination = async (req: Request, res: Response) => {
   const searchTerm = req.query.search || "";
   const page = Number(req.query.page) || 1;
   const limit = Number(req.query.limit) || 10;
-  const { weaverId, spinnerId, seasonId, programId, brandId, countryId }: any =
+  const { weaverId, spinnerId, seasonId, programId, brandId, countryId, startDate, endDate }: any =
     req.query;
   const offset = (page - 1) * limit;
   const whereCondition: any = {};
@@ -4502,6 +4665,14 @@ const fetchWeaverYarnPagination = async (req: Request, res: Response) => {
       whereCondition["$sales.buyer_id$"] = { [Op.in]: idArray };
     }
 
+    if (startDate && endDate) {
+      const startOfDay = new Date(startDate);
+      startOfDay.setUTCHours(0, 0, 0, 0);
+      const endOfDay = new Date(endDate);
+      endOfDay.setUTCHours(23, 59, 59, 999);
+      whereCondition.createdAt = { [Op.between]: [startOfDay, endOfDay] }
+  }
+
     let include = [
       {
         model: Spinner,
@@ -4542,6 +4713,7 @@ const fetchWeaverYarnPagination = async (req: Request, res: Response) => {
           [Sequelize.literal('"sales"."id"'), "sales_id"],
           [Sequelize.literal('"sales"."date"'), "date"],
           [Sequelize.literal('"sales"."accept_date"'), "accept_date"],
+          [Sequelize.literal('"sales"."createdAt"'), "createdAt"],
           [Sequelize.col('"sales"."season"."name"'), "season_name"],
           [Sequelize.col('"sales"."season"."id"'), "season_id"],
           [Sequelize.col('"sales"."spinner"."id"'), "spinner_id"],
@@ -4633,7 +4805,7 @@ const exportWeaverYarn = async (req: Request, res: Response) => {
   const searchTerm = req.query.search || "";
   const page = Number(req.query.page) || 1;
   const limit = Number(req.query.limit) || 10;
-  const { weaverId, spinnerId, seasonId, programId, brandId, countryId }: any =
+  const { weaverId, spinnerId, seasonId, programId, brandId, countryId, startDate, endDate }: any =
     req.query;
   const offset = (page - 1) * limit;
   const whereCondition: any = {};
@@ -4697,6 +4869,14 @@ const exportWeaverYarn = async (req: Request, res: Response) => {
         .map((id: any) => parseInt(id, 10));
       whereCondition["$sales.buyer_id$"] = { [Op.in]: idArray };
     }
+
+    if (startDate && endDate) {
+      const startOfDay = new Date(startDate);
+      startOfDay.setUTCHours(0, 0, 0, 0);
+      const endOfDay = new Date(endDate);
+      endOfDay.setUTCHours(23, 59, 59, 999);
+      whereCondition.createdAt = { [Op.between]: [startOfDay, endOfDay] }
+  }
 
     // Create the excel workbook file
     const workbook = new ExcelJS.Workbook();
@@ -4889,7 +5069,7 @@ const fetchWeaverYarnProcess = async (req: Request, res: Response) => {
   const searchTerm = req.query.search || "";
   const page = Number(req.query.page) || 1;
   const limit = Number(req.query.limit) || 10;
-  const { weaverId, seasonId, programId, brandId, countryId, fabricType }: any =
+  const { weaverId, seasonId, programId, brandId, countryId, fabricType, startDate, endDate }: any =
     req.query;
   const offset = (page - 1) * limit;
   const whereCondition: any = {};
@@ -4950,6 +5130,14 @@ const fetchWeaverYarnProcess = async (req: Request, res: Response) => {
         .map((id: any) => parseInt(id, 10));
       whereCondition.fabric_type = { [Op.overlap]: idArray };
     }
+
+    if (startDate && endDate) {
+      const startOfDay = new Date(startDate);
+      startOfDay.setUTCHours(0, 0, 0, 0);
+      const endOfDay = new Date(endDate);
+      endOfDay.setUTCHours(23, 59, 59, 999);
+      whereCondition.createdAt = { [Op.between]: [startOfDay, endOfDay] }
+  }
 
     let include = [
       {
@@ -5025,7 +5213,7 @@ const exportWeaverYarnProcess = async (req: Request, res: Response) => {
   const searchTerm = req.query.search || "";
   const page = Number(req.query.page) || 1;
   const limit = Number(req.query.limit) || 10;
-  const { weaverId, seasonId, programId, brandId, countryId, fabricType }: any =
+  const { weaverId, seasonId, programId, brandId, countryId, fabricType, startDate, endDate }: any =
     req.query;
   const offset = (page - 1) * limit;
   const whereCondition: any = {};
@@ -5086,6 +5274,14 @@ const exportWeaverYarnProcess = async (req: Request, res: Response) => {
         .map((id: any) => parseInt(id, 10));
       whereCondition.fabric_type = { [Op.overlap]: idArray };
     }
+
+    if (startDate && endDate) {
+      const startOfDay = new Date(startDate);
+      startOfDay.setUTCHours(0, 0, 0, 0);
+      const endOfDay = new Date(endDate);
+      endOfDay.setUTCHours(23, 59, 59, 999);
+      whereCondition.createdAt = { [Op.between]: [startOfDay, endOfDay] }
+  }
 
     // Create the excel workbook file
     const workbook = new ExcelJS.Workbook();
@@ -5232,7 +5428,7 @@ const fetchWeaverSalesPagination = async (req: Request, res: Response) => {
   const searchTerm = req.query.search || "";
   const page = Number(req.query.page) || 1;
   const limit = Number(req.query.limit) || 10;
-  const { weaverId, seasonId, programId, brandId, countryId, fabricType }: any =
+  const { weaverId, seasonId, programId, brandId, countryId, fabricType, startDate, endDate }: any =
     req.query;
   const offset = (page - 1) * limit;
   const whereCondition: any = {};
@@ -5295,6 +5491,14 @@ const fetchWeaverSalesPagination = async (req: Request, res: Response) => {
         .map((id: any) => parseInt(id, 10));
       whereCondition["$process.fabric_type$"] = { [Op.overlap]: idArray };
     }
+
+    if (startDate && endDate) {
+      const startOfDay = new Date(startDate);
+      startOfDay.setUTCHours(0, 0, 0, 0);
+      const endOfDay = new Date(endDate);
+      endOfDay.setUTCHours(23, 59, 59, 999);
+      whereCondition.createdAt = { [Op.between]: [startOfDay, endOfDay] }
+  }
 
     let include = [
       {
@@ -5453,6 +5657,8 @@ const exportWeaverSale = async (req: Request, res: Response) => {
       brandId,
       countryId,
       fabricType,
+      startDate,
+      endDate,
     }: any = req.query;
     const offset = (page - 1) * limit;
     const whereCondition: any = {};
@@ -5515,6 +5721,13 @@ const exportWeaverSale = async (req: Request, res: Response) => {
       whereCondition["$process.fabric_type$"] = { [Op.overlap]: idArray };
     }
 
+    if (startDate && endDate) {
+      const startOfDay = new Date(startDate);
+      startOfDay.setUTCHours(0, 0, 0, 0);
+      const endOfDay = new Date(endDate);
+      endOfDay.setUTCHours(23, 59, 59, 999);
+      whereCondition.createdAt = { [Op.between]: [startOfDay, endOfDay] }
+  }
     // Create the excel workbook file
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet("Sheet1");
@@ -5629,11 +5842,10 @@ const exportWeaverSale = async (req: Request, res: Response) => {
       raw: true
     });
 
-
     for await (let row of rows) {
       // if(row.dataValues?.fabric_type?.length > 0){
       //     for await (const [index, id] of row.dataValues?.fabric_type.entries() ){
-      if (row.dataValues.fabricType) {
+      if (row.fabricType) {
         const fabrictype = await FabricType.findOne({
           where: {
             id: row.fabricType,
@@ -5716,6 +5928,8 @@ const fetchGarmentFabricReceipt = async (req: Request, res: Response) => {
     brandId,
     countryId,
     fabricType,
+    startDate,
+    endDate
   }: any = req.query;
   const offset = (page - 1) * limit;
   const whereCondition: any = {};
@@ -5792,6 +6006,13 @@ const fetchGarmentFabricReceipt = async (req: Request, res: Response) => {
       whereCondition["$process.fabric_type$"] = { [Op.overlap]: idArray };
     }
 
+    if (startDate && endDate) {
+      const startOfDay = new Date(startDate);
+      startOfDay.setUTCHours(0, 0, 0, 0);
+      const endOfDay = new Date(endDate);
+      endOfDay.setUTCHours(23, 59, 59, 999);
+      whereCondition.createdAt = { [Op.between]: [startOfDay, endOfDay] }
+  }
     // Helper function to add conditions based on filter values
     const addFilterCondition = (whereObj: any, filterKey: string, arr: any) => {
       let idArray: number[] = arr
@@ -5847,6 +6068,7 @@ const fetchGarmentFabricReceipt = async (req: Request, res: Response) => {
           [Sequelize.literal('"sales"."id"'), "sales_id"],
           [Sequelize.literal('"sales"."accept_date"'), "accept_date"],
           [Sequelize.literal('"sales"."date"'), "date"],
+          [Sequelize.col('"sales"."createdAt"'), "createdAt"],
           [Sequelize.col('"sales"."season"."name"'), "season_name"],
           [Sequelize.col('"sales"."season"."id"'), "season_id"],
           [Sequelize.col('"sales"."weaver"."id"'), "weaver_id"],
@@ -6022,6 +6244,8 @@ const exportGarmentFabricReceipt = async (req: Request, res: Response) => {
     brandId,
     countryId,
     fabricType,
+    startDate,
+    endDate
   }: any = req.query;
   const offset = (page - 1) * limit;
   const whereCondition: any = {};
@@ -6097,6 +6321,14 @@ const exportGarmentFabricReceipt = async (req: Request, res: Response) => {
         .map((id: any) => parseInt(id, 10));
       whereCondition["$process.fabric_type$"] = { [Op.overlap]: idArray };
     }
+
+    if (startDate && endDate) {
+      const startOfDay = new Date(startDate);
+      startOfDay.setUTCHours(0, 0, 0, 0);
+      const endOfDay = new Date(endDate);
+      endOfDay.setUTCHours(23, 59, 59, 999);
+      whereCondition.createdAt = { [Op.between]: [startOfDay, endOfDay] }
+  }
 
     // Helper function to add conditions based on filter values
     const addFilterCondition = (whereObj: any, filterKey: string, arr: any) => {
@@ -6386,6 +6618,8 @@ const fetchGarmentFabricProcess = async (req: Request, res: Response) => {
     brandId,
     countryId,
     fabricType,
+    startDate,
+    endDate
   }: any = req.query;
   const offset = (page - 1) * limit;
   const whereCondition: any = {};
@@ -6445,6 +6679,13 @@ const fetchGarmentFabricProcess = async (req: Request, res: Response) => {
       whereCondition.fabric_type = { [Op.overlap]: idArray };
     }
 
+    if (startDate && endDate) {
+      const startOfDay = new Date(startDate);
+      startOfDay.setUTCHours(0, 0, 0, 0);
+      const endOfDay = new Date(endDate);
+      endOfDay.setUTCHours(23, 59, 59, 999);
+      whereCondition.createdAt = { [Op.between]: [startOfDay, endOfDay] }
+  }
     let include = [
       {
         model: Garment,
@@ -6526,6 +6767,7 @@ const exportGarmentFabricProcess = async (req: Request, res: Response) => {
   await ExportData.update({
     garment_fabric_process_load: true
   }, { where: { garment_fabric_process_load: false } })
+  res.send({ status: 200, message: "export file processing" })
   const excelFilePath = path.join(
     "./upload",
     "garment-fabric-process-report.xlsx"
@@ -6533,7 +6775,7 @@ const exportGarmentFabricProcess = async (req: Request, res: Response) => {
   const searchTerm = req.query.search || "";
   const page = Number(req.query.page) || 1;
   const limit = Number(req.query.limit) || 10;
-  const { garmentId, seasonId, programId, brandId, countryId }: any = req.query;
+  const { garmentId, seasonId, programId, brandId, countryId, startDate, endDate }: any = req.query;
   const offset = (page - 1) * limit;
   const whereCondition: any = {};
   try {
@@ -6584,6 +6826,13 @@ const exportGarmentFabricProcess = async (req: Request, res: Response) => {
       whereCondition.program_id = { [Op.in]: idArray };
     }
 
+    if (startDate && endDate) {
+      const startOfDay = new Date(startDate);
+      startOfDay.setUTCHours(0, 0, 0, 0);
+      const endOfDay = new Date(endDate);
+      endOfDay.setUTCHours(23, 59, 59, 999);
+      whereCondition.createdAt = { [Op.between]: [startOfDay, endOfDay] }
+  }
     // Create the excel workbook file
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet("Sheet1");
@@ -6746,6 +6995,8 @@ const fetchGarmentSalesPagination = async (req: Request, res: Response) => {
     buyerId,
     styleMarkNo,
     garmentType,
+    startDate,
+    endDate
   }: any = req.query;
   const offset = (page - 1) * limit;
   const whereCondition: any = {};
@@ -6823,6 +7074,13 @@ const fetchGarmentSalesPagination = async (req: Request, res: Response) => {
       const idArray: any[] = garmentType.split(",").map((id: any) => id);
       whereCondition.garment_type = { [Op.overlap]: idArray };
     }
+    if (startDate && endDate) {
+      const startOfDay = new Date(startDate);
+      startOfDay.setUTCHours(0, 0, 0, 0);
+      const endOfDay = new Date(endDate);
+      endOfDay.setUTCHours(23, 59, 59, 999);
+      whereCondition.createdAt = { [Op.between]: [startOfDay, endOfDay] }
+  }
 
     let include = [
       {
@@ -6916,6 +7174,8 @@ const exportGarmentSales = async (req: Request, res: Response) => {
     buyerId,
     styleMarkNo,
     garmentType,
+    startDate,
+    endDate
   }: any = req.query;
   const offset = (page - 1) * limit;
   const whereCondition: any = {};
@@ -6992,6 +7252,14 @@ const exportGarmentSales = async (req: Request, res: Response) => {
       const idArray: any[] = garmentType.split(",").map((id: any) => id);
       whereCondition.garment_type = { [Op.overlap]: idArray };
     }
+
+    if (startDate && endDate) {
+      const startOfDay = new Date(startDate);
+      startOfDay.setUTCHours(0, 0, 0, 0);
+      const endOfDay = new Date(endDate);
+      endOfDay.setUTCHours(23, 59, 59, 999);
+      whereCondition.createdAt = { [Op.between]: [startOfDay, endOfDay] }
+  }
     // Create the excel workbook file
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet("Sheet1");
@@ -7187,6 +7455,8 @@ const fetchQrCodeTrackPagination = async (req: Request, res: Response) => {
     buyerId,
     styleMarkNo,
     garmentType,
+    startDate,
+    endDate
   }: any = req.query;
   const offset = (page - 1) * limit;
   const whereCondition: any = {};
@@ -7210,6 +7480,12 @@ const fetchQrCodeTrackPagination = async (req: Request, res: Response) => {
         .map((id: any) => parseInt(id, 10));
       whereCondition.buyer_id = { [Op.in]: idArray };
     }
+    if (seasonId) {
+      const idArray: number[] = seasonId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.season_id = { [Op.in]: idArray };
+    }
 
     if (styleMarkNo) {
       const idArray: any[] = styleMarkNo.split(",").map((id: any) => id);
@@ -7226,6 +7502,13 @@ const fetchQrCodeTrackPagination = async (req: Request, res: Response) => {
         .map((id: any) => parseInt(id, 10));
       whereCondition.program_id = { [Op.in]: idArray };
     }
+    if (startDate && endDate) {
+      const startOfDay = new Date(startDate);
+      startOfDay.setUTCHours(0, 0, 0, 0);
+      const endOfDay = new Date(endDate);
+      endOfDay.setUTCHours(23, 59, 59, 999);
+      whereCondition.createdAt = { [Op.between]: [startOfDay, endOfDay] }
+  }
 
     let include = [
       {
@@ -7283,6 +7566,8 @@ const exportQrCodeTrack = async (req: Request, res: Response) => {
     buyerId,
     styleMarkNo,
     garmentType,
+    startDate,
+    endDate
   }: any = req.query;
   const offset = (page - 1) * limit;
   const whereCondition: any = {};
@@ -7306,6 +7591,12 @@ const exportQrCodeTrack = async (req: Request, res: Response) => {
         .map((id: any) => parseInt(id, 10));
       whereCondition.buyer_id = { [Op.in]: idArray };
     }
+    if (seasonId) {
+      const idArray: number[] = seasonId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.season_id = { [Op.in]: idArray };
+    }
 
     if (styleMarkNo) {
       const idArray: any[] = styleMarkNo.split(",").map((id: any) => id);
@@ -7322,7 +7613,13 @@ const exportQrCodeTrack = async (req: Request, res: Response) => {
         .map((id: any) => parseInt(id, 10));
       whereCondition.program_id = { [Op.in]: idArray };
     }
-
+   if (startDate && endDate) {
+            const startOfDay = new Date(startDate);
+            startOfDay.setUTCHours(0, 0, 0, 0);
+            const endOfDay = new Date(endDate);
+            endOfDay.setUTCHours(23, 59, 59, 999);
+            whereCondition.createdAt = { [Op.between]: [startOfDay, endOfDay] }
+        }
     // Create the excel workbook file
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet("Sheet1");
@@ -9715,7 +10012,7 @@ const exportPscpCottonProcurement = async (req: Request, res: Response) => {
   const excelFilePath = path.join("./upload", "excel-pscp-cotton-procurement.xlsx");
 
   const searchTerm = req.query.search || "";
-  const { exportType, seasonId, countryId, brandId }: any = req.query;
+  const { exportType, seasonId, countryId, brandId}: any = req.query;
   const whereCondition: any = {};
   try {
     if (exportType === "all") {
@@ -10687,7 +10984,7 @@ const exportPscpProcurementLiveTracker = async (
       "./upload",
       "excel-pscp-procurement-sell-live-tracker.xlsx"
     );
-    let { seasonId, countryId, brandId, ginnerId }: any = req.query;
+    let { seasonId, countryId, brandId, ginnerId}: any = req.query;
     const searchTerm = req.query.search || "";
     const page = Number(req.query.page) || 1;
     const limit = Number(req.query.limit) || 10;
@@ -11104,7 +11401,7 @@ const consolidatedTraceability = async (req: Request, res: Response) => {
   const limit = Number(req.query.limit) || 10;
   const offset = (page - 1) * limit;
   const whereCondition: any = {};
-  const { garmentId, brandId, styleMarkNo, garmentType }: any = req.query;
+  const { garmentId, brandId, styleMarkNo, garmentType, startDate, endDate, seasonId}: any = req.query;
   try {
     if (searchTerm) {
       whereCondition[Op.or] = [
@@ -11125,6 +11422,12 @@ const consolidatedTraceability = async (req: Request, res: Response) => {
         .map((id: any) => parseInt(id, 10));
       whereCondition.garment_id = { [Op.in]: idArray };
     }
+    if (seasonId) {
+      const idArray: number[] = seasonId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.season_id = { [Op.in]: idArray };
+    }
 
     if (brandId) {
       const idArray: number[] = brandId
@@ -11142,6 +11445,13 @@ const consolidatedTraceability = async (req: Request, res: Response) => {
       whereCondition.garment_type = { [Op.overlap]: idArray };
     }
 
+    if (startDate && endDate) {
+      const startOfDay = new Date(startDate);
+      startOfDay.setUTCHours(0, 0, 0, 0);
+      const endOfDay = new Date(endDate);
+      endOfDay.setUTCHours(23, 59, 59, 999);
+      whereCondition.createdAt = { [Op.between]: [startOfDay, endOfDay] }
+  }
     let include = [
       {
         model: Brand,
@@ -12296,7 +12606,7 @@ const exportConsolidatedTraceability = async (req: Request, res: Response) => {
   );
   
   const whereCondition: any = {};
-  const { garmentId, brandId, styleMarkNo, garmentType }: any = req.query;
+  const { garmentId, brandId, styleMarkNo, garmentType, startDate, endDate, seasonId }: any = req.query;
   let baseurl = process.env.BASE_URL;
   try {
     whereCondition.status = "Sold";
@@ -12307,6 +12617,21 @@ const exportConsolidatedTraceability = async (req: Request, res: Response) => {
         .map((id: any) => parseInt(id, 10));
       whereCondition.buyer_id = { [Op.in]: idArray };
     }
+   
+    if (seasonId) {
+      const idArray: number[] = seasonId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.season_id = { [Op.in]: idArray };
+    }
+
+    if (startDate && endDate) {
+      const startOfDay = new Date(startDate);
+      startOfDay.setUTCHours(0, 0, 0, 0);
+      const endOfDay = new Date(endDate);
+      endOfDay.setUTCHours(23, 59, 59, 999);
+      whereCondition.createdAt = { [Op.between]: [startOfDay, endOfDay] }
+  }
 
     let include = [
       {
@@ -13809,6 +14134,16 @@ const spinnerBackwardTraceabiltyReport = async (
         as: "knitter",
         attributes: ["id", "name"],
       },
+      {
+        model: Season,
+        as: "season",
+        attributes: ["id", "name"],
+      },
+      {
+        model: Program,
+        as: "program",
+        attributes: ["id", "program_name"],
+      },
     ];
 
     //fetch data with pagination
@@ -14586,7 +14921,7 @@ const villageSeedCottonReport = async (req: Request, res: Response) => {
   const limit = Number(req.query.limit) || 10;
   const offset = (page - 1) * limit;
   const whereCondition: any = {};
-  const { villageId, brandId, countryId }: any = req.query;
+  const { brandId, stateId, countryId }: any = req.query;
   try {
     if (searchTerm) {
       whereCondition[Op.or] = [
@@ -14594,6 +14929,12 @@ const villageSeedCottonReport = async (req: Request, res: Response) => {
       ];
     }
 
+    if (countryId) {
+      const idArray: number[] = countryId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition["$farmer.country_id$"] = { [Op.in]: idArray };
+    }
     if (brandId) {
       const idArray: number[] = brandId
         .split(",")
@@ -14601,18 +14942,11 @@ const villageSeedCottonReport = async (req: Request, res: Response) => {
       whereCondition["$farmer.brand_id$"] = { [Op.in]: idArray };
     }
 
-    if (villageId) {
-      const idArray: number[] = villageId
+    if (stateId) {
+      const idArray: number[] = stateId
         .split(",")
         .map((id: any) => parseInt(id, 10));
-      whereCondition["$farmer.village_id$"] = { [Op.in]: idArray };
-    }
-
-    if (countryId) {
-      const idArray: number[] = countryId
-        .split(",")
-        .map((id: any) => parseInt(id, 10));
-      whereCondition["$farmer.country_id$"] = { [Op.in]: idArray };
+      whereCondition["$farmer.state_id$"] = { [Op.in]: idArray };
     }
 
     const { count, rows } = await Farm.findAndCountAll({
@@ -14714,7 +15048,7 @@ const exportVillageSeedCotton = async (req: Request, res: Response) => {
   const limit = Number(req.query.limit) || 10;
   const offset = (page - 1) * limit;
   const whereCondition: any = {};
-  const { villageId, brandId, countryId }: any = req.query;
+  const { stateId, brandId, countryId }: any = req.query;
   try {
     if (searchTerm) {
       whereCondition[Op.or] = [
@@ -14729,11 +15063,11 @@ const exportVillageSeedCotton = async (req: Request, res: Response) => {
       whereCondition["$farmer.brand_id$"] = { [Op.in]: idArray };
     }
 
-    if (villageId) {
-      const idArray: number[] = villageId
+    if (stateId) {
+      const idArray: number[] = stateId
         .split(",")
         .map((id: any) => parseInt(id, 10));
-      whereCondition["$farmer.village_id$"] = { [Op.in]: idArray };
+      whereCondition["$farmer.state_id$"] = { [Op.in]: idArray };
     }
 
     if (countryId) {
@@ -14887,6 +15221,522 @@ const exportVillageSeedCotton = async (req: Request, res: Response) => {
   }
 };
 
+const spinnerProcessBackwardTraceabiltyReport = async (
+  req: Request,
+  res: Response
+) => {
+  const searchTerm = req.query.search || "";
+  const page = Number(req.query.page) || 1;
+  const limit = Number(req.query.limit) || 10;
+  const offset = (page - 1) * limit;
+  const whereCondition: any = {};
+  const {
+    spinnerId,
+    seasonId,
+    brandId,
+    programId,
+    type,
+  }: any = req.query;
+  try {
+    if (searchTerm) {
+      whereCondition[Op.or] = [
+        { reel_lot_no: { [Op.iLike]: `%${searchTerm}%` } },
+        { "$spinner.name$": { [Op.iLike]: `%${searchTerm}%` } },
+      ];
+    }
+    if (spinnerId) {
+      const idArray: number[] = spinnerId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.spinner_id = { [Op.in]: idArray };
+    }
+
+    if (brandId) {
+      const idArray: number[] = brandId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition["$spinner.brand$"] = { [Op.overlap]: idArray };
+    }
+
+    if (seasonId) {
+      const idArray: number[] = seasonId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.season_id = { [Op.in]: idArray };
+    }
+
+    if (programId) {
+      const idArray: number[] = programId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.program_id = { [Op.in]: idArray };
+    }
+
+    let include = [
+      {
+        model: Spinner,
+        as: "spinner",
+        attributes: ["id", "name"],
+      },
+    ];
+
+    //fetch data with pagination
+    const { count, rows } = await SpinProcess.findAndCountAll({
+      attributes: ['id', 'date', 'createdAt', 'reel_lot_no', 'net_yarn_qty', 'qr'],
+      where: whereCondition,
+      include: include,
+      order: [["id", "desc"]],
+      offset: offset,
+      limit: limit,
+    });
+
+    let data = [];
+
+    for await (let [index, item] of rows.entries()) {
+      let spnr_lint_ids: any = [];
+      let spinProcess = await LintSelections.findAll({
+        where: {
+          process_id: item.dataValues.id,
+        },
+        attributes: ["id", "lint_id"],
+      });
+      spnr_lint_ids = spinProcess.map((obj: any) => obj?.dataValues?.lint_id);
+
+      let lintConsumed = await LintSelections.findOne({
+        attributes: [
+          [
+            sequelize.fn(
+              "COALESCE",
+              sequelize.fn("SUM", sequelize.col("qty_used")),
+              0
+            ),
+            "lint_consumed",
+          ],
+        ],
+        where: { process_id: item.dataValues.id },
+        group: ["process_id"],
+      });
+
+      let ginSales: any = [];
+      let gin_process_ids: any = [];
+      let transactions_ids: any = [];
+
+      if (spnr_lint_ids.length > 0) {
+        ginSales = await GinSales.findAll({
+          attributes: [
+            "id",
+            "invoice_no",
+            "lot_no",
+            "reel_lot_no",
+          ],
+          include: [
+            {
+              model: Ginner,
+              as: "ginner",
+              attributes: ["id", "name"],
+            },
+          ],
+          where: {
+            id: {
+              [Op.in]: spnr_lint_ids,
+            },
+          },
+        });
+
+        let ginBaleId = await BaleSelection.findAll({
+          where: {
+            sales_id: ginSales.map((obj: any) => obj.dataValues.id),
+          },
+          attributes: ["id", "bale_id"],
+        });
+
+        let ginProcessIds = await GinBale.findAll({
+          where: {
+            id: ginBaleId.map((obj: any) => obj.dataValues.bale_id),
+          },
+          attributes: ["id", "process_id"],
+        });
+        gin_process_ids = ginProcessIds.map(
+          (obj: any) => obj.dataValues.process_id
+        );
+      }
+
+      if (gin_process_ids.length > 0) {
+        let cottornIds = await CottonSelection.findAll({
+          where: {
+            process_id: gin_process_ids,
+          },
+          attributes: ["id", "transaction_id"],
+        });
+        transactions_ids = cottornIds.map(
+          (obj: any) => obj.dataValues.transaction_id
+        );
+      }
+
+      let transactions: any = [];
+      if (transactions_ids.length > 0) {
+        transactions = await Transaction.findAll({
+          attributes: [
+            "id",
+          ],
+          where: {
+            id: {
+              [Op.in]: transactions_ids,
+            },
+          },
+          include: [
+            {
+              model: Village,
+              as: "village",
+              attributes: ["id", "village_name"],
+            },
+          ],
+        });
+      }
+
+      let obj: any = {};
+      obj.lint_consumed = lintConsumed ? formatDecimal(lintConsumed?.dataValues?.lint_consumed) : 0;
+
+      let ginName =
+        ginSales && ginSales.length > 0
+          ? ginSales
+            .map((val: any) => val?.ginner?.name)
+            .filter((item: any) => item !== null && item !== undefined)
+          : [];
+      let ginInvoice =
+        ginSales && ginSales.length > 0
+          ? ginSales
+            .map((val: any) => val?.invoice_no)
+            .filter((item: any) => item !== null && item !== undefined)
+          : [];
+      let ginLot =
+        ginSales && ginSales.length > 0
+          ? ginSales
+              .map((val: any) => val?.lot_no)
+              .filter((item: any) => item !== null && item !== undefined)
+          : [];
+      let ginReelLot =
+        ginSales && ginSales.length > 0
+          ? ginSales
+            .map((val: any) => val?.reel_lot_no)
+            .filter((item: any) => item !== null && item !== undefined)
+          : [];
+
+      obj.gnr_name = [...new Set(ginName)];
+      obj.gnr_invoice_no = [...new Set(ginInvoice)];
+      obj.gnr_lot_no = [...new Set(ginLot)];
+      obj.gnr_reel_lot_no = [...new Set(ginReelLot)];
+
+      let frmrVillages =
+        transactions && transactions.length > 0
+          ? transactions
+            .map((val: any) => val?.village?.village_name)
+            .filter((item: any) => item !== null && item !== undefined)
+          : [];
+
+      obj.frmr_villages = [...new Set(frmrVillages)];
+
+      data.push({
+        ...item.dataValues,
+        ...obj,
+      });
+    }
+
+    return res.sendPaginationSuccess(res, data, count);
+  } catch (error: any) {
+    console.log(error);
+    return res.sendError(res, error.message);
+  }
+};
+
+const exportSpinProcessBackwardfTraceabilty = async (req: Request, res: Response) => {
+  // spinner_yarn_process_load
+  const excelFilePath = path.join("./upload", "excel-spin-process-backward-traceability.xlsx");
+
+  const searchTerm = req.query.search || "";
+  const page = Number(req.query.page) || 1;
+  const limit = Number(req.query.limit) || 10;
+  const { exportType, spinnerId, seasonId, programId, brandId}: any = req.query;
+  const offset = (page - 1) * limit;
+  const whereCondition: any = {};
+  try {
+
+    if (exportType === "all") {
+      return res.status(200).send({
+        success: true,
+        messgage: "File successfully Generated",
+        data: process.env.BASE_URL + "spin-process-backward-traceability.xlsx",
+      });
+    } else {
+
+      if (searchTerm) {
+        whereCondition[Op.or] = [
+          { reel_lot_no: { [Op.iLike]: `%${searchTerm}%` } },
+          { "$spinner.name$": { [Op.iLike]: `%${searchTerm}%` } },
+        ];
+      }
+      
+    if (spinnerId) {
+      const idArray: number[] = spinnerId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.spinner_id = { [Op.in]: idArray };
+    }
+
+    if (brandId) {
+      const idArray: number[] = brandId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition["$spinner.brand$"] = { [Op.overlap]: idArray };
+    }
+
+    if (seasonId) {
+      const idArray: number[] = seasonId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.season_id = { [Op.in]: idArray };
+    }
+
+    if (programId) {
+      const idArray: number[] = programId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.program_id = { [Op.in]: idArray };
+    }
+
+    // Create the excel workbook file
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet("Sheet1");
+    worksheet.mergeCells("A1:J1");
+    const mergedCell = worksheet.getCell("A1");
+    mergedCell.value = "CottonConnect | Spinner Process Backward Traceability Report";
+    mergedCell.font = { bold: true };
+    mergedCell.alignment = { horizontal: "center", vertical: "middle" };
+    // Set bold font for header row
+    const headerRow = worksheet.addRow([
+      "S. No.",
+      "Spinner Name",
+      "Yarn REEL Lot No",
+      "Yarn Quantity Processed (Kgs)",
+      "Bale REEL Lot lint consumed",
+      "Bale Lot No",
+      "Ginner to Spinner Invoice",
+      "Lint Consumed (Kgs)",
+      "Villages",
+      "Ginner Name"
+    ]);
+    headerRow.font = { bold: true };
+
+    let include = [
+      {
+        model: Spinner,
+        as: "spinner",
+        attributes: ["id", "name"],
+      }
+    ];
+
+    const { count, rows } = await SpinProcess.findAndCountAll({
+      where: whereCondition,
+      include: include,
+      order: [["id", "desc"]],
+      offset: offset,
+      limit: limit,
+    });
+
+    for await (let [index, item] of rows.entries()) {
+      let spnr_lint_ids: any = [];
+      let spinProcess = await LintSelections.findAll({
+        where: {
+          process_id: item.dataValues.id,
+        },
+        attributes: ["id", "lint_id"],
+      });
+      spnr_lint_ids = spinProcess.map((obj: any) => obj?.dataValues?.lint_id);
+
+      let lintConsumed = await LintSelections.findOne({
+        attributes: [
+          [
+            sequelize.fn(
+              "COALESCE",
+              sequelize.fn("SUM", sequelize.col("qty_used")),
+              0
+            ),
+            "lint_consumed",
+          ],
+        ],
+        where: { process_id: item.dataValues.id },
+        group: ["process_id"],
+      });
+
+      let ginSales: any = [];
+      let gin_process_ids: any = [];
+      let transactions_ids: any = [];
+
+      if (spnr_lint_ids.length > 0) {
+        ginSales = await GinSales.findAll({
+          attributes: [
+            "id",
+            "invoice_no",
+            "lot_no",
+            "reel_lot_no",
+          ],
+          include: [
+            {
+              model: Ginner,
+              as: "ginner",
+              attributes: ["id", "name"],
+            },
+          ],
+          where: {
+            id: {
+              [Op.in]: spnr_lint_ids,
+            },
+          },
+        });
+
+        let ginBaleId = await BaleSelection.findAll({
+          where: {
+            sales_id: ginSales.map((obj: any) => obj.dataValues.id),
+          },
+          attributes: ["id", "bale_id"],
+        });
+
+        let ginProcessIds = await GinBale.findAll({
+          where: {
+            id: ginBaleId.map((obj: any) => obj.dataValues.bale_id),
+          },
+          attributes: ["id", "process_id"],
+        });
+        gin_process_ids = ginProcessIds.map(
+          (obj: any) => obj.dataValues.process_id
+        );
+      }
+
+      if (gin_process_ids.length > 0) {
+        let cottornIds = await CottonSelection.findAll({
+          where: {
+            process_id: gin_process_ids,
+          },
+          attributes: ["id", "transaction_id"],
+        });
+        transactions_ids = cottornIds.map(
+          (obj: any) => obj.dataValues.transaction_id
+        );
+      }
+
+      let transactions: any = [];
+      if (transactions_ids.length > 0) {
+        transactions = await Transaction.findAll({
+          attributes: [
+            "id",
+          ],
+          where: {
+            id: {
+              [Op.in]: transactions_ids,
+            },
+          },
+          include: [
+            {
+              model: Village,
+              as: "village",
+              attributes: ["id", "village_name"],
+            },
+          ],
+        });
+      }
+
+      let obj: any = {};
+      obj.lint_consumed = lintConsumed ? formatDecimal(lintConsumed?.dataValues?.lint_consumed) : 0;
+
+      let ginName =
+        ginSales && ginSales.length > 0
+          ? ginSales
+            .map((val: any) => val?.ginner?.name)
+            .filter((item: any) => item !== null && item !== undefined)
+          : [];
+      let ginInvoice =
+        ginSales && ginSales.length > 0
+          ? ginSales
+            .map((val: any) => val?.invoice_no)
+            .filter((item: any) => item !== null && item !== undefined)
+          : [];
+      let ginLot =
+        ginSales && ginSales.length > 0
+          ? ginSales
+              .map((val: any) => val?.lot_no)
+              .filter((item: any) => item !== null && item !== undefined)
+          : [];
+      let ginReelLot =
+        ginSales && ginSales.length > 0
+          ? ginSales
+            .map((val: any) => val?.reel_lot_no)
+            .filter((item: any) => item !== null && item !== undefined)
+          : [];
+
+      obj.gnr_name = [...new Set(ginName)];
+      obj.gnr_invoice_no = [...new Set(ginInvoice)];
+      obj.gnr_lot_no = [...new Set(ginLot)];
+      obj.gnr_reel_lot_no = [...new Set(ginReelLot)];
+
+      let frmrVillages =
+        transactions && transactions.length > 0
+          ? transactions
+            .map((val: any) => val?.village?.village_name)
+            .filter((item: any) => item !== null && item !== undefined)
+          : [];
+
+      obj.frmr_villages = [...new Set(frmrVillages)];
+
+      const rowValues = Object.values({
+        index: index + 1,
+        spinner: item.dataValues?.spinner ? item.dataValues?.spinner?.name : "",
+        reel_lot_no: item.dataValues?.reel_lot_no ? item.dataValues?.reel_lot_no : "",
+        total: item.dataValues?.net_yarn_qty ? item.dataValues?.net_yarn_qty : 0,
+        ginReel: obj.gnr_reel_lot_no && obj.gnr_reel_lot_no.length > 0
+        ? obj.gnr_reel_lot_no.join(", ")
+        : "",
+        ginLot: obj.gnr_lot_no && obj.gnr_lot_no.length > 0
+        ? obj.gnr_lot_no.join(", ")
+        : "",
+        invoice: obj.gnr_invoice_no && obj.gnr_invoice_no.length > 0
+        ? obj.gnr_invoice_no.join(", ")
+        : "",
+        lintConsumed: obj.lint_consumed,
+        frmrVillages: obj.frmr_villages && obj.frmr_villages.length > 0
+        ? obj.frmr_villages.join(", ")
+        : "",
+        ginner: obj.gnr_name && obj.gnr_name.length > 0
+        ? obj.gnr_name.join(", ")
+        : "",
+      });
+      worksheet.addRow(rowValues);
+    }
+
+    // Auto-adjust column widths based on content
+    worksheet.columns.forEach((column: any) => {
+      let maxCellLength = 0;
+      column.eachCell({ includeEmpty: true }, (cell: any) => {
+        const cellLength = (cell.value ? cell.value.toString() : "").length;
+        maxCellLength = Math.max(maxCellLength, cellLength);
+      });
+      column.width = Math.min(14, maxCellLength + 2); // Limit width to 30 characters
+    });
+
+    // Save the workbook
+    await workbook.xlsx.writeFile(excelFilePath);
+    res.status(200).send({
+      success: true,
+      messgage: "File successfully Generated",
+      data: process.env.BASE_URL + "excel-spin-process-backward-traceability.xlsx",
+    });
+  }
+  } catch (error: any) {
+    console.log(error);
+    return res.sendError(res, error.message);
+  }
+};
+
+
 export {
   fetchBaleProcess,
   exportPendingGinnerSales,
@@ -14943,6 +15793,8 @@ export {
   spinnerBackwardTraceabiltyReport,
   exportSpinnerBackwardTraceability,
   villageSeedCottonReport,
-  exportVillageSeedCotton
+  exportVillageSeedCotton,
+  spinnerProcessBackwardTraceabiltyReport,
+  exportSpinProcessBackwardfTraceabilty
 };
 
