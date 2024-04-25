@@ -30,7 +30,9 @@ const getQueryParams = async (
       district,
       block,
       village,
-      ginner
+      ginner,
+      fromDate,
+      toDate
     } = req.query;
     const validator = yup.string()
       .notRequired()
@@ -45,6 +47,8 @@ const getQueryParams = async (
     await validator.validate(block);
     await validator.validate(village);
     await validator.validate(ginner);
+    await validator.validate(fromDate);
+    await validator.validate(toDate);
     const user = (req as any).user
     if(user?.role == 3 && user?._id){
       brand = user._id
@@ -58,7 +62,9 @@ const getQueryParams = async (
       district,
       block,
       village,
-      ginner
+      ginner,
+      fromDate,
+      toDate
     };
 
   } catch (error: any) {
@@ -68,28 +74,6 @@ const getQueryParams = async (
   }
 };
 
-
-const getCountryEstimateAndProduction = async (
-  req: Request, res: Response
-) => {
-  try {
-    const reqData = await getQueryParams(req, res);
-    const where = getFarmWhereQuery(reqData);
-    const estimateProductionList = await getEstimateProductionByCountry(
-      where,
-      reqData
-    );
-    const data = getCountryEstimateProductionRes(estimateProductionList);
-    return res.sendSuccess(res, data);
-  }
-  catch (error: any) {
-    const code = error.errCode
-      ? error.errCode
-      : "ERR_INTERNAL_SERVER_ERROR";
-    return res.sendError(res, code);
-  }
-
-};
 
 const getFarmWhereQuery = (
   reqData: any
@@ -121,8 +105,131 @@ const getFarmWhereQuery = (
 
   if (reqData?.village)
     where['$farmer.village_id$'] = reqData.village;
+
+  
   return where;
 };
+
+
+const getTransactionWhereQuery = (
+  reqData: any
+) => {
+  const where: any = {
+    status: "Sold"
+  };
+
+  if (reqData?.program)
+    where.program_id = reqData.program;
+
+  if (reqData?.brand)
+    where.brand_id = reqData.brand;
+
+  if (reqData?.season)
+    where.season_id = reqData.season;
+
+  if (reqData?.country)
+    where.country_id = reqData.country;
+
+  if (reqData?.state)
+    where.state_id = reqData.state;
+
+  if (reqData?.district)
+    where.district_id = reqData.district;
+
+  if (reqData?.block)
+    where.block_id = reqData.block;
+
+  if (reqData?.village)
+    where.village_id = reqData.village;
+
+  if (reqData?.ginner)
+    where.mapped_ginner = reqData.ginner;
+
+  if (reqData?.fromDate)
+    where.date = { [Op.gte]: reqData.fromDate };
+
+  if (reqData?.toDate)
+    where.date = { [Op.lt]: reqData.toDate };
+
+  if (reqData?.fromDate && reqData?.toDate)
+    where.date = { [Op.between]: [reqData.fromDate, reqData.toDate] };
+
+  return where;
+};
+
+
+const getGinnerProcessWhereQuery = (
+  reqData: any
+) => {
+  const where: any = {
+
+  };
+
+  if (reqData?.program)
+    where.program_id = reqData.program;
+
+  if (reqData?.brand)
+    where['$ginner.brand$'] = {
+      [Op.contains]: Sequelize.literal(`ARRAY [${ reqData.brand }]`)
+    };
+
+  if (reqData?.season)
+    where.season_id = reqData.season;
+
+  if (reqData?.country)
+    where['$ginner.country_id$'] = reqData.country;
+
+  if (reqData?.state)
+    where['$ginner.state_id$'] = reqData.state;
+
+  if (reqData?.district)
+    where['$ginner.district_id$'] = reqData.district;
+
+    if (reqData?.ginner)
+    where['$ginner.id$'] = reqData.ginner;
+
+  // if (reqData?.block)
+  //   where.block_id = reqData.block;
+
+  // if (reqData?.village)
+  //   where.village_id = reqData.village;
+
+  if (reqData?.fromDate)
+    where.date = { [Op.gte]: reqData.fromDate };
+
+  if (reqData?.toDate)
+    where.date = { [Op.lt]: reqData.toDate };
+
+  if (reqData?.fromDate && reqData?.toDate)
+    where.date = { [Op.between]: [reqData.fromDate, reqData.toDate] };
+
+
+  return where;
+};
+
+
+const getCountryEstimateAndProduction = async (
+  req: Request, res: Response
+) => {
+  try {
+    const reqData = await getQueryParams(req, res);
+    const where = getFarmWhereQuery(reqData);
+    const estimateProductionList = await getEstimateProductionByCountry(
+      where,
+      reqData
+    );
+    const data = getCountryEstimateProductionRes(estimateProductionList);
+    return res.sendSuccess(res, data);
+  }
+  catch (error: any) {
+    const code = error.errCode
+      ? error.errCode
+      : "ERR_INTERNAL_SERVER_ERROR";
+    return res.sendError(res, code);
+  }
+
+};
+
 
 const getCountryEstimateProductionRes = (estimateProductionList: any) => {
   let name: any = [];
@@ -317,42 +424,6 @@ const getEstimateData = async (
 };
 
 
-const getTransactionWhereQuery = (
-  reqData: any
-) => {
-  const where: any = {
-    status: "Sold"
-  };
-
-  if (reqData?.program)
-    where.program_id = reqData.program;
-
-  if (reqData?.brand)
-    where.brand_id = reqData.brand;
-
-  if (reqData?.season)
-    where.season_id = reqData.season;
-
-  if (reqData?.country)
-    where.country_id = reqData.country;
-
-  if (reqData?.state)
-    where.state_id = reqData.state;
-
-  if (reqData?.district)
-    where.district_id = reqData.district;
-
-  if (reqData?.block)
-    where.block_id = reqData.block;
-
-  if (reqData?.village)
-    where.village_id = reqData.village;
-
-  if (reqData?.ginner)
-    where.mapped_ginner = reqData.ginner;
-
-  return where;
-};
 
 
 const getProcuredData = async (
@@ -465,46 +536,6 @@ const getProcuredProcessedRes = (
   };
 };
 
-
-const getGinnerProcessWhereQuery = (
-  reqData: any
-) => {
-  const where: any = {
-
-  };
-
-  if (reqData?.program)
-    where.program_id = reqData.program;
-
-  if (reqData?.brand)
-    where['$ginner.brand$'] = {
-      [Op.contains]: Sequelize.literal(`ARRAY [${ reqData.brand }]`)
-    };
-
-  if (reqData?.season)
-    where.season_id = reqData.season;
-
-  if (reqData?.country)
-    where['$ginner.country_id$'] = reqData.country;
-
-  if (reqData?.state)
-    where['$ginner.state_id$'] = reqData.state;
-
-  if (reqData?.district)
-    where['$ginner.district_id$'] = reqData.district;
-
-    if (reqData?.ginner)
-    where['$ginner.id$'] = reqData.ginner;
-
-  // if (reqData?.block)
-  //   where.block_id = reqData.block;
-
-  // if (reqData?.village)
-  //   where.village_id = reqData.village;
-
-
-  return where;
-};
 
 
 const getProcessedData = async (
