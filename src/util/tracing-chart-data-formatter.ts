@@ -147,7 +147,7 @@ export const formatDataFromKnitter = (title: any, data: any) : any => {
         width: 300,
         height: 100,
         isRoot: true,
-        children: data[0].spin.filter((el: any) => el.children)
+        children: data[0]? data[0].spin.filter((el: any) => el.children) : []
     };
     return treeData;
 }
@@ -160,7 +160,7 @@ export const formatDataFromWeaver = (title: any, data: any) : any => {
         width: 300,
         height: 100,
         isRoot: true,
-        children: data[0].spin.filter((el: any) => el.children)
+        children: data[0] ? data[0].spin.filter((el: any) => el.children): []
     };
     return treeData;
 }

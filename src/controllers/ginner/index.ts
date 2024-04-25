@@ -1600,9 +1600,16 @@ const getGinnerProcessTracingChartData = async (
   gin = await Promise.all(
     gin.map(async (el: any) => {
       el = el.toJSON();
+      let processTransactions = await CottonSelection.findAll({
+        where: {
+          process_id: el.id
+        }
+      })
       el.transaction = await Transaction.findAll({
         where: {
-          mapped_ginner: el.ginner_id,
+          id: {
+            [Op.in]: processTransactions.map((el: any) => el.transaction_id)
+          }
         },
         include: transactionInclude,
       });
