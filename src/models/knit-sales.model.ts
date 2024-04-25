@@ -139,10 +139,10 @@ KnitSales.belongsTo(Fabric, {
   as: "dyingwashing",
 });
 
-// KnitSales.belongsTo(FabricType, {
-//   foreignKey: "fabric_type",
-//   as: "fabric",
-// });
+KnitSales.belongsTo(FabricType, {
+  foreignKey: "fabric_type",
+  as: "fabric",
+});
 
 KnitSales.belongsTo(Program, {
   foreignKey: "program_id",

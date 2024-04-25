@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import moment from 'moment'
+import moment from 'moment';
 import { Op, QueryTypes, Sequelize } from "sequelize";
 import * as yup from 'yup';
 import sequelize from "../../util/dbConn";
@@ -16,7 +16,7 @@ const getTopVillages = async (
 ) => {
   try {
     const reqData = await getQueryParams(req, res);
-    const where = getTransactionDataQuery(reqData)
+    const where = getTransactionDataQuery(reqData);
     const villagesData = await getTopVillagesData(where);
     const data = getTopVillagesRes(villagesData);
     return res.sendSuccess(res, data);
@@ -41,7 +41,7 @@ const getOverAllDataQuery = (
 
   if (reqData?.brand)
     where['$ginner.brand$'] = {
-      [Op.contains]: Sequelize.literal(`ARRAY [${ reqData.brand }]`)
+      [Op.contains]: Sequelize.literal(`ARRAY [${reqData.brand}]`)
     };
 
   if (reqData?.season)
@@ -58,6 +58,15 @@ const getOverAllDataQuery = (
 
   if (reqData?.ginner)
     where['$ginner.id$'] = reqData.ginner;
+
+  if (reqData?.fromDate)
+    where.date = { [Op.gte]: reqData.fromDate };
+
+  if (reqData?.toDate)
+    where.date = { [Op.lt]: reqData.toDate };
+
+  if (reqData?.fromDate && reqData?.toDate)
+    where.date = { [Op.between]: [reqData.fromDate, reqData.toDate] };
 
   return where;
 };
@@ -76,7 +85,7 @@ const getTransactionDataQuery = (
 
   if (reqData?.brand)
     where['$ginner.brand$'] = {
-      [Op.contains]: Sequelize.literal(`ARRAY [${ reqData.brand }]`)
+      [Op.contains]: Sequelize.literal(`ARRAY [${reqData.brand}]`)
     };
 
   if (reqData?.season)
@@ -93,6 +102,15 @@ const getTransactionDataQuery = (
 
   if (reqData?.ginner)
     where['$ginner.id$'] = reqData.ginner;
+
+  if (reqData?.fromDate)
+    where.date = { [Op.gte]: reqData.fromDate };
+
+  if (reqData?.toDate)
+    where.date = { [Op.lt]: reqData.toDate };
+
+  if (reqData?.fromDate && reqData?.toDate)
+    where.date = { [Op.between]: [reqData.fromDate, reqData.toDate] };
 
   return where;
 };
@@ -112,7 +130,7 @@ const getTopVillagesData = async (
       model: Ginner,
       as: 'ginner',
       attributes: []
-    },  {
+    }, {
       model: Village,
       as: 'village',
       attributes: []
@@ -139,7 +157,9 @@ const getQueryParams = async (
       country,
       state,
       district,
-      ginner
+      ginner,
+      fromDate,
+      toDate
     } = req.query;
     const validator = yup.string()
       .notRequired()
@@ -152,10 +172,12 @@ const getQueryParams = async (
     await validator.validate(state);
     await validator.validate(district);
     await validator.validate(ginner);
+    await validator.validate(fromDate);
+    await validator.validate(toDate);
 
-    const user = (req as any).user
-    if(user?.role == 3 && user?._id){
-      brand = user._id
+    const user = (req as any).user;
+    if (user?.role == 3 && user?._id) {
+      brand = user._id;
     }
 
     return {
@@ -166,6 +188,8 @@ const getQueryParams = async (
       state,
       district,
       ginner,
+      fromDate,
+      toDate
     };
 
   } catch (error: any) {
@@ -662,7 +686,7 @@ const getMonthDate = (
     month: number,
     year: number;
   }[] = [];
-  while (end.diff(start, 'days') > 0  ) {
+  while (end.diff(start, 'days') > 0) {
     monthList.push({
       month: start.month(),
       year: start.year()

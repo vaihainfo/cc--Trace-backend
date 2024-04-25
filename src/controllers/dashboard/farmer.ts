@@ -135,6 +135,8 @@ const getQueryParams = async (
       district,
       block,
       village,
+      fromDate,
+      toDate
     } = req.query;
     const validator = yup.string()
       .notRequired()
@@ -148,6 +150,8 @@ const getQueryParams = async (
     await validator.validate(district);
     await validator.validate(block);
     await validator.validate(village);
+    await validator.validate(fromDate);
+    await validator.validate(toDate);
     // if (!season) {
     //   const seasonOne = await Season.findOne({
     //     order: [
@@ -170,6 +174,8 @@ const getQueryParams = async (
       district,
       block,
       village,
+      fromDate,
+      toDate
     };
 
   } catch (error: any) {
