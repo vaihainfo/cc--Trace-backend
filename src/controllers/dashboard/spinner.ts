@@ -245,7 +245,7 @@ const getTopFabricRes = (
   const name: string[] = [];
   const count: number[] = [];
   for (const row of list) {
-    if (row.dataValues && row.dataValues.name) {
+    if (row.dataValues && row.dataValues.name && name.length < 10) {
       name.push(row.dataValues.name);
       count.push(formatNumber(row.dataValues.total));
     }
@@ -260,7 +260,7 @@ const getTopFabricRes = (
 const getTopFabricData = async (
   where: any
 ) => {
-
+ 
   const result = await SpinSales.findAll({
     attributes: [
       [Sequelize.fn('SUM', Sequelize.col('total_qty')), 'total'],
@@ -286,7 +286,7 @@ const getTopFabricData = async (
     }],
     where,
     order: [['total', 'desc']],
-    limit: 10,
+    limit: 15,
     group: ['knitter.id', 'weaver.id', 'processor_name',]
   });
 
@@ -741,7 +741,7 @@ const getDataAll = async (
     const lintProcuredData = await getLintProcuredDataByMonth(ginSaleWhere);
     const lintSoldData = await getLintProcessedDataByMonth(spinProcessWhere);
     const yarnProcuredSoldData = await getYarnProcuredDataByMonth(spinProcessWhere);
-    const yarnSoldData = await getYarnSoldDataByMonth(where);
+    const yarnSoldData = await getYarnSoldDataByMonth(spinProcessWhere);
     const data = getDataAllRes(
       lintProcuredData,
       lintSoldData,

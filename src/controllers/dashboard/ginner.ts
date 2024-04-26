@@ -100,6 +100,12 @@ const getTransactionDataQuery = (
   if (reqData?.district)
     where['$ginner.district_id$'] = reqData.district;
 
+  if (reqData?.block)
+    where.block_id = reqData.block;
+
+  if (reqData?.village)
+    where.village_id = reqData.village;
+
   if (reqData?.ginner)
     where['$ginner.id$'] = reqData.ginner;
 
@@ -157,6 +163,8 @@ const getQueryParams = async (
       country,
       state,
       district,
+      block,
+      village,
       ginner,
       fromDate,
       toDate
@@ -171,6 +179,8 @@ const getQueryParams = async (
     await validator.validate(country);
     await validator.validate(state);
     await validator.validate(district);
+    await validator.validate(block);
+    await validator.validate(village);
     await validator.validate(ginner);
     await validator.validate(fromDate);
     await validator.validate(toDate);
@@ -187,6 +197,8 @@ const getQueryParams = async (
       country,
       state,
       district,
+      block,
+      village,
       ginner,
       fromDate,
       toDate
@@ -297,8 +309,13 @@ const getProcuredProcessed = async (
   try {
     const reqData = await getQueryParams(req, res);
     const transactionWhere = getTransactionDataQuery(reqData);
-    const procuredProcessedData = await getProcuredProcessedData(transactionWhere);
-    const data = getProcuredProcessedRes(procuredProcessedData);
+    const ginnerWhere = getOverAllDataQuery(reqData);
+    const procuredData = await getProcuredProcessedData(transactionWhere);
+    const processedData = await getLintProcessedData(ginnerWhere);
+    const data = getProcuredProcessedRes(
+      procuredData,
+      processedData
+    );
     return res.sendSuccess(res, data);
 
   } catch (error: any) {
@@ -311,17 +328,53 @@ const getProcuredProcessed = async (
 
 
 const getProcuredProcessedRes = (
-  list: any[]
+  procuredData: any[],
+  processedData: any[]
 ) => {
-  const season: string[] = [];
-  const stock: number[] = [];
-  const procured: number[] = [];
-  for (const row of list.reverse()) {
-    if (row.dataValues) {
-      season.push(row.dataValues.seasonName);
-      stock.push(formatNumber(row.dataValues.stock));
-      procured.push(formatNumber(row.dataValues.procured));
+  let seasonIds: number[] = [];
+
+  procuredData.forEach((procured: any) => {
+    if (procured.dataValues.seasonId)
+      seasonIds.push(procured.dataValues.seasonId);
+  });
+
+  processedData.forEach((processed: any) => {
+    if (!seasonIds.includes(processed.dataValues.seasonId))
+      seasonIds.push(processed.dataValues.seasonId);
+  });
+
+  seasonIds = seasonIds.sort((a, b) => a - b).slice(-3);
+
+  let season: any = [];
+  let procured: any = [];
+  let stock: any = [];
+
+  for (const sessionId of seasonIds) {
+    const fProcured = procuredData.find((production: any) =>
+      production.dataValues.seasonId == sessionId
+    );
+    const fProcessed = processedData.find((processed: any) =>
+      processed.dataValues.seasonId == sessionId
+    );
+    let data = {
+      seasonName: '',
+      procured: 0,
+      processed: 0
+    };
+    if (fProcured) {
+      data.seasonName = fProcured.dataValues.seasonName;
+      data.procured = formatNumber(fProcured.dataValues.procured);
     }
+
+    if (fProcessed) {
+      data.seasonName = fProcessed.dataValues.seasonName;
+      data.processed = formatNumber(fProcessed.dataValues.processed);
+    }
+
+    season.push(data.seasonName);
+    procured.push(data.procured);
+    stock.push(data.processed);
+
   }
 
   return {
@@ -332,13 +385,43 @@ const getProcuredProcessedRes = (
 };
 
 
+
+const getLintProcessedData = async (
+  where: any
+) => {
+
+  const result = await GinProcess.findAll({
+    attributes: [
+      [Sequelize.fn('SUM', Sequelize.col('total_qty')), 'processed'],
+      [Sequelize.col('season.name'), 'seasonName'],
+      [Sequelize.col('season.id'), 'seasonId']
+    ],
+    include: [{
+      model: Season,
+      as: 'season',
+      attributes: []
+    }, {
+      model: Ginner,
+      as: 'ginner',
+      attributes: []
+    }],
+    where,
+    order: [['seasonId', 'desc']],
+    limit: 3,
+    group: ['season.id']
+  });
+
+  return result;
+
+};
+
+
 const getProcuredProcessedData = async (
   where: any
 ) => {
 
   const result = await Transaction.findAll({
     attributes: [
-      [Sequelize.fn('SUM', Sequelize.col('qty_stock')), 'stock'],
       [Sequelize.fn('SUM', Sequelize.literal('CAST(qty_purchased  as numeric)')), 'procured'],
       [Sequelize.col('season.name'), 'seasonName'],
       [Sequelize.col('season.id'), 'seasonId']

@@ -723,6 +723,7 @@ const getTopYarnProcuredData = async (
       attributes: [],
     }],
     where,
+    limit: 10,
     order: [['qty', 'desc']],
     group: ['buyerName']
   });
@@ -862,7 +863,7 @@ const getFabricTypeRes = (
       for (const yarnData of res.dataList) {
         let qty = 0;
         const fYarnType = fSalesData.find(((salesData: any) =>
-          salesData.dataValues.yarnType == yarnData.fabricType
+          salesData.dataValues.fabricType == yarnData.name
         ));
 
         if (fYarnType)
