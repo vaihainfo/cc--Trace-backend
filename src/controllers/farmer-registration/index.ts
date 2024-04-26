@@ -68,7 +68,8 @@ const createFarmer = async (req: Request, res: Response) => {
       agri_estimated_yeld: req.body.agriEstimatedYield,
       agri_estimated_prod: req.body.agriEstimatedProd,
       cotton_total_area: req.body.cottonTotalArea,
-      total_estimated_cotton: req.body.totalEstimatedCotton
+      total_estimated_cotton: req.body.totalEstimatedCotton,
+      available_cotton: Number(req.body.totalEstimatedCotton) + (0.15 * Number(req.body.totalEstimatedCotton))
     };
     const farm = await Farm.create(farmData);
     res.sendSuccess(res, { farmer, farm });
@@ -395,7 +396,8 @@ const updateFarmer = async (req: Request, res: Response) => {
         agri_estimated_yeld: req.body.agriEstimatedYield,
         agri_estimated_prod: req.body.agriEstimatedProd,
         cotton_total_area: req.body.cottonTotalArea,
-        total_estimated_cotton: req.body.totalEstimatedCotton
+        total_estimated_cotton: req.body.totalEstimatedCotton,
+        available_cotton: Number(req.body.totalEstimatedCotton) + (0.15 * Number(req.body.totalEstimatedCotton))
       }, { where: { id: req.body.farmId } })
     }
 
@@ -433,7 +435,8 @@ const createFarmerFarm = async (req: Request, res: Response) => {
       agri_estimated_yeld: req.body.agriEstimatedYield,
       agri_estimated_prod: req.body.agriEstimatedProd,
       cotton_total_area: req.body.cottonTotalArea,
-      total_estimated_cotton: req.body.totalEstimatedCotton
+      total_estimated_cotton: req.body.totalEstimatedCotton,
+      available_cotton: Number(req.body.totalEstimatedCotton) + (0.15 * Number(req.body.totalEstimatedCotton))
     };
     const farm = await Farm.create(data);
     res.sendSuccess(res, { farm });
@@ -457,7 +460,8 @@ const updateFarmerFarm = async (req: Request, res: Response) => {
       agri_estimated_yeld: req.body.agriEstimatedYield,
       agri_estimated_prod: req.body.agriEstimatedProd,
       cotton_total_area: req.body.cottonTotalArea,
-      total_estimated_cotton: req.body.totalEstimatedCotton
+      total_estimated_cotton: req.body.totalEstimatedCotton,
+      available_cotton: Number(req.body.totalEstimatedCotton) + (0.15 * Number(req.body.totalEstimatedCotton))
     };
     const farm = await Farm.update(data, {
       where: {

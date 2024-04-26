@@ -62,22 +62,14 @@ const createTransaction = async (req: Request, res: Response) => {
       if (!farm) {
         return res.sendError(res, "Farm is not present");
       }
-      data.estimated_cotton = Number(farm.dataValues.total_estimated_cotton);
-      if(farm.dataValues.available_cotton==0){
-        data.available_cotton = data.estimated_cotton;
-      }else {
-        data.available_cotton = Number(farm.dataValues.available_cotton);
-      }
-      if (farm.dataValues.cotton_transacted==0) {
-        data.available_cotton += 0.15 * data.estimated_cotton;
-        data.qty_stock += 0.15 * data.estimated_cotton;
-      }
-      data.available_cotton = Number(data.available_cotton) - Number(farm.dataValues.cotton_transacted || 0);
+      data.estimated_cotton = Number(farm.total_estimated_cotton);
+      data.available_cotton = Number(farm.available_cotton) - Number(farm.cotton_transacted || 0);
     }
  
     const transaction = await Transaction.create(data);
     const s = await Farm.update({
-      cotton_transacted: Number(farm.cotton_transacted || 0) + Number(req.body.qtyPurchased)
+      cotton_transacted: Number(farm.cotton_transacted || 0) + Number(req.body.qtyPurchased),
+      // available_cotton: Number(farm.available_cotton || 0) - Number(req.body.qtyPurchased)
     }, { where: { id: req.body.farmId } });
     res.sendSuccess(res, transaction);
   } catch (error: any) {
@@ -453,10 +445,7 @@ const fetchTransactionsBySeasonAndFarmer = async (req: Request, res: Response) =
         [Sequelize.col('"farm"."total_estimated_cotton"'), 'total_estimated_cotton'],
         'available_cotton',
         'qty_purchased',
-        [
-          sequelize.literal('("available_cotton" - CAST("qty_purchased" AS DOUBLE PRECISION))'),
-          'qty_stock'
-        ]
+        [Sequelize.literal('("farm"."available_cotton" - CAST("qty_purchased" AS DOUBLE PRECISION))'), 'qty_stock']
       ],
       where: {
         farmer_id: farmerId,
@@ -1282,7 +1271,7 @@ const uploadTransactionBulk = async (req: Request, res: Response) => {
               proof: data.proof ? data.proof : "",
               status: 'Pending',
             };
-            let available_cotton = Number(farm.total_estimated_cotton) - Number(farm.cotton_transacted);
+            let available_cotton = Number(farm.available_cotton) - Number(farm.cotton_transacted);
             transactionData.estimated_cotton = Number(farm.total_estimated_cotton);
             transactionData.available_cotton = available_cotton;
             if (farm.cotton_transacted==0) {
