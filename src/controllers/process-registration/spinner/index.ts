@@ -110,6 +110,7 @@ const fetchSpinnerPagination = async (req: Request, res: Response) => {
         }
         //fetch data with pagination
         if (req.query.pagination === "true") {
+            let data: any = [];
             const { count, rows } = await Spinner.findAndCountAll({
                 where: whereCondition,
                 order: [
@@ -129,7 +130,21 @@ const fetchSpinnerPagination = async (req: Request, res: Response) => {
                 offset: offset,
                 limit: limit
             });
-            return res.sendPaginationSuccess(res, rows, count);
+            for await (let item of rows){
+                let users = await User.findAll({
+                    where: {
+                        id: item?.dataValues?.spinnerUser_id
+                    }
+                });
+
+                let newStatus = users.some((user: any) => user.status === true);
+
+                data.push({
+                    ...item?.dataValues,
+                    status: newStatus ? 'Active' : 'Inactive'
+                });
+            }
+            return res.sendPaginationSuccess(res, data, count);
         } else {
             const cooperative = await Spinner.findAll({
                 where: whereCondition,

@@ -90,6 +90,9 @@ const exportReportsOnebyOne = async () => {
   await generatePscpCottonProcurement();
   await generatePscpProcurementLiveTracker();
 
+  //brand wise report
+  await generateBrandWiseData();
+
   // Ginner Reports 
   await generateGinnerSummary();
   await generateGinnerSales();
@@ -3645,6 +3648,255 @@ const generatePendingSpinnerBale = async () => {
     console.log(error)
   }
 };
+
+const generateBrandWiseData = async () =>{
+  const maxRowsPerWorksheet = 500000; // Maximum number of rows per worksheet in Excel
+
+  try {
+        // Create the excel workbook file
+        const workbook = new ExcelJS.stream.xlsx.WorkbookWriter({
+          stream: fs.createWriteStream("./upload/brand-wise-data-report-test.xlsx")
+        });
+    
+        const batchSize = 5000;
+        let worksheetIndex = 0;
+        let offset = 0;
+        let hasNextBatch = true;
+
+      while (hasNextBatch) {
+
+      const rows = await Brand.findAll({
+        offset: offset,
+        limit: batchSize,
+      })
+
+      if (rows.length === 0) {
+        hasNextBatch = false;
+        break;
+      }
+
+      if (offset % maxRowsPerWorksheet === 0) {
+        worksheetIndex++;
+      }
+
+      let currentWorksheet = workbook.getWorksheet(`Sheet${worksheetIndex}`);
+        if (!currentWorksheet) {
+          currentWorksheet = workbook.addWorksheet(`Sheet${worksheetIndex}`);
+          if (worksheetIndex == 1) {
+            currentWorksheet.mergeCells("A1:J1");
+            const mergedCell = currentWorksheet.getCell("A1");
+            mergedCell.value = "CottonConnect | Brand Wise Data Report";
+            mergedCell.font = { bold: true };
+            mergedCell.alignment = { horizontal: "center", vertical: "middle" };
+          }
+          // Set bold font for header row
+          const headerRow = currentWorksheet.addRow([
+            "Sr No.",
+              "Brand",
+              "Total Numbers of Farmers Registered",
+              "Total Estimated Seed Cotton (MT)",
+              "Total Seed Cotton Procured (MT)",
+              "Total Number of Bales Processed",
+              "Total Lint Processed (MT)",
+              "Total Lint Sold (MT)",
+              "Total Yarn Processed (MT)",
+              "Total Yarn Sold (MT)",
+          ]);
+          headerRow.font = { bold: true };
+        }
+
+      for await (let [index, item] of rows.entries()) {
+        let [result, trans, lintProcured, lintSold, yarnProcessed, yarnSold]: any =
+          await Promise.all([
+            Farm.findOne({
+              where: {
+                "$farmer.brand_id$": item.dataValues.id},
+              attributes: [
+                [Sequelize.fn('COUNT', Sequelize.literal('DISTINCT farmer_id')), 'total_farmers'],
+                [Sequelize.fn('COALESCE', Sequelize.fn('SUM', Sequelize.col('farms.total_estimated_cotton')), 0), 'total_estimated_cotton']
+              ],
+              include: [{
+                model: Farmer,
+                as: 'farmer',
+                attributes: []
+              }],
+              group:["farmer.brand_id"]
+            }),
+            Transaction.findOne({
+              attributes: [
+                [Sequelize.fn('COALESCE', Sequelize.fn('sum', Sequelize.literal("CAST(qty_purchased AS DOUBLE PRECISION)")), 0), 'total_cotton_procured']
+              ],
+              where: {
+                brand_id: item?.dataValues?.id,
+              }
+            }),
+            GinBale.findOne({
+              attributes: [
+                [
+                  sequelize.fn(
+                    "COALESCE",
+                    sequelize.fn(
+                      "SUM",
+                      sequelize.literal(
+                        'CAST("gin-bales"."weight" AS DOUBLE PRECISION)'
+                      )
+                    ),
+                    0
+                  ),
+                  "lint_processed",
+                ],
+                [
+                  sequelize.fn(
+                    "COUNT",
+                    Sequelize.literal('DISTINCT "gin-bales"."id"')
+                  ),
+                  "bales_processed",
+                ],
+              ],
+              include: [
+                {
+                  model: GinProcess,
+                  as: "ginprocess",
+                  attributes: [],
+                  include: [
+                    {
+                      model: Ginner,
+                      as: "ginner",
+                      attributes: [],
+                    },
+                  ],
+                },
+              ],
+              where: {
+                "$ginprocess.ginner.brand$": { [Op.overlap]: [item?.dataValues?.id] },
+              },
+              group: ['ginprocess.ginner.brand'],
+            }),
+            BaleSelection.findOne({
+              attributes: [
+                [
+                  sequelize.fn(
+                    "COALESCE",
+                    sequelize.fn(
+                      "SUM",
+                      sequelize.literal(
+                        'CAST("bale"."weight" AS DOUBLE PRECISION)'
+                      )
+                    ),
+                    0
+                  ),
+                  "lint_sold",
+                ],
+                [
+                  sequelize.fn("COUNT", Sequelize.literal("DISTINCT bale_id")),
+                  "bales_sold",
+                ],
+              ],
+              include: [
+                {
+                  model: GinSales,
+                  as: "sales",
+                  attributes: [],
+                  include: [
+                    {
+                      model: Ginner,
+                      as: "ginner",
+                      attributes: [],
+                    },
+                  ],
+                },
+                {
+                  model: GinBale,
+                  as: "bale",
+                  attributes: [],
+                },
+              ],
+              where: {
+                "$sales.ginner.brand$": { [Op.overlap]: [item?.dataValues?.id] },
+              },
+              group: ["sales.ginner.brand"],
+            }),
+            SpinProcess.findOne({
+              attributes: [
+                [
+                  sequelize.fn(
+                    "COALESCE",
+                    sequelize.fn("SUM", sequelize.col("net_yarn_qty")),
+                    0
+                  ),
+                  "yarn_processed",
+                ],
+              ],
+              include: [
+                {
+                  model: Spinner,
+                  as: "spinner",
+                  attributes: [],
+                },
+              ],
+              where: {
+                "$spinner.brand$": { [Op.overlap]: [item?.dataValues?.id] },
+              },
+              group: ["spinner.brand"],
+            }),
+            SpinSales.findOne({
+              attributes: [
+                [
+                  sequelize.fn(
+                    "COALESCE",
+                    sequelize.fn("SUM", sequelize.col("total_qty")),
+                    0
+                  ),
+                  "yarn_sold",
+                ],
+              ],
+              include: [
+                {
+                  model: Spinner,
+                  as: "spinner",
+                  attributes: [],
+                },
+              ],
+              where: {
+                "$spinner.brand$": { [Op.overlap]: [item?.dataValues?.id] },
+              },
+              group: ["spinner.brand"],
+            }),
+          ]);
+
+        const rowValues = [
+          index + offset + 1,
+          item?.dataValues.brand_name ? item?.dataValues?.brand_name : "",
+          result ? formatDecimal(result?.dataValues?.total_farmers) : 0,
+          result ? formatDecimal(convert_kg_to_mt(result?.dataValues?.total_estimated_cotton ?? 0)) : 0,
+          trans ? formatDecimal(convert_kg_to_mt(trans?.dataValues?.total_cotton_procured ?? 0)) : 0,
+          lintProcured ? lintProcured?.dataValues?.bales_processed : 0,
+          lintProcured ? formatDecimal(convert_kg_to_mt(lintProcured?.dataValues?.lint_processed ?? 0)) : 0,
+          lintSold ? formatDecimal(convert_kg_to_mt(lintSold?.dataValues?.lint_sold ?? 0)) : 0,
+          yarnProcessed ? formatDecimal(convert_kg_to_mt(yarnProcessed?.dataValues?.yarn_processed ?? 0)) : 0,
+          yarnSold ? formatDecimal(convert_kg_to_mt(yarnSold?.dataValues?.yarn_sold ?? 0)) : 0,
+        ];
+        currentWorksheet.addRow(rowValues).commit();
+        }
+        offset += batchSize;
+      }
+
+    // Save the workbook
+    await workbook.commit()
+    .then(() => {
+      // Rename the temporary file to the final filename
+      fs.renameSync("./upload/brand-wise-data-report-test.xlsx", './upload/brand-wise-data-report.xlsx');
+      console.log('brand-wise-data report generation completed.');
+    })
+    .catch(error => {
+      console.log('Failed generation Report.');
+      throw error;
+    });
+
+  } catch (error: any) {
+    console.log(error);
+  }
+}
 
 const formatDecimal = (value: string | number): string | number => {
   const numericValue = typeof value === "string" ? parseFloat(value) : value;

@@ -143,6 +143,7 @@ const fetchTraderPagination = async (req: Request, res: Response) => {
         }
         //fetch data with pagination
         if (req.query.pagination === "true") {
+            let data: any = [];
             const { count, rows } = await Trader.findAndCountAll({
                 where: whereCondition,
                 order: [
@@ -162,7 +163,21 @@ const fetchTraderPagination = async (req: Request, res: Response) => {
                 offset: offset,
                 limit: limit
             });
-            return res.sendPaginationSuccess(res, rows, count);
+            for await (let item of rows){
+                let users = await User.findAll({
+                    where: {
+                        id: item?.dataValues?.traderUser_id
+                    }
+                });
+
+                let newStatus = users.some((user: any) => user.status === true);
+
+                data.push({
+                    ...item?.dataValues,
+                    status: newStatus ? 'Active' : 'Inactive'
+                });
+            }
+            return res.sendPaginationSuccess(res, data, count);
         } else {
             const result = await Trader.findAll({
                 where: whereCondition,
@@ -183,10 +198,10 @@ const fetchTraderPagination = async (req: Request, res: Response) => {
             });
             return res.sendSuccess(res, result);
         }
-    } catch (error) {
+    } catch (error: any) {
         console.log(error);
-        return res.sendError(res, "ERR_INTERNAL_SERVER_ERROR");
-    }
+        return res.sendError(res, error.message);
+      }
 }
 
 const updateTrader = async (req: Request, res: Response) => {
@@ -235,10 +250,10 @@ const updateTrader = async (req: Request, res: Response) => {
         }
         const trader = await Trader.update(data, { where: { id: req.body.id } });
         res.sendSuccess(res, trader);
-    } catch (error) {
+    } catch (error: any) {
         console.log(error);
-        return res.sendError(res, "ERR_INTERNAL_SERVER_ERROR");
-    }
+        return res.sendError(res, error.message);
+      }
 }
 
 const deleteTrader = async (req: Request, res: Response) => {

@@ -63,6 +63,7 @@ const fetchPhysicalPartnerPagination = async (req: Request, res: Response) => {
         }
 
         if (req.query.pagination === "true") {
+            let data: any = [];
             const { count, rows } = await PhysicalPartner.findAndCountAll({
                 where: whereCondition,
                 order: [
@@ -76,7 +77,21 @@ const fetchPhysicalPartnerPagination = async (req: Request, res: Response) => {
                 offset: offset,
                 limit: limit
             });
-            return res.sendPaginationSuccess(res, rows, count);
+            for await (let item of rows){
+                let users = await User.findAll({
+                    where: {
+                        id: item?.dataValues?.physicalPartnerUser_id
+                    }
+                });
+
+                let newStatus = users.some((user: any) => user.status === true);
+
+                data.push({
+                    ...item?.dataValues,
+                    status: newStatus ? 'Active' : 'Inactive'
+                });
+            }
+            return res.sendPaginationSuccess(res, data, count);
         } else {
             const result = await PhysicalPartner.findAll({
                 where: whereCondition,
@@ -91,9 +106,9 @@ const fetchPhysicalPartnerPagination = async (req: Request, res: Response) => {
             });
             return res.sendSuccess(res, result);
         }
-    } catch (error) {
+    } catch (error: any) {
         console.log(error);
-        return res.sendError(res, "ERR_INTERNAL_SERVER_ERROR");
+        return res.sendError(res, error.message);
     }
 }
 
@@ -145,10 +160,10 @@ const fetchPhysicalPartner = async (req: Request, res: Response) => {
         }
 
         return res.sendSuccess(res, result ? { ...result.dataValues, userData, programs, unitCerts, brands } : null);
-    } catch (error) {
+    } catch (error: any) {
         console.log(error);
-        return res.sendError(res, "ERR_INTERNAL_SERVER_ERROR");
-    }
+        return res.sendError(res, error.message);
+      }
 }
 
 const deletePhysicalPartner = async (req: Request, res: Response) => {
@@ -190,8 +205,9 @@ const deletePhysicalPartner = async (req: Request, res: Response) => {
         });
         res.sendSuccess(res, { physicalPartner });
     } catch (error: any) {
+        console.log(error);
         return res.sendError(res, error.message);
-    }
+      }
 }
 
 const checkPhysicalPartner = async (req: Request, res: Response) => {
@@ -212,8 +228,9 @@ const checkPhysicalPartner = async (req: Request, res: Response) => {
         });
         res.sendSuccess(res, result ? { exist: true } : { exist: false });
     } catch (error: any) {
+        console.log(error);
         return res.sendError(res, error.message);
-    }
+      }
 }
 
 export {

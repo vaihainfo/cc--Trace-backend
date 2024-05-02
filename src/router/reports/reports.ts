@@ -61,7 +61,9 @@ import {
     exportSpinnerBackwardTraceability,
     exportLoad,
     spinnerProcessBackwardTraceabiltyReport,
-    exportSpinProcessBackwardfTraceabilty
+    exportSpinProcessBackwardfTraceabilty,
+    brandWiseDataReport,
+    exportBrandWiseDataReport
 } from "../../controllers/reports";
 import accessControl from "../../middleware/access-control";
 
@@ -144,5 +146,8 @@ router.get('/export-village-seed-cotton-report', exportVillageSeedCotton);
 
 router.get('/get-spin-process-backward-traceability-report', spinnerProcessBackwardTraceabiltyReport);
 router.get('/export-spin-process-backward-traceability-report', exportSpinProcessBackwardfTraceabilty);
+
+router.get('/get-brand-wise-data-report', brandWiseDataReport);
+router.get('/export-brand-wise-data-report', exportBrandWiseDataReport);
 
 export default router;  

@@ -107,6 +107,7 @@ const fetchWeaverPagination = async (req: Request, res: Response) => {
         }
         //fetch data with pagination
         if (req.query.pagination === "true") {
+            let data: any = [];
             const { count, rows } = await Weaver.findAndCountAll({
                 where: whereCondition,
                 order: [
@@ -126,7 +127,21 @@ const fetchWeaverPagination = async (req: Request, res: Response) => {
                 offset: offset,
                 limit: limit
             });
-            return res.sendPaginationSuccess(res, rows, count);
+            for await (let item of rows){
+                let users = await User.findAll({
+                    where: {
+                        id: item?.dataValues?.weaverUser_id
+                    }
+                });
+
+                let newStatus = users.some((user: any) => user.status === true);
+
+                data.push({
+                    ...item?.dataValues,
+                    status: newStatus ? 'Active' : 'Inactive'
+                });
+            }
+            return res.sendPaginationSuccess(res, data, count);
         } else {
             const result = await Weaver.findAll({
                 where: whereCondition,
