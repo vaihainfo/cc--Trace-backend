@@ -260,7 +260,7 @@ const getTopFabricRes = (
 const getTopFabricData = async (
   where: any
 ) => {
- 
+
   const result = await SpinSales.findAll({
     attributes: [
       [Sequelize.fn('SUM', Sequelize.col('total_qty')), 'total'],
@@ -725,15 +725,10 @@ const getDataAll = async (
 ) => {
   try {
     const reqData = await getQueryParams(req, res);
-    const where: any = {};
-    if (reqData.season)
-      where['id'] = reqData.season;
-
     const seasonOne = await Season.findOne({
-      order: [
-        ['id', 'DESC']
-      ],
-      where
+      where: {
+        id: reqData.season ? reqData.season : '9'
+      }
     });
     reqData.season = seasonOne.id;
     const ginSaleWhere = getGinnerSalesWhereQuery(reqData);
@@ -815,7 +810,7 @@ const getDataAllRes = (
       data.yarnProcured = formatNumber(fYarnProcured.dataValues.yarnProcured);
     }
 
-    if(fYarnSold) {
+    if (fYarnSold) {
       data.yarnSold = formatNumber(fYarnSold.dataValues.yarnSold);
     }
 
@@ -909,15 +904,10 @@ const getYarnType = async (
 ) => {
   try {
     const reqData = await getQueryParams(req, res);
-    const where: any = {};
-    if (reqData.season)
-      where['id'] = reqData.season;
-
     const seasonOne = await Season.findOne({
-      order: [
-        ['id', 'DESC']
-      ],
-      where
+      where: {
+        id: reqData.season ? reqData.season : '9'
+      }
     });
     reqData.season = seasonOne.id;
     const saleWhere = getSpinnerSalesWhereQuery(reqData);
