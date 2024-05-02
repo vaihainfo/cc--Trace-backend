@@ -477,17 +477,12 @@ const getFabricYarnMonthlyData = async (
 ) => {
   try {
     const reqData = await getQueryParams(req, res);
-    const where: any = {};
-    if (reqData.season)
-      where['id'] = reqData.season;
-
     const seasonOne = await Season.findOne({
-      order: [
-        ['id', 'DESC']
-      ],
-      where
-    });
-    reqData.season = seasonOne.id;
+      where: {
+          id: reqData.season ? reqData.season : '9'
+      }
+  });
+  reqData.season = seasonOne.id;
     const salesWhere = getSpinnerSalesWhereQuery(reqData);
     const knitterWhere = getWeaverSalesWhereQuery(reqData);
     const yarnProcuredList = await getYarnProcuredMonthlyData(salesWhere);
@@ -722,6 +717,7 @@ const getTopYarnProcuredData = async (
       attributes: [],
     }],
     where,
+    limit: 10,
     order: [['qty', 'desc']],
     group: ['buyerName']
   });
@@ -804,16 +800,12 @@ const getFabricType = async (
 ) => {
   try {
     const reqData = await getQueryParams(req, res);
-    const where: any = {};
-    if (reqData.season)
-      where['id'] = reqData.season;
-
     const seasonOne = await Season.findOne({
-      order: [
-        ['id', 'DESC']
-      ],
-      where
-    });
+      where: {
+          id: reqData.season ? reqData.season : '9'
+      }
+  });
+  reqData.season = seasonOne.id;
     const salesWhere = getWeaverSalesWhereQuery(reqData);
     const fabricList = await getFabricTypeData(salesWhere);
     const data = getFabricTypeRes(

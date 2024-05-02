@@ -49,9 +49,9 @@ const getQueryParams = async (
     await validator.validate(ginner);
     await validator.validate(fromDate);
     await validator.validate(toDate);
-    const user = (req as any).user
-    if(user?.role == 3 && user?._id){
-      brand = user._id
+    const user = (req as any).user;
+    if (user?.role == 3 && user?._id) {
+      brand = user._id;
     }
     return {
       program,
@@ -106,7 +106,7 @@ const getFarmWhereQuery = (
   if (reqData?.village)
     where['$farmer.village_id$'] = reqData.village;
 
-  
+
   return where;
 };
 
@@ -170,7 +170,7 @@ const getGinnerProcessWhereQuery = (
 
   if (reqData?.brand)
     where['$ginner.brand$'] = {
-      [Op.contains]: Sequelize.literal(`ARRAY [${ reqData.brand }]`)
+      [Op.contains]: Sequelize.literal(`ARRAY [${reqData.brand}]`)
     };
 
   if (reqData?.season)
@@ -185,7 +185,7 @@ const getGinnerProcessWhereQuery = (
   if (reqData?.district)
     where['$ginner.district_id$'] = reqData.district;
 
-    if (reqData?.ginner)
+  if (reqData?.ginner)
     where['$ginner.id$'] = reqData.ginner;
 
   // if (reqData?.block)
@@ -283,7 +283,7 @@ const getEstimateProductionByCountry = async (
     attributes: [
       [Sequelize.fn('SUM', Sequelize.col('farmer.total_estimated_cotton')), 'estimate'],
       [Sequelize.fn('SUM', Sequelize.col('farmer.agri_estimated_prod')), 'production'],
-      [Sequelize.col(`farmer.${ tableName }.${ colName }`), 'name']
+      [Sequelize.col(`farmer.${tableName}.${colName}`), 'name']
     ],
     include: [
       {
@@ -297,7 +297,7 @@ const getEstimateProductionByCountry = async (
       },
     ],
     where,
-    group: [`farmer.${ tableName }.id`]
+    group: [`farmer.${tableName}.id`]
   });
 
   return estimateAndProduction;
@@ -572,15 +572,10 @@ const getProcuredProcessedMonthly = async (
 ) => {
   try {
     const reqData = await getQueryParams(req, res);
-    const where: any = {};
-    if (reqData.season)
-      where['id'] = reqData.season;
-
     const seasonOne = await Season.findOne({
-      order: [
-        ['id', 'DESC']
-      ],
-      where
+      where: {
+        id: reqData.season ? reqData.season : '9'
+      }
     });
     reqData.season = seasonOne.id;
     const transactionWhere = getTransactionWhereQuery(reqData);
@@ -704,7 +699,7 @@ const getMonthDate = (
     month: number,
     year: number;
   }[] = [];
-  while (end.diff(start, 'days') > 0  ) {
+  while (end.diff(start, 'days') > 0) {
     monthList.push({
       month: start.month(),
       year: start.year()

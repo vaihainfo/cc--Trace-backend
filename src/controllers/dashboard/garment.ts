@@ -521,7 +521,7 @@ const getFabricDyingSales = async (
             model: Fabric,
             as: 'dying_fabric',
             attributes: [],
-        },{
+        }, {
             model: Garment,
             as: 'buyer',
             attributes: [],
@@ -676,7 +676,7 @@ const getFabricCompareCountRes = (
             fProcured.forEach(procured => {
                 data.seasonName = procured.dataValues.seasonName;
                 data.fabricProcured += formatNumber(procured.dataValues.procured);
-            })
+            });
         }
 
         if (fProcessed) {
@@ -1060,15 +1060,10 @@ const getFabricGarmentMonthlyData = async (
 ) => {
     try {
         const reqData = await getQueryParams(req, res);
-        const where: any = {};
-        if (reqData.season)
-            where['id'] = reqData.season;
-
         const seasonOne = await Season.findOne({
-            order: [
-                ['id', 'DESC']
-            ],
-            where
+            where: {
+                id: reqData.season ? reqData.season : '9'
+            }
         });
         reqData.season = seasonOne.id;
         const garmentWhere = getGarmentWhereQuery(reqData);
