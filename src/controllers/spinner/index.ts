@@ -1833,7 +1833,9 @@ const chooseLint = async (req: Request, res: Response) => {
         }
 
         whereCondition.status = 'Sold';
+        whereCondition.greyout_status = { [Op.not]: true };
         whereCondition.qty_stock = { [Op.gt]: 0 }
+        
         let include = [
             {
                 model: Season,

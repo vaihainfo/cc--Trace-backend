@@ -115,8 +115,7 @@ const connectToDb = async () => {
   const data = await sequelize.sync({ force: false })
   try {
     await sequelize.authenticate();
-    console.log("Database Connected successfully.");
-
+      console.log("Database Connected successfully.");
       const used = process.memoryUsage();
       console.log(`Memory usage: ${JSON.stringify(used)}`);
       console.log("Current Server Time", moment());

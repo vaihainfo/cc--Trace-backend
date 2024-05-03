@@ -749,9 +749,10 @@ const fetchFabricReelLotNo = async (req: Request, res: Response) => {
     let prcs_date = day + month + year;
 
     let number = count + 1;
+    const random_number = +performance.now().toString().replace('.', '7').substring(0,4)
     let prcs_name = rows ? rows?.name.substring(0, 3).toUpperCase() : "";
     let country = rows ? rows?.country?.county_name.substring(0, 2).toUpperCase() : "";
-    let reelLotNo = "REEL-KNI-" + prcs_name + "-" + country + "-" + prcs_date + "/" + number;
+    let reelLotNo = "REEL-KNI-" + prcs_name + "-" + country + "-" + prcs_date + "/" + random_number;
 
     return res.sendSuccess(res, { reelLotNo });
   } catch (error: any) {

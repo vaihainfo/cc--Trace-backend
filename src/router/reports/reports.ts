@@ -60,6 +60,8 @@ import {
     spinnerBackwardTraceabiltyReport,
     exportSpinnerBackwardTraceability,
     exportLoad,
+    fetchSpinnerGreyOutReport,
+    exportSpinnerGreyOutReport,
     spinnerProcessBackwardTraceabiltyReport,
     exportSpinProcessBackwardfTraceabilty,
     brandWiseDataReport,
@@ -91,6 +93,12 @@ router.get('/get-gin-sales-report', fetchGinSalesPagination);
 router.get('/get-gin-pending-sales-report', fetchPendingGinnerSales);
 router.get('/export-pending-sales-report', exportPendingGinnerSales);
 router.get('/export-gin-sales-report', exportGinnerSales);
+
+// Grey Out Report
+
+router.get('/get-spin-grey-out-report', fetchSpinnerGreyOutReport);
+router.get('/export-spin-grey-out-report', exportSpinnerGreyOutReport);
+
 router.get('/get-spinner-bale-report', fetchSpinnerBalePagination);
 router.get('/get-spinner-pending-bale-report', fetchSpinnerPendingBale);
 router.get('/export-spinner-pending-bale-report', exportPendingSpinnerBale);

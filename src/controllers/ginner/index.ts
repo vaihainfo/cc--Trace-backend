@@ -1464,7 +1464,8 @@ const getReelBaleId = async (req: Request, res: Response) => {
 
     let prcs_date = day + month + year;
     var bale_no = baleCount ? Number(baleCount ?? 0) + 1 : 1;
-    var reelbale_id = baleid_prefix + prcs_date + "/" + String(bale_no);
+    const random_number = +performance.now().toString().replace('.', '7').substring(0,4)
+    var reelbale_id = baleid_prefix + prcs_date + "/" + String(random_number);
     res.sendSuccess(res, { id: reelbale_id });
   } catch (error: any) {
     console.error(error);

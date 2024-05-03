@@ -956,6 +956,119 @@ const exportPendingGinnerSales = async (req: Request, res: Response) => {
   }
 };
 
+
+const fetchSpinnerGreyOutReport = async (req: Request, res: Response) => {
+  const searchTerm = req.query.search || "";
+  const page = Number(req.query.page) || 1;
+  const limit = Number(req.query.limit) || 10;
+
+  const { ginnerId, spinnerId, seasonId, programId, brandId, countryId }: any =
+    req.query;
+  const offset = (page - 1) * limit;
+  const whereCondition: any = {};
+  try {
+    if (searchTerm) {
+      whereCondition[Op.or] = [
+        { "$season.name$": { [Op.iLike]: `%${searchTerm}%` } },
+        { "$buyerdata.name$": { [Op.iLike]: `%${searchTerm}%` } },
+        { "$ginner.name$": { [Op.iLike]: `%${searchTerm}%` } },
+        { "$program.program_name$": { [Op.iLike]: `%${searchTerm}%` } },
+        { lot_no: { [Op.iLike]: `%${searchTerm}%` } },
+        { invoice_no: { [Op.iLike]: `%${searchTerm}%` } },
+        { reel_lot_no: { [Op.iLike]: `%${searchTerm}%` } },
+        { press_no: { [Op.iLike]: `%${searchTerm}%` } },
+        { vehicle_no: { [Op.iLike]: `%${searchTerm}%` } },
+      ];
+    }
+    if (spinnerId) {
+      const idArray: number[] = spinnerId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.buyer = { [Op.in]: idArray };
+    } else {
+      whereCondition.buyer = {
+        [Op.ne]: null,
+      };
+    }
+
+    if (ginnerId) {
+      const idArray: number[] = ginnerId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.ginner_id = { [Op.in]: idArray };
+    }
+
+    if (brandId) {
+      const idArray: number[] = brandId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition["$buyerdata.brand$"] = { [Op.overlap]: idArray };
+    }
+
+    if (countryId) {
+      const idArray: number[] = countryId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition["$buyerdata.country_id$"] = { [Op.in]: idArray };
+    }
+
+    if (seasonId) {
+      const idArray: number[] = seasonId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.season_id = { [Op.in]: idArray };
+    }
+
+    // whereCondition.total_qty = {
+    //   [Op.gt]: 0,
+    // };
+    whereCondition.greyout_status = true;
+
+    if (programId) {
+      const idArray: number[] = programId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.program_id = { [Op.in]: idArray };
+    }
+
+    let include = [
+      {
+        model: Ginner,
+        as: "ginner",
+        attributes: ["id", "name"],
+      },
+      {
+        model: Season,
+        as: "season",
+        attributes: ["id", "name"],
+      },
+      {
+        model: Program,
+        as: "program",
+        attributes: ["id", "program_name"],
+      },
+      {
+        model: Spinner,
+        as: "buyerdata",
+        attributes: ["id", "name"],
+      },
+    ];
+    //fetch data with pagination
+
+    const { count, rows } = await GinSales.findAndCountAll({
+      where: whereCondition,
+      include: include,
+      // attributes: ['id', 'lot_no', 'invoice_no', 'reel_lot_no', 'qty_stock'],
+      offset: offset,
+      limit: limit,
+    });
+    return res.sendPaginationSuccess(res, rows, count);
+  } catch (error: any) {
+    console.log(error)
+    return res.sendError(res, error.message);
+  }
+};
+
 const fetchGinSalesPagination = async (req: Request, res: Response) => {
   const searchTerm = req.query.search || "";
   const page = Number(req.query.page) || 1;
@@ -1404,6 +1517,191 @@ const fetchGinSalesPagination = async (req: Request, res: Response) => {
 //     return res.sendError(res, error.message);
 //   }
 // };
+
+
+
+const exportSpinnerGreyOutReport = async (req: Request, res: Response) => {
+  // spinner_bale_receipt_load
+  const excelFilePath = path.join(
+   "./upload",
+   "excel-spinner-grey-out-report.xlsx"
+ );
+
+ const searchTerm = req.query.search || "";
+ const page = Number(req.query.page) || 1;
+ const limit = Number(req.query.limit) || 10;
+ const {exportType, ginnerId, spinnerId, seasonId, programId, brandId, countryId }: any =
+   req.query;
+ const offset = (page - 1) * limit;
+ const whereCondition: any = {};
+ try {
+
+   if (exportType === "all") {
+     return res.status(200).send({
+       success: true,
+       messgage: "File successfully Generated",
+       data: process.env.BASE_URL + "spinner-grey-out-report.xlsx",
+     });
+   } else {
+
+   if (searchTerm) {
+     whereCondition[Op.or] = [
+       { "$season.name$": { [Op.iLike]: `%${searchTerm}%` } },
+       { "$buyerdata.name$": { [Op.iLike]: `%${searchTerm}%` } },
+       { "$ginner.name$": { [Op.iLike]: `%${searchTerm}%` } },
+       { "$program.program_name$": { [Op.iLike]: `%${searchTerm}%` } },
+       { lot_no: { [Op.iLike]: `%${searchTerm}%` } },
+       { invoice_no: { [Op.iLike]: `%${searchTerm}%` } },
+       { reel_lot_no: { [Op.iLike]: `%${searchTerm}%` } },
+       { press_no: { [Op.iLike]: `%${searchTerm}%` } },
+       { vehicle_no: { [Op.iLike]: `%${searchTerm}%` } },
+     ];
+   }
+   if (spinnerId) {
+     const idArray: number[] = spinnerId
+       .split(",")
+       .map((id: any) => parseInt(id, 10));
+     whereCondition["$buyer$"] = { [Op.in]: idArray };
+   }
+
+   if (ginnerId) {
+     const idArray: number[] = ginnerId
+       .split(",")
+       .map((id: any) => parseInt(id, 10));
+     whereCondition["$ginner_id$"] = { [Op.in]: idArray };
+   }
+
+   if (brandId) {
+     const idArray: number[] = brandId
+       .split(",")
+       .map((id: any) => parseInt(id, 10));
+     whereCondition["$buyerdata.brand$"] = { [Op.overlap]: idArray };
+   }
+
+   if (countryId) {
+     const idArray: number[] = countryId
+       .split(",")
+       .map((id: any) => parseInt(id, 10));
+     whereCondition["$buyerdata.country_id$"] = { [Op.in]: idArray };
+   }
+
+   if (seasonId) {
+     const idArray: number[] = seasonId
+       .split(",")
+       .map((id: any) => parseInt(id, 10));
+     whereCondition["$season_id$"] = { [Op.in]: idArray };
+   }
+
+   whereCondition.greyout_status = true;
+
+   if (programId) {
+     const idArray: number[] = programId
+       .split(",")
+       .map((id: any) => parseInt(id, 10));
+     whereCondition["$program_id$"] = { [Op.in]: idArray };
+   }
+
+   let include = [
+     {
+       model: Ginner,
+       as: "ginner",
+       attributes: [],
+     },
+     {
+       model: Season,
+       as: "season",
+       attributes: [],
+     },
+     {
+       model: Program,
+       as: "program",
+       attributes: [],
+     },
+     {
+       model: Spinner,
+       as: "buyerdata",
+       attributes: [],
+     },
+   ];
+
+   // Create the excel workbook file
+   const workbook = new ExcelJS.Workbook();
+   const worksheet = workbook.addWorksheet("Sheet1");
+   worksheet.mergeCells("A1:M1");
+   const mergedCell = worksheet.getCell("A1");
+   mergedCell.value = "CottonConnect | Spinner Grey Out Report";
+   mergedCell.font = { bold: true };
+   mergedCell.alignment = { horizontal: "center", vertical: "middle" };
+   // Set bold font for header row
+   const headerRow = worksheet.addRow([
+     "Sr No.",
+     "Season",
+     "Ginner Name",
+     "Spinner Name",
+     "REEL Lot No",
+     "Invoice Number",
+     "Bale Lot No",
+     "Quantity Stock",
+   ]);
+   headerRow.font = { bold: true };
+
+   // //fetch data with pagination
+
+   const { count, rows }: any = await GinSales.findAndCountAll({
+     where: whereCondition,
+     include: include,
+     attributes: [
+       [Sequelize.col('"season"."name"'), 'season_name'],
+       [Sequelize.literal('"ginner"."name"'), "ginner_name"],
+       [Sequelize.col('"buyerdata"."name"'), 'spinner'],
+       [Sequelize.fn('MAX', Sequelize.col('invoice_no')), 'invoice_no'],
+       [Sequelize.fn('MAX', Sequelize.col('lot_no')), 'lot_no'],
+       [Sequelize.fn('MAX', Sequelize.col('reel_lot_no')), 'reel_lot_no'],
+       [Sequelize.fn('MAX', Sequelize.col('qty_stock')), 'qty_stock'],
+     ],
+     group: ['season.id', 'ginner.id', 'buyerdata.id'], 
+     offset: offset,
+     limit: limit,
+   });    
+
+   // // Append data to worksheet
+   for await (const [index, item] of rows.entries()) {
+     const rowValues = Object.values({
+       index: index + 1,
+       season: item.dataValues.season_name ? item.dataValues.season_name : "",
+       ginner: item.dataValues.ginner_name ? item.dataValues.ginner_name : "",
+       spinner: item.dataValues.spinner ? item.dataValues.spinner : "",
+       reel_lot_no: item.dataValues.reel_lot_no? item.dataValues.reel_lot_no: "",
+       invoice: item.dataValues.invoice_no ? item.dataValues.invoice_no : "",
+       lot_no: item.dataValues.lot_no ? item.dataValues.lot_no : "",
+       lint_quantity: item.dataValues.qty_stock? item.dataValues.qty_stock: "",
+     });
+     worksheet.addRow(rowValues);
+   }
+
+   // Auto-adjust column widths based on content
+   worksheet.columns.forEach((column: any) => {
+     let maxCellLength = 0;
+     column.eachCell({ includeEmpty: true }, (cell: any) => {
+       const cellLength = (cell.value ? cell.value.toString() : "").length;
+       maxCellLength = Math.max(maxCellLength, cellLength);
+     });
+     column.width = Math.min(14, maxCellLength + 2); // Limit width to 30 characters
+   });
+
+   // Save the workbook
+   await workbook.xlsx.writeFile(excelFilePath);
+   return res.status(200).send({
+     success: true,
+     messgage: "File successfully Generated",
+     data: process.env.BASE_URL + "excel-spinner-grey-out-report.xlsx",
+   });
+ }
+ } catch (error: any) {
+   console.log(error);
+   return res.sendError(res, error.message);
+ }
+};
 
 const exportGinnerSales = async (req: Request, res: Response) => {
   const excelFilePath = path.join("./upload", "excel-Ginner-sales-report.xlsx");
@@ -15782,7 +16080,7 @@ const brandWiseDataReport = async (req: Request, res: Response) =>{
       const idArray: number[] = programId
         .split(",")
         .map((id: any) => parseInt(id, 10));
-      whereCondition.program_id = { [Op.overlap]: idArray };
+      whereCondition.programs_id = { [Op.overlap]: idArray };
     }
 
     if (countryId) {
@@ -16015,7 +16313,7 @@ const exportBrandWiseDataReport = async (req: Request, res: Response) =>{
 
   try {
     if (exportType === "all") {
-      
+
       return res.status(200).send({
         success: true,
         messgage: "File successfully Generated",
@@ -16050,7 +16348,7 @@ const exportBrandWiseDataReport = async (req: Request, res: Response) =>{
       const idArray: number[] = programId
         .split(",")
         .map((id: any) => parseInt(id, 10));
-      whereCondition.program_id = { [Op.overlap]: idArray };
+      whereCondition.programs_id = { [Op.overlap]: idArray };
     }
 
     if (countryId) {
@@ -16359,6 +16657,8 @@ export {
   spinnerProcessBackwardTraceabiltyReport,
   exportSpinProcessBackwardfTraceabilty,
   brandWiseDataReport,
-  exportBrandWiseDataReport
+  exportBrandWiseDataReport,
+  fetchSpinnerGreyOutReport,
+  exportSpinnerGreyOutReport,
 };
 

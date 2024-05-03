@@ -105,11 +105,109 @@ const exportReportsOnebyOne = async () => {
   await generateSpinnerYarnProcess();
   await generateSpinnerSale();
   await generatePendingSpinnerBale();
+  await exportSpinnerGreyOutReport();
 
   console.log('Cron Job Completed to execute all reports.');
 }
 
 //----------------------------------------- Spinner Reports ------------------------//
+
+const exportSpinnerGreyOutReport = async () => {
+  // spinner_bale_receipt_load
+  const excelFilePath = path.join(
+   "./upload",
+   "spinner-grey-out-report.xlsx"
+ );
+
+   let include = [
+     {
+       model: Ginner,
+       as: "ginner",
+       attributes: [],
+     },
+     {
+       model: Season,
+       as: "season",
+       attributes: [],
+     },
+     {
+       model: Program,
+       as: "program",
+       attributes: [],
+     },
+     {
+       model: Spinner,
+       as: "buyerdata",
+       attributes: [],
+     },
+   ];
+
+   // Create the excel workbook file
+   const workbook = new ExcelJS.Workbook();
+   const worksheet = workbook.addWorksheet("Sheet1");
+   worksheet.mergeCells("A1:M1");
+   const mergedCell = worksheet.getCell("A1");
+   mergedCell.value = "CottonConnect | Spinner Grey Out Report";
+   mergedCell.font = { bold: true };
+   mergedCell.alignment = { horizontal: "center", vertical: "middle" };
+   // Set bold font for header row
+   const headerRow = worksheet.addRow([
+     "Sr No.",
+     "Season",
+     "Ginner Name",
+     "Spinner Name",
+     "REEL Lot No",
+     "Invoice Number",
+     "Bale Lot No",
+     "Quantity Stock",
+   ]);
+   headerRow.font = { bold: true };
+
+   // //fetch data with pagination
+
+   const { count, rows }: any = await GinSales.findAndCountAll({
+     where: {greyout_status : true},
+     include: include,
+     attributes: [
+       [Sequelize.col('"season"."name"'), 'season_name'],
+       [Sequelize.literal('"ginner"."name"'), "ginner_name"],
+       [Sequelize.col('"buyerdata"."name"'), 'spinner'],
+       [Sequelize.fn('MAX', Sequelize.col('invoice_no')), 'invoice_no'],
+       [Sequelize.fn('MAX', Sequelize.col('lot_no')), 'lot_no'],
+       [Sequelize.fn('MAX', Sequelize.col('reel_lot_no')), 'reel_lot_no'],
+       [Sequelize.fn('MAX', Sequelize.col('qty_stock')), 'qty_stock'],
+     ],
+     group: ['season.id', 'ginner.id', 'buyerdata.id'], 
+   });    
+
+   // // Append data to worksheet
+   for await (const [index, item] of rows.entries()) {
+     const rowValues = Object.values({
+       index: index + 1,
+       season: item.dataValues.season_name ? item.dataValues.season_name : "",
+       ginner: item.dataValues.ginner_name ? item.dataValues.ginner_name : "",
+       spinner: item.dataValues.spinner ? item.dataValues.spinner : "",
+       reel_lot_no: item.dataValues.reel_lot_no? item.dataValues.reel_lot_no: "",
+       invoice: item.dataValues.invoice_no ? item.dataValues.invoice_no : "",
+       lot_no: item.dataValues.lot_no ? item.dataValues.lot_no : "",
+       lint_quantity: item.dataValues.qty_stock? item.dataValues.qty_stock: "",
+     });
+     worksheet.addRow(rowValues);
+   }
+
+   // Auto-adjust column widths based on content
+   worksheet.columns.forEach((column: any) => {
+     let maxCellLength = 0;
+     column.eachCell({ includeEmpty: true }, (cell: any) => {
+       const cellLength = (cell.value ? cell.value.toString() : "").length;
+       maxCellLength = Math.max(maxCellLength, cellLength);
+     });
+     column.width = Math.min(14, maxCellLength + 2); // Limit width to 30 characters
+   });
+
+   // Save the workbook
+   await workbook.xlsx.writeFile(excelFilePath);
+};
 
 const generateSpinnerLintCottonStock = async () => {
   const excelFilePath = path.join(
