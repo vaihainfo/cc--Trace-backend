@@ -2,11 +2,13 @@ import { Request, Response } from "express";
 import { Sequelize, Op } from "sequelize";
 import Brand from "../../models/brand.model";
 import FarmGroup from "../../models/farm-group.model";
+import Season from "../../models/season.model";
 
 const createFarmGroup = async (req: Request, res: Response) => {
   try {
     const data = {
       brand_id: req.body.brandId,
+      season_id: req.body.seasonId,
       name: req.body.name,
       status: true,
     };
@@ -23,11 +25,11 @@ const createFarmGroups = async (req: Request, res: Response) => {
     let pass = [];
     let fail = [];
     for await (const obj of req.body.name) {
-      let result = await FarmGroup.findOne({ where: { name: { [Op.iLike]: obj }, brand_id: req.body.brandId } })
+      let result = await FarmGroup.findOne({ where: { name: { [Op.iLike]: obj }, brand_id: req.body.brandId,season_id: req.body.seasonId, } })
       if (result) {
         fail.push({ data: result });
       } else {
-        const result = await FarmGroup.create({ name: obj, brand_id: req.body.brandId, status: true });
+        const result = await FarmGroup.create({ name: obj, brand_id: req.body.brandId,season_id: req.body.seasonId, status: true });
         pass.push({ data: result });
       }
     }
@@ -42,7 +44,7 @@ const fetchFarmGroupPagination = async (req: Request, res: Response) => {
   const sortOrder = req.query.sort || "asc";
   const page = Number(req.query.page) || 1;
   const limit = Number(req.query.limit) || 10;
-  const { brandId, countryId }: any = req.query;
+  const { brandId, countryId,seasonId }: any = req.query;
   const offset = (page - 1) * limit;
   const status = req.query.status || '';
   const whereCondition: any = {};
@@ -60,6 +62,13 @@ const fetchFarmGroupPagination = async (req: Request, res: Response) => {
         .split(",")
         .map((id: any) => parseInt(id, 10));
       whereCondition.brand_id = { [Op.in]: idArray };
+    }
+
+    if (seasonId) {
+      const idArray: number[] = seasonId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.season_id = { [Op.in]: idArray };
     }
 
     if (countryId) {
@@ -81,6 +90,11 @@ const fetchFarmGroupPagination = async (req: Request, res: Response) => {
             model: Brand,
             as: "brand",
             attributes: ["id", "brand_name", "address", "countries_id"],
+          },
+          {
+            model: Season,
+            as: "season",
+            attributes: ["id", "name"],
           },
         ],
         offset: offset,
@@ -111,13 +125,14 @@ const fetchFarmGroupPagination = async (req: Request, res: Response) => {
 
 const updateFarmGroup = async (req: Request, res: Response) => {
   try {
-    let result = await FarmGroup.findOne({ where: { brand_id: req.body.brandId, name: { [Op.iLike]: req.body.name }, id: { [Op.ne]: req.body.id } } })
+    let result = await FarmGroup.findOne({ where: { brand_id: req.body.brandId, season_id: req.body.seasonId, name: { [Op.iLike]: req.body.name }, id: { [Op.ne]: req.body.id } } })
     if (result) {
       return res.sendError(res, "ALREADY_EXITS");
     }
     const farmGroup = await FarmGroup.update(
       {
         brand_id: req.body.brandId,
+        season_id: req.body.seasonId,
         name: req.body.name,
         latitude: req.body.latitude,
         longitude: req.body.longitude,

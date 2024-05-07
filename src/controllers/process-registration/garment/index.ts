@@ -64,6 +64,7 @@ const createGarment = async (req: Request, res: Response) => {
 
 const fetchGarmentPagination = async (req: Request, res: Response) => {
     const searchTerm = req.query.search || '';
+    const status = req.query.status || '';
     const sortOrder = req.query.sort || 'asc';
     const page = Number(req.query.page) || 1;
     const limit = Number(req.query.limit) || 10;
@@ -142,6 +143,7 @@ const fetchGarmentPagination = async (req: Request, res: Response) => {
             }
             return res.sendPaginationSuccess(res, data, count);
         } else {
+            let users: any = [];
             const result = await Garment.findAll({
                 where: whereCondition,
                 include: [
@@ -159,6 +161,19 @@ const fetchGarmentPagination = async (req: Request, res: Response) => {
                     ['id', 'desc'], // Sort the results based on the 'name' field and the specified order
                 ]
             });
+            if(status=='true'){
+                for await (let item of result) {
+                    const data = await User.findOne({
+                        where: {
+                            id: item?.dataValues?.garmentUser_id,
+                            status: true
+                        }
+                    });
+                    if(data){
+                        users = users.concat(item);
+                    }
+                }
+            }
             return res.sendSuccess(res, result);
         }
     } catch (error: any) {

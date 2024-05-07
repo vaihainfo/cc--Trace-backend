@@ -15597,7 +15597,7 @@ const spinnerProcessBackwardTraceabiltyReport = async (
           process_id: item.dataValues.id,
         },
         attributes: ["id", "lint_id"],
-      });
+      });    
       spnr_lint_ids = spinProcess.map((obj: any) => obj?.dataValues?.lint_id);
 
       let lintConsumed = await LintSelections.findOne({
@@ -15613,6 +15613,37 @@ const spinnerProcessBackwardTraceabiltyReport = async (
         ],
         where: { process_id: item.dataValues.id },
         group: ["process_id"],
+      });
+
+      let yarnConsumed= await SpinProcessYarnSelection.findAll({
+        attributes: [
+          'sales_id',
+          "qty_used",
+          [Sequelize.col('"sales"."buyer_type"'), "buyer_type"],
+          [Sequelize.col('"sales"."buyer_id"'), "buyer_id"],
+          [Sequelize.col('"sales"."knitter_id"'), "knitter_id"],
+          [Sequelize.col('"sales"."knitter"."name'), "knitter"],
+          [Sequelize.col('"sales"."weaver"."name'), "weaver"],
+          [Sequelize.literal('"sales"."invoice_no"'), "invoice_no"],
+        ],
+        include:[{
+          model: SpinSales,
+          as: "sales",
+          attributes: [],
+          include:[
+            {
+              model: Weaver,
+              as: "weaver",
+              attributes: ["id", "name"],
+            },
+            {
+              model: Knitter,
+              as: "knitter",
+              attributes: ["id", "name"],
+            },
+        ]
+        }],
+        where: { spin_process_id: item.dataValues.id },
       });
 
       let ginSales: any = [];
@@ -15692,8 +15723,37 @@ const spinnerProcessBackwardTraceabiltyReport = async (
         });
       }
 
+      let yarnSold = 0;
+      yarnConsumed && yarnConsumed.length > 0 && yarnConsumed.map((item: any)=> yarnSold += Number(item?.dataValues?.qty_used));
+
       let obj: any = {};
       obj.lint_consumed = lintConsumed ? formatDecimal(lintConsumed?.dataValues?.lint_consumed) : 0;
+
+      let knitterName =
+        yarnConsumed && yarnConsumed.length > 0
+        ? yarnConsumed
+          .map((val: any) => val?.dataValues?.knitter)
+          .filter((item: any) => item !== null && item !== undefined)
+        : [];
+      
+      let weaverName =
+        yarnConsumed && yarnConsumed.length > 0
+          ? yarnConsumed
+            .map((val: any) => val?.dataValues?.weaver)
+            .filter((item: any) => item !== null && item !== undefined)
+          : [];
+      
+      let salesInvoice =
+        yarnConsumed && yarnConsumed.length > 0
+          ? yarnConsumed
+            .map((val: any) => val?.dataValues?.invoice_no)
+            .filter((item: any) => item !== null && item !== undefined)
+           : [];
+
+      
+      obj.fbrc_name = [...new Set([...knitterName, ...weaverName])];
+      obj.spnr_invoice_no = [...new Set(salesInvoice)];
+      obj.spnr_yarn_sold = yarnSold;
 
       let ginName =
         ginSales && ginSales.length > 0
@@ -15805,7 +15865,7 @@ const exportSpinProcessBackwardfTraceabilty = async (req: Request, res: Response
     // Create the excel workbook file
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet("Sheet1");
-    worksheet.mergeCells("A1:J1");
+    worksheet.mergeCells("A1:M1");
     const mergedCell = worksheet.getCell("A1");
     mergedCell.value = "CottonConnect | Spinner Process Backward Traceability Report";
     mergedCell.font = { bold: true };
@@ -15814,8 +15874,11 @@ const exportSpinProcessBackwardfTraceabilty = async (req: Request, res: Response
     const headerRow = worksheet.addRow([
       "S. No.",
       "Spinner Name",
+      "Fabric Name",
       "Yarn REEL Lot No",
+      "Invoice Number",
       "Yarn Quantity Processed (Kgs)",
+      "Yarn Quantity Sold (Kgs)",
       "Bale REEL Lot lint consumed",
       "Bale Lot No",
       "Ginner to Spinner Invoice",
@@ -15865,6 +15928,38 @@ const exportSpinProcessBackwardfTraceabilty = async (req: Request, res: Response
         where: { process_id: item.dataValues.id },
         group: ["process_id"],
       });
+
+      let yarnConsumed= await SpinProcessYarnSelection.findAll({
+        attributes: [
+          'sales_id',
+          "qty_used",
+          [Sequelize.col('"sales"."buyer_type"'), "buyer_type"],
+          [Sequelize.col('"sales"."buyer_id"'), "buyer_id"],
+          [Sequelize.col('"sales"."knitter_id"'), "knitter_id"],
+          [Sequelize.col('"sales"."knitter"."name'), "knitter"],
+          [Sequelize.col('"sales"."weaver"."name'), "weaver"],
+          [Sequelize.literal('"sales"."invoice_no"'), "invoice_no"],
+        ],
+        include:[{
+          model: SpinSales,
+          as: "sales",
+          attributes: [],
+          include:[
+            {
+              model: Weaver,
+              as: "weaver",
+              attributes: ["id", "name"],
+            },
+            {
+              model: Knitter,
+              as: "knitter",
+              attributes: ["id", "name"],
+            },
+        ]
+        }],
+        where: { spin_process_id: item.dataValues.id },
+      });
+
 
       let ginSales: any = [];
       let gin_process_ids: any = [];
@@ -15943,8 +16038,37 @@ const exportSpinProcessBackwardfTraceabilty = async (req: Request, res: Response
         });
       }
 
+      let yarnSold = 0;
+      yarnConsumed && yarnConsumed.length > 0 && yarnConsumed.map((item: any)=> yarnSold += Number(item?.dataValues?.qty_used));
+
       let obj: any = {};
       obj.lint_consumed = lintConsumed ? formatDecimal(lintConsumed?.dataValues?.lint_consumed) : 0;
+
+      let knitterName =
+        yarnConsumed && yarnConsumed.length > 0
+        ? yarnConsumed
+          .map((val: any) => val?.dataValues?.knitter)
+          .filter((item: any) => item !== null && item !== undefined)
+        : [];
+      
+      let weaverName =
+        yarnConsumed && yarnConsumed.length > 0
+          ? yarnConsumed
+            .map((val: any) => val?.dataValues?.weaver)
+            .filter((item: any) => item !== null && item !== undefined)
+          : [];
+      
+      let salesInvoice =
+        yarnConsumed && yarnConsumed.length > 0
+          ? yarnConsumed
+            .map((val: any) => val?.dataValues?.invoice_no)
+            .filter((item: any) => item !== null && item !== undefined)
+           : [];
+
+      
+      obj.fbrc_name = [...new Set([...knitterName, ...weaverName])];
+      obj.spnr_invoice_no = [...new Set(salesInvoice)];
+      obj.spnr_yarn_sold = yarnSold;
 
       let ginName =
         ginSales && ginSales.length > 0
@@ -15988,8 +16112,15 @@ const exportSpinProcessBackwardfTraceabilty = async (req: Request, res: Response
       const rowValues = Object.values({
         index: index + 1,
         spinner: item.dataValues?.spinner ? item.dataValues?.spinner?.name : "",
+        fabric:  obj.fbrc_name && obj.fbrc_name.length > 0
+        ? obj.fbrc_name.join(", ")
+        : "",
         reel_lot_no: item.dataValues?.reel_lot_no ? item.dataValues?.reel_lot_no : "",
+        spnr_invoice: obj.spnr_invoice_no && obj.spnr_invoice_no.length > 0
+        ? obj.spnr_invoice_no.join(", ")
+        : "",
         total: item.dataValues?.net_yarn_qty ? item.dataValues?.net_yarn_qty : 0,
+        yarnSold: obj.spnr_yarn_sold ? obj.spnr_yarn_sold : 0,
         ginReel: obj.gnr_reel_lot_no && obj.gnr_reel_lot_no.length > 0
         ? obj.gnr_reel_lot_no.join(", ")
         : "",

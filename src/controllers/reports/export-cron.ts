@@ -3401,7 +3401,7 @@ const generateSpinProcessBackwardfTraceabilty = async () => {
       if (!currentWorksheet) {
         currentWorksheet = workbook.addWorksheet(`Sheet${worksheetIndex}`);
         if (worksheetIndex == 1) {
-          currentWorksheet.mergeCells("A1:J1");
+          currentWorksheet.mergeCells("A1:M1");
           const mergedCell = currentWorksheet.getCell("A1");
           mergedCell.value = "CottonConnect | Spinner Process Backward Traceability Report";
           mergedCell.font = { bold: true };
@@ -3412,8 +3412,11 @@ const generateSpinProcessBackwardfTraceabilty = async () => {
         const headerRow = currentWorksheet.addRow([
           "S. No.",
           "Spinner Name",
+          "Fabric Name",
           "Yarn REEL Lot No",
+          "Invoice Number",
           "Yarn Quantity Processed (Kgs)",
+          "Yarn Quantity Sold (Kgs)",
           "Bale REEL Lot lint consumed",
           "Bale Lot No",
           "Ginner to Spinner Invoice",
@@ -3447,6 +3450,37 @@ const generateSpinProcessBackwardfTraceabilty = async () => {
         ],
         where: { process_id: item.dataValues.id },
         group: ["process_id"],
+      });
+
+      let yarnConsumed= await SpinProcessYarnSelection.findAll({
+        attributes: [
+          'sales_id',
+          "qty_used",
+          [Sequelize.col('"sales"."buyer_type"'), "buyer_type"],
+          [Sequelize.col('"sales"."buyer_id"'), "buyer_id"],
+          [Sequelize.col('"sales"."knitter_id"'), "knitter_id"],
+          [Sequelize.col('"sales"."knitter"."name'), "knitter"],
+          [Sequelize.col('"sales"."weaver"."name'), "weaver"],
+          [Sequelize.literal('"sales"."invoice_no"'), "invoice_no"],
+        ],
+        include:[{
+          model: SpinSales,
+          as: "sales",
+          attributes: [],
+          include:[
+            {
+              model: Weaver,
+              as: "weaver",
+              attributes: ["id", "name"],
+            },
+            {
+              model: Knitter,
+              as: "knitter",
+              attributes: ["id", "name"],
+            },
+        ]
+        }],
+        where: { spin_process_id: item.dataValues.id },
       });
 
       let ginSales: any = [];
@@ -3526,8 +3560,37 @@ const generateSpinProcessBackwardfTraceabilty = async () => {
         });
       }
 
+      let yarnSold = 0;
+      yarnConsumed && yarnConsumed.length > 0 && yarnConsumed.map((item: any)=> yarnSold += Number(item?.dataValues?.qty_used));
+
       let obj: any = {};
       obj.lint_consumed = lintConsumed ? formatDecimal(lintConsumed?.dataValues?.lint_consumed) : 0;
+
+      let knitterName =
+        yarnConsumed && yarnConsumed.length > 0
+        ? yarnConsumed
+          .map((val: any) => val?.dataValues?.knitter)
+          .filter((item: any) => item !== null && item !== undefined)
+        : [];
+      
+      let weaverName =
+        yarnConsumed && yarnConsumed.length > 0
+          ? yarnConsumed
+            .map((val: any) => val?.dataValues?.weaver)
+            .filter((item: any) => item !== null && item !== undefined)
+          : [];
+      
+      let salesInvoice =
+        yarnConsumed && yarnConsumed.length > 0
+          ? yarnConsumed
+            .map((val: any) => val?.dataValues?.invoice_no)
+            .filter((item: any) => item !== null && item !== undefined)
+           : [];
+
+      
+      obj.fbrc_name = [...new Set([...knitterName, ...weaverName])];
+      obj.spnr_invoice_no = [...new Set(salesInvoice)];
+      obj.spnr_yarn_sold = yarnSold;
 
       let ginName =
         ginSales && ginSales.length > 0
@@ -3571,8 +3634,15 @@ const generateSpinProcessBackwardfTraceabilty = async () => {
       const rowValues = [
         index + offset + 1,
         item.dataValues?.spinner ? item.dataValues?.spinner?.name : "",
+        obj.fbrc_name && obj.fbrc_name.length > 0
+        ? obj.fbrc_name.join(", ")
+        : "",
         item.dataValues?.reel_lot_no ? item.dataValues?.reel_lot_no : "",
+        obj.spnr_invoice_no && obj.spnr_invoice_no.length > 0
+        ? obj.spnr_invoice_no.join(", ")
+        : "",
         item.dataValues?.net_yarn_qty ? item.dataValues?.net_yarn_qty : 0,
+        obj.spnr_yarn_sold ? obj.spnr_yarn_sold : 0,
         obj.gnr_reel_lot_no && obj.gnr_reel_lot_no.length > 0
         ? obj.gnr_reel_lot_no.join(", ")
         : "",
