@@ -25,7 +25,7 @@ const createFarmGroups = async (req: Request, res: Response) => {
     let pass = [];
     let fail = [];
     for await (const obj of req.body.name) {
-      let result = await FarmGroup.findOne({ where: { name: { [Op.iLike]: obj }, brand_id: req.body.brandId,season_id: req.body.seasonId, } })
+      let result = await FarmGroup.findOne({ where: { name: { [Op.iLike]: obj }, brand_id: req.body.brandId, } })
       if (result) {
         fail.push({ data: result });
       } else {

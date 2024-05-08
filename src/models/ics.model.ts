@@ -36,9 +36,9 @@ ICS.belongsTo(FarmGroup, {
   as: "farmGroup",
 });
 
-FarmGroup.belongsTo(Season, {
+ICS.belongsTo(Season, {
   foreignKey: "season_id",
-  as: "farmgroup-season",
+  as: "season",
 })
 
 ICS.associate = (models: any) => {

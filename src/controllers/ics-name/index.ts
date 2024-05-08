@@ -93,7 +93,8 @@ const fetchIcsNamePagination = async (req: Request, res: Response) => {
                         model: FarmGroup, as: 'farmGroup'
                     },
                     {
-                        model: Season, as: 'season'
+                        model: Season, as: 'season',
+                        attribute: ['id', 'name']
                     }
                 ],
                 order: [
@@ -109,7 +110,13 @@ const fetchIcsNamePagination = async (req: Request, res: Response) => {
                 include: [
                     {
                         model: FarmGroup, as: 'farmGroup'
-                    }],
+                    },
+                    {
+                        model: Season, as: 'season',
+                        attribute: ['id', 'name']
+
+                    }
+                ],
                 order: [
                     ['id', sortOrder], // Sort the results based on the 'name' field and the specified order
                 ],
@@ -199,6 +206,27 @@ const checkIcsNames = async (req: Request, res: Response) => {
     }
 }
 
+const getSeason = async (req: Request, res: Response) => {
+    let farmGroupId = req.query.farmGroupId;
+    if (!farmGroupId) {
+      return res.sendError(res, "Need farmGroup Id ");
+    }
+    let farmGroup = await FarmGroup.findAll({
+        include: [
+            {
+                model: Season, as: 'season'
+            }
+        ],
+      attributes: ["season_id"],
+      group:['season_id',"season.id",'farm_groups.id'],
+    });
+
+    const seasonIds = farmGroup.filter(Boolean) 
+        .map((farmGroup:any) => farmGroup.season).filter(Boolean); 
+
+    res.sendSuccess(res, seasonIds);
+};
+
 
 export {
     createIcsName,
@@ -207,5 +235,6 @@ export {
     fetchIcsNamePagination,
     updateIcsName,
     updateIcsNameStatus,
-    deleteIcsName
+    deleteIcsName,
+    getSeason
 };
