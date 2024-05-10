@@ -12,6 +12,7 @@ import Brand from "../../../models/brand.model";
 
 const fetchPhysicalPartnerPagination = async (req: Request, res: Response) => {
     const searchTerm = req.query.search || '';
+    const status = req.query.status || '';
     const sortOrder = req.query.sort || 'asc';
     const page = Number(req.query.page) || 1;
     const limit = Number(req.query.limit) || 10;
@@ -60,6 +61,10 @@ const fetchPhysicalPartnerPagination = async (req: Request, res: Response) => {
                 .split(",")
                 .map((id: any) => parseInt(id, 10));
             whereCondition.brand = { [Op.overlap]: idArray }
+        }
+
+        if(status=='true'){
+            whereCondition.status = true;
         }
 
         if (req.query.pagination === "true") {

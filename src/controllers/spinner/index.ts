@@ -1738,6 +1738,13 @@ const getYarnCount = async (req: Request, res: Response) => {
 
 const getKnitterWeaver = async (req: Request, res: Response) => {
     let spinnerId = req.query.spinnerId;
+
+    let whereCondition: any = {};
+
+    if(req.query.status=='true'){
+        whereCondition.status=true
+    }
+
     if (!spinnerId) {
         return res.sendError(res, 'Need spinner Id ');
     }
@@ -1748,11 +1755,11 @@ const getKnitterWeaver = async (req: Request, res: Response) => {
     let result: any = await Promise.all([
         Knitter.findAll({
             attributes: ['id', 'name', [sequelize.literal("'kniter'"), 'type']],
-            where: { brand: { [Op.overlap]: ress.dataValues.brand } }
+            where: { ...whereCondition,brand: { [Op.overlap]: ress.dataValues.brand } }
         }),
         Weaver.findAll({
             attributes: ['id', 'name', [sequelize.literal("'weaver'"), 'type']],
-            where: { brand: { [Op.overlap]: ress.dataValues.brand } }
+            where: { ...whereCondition,brand: { [Op.overlap]: ress.dataValues.brand } }
         })
     ])
     res.sendSuccess(res, result.flat());

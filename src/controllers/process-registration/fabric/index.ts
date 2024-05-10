@@ -64,6 +64,7 @@ const createFabric = async (req: Request, res: Response) => {
 
 const fetchFabricPagination = async (req: Request, res: Response) => {
     const searchTerm = req.query.search || '';
+    const status = req.query.status || '';
     const sortOrder = req.query.sort || 'asc';
     const page = Number(req.query.page) || 1;
     const limit = Number(req.query.limit) || 10;
@@ -104,6 +105,11 @@ const fetchFabricPagination = async (req: Request, res: Response) => {
                 .map((id: any) => parseInt(id, 10));
             whereCondition.brand = { [Op.overlap]: idArray }
         }
+
+        if(status=='true'){
+            whereCondition.status = true;
+        }
+
         //fetch data with pagination
         if (req.query.pagination === "true") {
             let data: any = [];

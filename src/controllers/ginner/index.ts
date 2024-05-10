@@ -1498,16 +1498,22 @@ const getProgram = async (req: Request, res: Response) => {
 
 const getSpinner = async (req: Request, res: Response) => {
   let ginnerId = req.query.ginnerId;
+  let whereCondition: any = {};
+
   if (!ginnerId) {
     return res.sendError(res, "Need Ginner Id ");
   }
+  if(req.query.status=='true'){
+    whereCondition.status=true
+  }
+
   let ginner = await Ginner.findOne({ where: { id: ginnerId } });
   if (!ginner) {
     return res.sendError(res, "No Ginner Found ");
   }
   let result = await Spinner.findAll({
     attributes: ["id", "name"],
-    where: { brand: { [Op.overlap]: ginner.dataValues.brand } },
+    where: { ...whereCondition,brand: { [Op.overlap]: ginner.dataValues.brand } },
   });
   res.sendSuccess(res, result);
 };

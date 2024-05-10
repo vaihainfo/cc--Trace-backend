@@ -2396,6 +2396,12 @@ const deleteCompactingProcess = async (req: Request, res: Response) => {
 
 const getGarments = async (req: Request, res: Response) => {
   let fabricId = req.query.fabricId;
+  let whereCondition: any = {};
+
+  if(req.query.status=='true'){
+    whereCondition.status=true
+  }  
+
   if (!fabricId) {
     return res.sendError(res, "Need Weaver Id ");
   }
@@ -2405,13 +2411,19 @@ const getGarments = async (req: Request, res: Response) => {
   }
   let garment = await Garment.findAll({
     attributes: ["id", "name"],
-    where: { brand: { [Op.overlap]: result.dataValues.brand } },
+    where: { ...whereCondition,brand: { [Op.overlap]: result.dataValues.brand } },
   });
   res.sendSuccess(res, garment);
 };
 
 const getFabrics = async (req: Request, res: Response) => {
   let fabricId = req.query.fabricId;
+  let whereCondition: any = {};
+
+  if(req.query.status=='true'){
+    whereCondition.status=true
+  }
+
   if (!fabricId) {
     return res.sendError(res, "Need Fabric Id ");
   }
@@ -2422,6 +2434,7 @@ const getFabrics = async (req: Request, res: Response) => {
   let garment = await Fabric.findAll({
     attributes: ["id", "name"],
     where: {
+      ...whereCondition,
       brand: { [Op.overlap]: result.dataValues.brand },
       fabric_processor_type: { [Op.overlap]: [req.query.type] },
     },
@@ -2433,6 +2446,10 @@ const getFabrics = async (req: Request, res: Response) => {
 const getProcessName = async (req: Request, res: Response) => {
   const { fabricId, buyerType }: any = req.query;
   const whereCondition: any = {};
+
+  if(req.query.status=='true'){
+    whereCondition.status=true
+  }
   try {
     if (!fabricId) {
       return res.sendError(res, "Need Fabric Id ");
@@ -2443,7 +2460,7 @@ const getProcessName = async (req: Request, res: Response) => {
       response = await Promise.all([
         WeaverSales.findAll({
           attributes: ["weaver_id", "weaver.name"],
-          where: { status: "Sold", buyer_type: "Dyeing", fabric_id: fabricId },
+          where: { ...whereCondition,status: "Sold", buyer_type: "Dyeing", fabric_id: fabricId },
           include: [
             {
               model: Weaver,
@@ -2455,7 +2472,7 @@ const getProcessName = async (req: Request, res: Response) => {
         }),
         KnitSales.findAll({
           attributes: ["knitter_id", "knitter.name"],
-          where: { status: "Sold", buyer_type: "Dyeing", fabric_id: fabricId },
+          where: { ...whereCondition, status: "Sold", buyer_type: "Dyeing", fabric_id: fabricId },
           include: [
             {
               model: Knitter,
@@ -2469,7 +2486,7 @@ const getProcessName = async (req: Request, res: Response) => {
     } else if (buyerType === "Printing") {
       response = await WashingSales.findAll({
         attributes: ["washing_id", "washing.name"],
-        where: { status: "Sold", buyer_type: "Printing", fabric_id: fabricId },
+        where: { ...whereCondition, status: "Sold", buyer_type: "Printing", fabric_id: fabricId },
         include: [
           {
             model: Fabric,
@@ -2483,7 +2500,7 @@ const getProcessName = async (req: Request, res: Response) => {
       response = await Promise.all([
         WeaverSales.findAll({
           attributes: ["weaver_id", "weaver.name"],
-          where: { status: "Sold", buyer_type: "Washing", fabric_id: fabricId },
+          where: { ...whereCondition, status: "Sold", buyer_type: "Washing", fabric_id: fabricId },
           include: [
             {
               model: Weaver,
@@ -2495,7 +2512,7 @@ const getProcessName = async (req: Request, res: Response) => {
         }),
         KnitSales.findAll({
           attributes: ["knitter_id", "knitter.name"],
-          where: { status: "Sold", buyer_type: "Washing", fabric_id: fabricId },
+          where: { ...whereCondition, status: "Sold", buyer_type: "Washing", fabric_id: fabricId },
           include: [
             {
               model: Knitter,
@@ -2507,7 +2524,7 @@ const getProcessName = async (req: Request, res: Response) => {
         }),
         DyingSales.findAll({
           attributes: ["dying_id", "dying_fabric.name"],
-          where: { status: "Sold", buyer_type: "Washing", fabric_id: fabricId },
+          where: { ...whereCondition, status: "Sold", buyer_type: "Washing", fabric_id: fabricId },
           include: [
             { model: Fabric, as: "dying_fabric", attributes: ["id", "name"] },
           ],
@@ -2519,6 +2536,7 @@ const getProcessName = async (req: Request, res: Response) => {
         WashingSales.findAll({
           attributes: ["washing_id", "washing.name"],
           where: {
+            ...whereCondition,
             status: "Sold",
             buyer_type: "Compacting",
             fabric_id: fabricId,
@@ -2535,6 +2553,7 @@ const getProcessName = async (req: Request, res: Response) => {
         PrintingSales.findAll({
           attributes: ["printing_id", "printing.name"],
           where: {
+            ...whereCondition,
             status: "Sold",
             buyer_type: "Compacting",
             fabric_id: fabricId,
@@ -2546,7 +2565,7 @@ const getProcessName = async (req: Request, res: Response) => {
         }),
         DyingSales.findAll({
           attributes: ["dying_id", "dying_fabric.name"],
-          where: { status: "Sold", buyer_type: "Washing", fabric_id: fabricId },
+          where: { ...whereCondition, status: "Sold", buyer_type: "Washing", fabric_id: fabricId },
           include: [
             { model: Fabric, as: "dying_fabric", attributes: ["id", "name"] },
           ],

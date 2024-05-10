@@ -1001,12 +1001,17 @@ const deleteWeaverSales = async (req: Request, res: Response) => {
 
 const getWeaverDyeing = async (req: Request, res: Response) => {
   try {
+    let whereCondition: any = {};
     if (!req.query.id) {
       return res.sendError(res, "Need Id");
     }
+    
+    if(req.query.status=='true'){
+      whereCondition.status=true
+    }
 
     let id = req.query.id;
-    let weaver = await Dyeing.findOne({ where: { id: id } });
+    let weaver = await Dyeing.findOne({ where: { id: id,...whereCondition, } });
 
     res.sendSuccess(res, weaver);
   } catch (error: any) {
@@ -1520,8 +1525,14 @@ const getChooseFabricFilters = async (req: Request, res: Response) => {
 
 const getGarments = async (req: Request, res: Response) => {
   let weaverId = req.query.weaverId;
+  let whereCondition: any = {};
+
   if (!weaverId) {
     return res.sendError(res, "Need Weaver Id ");
+  }
+
+  if(req.query.status=='true'){
+    whereCondition.status=true
   }
   let weaver = await Weaver.findOne({ where: { id: weaverId } });
   if (!weaver) {
@@ -1529,13 +1540,19 @@ const getGarments = async (req: Request, res: Response) => {
   }
   let garment = await Garment.findAll({
     attributes: ["id", "name"],
-    where: { brand: { [Op.overlap]: weaver.dataValues.brand } },
+    where: { ...whereCondition,brand: { [Op.overlap]: weaver.dataValues.brand } },
   });
   res.sendSuccess(res, garment);
 };
 
 const getFabrics = async (req: Request, res: Response) => {
   let weaverId = req.query.weaverId;
+  let whereCondition: any = {};
+
+  if(req.query.status=='true'){
+    whereCondition.status=true
+  }
+
   if (!weaverId) {
     return res.sendError(res, "Need Weaver Id ");
   }
@@ -1547,6 +1564,7 @@ const getFabrics = async (req: Request, res: Response) => {
   let fabric = await Fabric.findAll({
     attributes: ["id", "name"],
     where: {
+      ...whereCondition,
       brand: { [Op.overlap]: weaver.dataValues.brand },
       fabric_processor_type: { [Op.overlap]: [req.query.type] },
     },

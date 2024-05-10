@@ -1515,6 +1515,12 @@ const getChooseFabricFilters = async (req: Request, res: Response) => {
 
 const getGarments = async (req: Request, res: Response) => {
   let knitterId = req.query.knitterId;
+  let whereCondition: any = {};
+
+  if(req.query.status=='true'){
+    whereCondition.status=true
+  }
+
   if (!knitterId) {
     return res.sendError(res, "Need Knitter Id ");
   }
@@ -1524,13 +1530,18 @@ const getGarments = async (req: Request, res: Response) => {
   }
   let garment = await Garment.findAll({
     attributes: ["id", "name"],
-    where: { brand: { [Op.overlap]: ress.dataValues.brand } },
+    where: { ...whereCondition,brand: { [Op.overlap]: ress.dataValues.brand } },
   });
   res.sendSuccess(res, garment);
 };
 
 const getFabrics = async (req: Request, res: Response) => {
   let knitterId = req.query.knitterId;
+  let whereCondition: any = {};
+
+  if(req.query.status=='true'){
+    whereCondition.status=true
+  }
   if (!knitterId) {
     return res.sendError(res, "Need Knitter Id ");
   }
@@ -1542,6 +1553,7 @@ const getFabrics = async (req: Request, res: Response) => {
   let fabric = await Fabric.findAll({
     attributes: ["id", "name"],
     where: {
+      ...whereCondition,
       brand: { [Op.overlap]: ress.dataValues.brand },
       fabric_processor_type: { [Op.overlap]: [req.query.type] },
     },

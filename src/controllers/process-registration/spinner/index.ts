@@ -109,6 +109,11 @@ const fetchSpinnerPagination = async (req: Request, res: Response) => {
                 .map((id: any) => parseInt(id, 10));
             whereCondition.brand = { [Op.overlap]: idArray }
         }
+
+        if(status=='true'){
+            whereCondition.status = true;
+        }
+
         //fetch data with pagination
         if (req.query.pagination === "true") {
             let data: any = [];
@@ -147,7 +152,6 @@ const fetchSpinnerPagination = async (req: Request, res: Response) => {
             }
             return res.sendPaginationSuccess(res, data, count);
         } else {
-            let users :any =[];
             const cooperative = await Spinner.findAll({
                 where: whereCondition,
                 include: [
@@ -165,20 +169,8 @@ const fetchSpinnerPagination = async (req: Request, res: Response) => {
                     ['id', 'desc'], // Sort the results based on the 'name' field and the specified order
                 ]
             });
-            if(status=='true'){
-                for await (let item of cooperative) {
-                    const data = await User.findOne({
-                        where: {
-                            id: item?.dataValues?.spinnerUser_id,
-                            status: true
-                        }
-                    });
-                    if(data){
-                        users = users.concat(item);
-                    }
-                }
-            }
-            return res.sendSuccess(res, users);
+            
+            return res.sendSuccess(res, cooperative);
         }
     } catch (error: any) {
         console.log(error);

@@ -3056,7 +3056,7 @@ const generateSpinnerYarnProcess = async () => {
           yarnType: item.yarn_type ? item.yarn_type : "",
           count: yarncount ? yarncount : "",
           resa: item.yarn_realisation ? item.yarn_realisation : "",
-          comber: item?.comber_noil > item?.comber_noil_stock ? item.comber_noil - item.comber_noil_stock : "",
+          comber: item.comber_noil ? item.comber_noil : "",          
           blend: blendValue,
           blendqty: blendqty,
           cotton_consumed: cottonConsumed
@@ -3089,7 +3089,7 @@ const generateSpinnerYarnProcess = async () => {
             "Yarn Type",
             "Yarn Count",
             "Yarn Realisation %",
-            "Comber Noil Consumption(Kgs)",
+            "Comber Noil (Kgs)",
             "Blend Material",
             "Blend Quantity (Kgs)",
             "Total Lint cotton consumed (Kgs)",

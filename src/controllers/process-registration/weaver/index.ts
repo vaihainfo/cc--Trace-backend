@@ -106,6 +106,11 @@ const fetchWeaverPagination = async (req: Request, res: Response) => {
                 .map((id: any) => parseInt(id, 10));
             whereCondition.brand = { [Op.overlap]: idArray }
         }
+
+        if(status=='true'){
+            whereCondition.status = true;
+        }
+
         //fetch data with pagination
         if (req.query.pagination === "true") {
             let data: any = [];
@@ -144,7 +149,6 @@ const fetchWeaverPagination = async (req: Request, res: Response) => {
             }
             return res.sendPaginationSuccess(res, data, count);
         } else {
-            let users: any = [];
             const result = await Weaver.findAll({
                 where: whereCondition,
                 include: [
@@ -162,19 +166,7 @@ const fetchWeaverPagination = async (req: Request, res: Response) => {
                     ['id', 'desc'], // Sort the results based on the 'name' field and the specified order
                 ]
             });
-            if(status=='true'){
-                for await (let item of result) {
-                    const data = await User.findOne({
-                        where: {
-                            id: item?.dataValues?.weaverUser_id,
-                            status: true
-                        }
-                    });
-                    if(data){
-                        users = users.concat(item);
-                    }
-                }
-            }
+            
             return res.sendSuccess(res, result);
         }
     } catch (error: any) {
