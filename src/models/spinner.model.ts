@@ -106,7 +106,12 @@ const Spinner = db.define('spinners', {
   },
   registration_document: {
     type: DataTypes.STRING
-  }
+  },
+  status: {
+    allowNull: false,
+    defaultValue: true,
+    type: DataTypes.BOOLEAN
+  },
 });
 
 Spinner.belongsTo(Country, {

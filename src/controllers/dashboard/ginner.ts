@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import moment from 'moment'
+import moment from 'moment';
 import { Op, QueryTypes, Sequelize } from "sequelize";
 import * as yup from 'yup';
 import sequelize from "../../util/dbConn";
@@ -16,7 +16,7 @@ const getTopVillages = async (
 ) => {
   try {
     const reqData = await getQueryParams(req, res);
-    const where = getTransactionDataQuery(reqData)
+    const where = getTransactionDataQuery(reqData);
     const villagesData = await getTopVillagesData(where);
     const data = getTopVillagesRes(villagesData);
     return res.sendSuccess(res, data);
@@ -41,7 +41,7 @@ const getOverAllDataQuery = (
 
   if (reqData?.brand)
     where['$ginner.brand$'] = {
-      [Op.contains]: Sequelize.literal(`ARRAY [${ reqData.brand }]`)
+      [Op.contains]: Sequelize.literal(`ARRAY [${reqData.brand}]`)
     };
 
   if (reqData?.season)
@@ -58,6 +58,15 @@ const getOverAllDataQuery = (
 
   if (reqData?.ginner)
     where['$ginner.id$'] = reqData.ginner;
+
+  if (reqData?.fromDate)
+    where.date = { [Op.gte]: reqData.fromDate };
+
+  if (reqData?.toDate)
+    where.date = { [Op.lt]: reqData.toDate };
+
+  if (reqData?.fromDate && reqData?.toDate)
+    where.date = { [Op.between]: [reqData.fromDate, reqData.toDate] };
 
   return where;
 };
@@ -76,7 +85,7 @@ const getTransactionDataQuery = (
 
   if (reqData?.brand)
     where['$ginner.brand$'] = {
-      [Op.contains]: Sequelize.literal(`ARRAY [${ reqData.brand }]`)
+      [Op.contains]: Sequelize.literal(`ARRAY [${reqData.brand}]`)
     };
 
   if (reqData?.season)
@@ -91,8 +100,23 @@ const getTransactionDataQuery = (
   if (reqData?.district)
     where['$ginner.district_id$'] = reqData.district;
 
+  if (reqData?.block)
+    where.block_id = reqData.block;
+
+  if (reqData?.village)
+    where.village_id = reqData.village;
+
   if (reqData?.ginner)
     where['$ginner.id$'] = reqData.ginner;
+
+  if (reqData?.fromDate)
+    where.date = { [Op.gte]: reqData.fromDate };
+
+  if (reqData?.toDate)
+    where.date = { [Op.lt]: reqData.toDate };
+
+  if (reqData?.fromDate && reqData?.toDate)
+    where.date = { [Op.between]: [reqData.fromDate, reqData.toDate] };
 
   return where;
 };
@@ -112,7 +136,7 @@ const getTopVillagesData = async (
       model: Ginner,
       as: 'ginner',
       attributes: []
-    },  {
+    }, {
       model: Village,
       as: 'village',
       attributes: []
@@ -139,7 +163,11 @@ const getQueryParams = async (
       country,
       state,
       district,
-      ginner
+      block,
+      village,
+      ginner,
+      fromDate,
+      toDate
     } = req.query;
     const validator = yup.string()
       .notRequired()
@@ -151,11 +179,15 @@ const getQueryParams = async (
     await validator.validate(country);
     await validator.validate(state);
     await validator.validate(district);
+    await validator.validate(block);
+    await validator.validate(village);
     await validator.validate(ginner);
+    await validator.validate(fromDate);
+    await validator.validate(toDate);
 
-    const user = (req as any).user
-    if(user?.role == 3 && user?._id){
-      brand = user._id
+    const user = (req as any).user;
+    if (user?.role == 3 && user?._id) {
+      brand = user._id;
     }
 
     return {
@@ -165,7 +197,11 @@ const getQueryParams = async (
       country,
       state,
       district,
+      block,
+      village,
       ginner,
+      fromDate,
+      toDate
     };
 
   } catch (error: any) {
@@ -273,8 +309,13 @@ const getProcuredProcessed = async (
   try {
     const reqData = await getQueryParams(req, res);
     const transactionWhere = getTransactionDataQuery(reqData);
-    const procuredProcessedData = await getProcuredProcessedData(transactionWhere);
-    const data = getProcuredProcessedRes(procuredProcessedData);
+    const ginnerWhere = getOverAllDataQuery(reqData);
+    const procuredData = await getProcuredProcessedData(transactionWhere);
+    const processedData = await getLintProcessedData(ginnerWhere);
+    const data = getProcuredProcessedRes(
+      procuredData,
+      processedData
+    );
     return res.sendSuccess(res, data);
 
   } catch (error: any) {
@@ -287,17 +328,53 @@ const getProcuredProcessed = async (
 
 
 const getProcuredProcessedRes = (
-  list: any[]
+  procuredData: any[],
+  processedData: any[]
 ) => {
-  const season: string[] = [];
-  const stock: number[] = [];
-  const procured: number[] = [];
-  for (const row of list.reverse()) {
-    if (row.dataValues) {
-      season.push(row.dataValues.seasonName);
-      stock.push(formatNumber(row.dataValues.stock));
-      procured.push(formatNumber(row.dataValues.procured));
+  let seasonIds: number[] = [];
+
+  procuredData.forEach((procured: any) => {
+    if (procured.dataValues.seasonId)
+      seasonIds.push(procured.dataValues.seasonId);
+  });
+
+  processedData.forEach((processed: any) => {
+    if (!seasonIds.includes(processed.dataValues.seasonId))
+      seasonIds.push(processed.dataValues.seasonId);
+  });
+
+  seasonIds = seasonIds.sort((a, b) => a - b).slice(-3);
+
+  let season: any = [];
+  let procured: any = [];
+  let stock: any = [];
+
+  for (const sessionId of seasonIds) {
+    const fProcured = procuredData.find((production: any) =>
+      production.dataValues.seasonId == sessionId
+    );
+    const fProcessed = processedData.find((processed: any) =>
+      processed.dataValues.seasonId == sessionId
+    );
+    let data = {
+      seasonName: '',
+      procured: 0,
+      processed: 0
+    };
+    if (fProcured) {
+      data.seasonName = fProcured.dataValues.seasonName;
+      data.procured = formatNumber(fProcured.dataValues.procured);
     }
+
+    if (fProcessed) {
+      data.seasonName = fProcessed.dataValues.seasonName;
+      data.processed = formatNumber(fProcessed.dataValues.processed);
+    }
+
+    season.push(data.seasonName);
+    procured.push(data.procured);
+    stock.push(data.processed);
+
   }
 
   return {
@@ -308,13 +385,43 @@ const getProcuredProcessedRes = (
 };
 
 
+
+const getLintProcessedData = async (
+  where: any
+) => {
+
+  const result = await GinProcess.findAll({
+    attributes: [
+      [Sequelize.fn('SUM', Sequelize.col('total_qty')), 'processed'],
+      [Sequelize.col('season.name'), 'seasonName'],
+      [Sequelize.col('season.id'), 'seasonId']
+    ],
+    include: [{
+      model: Season,
+      as: 'season',
+      attributes: []
+    }, {
+      model: Ginner,
+      as: 'ginner',
+      attributes: []
+    }],
+    where,
+    order: [['seasonId', 'desc']],
+    limit: 3,
+    group: ['season.id']
+  });
+
+  return result;
+
+};
+
+
 const getProcuredProcessedData = async (
   where: any
 ) => {
 
   const result = await Transaction.findAll({
     attributes: [
-      [Sequelize.fn('SUM', Sequelize.col('qty_stock')), 'stock'],
       [Sequelize.fn('SUM', Sequelize.literal('CAST(qty_purchased  as numeric)')), 'procured'],
       [Sequelize.col('season.name'), 'seasonName'],
       [Sequelize.col('season.id'), 'seasonId']
@@ -554,18 +661,12 @@ const getDataAll = async (
 ) => {
   try {
     const reqData = await getQueryParams(req, res);
-    const where: any = {};
-    if (reqData.season)
-      where['id'] = reqData.season;
-
     const seasonOne = await Season.findOne({
-      order: [
-        ['id', 'DESC']
-      ],
-      where
+      where: {
+        id: reqData.season ? reqData.season : '9'
+      }
     });
     reqData.season = seasonOne.id;
-
     const query = getOverAllDataQuery(reqData);
     const transactionWhere = getTransactionDataQuery(reqData);
     const procuredData = await getLintProcuredDataByMonth(query);
@@ -662,7 +763,7 @@ const getMonthDate = (
     month: number,
     year: number;
   }[] = [];
-  while (end.diff(start, 'days') > 0  ) {
+  while (end.diff(start, 'days') > 0) {
     monthList.push({
       month: start.month(),
       year: start.year()

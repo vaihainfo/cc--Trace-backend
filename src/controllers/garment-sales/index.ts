@@ -2065,9 +2065,10 @@ const getGarmentReelLotNo = async (req: Request, res: Response) => {
 
     let prcs_date = new Date().toLocaleDateString().replace(/\//g, "");
     let number = count + 1;
+    const random_number = +performance.now().toString().replace('.', '7').substring(0,4)
     let prcs_name = rows ? rows?.name.substring(0, 3).toUpperCase() : "";
     let country = rows ? rows?.country?.county_name.substring(0, 2).toUpperCase() : "";
-    let reelLotNo = "REEL-GAR-" + prcs_name + "-" + country + "-" + prcs_date + number;
+    let reelLotNo = "REEL-GAR-" + prcs_name + "-" + country + "-" + prcs_date + random_number;
 
     return res.sendSuccess(res, { reelLotNo });
   } catch (error: any) {
@@ -2756,11 +2757,6 @@ const garmentTraceabilityMap = async (req: Request, res: Response) => {
               as: "district",
             }]
           },
-          // {
-          //   model: YarnCount,
-          //   as: "yarncount",
-          //   attributes: ["yarnCount_name"],
-          // },
         ],
         where: {
           id: {
@@ -2786,6 +2782,7 @@ const garmentTraceabilityMap = async (req: Request, res: Response) => {
             ...row.dataValues,
             yarncount
         });
+
     }
       let spinSaleProcess = await SpinProcessYarnSelection.findAll({
         where: {

@@ -70,6 +70,7 @@ const createSpinner = async (req: Request, res: Response) => {
 const fetchSpinnerPagination = async (req: Request, res: Response) => {
     const searchTerm = req.query.search || '';
     const sortOrder = req.query.sort || 'asc';
+    const status = req.query.status || ''; 
     const page = Number(req.query.page) || 1;
     const limit = Number(req.query.limit) || 10;
     const countryId: any = req.query.countryId;
@@ -108,8 +109,14 @@ const fetchSpinnerPagination = async (req: Request, res: Response) => {
                 .map((id: any) => parseInt(id, 10));
             whereCondition.brand = { [Op.overlap]: idArray }
         }
+
+        if(status=='true'){
+            whereCondition.status = true;
+        }
+
         //fetch data with pagination
         if (req.query.pagination === "true") {
+            let data: any = [];
             const { count, rows } = await Spinner.findAndCountAll({
                 where: whereCondition,
                 order: [
@@ -129,7 +136,21 @@ const fetchSpinnerPagination = async (req: Request, res: Response) => {
                 offset: offset,
                 limit: limit
             });
-            return res.sendPaginationSuccess(res, rows, count);
+            for await (let item of rows){
+                let users = await User.findAll({
+                    where: {
+                        id: item?.dataValues?.spinnerUser_id
+                    }
+                });
+
+                let newStatus = users.some((user: any) => user.status === true);
+
+                data.push({
+                    ...item?.dataValues,
+                    status: newStatus ? 'Active' : 'Inactive'
+                });
+            }
+            return res.sendPaginationSuccess(res, data, count);
         } else {
             const cooperative = await Spinner.findAll({
                 where: whereCondition,
@@ -148,6 +169,7 @@ const fetchSpinnerPagination = async (req: Request, res: Response) => {
                     ['id', 'desc'], // Sort the results based on the 'name' field and the specified order
                 ]
             });
+            
             return res.sendSuccess(res, cooperative);
         }
     } catch (error: any) {

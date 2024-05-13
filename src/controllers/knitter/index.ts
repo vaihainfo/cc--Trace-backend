@@ -749,9 +749,10 @@ const fetchFabricReelLotNo = async (req: Request, res: Response) => {
     let prcs_date = day + month + year;
 
     let number = count + 1;
+    const random_number = +performance.now().toString().replace('.', '7').substring(0,4)
     let prcs_name = rows ? rows?.name.substring(0, 3).toUpperCase() : "";
     let country = rows ? rows?.country?.county_name.substring(0, 2).toUpperCase() : "";
-    let reelLotNo = "REEL-KNI-" + prcs_name + "-" + country + "-" + prcs_date + "/" + number;
+    let reelLotNo = "REEL-KNI-" + prcs_name + "-" + country + "-" + prcs_date + "/" + random_number;
 
     return res.sendSuccess(res, { reelLotNo });
   } catch (error: any) {
@@ -1514,6 +1515,12 @@ const getChooseFabricFilters = async (req: Request, res: Response) => {
 
 const getGarments = async (req: Request, res: Response) => {
   let knitterId = req.query.knitterId;
+  let whereCondition: any = {};
+
+  if(req.query.status=='true'){
+    whereCondition.status=true
+  }
+
   if (!knitterId) {
     return res.sendError(res, "Need Knitter Id ");
   }
@@ -1523,13 +1530,18 @@ const getGarments = async (req: Request, res: Response) => {
   }
   let garment = await Garment.findAll({
     attributes: ["id", "name"],
-    where: { brand: { [Op.overlap]: ress.dataValues.brand } },
+    where: { ...whereCondition,brand: { [Op.overlap]: ress.dataValues.brand } },
   });
   res.sendSuccess(res, garment);
 };
 
 const getFabrics = async (req: Request, res: Response) => {
   let knitterId = req.query.knitterId;
+  let whereCondition: any = {};
+
+  if(req.query.status=='true'){
+    whereCondition.status=true
+  }
   if (!knitterId) {
     return res.sendError(res, "Need Knitter Id ");
   }
@@ -1541,6 +1553,7 @@ const getFabrics = async (req: Request, res: Response) => {
   let fabric = await Fabric.findAll({
     attributes: ["id", "name"],
     where: {
+      ...whereCondition,
       brand: { [Op.overlap]: ress.dataValues.brand },
       fabric_processor_type: { [Op.overlap]: [req.query.type] },
     },

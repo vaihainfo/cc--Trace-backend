@@ -13,6 +13,8 @@ import Fabric from "../../models/fabric.model";
 import { Op } from "sequelize";
 import Brand from "../../models/brand.model";
 import { sendEmail } from "../../provider/send-mail";
+import UserRole from "../../models/user-role.model";
+import UserCategory from "../../models/user-category.model";
 
 const login = async (req: Request, res: Response) => {
   try {
@@ -20,11 +22,23 @@ const login = async (req: Request, res: Response) => {
     if (!user) {
       return res.sendError(res, "ERR_AUTH_WRONG_USERNAME");
     }
-
+    
     if (user) {
       let verifyPassword = await hash.compare(req.body.password, user.dataValues.password)
       if (!verifyPassword) { return res.sendError(res, "ERR_AUTH_WRONG_PASSWORD"); };
-    if(user.dataValues.role !==1 && user.dataValues.role !==2){
+
+      const role = await UserRole.findByPk(user.dataValues.role, {
+          include: [
+              {
+                  model: UserCategory,
+                  as: 'userCategory',
+                  attributes: ['id', 'category_name'], 
+              },
+          ],
+      });
+
+    // if(user.dataValues.role !==1 && user.dataValues.role !==2){
+      if(role?.dataValues?.userCategory?.dataValues?.category_name?.toLowerCase() !== "superadmin" && role?.dataValues?.userCategory?.dataValues?.category_name?.toLowerCase() !== "admin"){
       const OTP = generateOTP()
       
       let body = `<div style="font-family: Arial, sans-serif; max-width: 800px; padding: 20px;">

@@ -12,8 +12,11 @@ const fetchValidationProjectReport = async (req: Request, res: Response) => {
   const whereCondition: any = {};
 
   const farmGroupId: string = req.query.farmGroupId as string;
-  const seasonId: string = req.query.farmGroupId as string;
+  const seasonId: string = req.query.seasonId as string;
   const brandId: string = req.query.brandId as string;
+
+  const { endDate, startDate }: any = req.query;
+
   try {
     if (farmGroupId) {
       const idArray: number[] = farmGroupId
@@ -28,7 +31,7 @@ const fetchValidationProjectReport = async (req: Request, res: Response) => {
         .split(",")
         .map((id) => parseInt(id, 10));
 
-      whereCondition.farmGroup_id = { [Op.in]: idArray };
+      whereCondition.season_id = { [Op.in]: idArray };
     }
     if (brandId) {
       const idArray: number[] = brandId
@@ -37,6 +40,15 @@ const fetchValidationProjectReport = async (req: Request, res: Response) => {
 
       whereCondition.brand_id = { [Op.in]: idArray };
     }
+
+    
+    if (startDate && endDate) {
+      const startOfDay = new Date(startDate);
+      startOfDay.setUTCHours(0, 0, 0, 0);
+      const endOfDay = new Date(endDate);
+      endOfDay.setUTCHours(23, 59, 59, 999);
+      whereCondition.createdAt = { [Op.between]: [startOfDay, endOfDay] }
+  }
 
     let include = [
       {

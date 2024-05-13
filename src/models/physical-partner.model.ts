@@ -91,7 +91,12 @@ const PhysicalPartner = db.define('physical_partner', {
     },
     registration_document: {
         type: DataTypes.STRING
-    }
+    },
+    status: {
+        allowNull: false,
+        defaultValue: true,
+        type: DataTypes.BOOLEAN
+    },
 });
 
 PhysicalPartner.belongsTo(Country, {

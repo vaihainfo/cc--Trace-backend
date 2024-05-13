@@ -936,7 +936,8 @@ const uploadFarmer = async (req: Request, res: Response) => {
                                 agri_estimated_yeld: data.agriEstimatedYield ? data.agriEstimatedYield : 0.0,
                                 agri_estimated_prod: data.agriEstimatedProd ? data.agriEstimatedProd : 0.0,
                                 cotton_total_area: data.cottonTotalArea ? data.cottonTotalArea : 0.0,
-                                total_estimated_cotton: data.totalEstimatedCotton ? data.totalEstimatedCotton : 0.0
+                                total_estimated_cotton: data.totalEstimatedCotton ? data.totalEstimatedCotton : 0.0,
+                                available_cotton: Number(data.totalEstimatedCotton) + (0.15 * Number(data.totalEstimatedCotton))
                             };
                             const updatedFarm = await Farm.update(farmData, {
                                 where: {
@@ -959,7 +960,8 @@ const uploadFarmer = async (req: Request, res: Response) => {
                                 agri_estimated_yeld: data.agriEstimatedYield ? data.agriEstimatedYield : 0.0,
                                 agri_estimated_prod: data.agriEstimatedProd ? data.agriEstimatedProd : 0.0,
                                 cotton_total_area: data.cottonTotalArea ? data.cottonTotalArea : 0.0,
-                                total_estimated_cotton: data.totalEstimatedCotton ? data.totalEstimatedCotton : 0.0
+                                total_estimated_cotton: data.totalEstimatedCotton ? data.totalEstimatedCotton : 0.0,
+                                available_cotton: Number(data.totalEstimatedCotton) + (0.15 * Number(data.totalEstimatedCotton))
                             };
                             const createdFarm = await Farm.create(farmData);
                             pass.push({

@@ -106,7 +106,12 @@ const Knitter = db.define('knitters', {
   },
   registration_document: {
     type: DataTypes.STRING
-  }
+  },
+  status: {
+    allowNull: false,
+    defaultValue: true,
+    type: DataTypes.BOOLEAN
+  },
 });
 
 Knitter.belongsTo(Country, {

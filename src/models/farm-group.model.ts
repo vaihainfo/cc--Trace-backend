@@ -1,6 +1,7 @@
 import { DataTypes } from 'sequelize';
 import db from '../util/dbConn';
 import Brand from './brand.model';
+import Season from './season.model';
 
 const FarmGroup = db.define('farm_groups', {
   id: {
@@ -10,6 +11,10 @@ const FarmGroup = db.define('farm_groups', {
     primaryKey: true
   },
   brand_id: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+  },
+  season_id: {
     type: DataTypes.INTEGER,
     allowNull: false,
   },
@@ -34,6 +39,11 @@ const FarmGroup = db.define('farm_groups', {
 FarmGroup.belongsTo(Brand, {
   foreignKey: "brand_id",
   as: "brand",
+})
+
+FarmGroup.belongsTo(Season, {
+  foreignKey: "season_id",
+  as: "season",
 })
 
 FarmGroup.associate = (models: any) => {

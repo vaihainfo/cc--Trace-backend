@@ -29,7 +29,9 @@ const getQueryParams = async (
             block,
             village,
             buyer,
-            fabric
+            fabric,
+            fromDate,
+            toDate
         } = req.query;
         const validator = yup.string()
             .notRequired()
@@ -43,6 +45,8 @@ const getQueryParams = async (
         await validator.validate(district);
         await validator.validate(block);
         await validator.validate(village);
+        await validator.validate(fromDate);
+        await validator.validate(toDate);
         if (isBuyer) {
             const reqValidator = yup.string()
                 .required();
@@ -81,7 +85,9 @@ const getQueryParams = async (
             fabric,
             knitter,
             weaver,
-            garment
+            garment,
+            fromDate,
+            toDate
         };
 
     } catch (error: any) {
@@ -98,9 +104,6 @@ const getKnitterYarn = async (
         const reqData = await getQueryParams(req, res);
         const where = getSpinSalesWhereQuery(reqData, 'knitter');
         const yarnList = await getSpinYarnData('knitter', where);
-
-        console.log("yarnList=-------",yarnList)
-        
         const data = getSpinYarnRes(yarnList);
         return res.sendSuccess(res, data);
     } catch (error: any) {
@@ -150,7 +153,7 @@ const getSpinSalesWhereQuery = (
 
         if (reqData?.brand)
             where['$knitter.brand$'] = {
-                [Op.contains]: Sequelize.literal(`ARRAY [${ reqData.brand }]`)
+                [Op.contains]: Sequelize.literal(`ARRAY [${reqData.brand}]`)
             };
 
 
@@ -171,7 +174,7 @@ const getSpinSalesWhereQuery = (
 
         if (reqData?.brand)
             where['$knitter.brand$'] = {
-                [Op.contains]: Sequelize.literal(`ARRAY [${ reqData.brand }]`)
+                [Op.contains]: Sequelize.literal(`ARRAY [${reqData.brand}]`)
             };
 
         if (reqData?.country)
@@ -186,6 +189,15 @@ const getSpinSalesWhereQuery = (
         if (reqData?.weaver)
             where['$weaver.id$'] = reqData.weaver;
     }
+
+    if (reqData?.fromDate)
+        where.date = { [Op.gte]: reqData.fromDate };
+
+    if (reqData?.toDate)
+        where.date = { [Op.lt]: reqData.toDate };
+
+    if (reqData?.fromDate && reqData?.toDate)
+        where.date = { [Op.between]: [reqData.fromDate, reqData.toDate] };
 
     return where;
 
@@ -311,7 +323,7 @@ const getKnitterSalesWhereQuery = (
 
     if (reqData?.brand)
         where['$knitter.brand$'] = {
-            [Op.contains]: Sequelize.literal(`ARRAY [${ reqData.brand }]`)
+            [Op.contains]: Sequelize.literal(`ARRAY [${reqData.brand}]`)
         };
 
     if (reqData?.country)
@@ -325,6 +337,15 @@ const getKnitterSalesWhereQuery = (
 
     if (reqData?.knitter)
         where['$knitter.id$'] = reqData.knitter;
+
+    if (reqData?.fromDate)
+        where.date = { [Op.gte]: reqData.fromDate };
+
+    if (reqData?.toDate)
+        where.date = { [Op.lt]: reqData.toDate };
+
+    if (reqData?.fromDate && reqData?.toDate)
+        where.date = { [Op.between]: [reqData.fromDate, reqData.toDate] };
 
     return where;
 
@@ -407,7 +428,7 @@ const getWeaverSalesWhereQuery = (
 
     if (reqData?.brand)
         where['$weaver.brand$'] = {
-            [Op.contains]: Sequelize.literal(`ARRAY [${ reqData.brand }]`)
+            [Op.contains]: Sequelize.literal(`ARRAY [${reqData.brand}]`)
         };
 
     if (reqData?.country)
@@ -421,6 +442,15 @@ const getWeaverSalesWhereQuery = (
 
     if (reqData?.weaver)
         where['$weaver.id$'] = reqData.weaver;
+
+    if (reqData?.fromDate)
+        where.date = { [Op.gte]: reqData.fromDate };
+
+    if (reqData?.toDate)
+        where.date = { [Op.lt]: reqData.toDate };
+
+    if (reqData?.fromDate && reqData?.toDate)
+        where.date = { [Op.between]: [reqData.fromDate, reqData.toDate] };
 
     return where;
 
@@ -461,6 +491,7 @@ const getGarmentFabric = async (
     try {
         const reqData = await getQueryParams(req, res);
         const where = getWeaverSalesGarmentWhereQuery(reqData);
+        where.buyer_type = "Garment";
         const weaverList = await getWeaverSalesFabricData(where);
         const knitList = await getKnitSalesFabricData(where);
         const data = getGarmentFabricRes(
@@ -578,7 +609,7 @@ const getWeaverSalesGarmentWhereQuery = (
 
     if (reqData?.brand)
         where['$buyer.brand$'] = {
-            [Op.contains]: Sequelize.literal(`ARRAY [${ reqData.brand }]`)
+            [Op.contains]: Sequelize.literal(`ARRAY [${reqData.brand}]`)
         };
 
     if (reqData?.country)
@@ -592,6 +623,15 @@ const getWeaverSalesGarmentWhereQuery = (
 
     if (reqData?.garment)
         where['$buyer.id$'] = reqData.garment;
+
+    if (reqData?.fromDate)
+        where.date = { [Op.gte]: reqData.fromDate };
+
+    if (reqData?.toDate)
+        where.date = { [Op.lt]: reqData.toDate };
+
+    if (reqData?.fromDate && reqData?.toDate)
+        where.date = { [Op.between]: [reqData.fromDate, reqData.toDate] };
 
     return where;
 
@@ -654,7 +694,7 @@ const getGarmentSalesWhereQuery = (
 
     if (reqData?.brand)
         where['$garment.brand$'] = {
-            [Op.contains]: Sequelize.literal(`ARRAY [${ reqData.brand }]`)
+            [Op.contains]: Sequelize.literal(`ARRAY [${reqData.brand}]`)
         };
 
     if (reqData?.country)
@@ -668,6 +708,15 @@ const getGarmentSalesWhereQuery = (
 
     if (reqData?.garment)
         where['$garment.id$'] = reqData.garment;
+
+    if (reqData?.fromDate)
+        where.date = { [Op.gte]: reqData.fromDate };
+
+    if (reqData?.toDate)
+        where.date = { [Op.lt]: reqData.toDate };
+
+    if (reqData?.fromDate && reqData?.toDate)
+        where.date = { [Op.between]: [reqData.fromDate, reqData.toDate] };
 
     return where;
 
@@ -760,7 +809,7 @@ const getDyingSalesWhereQuery = (
 
     if (reqData?.brand)
         where['$dying_fabric.brand$'] = {
-            [Op.contains]: Sequelize.literal(`ARRAY [${ reqData.brand }]`)
+            [Op.contains]: Sequelize.literal(`ARRAY [${reqData.brand}]`)
         };
 
     if (reqData?.country)
@@ -777,6 +826,15 @@ const getDyingSalesWhereQuery = (
 
     // if (reqData?.village)
     //     where['$farmer.village_id$'] = reqData.village;
+
+    if (reqData?.fromDate)
+        where.date = { [Op.gte]: reqData.fromDate };
+
+    if (reqData?.toDate)
+        where.date = { [Op.lt]: reqData.toDate };
+
+    if (reqData?.fromDate && reqData?.toDate)
+        where.date = { [Op.between]: [reqData.fromDate, reqData.toDate] };
 
     return where;
 
@@ -949,7 +1007,7 @@ const getKnitSalesWhereQuery = (
 
     if (reqData?.brand)
         where['$dyingwashing.brand$'] = {
-            [Op.contains]: Sequelize.literal(`ARRAY [${ reqData.brand }]`)
+            [Op.contains]: Sequelize.literal(`ARRAY [${reqData.brand}]`)
         };
 
     if (reqData?.country)
@@ -966,6 +1024,15 @@ const getKnitSalesWhereQuery = (
 
     // if (reqData?.village)
     //     where['$farmer.village_id$'] = reqData.village;
+
+    if (reqData?.fromDate)
+        where.date = { [Op.gte]: reqData.fromDate };
+
+    if (reqData?.toDate)
+        where.date = { [Op.lt]: reqData.toDate };
+
+    if (reqData?.fromDate && reqData?.toDate)
+        where.date = { [Op.between]: [reqData.fromDate, reqData.toDate] };
 
     return where;
 };

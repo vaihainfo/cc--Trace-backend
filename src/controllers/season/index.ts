@@ -30,6 +30,7 @@ const fetchSeasonPagination = async (req: Request, res: Response) => {
     const sortName = req.query.sortName || 'name';
     const page = Number(req.query.page) || 1;
     const limit = Number(req.query.limit) || 10;
+    const brandId = Number(req.query.brandId);
     const offset = (page - 1) * limit;
 
     try {
@@ -55,7 +56,13 @@ const fetchSeasonPagination = async (req: Request, res: Response) => {
                     [sortName, sortOrder], // Sort the results based on the 'username' field and the specified order
                 ],
             });
-            return res.sendSuccess(res, season);
+            if(brandId){
+                const seasonData:any = season.map((item:any)=> item.dataValues)
+                return res.sendSuccess(res, seasonData?.slice(-3))
+            }
+            else{
+                return res.sendSuccess(res, season);
+            }
         }
 
     } catch (error) {

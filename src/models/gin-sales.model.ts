@@ -142,7 +142,11 @@ const GinSales = db.define('gin_sales', {
   },
   qty_stock: {
     type: DataTypes.DOUBLE
-  }
+  },
+  greyout_status: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+  },
 });
 
 GinSales.belongsTo(Ginner, {
