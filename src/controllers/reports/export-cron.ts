@@ -3696,7 +3696,7 @@ const generatePendingSpinnerBale = async () => {
     whereCondition.total_qty = {
       [Op.gt]: 0,
     };
-    whereCondition.status = "Pending for QR scanning";
+    whereCondition.status = { [Op.in]: ['Pending', "Pending for QR scanning"] }
     whereCondition.buyer = {
       [Op.ne]: null,
     };

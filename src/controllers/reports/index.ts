@@ -2117,7 +2117,6 @@ const fetchSpinnerPendingBale = async (req: Request, res: Response) => {
   const searchTerm = req.query.search || "";
   const page = Number(req.query.page) || 1;
   const limit = Number(req.query.limit) || 10;
-  const status = req.query.status || "To be Submitted";
   const { ginnerId, spinnerId, seasonId, programId, brandId, countryId, startDate, endDate }: any =
     req.query;
   const offset = (page - 1) * limit;
@@ -2186,7 +2185,7 @@ const fetchSpinnerPendingBale = async (req: Request, res: Response) => {
     whereCondition.total_qty = {
       [Op.gt]: 0,
     };
-    whereCondition.status = "Pending for QR scanning";
+    whereCondition.status = { [Op.in]: ['Pending', "Pending for QR scanning"] }
 
     if (programId) {
       const idArray: number[] = programId
@@ -2581,7 +2580,8 @@ const exportPendingSpinnerBale = async (req: Request, res: Response) => {
     whereCondition.total_qty = {
       [Op.gt]: 0,
     };
-    whereCondition.status = "Pending for QR scanning";
+    whereCondition.status = { [Op.in]: ['Pending', "Pending for QR scanning"] }
+
     whereCondition.buyer = {
       [Op.ne]: null,
     };
