@@ -10111,7 +10111,7 @@ const fetchPscpPrecurement = async (req: Request, res: Response) => {
         .split(",")
         .map((id: any) => parseInt(id, 10));
       whereCondition["$farmer.country_id$"] = { [Op.in]: idArray };
-      transtionCondition["$farmer.country_id$"] = { [Op.in]: idArray };
+      transtionCondition["$country_id$"] = { [Op.in]: idArray };
       ginnerCondition["$ginner.country_id$"] = { [Op.in]: idArray };
       ginnernewCondition["$ginprocess.ginner.country_id$"] = { [Op.in]: idArray };
     }
@@ -10180,11 +10180,8 @@ const fetchPscpPrecurement = async (req: Request, res: Response) => {
             ),
             "total_qty_lint_produced",
           ],
-          [sequelize.col("farmer.country_id"), "country_id"],
         ],
-        include: [{ model: Farmer, as: "farmer", attributes: [] }],
         where: { season_id: item.season_id,...transtionCondition },
-        group: ["farmer.country_id"],
       });
 
       let processgin = await GinProcess.findOne({
@@ -10197,7 +10194,6 @@ const fetchPscpPrecurement = async (req: Request, res: Response) => {
             ),
             "no_of_bales",
           ],
-          [sequelize.col("ginner.country_id"), "country_id"],
         ],
         include: [
           {
@@ -10207,7 +10203,7 @@ const fetchPscpPrecurement = async (req: Request, res: Response) => {
           },
         ],
         where: { season_id: item.season_id,...ginnerCondition },
-        group: ["ginner.country_id"],
+        group: ["season_id"],
       });
       let ginbales = await GinBale.findOne({
         attributes: [
@@ -10224,7 +10220,6 @@ const fetchPscpPrecurement = async (req: Request, res: Response) => {
             ),
             "total_qty",
           ],
-          [sequelize.col('"ginprocess"."ginner"."country_id"'), "country_id"],
         ],
         include: [
           {
@@ -10243,7 +10238,7 @@ const fetchPscpPrecurement = async (req: Request, res: Response) => {
         where: {
           "$ginprocess.season_id$": item.season_id,...ginnernewCondition
         },
-        group: ["ginprocess.season_id","ginprocess->ginner.country_id"],
+        group: ["ginprocess.season_id"],
       });
       let processSale = await GinSales.findOne({
         attributes: [
@@ -10272,7 +10267,7 @@ const fetchPscpPrecurement = async (req: Request, res: Response) => {
           },
         ],
         where: { season_id: item.season_id,...ginnerCondition },
-        group: ["ginner.country_id"],
+        group: ["season_id"],
       });
 
       obj.estimated_seed_cotton =
@@ -10347,6 +10342,9 @@ const exportPscpCottonProcurement = async (req: Request, res: Response) => {
   const searchTerm = req.query.search || "";
   const { exportType, seasonId, countryId, brandId}: any = req.query;
   const whereCondition: any = {};
+  let transtionCondition: any = {};
+  let ginnerCondition: any = {};
+  let ginnernewCondition: any = {};
   try {
     if (exportType === "all") {
 
@@ -10369,6 +10367,9 @@ const exportPscpCottonProcurement = async (req: Request, res: Response) => {
           .split(",")
           .map((id: any) => parseInt(id, 10));
         whereCondition["$farmer.country_id$"] = { [Op.in]: idArray };
+        transtionCondition["$country_id$"] = { [Op.in]: idArray };
+        ginnerCondition["$ginner.country_id$"] = { [Op.in]: idArray };
+        ginnernewCondition["$ginprocess.ginner.country_id$"] = { [Op.in]: idArray };
       }
 
       if (brandId) {
@@ -10462,8 +10463,9 @@ const exportPscpCottonProcurement = async (req: Request, res: Response) => {
               "total_qty_lint_produced",
             ],
           ],
-          where: { season_id: item.season_id },
+          where: { season_id: item.season_id,...transtionCondition },
         });
+  
         let processgin = await GinProcess.findOne({
           attributes: [
             [
@@ -10475,7 +10477,15 @@ const exportPscpCottonProcurement = async (req: Request, res: Response) => {
               "no_of_bales",
             ],
           ],
-          where: { season_id: item.season_id },
+          include: [
+            {
+              model: Ginner,
+              as: "ginner",
+              attributes: [],
+            },
+          ],
+          where: { season_id: item.season_id,...ginnerCondition },
+          group: ["season_id"],
         });
         let ginbales = await GinBale.findOne({
           attributes: [
@@ -10498,10 +10508,17 @@ const exportPscpCottonProcurement = async (req: Request, res: Response) => {
               model: GinProcess,
               as: "ginprocess",
               attributes: [],
+              include: [
+                {
+                  model: Ginner,
+                  as: "ginner",
+                  attributes: [],
+                },
+              ]
             },
           ],
           where: {
-            "$ginprocess.season_id$": item.season_id,
+            "$ginprocess.season_id$": item.season_id,...ginnernewCondition
           },
           group: ["ginprocess.season_id"],
         });
@@ -10524,8 +10541,17 @@ const exportPscpCottonProcurement = async (req: Request, res: Response) => {
               "total_qty",
             ],
           ],
-          where: { season_id: item.season_id },
+          include: [
+            {
+              model: Ginner,
+              as: "ginner",
+              attributes: [],
+            },
+          ],
+          where: { season_id: item.season_id,...ginnerCondition },
+          group: ["season_id"],
         });
+  
 
         obj.estimated_seed_cotton =
           (item?.dataValues.estimated_seed_cotton ?? 0) / 1000;
