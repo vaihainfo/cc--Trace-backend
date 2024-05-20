@@ -1,5 +1,5 @@
 import { Op, Sequelize, where } from "sequelize";
-import { Request, Response } from "express";
+import { Request, Response, raw } from "express";
 import GinProcess from "../../models/gin-process.model";
 import GinBale from "../../models/gin-bale.model";
 import Season from "../../models/season.model";
@@ -10093,6 +10093,9 @@ const fetchPscpPrecurement = async (req: Request, res: Response) => {
     let { seasonId, countryId, brandId }: any = req.query;
     const searchTerm = req.query.search || "";
     let whereCondition: any = {};
+    let transtionCondition: any = {};
+    let ginnerCondition: any = {};
+    let ginnernewCondition: any = {};
     const page = Number(req.query.page) || 1;
     const limit = Number(req.query.limit) || 10;
     const offset = (page - 1) * limit;
@@ -10108,6 +10111,9 @@ const fetchPscpPrecurement = async (req: Request, res: Response) => {
         .split(",")
         .map((id: any) => parseInt(id, 10));
       whereCondition["$farmer.country_id$"] = { [Op.in]: idArray };
+      transtionCondition["$farmer.country_id$"] = { [Op.in]: idArray };
+      ginnerCondition["$ginner.country_id$"] = { [Op.in]: idArray };
+      ginnernewCondition["$ginprocess.ginner.country_id$"] = { [Op.in]: idArray };
     }
 
     if (brandId) {
@@ -10174,9 +10180,13 @@ const fetchPscpPrecurement = async (req: Request, res: Response) => {
             ),
             "total_qty_lint_produced",
           ],
+          [sequelize.col("farmer.country_id"), "country_id"],
         ],
-        where: { season_id: item.season_id },
+        include: [{ model: Farmer, as: "farmer", attributes: [] }],
+        where: { season_id: item.season_id,...transtionCondition },
+        group: ["farmer.country_id"],
       });
+
       let processgin = await GinProcess.findOne({
         attributes: [
           [
@@ -10187,8 +10197,17 @@ const fetchPscpPrecurement = async (req: Request, res: Response) => {
             ),
             "no_of_bales",
           ],
+          [sequelize.col("ginner.country_id"), "country_id"],
         ],
-        where: { season_id: item.season_id },
+        include: [
+          {
+            model: Ginner,
+            as: "ginner",
+            attributes: [],
+          },
+        ],
+        where: { season_id: item.season_id,...ginnerCondition },
+        group: ["ginner.country_id"],
       });
       let ginbales = await GinBale.findOne({
         attributes: [
@@ -10205,18 +10224,26 @@ const fetchPscpPrecurement = async (req: Request, res: Response) => {
             ),
             "total_qty",
           ],
+          [sequelize.col('"ginprocess"."ginner"."country_id"'), "country_id"],
         ],
         include: [
           {
             model: GinProcess,
             as: "ginprocess",
             attributes: [],
+            include: [
+              {
+                model: Ginner,
+                as: "ginner",
+                attributes: [],
+              },
+            ]
           },
         ],
         where: {
-          "$ginprocess.season_id$": item.season_id,
+          "$ginprocess.season_id$": item.season_id,...ginnernewCondition
         },
-        group: ["ginprocess.season_id"],
+        group: ["ginprocess.season_id","ginprocess->ginner.country_id"],
       });
       let processSale = await GinSales.findOne({
         attributes: [
@@ -10237,7 +10264,15 @@ const fetchPscpPrecurement = async (req: Request, res: Response) => {
             "total_qty",
           ],
         ],
-        where: { season_id: item.season_id },
+        include: [
+          {
+            model: Ginner,
+            as: "ginner",
+            attributes: [],
+          },
+        ],
+        where: { season_id: item.season_id,...ginnerCondition },
+        group: ["ginner.country_id"],
       });
 
       obj.estimated_seed_cotton =
