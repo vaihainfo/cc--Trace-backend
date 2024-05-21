@@ -212,6 +212,7 @@ const getSeason = async (req: Request, res: Response) => {
       return res.sendError(res, "Need farmGroup Id ");
     }
     let farmGroup = await FarmGroup.findAll({
+        where: { id: farmGroupId },
         include: [
             {
                 model: Season, as: 'season'

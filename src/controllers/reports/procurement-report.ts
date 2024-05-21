@@ -28,6 +28,7 @@ const fetchTransactionsReport = async (req: Request, res: Response) => {
   const offset = (page - 1) * limit;
 
   const countryId: string = req.query.countryId as string;
+  const stateId: string = req.query.stateId as string;
   const brandId: string = req.query.brandId as string;
   const farmGroupId: string = req.query.farmGroupId as string;
   const seasonId: string = req.query.seasonId as string;
@@ -46,6 +47,14 @@ const fetchTransactionsReport = async (req: Request, res: Response) => {
         .map((id) => parseInt(id, 10));
       whereCondition.country_id = { [Op.in]: idArray };
     }
+
+    if (stateId) {
+      const idArray: number[] = stateId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.state_id = { [Op.in]: idArray };
+    }
+
     if (brandId) {
       const idArray: number[] = brandId
         .split(",")
