@@ -4084,4 +4084,4 @@ function convert_kg_to_mt(number: any) {
   return (number / 1000).toFixed(2);
 }
 
-export { exportReportsTameTaking, exportReportsOnebyOne };
+export { exportReportsTameTaking, exportReportsOnebyOne, generateSpinProcessBackwardfTraceabilty };
