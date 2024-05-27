@@ -1464,7 +1464,8 @@ const getReelBaleId = async (req: Request, res: Response) => {
 
     let prcs_date = day + month + year;
     var bale_no = baleCount ? Number(baleCount ?? 0) + 1 : 1;
-    var reelbale_id = baleid_prefix + prcs_date + "/" + String(bale_no);
+    const random_number = +performance.now().toString().replace('.', '7').substring(0,4)
+    var reelbale_id = baleid_prefix + prcs_date + "/" + String(random_number);
     res.sendSuccess(res, { id: reelbale_id });
   } catch (error: any) {
     console.error(error);
@@ -1497,16 +1498,22 @@ const getProgram = async (req: Request, res: Response) => {
 
 const getSpinner = async (req: Request, res: Response) => {
   let ginnerId = req.query.ginnerId;
+  let whereCondition: any = {};
+
   if (!ginnerId) {
     return res.sendError(res, "Need Ginner Id ");
   }
+  if(req.query.status=='true'){
+    whereCondition.status=true
+  }
+
   let ginner = await Ginner.findOne({ where: { id: ginnerId } });
   if (!ginner) {
     return res.sendError(res, "No Ginner Found ");
   }
   let result = await Spinner.findAll({
     attributes: ["id", "name"],
-    where: { brand: { [Op.overlap]: ginner.dataValues.brand } },
+    where: { ...whereCondition,brand: { [Op.overlap]: ginner.dataValues.brand } },
   });
   res.sendSuccess(res, result);
 };
@@ -1600,9 +1607,16 @@ const getGinnerProcessTracingChartData = async (
   gin = await Promise.all(
     gin.map(async (el: any) => {
       el = el.toJSON();
+      let processTransactions = await CottonSelection.findAll({
+        where: {
+          process_id: el.id
+        }
+      })
       el.transaction = await Transaction.findAll({
         where: {
-          mapped_ginner: el.ginner_id,
+          id: {
+            [Op.in]: processTransactions.map((el: any) => el.transaction_id)
+          }
         },
         include: transactionInclude,
       });

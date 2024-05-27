@@ -76,6 +76,7 @@ const exportReportsTameTaking = async () => {
   await generateAgentTransactions();
   await generateGinnerProcess(); // taking time
   await generateSpinnerLintCottonStock();
+  await generateSpinProcessBackwardfTraceabilty();
 
   console.log('TameTaking Cron Job Completed to execute all reports.');
 }
@@ -89,6 +90,9 @@ const exportReportsOnebyOne = async () => {
   await generatePscpCottonProcurement();
   await generatePscpProcurementLiveTracker();
 
+  //brand wise report
+  await generateBrandWiseData();
+
   // Ginner Reports 
   await generateGinnerSummary();
   await generateGinnerSales();
@@ -101,11 +105,109 @@ const exportReportsOnebyOne = async () => {
   await generateSpinnerYarnProcess();
   await generateSpinnerSale();
   await generatePendingSpinnerBale();
+  await exportSpinnerGreyOutReport();
 
   console.log('Cron Job Completed to execute all reports.');
 }
 
 //----------------------------------------- Spinner Reports ------------------------//
+
+const exportSpinnerGreyOutReport = async () => {
+  // spinner_bale_receipt_load
+  const excelFilePath = path.join(
+   "./upload",
+   "spinner-grey-out-report.xlsx"
+ );
+
+   let include = [
+     {
+       model: Ginner,
+       as: "ginner",
+       attributes: [],
+     },
+     {
+       model: Season,
+       as: "season",
+       attributes: [],
+     },
+     {
+       model: Program,
+       as: "program",
+       attributes: [],
+     },
+     {
+       model: Spinner,
+       as: "buyerdata",
+       attributes: [],
+     },
+   ];
+
+   // Create the excel workbook file
+   const workbook = new ExcelJS.Workbook();
+   const worksheet = workbook.addWorksheet("Sheet1");
+   worksheet.mergeCells("A1:M1");
+   const mergedCell = worksheet.getCell("A1");
+   mergedCell.value = "CottonConnect | Spinner Grey Out Report";
+   mergedCell.font = { bold: true };
+   mergedCell.alignment = { horizontal: "center", vertical: "middle" };
+   // Set bold font for header row
+   const headerRow = worksheet.addRow([
+     "Sr No.",
+     "Season",
+     "Ginner Name",
+     "Spinner Name",
+     "REEL Lot No",
+     "Invoice Number",
+     "Bale Lot No",
+     "Quantity Stock",
+   ]);
+   headerRow.font = { bold: true };
+
+   // //fetch data with pagination
+
+   const { count, rows }: any = await GinSales.findAndCountAll({
+     where: {greyout_status : true},
+     include: include,
+     attributes: [
+       [Sequelize.col('"season"."name"'), 'season_name'],
+       [Sequelize.literal('"ginner"."name"'), "ginner_name"],
+       [Sequelize.col('"buyerdata"."name"'), 'spinner'],
+       [Sequelize.fn('MAX', Sequelize.col('invoice_no')), 'invoice_no'],
+       [Sequelize.fn('MAX', Sequelize.col('lot_no')), 'lot_no'],
+       [Sequelize.fn('MAX', Sequelize.col('reel_lot_no')), 'reel_lot_no'],
+       [Sequelize.fn('MAX', Sequelize.col('qty_stock')), 'qty_stock'],
+     ],
+     group: ['season.id', 'ginner.id', 'buyerdata.id'], 
+   });    
+
+   // // Append data to worksheet
+   for await (const [index, item] of rows.entries()) {
+     const rowValues = Object.values({
+       index: index + 1,
+       season: item.dataValues.season_name ? item.dataValues.season_name : "",
+       ginner: item.dataValues.ginner_name ? item.dataValues.ginner_name : "",
+       spinner: item.dataValues.spinner ? item.dataValues.spinner : "",
+       reel_lot_no: item.dataValues.reel_lot_no? item.dataValues.reel_lot_no: "",
+       invoice: item.dataValues.invoice_no ? item.dataValues.invoice_no : "",
+       lot_no: item.dataValues.lot_no ? item.dataValues.lot_no : "",
+       lint_quantity: item.dataValues.qty_stock? item.dataValues.qty_stock: "",
+     });
+     worksheet.addRow(rowValues);
+   }
+
+   // Auto-adjust column widths based on content
+   worksheet.columns.forEach((column: any) => {
+     let maxCellLength = 0;
+     column.eachCell({ includeEmpty: true }, (cell: any) => {
+       const cellLength = (cell.value ? cell.value.toString() : "").length;
+       maxCellLength = Math.max(maxCellLength, cellLength);
+     });
+     column.width = Math.min(14, maxCellLength + 2); // Limit width to 30 characters
+   });
+
+   // Save the workbook
+   await workbook.xlsx.writeFile(excelFilePath);
+};
 
 const generateSpinnerLintCottonStock = async () => {
   const excelFilePath = path.join(
@@ -2954,7 +3056,7 @@ const generateSpinnerYarnProcess = async () => {
           yarnType: item.yarn_type ? item.yarn_type : "",
           count: yarncount ? yarncount : "",
           resa: item.yarn_realisation ? item.yarn_realisation : "",
-          comber: item.comber_noil ? item.comber_noil : "",
+          comber: item.comber_noil ? item.comber_noil : "",          
           blend: blendValue,
           blendqty: blendqty,
           cotton_consumed: cottonConsumed
@@ -2987,10 +3089,10 @@ const generateSpinnerYarnProcess = async () => {
             "Yarn Type",
             "Yarn Count",
             "Yarn Realisation %",
-            "Comber Noil(Kgs)",
+            "Comber Noil (Kgs)",
             "Blend Material",
             "Blend Quantity (Kgs)",
-            "Total Seed cotton consumed (Kgs)",
+            "Total Lint cotton consumed (Kgs)",
             "Program",
             "Total Yarn weight (Kgs)",
             "Total yarn sold (Kgs)",
@@ -3255,6 +3357,330 @@ const generateSpinnerSale = async () => {
   }
 };
 
+const generateSpinProcessBackwardfTraceabilty = async () => {
+  const maxRowsPerWorksheet = 500000; // Maximum number of rows per worksheet in Excel
+  const whereCondition: any = {};
+  try {
+
+        // Create the excel workbook file
+        const workbook = new ExcelJS.stream.xlsx.WorkbookWriter({
+          stream: fs.createWriteStream("./upload/spin-process-backward-traceability-test.xlsx")
+        });
+    
+        const batchSize = 5000;
+        let worksheetIndex = 0;
+        let offset = 0;
+        let hasNextBatch = true;
+
+    let include = [
+      {
+        model: Spinner,
+        as: "spinner",
+        attributes: ["id", "name"],
+      }
+    ];
+
+    while (hasNextBatch) {
+
+    const { count, rows } = await SpinProcess.findAndCountAll({
+      include: include,
+        offset: offset,
+        limit: batchSize,
+      });
+
+      if (rows.length === 0) {
+        hasNextBatch = false;
+        break;
+      }
+
+      if (offset % maxRowsPerWorksheet === 0) {
+        worksheetIndex++;
+      }
+
+      let currentWorksheet = workbook.getWorksheet(`Sheet${worksheetIndex}`);
+      if (!currentWorksheet) {
+        currentWorksheet = workbook.addWorksheet(`Sheet${worksheetIndex}`);
+        if (worksheetIndex == 1) {
+          currentWorksheet.mergeCells("A1:M1");
+          const mergedCell = currentWorksheet.getCell("A1");
+          mergedCell.value = "CottonConnect | Spinner Process Backward Traceability Report";
+          mergedCell.font = { bold: true };
+          mergedCell.alignment = { horizontal: "center", vertical: "middle" };
+        }
+        // Set bold font for header row
+        // Set bold font for header row
+        const headerRow = currentWorksheet.addRow([
+          "S. No.",
+          "Spinner Name",
+          "Fabric Name",
+          "Yarn REEL Lot No",
+          "Invoice Number",
+          "Yarn Quantity Processed (Kgs)",
+          "Yarn Quantity Sold (Kgs)",
+          "Bale REEL Lot lint consumed",
+          "Bale Lot No",
+          "Ginner to Spinner Invoice",
+          "Lint Consumed (Kgs)",
+          "Villages",
+          "Ginner Name"
+        ]);
+        headerRow.font = { bold: true };
+      }
+
+    for await (let [index, item] of rows.entries()) {
+      let spnr_lint_ids: any = [];
+      let spinProcess = await LintSelections.findAll({
+        where: {
+          process_id: item.dataValues.id,
+        },
+        attributes: ["id", "lint_id"],
+      });
+      spnr_lint_ids = spinProcess.map((obj: any) => obj?.dataValues?.lint_id);
+
+      let lintConsumed = await LintSelections.findOne({
+        attributes: [
+          [
+            sequelize.fn(
+              "COALESCE",
+              sequelize.fn("SUM", sequelize.col("qty_used")),
+              0
+            ),
+            "lint_consumed",
+          ],
+        ],
+        where: { process_id: item.dataValues.id },
+        group: ["process_id"],
+      });
+
+      let yarnConsumed= await SpinProcessYarnSelection.findAll({
+        attributes: [
+          'sales_id',
+          "qty_used",
+          [Sequelize.col('"sales"."buyer_type"'), "buyer_type"],
+          [Sequelize.col('"sales"."buyer_id"'), "buyer_id"],
+          [Sequelize.col('"sales"."knitter_id"'), "knitter_id"],
+          [Sequelize.col('"sales"."knitter"."name'), "knitter"],
+          [Sequelize.col('"sales"."weaver"."name'), "weaver"],
+          [Sequelize.literal('"sales"."invoice_no"'), "invoice_no"],
+        ],
+        include:[{
+          model: SpinSales,
+          as: "sales",
+          attributes: [],
+          include:[
+            {
+              model: Weaver,
+              as: "weaver",
+              attributes: ["id", "name"],
+            },
+            {
+              model: Knitter,
+              as: "knitter",
+              attributes: ["id", "name"],
+            },
+        ]
+        }],
+        where: { spin_process_id: item.dataValues.id },
+      });
+
+      let ginSales: any = [];
+      let gin_process_ids: any = [];
+      let transactions_ids: any = [];
+
+      if (spnr_lint_ids.length > 0) {
+        ginSales = await GinSales.findAll({
+          attributes: [
+            "id",
+            "invoice_no",
+            "lot_no",
+            "reel_lot_no",
+          ],
+          include: [
+            {
+              model: Ginner,
+              as: "ginner",
+              attributes: ["id", "name"],
+            },
+          ],
+          where: {
+            id: {
+              [Op.in]: spnr_lint_ids,
+            },
+          },
+        });
+
+        let ginBaleId = await BaleSelection.findAll({
+          where: {
+            sales_id: ginSales.map((obj: any) => obj.dataValues.id),
+          },
+          attributes: ["id", "bale_id"],
+        });
+
+        let ginProcessIds = await GinBale.findAll({
+          where: {
+            id: ginBaleId.map((obj: any) => obj.dataValues.bale_id),
+          },
+          attributes: ["id", "process_id"],
+        });
+        gin_process_ids = ginProcessIds.map(
+          (obj: any) => obj.dataValues.process_id
+        );
+      }
+
+      if (gin_process_ids.length > 0) {
+        let cottornIds = await CottonSelection.findAll({
+          where: {
+            process_id: gin_process_ids,
+          },
+          attributes: ["id", "transaction_id"],
+        });
+        transactions_ids = cottornIds.map(
+          (obj: any) => obj.dataValues.transaction_id
+        );
+      }
+
+      let transactions: any = [];
+      if (transactions_ids.length > 0) {
+        transactions = await Transaction.findAll({
+          attributes: [
+            "id",
+          ],
+          where: {
+            id: {
+              [Op.in]: transactions_ids,
+            },
+          },
+          include: [
+            {
+              model: Village,
+              as: "village",
+              attributes: ["id", "village_name"],
+            },
+          ],
+        });
+      }
+
+      let yarnSold = 0;
+      yarnConsumed && yarnConsumed.length > 0 && yarnConsumed.map((item: any)=> yarnSold += Number(item?.dataValues?.qty_used));
+
+      let obj: any = {};
+      obj.lint_consumed = lintConsumed ? formatDecimal(lintConsumed?.dataValues?.lint_consumed) : 0;
+
+      let knitterName =
+        yarnConsumed && yarnConsumed.length > 0
+        ? yarnConsumed
+          .map((val: any) => val?.dataValues?.knitter)
+          .filter((item: any) => item !== null && item !== undefined)
+        : [];
+      
+      let weaverName =
+        yarnConsumed && yarnConsumed.length > 0
+          ? yarnConsumed
+            .map((val: any) => val?.dataValues?.weaver)
+            .filter((item: any) => item !== null && item !== undefined)
+          : [];
+      
+      let salesInvoice =
+        yarnConsumed && yarnConsumed.length > 0
+          ? yarnConsumed
+            .map((val: any) => val?.dataValues?.invoice_no)
+            .filter((item: any) => item !== null && item !== undefined)
+           : [];
+
+      
+      obj.fbrc_name = [...new Set([...knitterName, ...weaverName])];
+      obj.spnr_invoice_no = [...new Set(salesInvoice)];
+      obj.spnr_yarn_sold = yarnSold;
+
+      let ginName =
+        ginSales && ginSales.length > 0
+          ? ginSales
+            .map((val: any) => val?.ginner?.name)
+            .filter((item: any) => item !== null && item !== undefined)
+          : [];
+      let ginInvoice =
+        ginSales && ginSales.length > 0
+          ? ginSales
+            .map((val: any) => val?.invoice_no)
+            .filter((item: any) => item !== null && item !== undefined)
+          : [];
+      let ginLot =
+        ginSales && ginSales.length > 0
+          ? ginSales
+              .map((val: any) => val?.lot_no)
+              .filter((item: any) => item !== null && item !== undefined)
+          : [];
+      let ginReelLot =
+        ginSales && ginSales.length > 0
+          ? ginSales
+            .map((val: any) => val?.reel_lot_no)
+            .filter((item: any) => item !== null && item !== undefined)
+          : [];
+
+      obj.gnr_name = [...new Set(ginName)];
+      obj.gnr_invoice_no = [...new Set(ginInvoice)];
+      obj.gnr_lot_no = [...new Set(ginLot)];
+      obj.gnr_reel_lot_no = [...new Set(ginReelLot)];
+
+      let frmrVillages =
+        transactions && transactions.length > 0
+          ? transactions
+            .map((val: any) => val?.village?.village_name)
+            .filter((item: any) => item !== null && item !== undefined)
+          : [];
+
+      obj.frmr_villages = [...new Set(frmrVillages)];
+
+      const rowValues = [
+        index + offset + 1,
+        item.dataValues?.spinner ? item.dataValues?.spinner?.name : "",
+        obj.fbrc_name && obj.fbrc_name.length > 0
+        ? obj.fbrc_name.join(", ")
+        : "",
+        item.dataValues?.reel_lot_no ? item.dataValues?.reel_lot_no : "",
+        obj.spnr_invoice_no && obj.spnr_invoice_no.length > 0
+        ? obj.spnr_invoice_no.join(", ")
+        : "",
+        item.dataValues?.net_yarn_qty ? item.dataValues?.net_yarn_qty : 0,
+        obj.spnr_yarn_sold ? obj.spnr_yarn_sold : 0,
+        obj.gnr_reel_lot_no && obj.gnr_reel_lot_no.length > 0
+        ? obj.gnr_reel_lot_no.join(", ")
+        : "",
+        obj.gnr_lot_no && obj.gnr_lot_no.length > 0
+        ? obj.gnr_lot_no.join(", ")
+        : "",
+        obj.gnr_invoice_no && obj.gnr_invoice_no.length > 0
+        ? obj.gnr_invoice_no.join(", ")
+        : "",
+        obj.lint_consumed,
+        obj.frmr_villages && obj.frmr_villages.length > 0
+        ? obj.frmr_villages.join(", ")
+        : "",
+        obj.gnr_name && obj.gnr_name.length > 0
+        ? obj.gnr_name.join(", ")
+        : "",
+      ];
+      currentWorksheet.addRow(rowValues).commit();
+      }
+      offset += batchSize;
+  }
+
+    // Save the workbook
+    await workbook.commit()
+      .then(() => {
+        // Rename the temporary file to the final filename
+        fs.renameSync("./upload/spin-process-backward-traceability-test.xlsx", './upload/spin-process-backward-traceability.xlsx');
+        console.log('spin-process-backward-traceability report generation completed.');
+      })
+      .catch(error => {
+        console.log('Failed generation Report.');
+        throw error;
+      });
+  } catch (error: any) {
+    console.log(error);
+  }
+};
+
 
 const generatePendingSpinnerBale = async () => {
   // spinner_yarn_bales_load
@@ -3270,7 +3696,7 @@ const generatePendingSpinnerBale = async () => {
     whereCondition.total_qty = {
       [Op.gt]: 0,
     };
-    whereCondition.status = "Pending for QR scanning";
+    whereCondition.status = { [Op.in]: ['Pending', "Pending for QR scanning"] }
     whereCondition.buyer = {
       [Op.ne]: null,
     };
@@ -3391,6 +3817,255 @@ const generatePendingSpinnerBale = async () => {
   }
 };
 
+const generateBrandWiseData = async () =>{
+  const maxRowsPerWorksheet = 500000; // Maximum number of rows per worksheet in Excel
+
+  try {
+        // Create the excel workbook file
+        const workbook = new ExcelJS.stream.xlsx.WorkbookWriter({
+          stream: fs.createWriteStream("./upload/brand-wise-data-report-test.xlsx")
+        });
+    
+        const batchSize = 5000;
+        let worksheetIndex = 0;
+        let offset = 0;
+        let hasNextBatch = true;
+
+      while (hasNextBatch) {
+
+      const rows = await Brand.findAll({
+        offset: offset,
+        limit: batchSize,
+      })
+
+      if (rows.length === 0) {
+        hasNextBatch = false;
+        break;
+      }
+
+      if (offset % maxRowsPerWorksheet === 0) {
+        worksheetIndex++;
+      }
+
+      let currentWorksheet = workbook.getWorksheet(`Sheet${worksheetIndex}`);
+        if (!currentWorksheet) {
+          currentWorksheet = workbook.addWorksheet(`Sheet${worksheetIndex}`);
+          if (worksheetIndex == 1) {
+            currentWorksheet.mergeCells("A1:J1");
+            const mergedCell = currentWorksheet.getCell("A1");
+            mergedCell.value = "CottonConnect | Brand Wise Data Report";
+            mergedCell.font = { bold: true };
+            mergedCell.alignment = { horizontal: "center", vertical: "middle" };
+          }
+          // Set bold font for header row
+          const headerRow = currentWorksheet.addRow([
+            "Sr No.",
+              "Brand",
+              "Total Numbers of Farmers Registered",
+              "Total Estimated Seed Cotton (MT)",
+              "Total Seed Cotton Procured (MT)",
+              "Total Number of Bales Processed",
+              "Total Lint Processed (MT)",
+              "Total Lint Sold (MT)",
+              "Total Yarn Processed (MT)",
+              "Total Yarn Sold (MT)",
+          ]);
+          headerRow.font = { bold: true };
+        }
+
+      for await (let [index, item] of rows.entries()) {
+        let [result, trans, lintProcured, lintSold, yarnProcessed, yarnSold]: any =
+          await Promise.all([
+            Farm.findOne({
+              where: {
+                "$farmer.brand_id$": item.dataValues.id},
+              attributes: [
+                [Sequelize.fn('COUNT', Sequelize.literal('DISTINCT farmer_id')), 'total_farmers'],
+                [Sequelize.fn('COALESCE', Sequelize.fn('SUM', Sequelize.col('farms.total_estimated_cotton')), 0), 'total_estimated_cotton']
+              ],
+              include: [{
+                model: Farmer,
+                as: 'farmer',
+                attributes: []
+              }],
+              group:["farmer.brand_id"]
+            }),
+            Transaction.findOne({
+              attributes: [
+                [Sequelize.fn('COALESCE', Sequelize.fn('sum', Sequelize.literal("CAST(qty_purchased AS DOUBLE PRECISION)")), 0), 'total_cotton_procured']
+              ],
+              where: {
+                brand_id: item?.dataValues?.id,
+              }
+            }),
+            GinBale.findOne({
+              attributes: [
+                [
+                  sequelize.fn(
+                    "COALESCE",
+                    sequelize.fn(
+                      "SUM",
+                      sequelize.literal(
+                        'CAST("gin-bales"."weight" AS DOUBLE PRECISION)'
+                      )
+                    ),
+                    0
+                  ),
+                  "lint_processed",
+                ],
+                [
+                  sequelize.fn(
+                    "COUNT",
+                    Sequelize.literal('DISTINCT "gin-bales"."id"')
+                  ),
+                  "bales_processed",
+                ],
+              ],
+              include: [
+                {
+                  model: GinProcess,
+                  as: "ginprocess",
+                  attributes: [],
+                  include: [
+                    {
+                      model: Ginner,
+                      as: "ginner",
+                      attributes: [],
+                    },
+                  ],
+                },
+              ],
+              where: {
+                "$ginprocess.ginner.brand$": { [Op.overlap]: [item?.dataValues?.id] },
+              },
+              group: ['ginprocess.ginner.brand'],
+            }),
+            BaleSelection.findOne({
+              attributes: [
+                [
+                  sequelize.fn(
+                    "COALESCE",
+                    sequelize.fn(
+                      "SUM",
+                      sequelize.literal(
+                        'CAST("bale"."weight" AS DOUBLE PRECISION)'
+                      )
+                    ),
+                    0
+                  ),
+                  "lint_sold",
+                ],
+                [
+                  sequelize.fn("COUNT", Sequelize.literal("DISTINCT bale_id")),
+                  "bales_sold",
+                ],
+              ],
+              include: [
+                {
+                  model: GinSales,
+                  as: "sales",
+                  attributes: [],
+                  include: [
+                    {
+                      model: Ginner,
+                      as: "ginner",
+                      attributes: [],
+                    },
+                  ],
+                },
+                {
+                  model: GinBale,
+                  as: "bale",
+                  attributes: [],
+                },
+              ],
+              where: {
+                "$sales.ginner.brand$": { [Op.overlap]: [item?.dataValues?.id] },
+              },
+              group: ["sales.ginner.brand"],
+            }),
+            SpinProcess.findOne({
+              attributes: [
+                [
+                  sequelize.fn(
+                    "COALESCE",
+                    sequelize.fn("SUM", sequelize.col("net_yarn_qty")),
+                    0
+                  ),
+                  "yarn_processed",
+                ],
+              ],
+              include: [
+                {
+                  model: Spinner,
+                  as: "spinner",
+                  attributes: [],
+                },
+              ],
+              where: {
+                "$spinner.brand$": { [Op.overlap]: [item?.dataValues?.id] },
+              },
+              group: ["spinner.brand"],
+            }),
+            SpinSales.findOne({
+              attributes: [
+                [
+                  sequelize.fn(
+                    "COALESCE",
+                    sequelize.fn("SUM", sequelize.col("total_qty")),
+                    0
+                  ),
+                  "yarn_sold",
+                ],
+              ],
+              include: [
+                {
+                  model: Spinner,
+                  as: "spinner",
+                  attributes: [],
+                },
+              ],
+              where: {
+                "$spinner.brand$": { [Op.overlap]: [item?.dataValues?.id] },
+              },
+              group: ["spinner.brand"],
+            }),
+          ]);
+
+        const rowValues = [
+          index + offset + 1,
+          item?.dataValues.brand_name ? item?.dataValues?.brand_name : "",
+          result ? formatDecimal(result?.dataValues?.total_farmers) : 0,
+          result ? formatDecimal(convert_kg_to_mt(result?.dataValues?.total_estimated_cotton ?? 0)) : 0,
+          trans ? formatDecimal(convert_kg_to_mt(trans?.dataValues?.total_cotton_procured ?? 0)) : 0,
+          lintProcured ? lintProcured?.dataValues?.bales_processed : 0,
+          lintProcured ? formatDecimal(convert_kg_to_mt(lintProcured?.dataValues?.lint_processed ?? 0)) : 0,
+          lintSold ? formatDecimal(convert_kg_to_mt(lintSold?.dataValues?.lint_sold ?? 0)) : 0,
+          yarnProcessed ? formatDecimal(convert_kg_to_mt(yarnProcessed?.dataValues?.yarn_processed ?? 0)) : 0,
+          yarnSold ? formatDecimal(convert_kg_to_mt(yarnSold?.dataValues?.yarn_sold ?? 0)) : 0,
+        ];
+        currentWorksheet.addRow(rowValues).commit();
+        }
+        offset += batchSize;
+      }
+
+    // Save the workbook
+    await workbook.commit()
+    .then(() => {
+      // Rename the temporary file to the final filename
+      fs.renameSync("./upload/brand-wise-data-report-test.xlsx", './upload/brand-wise-data-report.xlsx');
+      console.log('brand-wise-data report generation completed.');
+    })
+    .catch(error => {
+      console.log('Failed generation Report.');
+      throw error;
+    });
+
+  } catch (error: any) {
+    console.log(error);
+  }
+}
+
 const formatDecimal = (value: string | number): string | number => {
   const numericValue = typeof value === "string" ? parseFloat(value) : value;
 
@@ -3409,4 +4084,4 @@ function convert_kg_to_mt(number: any) {
   return (number / 1000).toFixed(2);
 }
 
-export { exportReportsTameTaking, exportReportsOnebyOne };
+export { exportReportsTameTaking, exportReportsOnebyOne, generateSpinProcessBackwardfTraceabilty };

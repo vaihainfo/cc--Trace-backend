@@ -29,6 +29,8 @@ const fetchFarmerReportPagination = async (req: Request, res: Response) => {
     blockId,
     villageId,
     type,
+    startDate,
+    endDate
   }: any = req.query;
   const offset = (page - 1) * limit;
   const whereCondition: any = {};
@@ -102,6 +104,14 @@ const fetchFarmerReportPagination = async (req: Request, res: Response) => {
       whereCondition.village_id = { [Op.in]: idArray };
     }
 
+    if (startDate && endDate) {
+      const startOfDay = new Date(startDate);
+      startOfDay.setUTCHours(0, 0, 0, 0);
+      const endOfDay = new Date(endDate);
+      endOfDay.setUTCHours(23, 59, 59, 999);
+      whereCondition.createdAt = { [Op.between]: [startOfDay, endOfDay] }
+  }
+
     let include = [
       {
         model: Program,
@@ -170,6 +180,8 @@ const exportNonOrganicFarmerReport = async (req: Request, res: Response) => {
       blockId,
       villageId,
       exportType,
+      startDate,
+      endDate
     }: any = req.query;
 
     if (exportType === "all") {
@@ -275,6 +287,13 @@ const exportNonOrganicFarmerReport = async (req: Request, res: Response) => {
         .map((id: any) => parseInt(id, 10));
       whereCondition.ics_id = { [Op.in]: idArray };
     }
+    if (startDate && endDate) {
+      const startOfDay = new Date(startDate);
+      startOfDay.setUTCHours(0, 0, 0, 0);
+      const endOfDay = new Date(endDate);
+      endOfDay.setUTCHours(23, 59, 59, 999);
+      whereCondition.createdAt = { [Op.between]: [startOfDay, endOfDay] }
+  }
     let farmer: any;
     let include = [
       {
@@ -400,6 +419,8 @@ const exportOrganicFarmerReport = async (req: Request, res: Response) => {
     blockId,
     villageId,
     exportType,
+    startDate,
+    endDate
   }: any = req.query;
 
   try {
@@ -505,6 +526,14 @@ const exportOrganicFarmerReport = async (req: Request, res: Response) => {
           .map((id: any) => parseInt(id, 10));
         whereCondition.ics_id = { [Op.in]: idArray };
       }
+      if (startDate && endDate) {
+        const startOfDay = new Date(startDate);
+        startOfDay.setUTCHours(0, 0, 0, 0);
+        const endOfDay = new Date(endDate);
+        endOfDay.setUTCHours(23, 59, 59, 999);
+        whereCondition.createdAt = { [Op.between]: [startOfDay, endOfDay] }
+    }
+  
 
       let farmer: any;
       let include = [

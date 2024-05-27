@@ -6,6 +6,7 @@ import ICS from "../../models/ics.model";
 import Brand from "../../models/brand.model";
 import Ginner from "../../models/ginner.model";
 import Farmer from "../../models/farmer.model";
+import Season from "../../models/season.model";
 
 
 const createOrganicIntegrity = async (req: Request, res: Response) => {
@@ -13,6 +14,7 @@ const createOrganicIntegrity = async (req: Request, res: Response) => {
         const data = {
             date: req.body.date,
             brand_id: req.body.brandId,
+            season_id: req.body.seasonId,
             farmGroup_id: req.body.farmGroupId ? req.body.farmGroupId : null,
             ics_id: req.body.icsId ? req.body.icsId : null,
             test_stage: req.body.testStage,
@@ -36,7 +38,7 @@ const fetchOrganicIntegrityPagination = async (req: Request, res: Response) => {
     const searchTerm = req.query.search || '';
     const page = Number(req.query.page) || 1;
     const limit = Number(req.query.limit) || 10;
-    const { brandId, farmGroupId, icsId }: any = req.query;
+    const { brandId, farmGroupId, icsId, seasonId, ginnerId }: any = req.query;
     const offset = (page - 1) * limit;
     const whereCondition: any = {}
     try {
@@ -56,6 +58,12 @@ const fetchOrganicIntegrityPagination = async (req: Request, res: Response) => {
                 .map((id: any) => parseInt(id, 10));
             whereCondition.brand_id = { [Op.in]: idArray };
         }
+        if (seasonId) {
+            const idArray: number[] = seasonId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition.season_id = { [Op.in]: idArray };
+        }  
         if (farmGroupId) {
             const idArray: number[] = farmGroupId
                 .split(",")
@@ -68,6 +76,14 @@ const fetchOrganicIntegrityPagination = async (req: Request, res: Response) => {
                 .map((id: any) => parseInt(id, 10));
             whereCondition.ics_id = { [Op.in]: idArray };
         }
+     
+        if (ginnerId) {
+            const idArray: number[] = ginnerId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition.ginner_id = { [Op.in]: idArray };
+        }
+        
         let include = [
             {
                 model: FarmGroup, as: 'farmGroup'
@@ -83,6 +99,9 @@ const fetchOrganicIntegrityPagination = async (req: Request, res: Response) => {
             },
             {
                 model: Farmer, as: 'farmerdetails'
+            },
+            {
+                model: Season, as: 'season'
             }
         ]
         //fetch data with pagination
@@ -124,6 +143,9 @@ const fetchOrganicIntegrity = async (req: Request, res: Response) => {
             },
             {
                 model: Farmer, as: 'farmerdetails'
+            },
+            {
+                model: Season, as: 'season'
             }
         ]
         //fetch data with pagination
@@ -143,6 +165,7 @@ const updateOrganicIntegrity = async (req: Request, res: Response) => {
     try {
         const organicIntegrity = await OrganicIntegrity.update({
             date: req.body.date,
+            season_id: req.body.seasonId,
             brand_id: req.body.brandId,
             farmGroup_id: req.body.farmGroupId ? req.body.farmGroupId : undefined,
             ics_id: req.body.icsId ? req.body.icsId : undefined,

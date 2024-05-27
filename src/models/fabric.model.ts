@@ -100,6 +100,11 @@ const Fabric = db.define('fabrics', {
   short_name: {
     type: DataTypes.STRING
   },
+  status: {
+    allowNull: false,
+    defaultValue: true,
+    type: DataTypes.BOOLEAN
+  },
 });
 
 Fabric.belongsTo(Country, {

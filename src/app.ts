@@ -91,7 +91,7 @@ import cropCurrentSeasonRouter from './router/master/crop-current-season';
 import organicProgramDataDigitizationRouter from './router/services/organic-program-data-digitization';
 import { sendScheduledEmails } from "./controllers/email-management/scheduled-email.controller";
 import ExportData from "./models/export-data-check.model";
-import { exportReportsTameTaking, exportReportsOnebyOne } from "./controllers/reports/export-cron";
+import { exportReportsTameTaking, exportReportsOnebyOne, generateSpinProcessBackwardfTraceabilty } from "./controllers/reports/export-cron";
 import moment from "moment";
 import 'moment-timezone';
 
@@ -115,14 +115,14 @@ const connectToDb = async () => {
   const data = await sequelize.sync({ force: false })
   try {
     await sequelize.authenticate();
-    console.log("Database Connected successfully.");
+  await generateSpinProcessBackwardfTraceabilty();
 
+      console.log("Database Connected successfully.");
       const used = process.memoryUsage();
       console.log(`Memory usage: ${JSON.stringify(used)}`);
       console.log("Current Server Time", moment());
       console.log("Time Zone", serverTimezone);
       console.log("Offset IST", differenceInMinutes);
-
   } catch (error) {
     console.error("Unable to connect to the database:", error);
   }

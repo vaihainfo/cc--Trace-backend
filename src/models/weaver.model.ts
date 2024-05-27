@@ -109,7 +109,12 @@ const Weaver = db.define('weavers', {
   },
   registration_document: {
     type: DataTypes.STRING
-  }
+  },
+  status: {
+    allowNull: false,
+    defaultValue: true,
+    type: DataTypes.BOOLEAN
+  },
 });
 
 Weaver.belongsTo(Country, {

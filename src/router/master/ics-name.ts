@@ -5,7 +5,8 @@ import {
     fetchIcsNamePagination,
     updateIcsName,
     updateIcsNameStatus,
-    deleteIcsName
+    deleteIcsName,
+    getSeason
 } from "../../controllers/ics-name";
 import accessControl from "../../middleware/access-control";
 import { Router } from "express";
@@ -21,6 +22,7 @@ router.post('/multiple', createIcsNames);
 router.put('/', updateIcsName);
 router.put('/status', updateIcsNameStatus);
 router.delete('/', deleteIcsName);
+router.get('/seasons', getSeason);
 
 
 export default router;

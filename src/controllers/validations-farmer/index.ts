@@ -51,7 +51,7 @@ const fetchValidationFarmerPagination = async (req: Request, res: Response) => {
     const searchTerm = req.query.search || '';
     const page = Number(req.query.page) || 1;
     const limit = Number(req.query.limit) || 10;
-    const { brandId, icsId, farmGroupId }: any = req.query
+    const { seasonId, brandId, icsId, farmGroupId }: any = req.query
     const offset = (page - 1) * limit;
     const whereCondition: any = {}
     try {
@@ -63,6 +63,13 @@ const fetchValidationFarmerPagination = async (req: Request, res: Response) => {
                 { '$brand.brand_name$': { [Op.iLike]: `%${searchTerm}%` } }, // Search by Brand name
             ];
         }
+        if (seasonId) {
+            const idArray: number[] = seasonId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition.season_id = { [Op.in]: idArray };
+        }
+
         if (brandId) {
             const idArray: number[] = brandId
                 .split(",")

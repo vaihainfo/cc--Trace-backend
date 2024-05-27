@@ -59,13 +59,19 @@ import {
     exportVillageSeedCotton,
     spinnerBackwardTraceabiltyReport,
     exportSpinnerBackwardTraceability,
-    exportLoad
+    exportLoad,
+    fetchSpinnerGreyOutReport,
+    exportSpinnerGreyOutReport,
+    spinnerProcessBackwardTraceabiltyReport,
+    exportSpinProcessBackwardfTraceabilty,
+    brandWiseDataReport,
+    exportBrandWiseDataReport
 } from "../../controllers/reports";
 import accessControl from "../../middleware/access-control";
 
 const router = Router();
 
-router.use(accessControl);
+// router.use(accessControl);
 
 // Transaction Report Route
 router.get('/get-transactions', fetchTransactionsReport);
@@ -87,6 +93,12 @@ router.get('/get-gin-sales-report', fetchGinSalesPagination);
 router.get('/get-gin-pending-sales-report', fetchPendingGinnerSales);
 router.get('/export-pending-sales-report', exportPendingGinnerSales);
 router.get('/export-gin-sales-report', exportGinnerSales);
+
+// Grey Out Report
+
+router.get('/get-spin-grey-out-report', fetchSpinnerGreyOutReport);
+router.get('/export-spin-grey-out-report', exportSpinnerGreyOutReport);
+
 router.get('/get-spinner-bale-report', fetchSpinnerBalePagination);
 router.get('/get-spinner-pending-bale-report', fetchSpinnerPendingBale);
 router.get('/export-spinner-pending-bale-report', exportPendingSpinnerBale);
@@ -139,5 +151,11 @@ router.get('/export-spinner-traceability-report', exportSpinnerBackwardTraceabil
 
 router.get('/get-village-seed-cotton-report', villageSeedCottonReport);
 router.get('/export-village-seed-cotton-report', exportVillageSeedCotton);
+
+router.get('/get-spin-process-backward-traceability-report', spinnerProcessBackwardTraceabiltyReport);
+router.get('/export-spin-process-backward-traceability-report', exportSpinProcessBackwardfTraceabilty);
+
+router.get('/get-brand-wise-data-report', brandWiseDataReport);
+router.get('/export-brand-wise-data-report', exportBrandWiseDataReport);
 
 export default router;  
