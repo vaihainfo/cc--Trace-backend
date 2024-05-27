@@ -209,10 +209,6 @@ const getQueryParams = async (
         await validator.validate(fromDate);
         await validator.validate(toDate);
         await validator.validate(garment);
-        const user = (req as any).user;
-        if (user?.role == 3 && user?._id) {
-            brand = user._id;
-        }
 
         return {
             program,

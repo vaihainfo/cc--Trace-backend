@@ -160,10 +160,6 @@ const getQueryParams = async (
     //   });
     //   season = seasonOne.id;
     // }
-    const user = (req as any).user
-    if(user?.role == 3 && user?._id){
-      brand = user._id
-    }
 
     return {
       program,
