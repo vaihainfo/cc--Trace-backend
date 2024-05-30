@@ -183,11 +183,11 @@ cron.schedule(`0 ${checkTimeDiff(2,differenceInHours)} * * *`, async () => {
 
 // ---------------------hostinger--------------------------------//
 
-cron.schedule( `0 ${checkTimeDiff(13,differenceInHours)} * * *`, async () => {
-  console.log('Running a task at 1 pm IST');
-  // Add your task for 1 am IST here
-  exportReportsTameTaking();
-});
+// cron.schedule( `0 ${checkTimeDiff(13,differenceInHours)} * * *`, async () => {
+//   console.log('Running a task at 1 pm IST');
+//   // Add your task for 1 am IST here
+//   exportReportsTameTaking();
+// });
 
 // Schedule the cron job to run at 1 AM IST
 cron.schedule(`25 ${checkTimeDiff(19,differenceInHours)} * * *`, () => {
