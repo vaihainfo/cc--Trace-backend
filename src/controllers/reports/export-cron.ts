@@ -81,7 +81,7 @@ const exportReportsTameTaking = async () => {
 }
 
 const exportReportsOnebyOne = async () => {
-  // //call all export reports one by one on every cron
+  //call all export reports one by one on every cron
   await generateFaildReport("Farmer");
   await generateFaildReport("Procurement");
 
@@ -3400,127 +3400,270 @@ const generateSpinnerSale = async () => {
 
 const generateSpinProcessBackwardfTraceabilty = async () => {
   const maxRowsPerWorksheet = 500000; // Maximum number of rows per worksheet in Excel
-  const batchSize = 5000;
-  let offset = 0;
-  let worksheetIndex = 1;
-
+  const whereCondition: any = {};
   try {
-    // Create the excel workbook file
-    const workbook = new ExcelJS.stream.xlsx.WorkbookWriter({
-      filename: './upload/spin-process-backward-traceability-temp.xlsx'
-    });
 
-    const include = [
+        // Create the excel workbook file
+        const workbook = new ExcelJS.stream.xlsx.WorkbookWriter({
+          stream: fs.createWriteStream("./upload/spin-process-backward-traceability-test.xlsx")
+        });
+    
+        const batchSize = 5000;
+        let worksheetIndex = 0;
+        let offset = 0;
+        let hasNextBatch = true;
+
+    let include = [
       {
         model: Spinner,
-        as: 'spinner',
-        attributes: ['id', 'name'],
+        as: "spinner",
+        attributes: ["id", "name"],
       }
     ];
+    whereCondition["$spinprocess.id$"] = { [Op.not]: null };
 
-    while (true) {
-      const { count, rows } = await SpinProcess.findAndCountAll({
-        include,
-        offset,
+    while (hasNextBatch) {
+      const rows: any = await LintSelections.findAll({
+        attributes: [
+          [Sequelize.literal('"spinprocess"."id"'), "spinprocess_id"],
+          [Sequelize.literal('"spinprocess"."date"'), "date"],
+          [Sequelize.literal('"spinprocess"."createdAt"'), "createdAt"],
+          [Sequelize.literal('"spinprocess"."reel_lot_no"'), "reel_lot_no"],
+          [Sequelize.literal('"spinprocess"."net_yarn_qty"'), "net_yarn_qty"],
+          [Sequelize.col('"spinprocess"."spinner"."id"'), "spinner_id"],
+          [Sequelize.col('"spinprocess"."spinner"."name"'), "spinner_name"],
+          [Sequelize.literal('"spinprocess"."qr"'), "qr"],
+          [Sequelize.fn('ARRAY_AGG', Sequelize.literal('DISTINCT lint_id')), "spnr_lint_ids"],
+          [Sequelize.fn('STRING_AGG', Sequelize.literal('DISTINCT "ginsales"."invoice_no"'), ',' ) , "gnr_invoice_no"],
+          [Sequelize.fn('STRING_AGG', Sequelize.literal('DISTINCT "ginsales"."lot_no"'), ',' ) , "gnr_lot_no"],
+          [Sequelize.fn('STRING_AGG', Sequelize.literal('DISTINCT "ginsales"."reel_lot_no"'), ',' ) , "gnr_reel_lot_no"],
+          [Sequelize.fn('STRING_AGG', Sequelize.literal('DISTINCT "ginsales->ginner"."name"'), ',' ) , "gnr_name"],
+          [Sequelize.fn("COALESCE", Sequelize.fn("SUM", sequelize.col("qty_used")), 0), "lint_consumed",],
+        ],
+        where: whereCondition,
+        include: [
+          {
+            model: GinSales,
+            as: "ginsales",
+            include: [{
+              model: Ginner,
+                as: "ginner",
+                attributes: [],
+            }],
+            attributes: [],
+          },
+          {
+            model: SpinProcess,
+            as: "spinprocess",
+            include: include,
+            attributes: [],
+          }
+        ],
+        group: [
+          "spinprocess.id",
+          "spinprocess.spinner.id",
+        ],
+        offset: offset,
         limit: batchSize,
       });
 
-      if (rows.length === 0) break;
+      if (rows.length === 0) {
+        hasNextBatch = false;
+        break;
+      }
 
-      // Create a new worksheet if necessary
+      if (offset % maxRowsPerWorksheet === 0) {
+        worksheetIndex++;
+      }
+
       let currentWorksheet = workbook.getWorksheet(`Sheet${worksheetIndex}`);
       if (!currentWorksheet) {
         currentWorksheet = workbook.addWorksheet(`Sheet${worksheetIndex}`);
-        // Add header only if it's the first batch
-        if (worksheetIndex === 1) {
-          currentWorksheet.mergeCells('A1:M1');
-          const mergedCell = currentWorksheet.getCell('A1');
-          mergedCell.value = 'CottonConnect | Spinner Process Backward Traceability Report';
+        if (worksheetIndex == 1) {
+          currentWorksheet.mergeCells("A1:M1");
+          const mergedCell = currentWorksheet.getCell("A1");
+          mergedCell.value = "CottonConnect | Spinner Process Backward Traceability Report";
           mergedCell.font = { bold: true };
-          mergedCell.alignment = { horizontal: 'center', vertical: 'middle' };
+          mergedCell.alignment = { horizontal: "center", vertical: "middle" };
         }
+        // Set bold font for header row
+        // Set bold font for header row
         const headerRow = currentWorksheet.addRow([
-          'S. No.', 'Spinner Name', 'Fabric Name', 'Yarn REEL Lot No', 'Invoice Number',
-          'Yarn Quantity Processed (Kgs)', 'Yarn Quantity Sold (Kgs)', 'Bale REEL Lot lint consumed',
-          'Bale Lot No', 'Ginner to Spinner Invoice', 'Lint Consumed (Kgs)', 'Villages', 'Ginner Name'
+          "S. No.",
+          "Spinner Name",
+          "Fabric Name",
+          "Yarn REEL Lot No",
+          "Invoice Number",
+          "Yarn Quantity Processed (Kgs)",
+          "Yarn Quantity Sold (Kgs)",
+          "Bale REEL Lot lint consumed",
+          "Bale Lot No",
+          "Ginner to Spinner Invoice",
+          "Lint Consumed (Kgs)",
+          "Villages",
+          "Ginner Name"
         ]);
         headerRow.font = { bold: true };
-        headerRow.commit();
       }
 
-      for (const [index, item] of rows.entries()) {
-        const spnr_lint_ids = (await LintSelections.findAll({
-          where: { process_id: item.id },
-          attributes: ['lint_id']
-        })).map((obj:any) => obj.lint_id);
+      for await (let [index, item] of rows.entries()) {
 
-        const lintConsumed = await LintSelections.findOne({
-          attributes: [[sequelize.fn('COALESCE', sequelize.fn('SUM', sequelize.col('qty_used')), 0), 'lint_consumed']],
-          where: { process_id: item.id },
-          group: ['process_id']
-        });
-
-        const yarnConsumed = await SpinProcessYarnSelection.findAll({
+        let yarnConsumed= await SpinProcessYarnSelection.findOne({
           attributes: [
-            'qty_used',
-            [Sequelize.col('sales.invoice_no'), 'invoice_no'],
-            [Sequelize.col('sales.knitter.name'), 'knitter'],
-            [Sequelize.col('sales.weaver.name'), 'weaver']
+            [Sequelize.fn('COALESCE', Sequelize.fn('SUM', Sequelize.col('qty_used')), 0), 'spnr_yarn_sold'],
+            [Sequelize.fn('ARRAY_AGG', Sequelize.literal('DISTINCT "sales"."buyer_id"')), "buyer_id"],
+            [Sequelize.fn('ARRAY_AGG', Sequelize.literal('DISTINCT "sales"."knitter_id"')), "knitter_id"],
+            [Sequelize.fn('ARRAY_AGG', Sequelize.literal('DISTINCT "sales->knitter"."name"')), "knitter"],
+            [Sequelize.fn('ARRAY_AGG', Sequelize.literal('DISTINCT "sales->weaver"."name"')), "weaver"],
+            [Sequelize.fn('STRING_AGG', Sequelize.literal('DISTINCT "sales"."invoice_no"'), ',' ) , "spnr_invoice_no"],
           ],
-          include: [{ model: SpinSales, as: 'sales', include: [{ model: Weaver, as: 'weaver' }, { model: Knitter, as: 'knitter' }] }],
-          where: { spin_process_id: item.id }
+          include:[{
+            model: SpinSales,
+            as: "sales",
+            attributes: [],
+            include:[
+              {
+                model: Weaver,
+                as: "weaver",
+                attributes: [],
+              },
+              {
+                model: Knitter,
+                as: "knitter",
+                attributes: [],
+              },
+          ]
+          }],
+          where: { spin_process_id: item.dataValues.spinprocess_id },
+          group: [
+            "spin_process_id",
+          ],
         });
-
-        const ginSales = spnr_lint_ids.length > 0 ? await GinSales.findAll({
-          where: { id: { [Op.in]: spnr_lint_ids } },
-          include: [{ model: Ginner, as: 'ginner', attributes: ['name'] }]
-        }) : [];
-
-        const ginProcessIds = spnr_lint_ids.length > 0 ? (await GinBale.findAll({
-          where: { id: { [Op.in]: (await BaleSelection.findAll({
-            where: { sales_id: ginSales.map((g:any) => g.id) },
-            attributes: ['bale_id']
-          })).map((b:any) => b.bale_id) } },
-          attributes: ['process_id']
-        })).map((g:any) => g.process_id) : [];
-
-        const transactions = ginProcessIds.length > 0 ? await Transaction.findAll({
-          where: { id: { [Op.in]: (await CottonSelection.findAll({
-            where: { process_id: ginProcessIds },
-            attributes: ['transaction_id']
-          })).map((c:any) => c.transaction_id) } },
-          include: [{ model: Village, as: 'village', attributes: ['village_name'] }]
-        }) : [];
+  
+        let gin_process_ids: any = [];
+        let transactions: any = [];
+  
+        if (item.dataValues.spnr_lint_ids && item.dataValues.spnr_lint_ids.length > 0) {
+          let ginBaleId = await BaleSelection.findAll({
+            where: {
+              sales_id: item.dataValues.spnr_lint_ids,
+            },
+            attributes: [
+              [Sequelize.col('"bale"."process_id"'), "gin_process_id"],
+            ],
+            include: [{
+              model: GinBale,
+              attributes: [],
+              as: "bale",
+            }],
+            // group: ['sales_id'],
+          });
+          
+          gin_process_ids = ginBaleId && ginBaleId.length > 0 ? [...new Set(ginBaleId.map((item: any) => item?.dataValues?.gin_process_id))]: [];
+        }
+  
+        if (gin_process_ids.length > 0) {
+          transactions = await CottonSelection.findAll({
+            where: {
+              process_id: {
+                          [Op.in]: gin_process_ids,
+                        },
+            },
+            attributes: [
+              [Sequelize.col('"transaction->village"."village_name"'), "village_name"],
+              // [Sequelize.fn('STRING_AGG', Sequelize.literal('DISTINCT "transaction->village"."village_name"'), ',' ) , "frmr_villages"],
+            ],
+            include: [{
+              model: Transaction,
+              attributes: [],
+              as: "transaction",
+              include: [{
+                model: Village,
+                as: "village",
+                attributes: [],
+              }]
+            }],
+            // group: ['process_id'],
+          });
+        }
+  
+        let obj: any = {};
+  
+        let knitterName =
+          yarnConsumed 
+          ? yarnConsumed?.dataValues?.knitter
+            .map((val: any) => val)
+            .filter((item: any) => item !== null && item !== undefined)
+          : [];
+        
+        let weaverName =
+          yarnConsumed 
+            ? yarnConsumed?.dataValues?.weaver
+              .map((val: any) => val)
+              .filter((item: any) => item !== null && item !== undefined)
+            : [];
+  
+        
+        obj.fbrc_name = [...new Set([...knitterName, ...weaverName])];
+        obj.spnr_invoice_no =  yarnConsumed ? yarnConsumed?.dataValues?.spnr_invoice_no : null;
+        obj.spnr_yarn_sold = yarnConsumed ? yarnConsumed?.dataValues?.spnr_yarn_sold : null;
+  
+        let frmrVillages =
+          transactions && transactions.length > 0
+            ? transactions
+              .map((val: any) => val?.dataValues.village_name)
+              .filter((item: any) => item !== null && item !== undefined)
+            : [];
+  
+        obj.frmr_villages = [...new Set(frmrVillages)];
 
         const rowValues = [
           index + offset + 1,
-          item.spinner?.name || '',
-          yarnConsumed.map((y:any) => y.knitter || y.weaver).filter(Boolean).join(', '),
-          item.reel_lot_no || '',
-          yarnConsumed.map((y:any) => y.invoice_no).filter(Boolean).join(', '),
-          item.net_yarn_qty || 0,
-          yarnConsumed.reduce((sum:any, y:any) => sum + Number(y.qty_used), 0),
-          ginSales.map((g:any) => g.reel_lot_no).filter(Boolean).join(', '),
-          ginSales.map((g:any) => g.lot_no).filter(Boolean).join(', '),
-          ginSales.map((g:any) => g.invoice_no).filter(Boolean).join(', '),
-          lintConsumed ? Number(lintConsumed.lint_consumed).toFixed(2) : 0,
-          transactions.map((t:any) => t.village?.village_name).filter(Boolean).join(', '),
-          ginSales.map((g:any) => g.ginner?.name).filter(Boolean).join(', ')
+          item?.dataValues.spinner_name ? item.dataValues.spinner_name : "",
+          obj.fbrc_name && obj.fbrc_name.length > 0
+          ? obj.fbrc_name.join(", ")
+          : "",
+          item.dataValues?.reel_lot_no ? item.dataValues?.reel_lot_no : "",
+          obj.spnr_invoice_no
+          ? obj.spnr_invoice_no
+          : "",
+          item.dataValues?.net_yarn_qty ? item.dataValues?.net_yarn_qty : 0,
+          obj.spnr_yarn_sold ? obj.spnr_yarn_sold : 0,
+          item?.dataValues.gnr_reel_lot_no
+          ? item?.dataValues.gnr_reel_lot_no
+          : "",
+          item?.dataValues.gnr_lot_no
+          ? item?.dataValues.gnr_lot_no
+          : "",
+          item?.dataValues.gnr_invoice_no
+          ? item?.dataValues.gnr_invoice_no
+          : "",
+          item?.dataValues.lint_consumed ? item?.dataValues.lint_consumed : 0,
+          obj.frmr_villages && obj.frmr_villages.length > 0
+          ? obj.frmr_villages.join(", ")
+          : "",
+          item?.dataValues.gnr_name
+          ? item?.dataValues.gnr_name
+          : "",
         ];
-
         currentWorksheet.addRow(rowValues).commit();
       }
-
       offset += batchSize;
-      if (offset % maxRowsPerWorksheet === 0) worksheetIndex++;
-    }
+  }
 
-    await workbook.commit();
-    fs.renameSync('./upload/spin-process-backward-traceability-temp.xlsx', './upload/spin-process-backward-traceability.xlsx');
-    console.log('Spin process backward traceability report generation completed.');
-
-  } catch (error) {
-    console.error('Failed to generate report:', error);
+    // Save the workbook
+    await workbook.commit()
+      .then(() => {
+        // Rename the temporary file to the final filename
+        fs.renameSync("./upload/spin-process-backward-traceability-test.xlsx", './upload/spin-process-backward-traceability.xlsx');
+        console.log('spin-process-backward-traceability report generation completed.');
+      })
+      .catch(error => {
+        console.log('Failed generation Report.');
+        throw error;
+      });
+  } catch (error: any) {
+    console.log(error);
   }
 };
 

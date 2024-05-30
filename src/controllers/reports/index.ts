@@ -15473,7 +15473,8 @@ const villageSeedCottonReport = async (req: Request, res: Response) => {
   const limit = Number(req.query.limit) || 10;
   const offset = (page - 1) * limit;
   const whereCondition: any = {};
-  const { brandId, stateId, countryId }: any = req.query;
+  const { brandId, stateId, countryId, seasonId }: any = req.query;
+  console.log(seasonId)
   try {
     if (searchTerm) {
       whereCondition[Op.or] = [
@@ -15499,6 +15500,13 @@ const villageSeedCottonReport = async (req: Request, res: Response) => {
         .split(",")
         .map((id: any) => parseInt(id, 10));
       whereCondition["$farmer.state_id$"] = { [Op.in]: idArray };
+    }
+
+    if (seasonId) {
+      const idArray: number[] = seasonId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.season_id = { [Op.in]: idArray };
     }
 
     const { count, rows } = await Farm.findAndCountAll({
@@ -15558,7 +15566,6 @@ const villageSeedCottonReport = async (req: Request, res: Response) => {
       offset: offset,
       limit: limit,
     });
-
     let data: any = [];
 
     if (rows.length > 0) {
@@ -15600,7 +15607,7 @@ const exportVillageSeedCotton = async (req: Request, res: Response) => {
   const limit = Number(req.query.limit) || 10;
   const offset = (page - 1) * limit;
   const whereCondition: any = {};
-  const { stateId, brandId, countryId }: any = req.query;
+  const { stateId, brandId, countryId, seasonId }: any = req.query;
   try {
     if (searchTerm) {
       whereCondition[Op.or] = [
@@ -15628,6 +15635,14 @@ const exportVillageSeedCotton = async (req: Request, res: Response) => {
         .map((id: any) => parseInt(id, 10));
       whereCondition["$farmer.country_id$"] = { [Op.in]: idArray };
     }
+
+    if (seasonId) {
+      const idArray: number[] = seasonId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.season_id = { [Op.in]: idArray };
+    }
+    
 
     // Create the excel workbook file
     const workbook = new ExcelJS.Workbook();
@@ -15792,37 +15807,40 @@ const spinnerProcessBackwardTraceabiltyReport = async (
   try {
     if (searchTerm) {
       whereCondition[Op.or] = [
-        { reel_lot_no: { [Op.iLike]: `%${searchTerm}%` } },
-        { "$spinner.name$": { [Op.iLike]: `%${searchTerm}%` } },
+        { "$spinprocess.reel_lot_no$": { [Op.iLike]: `%${searchTerm}%` } },
+        { "$spinprocess.spinner.name$": { [Op.iLike]: `%${searchTerm}%` } },
       ];
     }
-    if (spinnerId) {
-      const idArray: number[] = spinnerId
-        .split(",")
-        .map((id: any) => parseInt(id, 10));
-      whereCondition.spinner_id = { [Op.in]: idArray };
-    }
+    
+  if (spinnerId) {
+    const idArray: number[] = spinnerId
+      .split(",")
+      .map((id: any) => parseInt(id, 10));
+    whereCondition["$spinprocess.spinner_id$"] = { [Op.in]: idArray };
+  }
 
-    if (brandId) {
-      const idArray: number[] = brandId
-        .split(",")
-        .map((id: any) => parseInt(id, 10));
-      whereCondition["$spinner.brand$"] = { [Op.overlap]: idArray };
-    }
+  if (brandId) {
+    const idArray: number[] = brandId
+      .split(",")
+      .map((id: any) => parseInt(id, 10));
+    whereCondition["$spinprocess.spinner.brand$"] = { [Op.overlap]: idArray };
+  }
 
-    if (seasonId) {
-      const idArray: number[] = seasonId
-        .split(",")
-        .map((id: any) => parseInt(id, 10));
-      whereCondition.season_id = { [Op.in]: idArray };
-    }
+  if (seasonId) {
+    const idArray: number[] = seasonId
+      .split(",")
+      .map((id: any) => parseInt(id, 10));
+    whereCondition["$spinprocess.season_id$"] = { [Op.in]: idArray };
+  }
 
-    if (programId) {
-      const idArray: number[] = programId
-        .split(",")
-        .map((id: any) => parseInt(id, 10));
-      whereCondition.program_id = { [Op.in]: idArray };
-    }
+  if (programId) {
+    const idArray: number[] = programId
+      .split(",")
+      .map((id: any) => parseInt(id, 10));
+    whereCondition["$spinprocess.program_id$"] = { [Op.in]: idArray };
+  }
+
+  whereCondition["$spinprocess.id$"] = { [Op.not]: null };
 
     let include = [
       {
@@ -15833,52 +15851,65 @@ const spinnerProcessBackwardTraceabiltyReport = async (
     ];
 
     //fetch data with pagination
-    const { count, rows } = await SpinProcess.findAndCountAll({
-      attributes: ['id', 'date', 'createdAt', 'reel_lot_no', 'net_yarn_qty', 'qr'],
+
+    const { count, rows }: any = await LintSelections.findAndCountAll({
+      attributes: [
+        [Sequelize.literal('"spinprocess"."id"'), "spinprocess_id"],
+        [Sequelize.literal('"spinprocess"."date"'), "date"],
+        [Sequelize.literal('"spinprocess"."createdAt"'), "createdAt"],
+        [Sequelize.literal('"spinprocess"."reel_lot_no"'), "reel_lot_no"],
+        [Sequelize.literal('"spinprocess"."net_yarn_qty"'), "net_yarn_qty"],
+        [Sequelize.col('"spinprocess"."spinner"."id"'), "spinner_id"],
+        [Sequelize.col('"spinprocess"."spinner"."name"'), "spinner_name"],
+        [Sequelize.literal('"spinprocess"."qr"'), "qr"],
+        [Sequelize.fn('ARRAY_AGG', Sequelize.literal('DISTINCT lint_id')), "spnr_lint_ids"],
+        [Sequelize.fn('STRING_AGG', Sequelize.literal('DISTINCT "ginsales"."invoice_no"'), ',' ) , "gnr_invoice_no"],
+        [Sequelize.fn('STRING_AGG', Sequelize.literal('DISTINCT "ginsales"."lot_no"'), ',' ) , "gnr_lot_no"],
+        [Sequelize.fn('STRING_AGG', Sequelize.literal('DISTINCT "ginsales"."reel_lot_no"'), ',' ) , "gnr_reel_lot_no"],
+        [Sequelize.fn('STRING_AGG', Sequelize.literal('DISTINCT "ginsales->ginner"."name"'), ',' ) , "gnr_name"],
+        [Sequelize.fn("COALESCE", Sequelize.fn("SUM", sequelize.col("qty_used")), 0), "lint_consumed",],
+      ],
       where: whereCondition,
-      include: include,
-      order: [["id", "desc"]],
+      include: [
+        {
+          model: GinSales,
+          as: "ginsales",
+          include: [{
+            model: Ginner,
+              as: "ginner",
+              attributes: [],
+          }],
+          attributes: [],
+        },
+        {
+          model: SpinProcess,
+          as: "spinprocess",
+          include: include,
+          attributes: [],
+        }
+      ],
+      group: [
+        "spinprocess.id",
+        "spinprocess.spinner.id",
+      ],
+      order: [["spinprocess_id", "desc"]],
       offset: offset,
       limit: limit,
     });
 
+
     let data = [];
 
     for await (let [index, item] of rows.entries()) {
-      let spnr_lint_ids: any = [];
-      let spinProcess = await LintSelections.findAll({
-        where: {
-          process_id: item.dataValues.id,
-        },
-        attributes: ["id", "lint_id"],
-      });    
-      spnr_lint_ids = spinProcess.map((obj: any) => obj?.dataValues?.lint_id);
 
-      let lintConsumed = await LintSelections.findOne({
+      let yarnConsumed= await SpinProcessYarnSelection.findOne({
         attributes: [
-          [
-            sequelize.fn(
-              "COALESCE",
-              sequelize.fn("SUM", sequelize.col("qty_used")),
-              0
-            ),
-            "lint_consumed",
-          ],
-        ],
-        where: { process_id: item.dataValues.id },
-        group: ["process_id"],
-      });
-
-      let yarnConsumed= await SpinProcessYarnSelection.findAll({
-        attributes: [
-          'sales_id',
-          "qty_used",
-          [Sequelize.col('"sales"."buyer_type"'), "buyer_type"],
-          [Sequelize.col('"sales"."buyer_id"'), "buyer_id"],
-          [Sequelize.col('"sales"."knitter_id"'), "knitter_id"],
-          [Sequelize.col('"sales"."knitter"."name'), "knitter"],
-          [Sequelize.col('"sales"."weaver"."name'), "weaver"],
-          [Sequelize.literal('"sales"."invoice_no"'), "invoice_no"],
+          [Sequelize.fn('COALESCE', Sequelize.fn('SUM', Sequelize.col('qty_used')), 0), 'spnr_yarn_sold'],
+          [Sequelize.fn('ARRAY_AGG', Sequelize.literal('DISTINCT "sales"."buyer_id"')), "buyer_id"],
+          [Sequelize.fn('ARRAY_AGG', Sequelize.literal('DISTINCT "sales"."knitter_id"')), "knitter_id"],
+          [Sequelize.fn('ARRAY_AGG', Sequelize.literal('DISTINCT "sales->knitter"."name"')), "knitter"],
+          [Sequelize.fn('ARRAY_AGG', Sequelize.literal('DISTINCT "sales->weaver"."name"')), "weaver"],
+          [Sequelize.fn('STRING_AGG', Sequelize.literal('DISTINCT "sales"."invoice_no"'), ',' ) , "spnr_invoice_no"],
         ],
         include:[{
           model: SpinSales,
@@ -15888,161 +15919,94 @@ const spinnerProcessBackwardTraceabiltyReport = async (
             {
               model: Weaver,
               as: "weaver",
-              attributes: ["id", "name"],
+              attributes: [],
             },
             {
               model: Knitter,
               as: "knitter",
-              attributes: ["id", "name"],
+              attributes: [],
             },
         ]
         }],
-        where: { spin_process_id: item.dataValues.id },
+        where: { spin_process_id: item.dataValues.spinprocess_id },
+        group: [
+          "spin_process_id",
+        ],
       });
 
       let ginSales: any = [];
       let gin_process_ids: any = [];
-      let transactions_ids: any = [];
+      let transactions: any = [];
 
-      if (spnr_lint_ids.length > 0) {
-        ginSales = await GinSales.findAll({
-          attributes: [
-            "id",
-            "invoice_no",
-            "lot_no",
-            "reel_lot_no",
-          ],
-          include: [
-            {
-              model: Ginner,
-              as: "ginner",
-              attributes: ["id", "name"],
-            },
-          ],
-          where: {
-            id: {
-              [Op.in]: spnr_lint_ids,
-            },
-          },
-        });
-
+      if (item.dataValues.spnr_lint_ids && item.dataValues.spnr_lint_ids.length > 0) {
         let ginBaleId = await BaleSelection.findAll({
           where: {
-            sales_id: ginSales.map((obj: any) => obj.dataValues.id),
+            sales_id: item.dataValues.spnr_lint_ids,
           },
-          attributes: ["id", "bale_id"],
+          attributes: [
+            [Sequelize.col('"bale"."process_id"'), "gin_process_id"],
+          ],
+          include: [{
+            model: GinBale,
+            attributes: [],
+            as: "bale",
+          }],
+          // group: ['sales_id'],
         });
-
-        let ginProcessIds = await GinBale.findAll({
-          where: {
-            id: ginBaleId.map((obj: any) => obj.dataValues.bale_id),
-          },
-          attributes: ["id", "process_id"],
-        });
-        gin_process_ids = ginProcessIds.map(
-          (obj: any) => obj.dataValues.process_id
-        );
+        
+        gin_process_ids = ginBaleId && ginBaleId.length > 0 ? [...new Set(ginBaleId.map((item: any) => item?.dataValues?.gin_process_id))]: [];
       }
 
       if (gin_process_ids.length > 0) {
-        let cottornIds = await CottonSelection.findAll({
+        transactions = await CottonSelection.findAll({
           where: {
-            process_id: gin_process_ids,
+            process_id: {
+                        [Op.in]: gin_process_ids,
+                      },
           },
-          attributes: ["id", "transaction_id"],
-        });
-        transactions_ids = cottornIds.map(
-          (obj: any) => obj.dataValues.transaction_id
-        );
-      }
-
-      let transactions: any = [];
-      if (transactions_ids.length > 0) {
-        transactions = await Transaction.findAll({
           attributes: [
-            "id",
+            [Sequelize.col('"transaction->village"."village_name"'), "village_name"],
+            // [Sequelize.fn('STRING_AGG', Sequelize.literal('DISTINCT "transaction->village"."village_name"'), ',' ) , "frmr_villages"],
           ],
-          where: {
-            id: {
-              [Op.in]: transactions_ids,
-            },
-          },
-          include: [
-            {
+          include: [{
+            model: Transaction,
+            attributes: [],
+            as: "transaction",
+            include: [{
               model: Village,
               as: "village",
-              attributes: ["id", "village_name"],
-            },
-          ],
+              attributes: [],
+            }]
+          }],
+          // group: ['process_id'],
         });
       }
 
-      let yarnSold = 0;
-      yarnConsumed && yarnConsumed.length > 0 && yarnConsumed.map((item: any)=> yarnSold += Number(item?.dataValues?.qty_used));
-
       let obj: any = {};
-      obj.lint_consumed = lintConsumed ? formatDecimal(lintConsumed?.dataValues?.lint_consumed) : 0;
 
       let knitterName =
-        yarnConsumed && yarnConsumed.length > 0
-        ? yarnConsumed
-          .map((val: any) => val?.dataValues?.knitter)
+        yarnConsumed 
+        ? yarnConsumed?.dataValues?.knitter
+          .map((val: any) => val)
           .filter((item: any) => item !== null && item !== undefined)
         : [];
       
       let weaverName =
-        yarnConsumed && yarnConsumed.length > 0
-          ? yarnConsumed
-            .map((val: any) => val?.dataValues?.weaver)
+        yarnConsumed 
+          ? yarnConsumed?.dataValues?.weaver
+            .map((val: any) => val)
             .filter((item: any) => item !== null && item !== undefined)
           : [];
-      
-      let salesInvoice =
-        yarnConsumed && yarnConsumed.length > 0
-          ? yarnConsumed
-            .map((val: any) => val?.dataValues?.invoice_no)
-            .filter((item: any) => item !== null && item !== undefined)
-           : [];
 
       
       obj.fbrc_name = [...new Set([...knitterName, ...weaverName])];
-      obj.spnr_invoice_no = [...new Set(salesInvoice)];
-      obj.spnr_yarn_sold = yarnSold;
-
-      let ginName =
-        ginSales && ginSales.length > 0
-          ? ginSales
-            .map((val: any) => val?.ginner?.name)
-            .filter((item: any) => item !== null && item !== undefined)
-          : [];
-      let ginInvoice =
-        ginSales && ginSales.length > 0
-          ? ginSales
-            .map((val: any) => val?.invoice_no)
-            .filter((item: any) => item !== null && item !== undefined)
-          : [];
-      let ginLot =
-        ginSales && ginSales.length > 0
-          ? ginSales
-              .map((val: any) => val?.lot_no)
-              .filter((item: any) => item !== null && item !== undefined)
-          : [];
-      let ginReelLot =
-        ginSales && ginSales.length > 0
-          ? ginSales
-            .map((val: any) => val?.reel_lot_no)
-            .filter((item: any) => item !== null && item !== undefined)
-          : [];
-
-      obj.gnr_name = [...new Set(ginName)];
-      obj.gnr_invoice_no = [...new Set(ginInvoice)];
-      obj.gnr_lot_no = [...new Set(ginLot)];
-      obj.gnr_reel_lot_no = [...new Set(ginReelLot)];
+      obj.spnr_invoice_no =  yarnConsumed ? yarnConsumed?.dataValues?.spnr_invoice_no : null;
+      obj.spnr_yarn_sold = yarnConsumed ? yarnConsumed?.dataValues?.spnr_yarn_sold : null;
 
       let frmrVillages =
         transactions && transactions.length > 0
           ? transactions
-            .map((val: any) => val?.village?.village_name)
+            .map((val: any) => val?.dataValues.village_name)
             .filter((item: any) => item !== null && item !== undefined)
           : [];
 
@@ -16054,7 +16018,7 @@ const spinnerProcessBackwardTraceabiltyReport = async (
       });
     }
 
-    return res.sendPaginationSuccess(res, data, count);
+    return res.sendPaginationSuccess(res, data, count.length);
   } catch (error: any) {
     console.log(error);
     return res.sendError(res, error.message);
@@ -16083,8 +16047,8 @@ const exportSpinProcessBackwardfTraceabilty = async (req: Request, res: Response
 
       if (searchTerm) {
         whereCondition[Op.or] = [
-          { reel_lot_no: { [Op.iLike]: `%${searchTerm}%` } },
-          { "$spinner.name$": { [Op.iLike]: `%${searchTerm}%` } },
+          { "$spinprocess.reel_lot_no$": { [Op.iLike]: `%${searchTerm}%` } },
+          { "$spinprocess.spinner.name$": { [Op.iLike]: `%${searchTerm}%` } },
         ];
       }
       
@@ -16092,29 +16056,31 @@ const exportSpinProcessBackwardfTraceabilty = async (req: Request, res: Response
       const idArray: number[] = spinnerId
         .split(",")
         .map((id: any) => parseInt(id, 10));
-      whereCondition.spinner_id = { [Op.in]: idArray };
+      whereCondition["$spinprocess.spinner_id$"] = { [Op.in]: idArray };
     }
 
     if (brandId) {
       const idArray: number[] = brandId
         .split(",")
         .map((id: any) => parseInt(id, 10));
-      whereCondition["$spinner.brand$"] = { [Op.overlap]: idArray };
+      whereCondition["$spinprocess.spinner.brand$"] = { [Op.overlap]: idArray };
     }
 
     if (seasonId) {
       const idArray: number[] = seasonId
         .split(",")
         .map((id: any) => parseInt(id, 10));
-      whereCondition.season_id = { [Op.in]: idArray };
+      whereCondition["$spinprocess.season_id$"] = { [Op.in]: idArray };
     }
 
     if (programId) {
       const idArray: number[] = programId
         .split(",")
         .map((id: any) => parseInt(id, 10));
-      whereCondition.program_id = { [Op.in]: idArray };
+      whereCondition["$spinprocess.program_id$"] = { [Op.in]: idArray };
     }
+
+    whereCondition["$spinprocess.id$"] = { [Op.not]: null };
 
     // Create the excel workbook file
     const workbook = new ExcelJS.Workbook();
@@ -16150,49 +16116,61 @@ const exportSpinProcessBackwardfTraceabilty = async (req: Request, res: Response
       }
     ];
 
-    const { count, rows } = await SpinProcess.findAndCountAll({
+    const { count, rows }: any = await LintSelections.findAndCountAll({
+      attributes: [
+        [Sequelize.literal('"spinprocess"."id"'), "spinprocess_id"],
+        [Sequelize.literal('"spinprocess"."date"'), "date"],
+        [Sequelize.literal('"spinprocess"."createdAt"'), "createdAt"],
+        [Sequelize.literal('"spinprocess"."reel_lot_no"'), "reel_lot_no"],
+        [Sequelize.literal('"spinprocess"."net_yarn_qty"'), "net_yarn_qty"],
+        [Sequelize.col('"spinprocess"."spinner"."id"'), "spinner_id"],
+        [Sequelize.col('"spinprocess"."spinner"."name"'), "spinner_name"],
+        [Sequelize.literal('"spinprocess"."qr"'), "qr"],
+        [Sequelize.fn('ARRAY_AGG', Sequelize.literal('DISTINCT lint_id')), "spnr_lint_ids"],
+        [Sequelize.fn('STRING_AGG', Sequelize.literal('DISTINCT "ginsales"."invoice_no"'), ',' ) , "gnr_invoice_no"],
+        [Sequelize.fn('STRING_AGG', Sequelize.literal('DISTINCT "ginsales"."lot_no"'), ',' ) , "gnr_lot_no"],
+        [Sequelize.fn('STRING_AGG', Sequelize.literal('DISTINCT "ginsales"."reel_lot_no"'), ',' ) , "gnr_reel_lot_no"],
+        [Sequelize.fn('STRING_AGG', Sequelize.literal('DISTINCT "ginsales->ginner"."name"'), ',' ) , "gnr_name"],
+        [Sequelize.fn("COALESCE", Sequelize.fn("SUM", sequelize.col("qty_used")), 0), "lint_consumed",],
+      ],
       where: whereCondition,
-      include: include,
-      order: [["id", "desc"]],
+      include: [
+        {
+          model: GinSales,
+          as: "ginsales",
+          include: [{
+            model: Ginner,
+              as: "ginner",
+              attributes: [],
+          }],
+          attributes: [],
+        },
+        {
+          model: SpinProcess,
+          as: "spinprocess",
+          include: include,
+          attributes: [],
+        }
+      ],
+      group: [
+        "spinprocess.id",
+        "spinprocess.spinner.id",
+      ],
+      order: [["spinprocess_id", "desc"]],
       offset: offset,
       limit: limit,
     });
 
     for await (let [index, item] of rows.entries()) {
-      let spnr_lint_ids: any = [];
-      let spinProcess = await LintSelections.findAll({
-        where: {
-          process_id: item.dataValues.id,
-        },
-        attributes: ["id", "lint_id"],
-      });
-      spnr_lint_ids = spinProcess.map((obj: any) => obj?.dataValues?.lint_id);
 
-      let lintConsumed = await LintSelections.findOne({
+      let yarnConsumed= await SpinProcessYarnSelection.findOne({
         attributes: [
-          [
-            sequelize.fn(
-              "COALESCE",
-              sequelize.fn("SUM", sequelize.col("qty_used")),
-              0
-            ),
-            "lint_consumed",
-          ],
-        ],
-        where: { process_id: item.dataValues.id },
-        group: ["process_id"],
-      });
-
-      let yarnConsumed= await SpinProcessYarnSelection.findAll({
-        attributes: [
-          'sales_id',
-          "qty_used",
-          [Sequelize.col('"sales"."buyer_type"'), "buyer_type"],
-          [Sequelize.col('"sales"."buyer_id"'), "buyer_id"],
-          [Sequelize.col('"sales"."knitter_id"'), "knitter_id"],
-          [Sequelize.col('"sales"."knitter"."name'), "knitter"],
-          [Sequelize.col('"sales"."weaver"."name'), "weaver"],
-          [Sequelize.literal('"sales"."invoice_no"'), "invoice_no"],
+          [Sequelize.fn('COALESCE', Sequelize.fn('SUM', Sequelize.col('qty_used')), 0), 'spnr_yarn_sold'],
+          [Sequelize.fn('ARRAY_AGG', Sequelize.literal('DISTINCT "sales"."buyer_id"')), "buyer_id"],
+          [Sequelize.fn('ARRAY_AGG', Sequelize.literal('DISTINCT "sales"."knitter_id"')), "knitter_id"],
+          [Sequelize.fn('ARRAY_AGG', Sequelize.literal('DISTINCT "sales->knitter"."name"')), "knitter"],
+          [Sequelize.fn('ARRAY_AGG', Sequelize.literal('DISTINCT "sales->weaver"."name"')), "weaver"],
+          [Sequelize.fn('STRING_AGG', Sequelize.literal('DISTINCT "sales"."invoice_no"'), ',' ) , "spnr_invoice_no"],
         ],
         include:[{
           model: SpinSales,
@@ -16202,162 +16180,93 @@ const exportSpinProcessBackwardfTraceabilty = async (req: Request, res: Response
             {
               model: Weaver,
               as: "weaver",
-              attributes: ["id", "name"],
+              attributes: [],
             },
             {
               model: Knitter,
               as: "knitter",
-              attributes: ["id", "name"],
+              attributes: [],
             },
         ]
         }],
-        where: { spin_process_id: item.dataValues.id },
+        where: { spin_process_id: item.dataValues.spinprocess_id },
+        group: [
+          "spin_process_id",
+        ],
       });
 
-
-      let ginSales: any = [];
       let gin_process_ids: any = [];
-      let transactions_ids: any = [];
+      let transactions: any = [];
 
-      if (spnr_lint_ids.length > 0) {
-        ginSales = await GinSales.findAll({
-          attributes: [
-            "id",
-            "invoice_no",
-            "lot_no",
-            "reel_lot_no",
-          ],
-          include: [
-            {
-              model: Ginner,
-              as: "ginner",
-              attributes: ["id", "name"],
-            },
-          ],
-          where: {
-            id: {
-              [Op.in]: spnr_lint_ids,
-            },
-          },
-        });
-
+      if (item.dataValues.spnr_lint_ids && item.dataValues.spnr_lint_ids.length > 0) {
         let ginBaleId = await BaleSelection.findAll({
           where: {
-            sales_id: ginSales.map((obj: any) => obj.dataValues.id),
+            sales_id: item.dataValues.spnr_lint_ids,
           },
-          attributes: ["id", "bale_id"],
+          attributes: [
+            [Sequelize.col('"bale"."process_id"'), "gin_process_id"],
+          ],
+          include: [{
+            model: GinBale,
+            attributes: [],
+            as: "bale",
+          }],
+          // group: ['sales_id'],
         });
-
-        let ginProcessIds = await GinBale.findAll({
-          where: {
-            id: ginBaleId.map((obj: any) => obj.dataValues.bale_id),
-          },
-          attributes: ["id", "process_id"],
-        });
-        gin_process_ids = ginProcessIds.map(
-          (obj: any) => obj.dataValues.process_id
-        );
+        
+        gin_process_ids = ginBaleId && ginBaleId.length > 0 ? [...new Set(ginBaleId.map((item: any) => item?.dataValues?.gin_process_id))]: [];
       }
 
       if (gin_process_ids.length > 0) {
-        let cottornIds = await CottonSelection.findAll({
+        transactions = await CottonSelection.findAll({
           where: {
-            process_id: gin_process_ids,
+            process_id: {
+                        [Op.in]: gin_process_ids,
+                      },
           },
-          attributes: ["id", "transaction_id"],
-        });
-        transactions_ids = cottornIds.map(
-          (obj: any) => obj.dataValues.transaction_id
-        );
-      }
-
-      let transactions: any = [];
-      if (transactions_ids.length > 0) {
-        transactions = await Transaction.findAll({
           attributes: [
-            "id",
+            [Sequelize.col('"transaction->village"."village_name"'), "village_name"],
+            // [Sequelize.fn('STRING_AGG', Sequelize.literal('DISTINCT "transaction->village"."village_name"'), ',' ) , "frmr_villages"],
           ],
-          where: {
-            id: {
-              [Op.in]: transactions_ids,
-            },
-          },
-          include: [
-            {
+          include: [{
+            model: Transaction,
+            attributes: [],
+            as: "transaction",
+            include: [{
               model: Village,
               as: "village",
-              attributes: ["id", "village_name"],
-            },
-          ],
+              attributes: [],
+            }]
+          }],
+          // group: ['process_id'],
         });
       }
 
-      let yarnSold = 0;
-      yarnConsumed && yarnConsumed.length > 0 && yarnConsumed.map((item: any)=> yarnSold += Number(item?.dataValues?.qty_used));
-
       let obj: any = {};
-      obj.lint_consumed = lintConsumed ? formatDecimal(lintConsumed?.dataValues?.lint_consumed) : 0;
 
       let knitterName =
-        yarnConsumed && yarnConsumed.length > 0
-        ? yarnConsumed
-          .map((val: any) => val?.dataValues?.knitter)
+        yarnConsumed 
+        ? yarnConsumed?.dataValues?.knitter
+          .map((val: any) => val)
           .filter((item: any) => item !== null && item !== undefined)
         : [];
       
       let weaverName =
-        yarnConsumed && yarnConsumed.length > 0
-          ? yarnConsumed
-            .map((val: any) => val?.dataValues?.weaver)
+        yarnConsumed 
+          ? yarnConsumed?.dataValues?.weaver
+            .map((val: any) => val)
             .filter((item: any) => item !== null && item !== undefined)
           : [];
-      
-      let salesInvoice =
-        yarnConsumed && yarnConsumed.length > 0
-          ? yarnConsumed
-            .map((val: any) => val?.dataValues?.invoice_no)
-            .filter((item: any) => item !== null && item !== undefined)
-           : [];
 
       
       obj.fbrc_name = [...new Set([...knitterName, ...weaverName])];
-      obj.spnr_invoice_no = [...new Set(salesInvoice)];
-      obj.spnr_yarn_sold = yarnSold;
-
-      let ginName =
-        ginSales && ginSales.length > 0
-          ? ginSales
-            .map((val: any) => val?.ginner?.name)
-            .filter((item: any) => item !== null && item !== undefined)
-          : [];
-      let ginInvoice =
-        ginSales && ginSales.length > 0
-          ? ginSales
-            .map((val: any) => val?.invoice_no)
-            .filter((item: any) => item !== null && item !== undefined)
-          : [];
-      let ginLot =
-        ginSales && ginSales.length > 0
-          ? ginSales
-              .map((val: any) => val?.lot_no)
-              .filter((item: any) => item !== null && item !== undefined)
-          : [];
-      let ginReelLot =
-        ginSales && ginSales.length > 0
-          ? ginSales
-            .map((val: any) => val?.reel_lot_no)
-            .filter((item: any) => item !== null && item !== undefined)
-          : [];
-
-      obj.gnr_name = [...new Set(ginName)];
-      obj.gnr_invoice_no = [...new Set(ginInvoice)];
-      obj.gnr_lot_no = [...new Set(ginLot)];
-      obj.gnr_reel_lot_no = [...new Set(ginReelLot)];
+      obj.spnr_invoice_no =  yarnConsumed ? yarnConsumed?.dataValues?.spnr_invoice_no : null;
+      obj.spnr_yarn_sold = yarnConsumed ? yarnConsumed?.dataValues?.spnr_yarn_sold : null;
 
       let frmrVillages =
         transactions && transactions.length > 0
           ? transactions
-            .map((val: any) => val?.village?.village_name)
+            .map((val: any) => val?.dataValues.village_name)
             .filter((item: any) => item !== null && item !== undefined)
           : [];
 
@@ -16365,31 +16274,31 @@ const exportSpinProcessBackwardfTraceabilty = async (req: Request, res: Response
 
       const rowValues = Object.values({
         index: index + 1,
-        spinner: item.dataValues?.spinner ? item.dataValues?.spinner?.name : "",
+        spinner: item?.dataValues.spinner_name ? item.dataValues.spinner_name : "",
         fabric:  obj.fbrc_name && obj.fbrc_name.length > 0
         ? obj.fbrc_name.join(", ")
         : "",
         reel_lot_no: item.dataValues?.reel_lot_no ? item.dataValues?.reel_lot_no : "",
-        spnr_invoice: obj.spnr_invoice_no && obj.spnr_invoice_no.length > 0
-        ? obj.spnr_invoice_no.join(", ")
+        spnr_invoice: obj.spnr_invoice_no
+        ? obj.spnr_invoice_no
         : "",
         total: item.dataValues?.net_yarn_qty ? item.dataValues?.net_yarn_qty : 0,
         yarnSold: obj.spnr_yarn_sold ? obj.spnr_yarn_sold : 0,
-        ginReel: obj.gnr_reel_lot_no && obj.gnr_reel_lot_no.length > 0
-        ? obj.gnr_reel_lot_no.join(", ")
+        ginReel: item?.dataValues.gnr_reel_lot_no
+        ? item?.dataValues.gnr_reel_lot_no
         : "",
-        ginLot: obj.gnr_lot_no && obj.gnr_lot_no.length > 0
-        ? obj.gnr_lot_no.join(", ")
+        ginLot: item?.dataValues.gnr_lot_no
+        ? item?.dataValues.gnr_lot_no
         : "",
-        invoice: obj.gnr_invoice_no && obj.gnr_invoice_no.length > 0
-        ? obj.gnr_invoice_no.join(", ")
+        invoice: item?.dataValues.gnr_invoice_no
+        ? item?.dataValues.gnr_invoice_no
         : "",
-        lintConsumed: obj.lint_consumed,
+        lintConsumed: item?.dataValues.lint_consumed ? item?.dataValues.lint_consumed : 0,
         frmrVillages: obj.frmr_villages && obj.frmr_villages.length > 0
         ? obj.frmr_villages.join(", ")
         : "",
-        ginner: obj.gnr_name && obj.gnr_name.length > 0
-        ? obj.gnr_name.join(", ")
+        ginner: item?.dataValues.gnr_name
+        ? item?.dataValues.gnr_name
         : "",
       });
       worksheet.addRow(rowValues);

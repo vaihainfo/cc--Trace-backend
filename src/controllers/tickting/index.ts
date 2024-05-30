@@ -5,6 +5,10 @@ import TicketTracker from "../../models/ticket-tracker.model";
 import TicketTrackerStatus from "../../models/ticketing-status.model";
 import Spinner from "../../models/spinner.model";
 import User from "../../models/user.model";
+import Ginner from "../../models/ginner.model";
+import Knitter from "../../models/knitter.model";
+import Weaver from "../../models/weaver.model";
+import Garment from "../../models/garment.model";
 
 
 const createTicketTracker = async (req: Request, res: Response) => {
@@ -88,20 +92,37 @@ const fetchTicketTracker = async (req: Request, res: Response) => {
         if (processor) {
             const idArray: any[] = processor
                 .split(",")
-                .map((id: any) => id);
+                .map((id: any) => id.toLowerCase());
             whereCondition.processor_type = { [Op.in]: idArray };
         }
 
         if (brandId) {
-            const idArray: number[] = brandId
-                .split(",")
-                .map((id: any) => parseInt(id, 10));
-            let spinner = await Spinner.findAll({ where: { brand: { [Op.overlap]: idArray } } });
-            const arry: number[] = spinner
-                .map((gin: any) => parseInt(gin.id, 10));
-            whereCondition.process_id = { [Op.in]: arry };
-            // whereCondition.processor_type = 'spinner';
+            const idArray = brandId.split(",").map((id: any) => parseInt(id, 10));
+        
+            const [spinner, ginner, knitter, weaver, garment] = await Promise.all([
+                Spinner.findAll({ where: { brand: { [Op.overlap]: idArray } } }),
+                Ginner.findAll({ where: { brand: { [Op.overlap]: idArray } } }),
+                Knitter.findAll({ where: { brand: { [Op.overlap]: idArray } } }),
+                Weaver.findAll({ where: { brand: { [Op.overlap]: idArray } } }),
+                Garment.findAll({ where: { brand: { [Op.overlap]: idArray } } })
+            ]);
+        
+            const processorConditions = [
+                { processor_type: { [Op.iLike]: 'spinner' }, process_id: { [Op.in]: spinner.map((spin: any) => spin.id) } },
+                { processor_type: { [Op.iLike]: 'ginner' }, process_id: { [Op.in]: ginner.map((gin: any) => gin.id) } },
+                { processor_type: { [Op.iLike]: 'knitter' }, process_id: { [Op.in]: knitter.map((knit: any) => knit.id) } },
+                { processor_type: { [Op.iLike]: 'weaver' }, process_id: { [Op.in]: weaver.map((weave: any) => weave.id) } },
+                { processor_type: { [Op.iLike]: 'garment' }, process_id: { [Op.in]: garment.map((gar: any) => gar.id) } }
+            ];
+        
+            if (whereCondition[Op.or]) {
+                whereCondition[Op.and] = whereCondition[Op.and] || [];
+                whereCondition[Op.and].push({ [Op.or]: processorConditions });
+            } else {
+                whereCondition[Op.or] = processorConditions;
+            }
         }
+        
 
         if (processorId) {
             const idArray: number[] = processorId
@@ -122,14 +143,21 @@ const fetchTicketTracker = async (req: Request, res: Response) => {
 
 
         if (searchTerm) {
-            whereCondition[Op.or] = [
+            const searchConditions = [
                 { ticket_type: { [Op.iLike]: `%${searchTerm}%` } },
                 { processor_name: { [Op.iLike]: `%${searchTerm}%` } },
                 { processor_type: { [Op.iLike]: `%${searchTerm}%` } },
                 { process_or_sales: { [Op.iLike]: `%${searchTerm}%` } },
                 { style_mark_no: { [Op.iLike]: `%${searchTerm}%` } },
                 { comments: { [Op.iLike]: `%${searchTerm}%` } }
-            ]
+            ];
+        
+            if (whereCondition[Op.or]) {
+                whereCondition[Op.and] = whereCondition[Op.and] || [];
+                whereCondition[Op.and].push({ [Op.or]: searchConditions });
+            } else {
+                whereCondition[Op.or] = searchConditions;
+            }
         }
 
         let queryOptions: any = {
@@ -215,17 +243,179 @@ const fetchTicketTrackerStatus = async (req: Request, res: Response) => {
 
 const countTicketTracker = async (req: Request, res: Response) => {
     try {
-        const whereCondition: any = {}
+        const whereCondition: any = {};
+        const { processor,programId, brandId, countryId, stateId, ginnerId, spinnerId, weaverId, knitterId, garmentId }: any = req.query;
+
         if (req.query.status) {
             whereCondition.status = req.query.status;
         }
+
+        if (brandId) {
+            const idArray = brandId.split(",").map((id: any) => parseInt(id, 10));
+        
+            const [spinner, ginner, knitter, weaver, garment] = await Promise.all([
+                Spinner.findAll({ where: { brand: { [Op.overlap]: idArray } } }),
+                Ginner.findAll({ where: { brand: { [Op.overlap]: idArray } } }),
+                Knitter.findAll({ where: { brand: { [Op.overlap]: idArray } } }),
+                Weaver.findAll({ where: { brand: { [Op.overlap]: idArray } } }),
+                Garment.findAll({ where: { brand: { [Op.overlap]: idArray } } })
+            ]);
+        
+            const processorConditions = [
+                { processor_type: { [Op.iLike]: 'spinner' }, process_id: { [Op.in]: spinner.map((spin: any) => spin.id) } },
+                { processor_type: { [Op.iLike]: 'ginner' }, process_id: { [Op.in]: ginner.map((gin: any) => gin.id) } },
+                { processor_type: { [Op.iLike]: 'knitter' }, process_id: { [Op.in]: knitter.map((knit: any) => knit.id) } },
+                { processor_type: { [Op.iLike]: 'weaver' }, process_id: { [Op.in]: weaver.map((weave: any) => weave.id) } },
+                { processor_type: { [Op.iLike]: 'garment' }, process_id: { [Op.in]: garment.map((gar: any) => gar.id) } }
+            ];
+        
+            if (whereCondition[Op.or]) {
+                whereCondition[Op.and] = whereCondition[Op.and] || [];
+                whereCondition[Op.and].push({ [Op.or]: processorConditions });
+            } else {
+                whereCondition[Op.or] = processorConditions;
+            }
+        }
+        
+
+        if (programId) {
+            const idArray = programId.split(",").map((id: any) => parseInt(id, 10));
+        
+            const [spinner, ginner, knitter, weaver, garment] = await Promise.all([
+                Spinner.findAll({ where: { program_id: { [Op.overlap]: idArray } } }),
+                Ginner.findAll({ where: { program_id: { [Op.overlap]: idArray } } }),
+                Knitter.findAll({ where: { program_id: { [Op.overlap]: idArray } } }),
+                Weaver.findAll({ where: { program_id: { [Op.overlap]: idArray } } }),
+                Garment.findAll({ where: { program_id: { [Op.overlap]: idArray } } })
+            ]);
+        
+            const processorConditions = [
+                { processor_type: { [Op.iLike]: 'spinner' }, process_id: { [Op.in]: spinner.map((spin: any) => spin.id) } },
+                { processor_type: { [Op.iLike]: 'ginner' }, process_id: { [Op.in]: ginner.map((gin: any) => gin.id) } },
+                { processor_type: { [Op.iLike]: 'knitter' }, process_id: { [Op.in]: knitter.map((knit: any) => knit.id) } },
+                { processor_type: { [Op.iLike]: 'weaver' }, process_id: { [Op.in]: weaver.map((weave: any) => weave.id) } },
+                { processor_type: { [Op.iLike]: 'garment' }, process_id: { [Op.in]: garment.map((gar: any) => gar.id) } }
+            ];
+        
+            if (whereCondition[Op.or]) {
+                whereCondition[Op.and] = whereCondition[Op.and] || [];
+                whereCondition[Op.and].push({ [Op.or]: processorConditions });
+            } else {
+                whereCondition[Op.or] = processorConditions;
+            }
+        }
+
+        if (countryId) {
+            const idArray = countryId.split(",").map((id: any) => parseInt(id, 10));
+        
+            const [spinner, ginner, knitter, weaver, garment] = await Promise.all([
+                Spinner.findAll({ where: { country_id: { [Op.in]: idArray } } }),
+                Ginner.findAll({ where: { country_id: { [Op.in]: idArray } } }),
+                Knitter.findAll({ where: { country_id: { [Op.in]: idArray } } }),
+                Weaver.findAll({ where: { country_id: { [Op.in]: idArray } } }),
+                Garment.findAll({ where: { country_id: { [Op.in]: idArray } } })
+            ]);
+        
+            const processorConditions = [
+                { processor_type: { [Op.iLike]: 'spinner' }, process_id: { [Op.in]: spinner.map((spin: any) => spin.id) } },
+                { processor_type: { [Op.iLike]: 'ginner' }, process_id: { [Op.in]: ginner.map((gin: any) => gin.id) } },
+                { processor_type: { [Op.iLike]: 'knitter' }, process_id: { [Op.in]: knitter.map((knit: any) => knit.id) } },
+                { processor_type: { [Op.iLike]: 'weaver' }, process_id: { [Op.in]: weaver.map((weave: any) => weave.id) } },
+                { processor_type: { [Op.iLike]: 'garment' }, process_id: { [Op.in]: garment.map((gar: any) => gar.id) } }
+            ];
+        
+            if (whereCondition[Op.or]) {
+                whereCondition[Op.and] = whereCondition[Op.and] || [];
+                whereCondition[Op.and].push({ [Op.or]: processorConditions });
+            } else {
+                whereCondition[Op.or] = processorConditions;
+            }
+        }
+
+        if (stateId) {
+            const idArray = stateId.split(",").map((id: any) => parseInt(id, 10));
+        
+            const [spinner, ginner, knitter, weaver, garment] = await Promise.all([
+                Spinner.findAll({ where: { state_id: { [Op.in]: idArray } } }),
+                Ginner.findAll({ where: { state_id: { [Op.in]: idArray } } }),
+                Knitter.findAll({ where: { state_id: { [Op.in]: idArray } } }),
+                Weaver.findAll({ where: { state_id: { [Op.in]: idArray } } }),
+                Garment.findAll({ where: { state_id: { [Op.in]: idArray } } })
+            ]);
+        
+            const processorConditions = [
+                { processor_type: { [Op.iLike]: 'spinner' }, process_id: { [Op.in]: spinner.map((spin: any) => spin.id) } },
+                { processor_type: { [Op.iLike]: 'ginner' }, process_id: { [Op.in]: ginner.map((gin: any) => gin.id) } },
+                { processor_type: { [Op.iLike]: 'knitter' }, process_id: { [Op.in]: knitter.map((knit: any) => knit.id) } },
+                { processor_type: { [Op.iLike]: 'weaver' }, process_id: { [Op.in]: weaver.map((weave: any) => weave.id) } },
+                { processor_type: { [Op.iLike]: 'garment' }, process_id: { [Op.in]: garment.map((gar: any) => gar.id) } }
+            ];
+        
+            if (whereCondition[Op.or]) {
+                whereCondition[Op.and] = whereCondition[Op.and] || [];
+                whereCondition[Op.and].push({ [Op.or]: processorConditions });
+            } else {
+                whereCondition[Op.or] = processorConditions;
+            }
+        }
+
+        const addProcessorFilter = (type : any, idArray : Array<number>) => {
+            if (idArray && idArray.length > 0) {
+                return {
+                    processor_type: { [Op.iLike]: type },
+                    process_id: { [Op.in]: idArray }
+                };
+            }
+            return null;
+        };
+
+
+        let proConditions = [];
+
+        if(ginnerId){
+            proConditions.push(addProcessorFilter('ginner', ginnerId?.split(",").map((id: any) => parseInt(id, 10))));
+        }
+
+        if(spinnerId){
+            proConditions.push(addProcessorFilter('spinner', spinnerId?.split(",").map((id: any) => parseInt(id, 10))));
+        }
+
+
+        if(knitterId){
+            proConditions.push(addProcessorFilter('knitter', knitterId?.split(",").map((id: any) => parseInt(id, 10))));
+        }
+
+
+        if(weaverId){
+            proConditions.push(addProcessorFilter('weaver', weaverId?.split(",").map((id: any) => parseInt(id, 10))));
+        }
+
+
+        if(garmentId){
+            proConditions.push(addProcessorFilter('garment', garmentId?.split(",").map((id: any) => parseInt(id, 10))));
+        }
+
+            // Filter out null values
+        const validProcessorFilters = proConditions.filter(filter => filter !== null);
+
+        // Combine processor filters using Op.or
+        if (validProcessorFilters.length > 0) {
+            if (whereCondition[Op.or]) {
+                whereCondition[Op.and] = whereCondition[Op.and] || [];
+                whereCondition[Op.and].push({ [Op.or]: validProcessorFilters });
+            } else {
+                whereCondition[Op.or] = validProcessorFilters;
+            }
+        }
+
+
         const ticketTracker = await TicketTracker.findAll({
             where: whereCondition,
             attributes: [
-                'processor_type',
-                [Sequelize.fn('COUNT', Sequelize.col('processor_type')), 'count'],
+                [Sequelize.literal('LOWER(processor_type)'), 'processor_type'],
+                [Sequelize.fn('COUNT', Sequelize.col('*')), 'count'],
             ],
-            group: ['processor_type']
+            group: [Sequelize.literal('LOWER(processor_type)')]
         });
         let data = []
         for (let track of ['Garment', 'Ginner', 'Weaver', 'Spinner', 'Knitter']) {

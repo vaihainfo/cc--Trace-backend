@@ -435,7 +435,7 @@ const exportSingleQualityParameter = async (req: Request, res: Response) => {
 const reportParameter = async (req: Request, res: Response) => {
     try {
         let currentDate: any = new Date();
-        const { seasonId, countryId, stateId, processId }: any = req.query
+        const { seasonId, countryId, stateId, processId, brandId }: any = req.query
         if (!seasonId) {
             return res.sendError(res, "Please select season");
         }
@@ -456,6 +456,12 @@ const reportParameter = async (req: Request, res: Response) => {
             parameter === 'ginner' ? whereCondition['$ginner.state_id$'] = stateId
                 : whereCondition['$spinner.state_id$'] = stateId
         }
+
+        if(brandId){
+            const idArray = brandId.split(",").map((id: any) => parseInt(id, 10));
+            parameter === 'ginner' ? whereCondition['$ginner.brand$']= { [Op.overlap]: idArray } : whereCondition['$spinner.brand$']= { [Op.overlap]: idArray }
+        }
+        
         if (processId) {
             parameter === 'ginner' ? whereCondition.ginner_id = processId
                 : whereCondition.spinner_id = processId
@@ -650,7 +656,7 @@ const reportParameter = async (req: Request, res: Response) => {
 const reportCountryParameter = async (req: Request, res: Response) => {
     try {
 
-        const {seasonId, countryId, stateId,ginnerId, spinnerId}: any = req.query;
+        const {seasonId, countryId, stateId,ginnerId, spinnerId, brandId}: any = req.query;
 
         // Get the current date
         let currentDate: any = new Date();
@@ -681,6 +687,11 @@ const reportCountryParameter = async (req: Request, res: Response) => {
             
             if(stateId){
                 parameter === 'ginner' ? value['$ginner.state_id$']= stateId : value['$spinner.state_id$']= stateId
+            }
+
+            if(brandId){
+                const idArray = brandId.split(",").map((id: any) => parseInt(id, 10));
+                parameter === 'ginner' ? value['$ginner.brand$']= { [Op.overlap]: idArray } : value['$spinner.brand$']= { [Op.overlap]: idArray }
             }
 
             if(ginnerId && parameter === 'ginner'){
@@ -772,7 +783,7 @@ const reportCountryParameter = async (req: Request, res: Response) => {
 
 const reportDashBoardParameter = async (req: Request, res: Response) => {
     try {
-        const { seasonId, countryId }: any = req.query;
+        const { seasonId, countryId, brandId }: any = req.query;
         if (!seasonId) {
             return res.sendError(res, "Please select season");
         }
@@ -782,6 +793,12 @@ const reportDashBoardParameter = async (req: Request, res: Response) => {
             if (countryId) {
                 whereCondition['$spinner.country_id$'] = countryId
             }
+
+            if(brandId){
+                const idArray = brandId.split(",").map((id: any) => parseInt(id, 10));
+                whereCondition['$spinner.brand$']= { [Op.overlap]: idArray }
+            }
+            
             let seasons = await QualityParameter.findAll({
                 where: { '$sales.season_id$': seasonId, spinner_id: { [Op.not]: null }, ...whereCondition }, include: [
                     {
@@ -823,6 +840,13 @@ const reportDashBoardParameter = async (req: Request, res: Response) => {
             if (countryId) {
                 whereCondition['$ginner.country_id$'] = countryId
             }
+
+            if(brandId){
+                const idArray = brandId.split(",").map((id: any) => parseInt(id, 10));
+                whereCondition['$ginner.brand$']= { [Op.overlap]: idArray }
+            }
+            
+
             let seasons = await QualityParameter.findAll({
                 where: { '$process.season_id$': seasonId, ginner_id: { [Op.not]: null }, ...whereCondition }, include: [
                     {
@@ -863,6 +887,12 @@ const reportDashBoardParameter = async (req: Request, res: Response) => {
             countCondition['$ginner.country_id$'] = countryId;
             countCondition1['$spinner.country_id$'] = countryId;
         }
+
+        if(brandId){
+            const idArray = brandId.split(",").map((id: any) => parseInt(id, 10));
+            countCondition['$ginner.brand$']= { [Op.overlap]: idArray }
+            countCondition1['$spinner.brand$']= { [Op.overlap]: idArray }
+        } 
 
         let count = await QualityParameter.count({
             where: { '$process.season_id$': seasonId, ...countCondition },
@@ -962,7 +992,7 @@ const reportDashBoardParameter = async (req: Request, res: Response) => {
 
 const reportNationalQualityParameter = async (req: Request, res: Response) => {
     try {
-        const { seasonId, countryId, stateId }: any = req.query;
+        const { seasonId, countryId, stateId, brandId }: any = req.query;
         if (!seasonId) {
             return res.sendError(res, "Please select season");
         }
@@ -970,6 +1000,12 @@ const reportNationalQualityParameter = async (req: Request, res: Response) => {
         if (countryId) {
             nationalSpin['$spinner.country_id$'] = countryId
         }
+
+        if(brandId){
+            const idArray = brandId.split(",").map((id: any) => parseInt(id, 10));
+            nationalSpin['$spinner.brand$']= { [Op.overlap]: idArray }
+        }
+
         let spinner = await QualityParameter.findAll({
             attributes: [
                 [Sequelize.literal('spinner.country_id'), 'country_id'],
@@ -1004,6 +1040,12 @@ const reportNationalQualityParameter = async (req: Request, res: Response) => {
         if (countryId) {
             nationalGin['$ginner.country_id$'] = countryId
         }
+
+        if(brandId){
+            const idArray = brandId.split(",").map((id: any) => parseInt(id, 10));
+            nationalGin['$ginner.brand$']= { [Op.overlap]: idArray }
+        }
+
         let ginner = await QualityParameter.findAll({
             attributes: [
                 [Sequelize.literal('ginner.country_id'), 'country_id'],
@@ -1109,7 +1151,7 @@ const reportNationalQualityParameter = async (req: Request, res: Response) => {
 
 const reporProcessorWiseParameter = async (req: Request, res: Response) => {
     try {
-        const { seasonId, countryId, stateId, ginnerId, spinnerId }: any = req.query;
+        const { seasonId, countryId, stateId, ginnerId, spinnerId, brandId }: any = req.query;
         if (!seasonId) {
             return res.sendError(res, "Please select season");
         }
@@ -1120,6 +1162,12 @@ const reporProcessorWiseParameter = async (req: Request, res: Response) => {
         if (stateId) {
             nationalSpin['$spinner.state_id$'] = stateId
         }
+
+        if(brandId){
+            const idArray = brandId.split(",").map((id: any) => parseInt(id, 10));
+            nationalSpin['$spinner.brand$']= { [Op.overlap]: idArray }
+        }
+
         if (spinnerId) {
             nationalSpin.spinner_id = spinnerId
         }
@@ -1208,6 +1256,10 @@ const reporProcessorWiseParameter = async (req: Request, res: Response) => {
         }
         if (stateId) {
             nationalGin['$ginner.state_id$'] = stateId
+        }
+        if(brandId){
+            const idArray = brandId.split(",").map((id: any) => parseInt(id, 10));
+            nationalGin['$ginner.brand$']= { [Op.overlap]: idArray }
         }
         if (ginnerId) {
             nationalGin.ginner_id = ginnerId
