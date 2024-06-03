@@ -194,12 +194,6 @@ cron.schedule(`25 ${checkTimeDiff(19,differenceInHours)} * * *`, () => {
   console.log(`Cron job scheduled in server's timezone (${serverTimezone}) to run at IST`);
 });
 
-
-// app.use("/", (req: Request, res: Response) =>{
-//     console.log("object");
-//     res.json("ressss")
-// })
-
 app.use("/auth", authRouter);
 app.use("/location", locationRouter);
 app.use("/crop", cropRouter);
