@@ -697,10 +697,11 @@ const getFabricCompareData = async (
     const processData = await getFabricData(reqData, true);
     const saleData = await getFabricData(reqData, false);
     const procuredData = await getFabricProcuredData(reqData);
-    const data = getOverallChartDataRes(
+    const data = await getOverallChartDataRes(
       processData,
       saleData,
-      procuredData
+      procuredData,
+      reqData.season
     );
     return res.sendSuccess(res, data);
   } catch (error: any) {
@@ -1185,10 +1186,11 @@ const getOverallTopProcured = async (
   return topResults;
 };
 
-const getOverallChartDataRes = (
+const getOverallChartDataRes = async (
   processList: any[],
   saleList: any[],
   procuredList: any[],
+  reqSeason: any
 ) => {
   let seasonIds: number[] = [];
 
@@ -1206,8 +1208,20 @@ const getOverallChartDataRes = (
     if (!seasonIds.includes(procured.dataValues.seasonId))
       seasonIds.push(procured.dataValues.seasonId);
   });
-
+  const seasons = await Season.findAll({
+    limit: 3,
+    order: [
+      ["id", "DESC"],
+    ],
+  });
+  if (seasonIds.length != 3 && !reqSeason) {
+    for (const season of seasons) {
+      if (!seasonIds.includes(season.id))
+        seasonIds.push(season.id);
+    }
+  }
   seasonIds = seasonIds.sort((a, b) => a - b).slice(-3);
+
 
   let season: any = [];
   let processed: any = [];
@@ -1247,6 +1261,15 @@ const getOverallChartDataRes = (
     if (fSold) {
       data.seasonName = fSold.dataValues.seasonName;
       data.sold = formatNumber(fSold.dataValues.qty);
+    }
+
+    if (!data.seasonName) {
+      const fSeason = seasons.find((season: any) =>
+        season.id == sessionId
+      );
+      if (fSeason) {
+        data.seasonName = fSeason.name;
+      }
     }
 
     season.push(data.seasonName);
