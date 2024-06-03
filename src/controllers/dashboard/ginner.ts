@@ -307,9 +307,10 @@ const getProcuredProcessed = async (
     const ginnerWhere = getOverAllDataQuery(reqData);
     const procuredData = await getProcuredProcessedData(transactionWhere);
     const processedData = await getLintProcessedData(ginnerWhere);
-    const data = getProcuredProcessedRes(
+    const data = await getProcuredProcessedRes(
       procuredData,
-      processedData
+      processedData,
+      reqData.season
     );
     return res.sendSuccess(res, data);
 
@@ -322,9 +323,10 @@ const getProcuredProcessed = async (
 };
 
 
-const getProcuredProcessedRes = (
+const getProcuredProcessedRes = async (
   procuredData: any[],
-  processedData: any[]
+  processedData: any[],
+  reqSeason: any
 ) => {
   let seasonIds: number[] = [];
 
@@ -337,6 +339,19 @@ const getProcuredProcessedRes = (
     if (!seasonIds.includes(processed.dataValues.seasonId))
       seasonIds.push(processed.dataValues.seasonId);
   });
+
+  const seasons = await Season.findAll({
+    limit: 3,
+    order: [
+      ["id", "DESC"],
+    ],
+  });
+  if (seasonIds.length != 3 && !reqSeason) {
+    for (const season of seasons) {
+      if (!seasonIds.includes(season.id))
+        seasonIds.push(season.id);
+    }
+  }
 
   seasonIds = seasonIds.sort((a, b) => a - b).slice(-3);
 
@@ -364,6 +379,15 @@ const getProcuredProcessedRes = (
     if (fProcessed) {
       data.seasonName = fProcessed.dataValues.seasonName;
       data.processed = formatNumber(fProcessed.dataValues.processed);
+    }
+
+    if (!data.seasonName) {
+      const fSeason = seasons.find((season: any) =>
+        season.id == sessionId
+      );
+      if (fSeason) {
+        data.seasonName = fSeason.name;
+      }
     }
 
     season.push(data.seasonName);
@@ -449,9 +473,10 @@ const getLintProcuredSold = async (
     const where = getOverAllDataQuery(reqData);
     const procuredData = await getLintProcuredData(where);
     const soldData = await getLintSoldData(where);
-    const data = getLintProcuredSoldRes(
+    const data = await getLintProcuredSoldRes(
       procuredData,
-      soldData
+      soldData,
+      reqData.season
     );
     return res.sendSuccess(res, data);
 
@@ -463,9 +488,10 @@ const getLintProcuredSold = async (
   }
 };
 
-const getLintProcuredSoldRes = (
+const getLintProcuredSoldRes = async (
   procuredList: any[],
-  soldList: any[]
+  soldList: any[],
+  reqSeason: any
 ) => {
   let seasonIds: number[] = [];
 
@@ -478,6 +504,19 @@ const getLintProcuredSoldRes = (
     if (!seasonIds.includes(sold.dataValues.seasonId))
       seasonIds.push(sold.dataValues.seasonId);
   });
+
+  const seasons = await Season.findAll({
+    limit: 3,
+    order: [
+      ["id", "DESC"],
+    ],
+  });
+  if (seasonIds.length != 3 && !reqSeason) {
+    for (const season of seasons) {
+      if (!seasonIds.includes(season.id))
+        seasonIds.push(season.id);
+    }
+  }
 
   seasonIds = seasonIds.sort((a, b) => a - b).slice(-3);
 
@@ -505,6 +544,15 @@ const getLintProcuredSoldRes = (
     if (fSold) {
       data.seasonName = fSold.dataValues.seasonName;
       data.sold = formatNumber(fSold.dataValues.sold);
+    }
+
+    if (!data.seasonName) {
+      const fSeason = seasons.find((season: any) =>
+        season.id == sessionId
+      );
+      if (fSeason) {
+        data.seasonName = fSeason.name;
+      }
     }
 
     season.push(data.seasonName);
