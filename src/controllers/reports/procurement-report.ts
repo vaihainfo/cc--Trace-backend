@@ -28,6 +28,7 @@ const fetchTransactionsReport = async (req: Request, res: Response) => {
   const offset = (page - 1) * limit;
 
   const countryId: string = req.query.countryId as string;
+  const stateId: string = req.query.stateId as string;
   const brandId: string = req.query.brandId as string;
   const farmGroupId: string = req.query.farmGroupId as string;
   const seasonId: string = req.query.seasonId as string;
@@ -46,6 +47,14 @@ const fetchTransactionsReport = async (req: Request, res: Response) => {
         .map((id) => parseInt(id, 10));
       whereCondition.country_id = { [Op.in]: idArray };
     }
+
+    if (stateId) {
+      const idArray: number[] = stateId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.state_id = { [Op.in]: idArray };
+    }
+
     if (brandId) {
       const idArray: number[] = brandId
         .split(",")
@@ -474,9 +483,9 @@ const exportProcurementReport = async (req: Request, res: Response) => {
         block: item.dataValues.block ? item.dataValues.block.block_name : '',
         village: item.dataValues.village ? item.dataValues.village.village_name : '',
         id: item.dataValues.id ? item.dataValues.id : '',
-        qty_purchased: item.dataValues.qty_purchased ? item.dataValues.qty_purchased : '',
+        qty_purchased: item.dataValues.qty_purchased ? Number(item.dataValues.qty_purchased) : 0,
         available_cotton: item.dataValues.farm ? (Number(item.dataValues.farm.total_estimated_cotton) > Number(item.dataValues.farm.cotton_transacted) ? Number(item.dataValues.farm.total_estimated_cotton) - Number(item.dataValues.farm.cotton_transacted) : 0) : 0,
-        rate: item.dataValues.rate ? item.dataValues.rate : '',
+        rate: item.dataValues.rate ? Number(item.dataValues.rate) : 0,
         program: item.dataValues.program ? item.dataValues.program.program_name : '',
         vehicle: item.dataValues.vehicle ? item.dataValues.vehicle : '',
         payment_method: item.dataValues.payment_method ? item.dataValues.payment_method : '',

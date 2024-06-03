@@ -160,10 +160,6 @@ const getQueryParams = async (
     //   });
     //   season = seasonOne.id;
     // }
-    const user = (req as any).user
-    if(user?.role == 3 && user?._id){
-      brand = user._id
-    }
 
     return {
       program,
@@ -559,7 +555,11 @@ const farmerCountAndArea = async (
     const where = getOverAllDataQuery(reqData);
     const acresList = await getAcreBySession(where);
     const farmerCountList = await getFarmerBySeasons(where);
-    const data = getFarmerCountAndAreaRes(acresList, farmerCountList);
+    const data = await getFarmerCountAndAreaRes(
+      acresList,
+      farmerCountList,
+      reqData.season
+    );
     return res.sendSuccess(res, data);
 
   } catch (error: any) {
@@ -570,9 +570,10 @@ const farmerCountAndArea = async (
   }
 };
 
-const getFarmerCountAndAreaRes = (
+const getFarmerCountAndAreaRes = async (
   acreList: any[],
-  farmerCountList: any[]
+  farmerCountList: any[],
+  reqSeason: any
 ) => {
 
   let seasonIds: number[] = [];
@@ -586,6 +587,19 @@ const getFarmerCountAndAreaRes = (
     if (!seasonIds.includes(farmerCount.dataValues.seasonId))
       seasonIds.push(farmerCount.dataValues.seasonId);
   });
+
+  const seasons = await Season.findAll({
+    limit: 3,
+    order: [
+      ["id", "DESC"],
+    ],
+  });
+  if (seasonIds.length != 3 && !reqSeason) {
+    for (const season of seasons) {
+      if (!seasonIds.includes(season.id))
+        seasonIds.push(season.id);
+    }
+  }
 
   seasonIds = seasonIds.sort((a, b) => a - b).slice(-3);
 
@@ -615,6 +629,16 @@ const getFarmerCountAndAreaRes = (
       data.count = formatNumber(fCount.dataValues.farmerCount);
     }
 
+    if (!data.seasonName) {
+      const fSeason = seasons.find((season: any) =>
+        season.id == sessionId
+      );
+      if (fSeason) {
+        data.seasonName = fSeason.name;
+      }
+    }
+
+
     season.push(data.seasonName);
     count.push(data.count);
     acre.push(data.acre);
@@ -642,10 +666,11 @@ const farmerAllData = async (
     const acresList = await getAcreBySession(where);
     const farmerCountList = await getFarmerBySeasons(where);
     const estimateProductionList = await getEstimateProductionBySeason(where);
-    const data = getFarmerAllDataRes(
+    const data = await getFarmerAllDataRes(
       acresList,
       farmerCountList,
-      estimateProductionList
+      estimateProductionList,
+      reqData.season
     );
     return res.sendSuccess(res, data);
 
@@ -657,10 +682,11 @@ const farmerAllData = async (
   }
 };
 
-const getFarmerAllDataRes = (
+const getFarmerAllDataRes = async (
   acreList: any[],
   farmerCountList: any[],
-  estimateProductionList: any
+  estimateProductionList: any,
+  reqSeason: any
 ) => {
 
   let seasonIds: number[] = [];
@@ -679,6 +705,19 @@ const getFarmerAllDataRes = (
     if (!seasonIds.includes(estimateProduction.dataValues.season.id))
       seasonIds.push(estimateProduction.dataValues.season.id);
   });
+
+  const seasons = await Season.findAll({
+    limit: 3,
+    order: [
+      ["id", "DESC"],
+    ],
+  });
+  if (seasonIds.length != 3 && !reqSeason) {
+    for (const season of seasons) {
+      if (!seasonIds.includes(season.id))
+        seasonIds.push(season.id);
+    }
+  }
 
   seasonIds = seasonIds.sort((a, b) => a - b).slice(-3);
 
@@ -720,6 +759,15 @@ const getFarmerAllDataRes = (
       data.seasonName = fEstimateProduction.dataValues.season.name;
       data.production = formatNumber(fEstimateProduction.dataValues.production);
       data.estimate = formatNumber(fEstimateProduction.dataValues.estimate);
+    }
+
+    if (!data.seasonName) {
+      const fSeason = seasons.find((season: any) =>
+        season.id == sessionId
+      );
+      if (fSeason) {
+        data.seasonName = fSeason.name;
+      }
     }
 
     season.push(data.seasonName);

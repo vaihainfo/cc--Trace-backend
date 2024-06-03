@@ -43,10 +43,7 @@ const getQueryParams = async (
     await validator.validate(knitter);
     await validator.validate(fromDate);
     await validator.validate(toDate);
-    const user = (req as any).user;
-    if (user?.role == 3 && user?._id) {
-      brand = user._id;
-    }
+
     return {
       program,
       brand,
@@ -204,9 +201,10 @@ const getYarnCompareCount = async (
     const knitterWhere = getKnitterSalesWhereQuery(reqData);
     const procuredList = await getYarnProcuredData(salesWhere);
     const processedList = await getYarnProcessedData(knitterWhere);
-    const data = getYarnCompareCountRes(
+    const data = await getYarnCompareCountRes(
       procuredList,
-      processedList
+      processedList,
+      reqData.season
     );
     return res.sendSuccess(res, data);
   } catch (error: any) {
@@ -218,9 +216,10 @@ const getYarnCompareCount = async (
 };
 
 
-const getYarnCompareCountRes = (
+const getYarnCompareCountRes = async (
   yarnProcuredList: any[],
-  yarnProcessedList: any[]
+  yarnProcessedList: any[],
+  reqSeason: any
 ) => {
   let seasonIds: number[] = [];
 
@@ -233,6 +232,19 @@ const getYarnCompareCountRes = (
     if (!seasonIds.includes(processed.dataValues.seasonId))
       seasonIds.push(processed.dataValues.seasonId);
   });
+
+  const seasons = await Season.findAll({
+    limit: 3,
+    order: [
+      ["id", "DESC"],
+    ],
+  });
+  if (seasonIds.length != 3 && !reqSeason) {
+    for (const season of seasons) {
+      if (!seasonIds.includes(season.id))
+        seasonIds.push(season.id);
+    }
+  }
 
   seasonIds = seasonIds.sort((a, b) => a - b).slice(-3);
 
@@ -263,6 +275,15 @@ const getYarnCompareCountRes = (
     if (fProcessed) {
       data.seasonName = fProcessed.dataValues.seasonName;
       data.yarnProcessed = formatNumber(fProcessed.dataValues.processed);
+    }
+
+    if (!data.seasonName) {
+      const fSeason = seasons.find((season: any) =>
+        season.id == sessionId
+      );
+      if (fSeason) {
+        data.seasonName = fSeason.name;
+      }
     }
 
     season.push(data.seasonName);
@@ -346,9 +367,10 @@ const getFabricCompareCount = async (
     const where = getKnitterSalesWhereQuery(reqData);
     const processedList = await getFabricProcessedData(where);
     const soldList = await getFabricSoldData(where);
-    const data = getFabricCompareCountRes(
+    const data = await getFabricCompareCountRes(
       processedList,
-      soldList
+      soldList,
+      reqData.season
     );
     return res.sendSuccess(res, data);
   } catch (error: any) {
@@ -360,9 +382,10 @@ const getFabricCompareCount = async (
 };
 
 
-const getFabricCompareCountRes = (
+const getFabricCompareCountRes = async (
   fabricProcessedList: any[],
-  fabricSoldList: any[]
+  fabricSoldList: any[],
+  reqSeason: any
 ) => {
   let seasonIds: number[] = [];
 
@@ -375,6 +398,19 @@ const getFabricCompareCountRes = (
     if (!seasonIds.includes(sold.dataValues.seasonId))
       seasonIds.push(sold.dataValues.seasonId);
   });
+
+  const seasons = await Season.findAll({
+    limit: 3,
+    order: [
+      ["id", "DESC"],
+    ],
+  });
+  if (seasonIds.length != 3 && !reqSeason) {
+    for (const season of seasons) {
+      if (!seasonIds.includes(season.id))
+        seasonIds.push(season.id);
+    }
+  }
 
   seasonIds = seasonIds.sort((a, b) => a - b).slice(-3);
 
@@ -402,6 +438,15 @@ const getFabricCompareCountRes = (
     if (fSold) {
       data.seasonName = fSold.dataValues.seasonName;
       data.fabricSold = formatNumber(fSold.dataValues.sold);
+    }
+
+    if (!data.seasonName) {
+      const fSeason = seasons.find((season: any) =>
+        season.id == sessionId
+      );
+      if (fSeason) {
+        data.seasonName = fSeason.name;
+      }
     }
 
     season.push(data.seasonName);

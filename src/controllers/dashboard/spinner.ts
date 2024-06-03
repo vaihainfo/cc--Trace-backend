@@ -41,10 +41,7 @@ const getQueryParams = async (
     await validator.validate(spinner);
     await validator.validate(fromDate);
     await validator.validate(toDate);
-    const user = (req as any).user;
-    if (user?.role == 3 && user?._id) {
-      brand = user._id;
-    }
+
     return {
       program,
       brand,
@@ -352,9 +349,10 @@ const getLintProcuredProcessed = async (
     const spinProcessWhere = getSpinnerProcessWhereQuery(reqData);
     const lintProcuredData = await getLintProcuredData(ginSaleWhere);
     const lintProcessedData = await getLintProcessedData(spinProcessWhere);
-    const data = getLintProcuredProcessedRes(
+    const data = await getLintProcuredProcessedRes(
       lintProcuredData,
-      lintProcessedData
+      lintProcessedData,
+      reqData.season
     );
     return res.sendSuccess(res, data);
 
@@ -367,9 +365,10 @@ const getLintProcuredProcessed = async (
 };
 
 
-const getLintProcuredProcessedRes = (
+const getLintProcuredProcessedRes = async (
   lintProcuredList: any[],
-  lintProcessedList: any[]
+  lintProcessedList: any[],
+  reqSeason: any
 ) => {
   let seasonIds: number[] = [];
 
@@ -382,6 +381,19 @@ const getLintProcuredProcessedRes = (
     if (!seasonIds.includes(processed.dataValues.seasonId))
       seasonIds.push(processed.dataValues.seasonId);
   });
+
+  const seasons = await Season.findAll({
+    limit: 3,
+    order: [
+      ["id", "DESC"],
+    ],
+  });
+  if (seasonIds.length != 3 && !reqSeason) {
+    for (const season of seasons) {
+      if (!seasonIds.includes(season.id))
+        seasonIds.push(season.id);
+    }
+  }
 
   seasonIds = seasonIds.sort((a, b) => a - b).slice(-3);
 
@@ -410,6 +422,16 @@ const getLintProcuredProcessedRes = (
       data.seasonName = fProcessed.dataValues.seasonName;
       data.lintProcessed = formatNumber(fProcessed.dataValues.lintProcessed);
     }
+
+    if (!data.seasonName) {
+      const fSeason = seasons.find((season: any) =>
+        season.id == sessionId
+      );
+      if (fSeason) {
+        data.seasonName = fSeason.name;
+      }
+    }
+
 
     season.push(data.seasonName);
     lintProcured.push(data.lintProcured);
@@ -492,9 +514,10 @@ const getYarnProcuredSold = async (
     const where = getSpinnerProcessWhereQuery(reqData);
     const procuredData = await getYarnProcuredData(where);
     const soldData = await getYarnSoldData(where);
-    const data = getYarnProcuredSoldRes(
+    const data = await getYarnProcuredSoldRes(
       procuredData,
-      soldData
+      soldData,
+      reqData.season
     );
     return res.sendSuccess(res, data);
 
@@ -507,9 +530,10 @@ const getYarnProcuredSold = async (
 };
 
 
-const getYarnProcuredSoldRes = (
+const getYarnProcuredSoldRes = async (
   procuredData: any[],
-  soldData: any[]
+  soldData: any[],
+  reqSeason: any
 ) => {
   let seasonIds: number[] = [];
 
@@ -522,6 +546,19 @@ const getYarnProcuredSoldRes = (
     if (!seasonIds.includes(sold.dataValues.seasonId))
       seasonIds.push(sold.dataValues.seasonId);
   });
+
+  const seasons = await Season.findAll({
+    limit: 3,
+    order: [
+      ["id", "DESC"],
+    ],
+  });
+  if (seasonIds.length != 3 && !reqSeason) {
+    for (const season of seasons) {
+      if (!seasonIds.includes(season.id))
+        seasonIds.push(season.id);
+    }
+  }
 
   seasonIds = seasonIds.sort((a, b) => a - b).slice(-3);
 
@@ -550,6 +587,16 @@ const getYarnProcuredSoldRes = (
       data.seasonName = fSold.dataValues.seasonName;
       data.yarnSold = formatNumber(fSold.dataValues.yarnSold);
     }
+
+    if (!data.seasonName) {
+      const fSeason = seasons.find((season: any) =>
+        season.id == sessionId
+      );
+      if (fSeason) {
+        data.seasonName = fSeason.name;
+      }
+    }
+
 
     season.push(data.seasonName);
     yarnProcured.push(data.yarnProcured);

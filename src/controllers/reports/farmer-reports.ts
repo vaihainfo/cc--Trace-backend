@@ -369,9 +369,9 @@ const exportNonOrganicFarmerReport = async (req: Request, res: Response) => {
         country: item.country.county_name,
         brand: item.brand.brand_name,
         program: item.program.program_name,
-        totalArea: item ? item.agri_total_area : "",
-        cottonArea: item ? item.cotton_total_area : "",
-        totalEstimatedCotton: item ? item.total_estimated_cotton : "",
+        totalArea: item ? Number(item.agri_total_area) : 0,
+        cottonArea: item ? Number(item.cotton_total_area) : 0,
+        totalEstimatedCotton: item ? Number(item.total_estimated_cotton) : 0,
       });
       worksheet.addRow(rowValues);
     }
@@ -622,9 +622,9 @@ const exportOrganicFarmerReport = async (req: Request, res: Response) => {
           state: item.state.state_name,
           country: item.country.county_name,
           brand: item.brand.brand_name,
-          totalArea: item ? item.agri_total_area : "",
-          cottonArea: item ? item.cotton_total_area : "",
-          totalEstimatedCotton: item ? item.total_estimated_cotton : "",
+          totalArea: item ? Number(item.agri_total_area) : 0,
+          cottonArea: item ? Number(item.cotton_total_area) : 0,
+          totalEstimatedCotton: item ? Number(item.total_estimated_cotton) : 0,
           icsName: item.ics ? item.ics.ics_name : "",
           icsStatus: item.cert_status ? item.cert_status : "",
         });
