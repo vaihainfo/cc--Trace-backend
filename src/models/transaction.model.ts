@@ -181,7 +181,7 @@ Transaction.belongsTo(Farmer, {
 });
 
 Transaction.belongsTo(CropGrade, {
-  foreignKey: "grade_id",
+  foreignKey: "grade_id", 
   as: "grade",
 });
 

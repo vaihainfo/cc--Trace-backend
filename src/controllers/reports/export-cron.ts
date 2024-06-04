@@ -410,9 +410,6 @@ const generateOrganicFarmerReport = async () => {
       stream: fs.createWriteStream("./upload/farmer-organic-report-test.xlsx")
     });
 
-    const whereCondition: any = {};
-    // whereCondition['$program.program_name$'] = { [Op.iLike]: `%Organic%` };
-
     while (true) {
       const farmer = await sequelize.query(`
         SELECT
@@ -530,71 +527,70 @@ const generateOrganicFarmerReport = async () => {
 const generateNonOrganicFarmerReport = async () => {
   // const excelFilePath = path.join('./upload', 'farmer-non-organic-report.xlsx');
   const maxRowsPerWorksheet = 500000; // Maximum number of rows per worksheet in Excel
+  const batchSize = 100000;
+  let offset = 0;
+  let currentRow = 0;
+  let worksheetIndex = 0;
 
   try {
     const workbook = new ExcelJS.stream.xlsx.WorkbookWriter({
       stream: fs.createWriteStream("./upload/farmer-non-organic-report-test.xlsx")
     });
-    let worksheetIndex = 0;
-    const whereCondition = {
-      '$program.program_name$': { [Op.notILike]: `%Organic%` }
-    };
 
-    const include = [
-      { model: Program, as: 'program', attributes: ['program_name'] },
-      { model: Brand, as: 'brand', attributes: ['brand_name'] },
-      { model: Country, as: 'country', attributes: ['county_name'] },
-      { model: Village, as: 'village', attributes: ['village_name'] },
-      { model: State, as: 'state', attributes: ['state_name'] },
-      { model: District, as: 'district', attributes: ['district_name'] },
-      { model: Block, as: 'block', attributes: ['block_name'] }
-    ];
-
-    const batchSize = 5000;
-    let offset = 0;
-
-    let hasNextBatch = true;
-    while (hasNextBatch) {
-      const farmers = await Farmer.findAll({
-        attributes: ['firstName', 'lastName', 'code', 'agri_total_area', 'cotton_total_area', 'total_estimated_cotton'],
-        where: whereCondition,
-        include: include,
-        offset: offset,
-        limit: batchSize
+    while (true) {
+      const farmer = await sequelize.query(`
+        SELECT
+          "fr"."firstName" AS "Farmer Name",
+          "fr"."lastName" AS "Farmer Last Name",
+          fr.agri_total_area AS "Total Agricultural Area",
+          fr.cotton_total_area AS "Total Cotton Area",
+          fr.total_estimated_cotton AS "Total Estimated Cotton",
+          pr.program_name AS "Program Name",
+          br.brand_name AS "Brand Name",
+          cr.county_name AS "Country Name",
+          st.state_name AS "State Name",
+          dt.district_name AS "District Name",
+          bt.block_name AS "Block Name",
+          vt.village_name AS "Village Name",
+          fr.code AS code
+          FROM
+              farmers fr
+          LEFT JOIN
+              programs pr ON fr.program_id = pr.id
+          LEFT JOIN
+              brands br ON fr.brand_id = br.id
+          LEFT JOIN
+              countries cr ON fr.country_id = cr.id
+          LEFT JOIN
+              states st ON fr.state_id = st.id
+          LEFT JOIN
+              districts dt ON fr.district_id = dt.id
+          LEFT JOIN
+              blocks bt ON fr.block_id = bt.id
+          LEFT JOIN
+              villages vt ON fr.village_id = vt.id
+          WHERE
+              pr.program_name NOT LIKE '%Organic%'
+          LIMIT :limit OFFSET :offset`, {
+            replacements: { limit: batchSize, offset },
+            type: sequelize.QueryTypes.SELECT,
       });
 
-      if (farmers.length === 0) {
-        hasNextBatch = false;
-        break;
+      if (farmer.length === 0) {
+        break; // No more records to fetch, exit the loop
       }
 
-      if (offset % maxRowsPerWorksheet === 0) {
-        worksheetIndex++;
-      }
-
-
-      for await (const [index, item] of farmers.entries()) {
-        const rowValues = [
-          offset + index + 1,
-          `${item.firstName} ${item.lastName ? item.lastName : ""}`,
-          item.code,
-          item.village?.village_name || '',
-          item.block?.block_name || '',
-          item.district?.district_name || '',
-          item.state?.state_name || '',
-          item.country?.county_name || '',
-          item.brand.brand_name || '',
-          item.program.program_name || '',
-          Number(item.agri_total_area) || 0,
-          Number(item.cotton_total_area) || 0,
-          Number(item.total_estimated_cotton) || 0
-        ];
+      for (const item of farmer) {
+        if (currentRow % maxRowsPerWorksheet === 0) {
+          worksheetIndex++;
+          currentRow = 0;
+        }
 
         let currentWorksheet = workbook.getWorksheet(`Procurement Report ${worksheetIndex}`);
         if (!currentWorksheet) {
           currentWorksheet = workbook.addWorksheet(`Procurement Report ${worksheetIndex}`);
           if (worksheetIndex == 1) {
-            currentWorksheet.mergeCells('A1:M1');
+            currentWorksheet.mergeCells('A1:O1');
             const mergedCell = currentWorksheet.getCell('A1');
             mergedCell.value = 'Cotton Connect | Farmer Report';
             mergedCell.font = { bold: true };
@@ -608,11 +604,30 @@ const generateNonOrganicFarmerReport = async () => {
           ]);
           headerRow.font = { bold: true };
         }
+
+        const rowValues = Object.values({
+          index: (offset + currentRow + 1),
+          farmerName: item["Farmer Name"] + " " + (item["Farmer Last Name"] ? item["Farmer Last Name"] : ""),
+          code: item.code ? item.code : '',
+          village: item["Village Name"],
+          block: item["Block Name"],
+          district: item["District Name"],
+          state: item["State Name"],
+          country: item["Country Name"],
+          brand: item["Brand Name"],
+          program:item["Program Name"],
+          totalArea: item ? +item["Total Agricultural Area"] : 0,
+          cottonArea: item ? +item["Total Cotton Area"] : 0,
+          totalEstimatedCotton: item ? +item["Total Estimated Cotton"] : 0,
+        });
+
         currentWorksheet.addRow(rowValues).commit();
+        currentRow++;
       }
+
       offset += batchSize;
     }
-
+    
     await workbook.commit()
       .then(() => {
         // Rename the temporary file to the final filename
@@ -726,12 +741,29 @@ const generateFaildReport = async (type: string) => {
 
 const generateProcurementReport = async () => {
   try {
-    const batchSize = 5000; // Number of transactions to fetch per batch
+    const batchSize = 100000; // Number of transactions to fetch per batch
     const maxRowsPerWorksheet = 500000; // Maximum number of rows per worksheet in Excel
 
     const workbook = new ExcelJS.stream.xlsx.WorkbookWriter({
       stream: fs.createWriteStream("./upload/procurement-report-test.xlsx")
     });
+
+    await sequelize.query(`
+      CREATE INDEX IF NOT EXISTS idx_transactions_status ON transactions(status);
+      CREATE INDEX IF NOT EXISTS idx_transactions_program_id ON transactions(program_id);
+      CREATE INDEX IF NOT EXISTS idx_transactions_brand_id ON transactions(brand_id);
+      CREATE INDEX IF NOT EXISTS idx_transactions_country_id ON transactions(country_id);
+      CREATE INDEX IF NOT EXISTS idx_transactions_state_id ON transactions(state_id);
+      CREATE INDEX IF NOT EXISTS idx_transactions_district_id ON transactions(district_id);
+      CREATE INDEX IF NOT EXISTS idx_transactions_block_id ON transactions(block_id);
+      CREATE INDEX IF NOT EXISTS idx_transactions_village_id ON transactions(village_id);
+      CREATE INDEX IF NOT EXISTS idx_transactions_farmer_id ON transactions(farmer_id);
+      CREATE INDEX IF NOT EXISTS idx_transactions_ginner_id ON transactions(mapped_ginner);
+      CREATE INDEX IF NOT EXISTS idx_transactions_grade_id ON transactions(grade_id);
+      CREATE INDEX IF NOT EXISTS idx_transactions_season_id ON transactions(season_id);
+      CREATE INDEX IF NOT EXISTS idx_transactions_farm_id ON transactions(farm_id);
+      CREATE INDEX IF NOT EXISTS idx_transactions_agent_id ON transactions(agent_id);
+    `);
 
     let worksheetIndex = 0;
     let offset = 0;
@@ -740,24 +772,24 @@ const generateProcurementReport = async () => {
       for (const [index, transaction] of transactions.entries()) {
         worksheet.addRow([
           index + offset + 1,
-          transaction.dataValues.date ? transaction.dataValues.date.toString() : '',
-          transaction.dataValues.farmer_code ? transaction.dataValues.farmer_code : '',
-          transaction.dataValues.farmer ? transaction.dataValues.farmer.firstName + ' ' + `${transaction.dataValues.farmer.lastName ? transaction.dataValues.farmer.lastName : ""}` : transaction.dataValues.farmer_name,
-          transaction.dataValues.season ? transaction.dataValues.season.name : '',
-          transaction.dataValues.country ? transaction.dataValues.country.county_name : '',
-          transaction.dataValues.state ? transaction.dataValues.state.state_name : '',
-          transaction.dataValues.district ? transaction.dataValues.district.district_name : '',
-          transaction.dataValues.block ? transaction.dataValues.block.block_name : '',
-          transaction.dataValues.village ? transaction.dataValues.village.village_name : '',
-          transaction.dataValues.id ? transaction.dataValues.id : '',
-          transaction.dataValues.qty_purchased ? Number(transaction.dataValues.qty_purchased) : 0,
-          transaction.dataValues.farm ? (Number(transaction.dataValues.farm.total_estimated_cotton) > Number(transaction.dataValues.farm.cotton_transacted) ? Number(transaction.dataValues.farm.total_estimated_cotton) - Number(transaction.dataValues.farm.cotton_transacted) : 0) : 0,
-          transaction.dataValues.rate ? Number(transaction.dataValues.rate) : 0,
-          transaction.dataValues.program ? transaction.dataValues.program.program_name : '',
-          transaction.dataValues.vehicle ? transaction.dataValues.vehicle : '',
-          transaction.dataValues.payment_method ? transaction.dataValues.payment_method : '',
-          transaction.dataValues.ginner ? transaction.dataValues.ginner.name : '',
-          transaction.dataValues.agent ? transaction.dataValues.agent.firstName : "",
+          transaction.date ? moment(transaction.date).format('DD/MM/YYYY') : '',
+          transaction.firstName ? transaction.firstName + ' ' + `${transaction.lastName ? transaction.lastName : ""}` : transaction.firstName,
+          transaction.farmer_code ? transaction.farmer_code : '',
+          transaction.season_name ? transaction.season_name : '',
+          transaction.county_name ? transaction.county_name : '',
+          transaction.state_name ? transaction.state_name : '',
+          transaction.district_name ? transaction.district_name : '',
+          transaction.block_name ? transaction.block_name : '',
+          transaction.village_name ? transaction.village_name : '',
+          transaction.id ? transaction.id : '',
+          transaction.qty_purchased ? Number(transaction.qty_purchased) : 0,
+          transaction.total_estimated_cotton ? (Number(transaction.total_estimated_cotton) > Number(transaction.cotton_transacted) ? Number(transaction.total_estimated_cotton) - Number(transaction.cotton_transacted) : 0) : 0,
+          transaction.rate ? Number(transaction.rate) : 0,
+          transaction.program_name ? transaction.program_name : '',
+          transaction.vehicle ? transaction.vehicle : '',
+          transaction.payment_method ? transaction.payment_method : '',
+          transaction.ginner_name ? transaction.ginner_name : '',
+          transaction.agent_name ? transaction.agent_name : "",
         ]).commit();
       }
       offset += batchSize
@@ -765,76 +797,51 @@ const generateProcurementReport = async () => {
 
     while (true) {
       // Fetch a batch of transactions
-      const transactions = await Transaction.findAll({
-        attributes: ['date', 'farmer_code', 'qty_purchased', 'rate', 'id', 'vehicle', 'payment_method'],
-        where: { status: 'Sold' },
-        include: [
-          {
-            model: Village,
-            as: "village",
-            attributes: ['id', 'village_name']
-          },
-          {
-            model: Block,
-            as: "block",
-            attributes: ['id', 'block_name']
-          },
-          {
-            model: District,
-            as: "district",
-            attributes: ['id', 'district_name']
-          },
-          {
-            model: State,
-            as: "state",
-            attributes: ['id', 'state_name']
-          },
-          {
-            model: Country,
-            as: "country",
-            attributes: ['id', 'county_name']
-          },
-          {
-            model: Farmer,
-            as: "farmer",
-          },
-          {
-            model: Program,
-            as: "program",
-            attributes: ['id', 'program_name']
-          },
-          {
-            model: Brand,
-            as: "brand",
-            attributes: ['id', 'brand_name']
-          },
-          {
-            model: Ginner,
-            as: "ginner",
-            attributes: ['id', 'name', 'address']
-          },
-          {
-            model: CropGrade,
-            as: "grade",
-            attributes: ['id', 'cropGrade']
-          },
-          {
-            model: Season,
-            as: "season",
-            attributes: ['id', 'name']
-          },
-          {
-            model: Farm,
-            as: "farm"
-          },
-          {
-            model: UserApp,
-            as: "agent"
-          },
-        ],
-        offset: offset,
-        limit: batchSize
-      });
+      const transactions = await sequelize.query(`
+      SELECT
+          tr.date,
+          tr.farmer_code,
+          tr.qty_purchased,
+          tr.rate,
+          tr.id,
+          tr.vehicle,
+          tr.payment_method,
+          vt.village_name,
+          bt.block_name,
+          dt.district_name,
+          st.state_name,
+          cr.county_name,
+          "fr"."firstName",
+          "fr"."lastName",
+          pr.program_name,
+          br.brand_name,
+          gr.name AS ginner_name,
+          "cg"."cropGrade" AS grade_name,
+          s.name AS season_name,
+          fm.total_estimated_cotton,
+          fm.cotton_transacted,
+          "ag"."firstName" AS agent_name
+      FROM
+          transactions tr
+      LEFT JOIN programs pr ON tr.program_id = pr.id
+      LEFT JOIN brands br ON tr.brand_id = br.id
+      LEFT JOIN countries cr ON tr.country_id = cr.id
+      LEFT JOIN states st ON tr.state_id = st.id
+      LEFT JOIN districts dt ON tr.district_id = dt.id
+      LEFT JOIN blocks bt ON tr.block_id = bt.id
+      LEFT JOIN villages vt ON tr.village_id = vt.id
+      LEFT JOIN farmers fr ON tr.farmer_id = fr.id
+      LEFT JOIN ginners gr ON tr.mapped_ginner = gr.id
+      LEFT JOIN crop_grades cg ON tr.grade_id = cg.id
+      LEFT JOIN seasons s ON tr.season_id = s.id
+      LEFT JOIN farms fm ON tr.farm_id = fm.id 
+      LEFT JOIN users_apps ag ON tr.agent_id = ag.id
+      WHERE
+          tr.status = 'Sold'
+      LIMIT :limit OFFSET :offset`, {
+      replacements: { limit: batchSize, offset },
+      type: sequelize.QueryTypes.SELECT,
+    });
 
       if (transactions.length === 0) {
         // No more transactions to fetch, exit the loop
@@ -1508,7 +1515,7 @@ const generatePscpProcurementLiveTracker = async () => {
 
 const generateAgentTransactions = async () => {
   const maxRowsPerWorksheet = 500000; // Maximum number of rows per worksheet in Excel
-  const batchSize = 5000; // Number of records to fetch per batch
+  const batchSize = 100000; // Number of records to fetch per batch
 
   try {
     const workbook = new ExcelJS.stream.xlsx.WorkbookWriter({
@@ -1516,81 +1523,53 @@ const generateAgentTransactions = async () => {
     });
     let worksheetIndex = 0;
     let offset = 0;
-    let queryOptions: any = {
-      where: {
-        agent_id: { [Op.not]: null }
-      },
-      include: [
-        {
-          model: Village,
-          as: "village",
-          attributes: ['id', 'village_name']
-        },
-        {
-          model: Block,
-          as: "block",
-          attributes: ['id', 'block_name']
-        },
-        {
-          model: District,
-          as: "district",
-          attributes: ['id', 'district_name']
-        },
-        {
-          model: State,
-          as: "state",
-          attributes: ['id', 'state_name']
-        },
-        {
-          model: Country,
-          as: "country",
-          attributes: ['id', 'county_name']
-        },
-        {
-          model: Farmer,
-          as: "farmer",
-        },
-        {
-          model: Program,
-          as: "program",
-          attributes: ['id', 'program_name']
-        },
-        {
-          model: Brand,
-          as: "brand",
-          attributes: ['id', 'brand_name']
-        },
-        {
-          model: Ginner,
-          as: "ginner",
-          attributes: ['id', 'name', 'address']
-        },
-        {
-          model: CropGrade,
-          as: "grade",
-          attributes: ['id', 'cropGrade']
-        },
-        {
-          model: Season,
-          as: "season",
-          attributes: ['id', 'name']
-        },
-        {
-          model: Farm,
-          as: "farm"
-        },
-        {
-          model: UserApp,
-          as: "agent"
-        },
-      ],
-    };
 
     do {
-      const transactions = await Transaction.findAll({
-        ...queryOptions,
-        limit: batchSize,
-        offset: offset
+      const transactions = await sequelize.query(`
+        SELECT
+            tr.date,
+            tr.farmer_code,
+            tr.qty_purchased,
+            tr.rate,
+            tr.id,
+            tr.vehicle,
+            tr.payment_method,
+            vt.village_name,
+            bt.block_name,
+            dt.district_name,
+            st.state_name,
+            cr.county_name,
+            "fr"."firstName",
+            "fr"."lastName",
+            pr.program_name,
+            br.brand_name,
+            gr.name AS ginner_name,
+            "cg"."cropGrade" AS grade_name,
+            s.name AS season_name,
+            fm.total_estimated_cotton,
+            fm.cotton_transacted,
+            "ag"."firstName" AS agent_name
+        FROM
+            transactions tr
+        LEFT JOIN programs pr ON tr.program_id = pr.id
+        LEFT JOIN brands br ON tr.brand_id = br.id
+        LEFT JOIN countries cr ON tr.country_id = cr.id
+        LEFT JOIN states st ON tr.state_id = st.id
+        LEFT JOIN districts dt ON tr.district_id = dt.id
+        LEFT JOIN blocks bt ON tr.block_id = bt.id
+        LEFT JOIN villages vt ON tr.village_id = vt.id
+        LEFT JOIN farmers fr ON tr.farmer_id = fr.id
+        LEFT JOIN ginners gr ON tr.mapped_ginner = gr.id
+        LEFT JOIN crop_grades cg ON tr.grade_id = cg.id
+        LEFT JOIN seasons s ON tr.season_id = s.id
+        LEFT JOIN farms fm ON tr.farm_id = fm.id 
+        LEFT JOIN users_apps ag ON tr.agent_id = ag.id
+        WHERE
+          tr.agent_id IS NOT NULL
+          AND tr.agent_id <> 0
+        LIMIT :limit OFFSET :offset`, {
+        replacements: { limit: batchSize, offset },
+        type: sequelize.QueryTypes.SELECT,
       });
 
       if (transactions.length === 0) {
@@ -1622,27 +1601,27 @@ const generateAgentTransactions = async () => {
       }
 
       // Append data to worksheet
-      for await (const [index, item] of transactions.entries()) {
+      for await (const [index, item] of transactions.entries()){
         const rowValues = Object.values({
           index: index + offset + 1,
           date: moment(item.date).format('DD/MM/YYYY'),
-          farmerCode: item.farmer ? item.farmer?.code : "",
-          farmerName: item.farmer ? item.farmer?.firstName + ' ' + `${item.farmer?.lastName ? item.farmer?.lastName : ""}` : "",
-          season: item.season ? item.season.name : "",
-          country: item.country ? item.country.county_name : "",
-          state: item.state ? item.state.state_name : "",
-          district: item.district ? item.district.district_name : "",
-          block: item.block ? item.block.block_name : "",
-          village: item.village ? item.village.village_name : "",
+          farmerCode: item.farmer_code ? item.farmer_code : "",
+          farmerName: item.firstName ? item.firstName + ' ' + `${item.lastName ? item.lastName : ""}` : item.firstName,
+          season: item.season_name ? item.season_name : "",
+          country: item.county_name ? item.county_name : "",
+          state: item.state_name ? item.state_name : "",
+          district: item.district_name ? item.district_name : "",
+          block: item.block_name ? item.block_name : "",
+          village: item.village_name ? item.village_name : "",
           transactionId: item.id,
           qty_purchased: Number(item.qty_purchased) ?? 0,
-          available_cotton: item.farm ? (Number(item.farm.total_estimated_cotton) > Number(item.farm.cotton_transacted) ? Number(item.farm.total_estimated_cotton) - Number(item.farm.cotton_transacted) : 0) : 0,
+          available_cotton: item.total_estimated_cotton ? (Number(item.total_estimated_cotton) > Number(item.cotton_transacted) ? Number(item.total_estimated_cotton) - Number(item.cotton_transacted) : 0) : 0,
           rate: Number(item.rate) ?? 0,
-          program: item.program ? item.program.program_name : "",
+          program: item.program_name ? item.program_name : "",
           vehicle: item.vehicle ? item.vehicle : "",
           payment_method: item.payment_method ? item.payment_method : "",
-          ginner: item.ginner ? item.ginner.name : "",
-          agent: item.agent ? item.agent.firstName : "",
+          ginner: item.ginner_name ? item.ginner_name : "",
+          agent: item.agent_name ? item.agent_name : "",
         });
         currentWorksheet.addRow(rowValues).commit();
       }
