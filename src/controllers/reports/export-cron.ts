@@ -417,6 +417,7 @@ const generateOrganicFarmerReport = async () => {
           "fr"."lastName" AS "Farmer Last Name",
           fr.tracenet_id AS "Tracenet ID",
           fr.agri_total_area AS "Total Agricultural Area",
+          fr.agri_estimated_prod,
           fr.cotton_total_area AS "Total Cotton Area",
           fr.total_estimated_cotton AS "Total Estimated Cotton",
           br.brand_name AS "Brand Name",
@@ -478,7 +479,7 @@ const generateOrganicFarmerReport = async () => {
           const headerRow = currentWorksheet.addRow([
             'S.No', 'Farmer Name', 'Farm Group', 'Tracenet Id', 'Village',
             'Block', 'District', 'State', 'Country', 'Brand Name', 'Total Area',
-            'Cotton Area', 'Total Estimated Production', 'ICS Name', 'ICS Status'
+            'Cotton Area', 'Total Estimated Cotton', 'Total Estimated Production', 'ICS Name', 'ICS Status'
           ]);
           headerRow.font = { bold: true };
         }
@@ -497,6 +498,7 @@ const generateOrganicFarmerReport = async () => {
           totalArea: item ? +item["Total Agricultural Area"] : 0,
           cottonArea: item ? +item["Total Cotton Area"] : 0,
           totalEstimatedCotton: item ? +item["Total Estimated Cotton"] : 0,
+          totalEstimatedProduction: item ? +item.agri_estimated_prod : 0,
           icsName: item["ICS Name"] ? item["ICS Name"] : '',
           icsStatus: item.cert_status ? item.cert_status : '',
         });
@@ -544,6 +546,7 @@ const generateNonOrganicFarmerReport = async () => {
           "fr"."lastName" AS "Farmer Last Name",
           fr.agri_total_area AS "Total Agricultural Area",
           fr.cotton_total_area AS "Total Cotton Area",
+          fr.agri_estimated_prod,
           fr.total_estimated_cotton AS "Total Estimated Cotton",
           pr.program_name AS "Program Name",
           br.brand_name AS "Brand Name",
@@ -600,7 +603,7 @@ const generateNonOrganicFarmerReport = async () => {
           const headerRow = currentWorksheet.addRow([
             'S.No', 'Farmer Name', 'Farmer Code', 'Village',
             'Block', 'District', 'State', 'Country', 'Brand Name', 'Program Name', 'Total Area',
-            'Cotton Area', 'Total Estimated Production'
+            'Cotton Area', 'Total Estimated Cotton', 'Total Estimated Production'
           ]);
           headerRow.font = { bold: true };
         }
@@ -618,6 +621,7 @@ const generateNonOrganicFarmerReport = async () => {
           program:item["Program Name"],
           totalArea: item ? +item["Total Agricultural Area"] : 0,
           cottonArea: item ? +item["Total Cotton Area"] : 0,
+          totalEstimatedProduction: item ? +item.agri_estimated_prod : 0,
           totalEstimatedCotton: item ? +item["Total Estimated Cotton"] : 0,
         });
 
@@ -783,6 +787,7 @@ const generateProcurementReport = async () => {
           transaction.village_name ? transaction.village_name : '',
           transaction.id ? transaction.id : '',
           transaction.qty_purchased ? Number(transaction.qty_purchased) : 0,
+          transaction.qty_stock ? Number(transaction.qty_stock) : 0,
           transaction.total_estimated_cotton ? (Number(transaction.total_estimated_cotton) > Number(transaction.cotton_transacted) ? Number(transaction.total_estimated_cotton) - Number(transaction.cotton_transacted) : 0) : 0,
           transaction.rate ? Number(transaction.rate) : 0,
           transaction.program_name ? transaction.program_name : '',
@@ -802,6 +807,7 @@ const generateProcurementReport = async () => {
           tr.date,
           tr.farmer_code,
           tr.qty_purchased,
+          tr.qty_stock,
           tr.rate,
           tr.id,
           tr.vehicle,
@@ -880,6 +886,7 @@ const generateProcurementReport = async () => {
           "Transaction Id",
           "Quantity Purchased (Kgs)",
           "Available Cotton(Kgs)",
+          "Quantity in stock(Kgs)",
           "Price/Kg (Local Currency)",
           "Program",
           "Transport Vehicle No",
@@ -1853,12 +1860,13 @@ const generateGinnerProcess = async () => {
               g.name AS ginner_name,
               gp.heap_number,
               gp.lot_no,
+              gp.press_no,
               gp.reel_lot_no,
               gp.no_of_bales,
               gp.total_qty AS seed_consumed,
               gp.gin_out_turn AS got,
-              pr.program_name AS program,
-              ROW_NUMBER() OVER (ORDER BY gp.id) AS row_num
+              gp.bale_process,
+              pr.program_name AS program
           FROM
               gin_processes gp
           LEFT JOIN
@@ -1868,7 +1876,7 @@ const generateGinnerProcess = async () => {
           LEFT JOIN
               programs pr ON gp.program_id = pr.id
             ),
-            gin_bale_data AS (
+          gin_bale_data AS (
                 SELECT
                     gb.process_id,
                     COALESCE(SUM(CAST(gb.weight AS DOUBLE PRECISION)), 0) AS lint_quantity,
@@ -1882,7 +1890,7 @@ const generateGinnerProcess = async () => {
             cotton_selection_data AS (
                 SELECT
                     cs.process_id,
-                    STRING_AGG(v.village_name, ', ') AS villages
+                    STRING_AGG(DISTINCT v.village_name, ', ') AS villages
                 FROM
                     cotton_selections cs
                 LEFT JOIN
@@ -1906,11 +1914,12 @@ const generateGinnerProcess = async () => {
             )
             SELECT
                 gd.date AS date,
-                gd.created_date AS created_date,
+                gd.created_date AS "createdAt",
                 gd.season_name AS season,
-                gd.ginner_name AS ginner_Name,
-                gd.heap_number AS heap_no,
-                gd.lot_no AS gin_lot_no,
+                gd.ginner_name AS ginner_name,
+                gd.heap_number AS heap_number,
+                gd.lot_no AS lot_no,
+                gd.press_no AS press_no,
                 CONCAT(gb.pressno_from, '-', gb.pressno_to) AS gin_press_no,
                 gd.reel_lot_no AS reel_lot_no,
                 CONCAT('001-', LPAD(gd.no_of_bales::TEXT, 3, '0')) AS reel_press_no,
@@ -1918,11 +1927,11 @@ const generateGinnerProcess = async () => {
                 gb.lint_quantity AS lint_quantity,
                 gd.seed_consumed AS total_qty,
                 gd.got AS gin_out_turn,
-                sd.lint_quantity_sold AS soldlint,
-                sd.sold_bales AS soldBales,
-                (gb.lint_quantity - sd.lint_quantity_sold) AS lintStock,
-                (gd.no_of_bales - sd.sold_bales) AS balesStock,
-                gd.program AS Program,
+                COALESCE(sd.lint_quantity_sold, 0) AS lint_quantity_sold,
+                COALESCE(sd.sold_bales, 0) AS sold_bales,
+                (COALESCE(gb.lint_quantity, 0) - COALESCE(sd.lint_quantity_sold, 0)) AS lint_stock,
+                (COALESCE(gd.no_of_bales, 0) - COALESCE(sd.sold_bales, 0)) AS bale_stock,
+                gd.program AS program,
                 cs.villages AS village_names
             FROM
                 gin_process_data gd
@@ -1931,8 +1940,9 @@ const generateGinnerProcess = async () => {
             LEFT JOIN
                 cotton_selection_data cs ON gd.process_id = cs.process_id
             LEFT JOIN
-                sold_data sd ON gd.process_id = sd.process_id
-                LIMIT :limit OFFSET :offset`, {
+              sold_data sd ON gd.process_id = sd.process_id
+            LIMIT :limit OFFSET :offset
+            `, {
             replacements: { limit: batchSize, offset },
             type: sequelize.QueryTypes.SELECT,
           });
@@ -1970,24 +1980,24 @@ const generateGinnerProcess = async () => {
         const rowValues = Object.values({
           index: index + offset + 1,
           date: item.date ? item.date : "",
-          created_date: item.created_date ? item.created_date : "",
+          created_date: item.createdAt ? item.createdAt : "",
           season: item.season ? item.season : "",
           ginner: item.ginner_name ? item.ginner_name : "",
-          heap: item.heap_no ? item.heap_no : '',
-          lot_no: item.gin_lot_no ? item.gin_lot_no : "",
-          press_no: item.gin_press_no ? item.gin_press_no : "",
+          heap: item.heap_number ?  item.heap_number : '',
+          lot_no: item.lot_no ? item.lot_no : "",
+          press_no: item.press_no ? item.press_no : "",
           reel_lot_no: item.reel_lot_no ? item.reel_lot_no : "",
-          process_no: item.reel_press_no ? item.reel_press_no : "-",
-          noOfBales: item.no_of_bales ? item.no_of_bales : 0,
-          lint_qty: item.lint_quantity ? item.lint_quantity : 0,
-          seedConsmed: item.total_qty ? item.total_qty : 0,
+          reel_press_no: item.reel_press_no ? item.reel_press_no : "",
+          noOfBales: item.no_of_bales ? Number(item.no_of_bales) : 0,
+          lint_quantity: item.lint_quantity ? Number(item.lint_quantity) : 0,
+          seedConsmed: item.total_qty ? Number(item.total_qty) : 0,
           got: item.gin_out_turn ? item.gin_out_turn : "",
-          lint_quantity_sold: item.soldlint ? item.soldlint : 0,
-          sold_bales: item.soldbales ? +item.soldbales : 0,
-          lint_stock: item.lintstock && item.lintstock > 0 ? item.lintstock : 0,
-          bale_stock: item.balesstock && +item.balesstock > 0 ? +item.balesstock : 0,
+          lint_quantity_sold: item.lint_quantity_sold ? Number(item.lint_quantity_sold) : 0,
+          sold_bales: item.sold_bales ? Number(item.sold_bales) : 0,
+          lint_stock: item.lint_stock && Number(item.lint_stock) > 0 ? Number(item.lint_stock) : 0,
+          bale_stock: item.bale_stock && Number(item.bale_stock) > 0 ? Number(item.bale_stock) : 0,
           program: item.program ? item.program : "",
-          village: item.village_names ? item.village_names : "",
+          village_names: item.village_names ? item.village_names : "",
         });
 
         currentWorksheet.addRow(rowValues).commit();
@@ -2948,36 +2958,91 @@ const generateSpinnerYarnProcess = async () => {
 
     let hasNextBatch = true;
 
-    let include = [
-      {
-        model: Spinner,
-        as: "spinner",
-        attributes: ["id", "name"],
-      },
-      {
-        model: Season,
-        attributes: ["id", "name"],
-        as: "season",
-      },
-      {
-        model: Program,
-        as: "program",
-        attributes: ["id", "program_name"],
-      },
-      // {
-      //     model: YarnCount,
-      //     as: "yarncount",
-      //     attributes: ["id","yarnCount_name"]
-      // }
-    ];
-
     while (hasNextBatch) {
+      const dataQuery = `
+        WITH spin_process_data AS (
+          SELECT
+            spin_process.id AS process_id,
+            spin_process.date,
+            spin_process."createdAt",
+            season.name AS season_name,
+            spinner.name AS spinner_name,
+            spin_process.batch_lot_no,
+            spin_process.reel_lot_no,
+            spin_process.yarn_type,
+            spin_process.yarn_count,
+            spin_process.other_mix,
+            spin_process.cottonmix_type,
+            spin_process.cottonmix_qty,
+            spin_process.no_of_boxes,
+            spin_process.total_qty,
+            spin_process.net_yarn_qty,
+            spin_process.qty_stock,
+            spin_process.comber_noil,
+            spin_process.comber_noil_stock,
+            spin_process.yarn_realisation,
+            spin_process.yarn_qty_produced,
+            spin_process.accept_date,
+            spin_process.qr,
+            program.program_name AS program
+          FROM
+            spin_processes spin_process
+          LEFT JOIN
+            spinners spinner ON spin_process.spinner_id = spinner.id
+          LEFT JOIN
+            seasons season ON spin_process.season_id = season.id
+          LEFT JOIN
+            programs program ON spin_process.program_id = program.id
+        ),
+        cotton_consumed_data AS (
+          SELECT
+            process_id,
+            COALESCE(SUM(qty_used), 0) AS cotton_consumed
+          FROM
+            lint_selections
+          GROUP BY
+            process_id
+        ),
+        yarn_sold_data AS (
+          SELECT
+            spin_process_id,
+            COALESCE(SUM(qty_used), 0) AS yarn_sold
+          FROM
+            spin_process_yarn_selections
+          GROUP BY
+            spin_process_id
+        ),
+        yarn_count_data AS (
+          SELECT
+            spin_process.id AS process_id,
+            json_agg(json_build_object('id', yarn_count.id, 'yarnCount_name', yarn_count."yarnCount_name")) AS yarncount
+          FROM
+            spin_processes spin_process
+          LEFT JOIN
+            yarn_counts yarn_count ON yarn_count.id = ANY(spin_process.yarn_count)
+          GROUP BY
+            spin_process.id
+        )
+        SELECT
+          spd.*,
+          COALESCE(ccd.cotton_consumed, 0) AS cotton_consumed,
+          COALESCE(ysd.yarn_sold, 0) AS yarn_sold,
+          ycd.yarncount
+        FROM
+          spin_process_data spd
+        LEFT JOIN
+          cotton_consumed_data ccd ON spd.process_id = ccd.process_id
+        LEFT JOIN
+          yarn_sold_data ysd ON spd.process_id = ysd.spin_process_id
+        LEFT JOIN
+          yarn_count_data ycd ON spd.process_id = ycd.process_id
+        LIMIT :limit OFFSET :offset
+        `;
 
-      const { count, rows } = await SpinProcess.findAndCountAll({
-        where: whereCondition,
-        include: include,
-        offset: offset,
-        limit: batchSize,
+      // Execute the queries
+      const rows = await sequelize.query(dataQuery, {
+        replacements: { limit : batchSize, offset },
+        type: sequelize.QueryTypes.SELECT,
       });
 
       if (rows.length === 0) {
@@ -2993,8 +3058,8 @@ const generateSpinnerYarnProcess = async () => {
       for await (const [index, item] of rows.entries()) {
         let blendValue = "";
         let blendqty = "";
-        let yarncount = "";
-
+        let yarnCount = "";
+  
         if (item.cottonmix_type && item.cottonmix_type.length > 0) {
           let blend = await CottonMix.findAll({
             where: { id: { [Op.in]: item.cottonmix_type } },
@@ -3006,65 +3071,34 @@ const generateSpinnerYarnProcess = async () => {
             blendqty += `${obj},`;
           }
         }
-
-        if (item.yarn_count && item.yarn_count.length > 0) {
-          let yarn = await YarnCount.findAll({
-            attributes: ["id", "yarnCount_name"],
-            where: { id: { [Op.in]: item.yarn_count } },
-          });
-          yarncount = yarn
-            .map((yrn: any) => yrn.dataValues.yarnCount_name)
+  
+        if (item.yarncount && item.yarncount.length > 0) {
+          yarnCount = item.yarncount
+            .map((yrn: any) => yrn.yarnCount_name)
             .join(",");
-        }
-
-        let cottonConsumed = await LintSelections.findOne({
-          attributes: [
-            [
-              sequelize.fn(
-                "COALESCE",
-                sequelize.fn("SUM", sequelize.col("qty_used")),
-                0
-              ),
-              "cotton_consumed",
-            ],
-          ],
-          where: { process_id: item.dataValues.id },
-          group: ["process_id"],
-        });
-
-        let yarnSold = await SpinProcessYarnSelection.findOne({
-          attributes: [
-            [
-              sequelize.fn(
-                "COALESCE",
-                sequelize.fn("SUM", sequelize.col("qty_used")),
-                0
-              ),
-              "yarn_sold",
-            ],
-          ],
-          where: { spin_process_id: item.dataValues.id },
-        });
+        };
 
         const rowValues = Object.values({
           index: index + offset + 1,
           date: item.date ? item.date : "",
-          season: item.season ? item.season.name : "",
-          spinner: item.spinner ? item.spinner.name : "",
+          season: item.season_name ? item.season_name : "",
+          spinner: item.spinner_name ? item.spinner_name : "",
           lotNo: item.batch_lot_no ? item.batch_lot_no : "",
           reel_lot_no: item.reel_lot_no ? item.reel_lot_no : "",
           yarnType: item.yarn_type ? item.yarn_type : "",
-          count: yarncount ? yarncount : "",
+          count: yarnCount ? yarnCount : "",
           resa: item.yarn_realisation ? Number(item.yarn_realisation) : 0,
-          comber: item.comber_noil ? Number(item.comber_noil) : 0,          
-          blend: Number(blendValue) ?? 0,
-          blendqty: Number(blendqty) ?? 0,
-          cotton_consumed: cottonConsumed
-            ? Number(cottonConsumed?.dataValues?.cotton_consumed)
+          comber: item.comber_noil ? Number(item.comber_noil) : 0,
+          blend: blendValue,
+          blendqty: blendqty,
+          cotton_consumed: item?.cotton_consumed
+            ? Number(item?.cotton_consumed)
             : 0,
-          program: item.program ? item.program.program_name : "",
-          total: Number(item.net_yarn_qty) ?? 0,
-          yarn_sold: yarnSold ? Number(yarnSold?.dataValues?.yarn_sold) : 0,
+          program: item.program ? item.program : "",
+          total: item.net_yarn_qty ? Number(item.net_yarn_qty) : 0,
+          yarn_sold: item?.yarn_sold
+          ? Number(item?.yarn_sold)
+          : 0,
           yarn_stock: item.qty_stock ? Number(item.qty_stock) : 0,
         });
 

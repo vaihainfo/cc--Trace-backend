@@ -66,168 +66,183 @@ const fetchBaleProcess = async (req: Request, res: Response) => {
   const limit = Number(req.query.limit) || 10;
   const { ginnerId, seasonId, programId, brandId, countryId, startDate, endDate}: any = req.query;
   const offset = (page - 1) * limit;
-  const whereCondition: any = {};
+  const whereCondition: any = [];
   try {
     if (searchTerm) {
-      whereCondition[Op.or] = [
-        { "$ginner.name$": { [Op.iLike]: `%${searchTerm}%` } },
-        { "$season.name$": { [Op.iLike]: `%${searchTerm}%` } },
-        { "$program.program_name$": { [Op.iLike]: `%${searchTerm}%` } },
-        { lot_no: { [Op.iLike]: `%${searchTerm}%` } },
-        { reel_lot_no: { [Op.iLike]: `%${searchTerm}%` } },
-        { press_no: { [Op.iLike]: `%${searchTerm}%` } },
-      ];
+      whereCondition.push(`
+        (
+          g.name ILIKE '%${searchTerm}%' OR
+          s.name ILIKE '%${searchTerm}%' OR
+          pr.program_name ILIKE '%${searchTerm}%' OR
+          gp.lot_no ILIKE '%${searchTerm}%' OR
+          gp.reel_lot_no ILIKE '%${searchTerm}%' OR
+          gp.press_no ILIKE '%${searchTerm}%'
+        )
+      `);
     }
-
+    
     if (brandId) {
-      const idArray: number[] = brandId
-        .split(",")
-        .map((id: any) => parseInt(id, 10));
-
-      whereCondition["$ginner.brand$"] = { [Op.overlap]: idArray };
+      const idArray = brandId.split(",").map((id: any) => parseInt(id, 10));
+      whereCondition.push(`g.brand && ARRAY[${idArray.join(',')}]`);
     }
-
+    
     if (seasonId) {
-      const idArray: number[] = seasonId
-        .split(",")
-        .map((id: any) => parseInt(id, 10));
-      whereCondition.season_id = { [Op.in]: idArray };
+      const idArray = seasonId.split(",").map((id: any) => parseInt(id, 10));
+      whereCondition.push(`gp.season_id IN (${idArray.join(',')})`);
     }
-
+    
     if (ginnerId) {
-      const idArray: number[] = ginnerId
-        .split(",")
-        .map((id: any) => parseInt(id, 10));
-      whereCondition.ginner_id = { [Op.in]: idArray };
+      const idArray = ginnerId.split(",").map((id: any) => parseInt(id, 10));
+      whereCondition.push(`gp.ginner_id IN (${idArray.join(',')})`);
     }
+    
     if (countryId) {
-      const idArray: number[] = countryId
-        .split(",")
-        .map((id: any) => parseInt(id, 10));
-      whereCondition["$ginner.country_id$"] = { [Op.in]: idArray };
+      const idArray = countryId.split(",").map((id: any) => parseInt(id, 10));
+      whereCondition.push(`g.country_id IN (${idArray.join(',')})`);
     }
-
+    
     if (programId) {
-      const idArray: number[] = programId
-        .split(",")
-        .map((id: any) => parseInt(id, 10));
-      whereCondition.program_id = { [Op.in]: idArray };
+      const idArray = programId.split(",").map((id: any) => parseInt(id, 10));
+      whereCondition.push(`gp.program_id IN (${idArray.join(',')})`);
     }
-
+    
     if (startDate && endDate) {
       const startOfDay = new Date(startDate);
       startOfDay.setUTCHours(0, 0, 0, 0);
       const endOfDay = new Date(endDate);
       endOfDay.setUTCHours(23, 59, 59, 999);
-      whereCondition.createdAt = { [Op.between]: [startOfDay, endOfDay] }
-  }
-
-    let include = [
-      {
-        model: Ginner,
-        as: "ginner",
-      },
-      {
-        model: Season,
-        as: "season",
-      },
-      {
-        model: Program,
-        as: "program",
-      },
-    ];
-    //fetch data with pagination
-    const { count, rows } = await GinProcess.findAndCountAll({
-      where: whereCondition,
-      include: include,
-      order: [["id", "desc"]],
-      offset: offset,
-      limit: limit,
-    });
-    let sendData: any = [];
-    for await (let row of rows) {
-      let cotton = await CottonSelection.findAll({
-        attributes: ["transaction_id"],
-        where: { process_id: row.dataValues.id },
-      });
-      let village = [];
-      if (cotton?.length > 0) {
-        village = await Transaction.findAll({
-          attributes: ["village_id"],
-          where: {
-            id: cotton.map((obj: any) => obj.dataValues.transaction_id),
-          },
-          include: [
-            {
-              model: Village,
-              as: "village",
-              attributes: ["id", "village_name"],
-            },
-          ],
-          group: ["village_id", "village.id"],
-        });
-      }
-      let bale = await GinBale.findOne({
-        attributes: [
-          [
-            Sequelize.fn(
-              "SUM",
-              Sequelize.literal("CAST(weight AS DOUBLE PRECISION)")
-            ),
-            "lint_quantity",
-          ],
-          [sequelize.fn("min", sequelize.col("bale_no")), "pressno_from"],
-          [sequelize.fn("max", sequelize.col("bale_no")), "pressno_to"],
-        ],
-        where: { process_id: row.dataValues.id },
-      });
-
-      let soldBales = await GinBale.count({
-        where: { process_id: row.dataValues.id, sold_status: true },
-      });
-
-      let soldLint = await GinBale.findOne({
-        attributes: [
-          [
-            Sequelize.fn(
-              "SUM",
-              Sequelize.literal("CAST(weight AS DOUBLE PRECISION)")
-            ),
-            "lint_quantity_sold",
-          ],
-        ],
-        where: { process_id: row.dataValues.id, sold_status: true },
-      });
-
-      let lintStock =
-        Number(bale.dataValues.lint_quantity) -
-        Number(soldLint?.dataValues?.lint_quantity_sold);
-      let balesStock = Number(row.dataValues?.no_of_bales) - Number(soldBales);
-
-      sendData.push({
-        ...row.dataValues,
-        village: village,
-        gin_press_no:
-          (bale.dataValues.pressno_from || "") +
-          "-" +
-          (bale.dataValues.pressno_to || ""),
-        lint_quantity: bale.dataValues.lint_quantity,
-        reel_press_no:
-          row.dataValues.no_of_bales === 0
-            ? ""
-            : `001-${row.dataValues.no_of_bales < 9
-              ? `00${row.dataValues.no_of_bales}`
-              : row.dataValues.no_of_bales < 99
-                ? `0${row.dataValues.no_of_bales}`
-                : row.dataValues.no_of_bales
-            }`,
-        lint_quantity_sold: soldLint?.dataValues?.lint_quantity_sold,
-        sold_bales: soldBales,
-        lint_stock: lintStock && lintStock > 0 ? lintStock : 0,
-        bale_stock: balesStock && balesStock > 0 ? balesStock : 0,
-      });
+      whereCondition.push(`"gp"."createdAt" BETWEEN '${startOfDay.toISOString()}' AND '${endOfDay.toISOString()}'`);
     }
-    return res.sendPaginationSuccess(res, sendData, count);
+    
+    const whereClause = whereCondition.length > 0 ? `WHERE ${whereCondition.join(' AND ')}` : '';
+
+    const countQuery = `
+        SELECT
+          COUNT(gp.id) AS total_count
+        FROM
+          gin_processes gp
+        LEFT JOIN
+          ginners g ON gp.ginner_id = g.id
+        LEFT JOIN
+          seasons s ON gp.season_id = s.id
+        LEFT JOIN
+          programs pr ON gp.program_id = pr.id
+        ${whereClause}
+    `;
+
+
+  // Execute the count query
+  const countResult = await sequelize.query(countQuery);
+  const count = countResult ? Number(countResult[0][0]?.total_count) : 0;
+
+    const rows = await sequelize.query(
+      `WITH gin_process_data AS (
+        SELECT
+            gp.id AS process_id,
+            gp.date,
+            gp."createdAt" AS created_date,
+            s.name AS season_name,
+            g.name AS ginner_name,
+            gp.heap_number,
+            gp.heap_register,
+            gp.weigh_bridge,
+            gp.delivery_challan,
+            gp.qr,
+            gp.lot_no,
+            gp.press_no,
+            gp.reel_lot_no,
+            gp.no_of_bales,
+            gp.total_qty AS seed_consumed,
+            gp.gin_out_turn AS got,
+            gp.bale_process,
+            pr.program_name AS program
+        FROM
+            gin_processes gp
+        LEFT JOIN
+            ginners g ON gp.ginner_id = g.id
+        LEFT JOIN
+            seasons s ON gp.season_id = s.id
+        LEFT JOIN
+            programs pr ON gp.program_id = pr.id
+        ${whereClause}
+          ),
+        gin_bale_data AS (
+              SELECT
+                  gb.process_id,
+                  COALESCE(SUM(CAST(gb.weight AS DOUBLE PRECISION)), 0) AS lint_quantity,
+                  COALESCE(MIN(CASE WHEN gb.bale_no ~ '^[0-9]+$' THEN CAST(gb.bale_no AS BIGINT) ELSE 0 END), 0) AS pressno_from,
+                  COALESCE(MAX(CASE WHEN gb.bale_no ~ '^[0-9]+$' THEN CAST(gb.bale_no AS BIGINT) ELSE 0 END), 0) AS pressno_to
+              FROM
+                  "gin-bales" gb
+              GROUP BY
+                  gb.process_id
+          ),
+          cotton_selection_data AS (
+              SELECT
+                  cs.process_id,
+                  STRING_AGG(DISTINCT v.village_name, ', ') AS villages
+              FROM
+                  cotton_selections cs
+              LEFT JOIN
+                  transactions t ON cs.transaction_id = t.id
+              LEFT JOIN
+                  villages v ON t.village_id = v.id
+              GROUP BY
+                  cs.process_id
+          ),
+          sold_data AS (
+              SELECT
+                  gb.process_id,
+                  COUNT(gb.id) AS sold_bales,
+                  COALESCE(SUM(CAST(gb.weight AS DOUBLE PRECISION)), 0) AS lint_quantity_sold
+              FROM
+                  "gin-bales" gb
+              WHERE
+                  gb.sold_status = true
+              GROUP BY
+                  gb.process_id
+          )
+          SELECT
+              gd.date AS date,
+              gd.created_date AS "createdAt",
+              gd.season_name AS season,
+              gd.ginner_name AS ginner_name,
+              gd.heap_number AS heap_number,
+              gd.heap_register AS heap_register,
+              gd.bale_process AS bale_process,
+              gd.lot_no AS lot_no,
+              gd.press_no AS press_no,
+              CONCAT(gb.pressno_from, '-', gb.pressno_to) AS gin_press_no,
+              gd.reel_lot_no AS reel_lot_no,
+              CONCAT('001-', LPAD(gd.no_of_bales::TEXT, 3, '0')) AS reel_press_no,
+              gd.no_of_bales AS no_of_bales,
+              gb.lint_quantity AS lint_quantity,
+              gd.seed_consumed AS total_qty,
+              gd.got AS gin_out_turn,
+              COALESCE(sd.lint_quantity_sold, 0) AS lint_quantity_sold,
+              COALESCE(sd.sold_bales, 0) AS sold_bales,
+              (COALESCE(gb.lint_quantity, 0) - COALESCE(sd.lint_quantity_sold, 0)) AS lint_stock,
+              (COALESCE(gd.no_of_bales, 0) - COALESCE(sd.sold_bales, 0)) AS bale_stock,
+              gd.program AS program,
+              cs.villages AS village_names,
+              gd.weigh_bridge,
+              gd.delivery_challan,
+              gd.qr
+          FROM
+              gin_process_data gd
+          LEFT JOIN
+              gin_bale_data gb ON gd.process_id = gb.process_id
+          LEFT JOIN
+              cotton_selection_data cs ON gd.process_id = cs.process_id
+          LEFT JOIN
+              sold_data sd ON gd.process_id = sd.process_id
+          ORDER BY gd.process_id DESC
+          LIMIT :limit OFFSET :offset
+          `, {
+          replacements: { limit: limit, offset },
+          type: sequelize.QueryTypes.SELECT,
+        });
+    return res.sendPaginationSuccess(res, rows, count);
   } catch (error: any) {
     console.log(error);
     return res.sendError(res, error.message);
@@ -259,176 +274,6 @@ const exportLoad = async (req: Request, res: Response) => {
   }
 }
 
-// const exportGinnerProcess = async (req: Request, res: Response) => {
-
-//   const excelFilePath = path.join('./upload', "excel-gin-bale-process.xlsx")
-//   const searchTerm = req.query.search || "";
-//   const page = Number(req.query.page) || 1;
-//   const limit = Number(req.query.limit) || 10;
-//   const { exportType, ginnerId, seasonId, programId, brandId, countryId }: any = req.query;
-//   const offset = (page - 1) * limit;
-
-//   const whereCondition: any = {};
-//   try {
-//     if (exportType === "all") {
-
-//       return res.status(200).send({
-//         success: true,
-//         messgage: "File successfully Generated",
-//         data: process.env.BASE_URL + "gin-bale-process.xlsx",
-//       });
-
-//     } else {
-//       if (searchTerm) {
-//         whereCondition[Op.or] = [
-//           { ginner: { [Op.iLike]: `%${searchTerm}%` } },
-//           { season: { [Op.iLike]: `%${searchTerm}%` } },
-//           { program: { [Op.iLike]: `%${searchTerm}%` } },
-//           { lot_no: { [Op.iLike]: `%${searchTerm}%` } },
-//           { reel_lot_no: { [Op.iLike]: `%${searchTerm}%` } },
-//           { press_no: { [Op.iLike]: `%${searchTerm}%` } },
-//         ];
-//       }
-
-//       if (brandId) {
-//         const idArray: number[] = brandId
-//           .split(",")
-//           .map((id: any) => parseInt(id, 10));
-//         whereCondition.brand = { [Op.overlap]: idArray };
-//       }
-
-//       if (seasonId) {
-//         const idArray: number[] = seasonId
-//           .split(",")
-//           .map((id: any) => parseInt(id, 10));
-//         whereCondition.seasonId = { [Op.in]: idArray };
-//       }
-
-//       if (countryId) {
-//         const idArray: number[] = countryId
-//           .split(",")
-//           .map((id: any) => parseInt(id, 10));
-//         whereCondition.countryId = { [Op.in]: idArray };
-//       }
-
-//       if (ginnerId) {
-//         const idArray: number[] = ginnerId
-//           .split(",")
-//           .map((id: any) => parseInt(id, 10));
-//         whereCondition.ginnerId = { [Op.in]: idArray };
-//       }
-
-//       if (programId) {
-//         const idArray: number[] = programId
-//           .split(",")
-//           .map((id: any) => parseInt(id, 10));
-//         whereCondition.programId = { [Op.in]: idArray };
-//       }
-
-//       // Create the excel workbook file
-//       const workbook = new ExcelJS.Workbook();
-//       const worksheet = workbook.addWorksheet("Sheet1");
-//       worksheet.mergeCells("A1:T1");
-//       const mergedCell = worksheet.getCell("A1");
-//       mergedCell.value = "CottonConnect | Ginner Bale Process Report";
-//       mergedCell.font = { bold: true };
-//       mergedCell.alignment = { horizontal: "center", vertical: "middle" };
-//       // Set bold font for header row
-//       const headerRow = worksheet.addRow([
-//         "Sr No.",
-//         "Process Date",
-//         "Data Entry Date",
-//         "Season",
-//         "Ginner Name",
-//         "Heap Number",
-//         "Gin Lot No",
-//         "Gin Press No",
-//         "REEL Lot No",
-//         "REEL Process Nos",
-//         "No of Bales",
-//         "Lint Quantity(Kgs)",
-//         "Total Seed Cotton Consumed(Kgs)",
-//         "GOT",
-//         "Total lint cotton sold(Kgs)",
-//         "Total Bales Sold",
-//         "Total lint cotton in stock(Kgs)",
-//         "Total Bales in stock",
-//         "Program",
-//         "Village",
-//       ]);
-//       headerRow.font = { bold: true };
-//       // let include = [
-//       //   {
-//       //     model: Ginner,
-//       //     as: "ginner",
-//       //   },
-//       //   {
-//       //     model: Season,
-//       //     as: "season",
-//       //   },
-//       //   {
-//       //     model: Program,
-//       //     as: "program",
-//       //   },
-//       // ];
-//       const { count, rows } = await ExportGinnerProcess.findAndCountAll({
-//         where: whereCondition,
-//         // include: include,
-//         offset: offset,
-//         limit: limit,
-//       });
-
-//       // Append data to worksheet
-//       for await (const [index, item] of rows.entries()) {
-//         const rowValues = Object.values({
-//           index: index + 1,
-//           date: item.date ? item.date : "",
-//           created_date: item.createdAt ? item.createdAt : "",
-//           season: item.season ? item.season : "",
-//           ginner: item.ginner ? item.ginner : "",
-//           heap: item.heap_number ? item.heap_number : '',
-//           lot_no: item.lot_no ? item.lot_no : "",
-//           press_no: item?.press_no,
-//           reel_lot_no: item.reel_lot_no ? item.reel_lot_no : "",
-//           process_no: item?.process_no,
-//           noOfBales: item.noOfBales,
-//           lint_qty: item.lint_qty,
-//           seedConsmed: item.seedConsmed,
-//           got: item.got,
-//           lint_quantity_sold: item.lint_quantity_sold,
-//           sold_bales: item.sold_bales,
-//           lint_stock: item.lint_stock,
-//           bale_stock: item.bale_stock,
-//           program: item.program,
-//           village: item.village
-//         });
-
-//         worksheet.addRow(rowValues);
-//       }
-//       // Auto-adjust column widths based on content
-//       worksheet.columns.forEach((column: any) => {
-//         let maxCellLength = 0;
-//         column.eachCell({ includeEmpty: true }, (cell: any) => {
-//           const cellLength = (cell.value ? cell.value.toString() : "").length;
-//           maxCellLength = Math.max(maxCellLength, cellLength);
-//         });
-//         column.width = Math.min(15, maxCellLength + 2); // Limit width to 30 characters
-//       });
-
-//       // Save the workbook
-//       await workbook.xlsx.writeFile(excelFilePath);
-
-//       res.status(200).send({
-//         success: true,
-//         messgage: "File successfully Generated",
-//         data: process.env.BASE_URL + "excel-gin-bale-process.xlsx",
-//       });
-//     }
-//   } catch (error: any) {
-//     console.error("Error appending data:", error);
-//   }
-// };
-
 const exportGinnerProcess = async (req: Request, res: Response) => {
   const excelFilePath = path.join("./upload", "excel-gin-bale-process.xlsx");
   const searchTerm = req.query.search || "";
@@ -436,7 +281,7 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
   const limit = Number(req.query.limit) || 10;
   const { exportType, ginnerId, seasonId, programId, brandId, countryId, startDate, endDate }: any = req.query;
   const offset = (page - 1) * limit;
-  const whereCondition: any = {};
+  const whereCondition: any = [];
   try {
     if (exportType === "all") {
       return res.status(200).send({
@@ -447,59 +292,52 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
 
     } else {
       if (searchTerm) {
-        whereCondition[Op.or] = [
-          { "$ginner.name$": { [Op.iLike]: `%${searchTerm}%` } },
-          { "$season.name$": { [Op.iLike]: `%${searchTerm}%` } },
-          { "$program.program_name$": { [Op.iLike]: `%${searchTerm}%` } },
-          { lot_no: { [Op.iLike]: `%${searchTerm}%` } },
-          { reel_lot_no: { [Op.iLike]: `%${searchTerm}%` } },
-          { press_no: { [Op.iLike]: `%${searchTerm}%` } },
-        ];
-
+        whereCondition.push(`
+          (
+            g.name ILIKE '%${searchTerm}%' OR
+            s.name ILIKE '%${searchTerm}%' OR
+            pr.program_name ILIKE '%${searchTerm}%' OR
+            gp.lot_no ILIKE '%${searchTerm}%' OR
+            gp.reel_lot_no ILIKE '%${searchTerm}%' OR
+            gb.press_no ILIKE '%${searchTerm}%'
+          )
+        `);
       }
-
+      
       if (brandId) {
-        const idArray: number[] = brandId
-          .split(",")
-          .map((id: any) => parseInt(id, 10));
-        whereCondition['$ginner.brand$'] = { [Op.overlap]: idArray };
+        const idArray = brandId.split(",").map((id: any) => parseInt(id, 10));
+        whereCondition.push(`g.brand && ARRAY[${idArray.join(',')}]`);
       }
-
+      
       if (seasonId) {
-        const idArray: number[] = seasonId
-          .split(",")
-          .map((id: any) => parseInt(id, 10));
-        whereCondition.season_id = { [Op.in]: idArray };
+        const idArray = seasonId.split(",").map((id: any) => parseInt(id, 10));
+        whereCondition.push(`gp.season_id IN (${idArray.join(',')})`);
       }
-
-      if (countryId) {
-        const idArray: number[] = countryId
-          .split(",")
-          .map((id: any) => parseInt(id, 10));
-        whereCondition['$ginner.country_id$'] = { [Op.in]: idArray };
-      }
-
+      
       if (ginnerId) {
-        const idArray: number[] = ginnerId
-          .split(",")
-          .map((id: any) => parseInt(id, 10));
-        whereCondition.ginner_id = { [Op.in]: idArray };
+        const idArray = ginnerId.split(",").map((id: any) => parseInt(id, 10));
+        whereCondition.push(`gp.ginner_id IN (${idArray.join(',')})`);
       }
-     
+      
+      if (countryId) {
+        const idArray = countryId.split(",").map((id: any) => parseInt(id, 10));
+        whereCondition.push(`g.country_id IN (${idArray.join(',')})`);
+      }
+      
+      if (programId) {
+        const idArray = programId.split(",").map((id: any) => parseInt(id, 10));
+        whereCondition.push(`gp.program_id IN (${idArray.join(',')})`);
+      }
+      
       if (startDate && endDate) {
         const startOfDay = new Date(startDate);
         startOfDay.setUTCHours(0, 0, 0, 0);
         const endOfDay = new Date(endDate);
         endOfDay.setUTCHours(23, 59, 59, 999);
-        whereCondition.createdAt = { [Op.between]: [startOfDay, endOfDay] }
-    }
-     
-    if (programId) {
-        const idArray: number[] = programId
-          .split(",")
-          .map((id: any) => parseInt(id, 10));
-        whereCondition.program_id = { [Op.in]: idArray };
+        whereCondition.push(`"gp"."createdAt" BETWEEN '${startOfDay.toISOString()}' AND '${endOfDay.toISOString()}'`);
       }
+      
+      const whereClause = whereCondition.length > 0 ? `WHERE ${whereCondition.join(' AND ')}` : '';
 
       // Create the excel workbook file
       const workbook = new ExcelJS.Workbook();
@@ -514,135 +352,138 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
         "Sr No.", "Process Date", "Data Entry Date", "Season", "Ginner Name", "Heap Number", "Gin Lot No", "Gin Press No", "REEL Lot No", "REEL Process Nos", "No of Bales", "Lint Quantity(Kgs)", "Total Seed Cotton Consumed(Kgs)", "GOT", "Total lint cotton sold(Kgs)", "Total Bales Sold", "Total lint cotton in stock(Kgs)", "Total Bales in stock", "Program", "Village"
       ]);
       headerRow.font = { bold: true };
-      let include = [
-        {
-          model: Ginner,
-          as: "ginner",
-        },
-        {
-          model: Season,
-          as: "season",
-        },
-        {
-          model: Program,
-          as: "program",
-        }
-      ];
-      const { count, rows } = await GinProcess.findAndCountAll({
-        where: whereCondition,
-        include: include,
-        order: [["id", "desc"]],
-        offset: offset,
-        limit: limit,
-      });
-      const processIds = rows.map((process: any) => process.id);
-      const ginBales = await GinBale.findAll({
-        attributes: [
-          [
-            Sequelize.fn(
-              "SUM",
-              Sequelize.literal("CAST(weight AS DOUBLE PRECISION)")
+
+      const rows = await sequelize.query(
+        `WITH gin_process_data AS (
+          SELECT
+              gp.id AS process_id,
+              gp.date,
+              gp."createdAt" AS created_date,
+              s.name AS season_name,
+              g.name AS ginner_name,
+              gp.heap_number,
+              gp.heap_register,
+              gp.weigh_bridge,
+              gp.delivery_challan,
+              gp.qr,
+              gp.lot_no,
+              gp.press_no,
+              gp.reel_lot_no,
+              gp.no_of_bales,
+              gp.total_qty AS seed_consumed,
+              gp.gin_out_turn AS got,
+              gp.bale_process,
+              pr.program_name AS program
+          FROM
+              gin_processes gp
+          LEFT JOIN
+              ginners g ON gp.ginner_id = g.id
+          LEFT JOIN
+              seasons s ON gp.season_id = s.id
+          LEFT JOIN
+              programs pr ON gp.program_id = pr.id
+          ${whereClause}
             ),
-            "lint_quantity",
-          ],
-          [sequelize.fn("min", sequelize.col("bale_no")), "pressno_from"],
-          [sequelize.fn("max", sequelize.col("bale_no")), "pressno_to"],
-          "process_id",
-        ],
-        raw: true,
-        where: { process_id: { [Op.in]: processIds } },
-        group: ["process_id"],
-      });
-  
-      const cottonSelections = await CottonSelection.findAll({
-        include: [
-          {
-            model: Transaction,
-            include: [
-              {
-                model: Village,
-                attributes: [],
-                as: "village",
-              },
-            ],
-            attributes: [],
-            as: "transaction",
-          },
-        ],
-        attributes: [
-          "process_id",
-          [sequelize.col("transaction.village.village_name"), "name"],
-        ],
-        where: { process_id: { [Op.in]: processIds } },
-      });
-      let soldData = await GinBale.findAll({
-        attributes: [
-          [Sequelize.fn("COUNT", Sequelize.col("id")), "soldBales"],
-          [
-            Sequelize.fn(
-              "SUM",
-              Sequelize.literal("CAST(weight AS DOUBLE PRECISION)")
+          gin_bale_data AS (
+                SELECT
+                    gb.process_id,
+                    COALESCE(SUM(CAST(gb.weight AS DOUBLE PRECISION)), 0) AS lint_quantity,
+                    COALESCE(MIN(CASE WHEN gb.bale_no ~ '^[0-9]+$' THEN CAST(gb.bale_no AS BIGINT) ELSE 0 END), 0) AS pressno_from,
+                    COALESCE(MAX(CASE WHEN gb.bale_no ~ '^[0-9]+$' THEN CAST(gb.bale_no AS BIGINT) ELSE 0 END), 0) AS pressno_to
+                FROM
+                    "gin-bales" gb
+                GROUP BY
+                    gb.process_id
             ),
-            "lint_quantity_sold",
-          ],
-          "process_id",
-        ],
-        group: ["process_id"],
-        where: { process_id: { [Op.in]: processIds }, sold_status: true },
-      });
+            cotton_selection_data AS (
+                SELECT
+                    cs.process_id,
+                    STRING_AGG(DISTINCT v.village_name, ', ') AS villages
+                FROM
+                    cotton_selections cs
+                LEFT JOIN
+                    transactions t ON cs.transaction_id = t.id
+                LEFT JOIN
+                    villages v ON t.village_id = v.id
+                GROUP BY
+                    cs.process_id
+            ),
+            sold_data AS (
+                SELECT
+                    gb.process_id,
+                    COUNT(gb.id) AS sold_bales,
+                    COALESCE(SUM(CAST(gb.weight AS DOUBLE PRECISION)), 0) AS lint_quantity_sold
+                FROM
+                    "gin-bales" gb
+                WHERE
+                    gb.sold_status = true
+                GROUP BY
+                    gb.process_id
+            )
+            SELECT
+                gd.date AS date,
+                gd.created_date AS "createdAt",
+                gd.season_name AS season,
+                gd.ginner_name AS ginner_name,
+                gd.heap_number AS heap_number,
+                gd.heap_register AS heap_register,
+                gd.bale_process AS bale_process,
+                gd.lot_no AS lot_no,
+                gd.press_no AS press_no,
+                CONCAT(gb.pressno_from, '-', gb.pressno_to) AS gin_press_no,
+                gd.reel_lot_no AS reel_lot_no,
+                CONCAT('001-', LPAD(gd.no_of_bales::TEXT, 3, '0')) AS reel_press_no,
+                gd.no_of_bales AS no_of_bales,
+                gb.lint_quantity AS lint_quantity,
+                gd.seed_consumed AS total_qty,
+                gd.got AS gin_out_turn,
+                COALESCE(sd.lint_quantity_sold, 0) AS lint_quantity_sold,
+                COALESCE(sd.sold_bales, 0) AS sold_bales,
+                (COALESCE(gb.lint_quantity, 0) - COALESCE(sd.lint_quantity_sold, 0)) AS lint_stock,
+                (COALESCE(gd.no_of_bales, 0) - COALESCE(sd.sold_bales, 0)) AS bale_stock,
+                gd.program AS program,
+                cs.villages AS village_names,
+                gd.weigh_bridge,
+                gd.delivery_challan,
+                gd.qr
+            FROM
+                gin_process_data gd
+            LEFT JOIN
+                gin_bale_data gb ON gd.process_id = gb.process_id
+            LEFT JOIN
+                cotton_selection_data cs ON gd.process_id = cs.process_id
+            LEFT JOIN
+                sold_data sd ON gd.process_id = sd.process_id
+            ORDER BY gd.process_id DESC
+            LIMIT :limit OFFSET :offset
+            `, {
+            replacements: { limit: limit, offset },
+            type: sequelize.QueryTypes.SELECT,
+          });
       // Append data to worksheet
       for await (const [index, item] of rows.entries()) {
-        console.log(index,'index me hu')
-        const cottonSelectionsForProcess = cottonSelections.filter((cotton:any) => cotton.dataValues.process_id === item.id);
-        
-        let bale = ginBales.find((obj:any) => obj.process_id == item.id);
-        
-        let gin_press_no =
-        (bale?.pressno_from || "") +
-        "-" +
-        (bale?.pressno_to || "");
-      let lint_quantity =  bale?.lint_quantity ?? 0;
-      let reel_press_no =
-        (item?.no_of_bales ?? 0) === 0
-          ? ""
-          : `001-${
-            item.no_of_bales < 9
-                ? `00${item.no_of_bales}`
-                : item.no_of_bales < 99
-                ? `0${item.no_of_bales}`
-                : item.no_of_bales
-            }`;
-          let soldLint = soldData.find((obj:any) => obj.process_id == item.id);
-        let soldBales =soldLint?.dataValues?.soldBales ?? 0;
-        let soldlint  = soldLint?.dataValues?.lint_quantity_sold ?? 0
-        let lintStock =
-          Number(lint_quantity) -
-          Number(soldlint);
-        let balesStock = Number(item?.no_of_bales ?? 0) - Number(soldBales);
-  
   
         const rowValues = Object.values({
           index: index + 1,
           date: item.date ? item.date : "",
           created_date: item.createdAt ? item.createdAt : "",
-          season: item.season ? item.season.name : "",
-          ginner: item.ginner ? item.ginner.name : "",
+          season: item.season ? item.season : "",
+          ginner: item.ginner_name ? item.ginner_name : "",
           heap: item.heap_number ?  item.heap_number : '',
           lot_no: item.lot_no ? item.lot_no : "",
-          press_no: gin_press_no,
+          press_no: item.press_no ? item.press_no : "",
           reel_lot_no: item.reel_lot_no ? item.reel_lot_no : "",
-          process_no: reel_press_no ? reel_press_no : "-",
-          noOfBales: item.no_of_bales ? item.no_of_bales : 0,
-          lint_qty: lint_quantity,
-          seedConsmed: item.total_qty ? item.total_qty : "",
+          reel_press_no: item.reel_press_no ? item.reel_press_no : "",
+          noOfBales: item.no_of_bales ? Number(item.no_of_bales) : 0,
+          lint_quantity: item.lint_quantity ? Number(item.lint_quantity) : 0,
+          seedConsmed: item.total_qty ? Number(item.total_qty) : 0,
           got: item.gin_out_turn ? item.gin_out_turn : "",
-          lint_quantity_sold: soldlint,
-          sold_bales: soldBales ? Number(soldBales) : 0,
-          lint_stock: lintStock && lintStock > 0 ? lintStock : 0,
-          bale_stock: balesStock && balesStock > 0 ? balesStock : 0,
-          program: item.program ? item.program.program_name : "",
-          village:
-          [...new Set(cottonSelectionsForProcess.map((obj:any) => obj.dataValues.name))].join(", "),
+          lint_quantity_sold: item.lint_quantity_sold ? Number(item.lint_quantity_sold) : 0,
+          sold_bales: item.sold_bales ? Number(item.sold_bales) : 0,
+          lint_stock: item.lint_stock && Number(item.lint_stock) > 0 ? Number(item.lint_stock) : 0,
+          bale_stock: item.bale_stock && Number(item.bale_stock) > 0 ? Number(item.bale_stock) : 0,
+          program: item.program ? item.program : "",
+          village_names: item.village_names ? item.village_names : "",
         });
         
         worksheet.addRow(rowValues);
@@ -2947,144 +2788,165 @@ const fetchSpinnerYarnProcessPagination = async (
   const limit = Number(req.query.limit) || 10;
   const { spinnerId, seasonId, programId, brandId, countryId, startDate, endDate }: any = req.query;
   const offset = (page - 1) * limit;
-  const whereCondition: any = {};
+  const whereConditions: any = [];
   try {
     if (searchTerm) {
-      whereCondition[Op.or] = [
-        { "$spinner.name$": { [Op.iLike]: `%${searchTerm}%` } },
-        { "$season.name$": { [Op.iLike]: `%${searchTerm}%` } },
-        { "$program.program_name$": { [Op.iLike]: `%${searchTerm}%` } },
-        { yarn_type: { [Op.iLike]: `%${searchTerm}%` } },
-        { reel_lot_no: { [Op.iLike]: `%${searchTerm}%` } },
-        { batch_lot_no: { [Op.iLike]: `%${searchTerm}%` } },
-        { box_id: { [Op.iLike]: `%${searchTerm}%` } },
-        // { '$yarncount.yarnCount_name$': { [Op.iLike]: `%${searchTerm}%` } },
-      ];
+      whereConditions.push(`
+        (
+          spinner.name ILIKE '%${searchTerm}%' OR
+          season.name ILIKE '%${searchTerm}%' OR
+          program.program_name ILIKE '%${searchTerm}%' OR
+          spin_process.yarn_type ILIKE '%${searchTerm}%' OR
+          spin_process.reel_lot_no ILIKE '%${searchTerm}%' OR
+          spin_process.batch_lot_no ILIKE '%${searchTerm}%' OR
+          spin_process.box_id ILIKE '%${searchTerm}%'
+        )
+      `);
     }
+    
     if (spinnerId) {
-      const idArray: number[] = spinnerId
-        .split(",")
-        .map((id: any) => parseInt(id, 10));
-      whereCondition.spinner_id = { [Op.in]: idArray };
+      const idArray = spinnerId.split(",").map((id: any) => parseInt(id, 10));
+      whereConditions.push(`spin_process.spinner_id IN (${idArray.join(',')})`);
     }
-
+    
     if (brandId) {
-      const idArray: number[] = brandId
-        .split(",")
-        .map((id: any) => parseInt(id, 10));
-      whereCondition["$spinner.brand$"] = { [Op.overlap]: idArray };
+      const idArray = brandId.split(",").map((id: any) => parseInt(id, 10));
+      whereConditions.push(`spinner.brand && ARRAY[${idArray.join(',')}]`);
     }
-
+    
     if (countryId) {
-      const idArray: number[] = countryId
-        .split(",")
-        .map((id: any) => parseInt(id, 10));
-      whereCondition["$spinner.country_id$"] = { [Op.in]: idArray };
+      const idArray = countryId.split(",").map((id: any) => parseInt(id, 10));
+      whereConditions.push(`spinner.country_id IN (${idArray.join(',')})`);
     }
-
+    
     if (seasonId) {
-      const idArray: number[] = seasonId
-        .split(",")
-        .map((id: any) => parseInt(id, 10));
-      whereCondition.season_id = { [Op.in]: idArray };
+      const idArray = seasonId.split(",").map((id: any) => parseInt(id, 10));
+      whereConditions.push(`spin_process.season_id IN (${idArray.join(',')})`);
     }
-
+    
     if (programId) {
-      const idArray: number[] = programId
-        .split(",")
-        .map((id: any) => parseInt(id, 10));
-      whereCondition.program_id = { [Op.in]: idArray };
+      const idArray = programId.split(",").map((id: any) => parseInt(id, 10));
+      whereConditions.push(`spin_process.program_id IN (${idArray.join(',')})`);
     }
+    
     if (startDate && endDate) {
       const startOfDay = new Date(startDate);
       startOfDay.setUTCHours(0, 0, 0, 0);
       const endOfDay = new Date(endDate);
       endOfDay.setUTCHours(23, 59, 59, 999);
-      whereCondition.createdAt = { [Op.between]: [startOfDay, endOfDay] }
-  }
-    let include = [
-      {
-        model: Spinner,
-        as: "spinner",
-        attributes: ["id", "name"],
-      },
-      {
-        model: Season,
-        attributes: ["id", "name"],
-        as: "season",
-      },
-      {
-        model: Program,
-        as: "program",
-        attributes: ["id", "program_name"],
-      },
-      // {
-      //     model: YarnCount,
-      //     as: "yarncount",
-      //     attributes: ["id","yarnCount_name"]
-      // }
-    ];
-    //fetch data with pagination
-    const { count, rows } = await SpinProcess.findAndCountAll({
-      where: whereCondition,
-      include: include,
-      order: [["id", "desc"]],
-      offset: offset,
-      limit: limit,
-    });
-
-    let sendData: any = [];
-    for await (let row of rows) {
-      let yarncount = [];
-
-      if (row.dataValues?.yarn_count.length > 0) {
-        yarncount = await YarnCount.findAll({
-          attributes: ["id", "yarnCount_name"],
-          where: { id: { [Op.in]: row.dataValues?.yarn_count } },
-        });
-      }
-
-      let cottonConsumed = await LintSelections.findOne({
-        attributes: [
-          [
-            sequelize.fn(
-              "COALESCE",
-              sequelize.fn("SUM", sequelize.col("qty_used")),
-              0
-            ),
-            "cotton_consumed",
-          ],
-        ],
-        where: { process_id: row.dataValues.id },
-        group: ["process_id"],
-      });
-
-      let yarnSold = await SpinProcessYarnSelection.findOne({
-        attributes: [
-          [
-            sequelize.fn(
-              "COALESCE",
-              sequelize.fn("SUM", sequelize.col("qty_used")),
-              0
-            ),
-            "yarn_sold",
-          ],
-        ],
-        where: { spin_process_id: row.dataValues.id },
-      });
-
-      sendData.push({
-        ...row.dataValues,
-        cotton_consumed: cottonConsumed
-          ? cottonConsumed?.dataValues?.cotton_consumed
-          : 0,
-        yarn_sold: yarnSold ? yarnSold?.dataValues?.yarn_sold : 0,
-        yarncount,
-        // yarn_stock: row.dataValues.net_yarn_qty ? Number(row.dataValues.net_yarn_qty) -  Number(yarnSold  ? yarnSold?.dataValues?.yarn_sold : 0) : 0,
-      });
+      whereConditions.push(`spin_process."createdAt" BETWEEN '${startOfDay.toISOString()}' AND '${endOfDay.toISOString()}'`);
     }
+    
+    const whereClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : '';
 
-    return res.sendPaginationSuccess(res, sendData, count);
+    // Count query
+    const countQuery = `
+    SELECT COUNT(*) AS total_count
+    FROM spin_processes spin_process
+    LEFT JOIN spinners spinner ON spin_process.spinner_id = spinner.id
+    LEFT JOIN seasons season ON spin_process.season_id = season.id
+    LEFT JOIN programs program ON spin_process.program_id = program.id
+    ${whereClause}
+    `;
+
+    // Data query
+    const dataQuery = `
+    WITH spin_process_data AS (
+      SELECT
+        spin_process.id AS process_id,
+        spin_process.date,
+        spin_process."createdAt",
+        season.name AS season_name,
+        spinner.name AS spinner_name,
+        spin_process.batch_lot_no,
+        spin_process.reel_lot_no,
+        spin_process.yarn_type,
+        spin_process.yarn_count,
+        spin_process.other_mix,
+        spin_process.cottonmix_type,
+        spin_process.cottonmix_qty,
+        spin_process.no_of_boxes,
+        spin_process.total_qty,
+        spin_process.net_yarn_qty,
+        spin_process.qty_stock,
+        spin_process.comber_noil,
+        spin_process.comber_noil_stock,
+        spin_process.yarn_realisation,
+        spin_process.yarn_qty_produced,
+        spin_process.accept_date,
+        spin_process.qr,
+        program.program_name AS program
+      FROM
+        spin_processes spin_process
+      LEFT JOIN
+        spinners spinner ON spin_process.spinner_id = spinner.id
+      LEFT JOIN
+        seasons season ON spin_process.season_id = season.id
+      LEFT JOIN
+        programs program ON spin_process.program_id = program.id
+      ${whereClause}
+    ),
+    cotton_consumed_data AS (
+      SELECT
+        process_id,
+        COALESCE(SUM(qty_used), 0) AS cotton_consumed
+      FROM
+        lint_selections
+      GROUP BY
+        process_id
+    ),
+    yarn_sold_data AS (
+      SELECT
+        spin_process_id,
+        COALESCE(SUM(qty_used), 0) AS yarn_sold
+      FROM
+        spin_process_yarn_selections
+      GROUP BY
+        spin_process_id
+    ),
+    yarn_count_data AS (
+      SELECT
+        spin_process.id AS process_id,
+        json_agg(json_build_object('id', yarn_count.id, 'yarnCount_name', yarn_count."yarnCount_name")) AS yarncount
+      FROM
+        spin_processes spin_process
+      LEFT JOIN
+        yarn_counts yarn_count ON yarn_count.id = ANY(spin_process.yarn_count)
+      GROUP BY
+        spin_process.id
+    )
+    SELECT
+      spd.*,
+      COALESCE(ccd.cotton_consumed, 0) AS cotton_consumed,
+      COALESCE(ysd.yarn_sold, 0) AS yarn_sold,
+      ycd.yarncount
+    FROM
+      spin_process_data spd
+    LEFT JOIN
+      cotton_consumed_data ccd ON spd.process_id = ccd.process_id
+    LEFT JOIN
+      yarn_sold_data ysd ON spd.process_id = ysd.spin_process_id
+    LEFT JOIN
+      yarn_count_data ycd ON spd.process_id = ycd.process_id
+    ORDER BY
+      spd.process_id DESC
+    LIMIT :limit OFFSET :offset
+    `;
+
+    // Execute the queries
+    const [countResult, rows] = await Promise.all([
+    sequelize.query(countQuery, {
+      type: sequelize.QueryTypes.SELECT,
+    }),
+    sequelize.query(dataQuery, {
+      replacements: { limit, offset },
+      type: sequelize.QueryTypes.SELECT,
+    })
+    ]);
+
+    const totalCount = countResult && countResult.length > 0 ?  countResult[0].total_count : 0;
+
+    return res.sendPaginationSuccess(res, rows, totalCount);
   } catch (error: any) {
     console.log(error);
     return res.sendError(res, error.message);
@@ -3101,7 +2963,7 @@ const exportSpinnerYarnProcess = async (req: Request, res: Response) => {
   const limit = Number(req.query.limit) || 10;
   const { exportType, spinnerId, seasonId, programId, brandId, countryId, startDate, endDate }: any = req.query;
   const offset = (page - 1) * limit;
-  const whereCondition: any = {};
+  const whereConditions: any = [];
   try {
 
     if (exportType === "all") {
@@ -3112,61 +2974,54 @@ const exportSpinnerYarnProcess = async (req: Request, res: Response) => {
       });
     } else {
 
-    if (searchTerm) {
-      whereCondition[Op.or] = [
-        { "$spinner.name$": { [Op.iLike]: `%${searchTerm}%` } },
-        { "$season.name$": { [Op.iLike]: `%${searchTerm}%` } },
-        { "$program.program_name$": { [Op.iLike]: `%${searchTerm}%` } },
-        { yarn_type: { [Op.iLike]: `%${searchTerm}%` } },
-        { reel_lot_no: { [Op.iLike]: `%${searchTerm}%` } },
-        { batch_lot_no: { [Op.iLike]: `%${searchTerm}%` } },
-        { box_id: { [Op.iLike]: `%${searchTerm}%` } },
-        // { '$yarncount.yarnCount_name$': { [Op.iLike]: `%${searchTerm}%` } },
-      ];
-    }
-    if (spinnerId) {
-      const idArray: number[] = spinnerId
-        .split(",")
-        .map((id: any) => parseInt(id, 10));
-      whereCondition.spinner_id = { [Op.in]: idArray };
-    }
-
-    if (brandId) {
-      const idArray: number[] = brandId
-        .split(",")
-        .map((id: any) => parseInt(id, 10));
-      whereCondition["$spinner.brand$"] = { [Op.overlap]: idArray };
-    }
-
-    if (countryId) {
-      const idArray: number[] = countryId
-        .split(",")
-        .map((id: any) => parseInt(id, 10));
-      whereCondition["$spinner.country_id$"] = { [Op.in]: idArray };
-    }
-
-    if (seasonId) {
-      const idArray: number[] = seasonId
-        .split(",")
-        .map((id: any) => parseInt(id, 10));
-      whereCondition.season_id = { [Op.in]: idArray };
-    }
-
-    if (programId) {
-      const idArray: number[] = programId
-        .split(",")
-        .map((id: any) => parseInt(id, 10));
-      whereCondition.program_id = { [Op.in]: idArray };
-    }
-
-    if (startDate && endDate) {
-      const startOfDay = new Date(startDate);
-      startOfDay.setUTCHours(0, 0, 0, 0);
-      const endOfDay = new Date(endDate);
-      endOfDay.setUTCHours(23, 59, 59, 999);
-      whereCondition.createdAt = { [Op.between]: [startOfDay, endOfDay] }
-  }
-
+      if (searchTerm) {
+        whereConditions.push(`
+          (
+            spinner.name ILIKE '%${searchTerm}%' OR
+            season.name ILIKE '%${searchTerm}%' OR
+            program.program_name ILIKE '%${searchTerm}%' OR
+            spin_process.yarn_type ILIKE '%${searchTerm}%' OR
+            spin_process.reel_lot_no ILIKE '%${searchTerm}%' OR
+            spin_process.batch_lot_no ILIKE '%${searchTerm}%' OR
+            spin_process.box_id ILIKE '%${searchTerm}%'
+          )
+        `);
+      }
+      
+      if (spinnerId) {
+        const idArray = spinnerId.split(",").map((id: any) => parseInt(id, 10));
+        whereConditions.push(`spin_process.spinner_id IN (${idArray.join(',')})`);
+      }
+      
+      if (brandId) {
+        const idArray = brandId.split(",").map((id: any) => parseInt(id, 10));
+        whereConditions.push(`spinner.brand && ARRAY[${idArray.join(',')}]`);
+      }
+      
+      if (countryId) {
+        const idArray = countryId.split(",").map((id: any) => parseInt(id, 10));
+        whereConditions.push(`spinner.country_id IN (${idArray.join(',')})`);
+      }
+      
+      if (seasonId) {
+        const idArray = seasonId.split(",").map((id: any) => parseInt(id, 10));
+        whereConditions.push(`spin_process.season_id IN (${idArray.join(',')})`);
+      }
+      
+      if (programId) {
+        const idArray = programId.split(",").map((id: any) => parseInt(id, 10));
+        whereConditions.push(`spin_process.program_id IN (${idArray.join(',')})`);
+      }
+      
+      if (startDate && endDate) {
+        const startOfDay = new Date(startDate);
+        startOfDay.setUTCHours(0, 0, 0, 0);
+        const endOfDay = new Date(endDate);
+        endOfDay.setUTCHours(23, 59, 59, 999);
+        whereConditions.push(`spin_process."createdAt" BETWEEN '${startOfDay.toISOString()}' AND '${endOfDay.toISOString()}'`);
+      }
+      
+      const whereClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : '';
     // Create the excel workbook file
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet("Sheet1");
@@ -3220,18 +3075,99 @@ const exportSpinnerYarnProcess = async (req: Request, res: Response) => {
       // }
     ];
 
-    const { count, rows } = await SpinProcess.findAndCountAll({
-      where: whereCondition,
-      include: include,
-      order: [["id", "desc"]],
-      offset: offset,
-      limit: limit,
+    const dataQuery = `
+    WITH spin_process_data AS (
+      SELECT
+        spin_process.id AS process_id,
+        spin_process.date,
+        spin_process."createdAt",
+        season.name AS season_name,
+        spinner.name AS spinner_name,
+        spin_process.batch_lot_no,
+        spin_process.reel_lot_no,
+        spin_process.yarn_type,
+        spin_process.yarn_count,
+        spin_process.other_mix,
+        spin_process.cottonmix_type,
+        spin_process.cottonmix_qty,
+        spin_process.no_of_boxes,
+        spin_process.total_qty,
+        spin_process.net_yarn_qty,
+        spin_process.qty_stock,
+        spin_process.comber_noil,
+        spin_process.comber_noil_stock,
+        spin_process.yarn_realisation,
+        spin_process.yarn_qty_produced,
+        spin_process.accept_date,
+        spin_process.qr,
+        program.program_name AS program
+      FROM
+        spin_processes spin_process
+      LEFT JOIN
+        spinners spinner ON spin_process.spinner_id = spinner.id
+      LEFT JOIN
+        seasons season ON spin_process.season_id = season.id
+      LEFT JOIN
+        programs program ON spin_process.program_id = program.id
+      ${whereClause}
+    ),
+    cotton_consumed_data AS (
+      SELECT
+        process_id,
+        COALESCE(SUM(qty_used), 0) AS cotton_consumed
+      FROM
+        lint_selections
+      GROUP BY
+        process_id
+    ),
+    yarn_sold_data AS (
+      SELECT
+        spin_process_id,
+        COALESCE(SUM(qty_used), 0) AS yarn_sold
+      FROM
+        spin_process_yarn_selections
+      GROUP BY
+        spin_process_id
+    ),
+    yarn_count_data AS (
+      SELECT
+        spin_process.id AS process_id,
+        json_agg(json_build_object('id', yarn_count.id, 'yarnCount_name', yarn_count."yarnCount_name")) AS yarncount
+      FROM
+        spin_processes spin_process
+      LEFT JOIN
+        yarn_counts yarn_count ON yarn_count.id = ANY(spin_process.yarn_count)
+      GROUP BY
+        spin_process.id
+    )
+    SELECT
+      spd.*,
+      COALESCE(ccd.cotton_consumed, 0) AS cotton_consumed,
+      COALESCE(ysd.yarn_sold, 0) AS yarn_sold,
+      ycd.yarncount
+    FROM
+      spin_process_data spd
+    LEFT JOIN
+      cotton_consumed_data ccd ON spd.process_id = ccd.process_id
+    LEFT JOIN
+      yarn_sold_data ysd ON spd.process_id = ysd.spin_process_id
+    LEFT JOIN
+      yarn_count_data ycd ON spd.process_id = ycd.process_id
+    ORDER BY
+      spd.process_id DESC
+    LIMIT :limit OFFSET :offset
+    `;
+
+    // Execute the queries
+    const rows = await sequelize.query(dataQuery, {
+      replacements: { limit, offset },
+      type: sequelize.QueryTypes.SELECT,
     });
     // Append data to worksheet
     for await (const [index, item] of rows.entries()) {
       let blendValue = "";
       let blendqty = "";
-      let yarncount = "";
+      let yarnCount = "";
 
       if (item.cottonmix_type && item.cottonmix_type.length > 0) {
         let blend = await CottonMix.findAll({
@@ -3245,65 +3181,34 @@ const exportSpinnerYarnProcess = async (req: Request, res: Response) => {
         }
       }
 
-      if (item.yarn_count && item.yarn_count.length > 0) {
-        let yarn = await YarnCount.findAll({
-          attributes: ["id", "yarnCount_name"],
-          where: { id: { [Op.in]: item.yarn_count } },
-        });
-        yarncount = yarn
-          .map((yrn: any) => yrn.dataValues.yarnCount_name)
+      if (item.yarncount && item.yarncount.length > 0) {
+        yarnCount = item.yarncount
+          .map((yrn: any) => yrn.yarnCount_name)
           .join(",");
       }
-
-      let cottonConsumed = await LintSelections.findOne({
-        attributes: [
-          [
-            sequelize.fn(
-              "COALESCE",
-              sequelize.fn("SUM", sequelize.col("qty_used")),
-              0
-            ),
-            "cotton_consumed",
-          ],
-        ],
-        where: { process_id: item.dataValues.id },
-        group: ["process_id"],
-      });
-
-      let yarnSold = await SpinProcessYarnSelection.findOne({
-        attributes: [
-          [
-            sequelize.fn(
-              "COALESCE",
-              sequelize.fn("SUM", sequelize.col("qty_used")),
-              0
-            ),
-            "yarn_sold",
-          ],
-        ],
-        where: { spin_process_id: item.dataValues.id },
-      });
 
       const rowValues = Object.values({
         index: index + 1,
         date: item.date ? item.date : "",
-        season: item.season ? item.season.name : "",
-        spinner: item.spinner ? item.spinner.name : "",
+        season: item.season_name ? item.season_name : "",
+        spinner: item.spinner_name ? item.spinner_name : "",
         lotNo: item.batch_lot_no ? item.batch_lot_no : "",
         reel_lot_no: item.reel_lot_no ? item.reel_lot_no : "",
         yarnType: item.yarn_type ? item.yarn_type : "",
-        count: yarncount ? yarncount : "",
-        resa: item.yarn_realisation ? item.yarn_realisation : "",
-        comber: item.comber_noil ? item.comber_noil : "",
+        count: yarnCount ? yarnCount : "",
+        resa: item.yarn_realisation ? Number(item.yarn_realisation) : 0,
+        comber: item.comber_noil ? Number(item.comber_noil) : 0,
         blend: blendValue,
         blendqty: blendqty,
-        cotton_consumed: cottonConsumed
-          ? cottonConsumed?.dataValues?.cotton_consumed
+        cotton_consumed: item?.cotton_consumed
+          ? Number(item?.cotton_consumed)
           : 0,
-        program: item.program ? item.program.program_name : "",
-        total: item.net_yarn_qty,
-        yarn_sold: yarnSold ? yarnSold?.dataValues?.yarn_sold : 0,
-        yarn_stock: item.qty_stock ? item.qty_stock : 0,
+        program: item.program ? item.program : "",
+        total: item.net_yarn_qty ? Number(item.net_yarn_qty) : 0,
+        yarn_sold: item?.yarn_sold
+        ? Number(item?.yarn_sold)
+        : 0,
+        yarn_stock: item.qty_stock ? Number(item.qty_stock) : 0,
       });
       worksheet.addRow(rowValues);
     }
@@ -15474,7 +15379,7 @@ const villageSeedCottonReport = async (req: Request, res: Response) => {
   const offset = (page - 1) * limit;
   const whereCondition: any = {};
   const { brandId, stateId, countryId, seasonId }: any = req.query;
-  console.log(seasonId)
+
   try {
     if (searchTerm) {
       whereCondition[Op.or] = [
