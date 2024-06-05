@@ -15513,6 +15513,8 @@ const villageSeedCottonReport = async (req: Request, res: Response) => {
       attributes: [
         [sequelize.col('"farmer"."village_id"'), "village_id"],
         [sequelize.col('"farmer"."village"."village_name"'), "village_name"],
+        [sequelize.col('"season"."id"'), "season_id"],
+        [sequelize.col('"season"."name"'), "season_name"],
         [
           sequelize.fn(
             "COALESCE",
@@ -15558,10 +15560,14 @@ const villageSeedCottonReport = async (req: Request, res: Response) => {
               attributes: [],
             },
           ],
-        },
+        },{
+          model: Season,
+          as: 'season',
+          attributes: [],
+        }
       ],
       where: whereCondition,
-      group: ["farmer.village_id", "farmer.village.id"],
+      group: ["farmer.village_id", "farmer.village.id", "season_id", "season.id"],
       order: [["village_id", "desc"]],
       offset: offset,
       limit: limit,
@@ -15656,6 +15662,7 @@ const exportVillageSeedCotton = async (req: Request, res: Response) => {
     const headerRow = worksheet.addRow([
       "Sr No.",
       "Village Name ",
+      "Season ",
       "Total Estimated Seed cotton of village (Kgs)",
       "Total Seed Cotton Procured from village (Kgs)",
       "Total Seed Cotton in Stock at village (Kgs)",
@@ -15667,6 +15674,8 @@ const exportVillageSeedCotton = async (req: Request, res: Response) => {
       attributes: [
         [sequelize.col('"farmer"."village_id"'), "village_id"],
         [sequelize.col('"farmer"."village"."village_name"'), "village_name"],
+        [sequelize.col('"season"."id"'), "season_id"],
+        [sequelize.col('"season"."name"'), "season_name"],
         [
           sequelize.fn(
             "COALESCE",
@@ -15712,10 +15721,14 @@ const exportVillageSeedCotton = async (req: Request, res: Response) => {
               attributes: [],
             },
           ],
-        },
+        },{
+          model: Season,
+          as: 'season',
+          attributes: [],
+        }
       ],
       where: whereCondition,
-      group: ["farmer.village_id", "farmer.village.id"],
+      group: ["farmer.village_id", "farmer.village.id", "season_id", "season.id"],
       order: [["village_id", "desc"]],
       offset: offset,
       limit: limit,
@@ -15735,6 +15748,9 @@ const exportVillageSeedCotton = async (req: Request, res: Response) => {
         index: index + 1,
         village_name: item?.dataValues?.village_name
           ? item?.dataValues?.village_name
+          : "",
+        season_name: item?.dataValues?.season_name
+          ? item?.dataValues?.season_name
           : "",
         estimated_seed_cotton: item?.dataValues?.estimated_seed_cotton
           ? Number(item.dataValues?.estimated_seed_cotton)
