@@ -2907,7 +2907,7 @@ const fetchSpinnerYarnProcessPagination = async (
     yarn_count_data AS (
       SELECT
         spin_process.id AS process_id,
-        json_agg(json_build_object('id'::integer, yarn_count.id, 'yarnCount_name'::text, yarn_count."yarnCount_name")) AS yarncount
+        json_agg(json_build_object('id', yarn_count.id, 'yarnCount_name', yarn_count."yarnCount_name")) AS yarncount
       FROM
         spin_processes spin_process
       LEFT JOIN
