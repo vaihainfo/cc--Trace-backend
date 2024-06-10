@@ -52,7 +52,7 @@ const createFarmer = async (req: Request, res: Response) => {
     const farmer = await Farmer.create(data);
     let village = await Village.findOne({ where: { id: Number(req.body.villageId) } })
     let uniqueFilename = `qrcode_${Date.now()}.png`;
-    let name = farmer.firstName + " " + farmer.lastName
+    let name = farmer.lastName ? farmer.firstName + " " + farmer.lastName : farmer.firstName
     let aa = await generateQrCode(`${farmer.id}`,
       name, uniqueFilename, farmer.code, village ? village.village_name : '');
     const farmerPLace = await Farmer.update({ qrUrl: uniqueFilename }, {

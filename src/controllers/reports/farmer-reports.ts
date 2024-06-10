@@ -43,8 +43,9 @@ const fetchFarmerReportPagination = async (req: Request, res: Response) => {
     if (searchTerm) {
       whereCondition[Op.or] = [
         { firstName: { [Op.iLike]: `%${searchTerm}%` } },
-        { lastName: { [Op.iLike]: `%${searchTerm}%` } },
+        { lastName: { [Op.iLike]: `%${searchTerm}%` } }, 
         { code: { [Op.iLike]: `%${searchTerm}%` } },
+        { tracenet_id: { [Op.iLike]: `%${searchTerm}%` } },
         { "$country.county_name$": { [Op.iLike]: `%${searchTerm}%` } },
         { "$block.block_name$": { [Op.iLike]: `%${searchTerm}%` } },
         { "$farmGroup.name$": { [Op.iLike]: `%${searchTerm}%` } },
