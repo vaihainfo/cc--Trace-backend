@@ -19,7 +19,11 @@ const BaleSelection = db.define('bale_selections', {
   print: {
     type: DataTypes.BOOLEAN,
     defaultValue: false
-  }
+  },
+  spinner_status: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: null
+  },
 });
 
 BaleSelection.belongsTo(GinSales, {

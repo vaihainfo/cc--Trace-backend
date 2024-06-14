@@ -980,7 +980,7 @@ const createGinnerSales = async (req: Request, res: Response) => {
       despatch_from: req.body.despatchFrom,
       press_no: req.body.pressNo,
       status: "To be Submitted",
-      qty_stock: req.body.totalQty,
+      qty_stock: 0,
     };
     const ginSales = await GinSales.create(data);
     let uniqueFilename = `gin_sales_qrcode_${Date.now()}.png`;

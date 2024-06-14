@@ -1190,7 +1190,7 @@ const fetchWeaverDashBoard = async (req: Request, res: Response) => {
         include: include,
         order: [
           [
-            'id', 'asc'
+            'id', 'desc'
           ]
         ],
         offset: offset,
@@ -1220,7 +1220,7 @@ const fetchWeaverDashBoard = async (req: Request, res: Response) => {
         include: include,
         order: [
           [
-            'id', 'asc'
+            'id', 'desc'
           ]
         ]
       });

@@ -335,6 +335,11 @@ const fetchTransactions = async (req: Request, res: Response) => {
           ...include,
           { model: Weaver, as: "weaver", attributes: ["id", "name"] },
         ],
+        order: [
+          [
+              'id', 'desc'
+          ]
+      ]
       }),
       KnitSales.findAll({
         where: {
@@ -347,6 +352,11 @@ const fetchTransactions = async (req: Request, res: Response) => {
           ...include,
           { model: Knitter, as: "knitter", attributes: ["id", "name"] },
         ],
+        order: [
+          [
+              'id', 'desc'
+          ]
+      ]
       }),
       DyingSales.findAll({
         where: {
@@ -359,6 +369,11 @@ const fetchTransactions = async (req: Request, res: Response) => {
           ...include,
           { model: Fabric, as: "dying_fabric", attributes: ["id", "name"] },
         ],
+        order: [
+          [
+              'id', 'desc'
+          ]
+      ]
       }),
       WashingSales.findAll({
         where: {
@@ -371,6 +386,11 @@ const fetchTransactions = async (req: Request, res: Response) => {
           ...include,
           { model: Fabric, as: "washing", attributes: ["id", "name"] },
         ],
+        order: [
+          [
+              'id', 'desc'
+          ]
+      ]
       }),
       PrintingSales.findAll({
         where: {
@@ -383,6 +403,11 @@ const fetchTransactions = async (req: Request, res: Response) => {
           ...include,
           { model: Fabric, as: "printing", attributes: ["id", "name"] },
         ],
+        order: [
+          [
+              'id', 'desc'
+          ]
+      ]
       }),
       CompactingSales.findAll({
         where: {
@@ -395,6 +420,11 @@ const fetchTransactions = async (req: Request, res: Response) => {
           ...include,
           { model: Fabric, as: "compacting", attributes: ["id", "name"] },
         ],
+        order: [
+          [
+              'id', 'desc'
+          ]
+      ]
       }),
     ]);
 
@@ -509,6 +539,11 @@ const fetchTransactionsAll = async (req: Request, res: Response) => {
           ...include,
           { model: Weaver, as: "weaver", attributes: ["id", "name"] },
         ],
+        order: [
+          [
+              'id', 'desc'
+          ]
+      ]
       }),
       KnitSales.findAll({
         where: {
@@ -521,6 +556,11 @@ const fetchTransactionsAll = async (req: Request, res: Response) => {
           ...include,
           { model: Knitter, as: "knitter", attributes: ["id", "name"] },
         ],
+        order: [
+          [
+              'id', 'desc'
+          ]
+      ]
       }),
       DyingSales.findAll({
         where: {
@@ -533,6 +573,11 @@ const fetchTransactionsAll = async (req: Request, res: Response) => {
           ...include,
           { model: Fabric, as: "dying_fabric", attributes: ["id", "name"] },
         ],
+        order: [
+          [
+              'id', 'desc'
+          ]
+      ]
       }),
       WashingSales.findAll({
         where: {
@@ -545,6 +590,11 @@ const fetchTransactionsAll = async (req: Request, res: Response) => {
           ...include,
           { model: Fabric, as: "washing", attributes: ["id", "name"] },
         ],
+        order: [
+          [
+              'id', 'desc'
+          ]
+      ]
       }),
       PrintingSales.findAll({
         where: {
@@ -557,6 +607,11 @@ const fetchTransactionsAll = async (req: Request, res: Response) => {
           ...include,
           { model: Fabric, as: "printing", attributes: ["id", "name"] },
         ],
+        order: [
+          [
+              'id', 'desc'
+          ]
+      ]
       }),
       CompactingSales.findAll({
         where: {
@@ -569,6 +624,11 @@ const fetchTransactionsAll = async (req: Request, res: Response) => {
           ...include,
           { model: Fabric, as: "compacting", attributes: ["id", "name"] },
         ],
+        order: [
+          [
+              'id', 'desc'
+          ]
+      ]
       }),
     ]);
     let abc = result.flat();

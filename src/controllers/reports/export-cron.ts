@@ -3383,7 +3383,7 @@ const generateSpinnerSale = async () => {
 
 const generateSpinProcessBackwardfTraceabilty = async () => {
   const maxRowsPerWorksheet = 500000;
-  const whereCondition = {};
+  const whereCondition:any = {};
   try {
         // Create the excel workbook file
         const workbook = new ExcelJS.stream.xlsx.WorkbookWriter({
