@@ -474,8 +474,8 @@ const exportProcurementReport = async (req: Request, res: Response) => {
       const rowValues = Object.values({
         index: index + 1,
         date: item.dataValues.date ? item.dataValues.date : '',
-        farmer_code: item.dataValues.farmer_code ? item.dataValues.farmer_code : '',
         farmer_name: item.dataValues.farmer ? item.dataValues.farmer.firstName + ' ' + `${item.dataValues.farmer.lastName ? item.dataValues.farmer.lastName : ""}` : item.dataValues.farmer_name,
+        farmer_code: item.dataValues.farmer_code ? item.dataValues.farmer_code : '',
         season: item.dataValues.season ? item.dataValues.season.name : ' ',
         country: item.dataValues.country ? item.dataValues.country.county_name : '',
         state: item.dataValues.state ? item.dataValues.state.state_name : '',

@@ -2907,7 +2907,7 @@ const fetchSpinnerYarnProcessPagination = async (
     yarn_count_data AS (
       SELECT
         spin_process.id AS process_id,
-        json_agg(json_build_object('id', yarn_count.id, 'yarnCount_name', yarn_count."yarnCount_name")) AS yarncount
+        STRING_AGG(DISTINCT "yarn_count"."yarnCount_name", ',') AS yarncount
       FROM
         spin_processes spin_process
       LEFT JOIN
@@ -3132,7 +3132,7 @@ const exportSpinnerYarnProcess = async (req: Request, res: Response) => {
     yarn_count_data AS (
       SELECT
         spin_process.id AS process_id,
-        json_agg(json_build_object('id', yarn_count.id, 'yarnCount_name', yarn_count."yarnCount_name")) AS yarncount
+        STRING_AGG(DISTINCT "yarn_count"."yarnCount_name", ',') AS yarncount
       FROM
         spin_processes spin_process
       LEFT JOIN
@@ -3181,12 +3181,6 @@ const exportSpinnerYarnProcess = async (req: Request, res: Response) => {
         }
       }
 
-      if (item.yarncount && item.yarncount.length > 0) {
-        yarnCount = item.yarncount
-          .map((yrn: any) => yrn.yarnCount_name)
-          .join(",");
-      }
-
       const rowValues = Object.values({
         index: index + 1,
         date: item.date ? item.date : "",
@@ -3195,7 +3189,7 @@ const exportSpinnerYarnProcess = async (req: Request, res: Response) => {
         lotNo: item.batch_lot_no ? item.batch_lot_no : "",
         reel_lot_no: item.reel_lot_no ? item.reel_lot_no : "",
         yarnType: item.yarn_type ? item.yarn_type : "",
-        count: yarnCount ? yarnCount : "",
+        count: item.yarncount ? item.yarncount : "",
         resa: item.yarn_realisation ? Number(item.yarn_realisation) : 0,
         comber: item.comber_noil ? Number(item.comber_noil) : 0,
         blend: blendValue,
