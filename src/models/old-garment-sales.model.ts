@@ -145,10 +145,6 @@ const OldGarmentSales = db.define('old_garment_sales', {
     physical_traceability_process: {
         type: DataTypes.SMALLINT,
         defaultValue: "0"
-    },
-    garment_name: {
-        type: DataTypes.STRING,
-        defaultValue: null
     }
 }, {
     timestamps: false

@@ -2302,7 +2302,6 @@ const chooseLint = async (req: Request, res: Response) => {
             const items = await sequelize.query(dataQuery, {
                 type: sequelize.QueryTypes.SELECT,
             })
-``
             list.push({ ...item.dataValues, data: items });
         }
         return res.sendSuccess(res, list);

@@ -159,15 +159,7 @@ const OldWeaverSales = db.define('old_weaver_sales', {
     physical_traceability_process: {
         type: DataTypes.SMALLINT,
         defaultValue: "0"
-    },
-    weaver_name: {
-        type: DataTypes.STRING,
-        defaultValue: null
-    },
-    brand_name: {
-        type: DataTypes.STRING,
-        defaultValue: null
-    },
+    }
 }, {
     timestamps: false
 });

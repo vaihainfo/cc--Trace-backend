@@ -156,14 +156,6 @@ const OldKnitterSales = db.define('old_knitter_sales', {
         type: DataTypes.SMALLINT,
         defaultValue: "0"
     },
-    knitter_name: {
-        type: DataTypes.STRING,
-        defaultValue: null
-    },
-    brand_name: {
-        type: DataTypes.STRING,
-        defaultValue: null
-    },
 }, {
     timestamps: false
 });
