@@ -742,6 +742,7 @@ const generateFaildReport = async (type: string) => {
 
 //----------------------------------------- Procurement Reports ------------------------//
 
+
 const generateProcurementReport = async () => {
   try {
     const batchSize = 100000; // Number of transactions to fetch per batch
@@ -750,6 +751,7 @@ const generateProcurementReport = async () => {
     const workbook = new ExcelJS.stream.xlsx.WorkbookWriter({
       stream: fs.createWriteStream("./upload/procurement-report-test.xlsx")
     });
+
     let worksheetIndex = 0;
     let offset = 0;
     // Function to write a batch of transactions to the worksheet
