@@ -742,6 +742,88 @@ const generateFaildReport = async (type: string) => {
 
 //----------------------------------------- Procurement Reports ------------------------//
 
+const createIndexes = async () => {
+  const indexes = [
+    'idx_transactions_status ON transactions(status)',
+    'idx_transactions_program_id ON transactions(program_id)',
+    'idx_transactions_brand_id ON transactions(brand_id)',
+    'idx_transactions_country_id ON transactions(country_id)',
+    'idx_transactions_state_id ON transactions(state_id)',
+    'idx_transactions_district_id ON transactions(district_id)',
+    'idx_transactions_block_id ON transactions(block_id)',
+    'idx_transactions_village_id ON transactions(village_id)',
+    'idx_transactions_farmer_id ON transactions(farmer_id)',
+    'idx_transactions_ginner_id ON transactions(mapped_ginner)',
+    'idx_transactions_grade_id ON transactions(grade_id)',
+    'idx_transactions_season_id ON transactions(season_id)',
+    'idx_transactions_farm_id ON transactions(farm_id)',
+    'idx_transactions_agent_id ON transactions(agent_id)',
+  ];
+
+  const createIndexPromises = indexes.map(async (index) => {
+    let retries = 3; // Number of retries before giving up
+    while (retries > 0) {
+      try {
+        const indexNameMatch = index.match(/(\w+) ON/);
+        if (!indexNameMatch) {
+          throw new Error(`Failed to extract index name from query: ${index}`);
+        }
+        const indexName = indexNameMatch[1];
+
+        const indexExistsQuery = `
+          SELECT 1
+          FROM pg_indexes
+          WHERE tablename = 'transactions' AND indexname = '${indexName}'
+        `;
+        const [results] = await sequelize.query(indexExistsQuery);
+        if (results.length === 0) {
+          const createIndexQuery = `
+            DO $$
+            BEGIN
+                IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE tablename = 'transactions' AND indexname = '${indexName}') THEN
+                    CREATE INDEX CONCURRENTLY ${index};
+                    RAISE NOTICE 'Index created: ${indexName}';
+                ELSE
+                    RAISE NOTICE 'Index already exists: ${indexName}';
+                END IF;
+            END $$;
+          `;
+          await sequelize.query(createIndexQuery);
+        } else {
+          console.log(`Index already exists: ${indexName}`);
+        }
+        break; // Exit the retry loop if successful
+      } catch (error:any) {
+        console.error(`Error creating index: ${index}`, error);
+        if (error.message.includes('deadlock detected')) {
+          // If deadlock detected, retry after a delay
+          await new Promise(resolve => setTimeout(resolve, 1000)); // 1 second delay
+          retries--;
+        } else {
+          retries = 0; // Exit retry loop for non-deadlock errors
+        }
+      }
+    }
+
+    if (retries === 0) {
+      console.error(`Failed to create index after retries: ${index}`);
+    }
+  });
+
+  await Promise.all(createIndexPromises);
+};
+
+// Call the function to create indexes
+createIndexes()
+  .then(() => {
+    console.log('Index creation process completed successfully.');
+    // Additional code after index creation if needed
+  })
+  .catch((error) => {
+    console.error('Index creation process failed:', error);
+  });
+
+
 const generateProcurementReport = async () => {
   try {
     const batchSize = 100000; // Number of transactions to fetch per batch
@@ -750,6 +832,8 @@ const generateProcurementReport = async () => {
     const workbook = new ExcelJS.stream.xlsx.WorkbookWriter({
       stream: fs.createWriteStream("./upload/procurement-report-test.xlsx")
     });
+
+    await createIndexes();
 
     let worksheetIndex = 0;
     let offset = 0;
