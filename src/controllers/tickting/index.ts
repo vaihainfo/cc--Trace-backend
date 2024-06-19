@@ -93,7 +93,9 @@ const fetchTicketTracker = async (req: Request, res: Response) => {
             const idArray: any[] = processor
                 .split(",")
                 .map((id: any) => id.toLowerCase());
-            whereCondition.processor_type = { [Op.in]: idArray };
+                whereCondition.processor_type = {
+                    [Op.iLike]: { [Op.any]: idArray.map(id => `%${id}%`) }
+                };
         }
 
         if (brandId) {
