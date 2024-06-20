@@ -115,7 +115,7 @@ const connectToDb = async () => {
   const data = await sequelize.sync({ force: false })
   try {
     await sequelize.authenticate();
-  await generateSpinProcessBackwardfTraceabilty();
+  //await generateSpinProcessBackwardfTraceabilty();
 
       console.log("Database Connected successfully.");
       const used = process.memoryUsage();
