@@ -2208,15 +2208,18 @@ const chooseLint = async (req: Request, res: Response) => {
                 .split(",")
                 .map((id: any) => id);
             whereCondition.reel_lot_no = { [Op.in]: idArray };
-            sqlCondition.push(`gs.reel_lot_no IN (${idArray.join(',')})`);
+            const quotedIdArray = idArray.map(id => `'${id}'`).join(',');
+            sqlCondition.push(`gs.reel_lot_no IN (${quotedIdArray})`);
         }
 
         if (invoiceNo) {
             const idArray: any[] = invoiceNo
                 .split(",")
                 .map((id: any) => id);
-            whereCondition.invoice_no = { [Op.in]: idArray };
-            sqlCondition.push(`gs.invoice_no IN (${idArray.join(',')})`);
+                whereCondition.invoice_no = { [Op.in]: idArray };
+
+                const quotedIdArray = idArray.map(id => `'${id}'`).join(',');
+                sqlCondition.push(`gs.invoice_no IN (${quotedIdArray})`);
         }
 
         whereCondition.status = { [Op.in]: ['Sold', 'Partially Accepted', 'Partially Rejected'] }

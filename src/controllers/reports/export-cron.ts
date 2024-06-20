@@ -752,23 +752,6 @@ const generateProcurementReport = async () => {
       stream: fs.createWriteStream("./upload/procurement-report-test.xlsx")
     });
 
-    await sequelize.query(`
-      CREATE INDEX IF NOT EXISTS idx_transactions_status ON transactions(status);
-      CREATE INDEX IF NOT EXISTS idx_transactions_program_id ON transactions(program_id);
-      CREATE INDEX IF NOT EXISTS idx_transactions_brand_id ON transactions(brand_id);
-      CREATE INDEX IF NOT EXISTS idx_transactions_country_id ON transactions(country_id);
-      CREATE INDEX IF NOT EXISTS idx_transactions_state_id ON transactions(state_id);
-      CREATE INDEX IF NOT EXISTS idx_transactions_district_id ON transactions(district_id);
-      CREATE INDEX IF NOT EXISTS idx_transactions_block_id ON transactions(block_id);
-      CREATE INDEX IF NOT EXISTS idx_transactions_village_id ON transactions(village_id);
-      CREATE INDEX IF NOT EXISTS idx_transactions_farmer_id ON transactions(farmer_id);
-      CREATE INDEX IF NOT EXISTS idx_transactions_ginner_id ON transactions(mapped_ginner);
-      CREATE INDEX IF NOT EXISTS idx_transactions_grade_id ON transactions(grade_id);
-      CREATE INDEX IF NOT EXISTS idx_transactions_season_id ON transactions(season_id);
-      CREATE INDEX IF NOT EXISTS idx_transactions_farm_id ON transactions(farm_id);
-      CREATE INDEX IF NOT EXISTS idx_transactions_agent_id ON transactions(agent_id);
-    `);
-
     let worksheetIndex = 0;
     let offset = 0;
     // Function to write a batch of transactions to the worksheet

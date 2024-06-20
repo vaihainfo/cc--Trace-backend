@@ -93,7 +93,9 @@ const fetchTicketTracker = async (req: Request, res: Response) => {
             const idArray: any[] = processor
                 .split(",")
                 .map((id: any) => id.toLowerCase());
-            whereCondition.processor_type = { [Op.in]: idArray };
+                whereCondition.processor_type = {
+                    [Op.iLike]: { [Op.any]: idArray.map(id => `%${id}%`) }
+                };
         }
 
         if (brandId) {
@@ -420,11 +422,15 @@ const countTicketTracker = async (req: Request, res: Response) => {
         let data = []
         for (let track of ['Garment', 'Ginner', 'Weaver', 'Spinner', 'Knitter']) {
             let ticket = ticketTracker.find((obj: any) => obj?.processor_type?.toLowerCase() === track?.toLowerCase());
-            if (ticket) data.push(ticket);
-            else data.push({
-                "processor_type": track,
-                "count": "0"
-            })
+            if (ticket) {
+                ticket.processor_type = track.charAt(0).toUpperCase() + track.slice(1).toLowerCase();
+                data.push(ticket);
+            } else {
+                data.push({
+                    "processor_type": track.charAt(0).toUpperCase() + track.slice(1).toLowerCase(),
+                    "count": "0"
+                });
+            }
         }
         res.sendSuccess(res, data);
     } catch (error: any) {

@@ -3860,17 +3860,21 @@ const fetchKnitterYarnPagination = async (req: Request, res: Response) => {
           [Sequelize.literal('"sales"."total_qty"'), "total_qty"],
           [Sequelize.literal('"sales"."invoice_no"'), "invoice_no"],
           [Sequelize.literal('"sales"."batch_lot_no"'), "batch_lot_no"],
-          [Sequelize.literal('"process"."reel_lot_no"'), "reel_lot_no"],
+          // [Sequelize.literal('"process"."reel_lot_no"'), "reel_lot_no"],
+          [Sequelize.fn('STRING_AGG', Sequelize.literal('DISTINCT "process"."reel_lot_no"'), ', ' ) , "reel_lot_no"],
           [Sequelize.literal('"sales"."no_of_boxes"'), "no_of_boxes"],
-          // [Sequelize.literal('"process"."qty_used"'), 'yarn_weight'],
-          [Sequelize.literal("qty_used"), "yarn_weight"],
+          // [Sequelize.literal("qty_used"), "yarn_weight"],
+          [
+            sequelize.fn(
+              "COALESCE",
+              sequelize.fn("SUM", sequelize.col("qty_used")),
+              0
+            ),
+            "yarn_weight",
+          ],
           [Sequelize.literal('"sales"."box_ids"'), "box_ids"],
           [Sequelize.literal('"sales"."yarn_type"'), "yarn_type"],
           [Sequelize.literal('"sales"."yarn_count"'), "yarn_count"],
-          // [
-          //   Sequelize.col('"sales"."yarncount".yarnCount_name'),
-          //   "yarnCount_name",
-          // ],
           [Sequelize.literal('"sales"."quality_doc"'), "quality_doc"],
           [Sequelize.literal('"sales"."tc_files"'), "tc_files"],
           [Sequelize.literal('"sales"."contract_file"'), "contract_file"],
@@ -3900,32 +3904,47 @@ const fetchKnitterYarnPagination = async (req: Request, res: Response) => {
             as: "process",
           },
         ],
+        group: [
+          "sales.id",
+          "sales.season.id",
+          "sales.spinner.id",
+          "sales.weaver.id",
+          "sales.knitter.id",
+          "sales.program.id",
+        ],
         order: [["sales_id", "desc"]],
         offset: offset,
         limit: limit,
       }
     );
-    let data = [];
 
+    const data = [];
     for await (let row of rows) {
+
+      const yarnCountIds = row.dataValues.yarn_count?.map(Number);
+    
       const yarncount = await YarnCount.findAll({
         where: {
           id: {
-            [Op.in]: row.dataValues.yarn_count,
+            [Op.in]: yarnCountIds,
           },
         },
         attributes: ["yarnCount_name"],
       });
+    
+      const yarnCountNames = yarncount?.map((yc:any) => yc.yarnCount_name);
+    
       data.push({
         ...row.dataValues,
-        yarncount,
+        yarnCount_names: yarnCountNames, 
       });
     }
-    return res.sendPaginationSuccess(res, data, count);
+    return res.sendPaginationSuccess(res, data, count.length);
   } catch (error: any) {
     return res.sendError(res, error.message);
   }
 };
+
 
 const exportKnitterYarn = async (req: Request, res: Response) => {
   // knitter_yarn_receipt_load
@@ -4086,10 +4105,17 @@ const exportKnitterYarn = async (req: Request, res: Response) => {
           [Sequelize.literal('"sales"."total_qty"'), "total_qty"],
           [Sequelize.literal('"sales"."invoice_no"'), "invoice_no"],
           [Sequelize.literal('"sales"."batch_lot_no"'), "batch_lot_no"],
-          [Sequelize.literal('"process"."reel_lot_no"'), "reel_lot_no"],
+          [Sequelize.fn('STRING_AGG', Sequelize.literal('DISTINCT "process"."reel_lot_no"'), ', ' ) , "reel_lot_no"],
           [Sequelize.literal('"sales"."no_of_boxes"'), "no_of_boxes"],
           // [Sequelize.literal('"process"."qty_used"'), 'yarn_weight'],
-          [Sequelize.literal("qty_used"), "yarn_weight"],
+          [
+            sequelize.fn(
+              "COALESCE",
+              sequelize.fn("SUM", sequelize.col("qty_used")),
+              0
+            ),
+            "yarn_weight",
+          ],
           [Sequelize.literal('"sales"."box_ids"'), "box_ids"],
           [Sequelize.literal('"sales"."yarn_type"'), "yarn_type"],
           [Sequelize.literal('"sales"."yarn_count"'), "yarn_count"],
@@ -4126,24 +4152,34 @@ const exportKnitterYarn = async (req: Request, res: Response) => {
             as: "process",
           },
         ],
+        group: [
+          "sales.id",
+          "sales.season.id",
+          "sales.spinner.id",
+          "sales.weaver.id",
+          "sales.knitter.id",
+          "sales.program.id",
+        ],
         order: [["sales_id", "desc"]],
-        offset: offset,
-        limit: limit,
+        // offset: offset,
+        // limit: limit,
       }
     );
+
     // Append data to worksheet
     for await (const [index, item] of rows.entries()) {
-      let yarnCount : string = "";
-      
-      if (item.dataValues.yarn_count && item.dataValues.yarn_count.length > 0) {
-        let type = await YarnCount.findAll({
-          where: { id: { [Op.in]: item.dataValues.yarn_count } },
-        });
-    
-        for (let i of type) {
-          yarnCount += `${i.yarnCount_name},`;
-        }
-      }
+      const yarnCountIds = rows.flatMap((row:any) => row.dataValues.yarn_count || []);
+      const yarnCounts = await YarnCount.findAll({
+        where: {
+          id: { [Op.in]: yarnCountIds }
+        },
+        attributes: ["id", "yarnCount_name"]
+      });
+
+      const yarnCountMap = yarnCounts.reduce((map:any, yarnCount:any) => {
+        map[yarnCount.id] = yarnCount.yarnCount_name;
+        return map;
+      }, {});
       const rowValues = Object.values({
         index: index + 1,
         accept_date: item.dataValues.accept_date
@@ -4155,7 +4191,7 @@ const exportKnitterYarn = async (req: Request, res: Response) => {
         invoice: item.dataValues.invoice_no ? item.dataValues.invoice_no : "",
         lotNo: item.dataValues.batch_lot_no ? item.dataValues.batch_lot_no : "",
         reelLot: item.dataValues.reel_lot_no ? item.dataValues.reel_lot_no : "",
-        count: yarnCount ? yarnCount : '',
+        count: item.dataValues.yarn_count.map((id: number) => yarnCountMap[id] || null).join(", "),
         boxes: item.dataValues.no_of_boxes ? item.dataValues.no_of_boxes : "",
         boxId: item.dataValues.box_ids ? item.dataValues.box_ids : "",
         total: item.dataValues.yarn_weight,
@@ -5180,10 +5216,19 @@ const fetchWeaverYarnPagination = async (req: Request, res: Response) => {
           [Sequelize.literal('"sales"."total_qty"'), "total_qty"],
           [Sequelize.literal('"sales"."invoice_no"'), "invoice_no"],
           [Sequelize.literal('"sales"."batch_lot_no"'), "batch_lot_no"],
-          [Sequelize.literal('"process"."reel_lot_no"'), "reel_lot_no"],
+          // [Sequelize.literal('"process"."reel_lot_no"'), "reel_lot_no"],
+          [Sequelize.fn('STRING_AGG', Sequelize.literal('DISTINCT "process"."reel_lot_no"'), ', ' ) , "reel_lot_no"],
           [Sequelize.literal('"sales"."no_of_boxes"'), "no_of_boxes"],
           // [Sequelize.literal('"process"."qty_used"'), 'yarn_weight'],
-          [Sequelize.literal("qty_used"), "yarn_weight"],
+          // [Sequelize.literal("qty_used"), "yarn_weight"],
+          [
+            sequelize.fn(
+              "COALESCE",
+              sequelize.fn("SUM", sequelize.col("qty_used")),
+              0
+            ),
+            "yarn_weight",
+          ],
           [Sequelize.literal('"sales"."box_ids"'), "box_ids"],
           [Sequelize.literal('"sales"."yarn_type"'), "yarn_type"],
           [Sequelize.literal('"sales"."yarn_count"'), "yarn_count"],
@@ -5220,28 +5265,42 @@ const fetchWeaverYarnPagination = async (req: Request, res: Response) => {
             as: "process",
           },
         ],
+        group: [
+          "sales.id",
+          "sales.season.id",
+          "sales.spinner.id",
+          "sales.weaver.id",
+          "sales.knitter.id",
+          "sales.program.id",
+        ],
         order: [["sales_id", "desc"]],
         offset: offset,
         limit: limit,
       }
     );
-    let data = [];
 
+    const data = [];
     for await (let row of rows) {
+
+      const yarnCountIds = row.dataValues.yarn_count?.map(Number);
+    
       const yarncount = await YarnCount.findAll({
         where: {
           id: {
-            [Op.in]: row.dataValues.yarn_count,
+            [Op.in]: yarnCountIds,
           },
         },
         attributes: ["yarnCount_name"],
       });
+    
+      const yarnCountNames = yarncount?.map((yc:any) => yc.yarnCount_name);
+    
       data.push({
         ...row.dataValues,
-        yarncount,
+        yarnCount_names: yarnCountNames, 
       });
     }
-    return res.sendPaginationSuccess(res, data, count);
+    return res.sendPaginationSuccess(res, data, count?.length);
   } catch (error: any) {
     return res.sendError(res, error.message);
   }
@@ -5408,10 +5467,17 @@ const exportWeaverYarn = async (req: Request, res: Response) => {
           [Sequelize.literal('"sales"."total_qty"'), "total_qty"],
           [Sequelize.literal('"sales"."invoice_no"'), "invoice_no"],
           [Sequelize.literal('"sales"."batch_lot_no"'), "batch_lot_no"],
-          [Sequelize.literal('"process"."reel_lot_no"'), "reel_lot_no"],
+          [Sequelize.fn('STRING_AGG', Sequelize.literal('DISTINCT "process"."reel_lot_no"'), ', ' ) , "reel_lot_no"],
           [Sequelize.literal('"sales"."no_of_boxes"'), "no_of_boxes"],
           // [Sequelize.literal('"process"."qty_used"'), 'yarn_weight'],
-          [Sequelize.literal("qty_used"), "yarn_weight"],
+          [
+            sequelize.fn(
+              "COALESCE",
+              sequelize.fn("SUM", sequelize.col("qty_used")),
+              0
+            ),
+            "yarn_weight",
+          ],
           [Sequelize.literal('"sales"."box_ids"'), "box_ids"],
           [Sequelize.literal('"sales"."yarn_type"'), "yarn_type"],
           [Sequelize.literal('"sales"."yarn_count"'), "yarn_count"],
@@ -5448,24 +5514,32 @@ const exportWeaverYarn = async (req: Request, res: Response) => {
             as: "process",
           },
         ],
-        order: [["sales_id", "desc"]],
+        group: [
+          "sales.id",
+          "sales.season.id",
+          "sales.spinner.id",
+          "sales.weaver.id",
+          "sales.knitter.id",
+          "sales.program.id",
+        ], order: [["sales_id", "desc"]],
         offset: offset,
         limit: limit,
       }
     );
     // Append data to worksheet
     for await (const [index, item] of rows.entries()) {
-      let yarnCount : string = "";
-      
-      if (item.dataValues.yarn_count && item.dataValues.yarn_count.length > 0) {
-        let type = await YarnCount.findAll({
-          where: { id: { [Op.in]: item.dataValues.yarn_count } },
-        });
-    
-        for (let i of type) {
-          yarnCount += `${i.yarnCount_name},`;
-        }
-      }
+      const yarnCountIds = rows.flatMap((row:any) => row.dataValues.yarn_count || []);
+      const yarnCounts = await YarnCount.findAll({
+        where: {
+          id: { [Op.in]: yarnCountIds }
+        },
+        attributes: ["id", "yarnCount_name"]
+      });
+
+      const yarnCountMap = yarnCounts.reduce((map:any, yarnCount:any) => {
+        map[yarnCount.id] = yarnCount.yarnCount_name;
+        return map;
+      }, {});
 
       const rowValues = Object.values({
         index: index + 1,
@@ -5478,7 +5552,7 @@ const exportWeaverYarn = async (req: Request, res: Response) => {
         invoice: item.dataValues.invoice_no ? item.dataValues.invoice_no : "",
         lotNo: item.dataValues.batch_lot_no ? item.dataValues.batch_lot_no : "",
         reelLot: item.dataValues.reel_lot_no ? item.dataValues.reel_lot_no : "",
-        count: yarnCount ? yarnCount : '',
+        count: item.dataValues.yarn_count.map((id: number) => yarnCountMap[id] || null).join(", "),
         boxes: item.dataValues.no_of_boxes ? item.dataValues.no_of_boxes : "",
         boxId: item.dataValues.box_ids ? item.dataValues.box_ids : "",
         total: item.dataValues.yarn_weight,
