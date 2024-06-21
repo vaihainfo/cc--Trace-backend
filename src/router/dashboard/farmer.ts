@@ -4,7 +4,7 @@ import { Router } from "express";
 
 const router = Router();
 
-// router.use(accessControl);
+router.use(accessControl);
 
 router.get('/area/overall', Dashboard.getOverallArea);
 router.get('/overall', Dashboard.getOverallFarmer);

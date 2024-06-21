@@ -397,7 +397,8 @@ const getFarmerBySeasons = async (where: any) => {
 const getSeasonsList = (countList: any) => {
   let season: any = [];
   let farmerCount: any = [];
-
+  countList = countList.sort((a: any, b: any) =>
+    a.dataValues.seasonId - b.dataValues.seasonId).slice(-3);
   countList.forEach((seasonCount: any) => {
     season.push(seasonCount.dataValues.seasonName);
     farmerCount.push(Number(seasonCount.dataValues.farmerCount ? seasonCount.dataValues.farmerCount : 0));
@@ -459,7 +460,8 @@ const getAcreBySession = async (where: any) => {
 const getAcreList = (acreList: any) => {
   let season: any = [];
   let acreCount: any = [];
-
+  acreList = acreList.sort((a: any, b: any) =>
+    a.dataValues.seasonId - b.dataValues.seasonId).slice(-3);
   acreList.forEach((acre: any) => {
     season.push(acre.dataValues.seasonName);
     acreCount.push(acre.dataValues.acreCount ? Number(acre.dataValues.acreCount) : 0);
@@ -528,7 +530,8 @@ const getEstimateProductionList = (estimateProductionList: any) => {
   let season: any = [];
   let estimate: any = [];
   let production: any = [];
-
+  estimateProductionList = estimateProductionList.sort((a: any, b: any) =>
+    a.dataValues.seasonId - b.dataValues.seasonId).slice(-3);
   for (const estimateProduction of estimateProductionList) {
     season.push(estimateProduction.dataValues.season.name);
     estimate.push(formatNumber(estimateProduction.dataValues.estimate));
@@ -890,7 +893,7 @@ const getFarmerCountByCountry = async (where: any) => {
   });
 
   return farmerCount;
-}
+};
 
 const getSeasonLists = async () => {
   const seasons = await Season.findAll({
@@ -901,7 +904,7 @@ const getSeasonLists = async () => {
   });
 
   return seasons;
-}
+};
 
 const getCountrySeasonsList = async (
   farmerCountList: any = []
@@ -910,7 +913,7 @@ const getCountrySeasonsList = async (
   let seasonIds: number[] = [];
   const seasonLists: {
     name: string,
-    count: number[]
+    count: number[];
   }[] = [];
 
   farmerCountList.forEach((list: any) => {
@@ -950,8 +953,8 @@ const getCountrySeasonsList = async (
   return {
     countries,
     seasonLists,
-  }
-}
+  };
+};
 
 const getSeason = (seasonLists: any[], seasonName: any) => {
   const season = seasonLists.find((list: any) =>
@@ -959,7 +962,7 @@ const getSeason = (seasonLists: any[], seasonName: any) => {
   );
 
   return season;
-}
+};
 
 const getCountryFarmerArea = async (
   req: Request, res: Response
@@ -978,7 +981,7 @@ const getCountryFarmerArea = async (
       : "ERR_INTERNAL_SERVER_ERROR";
     return res.sendError(res, code);
   }
-}
+};
 
 const getAreaByCountry = async (where: any) => {
   const farmerCount = await Farm.findAll({
@@ -1008,7 +1011,7 @@ const getAreaByCountry = async (where: any) => {
   });
 
   return farmerCount;
-}
+};
 
 export {
   getOverallArea,
