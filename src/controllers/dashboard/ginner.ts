@@ -253,7 +253,7 @@ const getTopSpinnersData = async (
   const result = await GinSales.findAll({
     attributes: [
       [Sequelize.fn('SUM', Sequelize.col('gin_sales.total_qty')), 'total'],
-      [Sequelize.col('season.name'), 'seasonName'],
+      // [Sequelize.col('season.name'), 'seasonName'],
       [Sequelize.col('buyerdata.name'), 'spinnerName']
     ],
     include: [{
@@ -261,18 +261,21 @@ const getTopSpinnersData = async (
       as: 'buyerdata',
       attributes: []
     }, {
-      model: Season,
-      as: 'season',
-      attributes: []
-    }, {
       model: Ginner,
       as: 'ginner',
       attributes: []
-    }],
+    }
+    // {
+    //   model: Season,
+    //   as: 'season',
+    //   attributes: []
+    // },
+  ],
     where,
     order: [['total', 'desc']],
     limit: 10,
-    group: ['season.id', 'buyerdata.id']
+    //group: ['season.id', 'buyerdata.id']
+    group: ['buyerdata.id']
   });
 
   return result;

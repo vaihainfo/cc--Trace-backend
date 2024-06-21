@@ -397,7 +397,8 @@ const getFarmerBySeasons = async (where: any) => {
 const getSeasonsList = (countList: any) => {
   let season: any = [];
   let farmerCount: any = [];
-
+  countList = countList.sort((a: any, b: any) =>
+    a.dataValues.seasonId - b.dataValues.seasonId).slice(-3);
   countList.forEach((seasonCount: any) => {
     season.push(seasonCount.dataValues.seasonName);
     farmerCount.push(Number(seasonCount.dataValues.farmerCount ? seasonCount.dataValues.farmerCount : 0));
@@ -459,7 +460,8 @@ const getAcreBySession = async (where: any) => {
 const getAcreList = (acreList: any) => {
   let season: any = [];
   let acreCount: any = [];
-
+  acreList = acreList.sort((a: any, b: any) =>
+    a.dataValues.seasonId - b.dataValues.seasonId).slice(-3);
   acreList.forEach((acre: any) => {
     season.push(acre.dataValues.seasonName);
     acreCount.push(acre.dataValues.acreCount ? Number(acre.dataValues.acreCount) : 0);
@@ -528,7 +530,8 @@ const getEstimateProductionList = (estimateProductionList: any) => {
   let season: any = [];
   let estimate: any = [];
   let production: any = [];
-
+  estimateProductionList = estimateProductionList.sort((a: any, b: any) =>
+    a.dataValues.seasonId - b.dataValues.seasonId).slice(-3);
   for (const estimateProduction of estimateProductionList) {
     season.push(estimateProduction.dataValues.season.name);
     estimate.push(formatNumber(estimateProduction.dataValues.estimate));
@@ -843,6 +846,172 @@ const getFarmersByCountryData = async (
   return result;
 };
 
+const getCountryFarmerCount = async (
+  req: Request, res: Response
+) => {
+  try {
+
+    const reqData = await getQueryParams(req, res);
+    const where = getOverAllDataQuery(reqData);
+    const farmerCountList = await getFarmerCountByCountry(where);
+    const data = await getCountrySeasonsList(farmerCountList);
+    return res.sendSuccess(res, data);
+
+  } catch (error: any) {
+    const code = error.errCode
+      ? error.errCode
+      : "ERR_INTERNAL_SERVER_ERROR";
+    return res.sendError(res, code);
+  }
+};
+
+const getFarmerCountByCountry = async (where: any) => {
+  const farmerCount = await Farm.findAll({
+    attributes: [
+      [Sequelize.fn('count', Sequelize.col('farmer.id')), 'farmerCount'],
+      [Sequelize.col('farmer.country.id'), 'countryId'],
+      [Sequelize.col('farmer.country.county_name'), 'countryName'],
+      [Sequelize.col('season.id'), 'seasonId'],
+      [Sequelize.col('season.name'), 'seasonName']
+    ],
+    include: [{
+      model: Farmer,
+      as: 'farmer',
+      attributes: [],
+      include: [{
+        model: Country,
+        as: 'country',
+        attributes: []
+      }]
+    }, {
+      model: Season,
+      as: 'season',
+      attributes: []
+    }],
+    where,
+    group: ['farmer.country.id', 'season.id']
+  });
+
+  return farmerCount;
+};
+
+const getSeasonLists = async () => {
+  const seasons = await Season.findAll({
+    limit: 3,
+    order: [
+      ["id", "DESC"],
+    ],
+  });
+
+  return seasons;
+};
+
+const getCountrySeasonsList = async (
+  farmerCountList: any = []
+) => {
+  const countries: string[] = [];
+  let seasonIds: number[] = [];
+  const seasonLists: {
+    name: string,
+    count: number[];
+  }[] = [];
+
+  farmerCountList.forEach((list: any) => {
+    if (!countries.includes(list.dataValues.countryName))
+      countries.push(list.dataValues.countryName);
+
+    if (!seasonIds.includes(list.dataValues.seasonId))
+      seasonIds.push(list.dataValues.seasonId);
+
+  });
+  seasonIds = seasonIds.sort((a, b) => a - b).slice(-3);
+
+  for (const seasonId of seasonIds) {
+    for (const country of countries) {
+
+      const farmerList = farmerCountList.find((list: any) =>
+        list.dataValues.countryName == country && list.dataValues.seasonId == seasonId
+      );
+
+      if (farmerList) {
+        const season = getSeason(seasonLists, farmerList.dataValues.seasonName);
+        season ? season.count.push(Number(farmerList.dataValues.farmerCount))
+          : seasonLists.push({
+            name: farmerList.dataValues.seasonName,
+            count: [(Number(farmerList.dataValues.farmerCount))]
+          });
+      }
+      else {
+        const seasons = await getSeasonLists();
+        const fSeason = seasons.find((season: any) => season.id == seasonId);
+        const season = getSeason(seasonLists, fSeason.dataValues.name);
+        season.count.push(0);
+      }
+    }
+  }
+
+  return {
+    countries,
+    seasonLists,
+  };
+};
+
+const getSeason = (seasonLists: any[], seasonName: any) => {
+  const season = seasonLists.find((list: any) =>
+    list.name == seasonName
+  );
+
+  return season;
+};
+
+const getCountryFarmerArea = async (
+  req: Request, res: Response
+) => {
+  try {
+
+    const reqData = await getQueryParams(req, res);
+    const where = getOverAllDataQuery(reqData);
+    const acresList = await getAreaByCountry(where);
+    const data = await getCountrySeasonsList(acresList);
+    return res.sendSuccess(res, data);
+
+  } catch (error: any) {
+    const code = error.errCode
+      ? error.errCode
+      : "ERR_INTERNAL_SERVER_ERROR";
+    return res.sendError(res, code);
+  }
+};
+
+const getAreaByCountry = async (where: any) => {
+  const farmerCount = await Farm.findAll({
+    attributes: [
+      [Sequelize.fn('sum', Sequelize.col('farms.agri_total_area')), 'farmerCount'],
+      [Sequelize.col('farmer.country.id'), 'countryId'],
+      [Sequelize.col('farmer.country.county_name'), 'countryName'],
+      [Sequelize.col('season.id'), 'seasonId'],
+      [Sequelize.col('season.name'), 'seasonName']
+    ],
+    include: [{
+      model: Farmer,
+      as: 'farmer',
+      attributes: [],
+      include: [{
+        model: Country,
+        as: 'country',
+        attributes: []
+      }]
+    }, {
+      model: Season,
+      as: 'season',
+      attributes: []
+    }],
+    where,
+    group: ['farmer.country.id', 'season.id']
+  });
+
+  return farmerCount;
+};
 
 export {
   getOverallArea,
@@ -852,5 +1021,7 @@ export {
   getEstimateAndProduction,
   farmerCountAndArea,
   farmerAllData,
-  getFarmersByCountry
+  getFarmersByCountry,
+  getCountryFarmerCount,
+  getCountryFarmerArea
 };

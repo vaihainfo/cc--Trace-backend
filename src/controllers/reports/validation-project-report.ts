@@ -80,7 +80,7 @@ const fetchValidationProjectReport = async (req: Request, res: Response) => {
 
       const response = await rows.map((row: any) => ({
         ...row.dataValues,
-        premium_transfered_cost: row.dataValues.premium_transfered_cost.reduce((acc: any, val: any) => acc + parseFloat(val), 0),
+        premium_transfered_cost: row.dataValues.premium_transfered_cost && row.dataValues.premium_transfered_cost.length > 0 ? row.dataValues.premium_transfered_cost.reduce((acc: any, val: any) => acc + parseFloat(val), 0) : 0,
       }))
 
       return res.sendPaginationSuccess(res, response, count);
