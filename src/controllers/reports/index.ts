@@ -11177,6 +11177,7 @@ const fetchPscpProcurementLiveTracker = async (req: Request, res: Response) => {
     let whereCondition: any = {};
     let seasonCondition: any = {};
     let brandCondition: any = {};
+    let baleCondition: any = {};
 
     if (searchTerm) {
       // whereCondition[Op.or] = [
@@ -11209,6 +11210,7 @@ const fetchPscpProcurementLiveTracker = async (req: Request, res: Response) => {
         .split(",")
         .map((id: any) => parseInt(id, 10));
       seasonCondition.season_id = { [Op.in]: idArray };
+      baleCondition["$ginprocess.season_id$"] = { [Op.in]: idArray };
     }
 
     if (ginnerId) {
@@ -11317,6 +11319,7 @@ const fetchPscpProcurementLiveTracker = async (req: Request, res: Response) => {
             where: {
               "$ginprocess.program_id$": program,
               "$ginprocess.ginner_id$": item.dataValues.ginner.id,
+              ...baleCondition
             },
             group: ["ginprocess.season_id"],
           });
@@ -11364,6 +11367,7 @@ const fetchPscpProcurementLiveTracker = async (req: Request, res: Response) => {
               ],
             ],
             where: {
+              status: 'Sold',
               program_id: program,
               ginner_id: item.dataValues.ginner.id,
               ...seasonCondition,
@@ -11518,6 +11522,7 @@ const exportPscpProcurementLiveTracker = async (
     let whereCondition: any = {};
     let seasonCondition: any = {};
     let brandCondition: any = {};
+    let baleCondition: any = {};
     if (exportType === "all") {
 
       return res.status(200).send({
@@ -11555,6 +11560,7 @@ const exportPscpProcurementLiveTracker = async (
           .split(",")
           .map((id: any) => parseInt(id, 10));
         seasonCondition.season_id = { [Op.in]: idArray };
+        baleCondition["$ginprocess.season_id$"] = { [Op.in]: idArray };
       }
 
       if (ginnerId) {
@@ -11692,6 +11698,7 @@ const exportPscpProcurementLiveTracker = async (
               where: {
                 "$ginprocess.program_id$": program,
                 "$ginprocess.ginner_id$": item.dataValues.ginner.id,
+                ...baleCondition
               },
               group: ["ginprocess.season_id"],
             });
@@ -11739,6 +11746,7 @@ const exportPscpProcurementLiveTracker = async (
                 ],
               ],
               where: {
+                status: 'Sold',
                 program_id: program,
                 ginner_id: item.dataValues.ginner.id,
                 ...seasonCondition,
