@@ -47,100 +47,96 @@ const fetchDyingTransactions = async (req: Request, res: Response) => {
     }
 
     let baseQuery: any = `SELECT
-        'weaver' AS "type",
-        "weaver_sales"."id", 
-        "weaver_sales"."weaver_id", 
-        "weaver_sales"."season_id", 
-        "weaver_sales"."date",
-        "weaver_sales"."program_id", 
-        "weaver_sales"."brand_order_ref",
-        "weaver_sales"."garment_order_ref", 
-        "weaver_sales"."buyer_id",  
-        "weaver_sales"."transaction_via_trader", 
-        "weaver_sales"."transaction_agent", 
-        "weaver_sales"."batch_lot_no", 
-        "weaver_sales"."total_yarn_qty",
-        "weaver_sales"."total_fabric_length", 
-        "weaver_sales"."invoice_no", 
-        "weaver_sales"."invoice_file", 
-        "weaver_sales"."vehicle_no",
-        "weaver_sales"."qty_stock", 
-        "weaver_sales"."qr", 
-        "program"."id" AS "program-id", 
-        "program"."program_name" AS "program_name",
-        "weaver"."id" AS "processor-id", 
-        "weaver"."name" AS "processor_name"
-    FROM 
-        "weaver_sales" AS "weaver_sales" 
-    LEFT OUTER JOIN 
-        "programs" AS "program" ON "weaver_sales"."program_id" = "program"."id"
-    LEFT OUTER JOIN 
-        "weavers" AS "weaver" ON "weaver_sales"."weaver_id" = "weaver"."id" 
-    WHERE 
-        "weaver_sales"."buyer_type" = 'Dyeing' 
-        AND "weaver_sales"."status" = 'Sold' 
-        AND "weaver_sales"."fabric_id" = '${fabricId}'
-        AND (
-            "weaver_sales"."invoice_no" ILIKE '%${searchTerm}%'
-            OR "weaver_sales"."vehicle_no" ILIKE '%${searchTerm}%'
-            OR "weaver_sales"."batch_lot_no" ILIKE '%${searchTerm}%'
-            OR "weaver_sales"."transaction_agent" ILIKE '%${searchTerm}%'
-            OR "weaver_sales"."brand_order_ref" ILIKE '%${searchTerm}%'
-            OR "weaver_sales"."garment_order_ref" ILIKE '%${searchTerm}%'
-            OR "weaver"."name" ILIKE '%${searchTerm}%'
-            OR "program"."program_name" ILIKE '%${searchTerm}%'
-        )
-    ORDER BY 
-        "weaver_sales"."id" DESC
-    UNION ALL 
-    SELECT
-        'knitter' AS "type",
-        "knit_sales"."id", 
-        "knit_sales"."knitter_id", 
-        "knit_sales"."season_id", 
-        "knit_sales"."date", 
-        "knit_sales"."program_id", 
-        "knit_sales"."brand_order_ref",
-        "knit_sales"."garment_order_ref", 
-        "knit_sales"."buyer_id", 
-        "knit_sales"."transaction_via_trader", 
-        "knit_sales"."transaction_agent", 
-        "knit_sales"."batch_lot_no", 
-        "knit_sales"."total_yarn_qty", 
-        "knit_sales"."total_fabric_weight", 
-        "knit_sales"."invoice_no", 
-        "knit_sales"."invoice_file", 
-        "knit_sales"."vehicle_no", 
-        "knit_sales"."qty_stock", 
-        "knit_sales"."qr", 
-        "program"."id" AS "program-id", 
-        "program"."program_name" AS "program_name",
-        "knitter"."id" AS "processor-id", 
-        "knitter"."name" AS "processor_name"
-    FROM 
-        "knit_sales" AS "knit_sales" 
-    LEFT OUTER JOIN 
-        "programs" AS "program" ON "knit_sales"."program_id" = "program"."id" 
-    LEFT OUTER JOIN 
-        "knitters" AS "knitter" ON "knit_sales"."knitter_id" = "knitter"."id" 
-    WHERE  
-        "knit_sales"."buyer_type" = 'Dyeing' 
-        AND "knit_sales"."status" = 'Sold' 
-        AND "knit_sales"."fabric_id" = '${fabricId}'
-        AND (
-            -- Add conditions for search here
-            "knit_sales"."invoice_no" ILIKE '%${searchTerm}%'
-            OR "knit_sales"."vehicle_no" ILIKE '%${searchTerm}%'
-            OR "knit_sales"."transaction_agent" ILIKE '%${searchTerm}%'
-            OR "knit_sales"."brand_order_ref" ILIKE '%${searchTerm}%'
-            OR "knit_sales"."garment_order_ref" ILIKE '%${searchTerm}%'
-            OR "knit_sales"."batch_lot_no" ILIKE '%${searchTerm}%'
-            OR "knitter"."name" ILIKE '%${searchTerm}%'
-            OR "program"."program_name" ILIKE '%${searchTerm}%'
-            -- Add more fields as needed
-        )
-           ORDER BY 
-        "knit_sales"."id" DESC  
+    'weaver' AS "type",
+    "weaver_sales"."id", 
+    "weaver_sales"."weaver_id", 
+    "weaver_sales"."season_id", 
+    "weaver_sales"."date",
+    "weaver_sales"."program_id", 
+    "weaver_sales"."brand_order_ref",
+    "weaver_sales"."garment_order_ref", 
+    "weaver_sales"."buyer_id",  
+    "weaver_sales"."transaction_via_trader", 
+    "weaver_sales"."transaction_agent", 
+    "weaver_sales"."batch_lot_no", 
+    "weaver_sales"."total_yarn_qty",
+    "weaver_sales"."total_fabric_length", 
+    "weaver_sales"."invoice_no", 
+    "weaver_sales"."invoice_file", 
+    "weaver_sales"."vehicle_no",
+    "weaver_sales"."qty_stock", 
+    "weaver_sales"."qr", 
+    "program"."id" AS "program-id", 
+    "program"."program_name" AS "program_name",
+    "weaver"."id" AS "processor-id", 
+    "weaver"."name" AS "processor_name"
+FROM 
+    "weaver_sales" AS "weaver_sales" 
+LEFT OUTER JOIN 
+    "programs" AS "program" ON "weaver_sales"."program_id" = "program"."id"
+LEFT OUTER JOIN 
+    "weavers" AS "weaver" ON "weaver_sales"."weaver_id" = "weaver"."id" 
+WHERE 
+    "weaver_sales"."buyer_type" = 'Dyeing' 
+    AND "weaver_sales"."status" = 'Sold' 
+    AND "weaver_sales"."fabric_id" = '${fabricId}'
+    AND (
+        "weaver_sales"."invoice_no" ILIKE '%${searchTerm}%'
+        OR "weaver_sales"."vehicle_no" ILIKE '%${searchTerm}%'
+        OR "weaver_sales"."batch_lot_no" ILIKE '%${searchTerm}%'
+        OR "weaver_sales"."transaction_agent" ILIKE '%${searchTerm}%'
+        OR "weaver_sales"."brand_order_ref" ILIKE '%${searchTerm}%'
+        OR "weaver_sales"."garment_order_ref" ILIKE '%${searchTerm}%'
+        OR "weaver"."name" ILIKE '%${searchTerm}%'
+        OR "program"."program_name" ILIKE '%${searchTerm}%'
+    )
+UNION ALL 
+SELECT
+    'knitter' AS "type",
+    "knit_sales"."id", 
+    "knit_sales"."knitter_id", 
+    "knit_sales"."season_id", 
+    "knit_sales"."date", 
+    "knit_sales"."program_id", 
+    "knit_sales"."brand_order_ref",
+    "knit_sales"."garment_order_ref", 
+    "knit_sales"."buyer_id", 
+    "knit_sales"."transaction_via_trader", 
+    "knit_sales"."transaction_agent", 
+    "knit_sales"."batch_lot_no", 
+    "knit_sales"."total_yarn_qty", 
+    "knit_sales"."total_fabric_weight", 
+    "knit_sales"."invoice_no", 
+    "knit_sales"."invoice_file", 
+    "knit_sales"."vehicle_no", 
+    "knit_sales"."qty_stock", 
+    "knit_sales"."qr", 
+    "program"."id" AS "program-id", 
+    "program"."program_name" AS "program_name",
+    "knitter"."id" AS "processor-id", 
+    "knitter"."name" AS "processor_name"
+FROM 
+    "knit_sales" AS "knit_sales" 
+LEFT OUTER JOIN 
+    "programs" AS "program" ON "knit_sales"."program_id" = "program"."id" 
+LEFT OUTER JOIN 
+    "knitters" AS "knitter" ON "knit_sales"."knitter_id" = "knitter"."id" 
+WHERE  
+    "knit_sales"."buyer_type" = 'Dyeing' 
+    AND "knit_sales"."status" = 'Sold' 
+    AND "knit_sales"."fabric_id" = '${fabricId}'
+    AND (
+        "knit_sales"."invoice_no" ILIKE '%${searchTerm}%'
+        OR "knit_sales"."vehicle_no" ILIKE '%${searchTerm}%'
+        OR "knit_sales"."transaction_agent" ILIKE '%${searchTerm}%'
+        OR "knit_sales"."brand_order_ref" ILIKE '%${searchTerm}%'
+        OR "knit_sales"."garment_order_ref" ILIKE '%${searchTerm}%'
+        OR "knit_sales"."batch_lot_no" ILIKE '%${searchTerm}%'
+        OR "knitter"."name" ILIKE '%${searchTerm}%'
+        OR "program"."program_name" ILIKE '%${searchTerm}%'
+    )
+ORDER BY 
+    "id" DESC
         `;
 
     // Get total count

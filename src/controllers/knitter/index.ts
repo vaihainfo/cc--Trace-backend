@@ -1376,7 +1376,7 @@ const getSpinnerAndProgram = async (req: Request, res: Response) => {
         {
           model: Season,
           as: "season",
-          attributes: ["id", "name"],
+          attributes: ["id", "name", "from", "to"],
         },
       ],
       group: ["season_id", "season.id"],

@@ -194,7 +194,7 @@ const resendOTP = async (req: Request, res: Response) => {
 function generateOTP() {
   const otp = Math.floor(100000 + Math.random() * 900000);
   // const expirationTime = new Date(Date.now() + 2 * 1000);
-  const expirationTime = new Date(Date.now() + 2 * 60 * 1000); // 2 minutes expiration time
+  const expirationTime = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes expiration time
   return { otp: otp.toString(), expiresAt: expirationTime };
 }
 
