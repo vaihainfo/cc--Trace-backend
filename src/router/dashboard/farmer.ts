@@ -16,5 +16,7 @@ router.get('/data/all', Dashboard.farmerAllData);
 router.get('/by/country', Dashboard.getFarmersByCountry);
 router.get('/count/by/country', Dashboard.getCountryFarmerCount);
 router.get('/area/by/country', Dashboard.getCountryFarmerArea);
+router.get('/estimate/by/country', Dashboard.getEstimateCottonByCountry);
+router.get('/production/by/country', Dashboard.getCountryFarmerArea);
 
 export default router;

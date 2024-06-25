@@ -813,6 +813,412 @@ const getEstimateProcuredAndProductionRes = (
 };
 
 
+
+const getProcuredCottonByCountry = async (
+  req: Request, res: Response
+) => {
+  try {
+
+    const reqData = await getQueryParams(req, res);
+    const where = getTransactionWhereQuery(reqData);
+    const estimatedList = await getProcuredByCountryData(where);
+    const data = await getEstimateCottonRes(estimatedList, reqData.season);
+    return res.sendSuccess(res, data);
+
+  } catch (error: any) {
+    const code = error.errCode
+      ? error.errCode
+      : "ERR_INTERNAL_SERVER_ERROR";
+    return res.sendError(res, code);
+  }
+};
+
+
+const getEstimateCottonRes = async (
+  estimatedList: any = [],
+  reqSeason: any
+) => {
+  let seasonIds: number[] = [];
+  let countries: number[] = [];
+
+  estimatedList.forEach((list: any) => {
+    if (!countries.includes(list.dataValues.countryName))
+      countries.push(list.dataValues.countryName);
+
+    if (!seasonIds.includes(list.dataValues.seasonId))
+      seasonIds.push(list.dataValues.seasonId);
+  });
+
+  const seasons = await Season.findAll({
+    limit: 3,
+    order: [
+      ["id", "DESC"],
+    ],
+  });
+  if (seasonIds.length != 3 && !reqSeason) {
+    for (const season of seasons) {
+      if (!seasonIds.includes(season.id))
+        seasonIds.push(season.id);
+    }
+  }
+
+  seasonIds = seasonIds.sort((a, b) => a - b).slice(-3);
+
+  let seasonList: any[] = [];
+  let areaList: any[] = [];
+
+
+  for (const countryName of countries) {
+    const data: any = {
+      name: countryName,
+      data: [],
+    };
+    const farmerList = estimatedList.filter((list: any) =>
+      list.dataValues.countryName == countryName
+    );
+
+    for (const seasonId of seasonIds) {
+
+      let totalArea = 0;
+      const fFarmerValue = farmerList.find((list: any) =>
+        list.dataValues.seasonId == seasonId
+      );
+
+      if (fFarmerValue) {
+        totalArea = formatNumber(fFarmerValue.dataValues.procured);
+        if (!seasonList.includes(fFarmerValue.dataValues.seasonName))
+          seasonList.push(fFarmerValue.dataValues.seasonName);
+      }
+      data.data.push(totalArea);
+    }
+
+    areaList.push(data);
+  }
+
+  return {
+    areaList,
+    seasonList,
+  };
+};
+
+
+const getProcuredByCountryData = async (where: any) => {
+  const result = await Transaction.findAll({
+    attributes: [
+      [Sequelize.fn('SUM', Sequelize.literal('CAST(qty_purchased  as numeric)')), 'procured'],
+      [Sequelize.col('country.id'), 'countryId'],
+      [Sequelize.col('country.county_name'), 'countryName'],
+      [Sequelize.col('season.id'), 'seasonId'],
+      [Sequelize.col('season.name'), 'seasonName']
+    ],
+    include: [{
+      model: Season,
+      as: 'season',
+      attributes: ['id', 'name']
+    }, {
+      model: Country,
+      as: 'country',
+      attributes: []
+    }],
+    where,
+    order: [['seasonId', 'desc']],
+    group: ["country.id", 'season.id']
+  });
+
+
+  return result;
+};
+
+const getProcessedCottonByCountry = async (
+  req: Request, res: Response
+) => {
+  try {
+
+    const reqData = await getQueryParams(req, res);
+    const where = getGinnerProcessWhereQuery(reqData);
+    const processedList = await getProcessedByCountryData(where);
+    const data = await getProcessedCottonRes(processedList, reqData.season);
+    return res.sendSuccess(res, data);
+
+  } catch (error: any) {
+    const code = error.errCode
+      ? error.errCode
+      : "ERR_INTERNAL_SERVER_ERROR";
+    return res.sendError(res, code);
+  }
+};
+
+
+const getProcessedCottonRes = async (
+  processedList: any = [],
+  reqSeason: any
+) => {
+  let seasonIds: number[] = [];
+  let countries: number[] = [];
+
+  processedList.forEach((list: any) => {
+    if (!countries.includes(list.dataValues.countryName))
+      countries.push(list.dataValues.countryName);
+
+    if (!seasonIds.includes(list.dataValues.seasonId))
+      seasonIds.push(list.dataValues.seasonId);
+  });
+
+  const seasons = await Season.findAll({
+    limit: 3,
+    order: [
+      ["id", "DESC"],
+    ],
+  });
+  if (seasonIds.length != 3 && !reqSeason) {
+    for (const season of seasons) {
+      if (!seasonIds.includes(season.id))
+        seasonIds.push(season.id);
+    }
+  }
+
+  seasonIds = seasonIds.sort((a, b) => a - b).slice(-3);
+
+  let seasonList: any[] = [];
+  let areaList: any[] = [];
+
+
+  for (const countryName of countries) {
+    const data: any = {
+      name: countryName,
+      data: [],
+    };
+    const farmerList = processedList.filter((list: any) =>
+      list.dataValues.countryName == countryName
+    );
+
+    for (const seasonId of seasonIds) {
+
+      let totalArea = 0;
+      const fFarmerValue = farmerList.find((list: any) =>
+        list.dataValues.seasonId == seasonId
+      );
+
+      if (fFarmerValue) {
+        totalArea = formatNumber(fFarmerValue.dataValues.processed);
+        if (!seasonList.includes(fFarmerValue.dataValues.seasonName))
+          seasonList.push(fFarmerValue.dataValues.seasonName);
+      }
+      data.data.push(totalArea);
+    }
+
+    areaList.push(data);
+  }
+
+  return {
+    areaList,
+    seasonList,
+  };
+};
+
+
+
+const getProcessedEstimatedProcessedCottonByCountry = async (
+  req: Request, res: Response
+) => {
+  try {
+
+    const reqData = await getQueryParams(req, res);
+    const transactionWhere = getTransactionWhereQuery(reqData);
+    const ginnerProcessWhere = getGinnerProcessWhereQuery(reqData);
+    const farmWhere = getFarmWhereQuery(reqData);
+    const procuredList = await getProcuredByCountryData(transactionWhere);
+    const processedList = await getProcessedByCountryData(ginnerProcessWhere);
+    const estimateList = await getEstimateDataByCountry(farmWhere);
+    const data = await getProcessedEstimatedProcessedCottonRes(
+      processedList,
+      procuredList,
+      estimateList,
+      reqData.season
+    );
+    return res.sendSuccess(res, data);
+
+  } catch (error: any) {
+    const code = error.errCode
+      ? error.errCode
+      : "ERR_INTERNAL_SERVER_ERROR";
+    return res.sendError(res, code);
+  }
+};
+
+
+
+const getEstimateDataByCountry = async (
+  where: any
+) => {
+
+  const result = await Farm.findAll({
+    attributes: [
+      [Sequelize.fn('SUM', Sequelize.col('farmer.total_estimated_cotton')), 'estimate'],
+      [Sequelize.fn('SUM', Sequelize.col('farmer.agri_estimated_prod')), 'production'],
+      [Sequelize.col('farmer.country.id'), 'countryId'],
+      [Sequelize.col('farmer.country.county_name'), 'countryName'],
+      [Sequelize.col('season.id'), 'seasonId'],
+      [Sequelize.col('season.name'), 'seasonName']
+    ],
+    include: [{
+      model: Farmer,
+      as: 'farmer',
+      attributes: [],
+      include: [{
+        model: Country,
+        as: 'country',
+        attributes: []
+      }]
+    }, {
+      model: Season,
+      as: 'season',
+      attributes: []
+    }],
+    where,
+    group: ['farmer.country.id', 'season.id']
+  });
+  return result;
+
+};
+
+
+const getProcessedEstimatedProcessedCottonRes = async (
+  processedList: any[],
+  procuredList: any[],
+  estimateList: any[],
+  reqSeason: any
+) => {
+  let seasonIds: number[] = [];
+  let countries: number[] = [];
+
+  processedList.forEach((list: any) => {
+    if (!countries.includes(list.dataValues.countryName))
+      countries.push(list.dataValues.countryName);
+
+    if (!seasonIds.includes(list.dataValues.seasonId))
+      seasonIds.push(list.dataValues.seasonId);
+  });
+
+  procuredList.forEach((list: any) => {
+    if (!countries.includes(list.dataValues.countryName))
+      countries.push(list.dataValues.countryName);
+
+    if (!seasonIds.includes(list.dataValues.seasonId))
+      seasonIds.push(list.dataValues.seasonId);
+  });
+
+  estimateList.forEach((list: any) => {
+    if (!countries.includes(list.dataValues.countryName))
+      countries.push(list.dataValues.countryName);
+
+    if (!seasonIds.includes(list.dataValues.seasonId))
+      seasonIds.push(list.dataValues.seasonId);
+  });
+
+
+  const seasons = await Season.findAll({
+    limit: 3,
+    order: [
+      ["id", "DESC"],
+    ],
+  });
+  if (seasonIds.length != 3 && !reqSeason) {
+    for (const season of seasons) {
+      if (!seasonIds.includes(season.id))
+        seasonIds.push(season.id);
+    }
+  }
+
+  seasonIds = seasonIds.sort((a, b) => a - b).slice(-3);
+
+  let seasonList: any[] = [];
+  let processedData: any[] = [];
+  let estimatedData: any[] = [];
+  let procuredData: any[] = [];
+
+
+  for (const countryName of countries) {
+    const data: any = {
+      name: countryName,
+      data: [],
+    };
+    const farmerProcessedList = processedList.filter((list: any) =>
+      list.dataValues.countryName == countryName
+    );
+    const farmerProcuredList = procuredList.filter((list: any) =>
+      list.dataValues.countryName == countryName
+    );
+    const farmerEstimateList = estimateList.filter((list: any) =>
+      list.dataValues.countryName == countryName
+    );
+
+    for (const seasonId of seasonIds) {
+
+      let totalArea = 0;
+      
+      const fProcessed = farmerProcessedList.find((list: any) =>
+        list.dataValues.seasonId == seasonId
+      );
+      const fProcured = farmerProcuredList.find((list: any) =>
+        list.dataValues.seasonId == seasonId
+      );
+      const fEstimate = farmerEstimateList.find((list: any) =>
+        list.dataValues.seasonId == seasonId
+      );
+
+      if (fProcessed) {
+        totalArea = formatNumber(fProcessed.dataValues.processed);
+        if (!seasonList.includes(fProcessed.dataValues.seasonName))
+          seasonList.push(fProcessed.dataValues.seasonName);
+      }
+      data.data.push(totalArea);
+    }
+
+    processedData.push(data);
+  }
+
+  return {
+    areaList: processedData,
+    seasonList,
+  };
+};
+
+
+const getProcessedByCountryData = async (where: any) => {
+
+  const result = await GinProcess.findAll({
+    attributes: [
+      [Sequelize.fn('SUM', Sequelize.literal('total_qty')), 'processed'],
+      [Sequelize.col('ginner.country.id'), 'countryId'],
+      [Sequelize.col('ginner.country.county_name'), 'countryName'],
+      [Sequelize.col('season.id'), 'seasonId'],
+      [Sequelize.col('season.name'), 'seasonName']
+    ],
+    include: [{
+      model: Season,
+      as: 'season',
+      attributes: ['id', 'name']
+    }, {
+      model: Ginner,
+      as: 'ginner',
+      attributes: [],
+      include: [{
+        model: Country,
+        as: 'country',
+        attributes: []
+      }]
+    }],
+    where,
+    order: [['seasonId', 'desc']],
+    group: ["ginner.country.id", 'season.id']
+  });
+
+  return result;
+};
+
+
+
 const formatNumber = (data: string): number => {
   return Number(Number(data).toFixed(2));
 };
@@ -831,5 +1237,8 @@ export {
   getEstimateAndProcured,
   getProcuredProcessed,
   getProcuredProcessedMonthly,
-  getEstimateProcuredAndProduction as getEstimateProcuredAndProcessed
+  getEstimateProcuredAndProduction,
+  getProcuredCottonByCountry,
+  getProcessedCottonByCountry,
+  getProcessedEstimatedProcessedCottonByCountry
 };
