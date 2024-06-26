@@ -1495,7 +1495,7 @@ const exportProcurement = async (req: Request, res: Response) => {
 //Export the export details through excel file
 const exportGinnerProcurement = async (req: Request, res: Response) => {
   const excelFilePath = path.join("./upload", "Ginner_transactions.xlsx");
-  const { farmerId, programId, ginnerId, villageId }: any = req.query;
+  const { farmerId, programId, ginnerId, villageId, seasonId }: any = req.query;
   const whereCondition: any = {};
   const searchTerm = req.query.search || "";
   try {
@@ -1527,6 +1527,12 @@ const exportGinnerProcurement = async (req: Request, res: Response) => {
         .split(",")
         .map((id: any) => parseInt(id, 10));
       whereCondition.village_id = { [Op.in]: idArray };
+    }
+    if (seasonId) {
+      const idArray: number[] = seasonId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.season_id = { [Op.in]: idArray };
     }
     if (searchTerm) {
       whereCondition[Op.or] = [
@@ -1587,7 +1593,12 @@ const exportGinnerProcurement = async (req: Request, res: Response) => {
           model: Ginner,
           as: "ginner",
           attributes: [],
-        }
+        },
+        {
+          model: Season,
+          as: "season",
+          attributes: []
+        },
       ],
     });
 

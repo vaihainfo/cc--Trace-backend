@@ -51,7 +51,7 @@ const login = async (req: Request, res: Response) => {
             <div style="text-align: center; background-color: #00466a; color: #ffffff; border-radius: 4px; padding: 10px 20px; margin-top: 20px; display: inline-block;">
                 <span style="font-size: 20px; font-weight: bold;">${OTP.otp}</span>
             </div>
-            <p style="font-size: 12px; line-height: 22px; margin-top: 20px;">This OTP is valid for 2 minutes. If you didn't request this OTP, please ignore this message.</p>
+            <p style="font-size: 12px; line-height: 22px; margin-top: 20px;">This OTP is valid for 5 minutes. If you didn't request this OTP, please ignore this message.</p>
         </div>
         <div style="margin-top: 30px; text-align: center;">
             <hr style="border: 0; border-top: 1px solid #eee; margin: 0 auto; width: 50%;">
@@ -174,7 +174,7 @@ const resendOTP = async (req: Request, res: Response) => {
             <div style="text-align: center; background-color: #00466a; color: #ffffff; border-radius: 4px; padding: 10px 20px; margin-top: 20px; display: inline-block;">
                 <span style="font-size: 20px; font-weight: bold;">${newOTP.otp}</span>
             </div>
-            <p style="font-size: 12px; line-height: 22px; margin-top: 20px;">This OTP is valid for 2 minutes. If you didn't request this OTP, please ignore this message.</p>
+            <p style="font-size: 12px; line-height: 22px; margin-top: 20px;">This OTP is valid for 5 minutes. If you didn't request this OTP, please ignore this message.</p>
         </div>
         <div style="margin-top: 30px; text-align: center;">
             <hr style="border: 0; border-top: 1px solid #eee; margin: 0 auto; width: 50%;">

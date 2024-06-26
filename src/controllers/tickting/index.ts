@@ -79,7 +79,7 @@ const fetchTicketTracker = async (req: Request, res: Response) => {
     const offset = (page - 1) * limit;
     const whereCondition: any = {}
 
-    const { status, processor, from, to, processSale, processorId, brandId }: any = req.query;
+    const { status, processor, from, to, processSale, processorId, brandId, countryId }: any = req.query;
 
     try {
         if (status) {
@@ -125,6 +125,32 @@ const fetchTicketTracker = async (req: Request, res: Response) => {
             }
         }
         
+        if (countryId) {
+            const idArray = countryId.split(",").map((id: any) => parseInt(id, 10));
+        
+            const [spinner, ginner, knitter, weaver, garment] = await Promise.all([
+                Spinner.findAll({ where: { country_id: { [Op.in]: idArray } } }),
+                Ginner.findAll({ where: { country_id: { [Op.in]: idArray } } }),
+                Knitter.findAll({ where: { country_id: { [Op.in]: idArray } } }),
+                Weaver.findAll({ where: { country_id: { [Op.in]: idArray } } }),
+                Garment.findAll({ where: { country_id: { [Op.in]: idArray } } })
+            ]);
+        
+            const processorConditions = [
+                { processor_type: { [Op.iLike]: 'spinner' }, process_id: { [Op.in]: spinner.map((spin: any) => spin.id) } },
+                { processor_type: { [Op.iLike]: 'ginner' }, process_id: { [Op.in]: ginner.map((gin: any) => gin.id) } },
+                { processor_type: { [Op.iLike]: 'knitter' }, process_id: { [Op.in]: knitter.map((knit: any) => knit.id) } },
+                { processor_type: { [Op.iLike]: 'weaver' }, process_id: { [Op.in]: weaver.map((weave: any) => weave.id) } },
+                { processor_type: { [Op.iLike]: 'garment' }, process_id: { [Op.in]: garment.map((gar: any) => gar.id) } }
+            ];
+        
+            if (whereCondition[Op.or]) {
+                whereCondition[Op.and] = whereCondition[Op.and] || [];
+                whereCondition[Op.and].push({ [Op.or]: processorConditions });
+            } else {
+                whereCondition[Op.or] = processorConditions;
+            }
+        }
 
         if (processorId) {
             const idArray: number[] = processorId
