@@ -10,6 +10,10 @@ import Transaction from "../../models/transaction.model";
 import GinProcess from "../../models/gin-process.model";
 import Ginner from "../../models/ginner.model";
 import Village from "../../models/village.model";
+import GinBale from "../../models/gin-bale.model";
+import BaleSelection from "../../models/bale-selection.model";
+import Country from "../../models/country.model";
+import GinnerExpectedCotton from "../../models/ginner-expected-cotton.model";
 
 const getTopVillages = async (
   req: Request, res: Response
@@ -117,6 +121,98 @@ const getTransactionDataQuery = (
 
   if (reqData?.fromDate && reqData?.toDate)
     where.date = { [Op.between]: [reqData.fromDate, reqData.toDate] };
+
+  return where;
+};
+
+
+
+const getGinBaleQuery = (
+  reqData: any
+) => {
+  const where: any = {
+
+  };
+  if (reqData?.program)
+    where['$ginprocess.program_id$'] = reqData.program;
+
+  if (reqData?.brand)
+    where['$ginprocess.ginner.brand$'] = {
+      [Op.contains]: Sequelize.literal(`ARRAY [${reqData.brand}]`)
+    };
+
+  if (reqData?.season)
+    where['$ginprocess.season_id$'] = reqData.season;
+  else
+    where['$ginprocess.season_id$'] = {
+      [Op.not]: null,
+    };
+
+  if (reqData?.country)
+    where['$ginprocess.ginner.country_id$'] = reqData.country;
+
+  if (reqData?.state)
+    where['$ginprocess.ginner.state_id$'] = reqData.state;
+
+  if (reqData?.district)
+    where['$ginprocess.ginner.district_id$'] = reqData.district;
+
+  if (reqData?.ginner)
+    where['$ginprocess.ginner.id$'] = reqData.ginner;
+
+  if (reqData?.fromDate)
+    where['$ginprocess.date$'] = { [Op.gte]: reqData.fromDate };
+
+  if (reqData?.toDate)
+    where['$ginprocess.date$'] = { [Op.lt]: reqData.toDate };
+
+  if (reqData?.fromDate && reqData?.toDate)
+    where['$ginprocess.date$'] = { [Op.between]: [reqData.fromDate, reqData.toDate] };
+
+  return where;
+};
+
+
+const getBaleSelectionQuery = (
+  reqData: any
+) => {
+  const where: any = {
+
+  };
+  if (reqData?.program)
+    where['$sales.program_id$'] = reqData.program;
+
+  if (reqData?.brand)
+    where['$sales.ginner.brand$'] = {
+      [Op.contains]: Sequelize.literal(`ARRAY [${reqData.brand}]`)
+    };
+
+  if (reqData?.season)
+    where['$sales.season_id$'] = reqData.season;
+  else
+    where['$sales.season_id$'] = {
+      [Op.not]: null,
+    };
+  if (reqData?.country)
+    where['$sales.ginner.country_id$'] = reqData.country;
+
+  if (reqData?.state)
+    where['$sales.ginner.state_id$'] = reqData.state;
+
+  if (reqData?.district)
+    where['$sales.ginner.district_id$'] = reqData.district;
+
+  if (reqData?.ginner)
+    where['$sales.ginner.id$'] = reqData.ginner;
+
+  if (reqData?.fromDate)
+    where['$sales.date$'] = { [Op.gte]: reqData.fromDate };
+
+  if (reqData?.toDate)
+    where['$sales.date$'] = { [Op.lt]: reqData.toDate };
+
+  if (reqData?.fromDate && reqData?.toDate)
+    where['$sales.date$'] = { [Op.between]: [reqData.fromDate, reqData.toDate] };
 
   return where;
 };
@@ -265,12 +361,12 @@ const getTopSpinnersData = async (
       as: 'ginner',
       attributes: []
     }
-    // {
-    //   model: Season,
-    //   as: 'season',
-    //   attributes: []
-    // },
-  ],
+      // {
+      //   model: Season,
+      //   as: 'season',
+      //   attributes: []
+      // },
+    ],
     where,
     order: [['total', 'desc']],
     limit: 10,
@@ -490,7 +586,6 @@ const getLintProcuredSold = async (
     return res.sendError(res, code);
   }
 };
-
 const getLintProcuredSoldRes = async (
   procuredList: any[],
   soldList: any[],
@@ -526,6 +621,7 @@ const getLintProcuredSoldRes = async (
   let season: any = [];
   let procured: any = [];
   let sold: any = [];
+  let stock: any = [];
 
   for (const sessionId of seasonIds) {
     const fProcured = procuredList.find((production: any) =>
@@ -537,7 +633,8 @@ const getLintProcuredSoldRes = async (
     let data = {
       seasonName: '',
       procured: 0,
-      sold: 0
+      sold: 0,
+      stock: 0,
     };
     if (fProcured) {
       data.seasonName = fProcured.dataValues.seasonName;
@@ -548,6 +645,8 @@ const getLintProcuredSoldRes = async (
       data.seasonName = fSold.dataValues.seasonName;
       data.sold = formatNumber(fSold.dataValues.sold);
     }
+
+    data.stock = data.procured - data.sold;
 
     if (!data.seasonName) {
       const fSeason = seasons.find((season: any) =>
@@ -561,16 +660,18 @@ const getLintProcuredSoldRes = async (
     season.push(data.seasonName);
     procured.push(data.procured);
     sold.push(data.sold);
-
+    stock.push(data.stock);
   }
 
   return {
     season,
     procured,
-    sold
+    sold,
+    stock
   };
 
 };
+
 
 const getLintSoldData = async (
   where: any
@@ -798,6 +899,1488 @@ const getDataAllRes = (
 
 };
 
+const getBaleComparison = async (
+  req: Request, res: Response
+) => {
+  try {
+    const reqData = await getQueryParams(req, res);
+    const ginBale = getGinBaleQuery(reqData);
+    const baleSel = getBaleSelectionQuery(reqData);
+    const procuredData = await getBaleProcuredData(ginBale);
+    const soldData = await getBaleSoldData(baleSel);
+    const data = await getBaleComparisonRes(
+      procuredData,
+      soldData,
+      reqData.season
+    );
+    return res.sendSuccess(res, data);
+
+  } catch (error: any) {
+    const code = error.errCode
+      ? error.errCode
+      : "ERR_INTERNAL_SERVER_ERROR";
+    return res.sendError(res, code);
+  }
+};
+
+
+const getBaleProcuredData = async (
+  where: any
+) => {
+
+  const result = await GinBale.findAll({
+    attributes: [
+      [
+        sequelize.fn(
+          "COUNT",
+          Sequelize.literal('DISTINCT "gin-bales"."id"')
+        ),
+        "procured",
+      ],
+      [Sequelize.col('ginprocess.season.name'), 'seasonName'],
+      [Sequelize.col('ginprocess.season.id'), 'seasonId']
+    ],
+    include: [
+      {
+        model: GinProcess,
+        as: "ginprocess",
+        attributes: [],
+        include: [{
+          model: Season,
+          as: 'season',
+          attributes: []
+        }, {
+          model: Ginner,
+          as: 'ginner',
+          attributes: []
+        }],
+      },
+    ],
+    where,
+    limit: 3,
+    order: [['seasonId', 'desc']],
+    group: ["ginprocess.season.id"],
+  });
+  return result;
+
+};
+
+
+
+const getBaleSoldData = async (
+  where: any
+) => {
+  const result = await BaleSelection.findAll({
+    attributes: [
+      [
+        sequelize.fn("COUNT", Sequelize.literal("DISTINCT bale_id")),
+        "sold",
+      ],
+      [Sequelize.col('sales.season.name'), 'seasonName'],
+      [Sequelize.col('sales.season.id'), 'seasonId']
+    ],
+    include: [
+      {
+        model: GinSales,
+        as: "sales",
+        attributes: [],
+        include: [{
+          model: Season,
+          as: 'season',
+          attributes: []
+        }, {
+          model: Ginner,
+          as: 'ginner',
+          attributes: []
+        }
+        ],
+      },
+      {
+        model: GinBale,
+        as: "bale",
+        attributes: [],
+      },
+    ],
+    where,
+    limit: 3,
+    order: [['seasonId', 'desc']],
+    group: ["sales.season.id"],
+  });
+
+  return result;
+
+};
+
+
+const getBaleComparisonRes = async (
+  procuredData: any[],
+  soldData: any[],
+  reqSeason: any
+) => {
+  let seasonIds: number[] = [];
+
+  procuredData.forEach((procured: any) => {
+    if (procured.dataValues.seasonId)
+      seasonIds.push(procured.dataValues.seasonId);
+  });
+
+  soldData.forEach((processed: any) => {
+    if (!seasonIds.includes(processed.dataValues.seasonId))
+      seasonIds.push(processed.dataValues.seasonId);
+  });
+
+  const seasons = await Season.findAll({
+    limit: 3,
+    order: [
+      ["id", "DESC"],
+    ],
+  });
+  if (seasonIds.length != 3 && !reqSeason) {
+    for (const season of seasons) {
+      if (!seasonIds.includes(season.id))
+        seasonIds.push(season.id);
+    }
+  }
+
+  seasonIds = seasonIds.sort((a, b) => a - b).slice(-3);
+
+  let season: any = [];
+  let procured: any = [];
+  let sold: any = [];
+  let stock: any = [];
+
+  for (const sessionId of seasonIds) {
+    const fProcured = procuredData.find((production: any) =>
+      production.dataValues.seasonId == sessionId
+    );
+    const fSold = soldData.find((processed: any) =>
+      processed.dataValues.seasonId == sessionId
+    );
+    let data = {
+      seasonName: '',
+      procured: 0,
+      sold: 0,
+      stock: 0
+    };
+    if (fProcured) {
+      data.seasonName = fProcured.dataValues.seasonName;
+      data.procured = formatNumber(fProcured.dataValues.procured);
+    }
+
+    if (fSold) {
+      data.seasonName = fSold.dataValues.seasonName;
+      data.sold = formatNumber(fSold.dataValues.sold);
+    }
+
+    data.stock =
+      data.procured > data.sold
+        ? data.procured - data.sold
+        : 0;
+    if (!data.seasonName) {
+      const fSeason = seasons.find((season: any) =>
+        season.id == sessionId
+      );
+      if (fSeason) {
+        data.seasonName = fSeason.name;
+      }
+    }
+
+    season.push(data.seasonName);
+    procured.push(data.procured);
+    stock.push(data.stock);
+    sold.push(data.sold);
+
+  }
+
+  return {
+    season,
+    procured,
+    stock,
+    sold
+  };
+};
+
+
+const getLintProcessedTopGinners = async (
+  req: Request, res: Response
+) => {
+  try {
+    const reqData = await getQueryParams(req, res);
+    const ginnersData = await getLintProcessedTopGinnersData(reqData);
+    const data = getTopGinnersRes(ginnersData);
+    return res.sendSuccess(res, data);
+
+  } catch (error: any) {
+    const code = error.errCode
+      ? error.errCode
+      : "ERR_INTERNAL_SERVER_ERROR";
+    return res.sendError(res, code);
+  }
+};
+
+const getLintProcessedTopGinnersData = async (
+  reqData: any
+) => {
+  const where: any = {
+
+  };
+
+  if (reqData?.country)
+    where['$ginner.country_id$'] = reqData.country;
+
+  where['$ginner.name$'] = {
+    [Op.not]: null
+  };
+
+  const result = await GinProcess.findAll({
+    attributes: [
+      [Sequelize.fn('SUM', Sequelize.col('total_qty')), 'total'],
+      [Sequelize.col('ginner.name'), 'ginnerName']
+    ],
+    include: [{
+      model: Ginner,
+      as: 'ginner',
+      attributes: []
+    }],
+    where,
+    order: [['total', 'desc']],
+    limit: 10,
+    group: ['ginner.id']
+  });
+
+  return result;
+
+};
+
+const getTopGinnersRes = (
+  list: any[]
+) => {
+  const ginners: string[] = [];
+  const count: number[] = [];
+  for (const row of list) {
+    if (row.dataValues) {
+      ginners.push(row.dataValues.ginnerName);
+      count.push(formatNumber(row.dataValues.total));
+    }
+  }
+
+  return {
+    ginners,
+    count
+  };
+};
+
+const getLintSoldTopGinners = async (
+  req: Request, res: Response
+) => {
+  try {
+    const reqData = await getQueryParams(req, res);
+    const ginnersData = await getLintSoldTopGinnersData(reqData);
+    const data = getTopGinnersRes(ginnersData);
+    return res.sendSuccess(res, data);
+
+  } catch (error: any) {
+    const code = error.errCode
+      ? error.errCode
+      : "ERR_INTERNAL_SERVER_ERROR";
+    return res.sendError(res, code);
+  }
+};
+
+const getLintSoldTopGinnersData = async (
+  reqData: any
+) => {
+  const where: any = {
+
+  };
+
+  if (reqData?.country)
+    where['$ginner.country_id$'] = reqData.country;
+
+  where['$ginner.name$'] = {
+    [Op.not]: null
+  };
+
+  const result = await GinSales.findAll({
+    attributes: [
+      [Sequelize.fn('SUM', Sequelize.col('no_of_bales')), 'total'],
+      [Sequelize.col('ginner.name'), 'ginnerName']
+    ],
+    include: [{
+      model: Ginner,
+      as: 'ginner',
+      attributes: []
+    }],
+    where,
+    order: [['total', 'desc']],
+    limit: 10,
+    group: ['ginner.id']
+  });
+
+  return result;
+
+};
+
+const getLintStockTopGinners = async (
+  req: Request, res: Response
+) => {
+  try {
+    const reqData = await getQueryParams(req, res);
+    const ginnersData = await getLintStockTopGinnersData(reqData);
+    const data = getLintStockTopGinnersRes(ginnersData);
+    return res.sendSuccess(res, data);
+
+  } catch (error: any) {
+    const code = error.errCode
+      ? error.errCode
+      : "ERR_INTERNAL_SERVER_ERROR";
+    return res.sendError(res, code);
+  }
+};
+
+const getLintStockTopGinnersData = async (
+  reqData: any
+) => {
+
+
+  const [result] = await sequelize.query(`
+      select  g.name                                  as "ginnerName",
+              sum(gp.total_qty) - sum(gs.no_of_bales) as total
+      from public.ginners g
+        left join public.gin_processes gp on g.id = gp.ginner_id
+        left join public.gin_sales gs on g.id = gs.ginner_id
+      where g.name is not null ${reqData?.country ? " and g.country_id = reqData?.country" : ""}
+      group by g.id
+      order by total DESC nulls last
+      limit 10;
+    `);
+
+  return result;
+
+};
+
+const getLintStockTopGinnersRes = (
+  list: any[]
+) => {
+  const ginners: string[] = [];
+  const count: number[] = [];
+  for (const row of list) {
+    if (row) {
+      ginners.push(row.ginnerName);
+      count.push(formatNumber(row.total));
+    }
+  }
+  return {
+    ginners,
+    count
+  };
+}
+
+const getLintProcessedByCountry = async (
+  req: Request, res: Response
+) => {
+  try {
+
+    const reqData = await getQueryParams(req, res);
+    const where = getOverAllDataQuery(reqData);
+    const processedList = await getLintProcessedByCountryData(where);
+    const data = await getLintProcessedRes(processedList, reqData.season);
+    return res.sendSuccess(res, data);
+
+  } catch (error: any) {
+    const code = error.errCode
+      ? error.errCode
+      : "ERR_INTERNAL_SERVER_ERROR";
+    return res.sendError(res, code);
+  }
+};
+
+const getLintProcessedRes = async (
+  processedList: any = [],
+  reqSeason: any
+) => {
+  let seasonIds: number[] = [];
+  let countries: number[] = [];
+
+  processedList.forEach((list: any) => {
+    if (!countries.includes(list.dataValues.countryName))
+      countries.push(list.dataValues.countryName);
+
+    if (!seasonIds.includes(list.dataValues.seasonId))
+      seasonIds.push(list.dataValues.seasonId);
+  });
+
+  const seasons = await Season.findAll({
+    limit: 3,
+    order: [
+      ["id", "DESC"],
+    ],
+  });
+  if (seasonIds.length != 3 && !reqSeason) {
+    for (const season of seasons) {
+      if (!seasonIds.includes(season.id))
+        seasonIds.push(season.id);
+    }
+  }
+
+  seasonIds = seasonIds.sort((a, b) => a - b).slice(-3);
+
+  let seasonList: any[] = [];
+  let areaList: any[] = [];
+
+
+  for (const countryName of countries) {
+    const data: any = {
+      name: countryName,
+      data: [],
+    };
+    const lProcessedList = processedList.filter((list: any) =>
+      list.dataValues.countryName == countryName
+    );
+
+    for (const seasonId of seasonIds) {
+
+      let totalArea = 0;
+      const gProcessedValue = lProcessedList.find((list: any) =>
+        list.dataValues.seasonId == seasonId
+      );
+
+      if (gProcessedValue) {
+        totalArea = formatNumber(gProcessedValue.dataValues.processed);
+        if (!seasonList.includes(gProcessedValue.dataValues.seasonName))
+          seasonList.push(gProcessedValue.dataValues.seasonName);
+      }
+      data.data.push(totalArea);
+    }
+
+    areaList.push(data);
+  }
+
+  return {
+    areaList,
+    seasonList,
+  };
+};
+
+const getLintProcessedByCountryData = async (where: any) => {
+  const result = await GinProcess.findAll({
+    attributes: [
+      [Sequelize.fn('SUM', Sequelize.col('total_qty')), 'processed'],
+      [Sequelize.col('ginner.country.id'), 'countryId'],
+      [Sequelize.col('ginner.country.county_name'), 'countryName'],
+      [Sequelize.col('season.id'), 'seasonId'],
+      [Sequelize.col('season.name'), 'seasonName']
+    ],
+    include: [{
+      model: Ginner,
+      as: 'ginner',
+      attributes: [],
+      include: [{
+        model: Country,
+        as: 'country',
+        attributes: []
+      }]
+    }, {
+      model: Season,
+      as: 'season',
+      attributes: []
+    }],
+    where,
+    group: ['ginner.country.id', 'season.id']
+  });
+
+  return result;
+};
+
+const getLintSoldByCountry = async (
+  req: Request, res: Response
+) => {
+  try {
+
+    const reqData = await getQueryParams(req, res);
+    const where = getOverAllDataQuery(reqData);
+    const soldList = await getLintSoldByCountryData(where);
+    const data = await getLintSoldRes(soldList, reqData.season);
+    return res.sendSuccess(res, data);
+
+  } catch (error: any) {
+    const code = error.errCode
+      ? error.errCode
+      : "ERR_INTERNAL_SERVER_ERROR";
+    return res.sendError(res, code);
+  }
+};
+
+const getLintSoldRes = async (
+  soldList: any = [],
+  reqSeason: any
+) => {
+  let seasonIds: number[] = [];
+  let countries: number[] = [];
+
+  soldList.forEach((list: any) => {
+    if (!countries.includes(list.dataValues.countryName))
+      countries.push(list.dataValues.countryName);
+
+    if (!seasonIds.includes(list.dataValues.seasonId))
+      seasonIds.push(list.dataValues.seasonId);
+  });
+
+  const seasons = await Season.findAll({
+    limit: 3,
+    order: [
+      ["id", "DESC"],
+    ],
+  });
+  if (seasonIds.length != 3 && !reqSeason) {
+    for (const season of seasons) {
+      if (!seasonIds.includes(season.id))
+        seasonIds.push(season.id);
+    }
+  }
+
+  seasonIds = seasonIds.sort((a, b) => a - b).slice(-3);
+
+  let seasonList: any[] = [];
+  let areaList: any[] = [];
+
+
+  for (const countryName of countries) {
+    const data: any = {
+      name: countryName,
+      data: [],
+    };
+    const lSoldList = soldList.filter((list: any) =>
+      list.dataValues.countryName == countryName
+    );
+
+    for (const seasonId of seasonIds) {
+
+      let totalArea = 0;
+      const gSoldValue = lSoldList.find((list: any) =>
+        list.dataValues.seasonId == seasonId
+      );
+
+      if (gSoldValue) {
+        totalArea = formatNumber(gSoldValue.dataValues.sold);
+        if (!seasonList.includes(gSoldValue.dataValues.seasonName))
+          seasonList.push(gSoldValue.dataValues.seasonName);
+      }
+      data.data.push(totalArea);
+    }
+
+    areaList.push(data);
+  }
+
+  return {
+    areaList,
+    seasonList,
+  };
+};
+
+const getLintSoldByCountryData = async (where: any) => {
+  const result = await GinSales.findAll({
+    attributes: [
+      [Sequelize.fn('SUM', Sequelize.col('no_of_bales')), 'sold'],
+      [Sequelize.col('ginner.country.id'), 'countryId'],
+      [Sequelize.col('ginner.country.county_name'), 'countryName'],
+      [Sequelize.col('season.id'), 'seasonId'],
+      [Sequelize.col('season.name'), 'seasonName']
+    ],
+    include: [{
+      model: Ginner,
+      as: 'ginner',
+      attributes: [],
+      include: [{
+        model: Country,
+        as: 'country',
+        attributes: []
+      }]
+    }, {
+      model: Season,
+      as: 'season',
+      attributes: []
+    }],
+    where,
+    group: ['ginner.country.id', 'season.id']
+  });
+
+  return result;
+};
+
+const getProcuredAllocated = async (
+  req: Request, res: Response
+) => {
+  try {
+    const reqData = await getQueryParams(req, res);
+    const where = getOverAllDataQuery(reqData);
+    const procuredData = await getProcuredProcessedData(where);
+    const allocatedData = await getAllocatedData(where);
+    const data = await getProcuredAllocatedRes(
+      procuredData,
+      allocatedData,
+      reqData.season
+    );
+    return res.sendSuccess(res, data);
+
+  } catch (error: any) {
+    const code = error.errCode
+      ? error.errCode
+      : "ERR_INTERNAL_SERVER_ERROR";
+    return res.sendError(res, code);
+  }
+};
+
+const getAllocatedData = async (
+  where: any
+) => {
+
+  const result = await GinnerExpectedCotton.findAll({
+    attributes: [
+      [Sequelize.fn('SUM', Sequelize.literal('CAST(expected_seed_cotton  as numeric)')), 'allocated'],
+      [Sequelize.col('season.name'), 'seasonName'],
+      [Sequelize.col('season.id'), 'seasonId']
+    ],
+    include: [{
+      model: Season,
+      as: 'season',
+      attributes: []
+    }],
+    where,
+    order: [['seasonId', 'desc']],
+    limit: 3,
+    group: ['season.id']
+  });
+
+  return result;
+
+};
+
+const getProcuredAllocatedRes = async (
+  procuredData: any[],
+  allocatedData: any[],
+  reqSeason: any
+) => {
+  let seasonIds: number[] = [];
+
+  procuredData.forEach((procured: any) => {
+    if (procured.dataValues.seasonId)
+      seasonIds.push(procured.dataValues.seasonId);
+  });
+
+  allocatedData.forEach((processed: any) => {
+    if (!seasonIds.includes(processed.dataValues.seasonId))
+      seasonIds.push(processed.dataValues.seasonId);
+  });
+
+  const seasons = await Season.findAll({
+    limit: 3,
+    order: [
+      ["id", "DESC"],
+    ],
+  });
+  if (seasonIds.length != 3 && !reqSeason) {
+    for (const season of seasons) {
+      if (!seasonIds.includes(season.id))
+        seasonIds.push(season.id);
+    }
+  }
+
+  seasonIds = seasonIds.sort((a, b) => a - b).slice(-3);
+
+  let season: any = [];
+  let procured: any = [];
+  let allocated: any = [];
+
+  for (const sessionId of seasonIds) {
+    const gProcured = procuredData.find((production: any) =>
+      production.dataValues.seasonId == sessionId
+    );
+    const gAllocated = allocatedData.find((processed: any) =>
+      processed.dataValues.seasonId == sessionId
+    );
+    let data = {
+      seasonName: '',
+      procured: 0,
+      allocated: 0
+    };
+    if (gProcured) {
+      data.seasonName = gProcured.dataValues.seasonName;
+      data.procured = formatNumber(gProcured.dataValues.procured);
+    }
+
+    if (gAllocated) {
+      data.seasonName = gAllocated.dataValues.seasonName;
+      data.allocated = formatNumber(gAllocated.dataValues.allocated);
+    }
+
+    if (!data.seasonName) {
+      const fSeason = seasons.find((season: any) =>
+        season.id == sessionId
+      );
+      if (fSeason) {
+        data.seasonName = fSeason.name;
+      }
+    }
+
+    season.push(data.seasonName);
+    procured.push(data.procured);
+    allocated.push(data.allocated);
+
+  }
+
+  return {
+    season,
+    procured,
+    allocated
+  };
+};
+
+const getCountryGinnerArea = async (
+  req: Request, res: Response
+) =>
+{
+  try
+  {
+    const reqData = await getQueryParams(req, res);
+    const query = getOverAllDataQuery(reqData);
+    const ginnersData = await getGinnerCountryData(query);
+    const data = await getOutturnCountryRes(ginnersData,reqData.season);
+    return res.sendSuccess(res, data);
+
+  } catch (error: any)
+  {
+    const code = error.errCode
+      ? error.errCode
+      : "ERR_INTERNAL_SERVER_ERROR";
+    return res.sendError(res, code);
+  }
+};
+
+const getGinnerCountryData = async (where: any) =>
+{
+  const result = await GinProcess.findAll({
+    attributes: [
+      [sequelize.fn('AVG', sequelize.col('gin_out_turn')), 'outTurn'],
+      [sequelize.col('ginner.country.county_name'), 'countryName'],
+      [sequelize.col('ginner.country.id'), 'countryId'],
+      [sequelize.col('season.id'), 'seasonId'],
+      [sequelize.col('season.name'), 'seasonName']
+    ],
+    include: [
+      {
+        model: Ginner,
+        as: "ginner",
+        include: [
+          {
+            model: Country,
+            attributes: [],
+            as: "country"
+          }
+        ],
+        attributes: []
+      },
+      {
+        model: Season,
+        attributes: [],
+        as: "season"
+      }
+    ],
+    where,
+    group: ['ginner.country.id', 'season.id'],
+    order: [[sequelize.col('season.id'), 'DESC']]
+  });
+
+  return result;
+};
+
+
+const getOutturnCountryRes = async (
+  processedList: any = [],
+  reqSeason: any
+) =>
+{
+  let seasonIds: number[] = [];
+  let countries: number[] = [];
+
+  processedList.forEach((list: any) =>
+  {
+    if (!countries.includes(list.dataValues.countryName))
+      countries.push(list.dataValues.countryName);
+
+    if (!seasonIds.includes(list.dataValues.seasonId))
+      seasonIds.push(list.dataValues.seasonId);
+  });
+
+  const seasons = await Season.findAll({
+    limit: 3,
+    order: [
+      ["id", "DESC"],
+    ],
+  });
+  if (seasonIds.length != 3 && !reqSeason)
+  {
+    for (const season of seasons)
+    {
+      if (!seasonIds.includes(season.id))
+        seasonIds.push(season.id);
+    }
+  }
+
+  seasonIds = seasonIds.sort((a, b) => a - b).slice(-3);
+
+  let seasonList: any[] = [];
+  let countList: any[] = [];
+
+
+  for (const countryName of countries)
+  {
+    const data: any = {
+      name: countryName,
+      data: [],
+    };
+    const lProcessedList = processedList.filter((list: any) =>
+      list.dataValues.countryName == countryName
+    );
+
+    for (const seasonId of seasonIds)
+    {
+
+      let totalArea = 0;
+      const gProcessedValue = lProcessedList.find((list: any) =>
+        list.dataValues.seasonId == seasonId
+      );
+
+      if (gProcessedValue)
+      {
+        totalArea = formatNumber(gProcessedValue.dataValues.outTurn);
+        if (!seasonList.includes(gProcessedValue.dataValues.seasonName))
+          seasonList.push(gProcessedValue.dataValues.seasonName);
+      }
+      data.data.push(totalArea);
+    }
+
+    countList.push(data);
+  }
+
+  return {
+    countList,
+    seasonList,
+  };
+};
+
+const getProcuredByCountry = async (
+  req: Request, res: Response
+) => {
+  try {
+
+    const reqData = await getQueryParams(req, res);
+    const where = getOverAllDataQuery(reqData);
+    const procuredData = await getProcuredByCountryData(where);
+    const data = await getProcuredDataRes(procuredData, reqData.season);
+    return res.sendSuccess(res, data);
+
+  } catch (error: any) {
+    const code = error.errCode
+      ? error.errCode
+      : "ERR_INTERNAL_SERVER_ERROR";
+    return res.sendError(res, code);
+  }
+};
+
+
+const getProcuredByCountryData = async (where: any) => {
+  const result = await Transaction.findAll({
+    attributes: [
+      [Sequelize.fn('SUM', Sequelize.literal('CAST(qty_purchased  as numeric)')), 'procured'],
+      [Sequelize.col('country.id'), 'countryId'],
+      [Sequelize.col('country.county_name'), 'countryName'],
+      [Sequelize.col('season.id'), 'seasonId'],
+      [Sequelize.col('season.name'), 'seasonName']
+    ],
+    include: [{
+      model: Country,
+      as: 'country',
+      attributes: []
+    }, {
+      model: Season,
+      as: 'season',
+      attributes: []
+    }],
+    where,
+    group: ['country.id', 'season.id']
+  });
+
+  return result;
+};
+
+
+const getProcuredDataRes = async (
+  procuredCountList: any = [],
+  reqSeason: any
+) => {
+  let seasonIds: number[] = [];
+  let countries: number[] = [];
+
+  procuredCountList.forEach((list: any) => {
+    if (!countries.includes(list.dataValues.countryName))
+      countries.push(list.dataValues.countryName);
+
+    if (!seasonIds.includes(list.dataValues.seasonId))
+      seasonIds.push(list.dataValues.seasonId);
+  });
+
+  const seasons = await Season.findAll({
+    limit: 3,
+    order: [
+      ["id", "DESC"],
+    ],
+  });
+  if (seasonIds.length != 3 && !reqSeason) {
+    for (const season of seasons) {
+      if (!seasonIds.includes(season.id))
+        seasonIds.push(season.id);
+    }
+  }
+
+  seasonIds = seasonIds.sort((a, b) => a - b).slice(-3);
+
+  let seasonList: any[] = [];
+  let procuredList: any[] = [];
+
+
+
+
+  for (const countryName of countries) {
+    const data: any = {
+      name: countryName,
+      data: [],
+    };
+    const farmerList = procuredCountList.filter((list: any) =>
+      list.dataValues.countryName == countryName
+    );
+
+    for (const seasonId of seasonIds) {
+
+      let farmerCount = 0;
+      const fFarmerValue = farmerList.find((list: any) =>
+        list.dataValues.seasonId == seasonId
+      );
+
+      if (fFarmerValue) {
+        farmerCount = formatNumber(fFarmerValue.dataValues.procured);
+        if (!seasonList.includes(fFarmerValue.dataValues.seasonName))
+          seasonList.push(fFarmerValue.dataValues.seasonName);
+      }
+      data.data.push(farmerCount);
+    }
+
+    procuredList.push(data);
+  }
+
+  return {
+    procuredList,
+    seasonList,
+  };
+};
+
+const getProcessedByCountry = async (
+  req: Request, res: Response
+) => {
+  try {
+
+    const reqData = await getQueryParams(req, res);
+    const where = getOverAllDataQuery(reqData);
+    const processedData = await getProcessedByCountryData(where);
+    const data = await getProcessedDataRes(processedData, reqData.season);
+    return res.sendSuccess(res, data);
+
+  } catch (error: any) {
+    const code = error.errCode
+      ? error.errCode
+      : "ERR_INTERNAL_SERVER_ERROR";
+    return res.sendError(res, code);
+  }
+};
+
+
+const getProcessedByCountryData = async (where: any) => {
+  const result = await GinProcess.findAll({
+    attributes: [
+      [Sequelize.fn('SUM', Sequelize.col('total_qty')), 'processed'],
+      [Sequelize.col('ginner.country.id'), 'countryId'],
+      [Sequelize.col('ginner.country.county_name'), 'countryName'],
+      [Sequelize.col('season.id'), 'seasonId'],
+      [Sequelize.col('season.name'), 'seasonName']
+    ],
+    include: [{
+      model: Ginner,
+      as: 'ginner',
+      attributes: [],
+      include: [{
+        model: Country,
+        as: 'country',
+        attributes: []
+      }]
+    }, {
+      model: Season,
+      as: 'season',
+      attributes: []
+    }],
+    where,
+    group: ['ginner.country.id', 'season.id']
+  });
+
+  return result;
+};
+
+
+const getProcessedDataRes = async (
+  processedCountList: any = [],
+  reqSeason: any
+) => {
+  let seasonIds: number[] = [];
+  let countries: number[] = [];
+
+  processedCountList.forEach((list: any) => {
+    if (!countries.includes(list.dataValues.countryName))
+      countries.push(list.dataValues.countryName);
+
+    if (!seasonIds.includes(list.dataValues.seasonId))
+      seasonIds.push(list.dataValues.seasonId);
+  });
+
+  const seasons = await Season.findAll({
+    limit: 3,
+    order: [
+      ["id", "DESC"],
+    ],
+  });
+  if (seasonIds.length != 3 && !reqSeason) {
+    for (const season of seasons) {
+      if (!seasonIds.includes(season.id))
+        seasonIds.push(season.id);
+    }
+  }
+
+  seasonIds = seasonIds.sort((a, b) => a - b).slice(-3);
+
+  let seasonList: any[] = [];
+  let processedList: any[] = [];
+
+
+
+
+  for (const countryName of countries) {
+    const data: any = {
+      name: countryName,
+      data: [],
+    };
+    const farmerList = processedCountList.filter((list: any) =>
+      list.dataValues.countryName == countryName
+    );
+
+    for (const seasonId of seasonIds) {
+
+      let farmerCount = 0;
+      const fFarmerValue = farmerList.find((list: any) =>
+        list.dataValues.seasonId == seasonId
+      );
+
+      if (fFarmerValue) {
+        farmerCount = formatNumber(fFarmerValue.dataValues.processed);
+        if (!seasonList.includes(fFarmerValue.dataValues.seasonName))
+          seasonList.push(fFarmerValue.dataValues.seasonName);
+      }
+      data.data.push(farmerCount);
+    }
+
+    processedList.push(data);
+  }
+
+  return {
+    processedList,
+    seasonList,
+  };
+};
+
+
+
+const getBalesProcuredByCountry = async (
+  req: Request, res: Response
+) => {
+  try {
+
+    const reqData = await getQueryParams(req, res);
+    const where = getGinBaleQuery(reqData);
+    const processedData = await getBaleProcuredByCountryData(where);
+    const data = await getBalesProcuredByCountryDataRes(processedData, reqData.season);
+    return res.sendSuccess(res, data);
+
+  } catch (error: any) {
+    const code = error.errCode
+      ? error.errCode
+      : "ERR_INTERNAL_SERVER_ERROR";
+    return res.sendError(res, code);
+  }
+};
+
+
+const getBalesProcuredByCountryDataRes = async (
+  processedCountList: any = [],
+  reqSeason: any
+) => {
+  let seasonIds: number[] = [];
+  let countries: number[] = [];
+
+  processedCountList.forEach((list: any) => {
+    if (!countries.includes(list.dataValues.countryName))
+      countries.push(list.dataValues.countryName);
+
+    if (!seasonIds.includes(list.dataValues.seasonId))
+      seasonIds.push(list.dataValues.seasonId);
+  });
+
+  const seasons = await Season.findAll({
+    limit: 3,
+    order: [
+      ["id", "DESC"],
+    ],
+  });
+  if (seasonIds.length != 3 && !reqSeason) {
+    for (const season of seasons) {
+      if (!seasonIds.includes(season.id))
+        seasonIds.push(season.id);
+    }
+  }
+
+  seasonIds = seasonIds.sort((a, b) => a - b).slice(-3);
+
+  let seasonList: any[] = [];
+  let processedList: any[] = [];
+
+  for (const countryName of countries) {
+    const data: any = {
+      name: countryName,
+      data: [],
+    };
+    const farmerList = processedCountList.filter((list: any) =>
+      list.dataValues.countryName == countryName
+    );
+
+    for (const seasonId of seasonIds) {
+
+      let farmerCount = 0;
+      const fFarmerValue = farmerList.find((list: any) =>
+        list.dataValues.seasonId == seasonId
+      );
+
+      if (fFarmerValue) {
+        farmerCount = formatNumber(fFarmerValue.dataValues.procured);
+        if (!seasonList.includes(fFarmerValue.dataValues.seasonName))
+          seasonList.push(fFarmerValue.dataValues.seasonName);
+      }
+      data.data.push(farmerCount);
+    }
+
+    processedList.push(data);
+  }
+
+  return {
+    processedList,
+    seasonList,
+  };
+};
+
+const getBaleProcuredByCountryData = async (where: any) => {
+  const result = await GinBale.findAll({
+    attributes: [
+      [sequelize.fn("COUNT", Sequelize.literal('DISTINCT "gin-bales"."id"')), "procured"],
+      [Sequelize.col('ginprocess.season.name'), 'seasonName'],
+      [Sequelize.col('ginprocess.season.id'), 'seasonId'],
+      [Sequelize.col('ginprocess.ginner.country.id'), 'countryId'],
+      [Sequelize.col('ginprocess.ginner.country.county_name'), 'countryName']
+    ],
+    include: [
+      {
+        model: GinProcess,
+        as: "ginprocess",
+        attributes: [],
+        include: [{
+          model: Season,
+          as: 'season',
+          attributes: []
+        }, {
+          model: Ginner,
+          as: 'ginner',
+          attributes: [],
+          include: [{
+            model: Country,
+            as: 'country',
+            attributes: []
+          }]
+        }],
+      },
+    ],
+    where,
+    order: [['seasonId', 'desc']],
+    group: ["ginprocess.season.id", "ginprocess.ginner.country.id"],
+  });
+  return result;
+};
+
+
+const getBalesSoldByCountry = async (
+  req: Request, res: Response
+) => {
+  try {
+
+    const reqData = await getQueryParams(req, res);
+    const where = getBaleSelectionQuery(reqData);
+    const processedData = await getBaleSoldByCountryData(where);
+    const data = await getBaleSoldByCountryRes(processedData, reqData.season);
+    return res.sendSuccess(res, data);
+
+  } catch (error: any) {
+    const code = error.errCode
+      ? error.errCode
+      : "ERR_INTERNAL_SERVER_ERROR";
+    return res.sendError(res, code);
+  }
+};
+
+
+const getBaleSoldByCountryRes = async (
+  processedCountList: any = [],
+  reqSeason: any
+) => {
+  let seasonIds: number[] = [];
+  let countries: number[] = [];
+
+  processedCountList.forEach((list: any) => {
+    if (!countries.includes(list.dataValues.countryName))
+      countries.push(list.dataValues.countryName);
+
+    if (!seasonIds.includes(list.dataValues.seasonId))
+      seasonIds.push(list.dataValues.seasonId);
+  });
+
+  const seasons = await Season.findAll({
+    limit: 3,
+    order: [
+      ["id", "DESC"],
+    ],
+  });
+  if (seasonIds.length != 3 && !reqSeason) {
+    for (const season of seasons) {
+      if (!seasonIds.includes(season.id))
+        seasonIds.push(season.id);
+    }
+  }
+
+  seasonIds = seasonIds.sort((a, b) => a - b).slice(-3);
+
+  let seasonList: any[] = [];
+  let processedList: any[] = [];
+
+  for (const countryName of countries) {
+    const data: any = {
+      name: countryName,
+      data: [],
+    };
+    const farmerList = processedCountList.filter((list: any) =>
+      list.dataValues.countryName == countryName
+    );
+
+    for (const seasonId of seasonIds) {
+
+      let farmerCount = 0;
+      const fFarmerValue = farmerList.find((list: any) =>
+        list.dataValues.seasonId == seasonId
+      );
+
+      if (fFarmerValue) {
+        farmerCount = formatNumber(fFarmerValue.dataValues.sold);
+        if (!seasonList.includes(fFarmerValue.dataValues.seasonName))
+          seasonList.push(fFarmerValue.dataValues.seasonName);
+      }
+      data.data.push(farmerCount);
+    }
+
+    processedList.push(data);
+  }
+
+  return {
+    processedList,
+    seasonList,
+  };
+};
+
+const getBaleSoldByCountryData = async (
+  where: any
+) => {
+  const result = await BaleSelection.findAll({
+    attributes: [
+      [sequelize.fn("COUNT", Sequelize.literal("DISTINCT bale_id")), "sold"],
+      [Sequelize.col('sales.season.name'), 'seasonName'],
+      [Sequelize.col('sales.season.id'), 'seasonId'],
+      [Sequelize.col('sales.ginner.country.id'), 'countryId'],
+      [Sequelize.col('sales.ginner.country.county_name'), 'countryName']
+    ],
+    include: [
+      {
+        model: GinSales,
+        as: "sales",
+        attributes: [],
+        include: [{
+          model: Season,
+          as: 'season',
+          attributes: []
+        }, {
+          model: Ginner,
+          as: 'ginner',
+          attributes: [],
+          include: [{
+            model: Country,
+            as: 'country',
+            attributes: []
+          }]
+        }
+        ],
+      },
+      {
+        model: GinBale,
+        as: "bale",
+        attributes: [],
+      },
+    ],
+    where,
+    order: [['seasonId', 'desc']],
+    group: ["sales.season.id", "sales.ginner.country.id"],
+  });
+
+  return result;
+
+};
+
+const getBalesStockByCountry = async (
+  req: Request, res: Response
+) => {
+  try {
+
+    const reqData = await getQueryParams(req, res);
+    const processWhere = getGinBaleQuery(reqData);
+    const processedData = await getBaleProcuredByCountryData(processWhere);
+    const soldWhere = getBaleSelectionQuery(reqData);
+    const soldData = await getBaleSoldByCountryData(soldWhere);
+    const data = await getBaleStockDataRes(
+      processedData,
+      soldData,
+      reqData.season,
+    );
+    return res.sendSuccess(res, data);
+
+  } catch (error: any) {
+    const code = error.errCode
+      ? error.errCode
+      : "ERR_INTERNAL_SERVER_ERROR";
+    return res.sendError(res, code);
+  }
+};
+
+const getBaleStockDataRes = async (
+  processedCountList: any[],
+  soldCountList: any[],
+  reqSeason: any
+) => {
+  let seasonIds: number[] = [];
+  let countries: number[] = [];
+
+  processedCountList.forEach((list: any) => {
+    if (!countries.includes(list.dataValues.countryName))
+      countries.push(list.dataValues.countryName);
+
+    if (!seasonIds.includes(list.dataValues.seasonId))
+      seasonIds.push(list.dataValues.seasonId);
+  });
+
+  soldCountList.forEach((list: any) => {
+    if (!countries.includes(list.dataValues.countryName))
+      countries.push(list.dataValues.countryName);
+
+    if (!seasonIds.includes(list.dataValues.seasonId))
+      seasonIds.push(list.dataValues.seasonId);
+  });
+
+  const seasons = await Season.findAll({
+    limit: 3,
+    order: [
+      ["id", "DESC"],
+    ],
+  });
+  if (seasonIds.length != 3 && !reqSeason) {
+    for (const season of seasons) {
+      if (!seasonIds.includes(season.id))
+        seasonIds.push(season.id);
+    }
+  }
+
+  seasonIds = seasonIds.sort((a, b) => a - b).slice(-3);
+
+  let seasonList: any[] = [];
+  let soldList: any[] = [];
+
+
+
+
+  for (const countryName of countries) {
+    const data: any = {
+      name: countryName,
+      data: [],
+    };
+    const fProcuredList = processedCountList.filter((list: any) =>
+      list.dataValues.countryName == countryName
+    );
+    const fSoldList = soldCountList.filter((list: any) =>
+      list.dataValues.countryName == countryName
+    );
+
+
+    for (const seasonId of seasonIds) {
+
+      let farmerCount = {
+        procured: 0,
+        sold: 0,
+      };
+      const fProcuredValue = fProcuredList.find((list: any) =>
+        list.dataValues.seasonId == seasonId
+      );
+      const fSoldValue = fSoldList.find((list: any) =>
+        list.dataValues.seasonId == seasonId
+      );
+      if (fProcuredValue) {
+        farmerCount.procured = formatNumber(fProcuredValue.dataValues.procured);
+        if (!seasonList.includes(fProcuredValue.dataValues.seasonName))
+          seasonList.push(fProcuredValue.dataValues.seasonName);
+      }
+
+      if (fSoldValue) {
+        farmerCount.sold = formatNumber(fSoldValue.dataValues.sold);
+        if (!seasonList.includes(fSoldValue.dataValues.seasonName))
+          seasonList.push(fSoldValue.dataValues.seasonName);
+      }
+
+      data.data.push(farmerCount.procured > farmerCount.sold ? farmerCount.procured - farmerCount.sold : 0);
+    }
+
+    soldList.push(data);
+  }
+
+  return {
+    processedList: soldList,
+    seasonList,
+  };
+}
 
 const getMonthDate = (
   from: string,
@@ -834,5 +2417,18 @@ export {
   getTopSpinners,
   getProcuredProcessed,
   getLintProcuredSold,
-  getDataAll
+  getDataAll,
+  getBaleComparison,
+  getLintProcessedTopGinners,
+  getLintSoldTopGinners,
+  getLintStockTopGinners,
+  getProcuredAllocated,
+  getLintProcessedByCountry,
+  getLintSoldByCountry,
+  getCountryGinnerArea,
+  getProcuredByCountry,
+  getProcessedByCountry,
+  getBalesProcuredByCountry,
+  getBalesSoldByCountry,
+  getBalesStockByCountry
 };
