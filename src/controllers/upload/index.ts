@@ -15,7 +15,8 @@ const upload = async (req: any, res: any) => {
         res.status(200).send({
             success: true,
             message: "Uploaded the file successfully",
-            data: process.env.BASE_URL + req.file.filename
+            data: process.env.BASE_URL + req.file.filename,
+            name:req.file.originalname
         });
     } catch (err) {
         res.status(500).send({
