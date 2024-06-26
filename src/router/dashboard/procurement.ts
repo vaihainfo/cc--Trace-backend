@@ -7,8 +7,12 @@ const router = Router();
 router.use(accessControl);
 router.get('/country/estimate/production', Dashboard.getCountryEstimateAndProduction);
 router.get('/estimated/procured', Dashboard.getEstimateAndProcured);
-router.get('/estimated/procured/processed', Dashboard.getEstimateProcuredAndProcessed);
+router.get('/estimated/procured/processed', Dashboard.getEstimateProcuredAndProduction);
 router.get('/procured/processed', Dashboard.getProcuredProcessed);
 router.get('/procured/processed/monthly', Dashboard.getProcuredProcessedMonthly);
+router.get('/procured/processed', Dashboard.getProcuredProcessed);
+router.get('/procured/by/country', Dashboard.getProcuredCottonByCountry);
+router.get('/processed/by/country', Dashboard.getProcessedCottonByCountry);
+router.get('/estimated/procured/processed/by/country', Dashboard.getProcessedEstimatedProcessedCottonByCountry);
 
 export default router;

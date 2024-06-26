@@ -854,7 +854,7 @@ const getCountryFarmerCount = async (
     const reqData = await getQueryParams(req, res);
     const where = getOverAllDataQuery(reqData);
     const farmerCountList = await getFarmerCountByCountry(where);
-    const data = await getCountrySeasonsList(farmerCountList);
+    const data = await getCountryCountRes(farmerCountList, reqData.season);
     return res.sendSuccess(res, data);
 
   } catch (error: any) {
@@ -864,6 +864,77 @@ const getCountryFarmerCount = async (
     return res.sendError(res, code);
   }
 };
+
+
+const getCountryCountRes = async (
+  farmerCountList: any = [],
+  reqSeason: any
+) => {
+  let seasonIds: number[] = [];
+  let countries: number[] = [];
+
+  farmerCountList.forEach((list: any) => {
+    if (!countries.includes(list.dataValues.countryName))
+      countries.push(list.dataValues.countryName);
+
+    if (!seasonIds.includes(list.dataValues.seasonId))
+      seasonIds.push(list.dataValues.seasonId);
+  });
+
+  const seasons = await Season.findAll({
+    limit: 3,
+    order: [
+      ["id", "DESC"],
+    ],
+  });
+  if (seasonIds.length != 3 && !reqSeason) {
+    for (const season of seasons) {
+      if (!seasonIds.includes(season.id))
+        seasonIds.push(season.id);
+    }
+  }
+
+  seasonIds = seasonIds.sort((a, b) => a - b).slice(-3);
+
+  let seasonList: any[] = [];
+  let countList: any[] = [];
+
+
+
+
+  for (const countryName of countries) {
+    const data: any = {
+      name: countryName,
+      data: [],
+    };
+    const farmerList = farmerCountList.filter((list: any) =>
+      list.dataValues.countryName == countryName
+    );
+
+    for (const seasonId of seasonIds) {
+
+      let farmerCount = 0;
+      const fFarmerValue = farmerList.find((list: any) =>
+        list.dataValues.seasonId == seasonId
+      );
+
+      if (fFarmerValue) {
+        farmerCount = formatNumber(fFarmerValue.dataValues.farmerCount);
+        if (!seasonList.includes(fFarmerValue.dataValues.seasonName))
+          seasonList.push(fFarmerValue.dataValues.seasonName);
+      }
+      data.data.push(farmerCount);
+    }
+
+    countList.push(data);
+  }
+
+  return {
+    countList,
+    seasonList,
+  };
+};
+
 
 const getFarmerCountByCountry = async (where: any) => {
   const farmerCount = await Farm.findAll({
@@ -895,75 +966,6 @@ const getFarmerCountByCountry = async (where: any) => {
   return farmerCount;
 };
 
-const getSeasonLists = async () => {
-  const seasons = await Season.findAll({
-    limit: 3,
-    order: [
-      ["id", "DESC"],
-    ],
-  });
-
-  return seasons;
-};
-
-const getCountrySeasonsList = async (
-  farmerCountList: any = []
-) => {
-  const countries: string[] = [];
-  let seasonIds: number[] = [];
-  const seasonLists: {
-    name: string,
-    count: number[];
-  }[] = [];
-
-  farmerCountList.forEach((list: any) => {
-    if (!countries.includes(list.dataValues.countryName))
-      countries.push(list.dataValues.countryName);
-
-    if (!seasonIds.includes(list.dataValues.seasonId))
-      seasonIds.push(list.dataValues.seasonId);
-
-  });
-  seasonIds = seasonIds.sort((a, b) => a - b).slice(-3);
-
-  for (const seasonId of seasonIds) {
-    for (const country of countries) {
-
-      const farmerList = farmerCountList.find((list: any) =>
-        list.dataValues.countryName == country && list.dataValues.seasonId == seasonId
-      );
-
-      if (farmerList) {
-        const season = getSeason(seasonLists, farmerList.dataValues.seasonName);
-        season ? season.count.push(Number(farmerList.dataValues.farmerCount))
-          : seasonLists.push({
-            name: farmerList.dataValues.seasonName,
-            count: [(Number(farmerList.dataValues.farmerCount))]
-          });
-      }
-      else {
-        const seasons = await getSeasonLists();
-        const fSeason = seasons.find((season: any) => season.id == seasonId);
-        const season = getSeason(seasonLists, fSeason.dataValues.name);
-        season.count.push(0);
-      }
-    }
-  }
-
-  return {
-    countries,
-    seasonLists,
-  };
-};
-
-const getSeason = (seasonLists: any[], seasonName: any) => {
-  const season = seasonLists.find((list: any) =>
-    list.name == seasonName
-  );
-
-  return season;
-};
-
 const getCountryFarmerArea = async (
   req: Request, res: Response
 ) => {
@@ -972,7 +974,7 @@ const getCountryFarmerArea = async (
     const reqData = await getQueryParams(req, res);
     const where = getOverAllDataQuery(reqData);
     const acresList = await getAreaByCountry(where);
-    const data = await getCountrySeasonsList(acresList);
+    const data = await getCountryAreaRes(acresList, reqData.season);
     return res.sendSuccess(res, data);
 
   } catch (error: any) {
@@ -983,10 +985,79 @@ const getCountryFarmerArea = async (
   }
 };
 
+
+const getCountryAreaRes = async (
+  acresList: any = [],
+  reqSeason: any
+) => {
+  let seasonIds: number[] = [];
+  let countries: number[] = [];
+
+  acresList.forEach((list: any) => {
+    if (!countries.includes(list.dataValues.countryName))
+      countries.push(list.dataValues.countryName);
+
+    if (!seasonIds.includes(list.dataValues.seasonId))
+      seasonIds.push(list.dataValues.seasonId);
+  });
+
+  const seasons = await Season.findAll({
+    limit: 3,
+    order: [
+      ["id", "DESC"],
+    ],
+  });
+  if (seasonIds.length != 3 && !reqSeason) {
+    for (const season of seasons) {
+      if (!seasonIds.includes(season.id))
+        seasonIds.push(season.id);
+    }
+  }
+
+  seasonIds = seasonIds.sort((a, b) => a - b).slice(-3);
+
+  let seasonList: any[] = [];
+  let areaList: any[] = [];
+
+
+  for (const countryName of countries) {
+    const data: any = {
+      name: countryName,
+      data: [],
+    };
+    const farmerList = acresList.filter((list: any) =>
+      list.dataValues.countryName == countryName
+    );
+
+    for (const seasonId of seasonIds) {
+
+      let totalArea = 0;
+      const fFarmerValue = farmerList.find((list: any) =>
+        list.dataValues.seasonId == seasonId
+      );
+
+      if (fFarmerValue) {
+        totalArea = formatNumber(fFarmerValue.dataValues.area);
+        if (!seasonList.includes(fFarmerValue.dataValues.seasonName))
+          seasonList.push(fFarmerValue.dataValues.seasonName);
+      }
+      data.data.push(totalArea);
+    }
+
+    areaList.push(data);
+  }
+
+  return {
+    areaList,
+    seasonList,
+  };
+};
+
+
 const getAreaByCountry = async (where: any) => {
-  const farmerCount = await Farm.findAll({
+  const result = await Farm.findAll({
     attributes: [
-      [Sequelize.fn('sum', Sequelize.col('farms.agri_total_area')), 'farmerCount'],
+      [Sequelize.fn('sum', Sequelize.col('farms.agri_total_area')), 'area'],
       [Sequelize.col('farmer.country.id'), 'countryId'],
       [Sequelize.col('farmer.country.county_name'), 'countryName'],
       [Sequelize.col('season.id'), 'seasonId'],
@@ -1010,7 +1081,216 @@ const getAreaByCountry = async (where: any) => {
     group: ['farmer.country.id', 'season.id']
   });
 
-  return farmerCount;
+  return result;
+};
+
+
+
+const getEstimateCottonByCountry = async (
+  req: Request, res: Response
+) => {
+  try {
+
+    const reqData = await getQueryParams(req, res);
+    const where = getOverAllDataQuery(reqData);
+    const estimatedList = await getEstimateAndProcuredByCountryData(where);
+    const data = await getEstimateCottonRes(estimatedList, reqData.season);
+    return res.sendSuccess(res, data);
+
+  } catch (error: any) {
+    const code = error.errCode
+      ? error.errCode
+      : "ERR_INTERNAL_SERVER_ERROR";
+    return res.sendError(res, code);
+  }
+};
+
+
+const getEstimateCottonRes = async (
+  estimatedList: any = [],
+  reqSeason: any
+) => {
+  let seasonIds: number[] = [];
+  let countries: number[] = [];
+
+  estimatedList.forEach((list: any) => {
+    if (!countries.includes(list.dataValues.countryName))
+      countries.push(list.dataValues.countryName);
+
+    if (!seasonIds.includes(list.dataValues.seasonId))
+      seasonIds.push(list.dataValues.seasonId);
+  });
+
+  const seasons = await Season.findAll({
+    limit: 3,
+    order: [
+      ["id", "DESC"],
+    ],
+  });
+  if (seasonIds.length != 3 && !reqSeason) {
+    for (const season of seasons) {
+      if (!seasonIds.includes(season.id))
+        seasonIds.push(season.id);
+    }
+  }
+
+  seasonIds = seasonIds.sort((a, b) => a - b).slice(-3);
+
+  let seasonList: any[] = [];
+  let areaList: any[] = [];
+
+
+  for (const countryName of countries) {
+    const data: any = {
+      name: countryName,
+      data: [],
+    };
+    const farmerList = estimatedList.filter((list: any) =>
+      list.dataValues.countryName == countryName
+    );
+
+    for (const seasonId of seasonIds) {
+
+      let totalArea = 0;
+      const fFarmerValue = farmerList.find((list: any) =>
+        list.dataValues.seasonId == seasonId
+      );
+
+      if (fFarmerValue) {
+        totalArea = formatNumber(fFarmerValue.dataValues.estimate);
+        if (!seasonList.includes(fFarmerValue.dataValues.seasonName))
+          seasonList.push(fFarmerValue.dataValues.seasonName);
+      }
+      data.data.push(totalArea);
+    }
+
+    areaList.push(data);
+  }
+
+  return {
+    areaList,
+    seasonList,
+  };
+};
+
+
+const getEstimateAndProcuredByCountryData = async (where: any) => {
+  const result = await Farm.findAll({
+    attributes: [
+      [Sequelize.fn('SUM', Sequelize.col('farmer.total_estimated_cotton')), 'estimate'],
+      [Sequelize.fn('SUM', Sequelize.col('farmer.agri_estimated_prod')), 'production'],
+      [Sequelize.col('farmer.country.id'), 'countryId'],
+      [Sequelize.col('farmer.country.county_name'), 'countryName'],
+      [Sequelize.col('season.id'), 'seasonId'],
+      [Sequelize.col('season.name'), 'seasonName']
+    ],
+    include: [{
+      model: Farmer,
+      as: 'farmer',
+      attributes: [],
+      include: [{
+        model: Country,
+        as: 'country',
+        attributes: []
+      }]
+    }, {
+      model: Season,
+      as: 'season',
+      attributes: []
+    }],
+    where,
+    group: ['farmer.country.id', 'season.id']
+  });
+
+  return result;
+};
+
+
+const getProductionCottonByCountry = async (
+  req: Request, res: Response
+) => {
+  try {
+
+    const reqData = await getQueryParams(req, res);
+    const where = getOverAllDataQuery(reqData);
+    const productionList = await getEstimateAndProcuredByCountryData(where);
+    const data = await getProductionCottonRes(productionList, reqData.season);
+    return res.sendSuccess(res, data);
+
+  } catch (error: any) {
+    const code = error.errCode
+      ? error.errCode
+      : "ERR_INTERNAL_SERVER_ERROR";
+    return res.sendError(res, code);
+  }
+};
+
+
+const getProductionCottonRes = async (
+  productionList: any = [],
+  reqSeason: any
+) => {
+  let seasonIds: number[] = [];
+  let countries: number[] = [];
+
+  productionList.forEach((list: any) => {
+    if (!countries.includes(list.dataValues.countryName))
+      countries.push(list.dataValues.countryName);
+
+    if (!seasonIds.includes(list.dataValues.seasonId))
+      seasonIds.push(list.dataValues.seasonId);
+  });
+
+  const seasons = await Season.findAll({
+    limit: 3,
+    order: [
+      ["id", "DESC"],
+    ],
+  });
+  if (seasonIds.length != 3 && !reqSeason) {
+    for (const season of seasons) {
+      if (!seasonIds.includes(season.id))
+        seasonIds.push(season.id);
+    }
+  }
+
+  seasonIds = seasonIds.sort((a, b) => a - b).slice(-3);
+
+  let seasonList: any[] = [];
+  let areaList: any[] = [];
+
+
+  for (const countryName of countries) {
+    const data: any = {
+      name: countryName,
+      data: [],
+    };
+    const farmerList = productionList.filter((list: any) =>
+      list.dataValues.countryName == countryName
+    );
+
+    for (const seasonId of seasonIds) {
+
+      let totalArea = 0;
+      const fFarmerValue = farmerList.find((list: any) =>
+        list.dataValues.seasonId == seasonId
+      );
+
+      if (fFarmerValue) {
+        totalArea = formatNumber(fFarmerValue.dataValues.production);
+        if (!seasonList.includes(fFarmerValue.dataValues.seasonName))
+          seasonList.push(fFarmerValue.dataValues.seasonName);
+      }
+      data.data.push(totalArea);
+    }
+
+    areaList.push(data);
+  }
+
+  return {
+    areaList,
+    seasonList,
+  };
 };
 
 export {
@@ -1023,5 +1303,7 @@ export {
   farmerAllData,
   getFarmersByCountry,
   getCountryFarmerCount,
-  getCountryFarmerArea
+  getCountryFarmerArea,
+  getEstimateCottonByCountry,
+  getProductionCottonByCountry
 };
