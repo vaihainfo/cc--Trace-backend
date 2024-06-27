@@ -1161,6 +1161,11 @@ const generatePscpProcurementLiveTracker = async () => {
             as: "state",
             attributes: ["id", "state_name"],
           },
+          {
+            model: Country,
+            as: "country",
+            attributes: ["id", "county_name"],
+          }
         ],
         offset: offset,
         limit: 5000
@@ -1363,6 +1368,7 @@ const generatePscpProcurementLiveTracker = async () => {
               },
             });
 
+            obj.country = ginner?.dataValues?.country;
             obj.state = ginner?.dataValues?.state;
             obj.program = await Program.findOne({
               attributes: ["id", "program_name"],
@@ -1427,6 +1433,7 @@ const generatePscpProcurementLiveTracker = async () => {
         const rowValues = Object.values({
           index: index + 1,
           name: obj?.ginner ? obj.ginner.name : "",
+          country: obj.country ? obj.country?.county_name : "",
           state: obj.state ? obj.state?.state_name : "",
           program: obj.program ? obj.program?.program_name : "",
           expected_seed_cotton: Number(obj.expected_seed_cotton) ?? 0,
@@ -1464,6 +1471,7 @@ const generatePscpProcurementLiveTracker = async () => {
           const headerRow = currentWorksheet.addRow([
             "Sr No.",
             "Ginning Mill",
+            "Country",
             "State",
             "Program",
             "Expected Seed Cotton (KG)",
