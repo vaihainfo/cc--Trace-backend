@@ -12,6 +12,8 @@ import Weaver from "../../models/weaver.model";
 import { Op } from "sequelize";
 import moment from "moment";
 import YarnCount from "../../models/yarn-count.model";
+import Country from "../../models/country.model";
+import sequelize from "../../util/dbConn";
 
 const getQueryParams = async (
   req: Request, res: Response
@@ -1049,6 +1051,1049 @@ const getYarnTypeData = async (
 
 };
 
+const getYarnProcessedStock = async (
+  req: Request, res: Response
+) => {
+  try {
+    const reqData = await getQueryParams(req, res);
+    const where = getSpinnerProcessWhereQuery(reqData);
+    const processedData = await getYarnProcuredData(where);
+    const soldData = await getYarnSoldData(where);
+    const data = await getYarnProcuredStockRes(
+      processedData,
+      soldData,
+      reqData.season
+    );
+    return res.sendSuccess(res, data);
+
+  } catch (error: any) {
+    const code = error.errCode
+      ? error.errCode
+      : "ERR_INTERNAL_SERVER_ERROR";
+    return res.sendError(res, code);
+  }
+};
+
+const getYarnProcuredStockRes = async (
+  procuredData: any[],
+  soldData: any[],
+  reqSeason: any
+) => {
+  let seasonIds: number[] = [];
+
+  procuredData.forEach((procured: any) => {
+    if (procured.dataValues.seasonId)
+      seasonIds.push(procured.dataValues.seasonId);
+  });
+
+  soldData.forEach((sold: any) => {
+    if (!seasonIds.includes(sold.dataValues.seasonId))
+      seasonIds.push(sold.dataValues.seasonId);
+  });
+
+  const seasons = await Season.findAll({
+    limit: 3,
+    order: [
+      ["id", "DESC"],
+    ],
+  });
+  if (seasonIds.length != 3 && !reqSeason) {
+    for (const season of seasons) {
+      if (!seasonIds.includes(season.id))
+        seasonIds.push(season.id);
+    }
+  }
+
+  seasonIds = seasonIds.sort((a, b) => a - b).slice(-3);
+
+  let season: any = [];
+  let yarnProcessed: any = [];
+  let yarnStock: any = [];
+
+  for (const sessionId of seasonIds) {
+    const fProcured = procuredData.find((procured: any) =>
+      procured.dataValues.seasonId == sessionId
+    );
+    const fSold = soldData.find((sold: any) =>
+      sold.dataValues.seasonId == sessionId
+    );
+    let data = {
+      seasonName: '',
+      yarnProcessed: 0,
+      yarnStock: 0
+    };
+    if (fProcured) {
+      data.seasonName = fProcured.dataValues.seasonName;
+      data.yarnProcessed = formatNumber(fProcured.dataValues.yarnProcured);
+    }
+
+    if (fSold) {
+      data.seasonName = fSold.dataValues.seasonName;
+      data.yarnStock = data.yarnProcessed > fSold.dataValues.yarnSold
+        ? formatNumber((formatNumber(fProcured.dataValues.yarnProcured) - formatNumber(fSold.dataValues.yarnSold)).toFixed(2))
+        : 0;
+    }
+
+    if (!data.seasonName) {
+      const fSeason = seasons.find((season: any) =>
+        season.id == sessionId
+      );
+      if (fSeason) {
+        data.seasonName = fSeason.name;
+      }
+    }
+
+
+    season.push(data.seasonName);
+    yarnProcessed.push(data.yarnProcessed);
+    yarnStock.push(data.yarnStock);
+  }
+
+  return {
+    season,
+    yarnProcessed,
+    yarnStock
+  };
+};
+
+const getTopYarnProcessed = async (
+  req: Request, res: Response
+) => {
+  try {
+    const reqData = await getQueryParams(req, res);
+    const spinnersData = await getTopYarnProcessedData(reqData);
+    const data = getTopYarnProcessedRes(spinnersData);
+    return res.sendSuccess(res, data);
+
+  } catch (error: any) {
+    const code = error.errCode
+      ? error.errCode
+      : "ERR_INTERNAL_SERVER_ERROR";
+    return res.sendError(res, code);
+  }
+};
+
+const getTopYarnProcessedRes = (
+  list: any[]
+) => {
+  const spinners: string[] = [];
+  const processed: number[] = [];
+  for (const row of list) {
+    if (row.dataValues && row.dataValues.spinnerName) {
+      spinners.push(row.dataValues.spinnerName);
+      processed.push(formatNumber(row.dataValues.processed));
+    }
+  }
+
+  return {
+    spinners,
+    processed
+  };
+};
+
+const getTopYarnProcessedData = async (
+  reqData: any
+) => {
+  const where: any = {
+
+  };
+
+  if (reqData?.country)
+    where['$spinner.country_id$'] = reqData.country;
+
+  where['$spinner.name$'] = {
+    [Op.not]: null
+  };
+
+  const result = await SpinProcess.findAll({
+    attributes: [
+      [Sequelize.fn('SUM', Sequelize.col('net_yarn_qty')), 'processed'],
+      [Sequelize.col('spinner.name'), 'spinnerName']
+    ],
+    include: [{
+      model: Spinner,
+      as: 'spinner',
+      attributes: []
+    }],
+    where,
+    order: [['processed', 'desc']],
+    limit: 10,
+    group: ['spinner.id']
+  });
+
+  return result;
+
+};
+
+const getTopYarnSold = async (
+  req: Request, res: Response
+) => {
+  try {
+    const reqData = await getQueryParams(req, res);
+    const spinnersData = await getTopYarnSoldData(reqData);
+    const data = getTopYarnSoldRes(spinnersData);
+    return res.sendSuccess(res, data);
+
+  } catch (error: any) {
+    const code = error.errCode
+      ? error.errCode
+      : "ERR_INTERNAL_SERVER_ERROR";
+    return res.sendError(res, code);
+  }
+};
+
+const getTopYarnSoldRes = (
+  list: any[]
+) => {
+  const spinners: string[] = [];
+  const sold: number[] = [];
+  for (const row of list) {
+    if (row.dataValues && row.dataValues.spinnerName) {
+      spinners.push(row.dataValues.spinnerName);
+      sold.push(formatNumber(row.dataValues.sold));
+    }
+  }
+
+  return {
+    spinners,
+    sold
+  };
+};
+
+const getTopYarnSoldData = async (
+  reqData: any
+) => {
+  const where: any = {
+
+  };
+
+  if (reqData?.country)
+    where['$spinner.country_id$'] = reqData.country;
+
+  where['$spinner.name$'] = {
+    [Op.not]: null
+  };
+
+  const result = await SpinSales.findAll({
+    attributes: [
+      [Sequelize.fn('SUM', Sequelize.col('total_qty')), 'sold'],
+      [Sequelize.col('spinner.name'), 'spinnerName']
+    ],
+    include: [{
+      model: Spinner,
+      as: 'spinner',
+      attributes: []
+    }],
+    where,
+    order: [['sold', 'desc']],
+    limit: 10,
+    group: ['spinner.id']
+  });
+
+  return result;
+
+};
+
+const getTopYarnStock = async (
+  req: Request, res: Response
+) => {
+  try {
+    const reqData = await getQueryParams(req, res);
+    const spinnersData = await getTopYarnStockData(reqData);
+    const data = getTopYarnStockRes(spinnersData);
+    return res.sendSuccess(res, data);
+
+  } catch (error: any) {
+    const code = error.errCode
+      ? error.errCode
+      : "ERR_INTERNAL_SERVER_ERROR";
+    return res.sendError(res, code);
+  }
+};
+
+const getTopYarnStockRes = (
+  list: any[]
+) => {
+  const spinners: string[] = [];
+  const stock: number[] = [];
+  for (const row of list) {
+    if (row && row.spinnerName) {
+      spinners.push(row.spinnerName);
+      stock.push(formatNumber(row.stock));
+    }
+  }
+
+  return {
+    spinners,
+    stock
+  };
+};
+
+const getTopYarnStockData = async (
+  reqData: any
+) => {
+
+  const [result] = await sequelize.query(`
+    select sn.name                                  as "spinnerName",
+           sum(sp.net_yarn_qty) - sum(ss.total_qty) as stock
+    from public.spinners sn
+        left join public.spin_processes sp on sn.id = sp.spinner_id
+        left join public.spin_sales ss on sn.id = ss.spinner_id
+    where sn.name is not null ${reqData?.country ? " and g.country_id = reqData?.country" : ""}
+    group by sn.id
+    order by stock desc nulls last
+    limit 10
+  `);
+
+  return result;
+
+};
+
+const getLintProcessedByCountry = async (
+  req: Request, res: Response
+) => {
+  try {
+
+    const reqData = await getQueryParams(req, res);
+    const where = getSpinnerProcessWhereQuery(reqData);
+    const processedData = await getLintProcessedByCountryData(where);
+    const data = await getLintProcessedByCountryDataRes(processedData, reqData.season);
+    return res.sendSuccess(res, data);
+
+  } catch (error: any) {
+    const code = error.errCode
+      ? error.errCode
+      : "ERR_INTERNAL_SERVER_ERROR";
+    return res.sendError(res, code);
+  }
+};
+
+
+const getLintProcessedByCountryData = async (where: any) => {
+  const result = await SpinProcess.findAll({
+    attributes: [
+      [Sequelize.fn('SUM', Sequelize.col('total_qty')), 'processed'],
+      [Sequelize.col('spinner.country.id'), 'countryId'],
+      [Sequelize.col('spinner.country.county_name'), 'countryName'],
+      [Sequelize.col('season.id'), 'seasonId'],
+      [Sequelize.col('season.name'), 'seasonName']
+    ],
+    include: [{
+      model: Spinner,
+      as: 'spinner',
+      attributes: [],
+      include: [{
+        model: Country,
+        as: 'country',
+        attributes: []
+      }]
+    }, {
+      model: Season,
+      as: 'season',
+      attributes: []
+    }],
+    where,
+    group: ['spinner.country.id', 'season.id']
+  });
+
+  return result;
+};
+
+
+const getLintProcessedByCountryDataRes = async (
+  processedCountList: any = [],
+  reqSeason: any
+) => {
+  let seasonIds: number[] = [];
+  let countries: number[] = [];
+
+  processedCountList.forEach((list: any) => {
+    if (!countries.includes(list.dataValues.countryName))
+      countries.push(list.dataValues.countryName);
+
+    if (!seasonIds.includes(list.dataValues.seasonId))
+      seasonIds.push(list.dataValues.seasonId);
+  });
+
+  const seasons = await Season.findAll({
+    limit: 3,
+    order: [
+      ["id", "DESC"],
+    ],
+  });
+  if (seasonIds.length != 3 && !reqSeason) {
+    for (const season of seasons) {
+      if (!seasonIds.includes(season.id))
+        seasonIds.push(season.id);
+    }
+  }
+
+  seasonIds = seasonIds.sort((a, b) => a - b).slice(-3);
+
+  let seasonList: any[] = [];
+  let processedList: any[] = [];
+
+
+
+
+  for (const countryName of countries) {
+    const data: any = {
+      name: countryName,
+      data: [],
+    };
+    const farmerList = processedCountList.filter((list: any) =>
+      list.dataValues.countryName == countryName
+    );
+
+    for (const seasonId of seasonIds) {
+
+      let processedCount = 0;
+      const fFarmerValue = farmerList.find((list: any) =>
+        list.dataValues.seasonId == seasonId
+      );
+
+      if (fFarmerValue) {
+        processedCount = formatNumber(fFarmerValue.dataValues.processed);
+        if (!seasonList.includes(fFarmerValue.dataValues.seasonName))
+          seasonList.push(fFarmerValue.dataValues.seasonName);
+      } else {
+        const season = seasons.find((season: any) => season.dataValues.id == seasonId);
+        if (!seasonList.includes(season.dataValues.name))
+          seasonList.push(season.dataValues.name);
+      }
+      data.data.push(processedCount);
+    }
+
+    processedList.push(data);
+  }
+
+  return {
+    processedList,
+    seasonList,
+  };
+};
+
+const getLintSoldByCountry = async (
+  req: Request, res: Response
+) => {
+  try {
+
+    const reqData = await getQueryParams(req, res);
+    const where = getSpinnerProcessWhereQuery(reqData);
+    const soldList = await getLintSoldByCountryData(where);
+    const data = await getLintSoldByCountryRes(soldList, reqData.season);
+    return res.sendSuccess(res, data);
+
+  } catch (error: any) {
+    const code = error.errCode
+      ? error.errCode
+      : "ERR_INTERNAL_SERVER_ERROR";
+    return res.sendError(res, code);
+  }
+};
+
+
+const getLintSoldByCountryData = async (where: any) => {
+  const result = await SpinSales.findAll({
+    attributes: [
+      [Sequelize.fn('SUM', Sequelize.col('no_of_boxes')), 'sold'],
+      [Sequelize.col('spinner.country.id'), 'countryId'],
+      [Sequelize.col('spinner.country.county_name'), 'countryName'],
+      [Sequelize.col('season.id'), 'seasonId'],
+      [Sequelize.col('season.name'), 'seasonName']
+    ],
+    include: [{
+      model: Spinner,
+      as: 'spinner',
+      attributes: [],
+      include: [{
+        model: Country,
+        as: 'country',
+        attributes: []
+      }]
+    }, {
+      model: Season,
+      as: 'season',
+      attributes: []
+    }],
+    where,
+    group: ['spinner.country.id', 'season.id']
+  });
+
+  return result;
+};
+
+
+const getLintSoldByCountryRes = async (
+  soldCountList: any = [],
+  reqSeason: any
+) => {
+  let seasonIds: number[] = [];
+  let countries: number[] = [];
+
+  soldCountList.forEach((list: any) => {
+    if (!countries.includes(list.dataValues.countryName))
+      countries.push(list.dataValues.countryName);
+
+    if (!seasonIds.includes(list.dataValues.seasonId))
+      seasonIds.push(list.dataValues.seasonId);
+  });
+
+  const seasons = await Season.findAll({
+    limit: 3,
+    order: [
+      ["id", "DESC"],
+    ],
+  });
+  if (seasonIds.length != 3 && !reqSeason) {
+    for (const season of seasons) {
+      if (!seasonIds.includes(season.id))
+        seasonIds.push(season.id);
+    }
+  }
+
+  seasonIds = seasonIds.sort((a, b) => a - b).slice(-3);
+
+  let seasonList: any[] = [];
+  let soldList: any[] = [];
+
+
+  for (const countryName of countries) {
+    const data: any = {
+      name: countryName,
+      data: [],
+    };
+    const lSoldList = soldCountList.filter((list: any) =>
+      list.dataValues.countryName == countryName
+    );
+
+    for (const seasonId of seasonIds) {
+
+      let totalSold = 0;
+      const gSoldValue = lSoldList.find((list: any) =>
+        list.dataValues.seasonId == seasonId
+      );
+
+      if (gSoldValue) {
+        totalSold = formatNumber(gSoldValue.dataValues.sold);
+        if (!seasonList.includes(gSoldValue.dataValues.seasonName))
+          seasonList.push(gSoldValue.dataValues.seasonName);
+      }
+      else {
+        const season = seasons.find((season: any) => season.dataValues.id == seasonId);
+        if (!seasonList.includes(season.dataValues.name))
+          seasonList.push(season.dataValues.name);
+      }
+      data.data.push(totalSold);
+    }
+
+    soldList.push(data);
+  }
+
+  return {
+    soldList,
+    seasonList,
+  };
+};
+
+const getYarnProcessedByCountry = async (
+  req: Request, res: Response
+) => {
+  try {
+
+    const reqData = await getQueryParams(req, res);
+    const where = getSpinnerProcessWhereQuery(reqData);
+    const processedList = await getYarnProcessedByCountryData(where);
+    const data = await getYarnProcessedByCountryRes(processedList, reqData.season);
+    return res.sendSuccess(res, data);
+
+  } catch (error: any) {
+    const code = error.errCode
+      ? error.errCode
+      : "ERR_INTERNAL_SERVER_ERROR";
+    return res.sendError(res, code);
+  }
+};
+
+
+const getYarnProcessedByCountryData = async (where: any) => {
+  const result = await SpinProcess.findAll({
+    attributes: [
+      [Sequelize.fn('SUM', Sequelize.col('net_yarn_qty')), 'processed'],
+      [Sequelize.col('spinner.country.id'), 'countryId'],
+      [Sequelize.col('spinner.country.county_name'), 'countryName'],
+      [Sequelize.col('season.id'), 'seasonId'],
+      [Sequelize.col('season.name'), 'seasonName']
+    ],
+    include: [{
+      model: Spinner,
+      as: 'spinner',
+      attributes: [],
+      include: [{
+        model: Country,
+        as: 'country',
+        attributes: []
+      }]
+    }, {
+      model: Season,
+      as: 'season',
+      attributes: []
+    }],
+    where,
+    group: ['spinner.country.id', 'season.id']
+  });
+
+  return result;
+};
+
+
+const getYarnProcessedByCountryRes = async (
+  processedCountList: any = [],
+  reqSeason: any
+) => {
+  let seasonIds: number[] = [];
+  let countries: number[] = [];
+
+  processedCountList.forEach((list: any) => {
+    if (!countries.includes(list.dataValues.countryName))
+      countries.push(list.dataValues.countryName);
+
+    if (!seasonIds.includes(list.dataValues.seasonId))
+      seasonIds.push(list.dataValues.seasonId);
+  });
+
+  const seasons = await Season.findAll({
+    limit: 3,
+    order: [
+      ["id", "DESC"],
+    ],
+  });
+  if (seasonIds.length != 3 && !reqSeason) {
+    for (const season of seasons) {
+      if (!seasonIds.includes(season.id))
+        seasonIds.push(season.id);
+    }
+  }
+
+  seasonIds = seasonIds.sort((a, b) => a - b).slice(-3);
+
+  let seasonList: any[] = [];
+  let processedList: any[] = [];
+
+
+  for (const countryName of countries) {
+    const data: any = {
+      name: countryName,
+      data: [],
+    };
+    const fProcessedList = processedCountList.filter((list: any) =>
+      list.dataValues.countryName == countryName
+    );
+
+    for (const seasonId of seasonIds) {
+
+      let totalProcessed = 0;
+      const gSoldValue = fProcessedList.find((list: any) =>
+        list.dataValues.seasonId == seasonId
+      );
+
+      if (gSoldValue) {
+        totalProcessed = formatNumber(gSoldValue.dataValues.processed);
+        if (!seasonList.includes(gSoldValue.dataValues.seasonName))
+          seasonList.push(gSoldValue.dataValues.seasonName);
+      }
+      else {
+        const season = seasons.find((season: any) => season.dataValues.id == seasonId);
+        if (!seasonList.includes(season.dataValues.name))
+          seasonList.push(season.dataValues.name);
+      }
+      data.data.push(totalProcessed);
+    }
+
+    processedList.push(data);
+  }
+
+  return {
+    processedList,
+    seasonList,
+  };
+};
+
+const getYarnSoldByCountry = async (
+  req: Request, res: Response
+) => {
+  try {
+
+    const reqData = await getQueryParams(req, res);
+    const where = getSpinnerProcessWhereQuery(reqData);
+    const processedList = await getYarnSoldByCountryData(where);
+    const data = await getYarnSoldByCountryRes(processedList, reqData.season);
+    return res.sendSuccess(res, data);
+
+  } catch (error: any) {
+    const code = error.errCode
+      ? error.errCode
+      : "ERR_INTERNAL_SERVER_ERROR";
+    return res.sendError(res, code);
+  }
+};
+
+
+const getYarnSoldByCountryData = async (where: any) => {
+  const result = await SpinProcess.findAll({
+    attributes: [
+      [Sequelize.fn('SUM', Sequelize.col('total_qty')), 'sold'],
+      [Sequelize.col('spinner.country.id'), 'countryId'],
+      [Sequelize.col('spinner.country.county_name'), 'countryName'],
+      [Sequelize.col('season.id'), 'seasonId'],
+      [Sequelize.col('season.name'), 'seasonName']
+    ],
+    include: [{
+      model: Spinner,
+      as: 'spinner',
+      attributes: [],
+      include: [{
+        model: Country,
+        as: 'country',
+        attributes: []
+      }]
+    }, {
+      model: Season,
+      as: 'season',
+      attributes: []
+    }],
+    where,
+    group: ['spinner.country.id', 'season.id']
+  });
+
+  return result;
+};
+
+
+const getYarnSoldByCountryRes = async (
+  soldCountList: any = [],
+  reqSeason: any
+) => {
+  let seasonIds: number[] = [];
+  let countries: number[] = [];
+
+  soldCountList.forEach((list: any) => {
+    if (!countries.includes(list.dataValues.countryName))
+      countries.push(list.dataValues.countryName);
+
+    if (!seasonIds.includes(list.dataValues.seasonId))
+      seasonIds.push(list.dataValues.seasonId);
+  });
+
+  const seasons = await Season.findAll({
+    limit: 3,
+    order: [
+      ["id", "DESC"],
+    ],
+  });
+  if (seasonIds.length != 3 && !reqSeason) {
+    for (const season of seasons) {
+      if (!seasonIds.includes(season.id))
+        seasonIds.push(season.id);
+    }
+  }
+
+  seasonIds = seasonIds.sort((a, b) => a - b).slice(-3);
+
+  let seasonList: any[] = [];
+  let soldList: any[] = [];
+
+
+  for (const countryName of countries) {
+    const data: any = {
+      name: countryName,
+      data: [],
+    };
+    const fSoldList = soldCountList.filter((list: any) =>
+      list.dataValues.countryName == countryName
+    );
+
+    for (const seasonId of seasonIds) {
+
+      let totalSold = 0;
+      const gSoldValue = fSoldList.find((list: any) =>
+        list.dataValues.seasonId == seasonId
+      );
+
+      if (gSoldValue) {
+        totalSold = formatNumber(gSoldValue.dataValues.sold);
+        if (!seasonList.includes(gSoldValue.dataValues.seasonName))
+          seasonList.push(gSoldValue.dataValues.seasonName);
+      }
+      else {
+        const season = seasons.find((season: any) => season.dataValues.id == seasonId);
+        if (!seasonList.includes(season.dataValues.name))
+          seasonList.push(season.dataValues.name);
+      }
+      data.data.push(totalSold);
+    }
+
+    soldList.push(data);
+  }
+
+  return {
+    soldList,
+    seasonList,
+  };
+};
+
+const getYarnProducedByCountry = async (
+  req: Request, res: Response
+) => {
+  try {
+
+    const reqData = await getQueryParams(req, res);
+    const where = getSpinnerProcessWhereQuery(reqData);
+    const producedList = await getYarnProducedByCountryData(where);
+    const data = await getYarnProducedByCountryRes(producedList, reqData.season);
+    return res.sendSuccess(res, data);
+
+  } catch (error: any) {
+    const code = error.errCode
+      ? error.errCode
+      : "ERR_INTERNAL_SERVER_ERROR";
+    return res.sendError(res, code);
+  }
+};
+
+
+const getYarnProducedByCountryData = async (where: any) => {
+  const result = await SpinProcess.findAll({
+    attributes: [
+      [Sequelize.col('yarn_qty_produced'), 'produced'],
+      [Sequelize.col('spinner.country.id'), 'countryId'],
+      [Sequelize.col('spinner.country.county_name'), 'countryName'],
+      [Sequelize.col('season.id'), 'seasonId'],
+      [Sequelize.col('season.name'), 'seasonName']
+    ],
+    include: [{
+      model: Spinner,
+      as: 'spinner',
+      attributes: [],
+      include: [{
+        model: Country,
+        as: 'country',
+        attributes: []
+      }]
+    }, {
+      model: Season,
+      as: 'season',
+      attributes: []
+    }],
+    where,
+    group: ['spinner.country.id', 'season.id', 'spin_processes.id']
+  });
+
+  return result;
+};
+
+
+const getYarnProducedByCountryRes = async (
+  producedCountList: any = [],
+  reqSeason: any
+) => {
+  let seasonIds: number[] = [];
+  let countries: number[] = [];
+
+  producedCountList.forEach((list: any) => {
+    if (!countries.includes(list.dataValues.countryName))
+      countries.push(list.dataValues.countryName);
+
+    if (!seasonIds.includes(list.dataValues.seasonId))
+      seasonIds.push(list.dataValues.seasonId);
+  });
+
+  const seasons = await Season.findAll({
+    limit: 3,
+    order: [
+      ["id", "DESC"],
+    ],
+  });
+  if (seasonIds.length != 3 && !reqSeason) {
+    for (const season of seasons) {
+      if (!seasonIds.includes(season.id))
+        seasonIds.push(season.id);
+    }
+  }
+
+  seasonIds = seasonIds.sort((a, b) => a - b).slice(-3);
+
+  let seasonList: any[] = [];
+  let producedList: any[] = [];
+
+
+  for (const countryName of countries) {
+    const data: any = {
+      name: countryName,
+      data: [],
+    };
+    const fProducedList = producedCountList.filter((list: any) =>
+      list.dataValues.countryName == countryName
+    );
+
+    for (const seasonId of seasonIds) {
+
+      let totalProduced = 0;
+      const gProducedValue = fProducedList.find((list: any) =>
+        list.dataValues.seasonId == seasonId
+      );
+
+      if (gProducedValue) {
+        totalProduced = formatNumber(gProducedValue.dataValues.produced.reduce((fValue: any, sValue: any) => fValue + sValue));
+        if (!seasonList.includes(gProducedValue.dataValues.seasonName))
+          seasonList.push(gProducedValue.dataValues.seasonName);
+      }
+      else {
+        const season = seasons.find((season: any) => season.dataValues.id == seasonId);
+        if (!seasonList.includes(season.dataValues.name))
+          seasonList.push(season.dataValues.name);
+      }
+      data.data.push(totalProduced);
+    }
+
+    producedList.push(data);
+  }
+
+  return {
+    producedList,
+    seasonList,
+  };
+};
+
+
+const getYarnStockByCountry = async (
+  req: Request, res: Response
+) => {
+  try {
+    const reqData = await getQueryParams(req, res);
+    const where = getSpinnerProcessWhereQuery(reqData);
+    const processedData = await getYarnProcessedByCountryData(where);
+    const soldData = await getYarnSoldByCountryData(where);
+    const data = await getYarnStockByCountryRes(
+      processedData,
+      soldData,
+      reqData.season
+    );
+    return res.sendSuccess(res, data);
+
+  } catch (error: any) {
+    const code = error.errCode
+      ? error.errCode
+      : "ERR_INTERNAL_SERVER_ERROR";
+    return res.sendError(res, code);
+  }
+};
+
+
+const getYarnStockByCountryRes = async (
+  processedCountData: any[],
+  soldCountData: any[],
+  reqSeason: any
+) => {
+  let seasonIds: number[] = [];
+  let countries: number[] = [];
+
+  processedCountData.forEach((list: any) => {
+    if (!countries.includes(list.dataValues.countryName))
+      countries.push(list.dataValues.countryName);
+
+    if (!seasonIds.includes(list.dataValues.seasonId))
+      seasonIds.push(list.dataValues.seasonId);
+  });
+
+  soldCountData.forEach((list: any) => {
+    if (!countries.includes(list.dataValues.countryName))
+      countries.push(list.dataValues.countryName);
+
+    if (!seasonIds.includes(list.dataValues.seasonId))
+      seasonIds.push(list.dataValues.seasonId);
+  });
+
+  const seasons = await Season.findAll({
+    limit: 3,
+    order: [
+      ["id", "DESC"],
+    ],
+  });
+  if (seasonIds.length != 3 && !reqSeason) {
+    for (const season of seasons) {
+      if (!seasonIds.includes(season.id))
+        seasonIds.push(season.id);
+    }
+  }
+
+  seasonIds = seasonIds.sort((a, b) => a - b).slice(-3);
+
+  let seasonList: any[] = [];
+  let stockList: any[] = [];
+
+
+  for (const countryName of countries) {
+    const data: any = {
+      name: countryName,
+      data: [],
+    };
+    const fProcessedList = processedCountData.filter((list: any) =>
+      list.dataValues.countryName == countryName
+    );
+
+    const fSoldList = soldCountData.filter((list: any) =>
+      list.dataValues.countryName == countryName
+    );
+
+    for (const seasonId of seasonIds) {
+
+      let totalStock = {
+        processed: 0,
+        sold: 0,
+      };
+
+      const gProducedValue = fProcessedList.find((list: any) =>
+        list.dataValues.seasonId == seasonId
+      );
+
+      const gSoldValue = fSoldList.find((list: any) =>
+        list.dataValues.seasonId == seasonId
+      );
+
+      if (gProducedValue) {
+        totalStock.processed = formatNumber(gProducedValue.dataValues.processed);
+        if (!seasonList.includes(gProducedValue.dataValues.seasonName))
+          seasonList.push(gProducedValue.dataValues.seasonName);
+      }
+      else {
+        const season = seasons.find((season: any) => season.dataValues.id == seasonId);
+        if (!seasonList.includes(season.dataValues.name))
+          seasonList.push(season.dataValues.name);
+      }
+
+      if (gSoldValue) {
+        totalStock.sold = formatNumber(gSoldValue.dataValues.sold);
+        if (!seasonList.includes(gSoldValue.dataValues.seasonName))
+          seasonList.push(gSoldValue.dataValues.seasonName);
+      }
+      else {
+        const season = seasons.find((season: any) => season.dataValues.id == seasonId);
+        if (!seasonList.includes(season.dataValues.name))
+          seasonList.push(season.dataValues.name);
+      }
+
+      data.data.push(totalStock.processed > totalStock.sold ? totalStock.processed - totalStock.sold : 0);
+    }
+
+    stockList.push(data);
+  }
+
+  return {
+    stockList,
+    seasonList,
+  };
+};
 
 const getMonthDate = (
   from: string,
@@ -1087,5 +2132,15 @@ export {
   getDataAll,
   getTopFabric,
   getTopYarnCount,
-  getYarnType
+  getYarnType,
+  getYarnProcessedStock,
+  getTopYarnProcessed,
+  getTopYarnSold,
+  getTopYarnStock,
+  getLintProcessedByCountry,
+  getLintSoldByCountry,
+  getYarnProcessedByCountry,
+  getYarnSoldByCountry,
+  getYarnProducedByCountry,
+  getYarnStockByCountry
 };
