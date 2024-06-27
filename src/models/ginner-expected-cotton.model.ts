@@ -2,6 +2,7 @@ import { DataTypes  } from 'sequelize';
 import db  from '../util/dbConn';
 
 import Ginner from './ginner.model';
+import Season from './season.model';
 
 const GinnerExpectedCotton = db.define('ginner_expected_cottons',{
   id: {
@@ -41,6 +42,11 @@ const GinnerExpectedCotton = db.define('ginner_expected_cottons',{
 GinnerExpectedCotton.belongsTo(Ginner, {
   foreignKey: "ginner_id",
   as: "ginner_expected_cotton",
+});
+
+GinnerExpectedCotton.belongsTo(Season, {
+  foreignKey: "season_id",
+  as: "season",
 });
 
 GinnerExpectedCotton.sync();
