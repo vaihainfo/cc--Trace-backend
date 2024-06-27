@@ -1133,9 +1133,7 @@ const getProcessedEstimatedProcessedCottonRes = async (
   seasonIds = seasonIds.sort((a, b) => a - b).slice(-3);
 
   let seasonList: any[] = [];
-  let processedData: any[] = [];
-  let estimatedData: any[] = [];
-  let procuredData: any[] = [];
+  let overAllData: any[] = [];
 
 
   for (const countryName of countries) {
@@ -1155,7 +1153,11 @@ const getProcessedEstimatedProcessedCottonRes = async (
 
     for (const seasonId of seasonIds) {
 
-      let totalArea = 0;
+      let countryCount = {
+        estimated: 0,
+        procured: 0,
+        processed: 0,
+      };
       
       const fProcessed = farmerProcessedList.find((list: any) =>
         list.dataValues.seasonId == seasonId
@@ -1168,18 +1170,30 @@ const getProcessedEstimatedProcessedCottonRes = async (
       );
 
       if (fProcessed) {
-        totalArea = formatNumber(fProcessed.dataValues.processed);
+        countryCount.processed = formatNumber(fProcessed.dataValues.processed);
         if (!seasonList.includes(fProcessed.dataValues.seasonName))
           seasonList.push(fProcessed.dataValues.seasonName);
       }
-      data.data.push(totalArea);
+      if (fProcured) {
+        countryCount.procured = formatNumber(fProcured.dataValues.procured);
+        if (!seasonList.includes(fProcured.dataValues.seasonName))
+          seasonList.push(fProcured.dataValues.seasonName);
+      }
+      if (fEstimate) {
+        countryCount.estimated = formatNumber(fEstimate.dataValues.estimate);
+        if (!seasonList.includes(fEstimate.dataValues.seasonName))
+          seasonList.push(fEstimate.dataValues.seasonName);
+      }
+      data.data.push(countryCount.estimated);
+      data.data.push(countryCount.procured);
+      data.data.push(countryCount.processed);
     }
 
-    processedData.push(data);
+    overAllData.push(data);
   }
 
   return {
-    areaList: processedData,
+    overAllData,
     seasonList,
   };
 };
