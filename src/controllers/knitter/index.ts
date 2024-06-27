@@ -1180,7 +1180,7 @@ const fetchKnitterDashBoard = async (req: Request, res: Response) => {
       const { count, rows } = await SpinSales.findAndCountAll({
         where: whereCondition,
         include: include,
-        order: [["id", "desc"]],
+        order: [["createdAt", "desc"]],
         offset: offset,
         limit: limit,
       });
@@ -1206,7 +1206,7 @@ const fetchKnitterDashBoard = async (req: Request, res: Response) => {
       const gin = await SpinSales.findAll({
         where: whereCondition,
         include: include,
-        order: [["id", "desc"]],
+        order: [["createdAt", "desc"]],
       });
       let data = [];
 
@@ -1376,7 +1376,7 @@ const getSpinnerAndProgram = async (req: Request, res: Response) => {
         {
           model: Season,
           as: "season",
-          attributes: ["id", "name"],
+          attributes: ["id", "name", "from", "to"],
         },
       ],
       group: ["season_id", "season.id"],

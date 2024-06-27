@@ -329,7 +329,8 @@ const fetchAgentTransactions = async (req: Request, res: Response) => {
                 .map((id) => parseInt(id, 10));
             whereCondition.mapped_ginner = { [Op.in]: idArray };
         }
-        whereCondition.agent_id = { [Op.not]: null };
+       
+        whereCondition.agent_id = { [Op.not]: null, [Op.ne]: 0 };
 
         if (agentId) {
             const idArray: number[] = agentId
@@ -587,7 +588,7 @@ const exportAgentTransactions = async (req: Request, res: Response) => {
                     .map((id) => parseInt(id, 10));
                 whereCondition.mapped_ginner = { [Op.in]: idArray };
             }
-            whereCondition.agent_id = { [Op.not]: null };
+            whereCondition.agent_id = { [Op.not]: null, [Op.ne]: 0 };
 
 
             if (agentId) {

@@ -1269,7 +1269,7 @@ const exportSpinnerSale = async (req: Request, res: Response) => {
                 yarnType: yarnTypeData ? yarnTypeData : '',
                 count: yarnCount ? yarnCount : '',
                 boxes: item.no_of_boxes ? item.no_of_boxes : '',
-                buyer_id: item.kniter ? item.kniter.name : item.weaver ? item.weaver.name : item.processor_name,
+                buyer_id: item.knitter ? item.knitter.name : item.weaver ? item.weaver.name : item.processor_name,
                 boxId: item.box_ids ? item.box_ids : '',
                 blend: "",
                 blendqty: '',

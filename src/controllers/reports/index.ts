@@ -59,6 +59,7 @@ import WashingSales from "../../models/washing-sales.model";
 import WashingFabricSelection from "../../models/washing-fabric-selection.model";
 import DyingSales from "../../models/dying-sales.model";
 import DyingFabricSelection from "../../models/dying-fabric-selection.model";
+import Country from "../../models/country.model";
 
 const fetchBaleProcess = async (req: Request, res: Response) => {
   const searchTerm = req.query.search || "";
@@ -11229,6 +11230,11 @@ const fetchPscpProcurementLiveTracker = async (req: Request, res: Response) => {
           as: "state",
           attributes: ["id", "state_name"],
         },
+        {
+          model: Country,
+          as: "country",
+          attributes: ["id", "county_name"],
+        },
       ],
       offset: offset,
       limit: limit,
@@ -11431,6 +11437,7 @@ const fetchPscpProcurementLiveTracker = async (req: Request, res: Response) => {
             },
           });
 
+          obj.country = ginner?.dataValues?.country;
           obj.state = ginner?.dataValues?.state;
           obj.program = await Program.findOne({
             attributes: ["id", "program_name"],
@@ -11582,6 +11589,7 @@ const exportPscpProcurementLiveTracker = async (
       const headerRow = worksheet.addRow([
         "Sr No.",
         "Ginning Mill",
+        "Country",
         "State",
         "Program",
         "Expected Seed Cotton (KG)",
@@ -11610,6 +11618,11 @@ const exportPscpProcurementLiveTracker = async (
             as: "state",
             attributes: ["id", "state_name"],
           },
+          {
+            model: Country,
+            as: "country",
+            attributes: ["id", "county_name"],
+          }
         ],
       });
       for await (const [index, ginner] of ginners.entries()) {
@@ -11810,6 +11823,7 @@ const exportPscpProcurementLiveTracker = async (
               },
             });
 
+            obj.country = ginner?.dataValues?.country;
             obj.state = ginner?.dataValues?.state;
             obj.program = await Program.findOne({
               attributes: ["id", "program_name"],
@@ -11876,6 +11890,7 @@ const exportPscpProcurementLiveTracker = async (
         const rowValues = Object.values({
           index: index + 1,
           name: obj?.ginner ? obj.ginner.name : "",
+          country: obj.state ? obj.country?.county_name : "",
           state: obj.state ? obj.state?.state_name : "",
           program: obj.program ? obj.program?.program_name : "",
           expected_seed_cotton:  obj.expected_seed_cotton ? Number(obj.expected_seed_cotton) : 0,
