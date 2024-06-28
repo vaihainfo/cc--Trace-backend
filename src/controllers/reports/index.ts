@@ -11443,11 +11443,11 @@ const fetchPscpProcurementLiveTracker = async (req: Request, res: Response) => {
             attributes: ["id", "program_name"],
             where: { id: program },
           });
-          obj.expected_seed_cotton =
-            expectedQty?.dataValues["expected_seed_cotton"] ?? 0;
+          obj.expected_seed_cotton = expectedQty ?
+            (expectedQty?.dataValues["expected_seed_cotton"] ?? 0) / 1000 : 0;
           obj.expected_lint = expectedQty?.dataValues?.expected_lint ?? 0;
           obj.procurement_seed_cotton =
-            item?.dataValues?.procurement_seed_cotton ?? 0;
+          item ? (item?.dataValues?.procurement_seed_cotton ?? 0) / 1000 : 0;
           obj.procured_lint_cotton_kgs = ginbales
             ? ginbales.dataValues.total_qty ?? 0
             : 0;
@@ -11455,7 +11455,7 @@ const fetchPscpProcurementLiveTracker = async (req: Request, res: Response) => {
             ? (ginbales.dataValues.total_qty ?? 0) / 1000
             : 0;
           obj.pending_seed_cotton = pendingSeedCotton
-            ? pendingSeedCotton?.dataValues?.pending_seed_cotton
+            ? (pendingSeedCotton?.dataValues?.pending_seed_cotton ?? 0) / 1000
             : 0;
           obj.procurement =
             expectedQty?.dataValues?.expected_seed_cotton !== 0 &&
