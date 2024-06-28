@@ -76,6 +76,48 @@ const getOverAllDataQuery = (
 };
 
 
+const getGinnerAllocationQuery = (
+  reqData: any
+) => {
+  const where: any = {
+
+  };
+  if (reqData?.program)
+    where.program_id = reqData.program;
+
+  if (reqData?.brand)
+    where['$ginner_expected_cotton.brand$'] = {
+      [Op.contains]: Sequelize.literal(`ARRAY [${reqData.brand}]`)
+    };
+
+  if (reqData?.season)
+    where.season_id = reqData.season;
+
+  if (reqData?.country)
+    where['$ginner_expected_cotton.country_id$'] = reqData.country;
+
+  if (reqData?.state)
+    where['$ginner_expected_cotton.state_id$'] = reqData.state;
+
+  if (reqData?.district)
+    where['$ginner_expected_cotton.district_id$'] = reqData.district;
+
+  if (reqData?.ginner)
+    where['$ginner_expected_cotton.id$'] = reqData.ginner;
+
+  if (reqData?.fromDate)
+    where.upload_date = { [Op.gte]: reqData.fromDate };
+
+  if (reqData?.toDate)
+    where.upload_date = { [Op.lt]: reqData.toDate };
+
+  if (reqData?.fromDate && reqData?.toDate)
+    where.upload_date = { [Op.between]: [reqData.fromDate, reqData.toDate] };
+
+  return where;
+};
+
+
 const getTransactionDataQuery = (
   reqData: any
 ) => {
@@ -569,9 +611,10 @@ const getLintProcuredSold = async (
 ) => {
   try {
     const reqData = await getQueryParams(req, res);
-    const where = getOverAllDataQuery(reqData);
-    const procuredData = await getLintProcuredData(where);
-    const soldData = await getLintSoldData(where);
+    const procuredWhere = await getGinBaleQuery(reqData);
+    const baleSel = getBaleSelectionQuery(reqData);
+    const procuredData = await getBaleProcuredData(procuredWhere);
+    const soldData = await getBaleSoldData(baleSel);
     const data = await getLintProcuredSoldRes(
       procuredData,
       soldData,
@@ -638,12 +681,12 @@ const getLintProcuredSoldRes = async (
     };
     if (fProcured) {
       data.seasonName = fProcured.dataValues.seasonName;
-      data.procured = formatNumber(fProcured.dataValues.procured);
+      data.procured = formatNumber(fProcured.dataValues.lintProcured);
     }
 
     if (fSold) {
       data.seasonName = fSold.dataValues.seasonName;
-      data.sold = formatNumber(fSold.dataValues.sold);
+      data.sold = formatNumber(fSold.dataValues.lintSold);
     }
 
     data.stock = data.procured - data.sold;
@@ -669,65 +712,6 @@ const getLintProcuredSoldRes = async (
     sold,
     stock
   };
-
-};
-
-
-const getLintSoldData = async (
-  where: any
-) => {
-  where.status = "Sold";
-  const result = await GinSales.findAll({
-    attributes: [
-      [Sequelize.fn('SUM', Sequelize.col('no_of_bales')), 'sold'],
-      [Sequelize.col('season.name'), 'seasonName'],
-      [Sequelize.col('season.id'), 'seasonId']
-    ],
-    include: [{
-      model: Season,
-      as: 'season',
-      attributes: []
-    }, {
-      model: Ginner,
-      as: 'ginner',
-      attributes: []
-    }],
-    where,
-    order: [['seasonId', 'desc']],
-    limit: 3,
-    group: ['season.id']
-  });
-
-  return result;
-
-};
-
-const getLintProcuredData = async (
-  where: any
-) => {
-
-  const result = await GinProcess.findAll({
-    attributes: [
-      [Sequelize.fn('SUM', Sequelize.col('no_of_bales')), 'procured'],
-      [Sequelize.col('season.name'), 'seasonName'],
-      [Sequelize.col('season.id'), 'seasonId']
-    ],
-    include: [{
-      model: Season,
-      as: 'season',
-      attributes: []
-    }, {
-      model: Ginner,
-      as: 'ginner',
-      attributes: []
-    }],
-    where,
-    order: [['seasonId', 'desc']],
-    limit: 3,
-    group: ['season.id']
-  });
-
-  return result;
 
 };
 
@@ -937,6 +921,19 @@ const getBaleProcuredData = async (
         ),
         "procured",
       ],
+      [
+        sequelize.fn(
+          "COALESCE",
+          sequelize.fn(
+            "SUM",
+            sequelize.literal(
+              'CAST("gin-bales"."weight" AS DOUBLE PRECISION)'
+            )
+          ),
+          0
+        ),
+        "lintProcured",
+      ],
       [Sequelize.col('ginprocess.season.name'), 'seasonName'],
       [Sequelize.col('ginprocess.season.id'), 'seasonId']
     ],
@@ -972,6 +969,19 @@ const getBaleSoldData = async (
 ) => {
   const result = await BaleSelection.findAll({
     attributes: [
+      [
+        sequelize.fn(
+          "COALESCE",
+          sequelize.fn(
+            "SUM",
+            sequelize.literal(
+              'CAST("bale"."weight" AS DOUBLE PRECISION)'
+            )
+          ),
+          0
+        ),
+        "lintSold",
+      ],
       [
         sequelize.fn("COUNT", Sequelize.literal("DISTINCT bale_id")),
         "sold",
@@ -1126,29 +1136,48 @@ const getLintProcessedTopGinnersData = async (
   };
 
   if (reqData?.country)
-    where['$ginner.country_id$'] = reqData.country;
+    where['$ginprocess.ginner.country_id$'] = reqData.country;
 
-  where['$ginner.name$'] = {
+  where['$ginprocess.ginner.name$'] = {
     [Op.not]: null
   };
 
-  const result = await GinProcess.findAll({
+  const result = await GinBale.findAll({
     attributes: [
-      [Sequelize.fn('SUM', Sequelize.col('total_qty')), 'total'],
-      [Sequelize.col('ginner.name'), 'ginnerName']
+      [
+        sequelize.fn(
+          "COALESCE",
+          sequelize.fn(
+            "SUM",
+            sequelize.literal(
+              'CAST("gin-bales"."weight" AS DOUBLE PRECISION)'
+            )
+          ),
+          0
+        ),
+        "total",
+      ],
+      [Sequelize.col('ginprocess.ginner.name'), 'ginnerName']
     ],
-    include: [{
-      model: Ginner,
-      as: 'ginner',
-      attributes: []
-    }],
+    include: [
+      {
+        model: GinProcess,
+        as: "ginprocess",
+        attributes: [],
+        include: [{
+          model: Ginner,
+          as: 'ginner',
+          attributes: []
+        }],
+      },
+    ],
     where,
-    order: [['total', 'desc']],
     limit: 10,
-    group: ['ginner.id']
+    order: [['total', 'desc']],
+    group: ["ginprocess.ginner.id"],
   });
-
   return result;
+
 
 };
 
@@ -1191,30 +1220,54 @@ const getLintSoldTopGinnersData = async (
   reqData: any
 ) => {
   const where: any = {
-
   };
 
   if (reqData?.country)
-    where['$ginner.country_id$'] = reqData.country;
+    where['$sales.ginner.country_id$'] = reqData.country;
 
-  where['$ginner.name$'] = {
+  where['$sales.ginner.name$'] = {
     [Op.not]: null
   };
 
-  const result = await GinSales.findAll({
+  const result = await BaleSelection.findAll({
     attributes: [
-      [Sequelize.fn('SUM', Sequelize.col('no_of_bales')), 'total'],
-      [Sequelize.col('ginner.name'), 'ginnerName']
+      [
+        sequelize.fn(
+          "COALESCE",
+          sequelize.fn(
+            "SUM",
+            sequelize.literal(
+              'CAST("bale"."weight" AS DOUBLE PRECISION)'
+            )
+          ),
+          0
+        ),
+        "total",
+      ],
+      [Sequelize.col('sales.ginner.name'), 'ginnerName']
     ],
-    include: [{
-      model: Ginner,
-      as: 'ginner',
-      attributes: []
-    }],
+    include: [
+      {
+        model: GinSales,
+        as: "sales",
+        attributes: [],
+        include: [{
+          model: Ginner,
+          as: 'ginner',
+          attributes: [],
+        }
+        ],
+      },
+      {
+        model: GinBale,
+        as: "bale",
+        attributes: [],
+      },
+    ],
     where,
     order: [['total', 'desc']],
     limit: 10,
-    group: ['ginner.id']
+    group: ["sales.ginner.id"],
   });
 
   return result;
@@ -1274,7 +1327,7 @@ const getLintStockTopGinnersRes = (
     ginners,
     count
   };
-}
+};
 
 const getLintProcessedByCountry = async (
   req: Request, res: Response
@@ -1282,8 +1335,8 @@ const getLintProcessedByCountry = async (
   try {
 
     const reqData = await getQueryParams(req, res);
-    const where = getOverAllDataQuery(reqData);
-    const processedList = await getLintProcessedByCountryData(where);
+    const where = getGinBaleQuery(reqData);
+    const processedList = await getBaleProcuredByCountryData(where);
     const data = await getLintProcessedRes(processedList, reqData.season);
     return res.sendSuccess(res, data);
 
@@ -1362,35 +1415,6 @@ const getLintProcessedRes = async (
   };
 };
 
-const getLintProcessedByCountryData = async (where: any) => {
-  const result = await GinProcess.findAll({
-    attributes: [
-      [Sequelize.fn('SUM', Sequelize.col('total_qty')), 'processed'],
-      [Sequelize.col('ginner.country.id'), 'countryId'],
-      [Sequelize.col('ginner.country.county_name'), 'countryName'],
-      [Sequelize.col('season.id'), 'seasonId'],
-      [Sequelize.col('season.name'), 'seasonName']
-    ],
-    include: [{
-      model: Ginner,
-      as: 'ginner',
-      attributes: [],
-      include: [{
-        model: Country,
-        as: 'country',
-        attributes: []
-      }]
-    }, {
-      model: Season,
-      as: 'season',
-      attributes: []
-    }],
-    where,
-    group: ['ginner.country.id', 'season.id']
-  });
-
-  return result;
-};
 
 const getLintSoldByCountry = async (
   req: Request, res: Response
@@ -1398,8 +1422,8 @@ const getLintSoldByCountry = async (
   try {
 
     const reqData = await getQueryParams(req, res);
-    const where = getOverAllDataQuery(reqData);
-    const soldList = await getLintSoldByCountryData(where);
+    const where = getBaleSelectionQuery(reqData);
+    const soldList = await getBaleSoldByCountryData(where);
     const data = await getLintSoldRes(soldList, reqData.season);
     return res.sendSuccess(res, data);
 
@@ -1478,35 +1502,6 @@ const getLintSoldRes = async (
   };
 };
 
-const getLintSoldByCountryData = async (where: any) => {
-  const result = await GinSales.findAll({
-    attributes: [
-      [Sequelize.fn('SUM', Sequelize.col('no_of_bales')), 'sold'],
-      [Sequelize.col('ginner.country.id'), 'countryId'],
-      [Sequelize.col('ginner.country.county_name'), 'countryName'],
-      [Sequelize.col('season.id'), 'seasonId'],
-      [Sequelize.col('season.name'), 'seasonName']
-    ],
-    include: [{
-      model: Ginner,
-      as: 'ginner',
-      attributes: [],
-      include: [{
-        model: Country,
-        as: 'country',
-        attributes: []
-      }]
-    }, {
-      model: Season,
-      as: 'season',
-      attributes: []
-    }],
-    where,
-    group: ['ginner.country.id', 'season.id']
-  });
-
-  return result;
-};
 
 const getProcuredAllocated = async (
   req: Request, res: Response
@@ -1514,8 +1509,9 @@ const getProcuredAllocated = async (
   try {
     const reqData = await getQueryParams(req, res);
     const where = getOverAllDataQuery(reqData);
+    const allocationWhere = getGinnerAllocationQuery(reqData)
     const procuredData = await getProcuredProcessedData(where);
-    const allocatedData = await getAllocatedData(where);
+    const allocatedData = await getAllocatedData(allocationWhere);
     const data = await getProcuredAllocatedRes(
       procuredData,
       allocatedData,
@@ -1544,6 +1540,10 @@ const getAllocatedData = async (
     include: [{
       model: Season,
       as: 'season',
+      attributes: []
+    }, {
+      model: Ginner,
+      as: 'ginner_expected_cotton',
       attributes: []
     }],
     where,
@@ -1638,18 +1638,15 @@ const getProcuredAllocatedRes = async (
 
 const getCountryGinnerArea = async (
   req: Request, res: Response
-) =>
-{
-  try
-  {
+) => {
+  try {
     const reqData = await getQueryParams(req, res);
     const query = getOverAllDataQuery(reqData);
     const ginnersData = await getGinnerCountryData(query);
-    const data = await getOutturnCountryRes(ginnersData,reqData.season);
+    const data = await getOutturnCountryRes(ginnersData, reqData.season);
     return res.sendSuccess(res, data);
 
-  } catch (error: any)
-  {
+  } catch (error: any) {
     const code = error.errCode
       ? error.errCode
       : "ERR_INTERNAL_SERVER_ERROR";
@@ -1657,8 +1654,7 @@ const getCountryGinnerArea = async (
   }
 };
 
-const getGinnerCountryData = async (where: any) =>
-{
+const getGinnerCountryData = async (where: any) => {
   const result = await GinProcess.findAll({
     attributes: [
       [sequelize.fn('AVG', sequelize.col('gin_out_turn')), 'outTurn'],
@@ -1698,13 +1694,11 @@ const getGinnerCountryData = async (where: any) =>
 const getOutturnCountryRes = async (
   processedList: any = [],
   reqSeason: any
-) =>
-{
+) => {
   let seasonIds: number[] = [];
   let countries: number[] = [];
 
-  processedList.forEach((list: any) =>
-  {
+  processedList.forEach((list: any) => {
     if (!countries.includes(list.dataValues.countryName))
       countries.push(list.dataValues.countryName);
 
@@ -1718,10 +1712,8 @@ const getOutturnCountryRes = async (
       ["id", "DESC"],
     ],
   });
-  if (seasonIds.length != 3 && !reqSeason)
-  {
-    for (const season of seasons)
-    {
+  if (seasonIds.length != 3 && !reqSeason) {
+    for (const season of seasons) {
       if (!seasonIds.includes(season.id))
         seasonIds.push(season.id);
     }
@@ -1733,8 +1725,7 @@ const getOutturnCountryRes = async (
   let countList: any[] = [];
 
 
-  for (const countryName of countries)
-  {
+  for (const countryName of countries) {
     const data: any = {
       name: countryName,
       data: [],
@@ -1743,16 +1734,14 @@ const getOutturnCountryRes = async (
       list.dataValues.countryName == countryName
     );
 
-    for (const seasonId of seasonIds)
-    {
+    for (const seasonId of seasonIds) {
 
       let totalArea = 0;
       const gProcessedValue = lProcessedList.find((list: any) =>
         list.dataValues.seasonId == seasonId
       );
 
-      if (gProcessedValue)
-      {
+      if (gProcessedValue) {
         totalArea = formatNumber(gProcessedValue.dataValues.outTurn);
         if (!seasonList.includes(gProcessedValue.dataValues.seasonName))
           seasonList.push(gProcessedValue.dataValues.seasonName);
@@ -1805,6 +1794,10 @@ const getProcuredByCountryData = async (where: any) => {
     }, {
       model: Season,
       as: 'season',
+      attributes: []
+    }, {
+      model: Ginner,
+      as: 'ginner',
       attributes: []
     }],
     where,
@@ -2095,6 +2088,19 @@ const getBalesProcuredByCountryDataRes = async (
 const getBaleProcuredByCountryData = async (where: any) => {
   const result = await GinBale.findAll({
     attributes: [
+      [
+        sequelize.fn(
+          "COALESCE",
+          sequelize.fn(
+            "SUM",
+            sequelize.literal(
+              'CAST("gin-bales"."weight" AS DOUBLE PRECISION)'
+            )
+          ),
+          0
+        ),
+        "lintProcured",
+      ],
       [sequelize.fn("COUNT", Sequelize.literal('DISTINCT "gin-bales"."id"')), "procured"],
       [Sequelize.col('ginprocess.season.name'), 'seasonName'],
       [Sequelize.col('ginprocess.season.id'), 'seasonId'],
@@ -2221,6 +2227,19 @@ const getBaleSoldByCountryData = async (
 ) => {
   const result = await BaleSelection.findAll({
     attributes: [
+      [
+        sequelize.fn(
+          "COALESCE",
+          sequelize.fn(
+            "SUM",
+            sequelize.literal(
+              'CAST("bale"."weight" AS DOUBLE PRECISION)'
+            )
+          ),
+          0
+        ),
+        "lintSold",
+      ],
       [sequelize.fn("COUNT", Sequelize.literal("DISTINCT bale_id")), "sold"],
       [Sequelize.col('sales.season.name'), 'seasonName'],
       [Sequelize.col('sales.season.id'), 'seasonId'],
@@ -2380,7 +2399,7 @@ const getBaleStockDataRes = async (
     processedList: soldList,
     seasonList,
   };
-}
+};
 
 const getMonthDate = (
   from: string,
