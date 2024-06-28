@@ -56,7 +56,7 @@ const createGinnerProcess = async (req: Request, res: Response) => {
     const ginprocess = await GinProcess.create(data);
 
     let uniqueFilename = `gin_procees_qrcode_${Date.now()}.png`;
-    let da = encrypt(`${ginprocess.id}`);
+    let da = encrypt(`Ginner,Process,${ginprocess.id}`);
     let aa = await generateOnlyQrCode(da, uniqueFilename);
     const gin = await GinProcess.update(
       { qr: uniqueFilename },
