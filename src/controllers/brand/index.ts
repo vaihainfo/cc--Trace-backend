@@ -438,7 +438,7 @@ const sumbrandginnerSales = async (brandId: any, seasonId: any) => {
         const ginnerList = await GinSales.findAll({
             where: {
                 ...whereCondition,
-                status: 'Sold' || 'Pending',
+                status: 'Sold' || 'Pending' || 'Pending for QR scanning',
                 '$ginner.brand$': { [Op.contains]: [Number(brandId)] }
             },
             attributes: [
@@ -628,7 +628,7 @@ const sumbrandspinnerYarnSales = async (brandId: any, seasonId: any) => {
                 { model: Spinner, as: 'spinner', attributes: [] },
             ],
             where: {
-                status: 'Sold' || 'Pending',
+                status: 'Sold' || 'Pending' || 'Pending for QR scanning',
                 '$spinner.brand$': { [Op.contains]: [Number(brandId)] }
             },
             group: ['spinner.brand']
