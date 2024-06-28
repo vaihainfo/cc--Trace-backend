@@ -70,10 +70,10 @@ const fetchQualityParameterPagination = async (req: Request, res: Response) => {
         }
 
         if (type) {
-            if(type === 'ginner'){
+            if (type === 'ginner') {
                 whereCondition.ginner_id = { [Op.not]: null }
             }
-            if(type === 'spinner'){
+            if (type === 'spinner') {
                 whereCondition.spinner_id = { [Op.not]: null }
             }
         }
@@ -148,23 +148,23 @@ const fetchQualityParameterPagination = async (req: Request, res: Response) => {
                 ]
             ]
         });
-        let data: any =[];
+        let data: any = [];
 
-        if(searchTerm){
+        if (searchTerm) {
             data = rows?.filter((row: any) => {
-                return (row.sold && row.sold.name && row.sold?.name.toLowerCase().includes(searchTerm.toLowerCase()))  ||
-                (row.sales && row.sales.name && row.sales?.name.toLowerCase().includes(searchTerm.toLowerCase())) || 
-                (row.spinner && row.spinner.name && row.spinner?.name.toLowerCase().includes(searchTerm.toLowerCase())) || 
-                (row.ginner && row.ginner.name && row.ginner?.name.toLowerCase().includes(searchTerm.toLowerCase())) || 
-                (row.process && row.process.name && row.process?.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
-                (row.lot_no && row.lot_no?.toLowerCase().includes(searchTerm.toLowerCase())) ||
-                (row.reel_lot_no && row.reel_lot_no?.toLowerCase().includes(searchTerm.toLowerCase()))
+                return (row.sold && row.sold.name && row.sold?.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+                    (row.sales && row.sales.name && row.sales?.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+                    (row.spinner && row.spinner.name && row.spinner?.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+                    (row.ginner && row.ginner.name && row.ginner?.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+                    (row.process && row.process.name && row.process?.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+                    (row.lot_no && row.lot_no?.toLowerCase().includes(searchTerm.toLowerCase())) ||
+                    (row.reel_lot_no && row.reel_lot_no?.toLowerCase().includes(searchTerm.toLowerCase()))
             });
         }
 
         //fetch data with pagination
         if (req.query.pagination === 'true') {
-            if(searchTerm){
+            if (searchTerm) {
                 let ndata = data.length > 0 ? data.slice(offset, offset + limit) : [];
                 return res.sendPaginationSuccess(res, ndata, data.length > 0 ? data.length : 0);
             }
@@ -173,7 +173,7 @@ const fetchQualityParameterPagination = async (req: Request, res: Response) => {
 
             return res.sendPaginationSuccess(res, ndata, count);
         } else {
-            if(searchTerm){
+            if (searchTerm) {
                 return res.sendSuccess(res, data);
             }
             return res.sendSuccess(res, rows);
@@ -224,7 +224,7 @@ const exportQualityParameter = async (req: Request, res: Response) => {
     try {
         const searchTerm = req.query.search || "";
         // Create the excel workbook file
-        const { spinnerId, ginnerId, brandId, countryId, date }: any = req.query
+        const { spinnerId, ginnerId, brandId, countryId, date, type }: any = req.query
         const workbook = new ExcelJS.Workbook();
         const worksheet = workbook.addWorksheet("Sheet1");
         worksheet.mergeCells('A1:U1');
@@ -248,6 +248,16 @@ const exportQualityParameter = async (req: Request, res: Response) => {
                 { '$process.lot_no$': { [Op.iLike]: `%${searchTerm}%` } },
                 { '$process.reel_lot_no$': { [Op.iLike]: `%${searchTerm}%` } }
             ];
+        }
+        if (type) {
+            if (type == 'ginner')
+                whereCondition.ginner_id = {
+                    [Op.not]: null
+                }
+            else
+                whereCondition.spinner_id = {
+                    [Op.not]: null
+                }
         }
         if (spinnerId) {
             whereCondition.spinner_id = spinnerId
@@ -457,11 +467,11 @@ const reportParameter = async (req: Request, res: Response) => {
                 : whereCondition['$spinner.state_id$'] = stateId
         }
 
-        if(brandId){
+        if (brandId) {
             const idArray = brandId.split(",").map((id: any) => parseInt(id, 10));
-            parameter === 'ginner' ? whereCondition['$ginner.brand$']= { [Op.overlap]: idArray } : whereCondition['$spinner.brand$']= { [Op.overlap]: idArray }
+            parameter === 'ginner' ? whereCondition['$ginner.brand$'] = { [Op.overlap]: idArray } : whereCondition['$spinner.brand$'] = { [Op.overlap]: idArray }
         }
-        
+
         if (processId) {
             parameter === 'ginner' ? whereCondition.ginner_id = processId
                 : whereCondition.spinner_id = processId
@@ -470,7 +480,7 @@ const reportParameter = async (req: Request, res: Response) => {
             parameter === 'ginner' ? whereCondition['$process.season_id$'] = seasonId
                 : whereCondition['$sales.season_id$'] = seasonId
         }
-        let selectedSeason = await Season.findOne({where: {id: seasonId}});
+        let selectedSeason = await Season.findOne({ where: { id: seasonId } });
         currentDate = new Date(selectedSeason?.dataValues?.from);
 
 
@@ -574,12 +584,12 @@ const reportParameter = async (req: Request, res: Response) => {
                     attributes: []
                 },
                 {
-                    model: GinSales, 
+                    model: GinSales,
                     as: 'sales',
                     attributes: []
                 },
                 {
-                    model: Spinner, 
+                    model: Spinner,
                     as: 'spinner',
                     attributes: []
                 }
@@ -656,7 +666,7 @@ const reportParameter = async (req: Request, res: Response) => {
 const reportCountryParameter = async (req: Request, res: Response) => {
     try {
 
-        const {seasonId, countryId, stateId,ginnerId, spinnerId, brandId}: any = req.query;
+        const { seasonId, countryId, stateId, ginnerId, spinnerId, brandId }: any = req.query;
 
         // Get the current date
         let currentDate: any = new Date();
@@ -671,35 +681,35 @@ const reportCountryParameter = async (req: Request, res: Response) => {
         let parameter = req.query.filter || 'ginner';
         let countryWhere: any = {};
 
-        if(countryId){
-            countryWhere.id=countryId
+        if (countryId) {
+            countryWhere.id = countryId
         }
 
-        let season = await Season.findOne({where: {id: seasonId}});
+        let season = await Season.findOne({ where: { id: seasonId } });
         currentDate = new Date(season?.dataValues?.from);
 
-        let countries = await Country.findAll({where: countryWhere});
+        let countries = await Country.findAll({ where: countryWhere });
 
         for await (const country of countries) {
             let value: any = parameter === 'ginner' ?
                 { ginner_id: { [Op.not]: null }, '$ginner.country_id$': country.id } :
                 { spinner_id: { [Op.not]: null }, '$spinner.country_id$': country.id };
-            
-            if(stateId){
-                parameter === 'ginner' ? value['$ginner.state_id$']= stateId : value['$spinner.state_id$']= stateId
+
+            if (stateId) {
+                parameter === 'ginner' ? value['$ginner.state_id$'] = stateId : value['$spinner.state_id$'] = stateId
             }
 
-            if(brandId){
+            if (brandId) {
                 const idArray = brandId.split(",").map((id: any) => parseInt(id, 10));
-                parameter === 'ginner' ? value['$ginner.brand$']= { [Op.overlap]: idArray } : value['$spinner.brand$']= { [Op.overlap]: idArray }
+                parameter === 'ginner' ? value['$ginner.brand$'] = { [Op.overlap]: idArray } : value['$spinner.brand$'] = { [Op.overlap]: idArray }
             }
 
-            if(ginnerId && parameter === 'ginner'){
-                value['ginner_id']= ginnerId
+            if (ginnerId && parameter === 'ginner') {
+                value['ginner_id'] = ginnerId
             }
 
-            if(spinnerId && parameter === 'spinner'){
-                value['spinner_id']= spinnerId
+            if (spinnerId && parameter === 'spinner') {
+                value['spinner_id'] = spinnerId
             }
 
             let group = parameter === 'ginner' ? [Sequelize.literal('ginner.country_id')] : [Sequelize.literal('spinner.country_id')]
@@ -794,11 +804,11 @@ const reportDashBoardParameter = async (req: Request, res: Response) => {
                 whereCondition['$spinner.country_id$'] = countryId
             }
 
-            if(brandId){
+            if (brandId) {
                 const idArray = brandId.split(",").map((id: any) => parseInt(id, 10));
-                whereCondition['$spinner.brand$']= { [Op.overlap]: idArray }
+                whereCondition['$spinner.brand$'] = { [Op.overlap]: idArray }
             }
-            
+
             let seasons = await QualityParameter.findAll({
                 where: { '$sales.season_id$': seasonId, spinner_id: { [Op.not]: null }, ...whereCondition }, include: [
                     {
@@ -841,11 +851,11 @@ const reportDashBoardParameter = async (req: Request, res: Response) => {
                 whereCondition['$ginner.country_id$'] = countryId
             }
 
-            if(brandId){
+            if (brandId) {
                 const idArray = brandId.split(",").map((id: any) => parseInt(id, 10));
-                whereCondition['$ginner.brand$']= { [Op.overlap]: idArray }
+                whereCondition['$ginner.brand$'] = { [Op.overlap]: idArray }
             }
-            
+
 
             let seasons = await QualityParameter.findAll({
                 where: { '$process.season_id$': seasonId, ginner_id: { [Op.not]: null }, ...whereCondition }, include: [
@@ -888,11 +898,11 @@ const reportDashBoardParameter = async (req: Request, res: Response) => {
             countCondition1['$spinner.country_id$'] = countryId;
         }
 
-        if(brandId){
+        if (brandId) {
             const idArray = brandId.split(",").map((id: any) => parseInt(id, 10));
-            countCondition['$ginner.brand$']= { [Op.overlap]: idArray }
-            countCondition1['$spinner.brand$']= { [Op.overlap]: idArray }
-        } 
+            countCondition['$ginner.brand$'] = { [Op.overlap]: idArray }
+            countCondition1['$spinner.brand$'] = { [Op.overlap]: idArray }
+        }
 
         let count = await QualityParameter.count({
             where: { '$process.season_id$': seasonId, ...countCondition },
@@ -1001,9 +1011,9 @@ const reportNationalQualityParameter = async (req: Request, res: Response) => {
             nationalSpin['$spinner.country_id$'] = countryId
         }
 
-        if(brandId){
+        if (brandId) {
             const idArray = brandId.split(",").map((id: any) => parseInt(id, 10));
-            nationalSpin['$spinner.brand$']= { [Op.overlap]: idArray }
+            nationalSpin['$spinner.brand$'] = { [Op.overlap]: idArray }
         }
 
         let spinner = await QualityParameter.findAll({
@@ -1041,9 +1051,9 @@ const reportNationalQualityParameter = async (req: Request, res: Response) => {
             nationalGin['$ginner.country_id$'] = countryId
         }
 
-        if(brandId){
+        if (brandId) {
             const idArray = brandId.split(",").map((id: any) => parseInt(id, 10));
-            nationalGin['$ginner.brand$']= { [Op.overlap]: idArray }
+            nationalGin['$ginner.brand$'] = { [Op.overlap]: idArray }
         }
 
         let ginner = await QualityParameter.findAll({
@@ -1163,9 +1173,9 @@ const reporProcessorWiseParameter = async (req: Request, res: Response) => {
             nationalSpin['$spinner.state_id$'] = stateId
         }
 
-        if(brandId){
+        if (brandId) {
             const idArray = brandId.split(",").map((id: any) => parseInt(id, 10));
-            nationalSpin['$spinner.brand$']= { [Op.overlap]: idArray }
+            nationalSpin['$spinner.brand$'] = { [Op.overlap]: idArray }
         }
 
         if (spinnerId) {
@@ -1257,9 +1267,9 @@ const reporProcessorWiseParameter = async (req: Request, res: Response) => {
         if (stateId) {
             nationalGin['$ginner.state_id$'] = stateId
         }
-        if(brandId){
+        if (brandId) {
             const idArray = brandId.split(",").map((id: any) => parseInt(id, 10));
-            nationalGin['$ginner.brand$']= { [Op.overlap]: idArray }
+            nationalGin['$ginner.brand$'] = { [Op.overlap]: idArray }
         }
         if (ginnerId) {
             nationalGin.ginner_id = ginnerId
