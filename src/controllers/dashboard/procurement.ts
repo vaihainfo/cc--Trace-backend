@@ -278,8 +278,8 @@ const getEstimateProductionByCountry = async (
 
   const estimateAndProduction = await Farm.findAll({
     attributes: [
-      [Sequelize.fn('SUM', Sequelize.col('farmer.total_estimated_cotton')), 'estimate'],
-      [Sequelize.fn('SUM', Sequelize.col('farmer.agri_estimated_prod')), 'production'],
+      [Sequelize.fn('SUM', Sequelize.col('farms.total_estimated_cotton')), 'estimate'],
+      [Sequelize.fn('SUM', Sequelize.col('farms.agri_estimated_prod')), 'production'],
       [Sequelize.col(`farmer.${tableName}.${colName}`), 'name']
     ],
     include: [
@@ -394,8 +394,8 @@ const getEstimateData = async (
 
   const estimateAndProduction = await Farm.findAll({
     attributes: [
-      [Sequelize.fn('SUM', Sequelize.col('farmer.total_estimated_cotton')), 'estimate'],
-      [Sequelize.fn('SUM', Sequelize.col('farmer.agri_estimated_prod')), 'production'],
+      [Sequelize.fn('SUM', Sequelize.col('farms.total_estimated_cotton')), 'estimate'],
+      [Sequelize.fn('SUM', Sequelize.col('farms.agri_estimated_prod')), 'production'],
       [Sequelize.col('season.id'), 'seasonId']
     ],
     include: [
@@ -1054,8 +1054,8 @@ const getEstimateDataByCountry = async (
 
   const result = await Farm.findAll({
     attributes: [
-      [Sequelize.fn('SUM', Sequelize.col('farmer.total_estimated_cotton')), 'estimate'],
-      [Sequelize.fn('SUM', Sequelize.col('farmer.agri_estimated_prod')), 'production'],
+      [Sequelize.fn('SUM', Sequelize.col('farms.total_estimated_cotton')), 'estimate'],
+      [Sequelize.fn('SUM', Sequelize.col('farms.agri_estimated_prod')), 'production'],
       [Sequelize.col('farmer.country.id'), 'countryId'],
       [Sequelize.col('farmer.country.county_name'), 'countryName'],
       [Sequelize.col('season.id'), 'seasonId'],
