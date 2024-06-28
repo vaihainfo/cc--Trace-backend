@@ -32,6 +32,7 @@ import Brand from "../../models/brand.model";
 import PhysicalTraceabilityDataSpinnerSample from "../../models/physical-traceability-data-spinner-sample.model";
 import BaleSelection from "../../models/bale-selection.model";
 import GinBale from "../../models/gin-bale.model";
+import { _getGinnerProcessTracingChartData } from "../ginner";
 
 //create Spinner Process
 const createSpinnerProcess = async (req: Request, res: Response) => {
@@ -2528,79 +2529,149 @@ const getYarnReelLotNo = async (req: Request, res: Response) => {
     }
 };
 
-const _getSpinnerProcessTracingChartData = async (reelLotNo: any) => {
-    let include = [
-        {
-            model: Spinner,
-            as: "spinner",
-        }
-    ];
-    let whereCondition = {
-        reel_lot_no: reelLotNo
-    };
-    let transactionInclude = [
-        {
-            model: Village,
-            as: 'village'
-        },
-        {
-            model: Farmer,
-            as: 'farmer',
-            include: [
-                {
-                    model: Village,
-                    as: 'village'
-                },
-                {
-                    model: FarmGroup,
-                    as: 'farmGroup'
-                }
-            ]
-        }
-    ]
-    let spin = await SpinProcess.findAll({
-        where: whereCondition,
-        include: include,
-        order: [
-            [
-                'id', 'desc'
-            ]
-        ]
-    });
-    spin = await Promise.all(spin.map(async (el: any) => {
-        el = el.toJSON();
-        el.ginSales = await GinSales.findAll({
+const _getSpinnerProcessTracingChartData = async (reelLotNo:any) => {
+    let offset = 0;
+    let allSpinData:any = [];
+  
+    let include = [{ model: Spinner, as: "spinner", attributes: ['id', 'name'] }];
+    let whereCondition:any = {};
+  
+    if (reelLotNo) {
+      const idArray = reelLotNo.split(",");
+      whereCondition.reel_lot_no = { [Op.in]: idArray };
+    }
+  
+    const BATCH_SIZE = 10;
+  
+    while (true) {
+      let batchSpinData = await queryWithRetry(() =>
+        SpinProcess.findAll({
+          where: whereCondition,
+          include: include,
+          order: [['id', 'desc']],
+          limit: BATCH_SIZE,
+          offset: offset,
+          attributes: ['id', 'reel_lot_no']
+        })
+      );
+  
+      if (batchSpinData.length === 0) break;
+  
+      offset += BATCH_SIZE;
+  
+      let spinWithGinSales = await Promise.all(
+        batchSpinData.map(async (spin:any) => {
+          spin = spin.toJSON();
+  
+          // Fetch lintSele for spin
+          spin.lintSele = await LintSelections.findAll({
             where: {
-                buyer: el.spinner.id
-            },
-            include: [
-                {
-                    model: Ginner,
-                    as: "ginner"
-                }
-            ]
-        });
-        el.ginSales = await Promise.all(el.ginSales.map(async (el: any) => {
-            el = el.toJSON();
-            el.transaction = await Transaction.findAll({
-                where: {
-                    mapped_ginner: el.ginner_id
-                },
-                include: transactionInclude
-            });
-            return el;
-        }))
-        return el;
-    }));
+              process_id: spin.id,
+            }
+          });
+  
+          // Fetch ginSales for spin
+          spin.ginSales = await Promise.all(
+            spin.lintSele.map(async (lintSeleItem: any) => {
+              let ginSales = await GinSales.findAll({
+                where: { id: lintSeleItem.lint_id },
+                include: [{ model: Ginner, as: "ginner", attributes: ['id', 'name'] }],
+                attributes: ['id', 'ginner_id','reel_lot_no']
+              });
+              return ginSales;
+            })
+          );
+  
+          // Process ginSales and transactions
+          spin.ginSales = await Promise.all(
+            spin.ginSales.map(async (sales: any) => {
+              return await Promise.all(
+                sales.map(async (sale: any) => {
+                  // Assuming _getGinnerProcessTracingChartData returns data or handles async operations correctly
+                  return await _getGinnerProcessTracingChartData(sale.reel_lot_no);
+                })
+              );
+            })
+          );
+          
+          return spin;
+        })
+      );
+  
+      allSpinData = allSpinData.concat(spinWithGinSales);
+    }
+  
+    return formatDataForSpinnerProcess(reelLotNo, allSpinData);
+  };
 
-    return formatDataForSpinnerProcess(reelLotNo, spin);
-}
+  async function queryWithRetry(queryFunction:any, retries = 0) {
+    try {
+      return await queryFunction();
+    } catch (error) {
+      if (error instanceof sequelize.ConnectionAcquireTimeoutError && retries < 3) {
+        console.error(`Connection timeout, retrying... (attempt ${retries + 1}/3)`);
+        await new Promise(resolve => setTimeout(resolve, 1000)); // Retry after 1 second
+        return await queryWithRetry(queryFunction, retries + 1);
+      }
+      throw error; // Propagate other errors
+    }
+  }
 
-const getSpinnerProcessTracingChartData = async (req: Request, res: Response) => {
+
+  const getSpinnerProcessTracingChartData = async (req: Request, res: Response) => {
     const { reelLotNo } = req.query;
+
+    await createIndexes();
+
     const data = await _getSpinnerProcessTracingChartData(reelLotNo);
+
+    // await createIndexes();
     res.sendSuccess(res, data);
+  }
+
+  const createIndexIfNotExists= async (tableName:any, indexName:any, fields:any) => {
+    try {
+        const indexExistsQuery = `
+            SELECT indexname
+            FROM pg_indexes
+            WHERE tablename = '${tableName}'
+            AND indexname = '${indexName}';
+        `;
+        const [existingIndex] = await sequelize.query(indexExistsQuery, { type: sequelize.QueryTypes.SELECT });
+
+        if (!existingIndex || existingIndex.length === 0) {
+            const createIndexQuery = `
+                CREATE INDEX CONCURRENTLY ${indexName} ON "${tableName}" (${fields.map((field:any) => `"${field}"`).join(', ')});
+            `;
+            await sequelize.query(createIndexQuery);
+            console.log(`Index ${indexName} created successfully on ${tableName} table.`);
+        } else {
+            console.log(`Index ${indexName} already exists on ${tableName} table. Skipped creation.`);
+        }
+    } catch (error) {
+        console.error(`Error creating index ${indexName} on ${tableName} table:`, error);
+    }
 }
+
+const createIndexes = async () => {
+    try {
+        // Example 1: Creating unique index on farm_groups
+        await createIndexIfNotExists('farm_groups', 'idx_farmGroup_name', 'name');
+
+        // Example 2: Creating index on spin_processes
+        await createIndexIfNotExists('spin_processes', 'idx_spinProcess_reel_lot_no', 'reel_lot_no');
+
+        // Example 3: Creating index on gin_sales
+        await createIndexIfNotExists('gin_sales', 'idx_ginSales_buyer_ginner_id', ['buyer', 'ginner_id']);
+
+        // Example 4: Creating index on transactions
+        await createIndexIfNotExists('transactions', 'idx_transaction_mapped_ginner_farmer_id_village_id', ['mapped_ginner_farmer_id', 'village_id']);
+
+        console.log('Index creation completed.');
+    } catch (error) {
+        console.error('Error creating indexes:', error);
+    }
+};
 
 export {
     createSpinnerProcess,
