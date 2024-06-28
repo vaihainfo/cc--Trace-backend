@@ -1870,10 +1870,7 @@ const countCottonBaleWithProgram = async (req: Request, res: Response) => {
 const exportSpinnerTransaction = async (req: Request, res: Response) => {
     const excelFilePath = path.join("./upload", "Spinner_transaction_list.xlsx");
     const searchTerm = req.query.search || "";
-    const page = Number(req.query.page) || 1;
-    const limit = Number(req.query.limit) || 10;
     const { ginnerId, filter, seasonId, programId, spinnerId }: any = req.query;
-    const offset = (page - 1) * limit;
     const whereCondition: any = [];
     try {
         if (searchTerm) {
@@ -1967,12 +1964,8 @@ const exportSpinnerTransaction = async (req: Request, res: Response) => {
                 ${whereClause}
                 ORDER BY 
                     gs."updatedAt" DESC
-                LIMIT 
-                    :limit OFFSET :offset;`
-
-        
+                `
         const rows = await sequelize.query(dataQuery, {
-            replacements: { limit, offset },
             type: sequelize.QueryTypes.SELECT,
         })
 

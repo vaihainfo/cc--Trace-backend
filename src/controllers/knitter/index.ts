@@ -28,6 +28,7 @@ import Country from "../../models/country.model";
 import PhysicalTraceabilityDataKnitter from "../../models/physical-traceability-data-knitter.model";
 import Brand from "../../models/brand.model";
 import PhysicalTraceabilityDataKnitterSample from "../../models/physical-traceability-data-knitter-sample.model";
+import QualityParameter from "../../models/quality-parameter.model";
 
 const createKnitterProcess = async (req: Request, res: Response) => {
   try {
@@ -749,7 +750,7 @@ const fetchFabricReelLotNo = async (req: Request, res: Response) => {
     let prcs_date = day + month + year;
 
     let number = count + 1;
-    const random_number = +performance.now().toString().replace('.', '7').substring(0,4)
+    const random_number = +performance.now().toString().replace('.', '7').substring(0, 4)
     let prcs_name = rows ? rows?.name.substring(0, 3).toUpperCase() : "";
     let country = rows ? rows?.country?.county_name.substring(0, 2).toUpperCase() : "";
     let reelLotNo = "REEL-KNI-" + prcs_name + "-" + country + "-" + prcs_date + "/" + random_number;
@@ -1075,7 +1076,7 @@ const fetchKnitterDashBoard = async (req: Request, res: Response) => {
   }: any = req.query;
   const offset = (page - 1) * limit;
   const whereCondition: any = {};
-  const yarnTypeArray = yarnType?.split(',')?.map((item:any) => item.trim()); 
+  const yarnTypeArray = yarnType?.split(',')?.map((item: any) => item.trim());
   try {
     if (!knitterId) {
       return res.sendError(res, "Need Knitter Id ");
@@ -1154,8 +1155,8 @@ const fetchKnitterDashBoard = async (req: Request, res: Response) => {
       whereCondition.yarn_count = { [Op.contains]: idArray };
     }
     if (yarnType) {
-      whereCondition.yarn_type = { [Op.contains]: yarnTypeArray }; 
-  }
+      whereCondition.yarn_type = { [Op.contains]: yarnTypeArray };
+    }
 
     let include = [
       {
@@ -1187,19 +1188,19 @@ const fetchKnitterDashBoard = async (req: Request, res: Response) => {
       let data = [];
 
       for await (let row of rows) {
-          let yarncount = [];
+        let yarncount = [];
 
-          if (row.dataValues?.yarn_count.length > 0) {
-              yarncount = await YarnCount.findAll({
-                  attributes: ["id", "yarnCount_name"],
-                  where: { id: { [Op.in]: row.dataValues?.yarn_count } }
-              });
-          }
+        if (row.dataValues?.yarn_count.length > 0) {
+          yarncount = await YarnCount.findAll({
+            attributes: ["id", "yarnCount_name"],
+            where: { id: { [Op.in]: row.dataValues?.yarn_count } }
+          });
+        }
 
-          data.push({
-              ...row.dataValues,
-              yarncount
-          })
+        data.push({
+          ...row.dataValues,
+          yarncount
+        })
       }
       return res.sendPaginationSuccess(res, data, count);
     } else {
@@ -1211,19 +1212,19 @@ const fetchKnitterDashBoard = async (req: Request, res: Response) => {
       let data = [];
 
       for await (let row of gin) {
-          let yarncount = [];
+        let yarncount = [];
 
-          if (row.dataValues?.yarn_count.length > 0) {
-              yarncount = await YarnCount.findAll({
-                  attributes: ["id", "yarnCount_name"],
-                  where: { id: { [Op.in]: row.dataValues?.yarn_count } }
-              });
-          }
+        if (row.dataValues?.yarn_count.length > 0) {
+          yarncount = await YarnCount.findAll({
+            attributes: ["id", "yarnCount_name"],
+            where: { id: { [Op.in]: row.dataValues?.yarn_count } }
+          });
+        }
 
-          data.push({
-              ...row.dataValues,
-              yarncount
-          })
+        data.push({
+          ...row.dataValues,
+          yarncount
+        })
       }
       return res.sendSuccess(res, data);
     }
@@ -1447,14 +1448,14 @@ const getInvoiceAndyarnType = async (req: Request, res: Response) => {
       group: ['yarn_count'],
     });
 
-    const checkyarnData = yarncountData.map((item:any)=> item.yarn_count).flat();
-    const yarnCounts = await YarnCount.findAll({      
-      attributes: ["id", "yarnCount_name"],         
-      where: {  
-        id: { 
+    const checkyarnData = yarncountData.map((item: any) => item.yarn_count).flat();
+    const yarnCounts = await YarnCount.findAll({
+      attributes: ["id", "yarnCount_name"],
+      where: {
+        id: {
           [Op.in]: checkyarnData
-        } 
-      }, 
+        }
+      },
     });
 
     const yarn_type_fetch = await SpinSales.findAll({
@@ -1462,8 +1463,8 @@ const getInvoiceAndyarnType = async (req: Request, res: Response) => {
       where: whereCondition,
       group: ["yarn_type"],
     });
-    const yarn_type = yarn_type_fetch.map((item:any, i:any)=> {
-      return {yarn_type:  [...new Set(item.yarn_type)] }
+    const yarn_type = yarn_type_fetch.map((item: any, i: any) => {
+      return { yarn_type: [...new Set(item.yarn_type)] }
     })
 
     res.sendSuccess(res, { invoice, yarncount: yarnCounts, yarn_type, reelLot });
@@ -1517,8 +1518,8 @@ const getGarments = async (req: Request, res: Response) => {
   let knitterId = req.query.knitterId;
   let whereCondition: any = {};
 
-  if(req.query.status=='true'){
-    whereCondition.status=true
+  if (req.query.status == 'true') {
+    whereCondition.status = true
   }
 
   if (!knitterId) {
@@ -1530,7 +1531,7 @@ const getGarments = async (req: Request, res: Response) => {
   }
   let garment = await Garment.findAll({
     attributes: ["id", "name"],
-    where: { ...whereCondition,brand: { [Op.overlap]: ress.dataValues.brand } },
+    where: { ...whereCondition, brand: { [Op.overlap]: ress.dataValues.brand } },
   });
   res.sendSuccess(res, garment);
 };
@@ -1539,8 +1540,8 @@ const getFabrics = async (req: Request, res: Response) => {
   let knitterId = req.query.knitterId;
   let whereCondition: any = {};
 
-  if(req.query.status=='true'){
-    whereCondition.status=true
+  if (req.query.status == 'true') {
+    whereCondition.status = true
   }
   if (!knitterId) {
     return res.sendError(res, "Need Knitter Id ");
@@ -1689,6 +1690,168 @@ const getKnitterProcessTracingChartData = async (
   res.sendSuccess(res, formatDataFromKnitter(req.query[key], knitters));
 };
 
+const getKnitterTransactionList = async (req: Request, res: Response) => {
+  const excelFilePath = path.join("./upload", "Knitter_transaction_list.xlsx");
+
+  try {
+    const searchTerm = req.query.search || "";
+    // Create the excel workbook file
+    const {
+      seasonId,
+      knitterId,
+      status,
+      filter,
+      programId,
+      spinnerId,
+      invoice,
+      lotNo,
+      yarnCount,
+      yarnType,
+      reelLotNo,
+    }: any = req.query;
+    if (!knitterId) {
+      return res.sendError(res, "Need Knitter Id ");
+    }
+    if (!status) {
+      return res.sendError(res, "Need  status");
+    }
+    const yarnTypeArray = yarnType?.split(',')?.map((item: any) => item.trim());
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet("Sheet1");
+    worksheet.mergeCells('A1:U1');
+    const mergedCell = worksheet.getCell('A1');
+    mergedCell.value = 'CottonConnect | Cotton Transaction List';
+    mergedCell.font = { bold: true };
+    mergedCell.alignment = { horizontal: 'center', vertical: 'middle' };
+    // Set bold font for header row
+    const headerRow = worksheet.addRow([
+      "Sr No.", 'Date', 'Season', 'Spinner Name', 'Order Reference', 'Invoice Number',
+      'Spin Lot No', 'Yarn REEL Lot No', 'Yarn Type', 'Yarn Count', 'No of Boxes', 'Box Id',
+      'Total Weight (Kgs)', 'Program', 'Vehicle No', 'Transaction Via Trader', 'Agent Details'
+    ]);
+    headerRow.font = { bold: true };
+    const whereCondition: any = {}
+    if (status === "Pending") {
+      whereCondition.knitter_id = knitterId;
+      whereCondition.status = {
+        [Op.in]: ["Pending", "Pending for QR scanning"],
+      };
+    }
+    if (status === "Sold") {
+      whereCondition.knitter_id = knitterId;
+      whereCondition.status = "Sold";
+    }
+    if (seasonId) {
+      const idArray: number[] = seasonId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.season_id = { [Op.in]: idArray };
+    }
+    if (spinnerId) {
+      const idArray: number[] = spinnerId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.spinner_id = { [Op.in]: idArray };
+    }
+    if (filter === "Quantity") {
+      whereCondition.qty_stock = { [Op.gt]: 0 };
+    }
+    if (programId) {
+      const idArray: number[] = programId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.program_id = { [Op.in]: idArray };
+    }
+
+    if (invoice) {
+      const idArray: any[] = invoice.split(",").map((id: any) => id);
+      whereCondition.invoice_no = { [Op.in]: idArray };
+    }
+    if (lotNo) {
+      const idArray: any[] = lotNo.split(",").map((id: any) => id);
+      whereCondition.batch_lot_no = { [Op.in]: idArray };
+    }
+    if (reelLotNo) {
+      const filterValues: any[] = reelLotNo
+        .split(",")
+        .map((value: any) => value.trim());
+
+      whereCondition[Op.or] = filterValues.map((value) => ({
+        reel_lot_no: { [Op.iLike]: `%${value}%` },
+      }));
+    }
+    if (yarnCount) {
+      const idArray: number[] = yarnCount
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.yarn_count = { [Op.contains]: idArray };
+    }
+    if (yarnType) {
+      whereCondition.yarn_type = { [Op.contains]: yarnTypeArray };
+    }
+    let include = [
+      {
+        model: Spinner, as: 'spinner'
+      },
+      {
+        model: Season, as: 'season'
+      },
+      {
+        model: Program, as: 'program'
+      }]
+
+    const knitter = await SpinSales.findAll({
+      where: whereCondition,
+      order: [["createdAt", "desc"]],
+      include: include,
+    });
+    // Append data to worksheet
+    for await (const [index, item] of knitter.entries()) {
+      const rowValues = Object.values({
+        index: index + 1,
+        date: item.date ? item.date : '',
+        season: item.season ? item.season.name : item.season.name,
+        spinner_name: item.spinner ? item.spinner.name : item.spinner.name,
+        order_ref: item.order_ref ? item.order_ref : '',
+        invoice_no: item.invoice_no ? item.invoice_no : '',
+        batch_lot_no: item.batch_lot_no ? item.batch_lot_no : '',
+        reel_lot_no: item.reel_lot_no ? item.reel_lot_no : 'N/A',
+        yarn_type: item.yarn_type ? item.yarn_type.map((item: any) => item)?.join(',') : '',
+        yarn_count: item.yarn_count ? item.yarn_count.map((item: any) => item.yarnCount_name)?.join(',') : '',
+        no_of_boxes: item.no_of_boxes,
+        box_ids: item.box_ids,
+        total_qty: item.total_qty,
+        program: item.program?.program_name,
+        vehicle_no: item.vehicle_no ? item.vehicle_no : '',
+        transaction_via_trader: item.transaction_via_trader === true ? "Yes" : "No",
+        agent_details: item.agent_details ? item.agent_details : 'N/A',
+      });
+      worksheet.addRow(rowValues);
+    }
+    // Auto-adjust column widths based on content
+    worksheet.columns.forEach((column: any) => {
+      let maxCellLength = 0;
+      column.eachCell({ includeEmpty: true }, (cell: any) => {
+        const cellLength = (cell.value ? cell.value.toString() : '').length;
+        maxCellLength = Math.max(maxCellLength, cellLength);
+      });
+      column.width = Math.min(14, maxCellLength + 2); // Limit width to 30 characters
+    });
+
+    // Save the workbook
+    await workbook.xlsx.writeFile(excelFilePath);
+    res.status(200).send({
+      success: true,
+      messgage: "File successfully Generated",
+      data: process.env.BASE_URL + "Knitter_transaction_list.xlsx",
+    });
+  } catch (error: any) {
+    console.error("Error appending data:", error);
+    return res.sendError(res, error.message);
+
+  }
+};
+
 export {
   createKnitterProcess,
   updateKnitterProcess,
@@ -1713,4 +1876,5 @@ export {
   getChooseFabricFilters,
   chooseFabricProcess,
   getKnitterProcessTracingChartData,
+  getKnitterTransactionList
 };

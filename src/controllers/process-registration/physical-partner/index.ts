@@ -25,7 +25,6 @@ const fetchPhysicalPartnerPagination = async (req: Request, res: Response) =>
     const districtId: any = req.query.districtId as string;
     const offset = (page - 1) * limit;
     const whereCondition: any = {};
-    
 
     try
     {
