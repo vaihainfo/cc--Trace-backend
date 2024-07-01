@@ -56,7 +56,7 @@ const createGinnerProcess = async (req: Request, res: Response) => {
     const ginprocess = await GinProcess.create(data);
 
     let uniqueFilename = `gin_procees_qrcode_${Date.now()}.png`;
-    let da = encrypt(`${ginprocess.id}`);
+    let da = encrypt(`Ginner,Process,${ginprocess.id}`);
     let aa = await generateOnlyQrCode(da, uniqueFilename);
     const gin = await GinProcess.update(
       { qr: uniqueFilename },
@@ -1561,93 +1561,205 @@ const getVillageAndFarmer = async (req: Request, res: Response) => {
   res.sendSuccess(res, { farmers, village });
 };
 
+const _getGinnerProcessTracingChartData = async (
+  reelLotNo:any
+) => {
+  try {
+     await createIndexes();
+     
+    let include = [
+      {
+        model: Ginner,
+        as: "ginner",
+        attributes: ['id', 'name'], // Only fetch necessary fields
+      },
+    ];
+
+    let transactionInclude = [
+      {
+        model: Village,
+        as: "village",
+        attributes: ['id', 'village_name'], // Only fetch necessary fields
+      },
+      {
+        model: Farmer,
+        as: "farmer",
+        attributes: ['id', 'firstName',"lastName", 'farmGroup_id', 'village_id'],
+        include: [
+          {
+            model: Village,
+            as: "village",
+            attributes: ['id', 'village_name'], // Only fetch necessary fields
+          },
+          {
+            model: FarmGroup,
+            as: "farmGroup",
+            attributes: ['id', 'name'], // Only fetch necessary fields
+          },
+        ],
+      },
+    ];
+
+    let whereCondition: any = {};
+
+    if (reelLotNo) {
+      const idArray: number[] = reelLotNo
+        .split(",")
+      whereCondition.reel_lot_no = { [Op.in]: idArray };
+    }
+
+
+    const batchSize = 100;
+    let offset = 0;
+    let allGinData: any[] = [];
+
+    while (true) {
+      let ginBatch = await GinProcess.findAll({
+        where: whereCondition,
+        include: include,
+        order: [["id", "desc"]],
+        limit: batchSize,
+        offset: offset,
+        attributes: ['id', 'reel_lot_no'] // Only fetch necessary fields
+      });
+
+      if (ginBatch.length === 0) break;
+
+      offset += batchSize;
+
+      let ginWithTransactions = await Promise.all(
+        ginBatch.map(async (el: any) => {
+          el = el.toJSON();
+          let processTransactions = await CottonSelection.findAll({
+            where: {
+              process_id: el.id
+            },
+            attributes: ['id', 'process_id', 'transaction_id'] // Only fetch necessary fields
+          });
+
+          el.transaction = await Transaction.findAll({
+            where: {
+              id: {
+                [Op.in]: processTransactions.map((pt: any) => pt.transaction_id)
+              }
+            },
+            include: transactionInclude,
+            attributes: ['id', 'farmer_id', 'village_id'] // Only fetch necessary fields
+          });
+
+          return el;
+        })
+      );
+
+      allGinData = allGinData.concat(ginWithTransactions);
+    }
+
+    let formattedData: any = {};
+
+    allGinData.forEach((el: any) => {
+      el.transaction.forEach((tx: any) => {
+        if (!formattedData[tx.farmer.farmGroup_id]) {
+          formattedData[tx.farmer.farmGroup_id] = {
+            farm_name: tx.farmer.farmGroup.name,
+            villages: [],
+          };
+        }
+
+        const village_name = tx.farmer.village.village_name;
+        if (!formattedData[tx.farmer.farmGroup_id].villages.includes(village_name)) {
+          formattedData[tx.farmer.farmGroup_id].villages.push(village_name);
+        }
+      });
+    });
+
+    formattedData = Object.keys(formattedData).map((key: any) => {
+      return formattedData[key];
+    });
+
+    return formatDataForGinnerProcess(reelLotNo, formattedData);
+  } catch (error) {
+    console.error(error);
+  }
+};
+
+const createIndexes = async () => {
+  const indexQueries = [
+    {
+      indexName: 'idx_ginner_reel_lot_no',
+      query: `CREATE INDEX idx_ginner_reel_lot_no ON "Ginners" (reel_lot_no);`,
+      table: 'ginners'
+    },
+    {
+      indexName: 'idx_village_village_name',
+      query: `CREATE UNIQUE INDEX idx_village_village_name ON "Villages" (village_name);`,
+      table: 'villages'
+    },
+    {
+      indexName: 'idx_farmer_farmGroup_id_village_id',
+      query: `CREATE INDEX idx_farmer_farmGroup_id_village_id ON "Farmers" (farmGroup_id, village_id);`,
+      table: 'farmers'
+    },
+    {
+      indexName: 'idx_farmGroup_name',
+      query: `CREATE UNIQUE INDEX idx_farmGroup_name ON "FarmGroups" (name);`,
+      table: 'farm_groups'
+    },
+    {
+      indexName: 'idx_ginProcess_reel_lot_no',
+      query: `CREATE INDEX idx_ginProcess_reel_lot_no ON "GinProcesses" (reel_lot_no);`,
+      table: 'gin_processes'
+    },
+    {
+      indexName: 'idx_cottonSelection_process_id_transaction_id',
+      query: `CREATE INDEX idx_cottonSelection_process_id_transaction_id ON "CottonSelections" (process_id, transaction_id);`,
+      table: 'cotton_selections'
+    },
+    {
+      indexName: 'idx_transaction_farmer_id_village_id',
+      query: `CREATE INDEX idx_transaction_farmer_id_village_id ON "Transactions" (farmer_id, village_id);`,
+      table: 'transactions'
+    }
+  ];
+
+  for (const index of indexQueries) {
+    const indexExistsQuery = `
+      SELECT 1
+      FROM pg_indexes
+      WHERE tablename = :table
+      AND indexname = :indexName;
+    `;
+
+    const result = await sequelize.query(indexExistsQuery, {
+      type: sequelize.QueryTypes.SELECT,
+      replacements: {
+        table: index.table.toLowerCase(),
+        indexName: index.indexName
+      }
+    });
+    
+    if (result.length === 0) {
+      try {
+        await sequelize.query(index.query);
+        console.log(`Index ${index.indexName} created on table ${index.table}`);
+      } catch (error) {
+        console.error(`Error creating index ${index.indexName} on table ${index.table}`, error);
+      }
+    } else {
+      console.log(`Index ${index.indexName} already exists on table ${index.table}`);
+    }
+  }
+};
+
 const getGinnerProcessTracingChartData = async (
   req: Request,
   res: Response
 ) => {
-  const { reelLotNo } = req.query;
-  let include = [
-    {
-      model: Ginner,
-      as: "ginner",
-    },
-  ];
-
-  let transactionInclude = [
-    {
-      model: Village,
-      as: "village",
-    },
-    {
-      model: Farmer,
-      as: "farmer",
-      include: [
-        {
-          model: Village,
-          as: "village",
-        },
-        {
-          model: FarmGroup,
-          as: "farmGroup",
-        },
-      ],
-    },
-  ];
-
-  let whereCondition = {
-    reel_lot_no: reelLotNo,
-  };
-
-  let gin = await GinProcess.findAll({
-    where: whereCondition,
-    include: include,
-    order: [["id", "desc"]],
-  });
-
-  gin = await Promise.all(
-    gin.map(async (el: any) => {
-      el = el.toJSON();
-      let processTransactions = await CottonSelection.findAll({
-        where: {
-          process_id: el.id
-        }
-      })
-      el.transaction = await Transaction.findAll({
-        where: {
-          id: {
-            [Op.in]: processTransactions.map((el: any) => el.transaction_id)
-          }
-        },
-        include: transactionInclude,
-      });
-      return el;
-    })
-  );
-
-  let formattedData: any = {};
-
-  gin.forEach((el: any) => {
-    el.transaction.forEach((el: any) => {
-      if (!formattedData[el.farmer.farmGroup_id]) {
-        formattedData[el.farmer.farmGroup_id] = {
-          farm_name: el.farmer.farmGroup.name,
-          villages: [],
-        };
-      }
-
-      const village_name = el.farmer.village.village_name;
-      if (
-        !formattedData[el.farmer.farmGroup_id].villages.includes(village_name)
-      ) {
-        formattedData[el.farmer.farmGroup_id].villages.push(village_name);
-      }
-    });
-  });
-
-  formattedData = Object.keys(formattedData).map((el: any) => {
-    return formattedData[el];
-  });
-  res.sendSuccess(res, formatDataForGinnerProcess(reelLotNo, formattedData));
+    const { reelLotNo }:any = req.query;
+    if (!reelLotNo) {
+      return res.status(400).send({ error: "reelLotNo is required" });
+    }
+    const data = await _getGinnerProcessTracingChartData(reelLotNo);
+    res.sendSuccess(res, data);
 };
 
 const checkReport = async (req: Request, res: Response) => {
@@ -1717,4 +1829,5 @@ export {
   fetchGinProcess,
   exportGinnerProcess,
   checkReport,
+  _getGinnerProcessTracingChartData
 };

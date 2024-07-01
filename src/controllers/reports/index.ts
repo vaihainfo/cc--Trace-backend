@@ -8832,25 +8832,25 @@ const fetchGinnerSummaryPagination = async (req: Request, res: Response) => {
 
       let [cottonProcured, cottonProcessed, lintProcured, lintSold]: any =
         await Promise.all([
-          Transaction.findOne({
-            attributes: [
-              [
-                sequelize.fn(
-                  "COALESCE",
-                  sequelize.fn(
-                    "SUM",
-                    Sequelize.literal("CAST(qty_purchased AS DOUBLE PRECISION)")
-                  ),
-                  0
-                ),
-                "qty",
-              ],
-            ],
-            where: {
-              ...transactionWhere,
-              mapped_ginner: ginner.id,
-            },
-          }),
+          // Transaction.findOne({
+          //   attributes: [
+          //     [
+          //       sequelize.fn(
+          //         "COALESCE",
+          //         sequelize.fn(
+          //           "SUM",
+          //           Sequelize.literal("CAST(qty_purchased AS DOUBLE PRECISION)")
+          //         ),
+          //         0
+          //       ),
+          //       "qty",
+          //     ],
+          //   ],
+          //   where: {
+          //     ...transactionWhere,
+          //     mapped_ginner: ginner.id,
+          //   },
+          // }),
           Transaction.findOne({
             attributes: [
               [
@@ -8870,6 +8870,22 @@ const fetchGinnerSummaryPagination = async (req: Request, res: Response) => {
               mapped_ginner: ginner.id,
               status: "Sold",
             },
+          }),
+          CottonSelection.findOne({
+            attributes: [
+              [sequelize.fn('COALESCE', sequelize.fn('SUM', Sequelize.literal("CAST(qty_used AS DOUBLE PRECISION)")), 0), 'qty']
+            ],
+            include: [
+              {
+                model: GinProcess,
+                as: 'ginprocess',
+                attributes: []
+              }
+            ],
+            where: {
+              '$ginprocess.ginner_id$': ginner.id
+            },
+            group: ["ginprocess.ginner_id"]
           }),
           GinBale.findOne({
             attributes: [
@@ -9223,15 +9239,15 @@ const exportGinnerSummary = async (req: Request, res: Response) => {
 
 
         let [cottonProcured, cottonProcessed, lintProcured, lintSold]: any = await Promise.all([
-          Transaction.findOne({
-            attributes: [
-              [sequelize.fn('COALESCE', sequelize.fn('SUM', Sequelize.literal("CAST(qty_purchased AS DOUBLE PRECISION)")), 0), 'qty']
-            ],
-            where: {
-              ...transactionWhere,
-              mapped_ginner: item.id
-            }
-          }),
+          // Transaction.findOne({
+          //   attributes: [
+          //     [sequelize.fn('COALESCE', sequelize.fn('SUM', Sequelize.literal("CAST(qty_purchased AS DOUBLE PRECISION)")), 0), 'qty']
+          //   ],
+          //   where: {
+          //     ...transactionWhere,
+          //     mapped_ginner: item.id
+          //   }
+          // }),
           Transaction.findOne({
             attributes: [
               [sequelize.fn('COALESCE', sequelize.fn('SUM', Sequelize.literal("CAST(qty_purchased AS DOUBLE PRECISION)")), 0), 'qty']
@@ -9241,6 +9257,22 @@ const exportGinnerSummary = async (req: Request, res: Response) => {
               mapped_ginner: item.id,
               status: 'Sold'
             }
+          }),
+          CottonSelection.findOne({
+            attributes: [
+              [sequelize.fn('COALESCE', sequelize.fn('SUM', Sequelize.literal("CAST(qty_used AS DOUBLE PRECISION)")), 0), 'qty']
+            ],
+            include: [
+              {
+                model: GinProcess,
+                as: 'ginprocess',
+                attributes: []
+              }
+            ],
+            where: {
+              '$ginprocess.ginner_id$': item.id
+            },
+            group: ["ginprocess.ginner_id"]
           }),
           GinBale.findOne({
             attributes: [
@@ -11443,11 +11475,11 @@ const fetchPscpProcurementLiveTracker = async (req: Request, res: Response) => {
             attributes: ["id", "program_name"],
             where: { id: program },
           });
-          obj.expected_seed_cotton =
-            expectedQty?.dataValues["expected_seed_cotton"] ?? 0;
+          obj.expected_seed_cotton = expectedQty ?
+            (expectedQty?.dataValues["expected_seed_cotton"] ?? 0) / 1000 : 0;
           obj.expected_lint = expectedQty?.dataValues?.expected_lint ?? 0;
           obj.procurement_seed_cotton =
-            item?.dataValues?.procurement_seed_cotton ?? 0;
+          item ? (item?.dataValues?.procurement_seed_cotton ?? 0) / 1000 : 0;
           obj.procured_lint_cotton_kgs = ginbales
             ? ginbales.dataValues.total_qty ?? 0
             : 0;
@@ -11455,7 +11487,7 @@ const fetchPscpProcurementLiveTracker = async (req: Request, res: Response) => {
             ? (ginbales.dataValues.total_qty ?? 0) / 1000
             : 0;
           obj.pending_seed_cotton = pendingSeedCotton
-            ? pendingSeedCotton?.dataValues?.pending_seed_cotton
+            ? (pendingSeedCotton?.dataValues?.pending_seed_cotton ?? 0) / 1000
             : 0;
           obj.procurement =
             expectedQty?.dataValues?.expected_seed_cotton !== 0 &&

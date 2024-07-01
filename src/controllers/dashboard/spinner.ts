@@ -14,6 +14,7 @@ import moment from "moment";
 import YarnCount from "../../models/yarn-count.model";
 import Country from "../../models/country.model";
 import sequelize from "../../util/dbConn";
+import LintSelections from "../../models/lint-seletions.model";
 
 const getQueryParams = async (
   req: Request, res: Response
@@ -147,6 +148,50 @@ const getSpinnerProcessWhereQuery = (
 
   if (reqData?.fromDate && reqData?.toDate)
     where.date = { [Op.between]: [reqData.fromDate, reqData.toDate] };
+
+  return where;
+};
+
+
+
+const getSpinnerLintQuery = (
+  reqData: any
+) => {
+  const where: any = {
+    '$spinprocess.status$': "Sold"
+  };
+
+  if (reqData?.program)
+    where['$spinprocess.program_id$'] = reqData.program;
+
+  if (reqData?.brand)
+    where['$spinprocess.spinner.brand$'] = {
+      [Op.contains]: Sequelize.literal(`ARRAY [${reqData.brand}]`)
+    };
+
+  if (reqData?.season)
+    where['$spinprocess.season_id$'] = reqData.season;
+
+  if (reqData?.country)
+    where['$spinprocess.spinner.country_id$'] = reqData.country;
+
+  if (reqData?.state)
+    where['$spinprocess.spinner.state_id$'] = reqData.state;
+
+  if (reqData?.district)
+    where['$spinprocess.spinner.district_id$'] = reqData.district;
+
+  if (reqData?.spinner)
+    where['$spinprocess.spinner.id$'] = reqData.spinner;
+
+  if (reqData?.fromDate)
+    where['$spinprocess.date$'] = { [Op.gte]: reqData.fromDate };
+
+  if (reqData?.toDate)
+    where['$spinprocess.date$'] = { [Op.lt]: reqData.toDate };
+
+  if (reqData?.fromDate && reqData?.toDate)
+    where['$spinprocess.date$'] = { [Op.between]: [reqData.fromDate, reqData.toDate] };
 
   return where;
 };
@@ -348,7 +393,7 @@ const getLintProcuredProcessed = async (
   try {
     const reqData = await getQueryParams(req, res);
     const ginSaleWhere = getGinnerSalesWhereQuery(reqData);
-    const spinProcessWhere = getSpinnerProcessWhereQuery(reqData);
+    const spinProcessWhere = getSpinnerLintQuery(reqData);
     const lintProcuredData = await getLintProcuredData(ginSaleWhere);
     const lintProcessedData = await getLintProcessedData(spinProcessWhere);
     const data = await getLintProcuredProcessedRes(
@@ -482,25 +527,39 @@ const getLintProcessedData = async (
   where: any
 ) => {
 
-  const result = await SpinProcess.findAll({
+  const result = await LintSelections.findAll({
     attributes: [
-      [Sequelize.fn('SUM', Sequelize.col('total_qty')), 'lintProcessed'],
-      [Sequelize.col('season.name'), 'seasonName'],
-      [Sequelize.col('season.id'), 'seasonId']
+      [
+        sequelize.fn(
+          "COALESCE",
+          sequelize.fn("SUM", sequelize.col("qty_used")),
+          0
+        ),
+        "lintProcessed",
+      ],
+      [Sequelize.col('spinprocess.season.name'), 'seasonName'],
+      [Sequelize.col('spinprocess.season.id'), 'seasonId']
     ],
-    include: [{
-      model: Season,
-      as: 'season',
-      attributes: []
-    }, {
-      model: Spinner,
-      as: 'spinner',
-      attributes: []
-    }],
+    include: [
+      {
+        model: SpinProcess,
+        as: "spinprocess",
+        attributes: [],
+        include: [{
+          model: Season,
+          as: 'season',
+          attributes: []
+        }, {
+          model: Spinner,
+          as: 'spinner',
+          attributes: []
+        }],
+      },
+    ],
     order: [['seasonId', 'desc']],
     limit: 3,
     where,
-    group: ['season.id']
+    group: ['spinprocess.season.id']
   });
 
   return result;
@@ -1355,7 +1414,7 @@ const getLintProcessedByCountry = async (
   try {
 
     const reqData = await getQueryParams(req, res);
-    const where = getSpinnerProcessWhereQuery(reqData);
+    const where = getSpinnerLintQuery(reqData);
     const processedData = await getLintProcessedByCountryData(where);
     const data = await getLintProcessedByCountryDataRes(processedData, reqData.season);
     return res.sendSuccess(res, data);
@@ -1370,31 +1429,49 @@ const getLintProcessedByCountry = async (
 
 
 const getLintProcessedByCountryData = async (where: any) => {
-  const result = await SpinProcess.findAll({
+
+  const result = await LintSelections.findAll({
     attributes: [
-      [Sequelize.fn('SUM', Sequelize.col('total_qty')), 'processed'],
-      [Sequelize.col('spinner.country.id'), 'countryId'],
-      [Sequelize.col('spinner.country.county_name'), 'countryName'],
-      [Sequelize.col('season.id'), 'seasonId'],
-      [Sequelize.col('season.name'), 'seasonName']
+      [
+        sequelize.fn(
+          "COALESCE",
+          sequelize.fn("SUM", sequelize.col("qty_used")),
+          0
+        ),
+        "processed",
+      ],
+      [Sequelize.col('spinprocess.spinner.country.id'), 'countryId'],
+      [Sequelize.col('spinprocess.spinner.country.county_name'), 'countryName'],
+      [Sequelize.col('spinprocess.season.name'), 'seasonName'],
+      [Sequelize.col('spinprocess.season.id'), 'seasonId']
     ],
-    include: [{
-      model: Spinner,
-      as: 'spinner',
-      attributes: [],
-      include: [{
-        model: Country,
-        as: 'country',
-        attributes: []
-      }]
-    }, {
-      model: Season,
-      as: 'season',
-      attributes: []
-    }],
+    include: [
+      {
+        model: SpinProcess,
+        as: "spinprocess",
+        attributes: [],
+        include: [{
+          model: Season,
+          as: 'season',
+          attributes: []
+        }, {
+          model: Spinner,
+          as: 'spinner',
+          attributes: [],
+          include: [{
+            model: Country,
+            as: 'country',
+            attributes: []
+          }]
+        }],
+      },
+    ],
+    order: [['seasonId', 'desc']],
+    limit: 3,
     where,
-    group: ['spinner.country.id', 'season.id']
+    group: ['spinprocess.spinner.country.id', 'spinprocess.season.id']
   });
+
 
   return result;
 };
@@ -1496,7 +1573,7 @@ const getLintSoldByCountry = async (
 const getLintSoldByCountryData = async (where: any) => {
   const result = await SpinSales.findAll({
     attributes: [
-      [Sequelize.fn('SUM', Sequelize.col('no_of_boxes')), 'sold'],
+      [Sequelize.fn('SUM', Sequelize.col('total_qty')), 'sold'],
       [Sequelize.col('spinner.country.id'), 'countryId'],
       [Sequelize.col('spinner.country.county_name'), 'countryName'],
       [Sequelize.col('season.id'), 'seasonId'],
@@ -1740,7 +1817,7 @@ const getYarnSoldByCountry = async (
 
 
 const getYarnSoldByCountryData = async (where: any) => {
-  const result = await SpinProcess.findAll({
+  const result = await SpinSales.findAll({
     attributes: [
       [Sequelize.fn('SUM', Sequelize.col('total_qty')), 'sold'],
       [Sequelize.col('spinner.country.id'), 'countryId'],

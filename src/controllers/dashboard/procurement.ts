@@ -278,8 +278,8 @@ const getEstimateProductionByCountry = async (
 
   const estimateAndProduction = await Farm.findAll({
     attributes: [
-      [Sequelize.fn('SUM', Sequelize.col('farmer.total_estimated_cotton')), 'estimate'],
-      [Sequelize.fn('SUM', Sequelize.col('farmer.agri_estimated_prod')), 'production'],
+      [Sequelize.fn('SUM', Sequelize.col('farms.total_estimated_cotton')), 'estimate'],
+      [Sequelize.fn('SUM', Sequelize.col('farms.agri_estimated_prod')), 'production'],
       [Sequelize.col(`farmer.${tableName}.${colName}`), 'name']
     ],
     include: [
@@ -394,8 +394,8 @@ const getEstimateData = async (
 
   const estimateAndProduction = await Farm.findAll({
     attributes: [
-      [Sequelize.fn('SUM', Sequelize.col('farmer.total_estimated_cotton')), 'estimate'],
-      [Sequelize.fn('SUM', Sequelize.col('farmer.agri_estimated_prod')), 'production'],
+      [Sequelize.fn('SUM', Sequelize.col('farms.total_estimated_cotton')), 'estimate'],
+      [Sequelize.fn('SUM', Sequelize.col('farms.agri_estimated_prod')), 'production'],
       [Sequelize.col('season.id'), 'seasonId']
     ],
     include: [
@@ -519,6 +519,7 @@ const getProcuredProcessedRes = (
       data.seasonName = fProcured.dataValues.season.name;
       data.procured += formatNumber(fProcured.dataValues.procured);
     }
+    
 
     season.push(data.seasonName);
     processed.push(data.processed);
@@ -889,6 +890,13 @@ const getEstimateCottonRes = async (
         if (!seasonList.includes(fFarmerValue.dataValues.seasonName))
           seasonList.push(fFarmerValue.dataValues.seasonName);
       }
+      else {
+        seasons.forEach((season: any) => {
+            if(season.id == seasonId) {
+              seasonList.push(season.name);
+            }
+        })
+      }
       data.data.push(totalArea);
     }
 
@@ -1003,6 +1011,12 @@ const getProcessedCottonRes = async (
         totalArea = formatNumber(fFarmerValue.dataValues.processed);
         if (!seasonList.includes(fFarmerValue.dataValues.seasonName))
           seasonList.push(fFarmerValue.dataValues.seasonName);
+      } else {
+        seasons.forEach((season: any) => {
+            if(season.id == seasonId) {
+              seasonList.push(season.name);
+            }
+        })
       }
       data.data.push(totalArea);
     }
@@ -1054,8 +1068,8 @@ const getEstimateDataByCountry = async (
 
   const result = await Farm.findAll({
     attributes: [
-      [Sequelize.fn('SUM', Sequelize.col('farmer.total_estimated_cotton')), 'estimate'],
-      [Sequelize.fn('SUM', Sequelize.col('farmer.agri_estimated_prod')), 'production'],
+      [Sequelize.fn('SUM', Sequelize.col('farms.total_estimated_cotton')), 'estimate'],
+      [Sequelize.fn('SUM', Sequelize.col('farms.agri_estimated_prod')), 'production'],
       [Sequelize.col('farmer.country.id'), 'countryId'],
       [Sequelize.col('farmer.country.county_name'), 'countryName'],
       [Sequelize.col('season.id'), 'seasonId'],
@@ -1183,6 +1197,13 @@ const getProcessedEstimatedProcessedCottonRes = async (
         countryCount.estimated = formatNumber(fEstimate.dataValues.estimate);
         if (!seasonList.includes(fEstimate.dataValues.seasonName))
           seasonList.push(fEstimate.dataValues.seasonName);
+      }
+      if(!fProcessed && !fProcured && !fEstimate) {
+        seasons.forEach((season: any) => {
+            if(season.id == seasonId) {
+              seasonList.push(season.name);
+            }
+        })
       }
       data.data.push(countryCount.estimated);
       data.data.push(countryCount.procured);
