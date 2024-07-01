@@ -175,6 +175,8 @@ const getGinBaleQuery = (
   const where: any = {
 
   };
+
+  //where['$ginprocess.status$'] = "Sold";
   if (reqData?.program)
     where['$ginprocess.program_id$'] = reqData.program;
 
@@ -221,6 +223,7 @@ const getBaleSelectionQuery = (
   const where: any = {
 
   };
+  where['$sales.status$'] = "Sold";
   if (reqData?.program)
     where['$sales.program_id$'] = reqData.program;
 
@@ -579,7 +582,7 @@ const getLintProcessedData = async (
 const getProcuredProcessedData = async (
   where: any
 ) => {
-
+  where.status = 'Sold';
   const result = await Transaction.findAll({
     attributes: [
       [Sequelize.fn('SUM', Sequelize.literal('CAST(qty_purchased  as numeric)')), 'procured'],
@@ -645,6 +648,7 @@ const getLintProcuredSoldRes = async (
     if (!seasonIds.includes(sold.dataValues.seasonId))
       seasonIds.push(sold.dataValues.seasonId);
   });
+
 
   const seasons = await Season.findAll({
     limit: 3,
@@ -720,21 +724,50 @@ const getLintProcuredDataByMonth = async (
   where: any
 ) => {
 
-  const result = await GinProcess.findAll({
+  const result = await GinBale.findAll({
     attributes: [
-      [Sequelize.fn('SUM', Sequelize.col('no_of_bales')), 'procured'],
-      [Sequelize.literal("date_part('Month', date)"), 'month'],
-      [Sequelize.literal("date_part('Year', date)"), 'year']
+      [
+        sequelize.fn(
+          "COUNT",
+          Sequelize.literal('DISTINCT "gin-bales"."id"')
+        ),
+        "procured",
+      ],
+      [
+        sequelize.fn(
+          "COALESCE",
+          sequelize.fn(
+            "SUM",
+            sequelize.literal(
+              'CAST("gin-bales"."weight" AS DOUBLE PRECISION)'
+            )
+          ),
+          0
+        ),
+        "lintProcured",
+      ],
+      [Sequelize.literal("date_part('Month', ginprocess.date)"), 'month'],
+      [Sequelize.literal("date_part('Year', ginprocess.date)"), 'year']
     ],
-    include: [{
-      model: Ginner,
-      as: 'ginner',
-      attributes: []
-    }],
-    where: where,
+    include: [
+      {
+        model: GinProcess,
+        as: "ginprocess",
+        attributes: [],
+        include: [{
+          model: Season,
+          as: 'season',
+          attributes: []
+        }, {
+          model: Ginner,
+          as: 'ginner',
+          attributes: []
+        }],
+      },
+    ],
+    where,
     group: ['month', 'year']
   });
-
   return result;
 
 };
@@ -743,14 +776,74 @@ const getLintProcuredDataByMonth = async (
 const getLintSoldDataByMonth = async (
   where: any
 ) => {
-  where.status = "Sold";
-  const result = await GinSales.findAll({
+  const result = await BaleSelection.findAll({
     attributes: [
-      [Sequelize.fn('SUM', Sequelize.col('no_of_bales')), 'procured'],
+      [
+        sequelize.fn(
+          "COALESCE",
+          sequelize.fn(
+            "SUM",
+            sequelize.literal(
+              'CAST("bale"."weight" AS DOUBLE PRECISION)'
+            )
+          ),
+          0
+        ),
+        "lintSold",
+      ],
+      [
+        sequelize.fn("COUNT", Sequelize.literal("DISTINCT bale_id")),
+        "sold",
+      ],
+      [Sequelize.literal("date_part('Month', sales.date)"), 'month'],
+      [Sequelize.literal("date_part('Year', sales.date)"), 'year']
+    ],
+    include: [
+      {
+        model: GinSales,
+        as: "sales",
+        attributes: [],
+        include: [{
+          model: Season,
+          as: 'season',
+          attributes: []
+        }, {
+          model: Ginner,
+          as: 'ginner',
+          attributes: []
+        }
+        ],
+      },
+      {
+        model: GinBale,
+        as: "bale",
+        attributes: [],
+      },
+    ],
+    where,
+    group: ['month', 'year']
+  });
+
+  return result;
+
+};
+
+
+const getProcessedDataByMonth = async (
+  where: any
+) => {
+
+  const result = await GinProcess.findAll({
+    attributes: [
+      [Sequelize.fn('SUM', Sequelize.col('total_qty')), 'processed'],
       [Sequelize.literal("date_part('Month', date)"), 'month'],
       [Sequelize.literal("date_part('Year', date)"), 'year']
     ],
     include: [{
+      model: Season,
+      as: 'season',
+      attributes: []
+    }, {
       model: Ginner,
       as: 'ginner',
       attributes: []
@@ -763,7 +856,7 @@ const getLintSoldDataByMonth = async (
 
 };
 
-const getProcuredProcessedDataByMonth = async (
+const getProcuredDataByMonth = async (
   where: any
 ) => {
 
@@ -798,15 +891,19 @@ const getDataAll = async (
       }
     });
     reqData.season = seasonOne.id;
-    const query = getOverAllDataQuery(reqData);
+    const procuredWhere = await getGinBaleQuery(reqData);
+    const baleSel = getBaleSelectionQuery(reqData);
     const transactionWhere = getTransactionDataQuery(reqData);
-    const procuredData = await getLintProcuredDataByMonth(query);
-    const soldData = await getLintSoldDataByMonth(query);
-    const procuredProcessedData = await getProcuredProcessedDataByMonth(transactionWhere);
+    const processedWhere = getOverAllDataQuery(reqData);
+    const procuredData = await getLintProcuredDataByMonth(procuredWhere);
+    const processedData = await getProcessedDataByMonth(processedWhere);
+    const soldData = await getLintSoldDataByMonth(baleSel);
+    const procuredProcessedData = await getProcuredDataByMonth(transactionWhere);
     const data = getDataAllRes(
       procuredData,
       soldData,
       procuredProcessedData,
+      processedData,
       seasonOne
     );
     return res.sendSuccess(res, data);
@@ -824,6 +921,7 @@ const getDataAllRes = (
   procuredList: any[],
   soldList: any[],
   cottonList: any[],
+  processedList: any[],
   season: any
 ) => {
   const monthList = getMonthDate(season.from, season.to);
@@ -853,6 +951,10 @@ const getDataAllRes = (
       cotton.dataValues.year == month.year
     );
 
+    const fProcessed = processedList.find((cotton: any) =>
+      (cotton.dataValues.month - 1) == month.month &&
+      cotton.dataValues.year == month.year
+    );
     let data = {
       procured: 0,
       sold: 0,
@@ -860,14 +962,16 @@ const getDataAllRes = (
       cottonStock: 0
     };
     if (fProcured) {
-      data.procured = formatNumber(fProcured.dataValues.procured);
+      data.procured = formatNumber(fProcured.dataValues.lintProcured);
+    }
+    if(fProcessed) {
+      data.cottonStock = formatNumber(fProcessed.dataValues.processed);
     }
 
     if (fSold) {
-      data.sold = formatNumber(fSold.dataValues.procured);
+      data.sold = formatNumber(fSold.dataValues.lintSold);
     }
     if (fCotton) {
-      data.cottonStock = (formatNumber(fCotton.dataValues.stock));
       data.cottonProcured = (formatNumber(fCotton.dataValues.procured));
     }
 
@@ -1399,9 +1503,15 @@ const getLintProcessedRes = async (
       );
 
       if (gProcessedValue) {
-        totalArea = formatNumber(gProcessedValue.dataValues.processed);
+        totalArea = formatNumber(gProcessedValue.dataValues.lintProcured);
         if (!seasonList.includes(gProcessedValue.dataValues.seasonName))
           seasonList.push(gProcessedValue.dataValues.seasonName);
+      } else {
+        seasons.forEach((season: any) => {
+          if (season.id == seasonId) {
+            seasonList.push(season.name);
+          }
+        });
       }
       data.data.push(totalArea);
     }
@@ -1486,9 +1596,15 @@ const getLintSoldRes = async (
       );
 
       if (gSoldValue) {
-        totalArea = formatNumber(gSoldValue.dataValues.sold);
+        totalArea = formatNumber(gSoldValue.dataValues.lintSold);
         if (!seasonList.includes(gSoldValue.dataValues.seasonName))
           seasonList.push(gSoldValue.dataValues.seasonName);
+      } else {
+        seasons.forEach((season: any) => {
+          if (season.id == seasonId) {
+            seasonList.push(season.name);
+          }
+        });
       }
       data.data.push(totalArea);
     }
@@ -1509,7 +1625,7 @@ const getProcuredAllocated = async (
   try {
     const reqData = await getQueryParams(req, res);
     const where = getOverAllDataQuery(reqData);
-    const allocationWhere = getGinnerAllocationQuery(reqData)
+    const allocationWhere = getGinnerAllocationQuery(reqData);
     const procuredData = await getProcuredProcessedData(where);
     const allocatedData = await getAllocatedData(allocationWhere);
     const data = await getProcuredAllocatedRes(
@@ -1745,6 +1861,12 @@ const getOutturnCountryRes = async (
         totalArea = formatNumber(gProcessedValue.dataValues.outTurn);
         if (!seasonList.includes(gProcessedValue.dataValues.seasonName))
           seasonList.push(gProcessedValue.dataValues.seasonName);
+      } else {
+        seasons.forEach((season: any) => {
+          if (season.id == seasonId) {
+            seasonList.push(season.name);
+          }
+        });
       }
       data.data.push(totalArea);
     }
@@ -1779,6 +1901,7 @@ const getProcuredByCountry = async (
 
 
 const getProcuredByCountryData = async (where: any) => {
+  where.status = 'Sold';
   const result = await Transaction.findAll({
     attributes: [
       [Sequelize.fn('SUM', Sequelize.literal('CAST(qty_purchased  as numeric)')), 'procured'],
@@ -1864,6 +1987,12 @@ const getProcuredDataRes = async (
         farmerCount = formatNumber(fFarmerValue.dataValues.procured);
         if (!seasonList.includes(fFarmerValue.dataValues.seasonName))
           seasonList.push(fFarmerValue.dataValues.seasonName);
+      } else {
+        seasons.forEach((season: any) => {
+          if (season.id == seasonId) {
+            seasonList.push(season.name);
+          }
+        });
       }
       data.data.push(farmerCount);
     }
@@ -1984,6 +2113,12 @@ const getProcessedDataRes = async (
         farmerCount = formatNumber(fFarmerValue.dataValues.processed);
         if (!seasonList.includes(fFarmerValue.dataValues.seasonName))
           seasonList.push(fFarmerValue.dataValues.seasonName);
+      } else {
+        seasons.forEach((season: any) => {
+          if (season.id == seasonId) {
+            seasonList.push(season.name);
+          }
+        });
       }
       data.data.push(farmerCount);
     }
@@ -2072,6 +2207,12 @@ const getBalesProcuredByCountryDataRes = async (
         farmerCount = formatNumber(fFarmerValue.dataValues.procured);
         if (!seasonList.includes(fFarmerValue.dataValues.seasonName))
           seasonList.push(fFarmerValue.dataValues.seasonName);
+      } else {
+        seasons.forEach((season: any) => {
+          if (season.id == seasonId) {
+            seasonList.push(season.name);
+          }
+        });
       }
       data.data.push(farmerCount);
     }
@@ -2209,6 +2350,12 @@ const getBaleSoldByCountryRes = async (
         farmerCount = formatNumber(fFarmerValue.dataValues.sold);
         if (!seasonList.includes(fFarmerValue.dataValues.seasonName))
           seasonList.push(fFarmerValue.dataValues.seasonName);
+      } else {
+        seasons.forEach((season: any) => {
+          if (season.id == seasonId) {
+            seasonList.push(season.name);
+          }
+        });
       }
       data.data.push(farmerCount);
     }
@@ -2387,6 +2534,13 @@ const getBaleStockDataRes = async (
         farmerCount.sold = formatNumber(fSoldValue.dataValues.sold);
         if (!seasonList.includes(fSoldValue.dataValues.seasonName))
           seasonList.push(fSoldValue.dataValues.seasonName);
+      }
+      if (!fSoldValue && !fProcuredValue) {
+        seasons.forEach((season: any) => {
+          if (season.id == seasonId) {
+            seasonList.push(season.name);
+          }
+        });
       }
 
       data.data.push(farmerCount.procured > farmerCount.sold ? farmerCount.procured - farmerCount.sold : 0);
