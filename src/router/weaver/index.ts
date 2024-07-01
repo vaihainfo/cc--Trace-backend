@@ -23,7 +23,7 @@ import {
     updateWeaverProcess,
     fetchWeaverProcess,
     updateWeaverSales,
-    getWeaverTransactionList
+    exportWeaverTransactionList
 } from "../../controllers/weaver";
 import accessControl from "../../middleware/access-control";
 import { Router } from "express";
@@ -56,6 +56,6 @@ router.get('/get-reel-lot-no', fetchFabricReelLotNo);
 router.get('/get-fabric-filters', getChooseFabricFilters);
 router.get('/choose-fabric', chooseWeaverFabric);
 router.get('/tracing/chart', getWeaverProcessTracingChartData);
-router.get('/export/transaction', getWeaverTransactionList);
+router.get('/export/transaction', exportWeaverTransactionList);
 
 export default router;

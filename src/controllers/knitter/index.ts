@@ -1722,7 +1722,7 @@ const getKnitterProcessTracingChartData = async (
   res.sendSuccess(res, formatDataFromKnitter(req.query[key], knitters));
 };
 
-const getKnitterTransactionList = async (req: Request, res: Response) => {
+const exportKnitterTransactionList = async (req: Request, res: Response) => {
   const excelFilePath = path.join("./upload", "Knitter_transaction_list.xlsx");
 
   try {
@@ -1908,5 +1908,5 @@ export {
   getChooseFabricFilters,
   chooseFabricProcess,
   getKnitterProcessTracingChartData,
-  getKnitterTransactionList
+  exportKnitterTransactionList
 };
