@@ -8832,25 +8832,25 @@ const fetchGinnerSummaryPagination = async (req: Request, res: Response) => {
 
       let [cottonProcured, cottonProcessed, lintProcured, lintSold]: any =
         await Promise.all([
-          Transaction.findOne({
-            attributes: [
-              [
-                sequelize.fn(
-                  "COALESCE",
-                  sequelize.fn(
-                    "SUM",
-                    Sequelize.literal("CAST(qty_purchased AS DOUBLE PRECISION)")
-                  ),
-                  0
-                ),
-                "qty",
-              ],
-            ],
-            where: {
-              ...transactionWhere,
-              mapped_ginner: ginner.id,
-            },
-          }),
+          // Transaction.findOne({
+          //   attributes: [
+          //     [
+          //       sequelize.fn(
+          //         "COALESCE",
+          //         sequelize.fn(
+          //           "SUM",
+          //           Sequelize.literal("CAST(qty_purchased AS DOUBLE PRECISION)")
+          //         ),
+          //         0
+          //       ),
+          //       "qty",
+          //     ],
+          //   ],
+          //   where: {
+          //     ...transactionWhere,
+          //     mapped_ginner: ginner.id,
+          //   },
+          // }),
           Transaction.findOne({
             attributes: [
               [
@@ -8870,6 +8870,22 @@ const fetchGinnerSummaryPagination = async (req: Request, res: Response) => {
               mapped_ginner: ginner.id,
               status: "Sold",
             },
+          }),
+          CottonSelection.findOne({
+            attributes: [
+              [sequelize.fn('COALESCE', sequelize.fn('SUM', Sequelize.literal("CAST(qty_used AS DOUBLE PRECISION)")), 0), 'qty']
+            ],
+            include: [
+              {
+                model: GinProcess,
+                as: 'ginprocess',
+                attributes: []
+              }
+            ],
+            where: {
+              '$ginprocess.ginner_id$': ginner.id
+            },
+            group: ["ginprocess.ginner_id"]
           }),
           GinBale.findOne({
             attributes: [
@@ -9223,15 +9239,15 @@ const exportGinnerSummary = async (req: Request, res: Response) => {
 
 
         let [cottonProcured, cottonProcessed, lintProcured, lintSold]: any = await Promise.all([
-          Transaction.findOne({
-            attributes: [
-              [sequelize.fn('COALESCE', sequelize.fn('SUM', Sequelize.literal("CAST(qty_purchased AS DOUBLE PRECISION)")), 0), 'qty']
-            ],
-            where: {
-              ...transactionWhere,
-              mapped_ginner: item.id
-            }
-          }),
+          // Transaction.findOne({
+          //   attributes: [
+          //     [sequelize.fn('COALESCE', sequelize.fn('SUM', Sequelize.literal("CAST(qty_purchased AS DOUBLE PRECISION)")), 0), 'qty']
+          //   ],
+          //   where: {
+          //     ...transactionWhere,
+          //     mapped_ginner: item.id
+          //   }
+          // }),
           Transaction.findOne({
             attributes: [
               [sequelize.fn('COALESCE', sequelize.fn('SUM', Sequelize.literal("CAST(qty_purchased AS DOUBLE PRECISION)")), 0), 'qty']
@@ -9241,6 +9257,22 @@ const exportGinnerSummary = async (req: Request, res: Response) => {
               mapped_ginner: item.id,
               status: 'Sold'
             }
+          }),
+          CottonSelection.findOne({
+            attributes: [
+              [sequelize.fn('COALESCE', sequelize.fn('SUM', Sequelize.literal("CAST(qty_used AS DOUBLE PRECISION)")), 0), 'qty']
+            ],
+            include: [
+              {
+                model: GinProcess,
+                as: 'ginprocess',
+                attributes: []
+              }
+            ],
+            where: {
+              '$ginprocess.ginner_id$': item.id
+            },
+            group: ["ginprocess.ginner_id"]
           }),
           GinBale.findOne({
             attributes: [

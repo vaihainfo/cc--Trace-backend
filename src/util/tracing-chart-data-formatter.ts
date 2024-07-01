@@ -148,7 +148,7 @@ export const formatDataForSpinnerProcess = (reelLotNo: any, data: any): any => {
 
 export const formatDataFromKnitter = (title: any, data: any) : any => {
     console.log(data[0].spin,"----")
-   let flattenedArray = data[0].spin.flat(); // Using flat()
+   let flattenedArray = data[0]?.spin?.flat(); // Using flat()
     let treeData = {
         name: title,
         type: 'knitter_image',
