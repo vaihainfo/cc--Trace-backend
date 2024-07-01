@@ -1573,7 +1573,7 @@ const getLintSoldByCountry = async (
 const getLintSoldByCountryData = async (where: any) => {
   const result = await SpinSales.findAll({
     attributes: [
-      [Sequelize.fn('SUM', Sequelize.col('no_of_boxes')), 'sold'],
+      [Sequelize.fn('SUM', Sequelize.col('total_qty')), 'sold'],
       [Sequelize.col('spinner.country.id'), 'countryId'],
       [Sequelize.col('spinner.country.county_name'), 'countryName'],
       [Sequelize.col('season.id'), 'seasonId'],
@@ -1817,7 +1817,7 @@ const getYarnSoldByCountry = async (
 
 
 const getYarnSoldByCountryData = async (where: any) => {
-  const result = await SpinProcess.findAll({
+  const result = await SpinSales.findAll({
     attributes: [
       [Sequelize.fn('SUM', Sequelize.col('total_qty')), 'sold'],
       [Sequelize.col('spinner.country.id'), 'countryId'],

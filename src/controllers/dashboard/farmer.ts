@@ -14,7 +14,7 @@ const getOverallArea = async (
   try {
 
     const reqData = await getQueryParams(req, res);
-    const where = getOverAllDataQuery(reqData);
+    const where = getFarmerQuery(reqData);
     const overAllData = await getOverAllData(where);
     const data = getAreaPercentage(overAllData);
     return res.sendSuccess(res, data);
@@ -31,52 +31,28 @@ const getOverallArea = async (
 const getOverAllData = async (
   where: any
 ) => {
-  const moreThanTwo = await Farm.count({
-    include: [
-      {
-        model: Farmer,
-        attributes: [],
-        as: "farmer",
-        agri_total_area: {
-          [Op.gt]: 2.5
-        }
-      },
-    ],
-    where
+  const moreThanTwo = await Farmer.count({
+    where: {...where,
+      agri_total_area: {
+        [Op.gt]: 2.5
+      }
+    }
   });
-  const lessThanOne = await Farm.count({
-    include: [
-      {
-        model: Farmer,
-        attributes: [],
-        as: "farmer",
-        where: {
-          agri_total_area: {
-            [Op.lt]: 1
-          }
-        },
-      },
-    ],
-    where,
-
+  const lessThanOne = await Farmer.count({
+    where: {...where,
+      agri_total_area: {
+        [Op.lt]: 1
+      }
+    }
   });
 
-  const moreThanOne = await Farm.count({
-    include: [
-      {
-        model: Farmer,
-        attributes: [],
-        as: "farmer",
-        where: {
-          agri_total_area: {
-            [Op.gt]: 1,
-            [Op.lt]: 2.5
-          }
-        },
-      },
-    ],
-    where,
-
+  const moreThanOne = await Farmer.count({
+    where: {...where,
+      agri_total_area: {
+        [Op.gte]: 1,
+        [Op.lte]: 2.5
+      }
+    }
   });
 
   return {
@@ -117,6 +93,39 @@ const getOverAllDataQuery = (
 
   if (reqData?.village)
     where['$farmer.village_id$'] = reqData.village;
+
+  return where;
+};
+
+
+
+const getFarmerQuery = (
+  reqData: any
+) => {
+  const where: any = {
+
+  };
+
+  if (reqData?.program)
+    where.program_id = reqData.program;
+
+  if (reqData?.brand)
+    where.brand_id = reqData.brand;
+
+  if (reqData?.country)
+    where.country_id = reqData.country;
+
+  if (reqData?.state)
+    where.state_id = reqData.state;
+
+  if (reqData?.district)
+    where.district_id = reqData.district;
+
+  if (reqData?.block)
+    where.block_id = reqData.block;
+
+  if (reqData?.village)
+    where.village_id = reqData.village;
 
   return where;
 };
@@ -221,7 +230,7 @@ const getOverallFarmer = async (
   try {
 
     const reqData = await getQueryParams(req, res);
-    const where = getOverAllDataQuery(reqData);
+    const where = getFarmerQuery(reqData);
     const farmerList = await getAllFarmer(where);
     const data = getFarmerList(farmerList);
     return res.sendSuccess(res, data);
@@ -239,45 +248,38 @@ const getAllFarmer = async (
 ) => {
 
   try {
-    if (!where['$farmer.country_id$'])
-      where['$farmer.country_id$'] = 29;
+    if (!where.country_id)
+      where.country_id = 29;
 
-    const stateCount = Farm.findAll({
+    const stateCount = Farmer.findAll({
       attributes: [
-        [Sequelize.fn('COUNT', Sequelize.literal('"farmer"."state_id"')), 'farmerCount'],
-        [Sequelize.col('farmer.state.id'), 'state_id'],
-        [Sequelize.col('farmer.state.state_name'), 'state_name'],
-        [Sequelize.col('farmer.district.id'), 'district_id'],
-        [Sequelize.col('farmer.district.district_name'), 'district_name'],
-        [Sequelize.col('farmer.country.id'), 'country_id'],
-        [Sequelize.col('farmer.country.county_name'), 'country_name']
+        [Sequelize.fn('COUNT', Sequelize.literal('state.id')), 'farmerCount'],
+        [Sequelize.col('state.id'), 'state_id'],
+        [Sequelize.col('state.state_name'), 'state_name'],
+        [Sequelize.col('district.id'), 'district_id'],
+        [Sequelize.col('district.district_name'), 'district_name'],
+        [Sequelize.col('country.id'), 'country_id'],
+        [Sequelize.col('country.county_name'), 'country_name']
       ],
-      include:
-      {
-        model: Farmer,
-        as: 'farmer',
-        attributes: [],
-
-        include: [
-          {
-            model: State,
-            as: 'state',
-            attributes: [],
-          },
-          {
-            model: District,
-            as: 'district',
-            attributes: [],
-          },
-          {
-            model: Country,
-            as: 'country',
-            attributes: []
-          }
-        ],
-      },
+      include: [
+        {
+          model: State,
+          as: 'state',
+          attributes: [],
+        },
+        {
+          model: District,
+          as: 'district',
+          attributes: [],
+        },
+        {
+          model: Country,
+          as: 'country',
+          attributes: []
+        }
+      ],
       where,
-      group: ['farmer.state.id', 'farmer.district.id', 'farmer.country.id']
+      group: ['state.id', 'district.id', 'country.id']
     });
 
     return stateCount;
@@ -798,7 +800,7 @@ const getFarmersByCountry = async (
 ) => {
   try {
     const reqData = await getQueryParams(req, res);
-    const where = getOverAllDataQuery(reqData);
+    const where = getFarmerQuery(reqData);
     const data = await getFarmersByCountryData(where);
     return res.sendSuccess(res, data);
 
@@ -814,33 +816,28 @@ const getFarmersByCountry = async (
 const getFarmersByCountryData = async (
   where: any
 ) => {
-  where["$farmer.country.latitude$"] = {
+  where["$country.latitude$"] = {
     [Op.not]: null
   };
-  where["$farmer.country.longitude$"] = {
+  where["$country.longitude$"] = {
     [Op.not]: null
   };
 
-  const result = await Farm.findAll({
+  const result = await Farmer.findAll({
     attributes: [
-      [Sequelize.fn('SUM', Sequelize.col('farmer.agri_total_area')), 'area'],
-      [Sequelize.fn('count', Sequelize.col('farmer.id')), 'farmers'],
-      [Sequelize.col('farmer.country.county_name'), 'countryName'],
-      [Sequelize.col('farmer.country.latitude'), 'latitude'],
-      [Sequelize.col('farmer.country.longitude'), 'longitude']
+      [Sequelize.fn('SUM', Sequelize.col('agri_total_area')), 'area'],
+      [Sequelize.fn('count', Sequelize.col('farmers.id')), 'farmers'],
+      [Sequelize.col('country.county_name'), 'countryName'],
+      [Sequelize.col('country.latitude'), 'latitude'],
+      [Sequelize.col('country.longitude'), 'longitude']
     ],
     include: [{
-      model: Farmer,
-      as: 'farmer',
-      attributes: [],
-      include: [{
-        model: Country,
-        as: 'country',
-        attributes: []
-      }]
+      model: Country,
+      as: 'country',
+      attributes: []
     }],
     where,
-    group: ['farmer.country.id']
+    group: ['country.id']
   });
 
   return result;
