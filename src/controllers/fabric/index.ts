@@ -41,6 +41,8 @@ const fetchDyingTransactions = async (req: Request, res: Response) => {
     const offset = (page - 1) * limit;
     let fabricId = req.query.fabricId || "";
     const searchTerm = req.query.search || "";
+    let programId = req.query.programId || "";
+    let seasonId = req.query.seasonId || "";
 
     if (!fabricId) {
       return res.sendError(res, "Need Fabric Id");
@@ -50,7 +52,8 @@ const fetchDyingTransactions = async (req: Request, res: Response) => {
     'weaver' AS "type",
     "weaver_sales"."id", 
     "weaver_sales"."weaver_id", 
-    "weaver_sales"."season_id", 
+    "weaver_sales"."season_id",
+    "season"."name"  AS season_name,
     "weaver_sales"."date",
     "weaver_sales"."program_id", 
     "weaver_sales"."brand_order_ref",
@@ -76,11 +79,15 @@ LEFT OUTER JOIN
     "programs" AS "program" ON "weaver_sales"."program_id" = "program"."id"
 LEFT OUTER JOIN 
     "weavers" AS "weaver" ON "weaver_sales"."weaver_id" = "weaver"."id" 
+LEFT OUTER JOIN 
+    "seasons" AS "season" ON "weaver_sales"."season_id" = "season"."id" 
 WHERE 
     "weaver_sales"."buyer_type" = 'Dyeing' 
     AND "weaver_sales"."status" = 'Sold' 
     AND "weaver_sales"."fabric_id" = '${fabricId}'
-    AND (
+    ${programId && ' AND "weaver_sales"."program_id" in(' + programId + ')'}
+    ${seasonId && ' AND "weaver_sales"."season_id" in(' + seasonId + ')'}
+       AND (
         "weaver_sales"."invoice_no" ILIKE '%${searchTerm}%'
         OR "weaver_sales"."vehicle_no" ILIKE '%${searchTerm}%'
         OR "weaver_sales"."batch_lot_no" ILIKE '%${searchTerm}%'
@@ -96,6 +103,7 @@ SELECT
     "knit_sales"."id", 
     "knit_sales"."knitter_id", 
     "knit_sales"."season_id", 
+    "season"."name"  AS season_name,
     "knit_sales"."date", 
     "knit_sales"."program_id", 
     "knit_sales"."brand_order_ref",
@@ -121,10 +129,14 @@ LEFT OUTER JOIN
     "programs" AS "program" ON "knit_sales"."program_id" = "program"."id" 
 LEFT OUTER JOIN 
     "knitters" AS "knitter" ON "knit_sales"."knitter_id" = "knitter"."id" 
+LEFT OUTER JOIN 
+    "seasons" AS "season" ON "knit_sales"."season_id" = "season"."id" 
 WHERE  
     "knit_sales"."buyer_type" = 'Dyeing' 
     AND "knit_sales"."status" = 'Sold' 
     AND "knit_sales"."fabric_id" = '${fabricId}'
+   ${programId && ' AND "knit_sales"."program_id" in(' + programId + ')'}
+    ${seasonId && ' AND "knit_sales"."season_id" in(' + seasonId + ')'}
     AND (
         "knit_sales"."invoice_no" ILIKE '%${searchTerm}%'
         OR "knit_sales"."vehicle_no" ILIKE '%${searchTerm}%'
@@ -184,9 +196,9 @@ const fetchDyingTransactionsAll = async (req: Request, res: Response) => {
         ],
         order: [
           [
-              'id', 'desc'
+            'id', 'desc'
           ]
-      ]
+        ]
       }),
       KnitSales.findAll({
         where: {
@@ -200,9 +212,9 @@ const fetchDyingTransactionsAll = async (req: Request, res: Response) => {
         ],
         order: [
           [
-              'id', 'desc'
+            'id', 'desc'
           ]
-      ]
+        ]
       }),
     ]);
     let abc = result.flat();
@@ -307,7 +319,7 @@ const createDyingProcess = async (req: Request, res: Response) => {
       dye_invoice: req.body.dyeInvoice,
       invoice_files: req.body.invoiceFiles,
       other_docs: req.body.otherDocs,
-      sales_type :  req.body.salesType,
+      sales_type: req.body.salesType,
       status: "Pending",
     };
     const sales = await DyingSales.create(data);
@@ -315,9 +327,9 @@ const createDyingProcess = async (req: Request, res: Response) => {
     let da = encrypt(`dying,${sales.id}`);
     let aa = await generateOnlyQrCode(da, uniqueFilename);
     const dying = await DyingSales.update({ qr: uniqueFilename }, {
-        where: {
-            id: sales.id
-        }
+      where: {
+        id: sales.id
+      }
     });
     if (req.body.chooseFabric && req.body.chooseFabric.length > 0) {
       for await (let obj of req.body.chooseFabric) {
@@ -696,7 +708,7 @@ const deleteDyingProcess = async (req: Request, res: Response) => {
  */
 
 // Get SOld Transaction for Washing Dashboard
-const   fetchWashingTransactions = async (req: Request, res: Response) => {
+const fetchWashingTransactions = async (req: Request, res: Response) => {
   try {
     const searchTerm = req.query.search || "";
     const page = Number(req.query.page) || 1;
@@ -707,7 +719,10 @@ const   fetchWashingTransactions = async (req: Request, res: Response) => {
     let knitterWhere: any = {};
     let dyingWhere: any = {};
 
-    let { fabricId }: any = req.query;
+    let { fabricId,
+      programId,
+      seasonId
+    }: any = req.query;
     if (!fabricId) {
       return res.sendError(res, "Need Fabric Id");
     }
@@ -741,6 +756,20 @@ const   fetchWashingTransactions = async (req: Request, res: Response) => {
       ];
     }
 
+    if (programId) {
+      const idArray: number[] = programId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.program_id = { [Op.in]: idArray };
+    }
+
+    if (seasonId) {
+      const idArray: number[] = seasonId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.season_id = { [Op.in]: idArray };
+    }
+
     let include = [
       {
         model: Program,
@@ -758,6 +787,7 @@ const   fetchWashingTransactions = async (req: Request, res: Response) => {
           status: "Sold",
           buyer_type: "Washing",
           fabric_id: fabricId,
+          ...whereCondition,
           ...weaverWhere,
           //   [Op.or]: [{ "$weaver.name$": { [Op.iLike]: `%${searchTerm}%` } }],
         },
@@ -771,6 +801,7 @@ const   fetchWashingTransactions = async (req: Request, res: Response) => {
           status: "Sold",
           buyer_type: "Washing",
           fabric_id: fabricId,
+          ...whereCondition,
           ...knitterWhere,
           //   [Op.or]: [{ "$knitter.name$": { [Op.iLike]: `%${searchTerm}%` } }],
         },
@@ -837,9 +868,9 @@ const fetchWashingTransactionsAll = async (req: Request, res: Response) => {
         ],
         order: [
           [
-              'id', 'desc'
+            'id', 'desc'
           ]
-      ]
+        ]
       }),
       KnitSales.findAll({
         where: {
@@ -853,9 +884,9 @@ const fetchWashingTransactionsAll = async (req: Request, res: Response) => {
         ],
         order: [
           [
-              'id', 'desc'
+            'id', 'desc'
           ]
-      ]
+        ]
       }),
       DyingSales.findAll({
         where: {
@@ -870,9 +901,9 @@ const fetchWashingTransactionsAll = async (req: Request, res: Response) => {
         ],
         order: [
           [
-              'id', 'desc'
+            'id', 'desc'
           ]
-      ]
+        ]
       }),
     ]);
     let abc = result.flat();
@@ -965,7 +996,7 @@ const createWashingProcess = async (req: Request, res: Response) => {
       qty_stock: req.body.totalFabricQuantity,
       invoice_files: req.body.invoiceFiles,
       other_docs: req.body.otherDocs,
-      sales_type :  req.body.salesType,
+      sales_type: req.body.salesType,
       status: "Pending",
     };
     const sales = await WashingSales.create(data);
@@ -973,9 +1004,9 @@ const createWashingProcess = async (req: Request, res: Response) => {
     let da = encrypt(`washing,${sales.id}`);
     let aa = await generateOnlyQrCode(da, uniqueFilename);
     const washing = await WashingSales.update({ qr: uniqueFilename }, {
-        where: {
-            id: sales.id
-        }
+      where: {
+        id: sales.id
+      }
     });
     if (req.body.chooseFabric && req.body.chooseFabric.length > 0) {
       for await (let obj of req.body.chooseFabric) {
@@ -1366,9 +1397,9 @@ const fetchPrintingTransactions = async (req: Request, res: Response) => {
       ],
       order: [
         [
-            'id', 'desc'
+          'id', 'desc'
         ]
-    ]
+      ]
     });
 
     res.sendSuccess(res, data);
@@ -1382,6 +1413,8 @@ const fetchPrintingTransactions = async (req: Request, res: Response) => {
 const fetchPrintingTransactionSold = async (req: Request, res: Response) => {
   try {
     let fabricId = req.query.fabricId || "";
+    let programId = req.query.programId || "";
+    let seasonId = req.query.seasonId || "";
     const page = Number(req.query.page) || 1;
     const limit = Number(req.query.limit) || 10;
     const offset = (page - 1) * limit;
@@ -1405,12 +1438,27 @@ const fetchPrintingTransactionSold = async (req: Request, res: Response) => {
       ];
     }
 
+    if (programId) {
+      const idArray: any[] = (programId as string).split(",");
+      whereCondition.program_id = { [Op.in]: idArray };
+    }
+
+    if (seasonId) {
+      const idArray: any[] = (seasonId as string).split(",");
+      whereCondition.season_id = { [Op.in]: idArray };
+    }
+
+
     let include = [
       {
         model: Program,
         as: "program",
+      }, {
+        model: Season,
+        as: "season",
       },
     ];
+
     let { rows, count } = await WashingSales.findAndCountAll({
       where: {
         status: "Sold",
@@ -1424,9 +1472,9 @@ const fetchPrintingTransactionSold = async (req: Request, res: Response) => {
       ],
       order: [
         [
-            'id', 'desc'
+          'id', 'desc'
         ]
-    ],
+      ],
       offset: offset,
       limit: limit,
     });
@@ -1508,7 +1556,7 @@ const createPrintingProcess = async (req: Request, res: Response) => {
       qty_stock: req.body.totalFabricQuantity,
       invoice_files: req.body.invoiceFiles,
       other_docs: req.body.otherDocs,
-      sales_type :  req.body.salesType,
+      sales_type: req.body.salesType,
       status: "Pending",
     };
     const sales = await PrintingSales.create(data);
@@ -1516,9 +1564,9 @@ const createPrintingProcess = async (req: Request, res: Response) => {
     let da = encrypt(`printing,${sales.id}`);
     let aa = await generateOnlyQrCode(da, uniqueFilename);
     const printing = await PrintingSales.update({ qr: uniqueFilename }, {
-        where: {
-            id: sales.id
-        }
+      where: {
+        id: sales.id
+      }
     });
     if (req.body.chooseFabric && req.body.chooseFabric.length > 0) {
       for await (let obj of req.body.chooseFabric) {
@@ -1840,9 +1888,9 @@ const fetchCompactingTransactions = async (req: Request, res: Response) => {
         ],
         order: [
           [
-              'id', 'desc'
+            'id', 'desc'
           ]
-      ]
+        ]
       }),
       PrintingSales.findAll({
         where: {
@@ -1856,9 +1904,9 @@ const fetchCompactingTransactions = async (req: Request, res: Response) => {
         ],
         order: [
           [
-              'id', 'desc'
+            'id', 'desc'
           ]
-      ]
+        ]
       }),
       DyingSales.findAll({
         where: {
@@ -1872,9 +1920,9 @@ const fetchCompactingTransactions = async (req: Request, res: Response) => {
         ],
         order: [
           [
-              'id', 'desc'
+            'id', 'desc'
           ]
-      ]
+        ]
       }),
     ]);
     res.sendSuccess(res, data.flat());
@@ -1888,31 +1936,43 @@ const fetchCompactingTransactions = async (req: Request, res: Response) => {
 const fetchCompactingTransactionSold = async (req: Request, res: Response) => {
   try {
     let fabricId = req.query.fabricId || "";
+    let programId = req.query.programId || "";
+    let seasonId = req.query.seasonId || "";
     const page = Number(req.query.page) || 1;
     const limit = Number(req.query.limit) || 10;
     const offset = (page - 1) * limit;
     const searchTerm = req.query.search || "";
 
-    // let whereCondition: any = {};
+    let whereCondition: any = {};
     let washingWhere: any = {};
     let printingWhere: any = {};
     let dyingWhere: any = {};
-    let whereCondition: any = [
-      // Search by order ref
-      { garment_order_ref: { [Op.iLike]: `%${searchTerm}%` } }, // Search by order ref
-      { brand_order_ref: { [Op.iLike]: `%${searchTerm}%` } }, // Search by order ref
-      { batch_lot_no: { [Op.iLike]: `%${searchTerm}%` } },
-      { invoice_no: { [Op.iLike]: `%${searchTerm}%` } },
-      { "$program.program_name$": { [Op.iLike]: `%${searchTerm}%` } },
-      { processor_name: { [Op.iLike]: `%${searchTerm}%` } },
-      { processor_address: { [Op.iLike]: `%${searchTerm}%` } },
-    ];
 
     if (!fabricId) {
       return res.sendError(res, "Need Fabric Id");
     }
 
+    if (programId) {
+      const idArray: any[] = (programId as string).split(",");
+      whereCondition.program_id = { [Op.in]: idArray };
+    }
+
+    if (seasonId) {
+      const idArray: any[] = (seasonId as string).split(",");
+      whereCondition.season_id = { [Op.in]: idArray };
+    }
+
     if (searchTerm) {
+      whereCondition = [
+        // Search by order ref
+        { garment_order_ref: { [Op.iLike]: `%${searchTerm}%` } }, // Search by order ref
+        { brand_order_ref: { [Op.iLike]: `%${searchTerm}%` } }, // Search by order ref
+        { batch_lot_no: { [Op.iLike]: `%${searchTerm}%` } },
+        { invoice_no: { [Op.iLike]: `%${searchTerm}%` } },
+        { "$program.program_name$": { [Op.iLike]: `%${searchTerm}%` } },
+        { processor_name: { [Op.iLike]: `%${searchTerm}%` } },
+        { processor_address: { [Op.iLike]: `%${searchTerm}%` } },
+      ];
       washingWhere[Op.or] = [
         ...whereCondition,
         { "$washing.name$": { [Op.iLike]: `%${searchTerm}%` } }
@@ -1932,12 +1992,16 @@ const fetchCompactingTransactionSold = async (req: Request, res: Response) => {
       {
         model: Program,
         as: "program",
+      }, {
+        model: Season,
+        as: "season",
       },
     ];
     let result: any = await Promise.all([
       WashingSales.findAll({
         where: {
           ...washingWhere,
+          ...whereCondition,
           status: "Sold",
           buyer_type: "Compacting",
           fabric_id: fabricId,
@@ -1949,13 +2013,14 @@ const fetchCompactingTransactionSold = async (req: Request, res: Response) => {
         ],
         order: [
           [
-              'id', 'desc'
+            'id', 'desc'
           ]
-      ]
+        ]
       }),
       PrintingSales.findAll({
         where: {
           ...printingWhere,
+          ...whereCondition,
           status: "Sold",
           buyer_type: "Compacting",
           fabric_id: fabricId,
@@ -1967,13 +2032,14 @@ const fetchCompactingTransactionSold = async (req: Request, res: Response) => {
         ],
         order: [
           [
-              'id', 'desc'
+            'id', 'desc'
           ]
-      ]
+        ]
       }),
       DyingSales.findAll({
         where: {
           ...dyingWhere,
+          ...whereCondition,
           status: "Sold",
           buyer_type: "Compacting",
           fabric_id: fabricId,
@@ -1987,9 +2053,9 @@ const fetchCompactingTransactionSold = async (req: Request, res: Response) => {
         ],
         order: [
           [
-              'id', 'desc'
+            'id', 'desc'
           ]
-      ]
+        ]
       }),
     ]);
 
@@ -2090,7 +2156,7 @@ const createCompactingProcess = async (req: Request, res: Response) => {
       invoice_files: req.body.invoiceFiles,
       other_docs: req.body.otherDocs,
       wash_type: req.body.wash_type,
-      sales_type :  req.body.salesType,
+      sales_type: req.body.salesType,
       status: "Pending",
     };
     const sales = await CompactingSales.create(data);
@@ -2098,9 +2164,9 @@ const createCompactingProcess = async (req: Request, res: Response) => {
     let da = encrypt(`compacting,${sales.id}`);
     let aa = await generateOnlyQrCode(da, uniqueFilename);
     const compacting = await CompactingSales.update({ qr: uniqueFilename }, {
-        where: {
-            id: sales.id
-        }
+      where: {
+        id: sales.id
+      }
     });
     if (req.body.chooseFabric && req.body.chooseFabric.length > 0) {
       for await (let obj of req.body.chooseFabric) {
@@ -2464,9 +2530,9 @@ const getGarments = async (req: Request, res: Response) => {
   let fabricId = req.query.fabricId;
   let whereCondition: any = {};
 
-  if(req.query.status=='true'){
-    whereCondition.status=true
-  }  
+  if (req.query.status == 'true') {
+    whereCondition.status = true
+  }
 
   if (!fabricId) {
     return res.sendError(res, "Need Weaver Id ");
@@ -2477,7 +2543,7 @@ const getGarments = async (req: Request, res: Response) => {
   }
   let garment = await Garment.findAll({
     attributes: ["id", "name"],
-    where: { ...whereCondition,brand: { [Op.overlap]: result.dataValues.brand } },
+    where: { ...whereCondition, brand: { [Op.overlap]: result.dataValues.brand } },
   });
   res.sendSuccess(res, garment);
 };
@@ -2486,8 +2552,8 @@ const getFabrics = async (req: Request, res: Response) => {
   let fabricId = req.query.fabricId;
   let whereCondition: any = {};
 
-  if(req.query.status=='true'){
-    whereCondition.status=true
+  if (req.query.status == 'true') {
+    whereCondition.status = true
   }
 
   if (!fabricId) {
@@ -2513,8 +2579,8 @@ const getProcessName = async (req: Request, res: Response) => {
   const { fabricId, buyerType }: any = req.query;
   const whereCondition: any = {};
 
-  if(req.query.status=='true'){
-    whereCondition.status=true
+  if (req.query.status == 'true') {
+    whereCondition.status = true
   }
   try {
     if (!fabricId) {
@@ -2526,7 +2592,7 @@ const getProcessName = async (req: Request, res: Response) => {
       response = await Promise.all([
         WeaverSales.findAll({
           attributes: ["weaver_id", "weaver.name"],
-          where: { ...whereCondition,status: "Sold", buyer_type: "Dyeing", fabric_id: fabricId },
+          where: { ...whereCondition, status: "Sold", buyer_type: "Dyeing", fabric_id: fabricId },
           include: [
             {
               model: Weaver,
@@ -2945,6 +3011,585 @@ const getFabricProcessTracingChartData = async (req: Request, res: Response) => 
   res.send(await _getFabricProcessTracingChartData(type, query));
 }
 
+const exportTransactionList = async (req: Request, res: Response) => {
+  const excelFilePath = path.join("./upload", "Fabric_dying_transaction_list.xlsx");
+
+  try {
+
+    // Create the excel workbook file
+    let {
+      fabricId,
+      programId,
+      seasonId
+    }: any = req.query;
+
+    let whereCondition: any = {};
+
+    if (!fabricId) {
+      return res.sendError(res, "Need Fabric Id");
+    }
+
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet("Sheet1");
+    worksheet.mergeCells('A1:U1');
+    const mergedCell = worksheet.getCell('A1');
+    mergedCell.value = 'CottonConnect | Cotton Transaction List';
+    mergedCell.font = { bold: true };
+    mergedCell.alignment = { horizontal: 'center', vertical: 'middle' };
+    // Set bold font for header row
+    const headerRow = worksheet.addRow([
+      "Sr No.", 'Date', 'Knitter/Weaver Name', 'Garment Order Reference No', 'Brand Order Reference No', 'Invoice No',
+      'Finished Batch/Lot No', 'Total Weight (Kgs)', 'Program', 'Vehicle No'
+    ]);
+    headerRow.font = { bold: true };
+
+    if (programId) {
+      const idArray: number[] = programId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.program_id = { [Op.in]: idArray };
+    }
+
+
+    let baseQuery: any = `SELECT
+                        'weaver' AS "type",
+                        "weaver_sales"."id", 
+                        "weaver_sales"."weaver_id", 
+                        "weaver_sales"."season_id", 
+                        "season"."name" AS "season_name",
+                        "weaver_sales"."date",
+                        "weaver_sales"."program_id", 
+                        "weaver_sales"."brand_order_ref",
+                        "weaver_sales"."garment_order_ref", 
+                        "weaver_sales"."buyer_id",  
+                        "weaver_sales"."transaction_via_trader", 
+                        "weaver_sales"."transaction_agent", 
+                        "weaver_sales"."batch_lot_no", 
+                        "weaver_sales"."total_yarn_qty",
+                        "weaver_sales"."total_fabric_length", 
+                        "weaver_sales"."invoice_no", 
+                        "weaver_sales"."invoice_file", 
+                        "weaver_sales"."vehicle_no",
+                        "weaver_sales"."qty_stock", 
+                        "weaver_sales"."qr", 
+                        "program"."id" AS "program-id", 
+                        "program"."program_name" AS "program_name",
+                        "weaver"."id" AS "processor-id", 
+                        "weaver"."name" AS "processor_name"
+                    FROM 
+                        "weaver_sales" AS "weaver_sales" 
+                    LEFT OUTER JOIN 
+                        "programs" AS "program" ON "weaver_sales"."program_id" = "program"."id"
+                    LEFT OUTER JOIN 
+                        "weavers" AS "weaver" ON "weaver_sales"."weaver_id" = "weaver"."id"
+                    LEFT OUTER JOIN 
+                        "seasons" AS "season" ON "weaver_sales"."season_id" = "season"."id" 
+                    WHERE 
+                        "weaver_sales"."buyer_type" = 'Dyeing' 
+                        AND "weaver_sales"."status" = 'Sold' 
+                        AND "weaver_sales"."fabric_id" = '${fabricId}'
+                        ${programId && ' AND "weaver_sales"."program_id" in(' + programId + ')'}
+                        ${seasonId && ' AND "weaver_sales"."season_id" in(' + seasonId + ')'}
+                    UNION ALL 
+                    SELECT
+                        'knitter' AS "type",
+                        "knit_sales"."id", 
+                        "knit_sales"."knitter_id", 
+                        "knit_sales"."season_id", 
+                        "season"."name" AS "season_name",
+                        "knit_sales"."date", 
+                        "knit_sales"."program_id", 
+                        "knit_sales"."brand_order_ref",
+                        "knit_sales"."garment_order_ref", 
+                        "knit_sales"."buyer_id", 
+                        "knit_sales"."transaction_via_trader", 
+                        "knit_sales"."transaction_agent", 
+                        "knit_sales"."batch_lot_no", 
+                        "knit_sales"."total_yarn_qty", 
+                        "knit_sales"."total_fabric_weight", 
+                        "knit_sales"."invoice_no", 
+                        "knit_sales"."invoice_file", 
+                        "knit_sales"."vehicle_no", 
+                        "knit_sales"."qty_stock", 
+                        "knit_sales"."qr", 
+                        "program"."id" AS "program-id", 
+                        "program"."program_name" AS "program_name",
+                        "knitter"."id" AS "processor-id", 
+                        "knitter"."name" AS " "
+                    FROM 
+                        "knit_sales" AS "knit_sales" 
+                    LEFT OUTER JOIN 
+                        "programs" AS "program" ON "knit_sales"."program_id" = "program"."id" 
+                    LEFT OUTER JOIN 
+                        "knitters" AS "knitter" ON "knit_sales"."knitter_id" = "knitter"."id" 
+                    LEFT OUTER JOIN 
+                        "seasons" AS "season" ON "knit_sales"."season_id" = "season"."id" 
+                    WHERE  
+                        "knit_sales"."buyer_type" = 'Dyeing' 
+                        AND "knit_sales"."status" = 'Sold' 
+                        AND "knit_sales"."fabric_id" = '${fabricId}'
+                      ${programId && ' AND "knit_sales"."program_id" in(' + programId + ')'}
+                        ${seasonId && ' AND "knit_sales"."season_id" in(' + seasonId + ')'}
+                    ORDER BY 
+                        "id" DESC
+        `;
+
+
+    const [fabric]: any = await sequelize.query(baseQuery);
+    // Append data to worksheet
+    fabric.forEach((item: any, index: number) => {
+      const rowValues = Object.values({
+        index: index + 1,
+        date: item.date ? item.date : '',
+        processor_name: item.processor_name ? item.processor_name : '',
+        garment_order_ref: item.garment_order_ref ? item.garment_order_ref : '',
+        brand_order_ref: item.brand_order_ref ? item.brand_order_ref : '',
+        invoice_no: item.invoice_no ? item.invoice_no : 'N/A',
+        batch_lot_no: item.batch_lot_no ? item.batch_lot_no : '',
+        total_yarn_qty: item.total_yarn_qty ? item.total_yarn_qty : item?.total_fabric_quantity,
+        program: item.program_name,
+        vehicle_no: item.vehicle_no ? item.vehicle_no : ''
+      });
+      worksheet.addRow(rowValues);
+    });
+    // Auto-adjust column widths based on content
+    worksheet.columns.forEach((column: any) => {
+      let maxCellLength = 0;
+      column.eachCell({ includeEmpty: true }, (cell: any) => {
+        const cellLength = (cell.value ? cell.value.toString() : '').length;
+        maxCellLength = Math.max(maxCellLength, cellLength);
+      });
+      column.width = Math.min(14, maxCellLength + 2); // Limit width to 30 characters
+    });
+
+    // Save the workbook
+    await workbook.xlsx.writeFile(excelFilePath);
+    res.status(200).send({
+      success: true,
+      messgage: "File successfully Generated",
+      data: process.env.BASE_URL + "Fabric_dying_transaction_list.xlsx",
+    });
+  } catch (error: any) {
+    console.error("Error appending data:", error);
+    return res.sendError(res, error.message);
+
+  }
+};
+
+const exportPrintingTransactionList = async (req: Request, res: Response) => {
+  const excelFilePath = path.join("./upload", "Fabric_printing_transaction_list.xlsx");
+
+  try {
+
+    // Create the excel workbook file
+    let {
+      fabricId,
+      programId,
+      seasonId
+    }: any = req.query;
+
+    let whereCondition: any = {};
+
+    if (!fabricId) {
+      return res.sendError(res, "Need Fabric Id");
+    }
+
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet("Sheet1");
+    worksheet.mergeCells('A1:U1');
+    const mergedCell = worksheet.getCell('A1');
+    mergedCell.value = 'CottonConnect | Cotton Transaction List';
+    mergedCell.font = { bold: true };
+    mergedCell.alignment = { horizontal: 'center', vertical: 'middle' };
+    // Set bold font for header row
+    const headerRow = worksheet.addRow([
+      "Sr No.", 'Date', 'Washing Processor Name', 'Invoice No', 'Garment Order Reference No', 'Brand Order Reference No',
+      'Finished Batch/Lot No', 'Total Weight (Kgs)', 'Total length (Mts)', 'Program', 'Status'
+    ]);
+    headerRow.font = { bold: true };
+
+    if (programId) {
+      const idArray: number[] = programId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.program_id = { [Op.in]: idArray };
+    }
+
+    if (seasonId) {
+      const idArray: number[] = seasonId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.season_id = { [Op.in]: idArray };
+    }
+
+
+    let include = [
+      {
+        model: Program,
+        as: "program",
+      }, {
+        model: Season,
+        as: "season",
+      },
+    ];
+    let fabric = await WashingSales.findAll({
+      where: {
+        status: "Sold",
+        buyer_type: "Printing",
+        fabric_id: fabricId,
+        ...whereCondition,
+      },
+      include: [
+        ...include,
+        { model: Fabric, as: "washing", attributes: ["id", "name"] },
+      ],
+      order: [['id', 'desc']]
+    });
+    // Append data to worksheet
+    fabric.forEach((item: any, index: number) => {
+      const rowValues = Object.values({
+        index: index + 1,
+        date: item.date ? item.date : '',
+        processor_name: item.washing?.name,
+        invoice_no: item.invoice_no,
+        garment_order_ref: item.garment_order_ref ? item.garment_order_ref : '',
+        brand_order_ref: item.brand_order_ref ? item.brand_order_ref : '',
+        batch_lot_no: item.batch_lot_no ? item.batch_lot_no : '',
+        total_yarn_qty: item.total_fabric_quantity,
+        total_length: item.fabric_length,
+        program: item.program?.program_name,
+        status: item.status
+      });
+      worksheet.addRow(rowValues);
+    });
+    // Auto-adjust column widths based on content
+    worksheet.columns.forEach((column: any) => {
+      let maxCellLength = 0;
+      column.eachCell({ includeEmpty: true }, (cell: any) => {
+        const cellLength = (cell.value ? cell.value.toString() : '').length;
+        maxCellLength = Math.max(maxCellLength, cellLength);
+      });
+      column.width = Math.min(14, maxCellLength + 2); // Limit width to 30 characters
+    });
+
+    // Save the workbook
+    await workbook.xlsx.writeFile(excelFilePath);
+    res.status(200).send({
+      success: true,
+      messgage: "File successfully Generated",
+      data: process.env.BASE_URL + "Fabric_printing_transaction_list.xlsx",
+    });
+  } catch (error: any) {
+    console.error("Error appending data:", error);
+    return res.sendError(res, error.message);
+
+  }
+};
+
+const exportWashingTransactionList = async (req: Request, res: Response) => {
+  const excelFilePath = path.join("./upload", "Fabric_washing_transaction_list.xlsx");
+
+  try {
+
+    // Create the excel workbook file
+    let {
+      fabricId,
+      programId,
+      seasonId
+    }: any = req.query;
+
+    let whereCondition: any = {};
+
+    if (!fabricId) {
+      return res.sendError(res, "Need Fabric Id");
+    }
+
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet("Sheet1");
+    worksheet.mergeCells('A1:U1');
+    const mergedCell = worksheet.getCell('A1');
+    mergedCell.value = 'CottonConnect | Cotton Transaction List';
+    mergedCell.font = { bold: true };
+    mergedCell.alignment = { horizontal: 'center', vertical: 'middle' };
+    // Set bold font for header row
+    const headerRow = worksheet.addRow([
+      "Sr No.", 'Date', 'Knitter/ Weaver/ Dying Processor Name', 'Garment Order Reference No',
+      'Brand Order Reference No', 'Invoice No', 'Batch/Lot No', 'Total Weight (Kgs)', 'Program'
+    ]);
+    headerRow.font = { bold: true };
+
+    if (programId) {
+      const idArray: number[] = programId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.program_id = { [Op.in]: idArray };
+    }
+
+    if (seasonId) {
+      const idArray: number[] = seasonId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.season_id = { [Op.in]: idArray };
+    }
+
+
+    let include = [
+      {
+        model: Program,
+        as: "program",
+      }, {
+        model: Season,
+        as: "season",
+      },
+    ];
+    let fabric: any = await Promise.all([
+      WeaverSales.findAll({
+        where: {
+          status: "Sold",
+          buyer_type: "Washing",
+          fabric_id: fabricId,
+          ...whereCondition
+          //   [Op.or]: [{ "$weaver.name$": { [Op.iLike]: `%${searchTerm}%` } }],
+        },
+        include: [
+          ...include,
+          { model: Weaver, as: "weaver", attributes: ["id", "name"] },
+        ],
+      }),
+      KnitSales.findAll({
+        where: {
+          status: "Sold",
+          buyer_type: "Washing",
+          fabric_id: fabricId,
+          ...whereCondition
+          //   [Op.or]: [{ "$knitter.name$": { [Op.iLike]: `%${searchTerm}%` } }],
+        },
+        include: [
+          ...include,
+          { model: Knitter, as: "knitter", attributes: ["id", "name"] },
+        ],
+      }),
+      DyingSales.findAll({
+        where: {
+          status: "Sold",
+          buyer_type: "Washing",
+          fabric_id: fabricId,
+          ...whereCondition
+          //   [Op.or]: [
+          //     { "$dying_fabric.name$": { [Op.iLike]: `%${searchTerm}%` } },
+          //   ],
+        },
+        include: [
+          ...include,
+          { model: Fabric, as: "abuyer", attributes: ["id", "name"] },
+          { model: Fabric, as: "dying_fabric", attributes: ["id", "name"] },
+        ],
+      }),
+    ]);
+    fabric = fabric.flat();
+    // Append data to worksheet
+    fabric.forEach((item: any, index: number) => {
+      const rowValues = Object.values({
+        index: index + 1,
+        date: item.date ? item.date : '',
+        processor_name: item?.weaver?.name
+          ? item?.weaver?.name
+          : item?.knitter?.name
+            ? item?.knitter?.name
+            : item?.dying_fabric?.name,
+        garment_order_ref: item.garment_order_ref ? item.garment_order_ref : '',
+        brand_order_ref: item.brand_order_ref ? item.brand_order_ref : '',
+        invoice_no: item.invoice_no,
+        batch_lot_no: item.batch_lot_no ? item.batch_lot_no : '',
+        total_yarn_qty: item.total_yarn_qty ? item.total_yarn_qty : item.total_fabric_quantity,
+        program: item.program?.program_name,
+      });
+      worksheet.addRow(rowValues);
+    });
+    // Auto-adjust column widths based on content
+    worksheet.columns.forEach((column: any) => {
+      let maxCellLength = 0;
+      column.eachCell({ includeEmpty: true }, (cell: any) => {
+        const cellLength = (cell.value ? cell.value.toString() : '').length;
+        maxCellLength = Math.max(maxCellLength, cellLength);
+      });
+      column.width = Math.min(14, maxCellLength + 2); // Limit width to 30 characters
+    });
+
+    // Save the workbook
+    await workbook.xlsx.writeFile(excelFilePath);
+    res.status(200).send({
+      success: true,
+      messgage: "File successfully Generated",
+      data: process.env.BASE_URL + "Fabric_washing_transaction_list.xlsx",
+    });
+  } catch (error: any) {
+    console.error("Error appending data:", error);
+    return res.sendError(res, error.message);
+
+  }
+};
+
+const exportCompactingTransactionList = async (req: Request, res: Response) => {
+  const excelFilePath = path.join("./upload", "Fabric_compacting_transaction_list.xlsx");
+
+  try {
+
+    // Create the excel workbook file
+    let {
+      fabricId,
+      programId,
+      seasonId
+    }: any = req.query;
+
+    let whereCondition: any = {};
+
+    if (!fabricId) {
+      return res.sendError(res, "Need Fabric Id");
+    }
+
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet("Sheet1");
+    worksheet.mergeCells('A1:U1');
+    const mergedCell = worksheet.getCell('A1');
+    mergedCell.value = 'CottonConnect | Cotton Transaction List';
+    mergedCell.font = { bold: true };
+    mergedCell.alignment = { horizontal: 'center', vertical: 'middle' };
+    // Set bold font for header row
+    const headerRow = worksheet.addRow([
+      "Sr No.", 'Date', 'Dying/ Washing/ Printing Processor Name', 'Garment Order Reference No',
+      'Brand Order Reference No', 'Invoice No', 'Batch/Lot No', 'Total Weight (Kgs)', 'Total Length (Mts)', 'Program'
+    ]);
+    headerRow.font = { bold: true };
+
+    if (programId) {
+      const idArray: number[] = programId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.program_id = { [Op.in]: idArray };
+    }
+
+    if (seasonId) {
+      const idArray: number[] = seasonId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.season_id = { [Op.in]: idArray };
+    }
+
+
+    let include = [
+      {
+        model: Program,
+        as: "program",
+      }, {
+        model: Season,
+        as: "season",
+      },
+    ];
+    let fabric: any = await Promise.all([
+      WashingSales.findAll({
+        where: {
+          status: "Sold",
+          buyer_type: "Compacting",
+          fabric_id: fabricId,
+          ...whereCondition
+          //   [Op.or]: [{ "$washing.name$": { [Op.iLike]: `%${searchTerm}%` } }],
+        },
+        include: [
+          ...include,
+          { model: Fabric, as: "washing", attributes: ["id", "name"] },
+        ],
+        order: [
+          [
+            'id', 'desc'
+          ]
+        ]
+      }),
+      PrintingSales.findAll({
+        where: {
+          status: "Sold",
+          buyer_type: "Compacting",
+          fabric_id: fabricId,
+          ...whereCondition
+          //   [Op.or]: [{ "$printing.name$": { [Op.iLike]: `%${searchTerm}%` } }],
+        },
+        include: [
+          ...include,
+          { model: Fabric, as: "printing", attributes: ["id", "name"] },
+        ],
+        order: [
+          [
+            'id', 'desc'
+          ]
+        ]
+      }),
+      DyingSales.findAll({
+        where: {
+          status: "Sold",
+          buyer_type: "Compacting",
+          fabric_id: fabricId,
+          ...whereCondition
+          //   [Op.or]: [
+          // { "$dying_fabric.name$": { [Op.iLike]: `%${searchTerm}%` } },
+          //   ],
+        },
+        include: [
+          ...include,
+          { model: Fabric, as: "dying_fabric", attributes: ["id", "name"] },
+        ],
+        order: [
+          [
+            'id', 'desc'
+          ]
+        ]
+      }),
+    ]);
+
+    fabric = fabric.flat();
+    // Append data to worksheet
+    fabric.forEach((item: any, index: number) => {
+      const rowValues = Object.values({
+        index: index + 1,
+        date: item.date ? item.date : '',
+        processor_name: item.dying_fabric?.name
+          ? item.dying_fabric?.name
+          : item.washing?.name
+            ? item.washing?.name
+            : item.printing?.name,
+        garment_order_ref: item.garment_order_ref ? item.garment_order_ref : '',
+        brand_order_ref: item.brand_order_ref ? item.brand_order_ref : '',
+        invoice_no: item.invoice_no,
+        batch_lot_no: item.batch_lot_no ? item.batch_lot_no : '',
+        total_yarn_qty: item.total_fabric_quantity,
+        total_length: item.fabric_length,
+        program: item.program?.program_name,
+      });
+      worksheet.addRow(rowValues);
+    });
+    // Auto-adjust column widths based on content
+    worksheet.columns.forEach((column: any) => {
+      let maxCellLength = 0;
+      column.eachCell({ includeEmpty: true }, (cell: any) => {
+        const cellLength = (cell.value ? cell.value.toString() : '').length;
+        maxCellLength = Math.max(maxCellLength, cellLength);
+      });
+      column.width = Math.min(14, maxCellLength + 2); // Limit width to 30 characters
+    });
+
+    // Save the workbook
+    await workbook.xlsx.writeFile(excelFilePath);
+    res.status(200).send({
+      success: true,
+      messgage: "File successfully Generated",
+      data: process.env.BASE_URL + "Fabric_compacting_transaction_list.xlsx",
+    });
+  } catch (error: any) {
+    console.error("Error appending data:", error);
+    return res.sendError(res, error.message);
+
+  }
+};
+
 export {
   fetchDyingTransactions,
   getProgram,
@@ -2984,5 +3629,9 @@ export {
   getProcessName,
   getBatchLot,
   getFabricProcessTracingChartData,
-  _getFabricProcessTracingChartData
+  _getFabricProcessTracingChartData,
+  exportTransactionList,
+  exportPrintingTransactionList,
+  exportWashingTransactionList,
+  exportCompactingTransactionList,
 };

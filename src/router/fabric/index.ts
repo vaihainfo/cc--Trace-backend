@@ -36,7 +36,11 @@ import {
     deleteCompactingProcess,
     getProcessName,
     getBatchLot,
-    getFabricProcessTracingChartData
+    getFabricProcessTracingChartData,
+    exportTransactionList,
+    exportPrintingTransactionList,
+    exportWashingTransactionList,
+    exportCompactingTransactionList
 } from "../../controllers/fabric";
 import accessControl from "../../middleware/access-control";
 import { Router } from "express";
@@ -58,6 +62,7 @@ router.delete('/delete-dying-process', deleteDyingProcess);
 router.get('/get-program', getProgram);
 router.get('/get-fabrics', getFabrics);
 router.get('/get-garments', getGarments);
+router.get('/dying-dashboard/export/transaction', exportTransactionList);
 
 router.put('/update-transaction-washing', updateWashingTransactionStatus);
 router.get('/choose-washing-fabric', chooseWashingFabric);
@@ -65,6 +70,7 @@ router.post('/washing-process', createWashingProcess);
 router.get('/export-washing-process', exportWashingProcess);
 router.get('/washing-process', fetchWashingSalesPagination);
 router.delete('/delete-washing-process', deleteWashingProcess);
+router.get('/washing-process/export/transaction', exportWashingTransactionList);
 
 
 router.get('/printing-dashboard-all', fetchPrintingTransactions);
@@ -75,6 +81,7 @@ router.post('/printing-process', createPrintingProcess);
 router.get('/printing-process', fetchPrintingSalesPagination);
 router.get('/export-printing-process', exportPrintingProcess);
 router.delete('/delete-printing-process', deletePrintingProcess);
+router.get('/printing-dashboard/export/transaction', exportPrintingTransactionList);
 
 
 router.get('/compacting-dashboard-all', fetchCompactingTransactions);
@@ -85,6 +92,7 @@ router.post('/compacting-process', createCompactingProcess);
 router.get('/compacting-process', fetchCompactingSalesPagination);
 router.get('/export-compacting-process', exportCompactingProcess);
 router.delete('/delete-compacting-process', deleteCompactingProcess);
+router.get('/compacting-dashboard/export/transaction', exportCompactingTransactionList);
 
 router.get('/get-processors', getProcessName);
 router.get('/get-batch-lot', getBatchLot);

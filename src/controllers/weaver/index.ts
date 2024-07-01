@@ -1700,7 +1700,7 @@ const getWeaverProcessTracingChartData = async (
   res.sendSuccess(res, formatDataFromWeaver(req.query[key], weavers));
 };
 
-const getWeaverTransactionList = async (req: Request, res: Response) => {
+const exportWeaverTransactionList = async (req: Request, res: Response) => {
   const excelFilePath = path.join("./upload", "Weaver_transaction_list.xlsx");
 
   try {
@@ -1878,5 +1878,5 @@ export {
   fetchWeaverSale,
   chooseWeaverFabric,
   getWeaverProcessTracingChartData,
-  getWeaverTransactionList
+  exportWeaverTransactionList
 };
