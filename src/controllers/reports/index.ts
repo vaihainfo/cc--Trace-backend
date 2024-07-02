@@ -8776,6 +8776,7 @@ const fetchGinnerSummaryPagination = async (req: Request, res: Response) => {
   const transactionWhere: any = {};
   const ginBaleWhere: any = {};
   const baleSelectionWhere: any = {};
+  const cottenSectionWhere: any = {};
   try {
     if (searchTerm) {
       whereCondition[Op.or] = [{ name: { [Op.iLike]: `%${searchTerm}%` } }];
@@ -8809,6 +8810,7 @@ const fetchGinnerSummaryPagination = async (req: Request, res: Response) => {
       transactionWhere.program_id = { [Op.in]: idArray };
       ginBaleWhere["$ginprocess.program_id$"] = { [Op.in]: idArray };
       baleSelectionWhere["$sales.program_id$"] = { [Op.in]: idArray };
+      cottenSectionWhere["$ginprocess.program_id$"] = { [Op.in]: idArray };
     }
 
     if (seasonId) {
@@ -8818,6 +8820,7 @@ const fetchGinnerSummaryPagination = async (req: Request, res: Response) => {
       transactionWhere.season_id = { [Op.in]: idArray };
       ginBaleWhere["$ginprocess.season_id$"] = { [Op.in]: idArray };
       baleSelectionWhere["$sales.season_id$"] = { [Op.in]: idArray };
+      cottenSectionWhere["$ginprocess.season_id$"] = { [Op.in]: idArray };
     }
 
     let { count, rows } = await Ginner.findAndCountAll({
@@ -8879,10 +8882,11 @@ const fetchGinnerSummaryPagination = async (req: Request, res: Response) => {
               {
                 model: GinProcess,
                 as: 'ginprocess',
-                attributes: []
+                attributes: [],
               }
             ],
             where: {
+              ...cottenSectionWhere,
               '$ginprocess.ginner_id$': ginner.id
             },
             group: ["ginprocess.ginner_id"]
