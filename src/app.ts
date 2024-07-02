@@ -117,6 +117,7 @@ const connectToDb = async () => {
   try {
     await sequelize.authenticate();
       console.log("Database Connected successfully.");
+      cronWorker.stdin.write('executeCronJob\n');
       const used = process.memoryUsage();
       console.log(`Memory usage: ${JSON.stringify(used)}`);
       console.log("Current Server Time", moment());
@@ -213,12 +214,12 @@ cron.schedule(`25 ${checkTimeDiff(19,differenceInHours)} * * *`, () => {
   console.log(`Cron job scheduled in server's timezone (${serverTimezone}) to run at IST`);
 });
 
-cron.schedule('* * * * * *', async () => {
-  console.log('Running a task at 2 am IST');
-  // Add your task for 2 am IST here
-  // exportReportsTameTaking();
-  cronWorker.stdin.write('executeCronJob\n');
-});
+// cron.schedule('* * * * * *', async () => {
+//   console.log('Running a task at 2 am IST');
+//   // Add your task for 2 am IST here
+//   // exportReportsTameTaking();
+//   cronWorker.stdin.write('executeCronJob\n');
+// });
 
 app.use("/auth", authRouter);
 app.use("/location", locationRouter);
