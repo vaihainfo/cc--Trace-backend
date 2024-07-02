@@ -22,5 +22,6 @@ router.get('/yarn/processed/by/country', Dashboard.getYarnProcessedByCountry);
 router.get('/yarn/sold/by/country', Dashboard.getYarnSoldByCountry);
 router.get('/yarn/produced/by/country', Dashboard.getYarnProducedByCountry);
 router.get('/yarn/stock/by/country', Dashboard.getYarnStockByCountry);
+router.get('/yarn/average/realisation/by/country', Dashboard.getYarnAverageRealisationByCountry);
 
 export default router;

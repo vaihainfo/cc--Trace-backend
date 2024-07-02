@@ -2172,6 +2172,134 @@ const getYarnStockByCountryRes = async (
   };
 };
 
+const getYarnAverageRealisationByCountry = async (
+  req: Request, res: Response
+) => {
+  try {
+    const reqData = await getQueryParams(req, res);
+    const query = getSpinnerProcessWhereQuery(reqData);
+    const ginnersData = await getSpinnerYarnRealisationByCountryData(query);
+    const data = await getSpinnerYarnRealisationByCountryRes(ginnersData, reqData.season);
+    return res.sendSuccess(res, data);
+
+  } catch (error: any) {
+    const code = error.errCode
+      ? error.errCode
+      : "ERR_INTERNAL_SERVER_ERROR";
+    return res.sendError(res, code);
+  }
+};
+
+
+const getSpinnerYarnRealisationByCountryData = async (where: any) => {
+  const result = await SpinProcess.findAll({
+    attributes: [
+      [sequelize.fn('AVG', sequelize.col('yarn_realisation')), 'realisation'],
+      [sequelize.col('spinner.country.county_name'), 'countryName'],
+      [sequelize.col('spinner.country.id'), 'countryId'],
+      [sequelize.col('season.id'), 'seasonId'],
+      [sequelize.col('season.name'), 'seasonName']
+    ],
+    include: [
+      {
+        model: Spinner,
+        as: "spinner",
+        include: [
+          {
+            model: Country,
+            attributes: [],
+            as: "country"
+          }
+        ],
+        attributes: []
+      },
+      {
+        model: Season,
+        attributes: [],
+        as: "season"
+      }
+    ],
+    where,
+    group: ['spinner.country.id', 'season.id'],
+    order: [[sequelize.col('season.id'), 'DESC']]
+  });
+
+  return result;
+};
+
+const getSpinnerYarnRealisationByCountryRes = async (
+  processedList: any = [],
+  reqSeason: any
+) => {
+  let seasonIds: number[] = [];
+  let countries: number[] = [];
+
+  processedList.forEach((list: any) => {
+    if (!countries.includes(list.dataValues.countryName))
+      countries.push(list.dataValues.countryName);
+
+    if (!seasonIds.includes(list.dataValues.seasonId))
+      seasonIds.push(list.dataValues.seasonId);
+  });
+
+  const seasons = await Season.findAll({
+    limit: 3,
+    order: [
+      ["id", "DESC"],
+    ],
+  });
+  if (seasonIds.length != 3 && !reqSeason) {
+    for (const season of seasons) {
+      if (!seasonIds.includes(season.id))
+        seasonIds.push(season.id);
+    }
+  }
+
+  seasonIds = seasonIds.sort((a, b) => a - b).slice(-3);
+
+  let seasonList: any[] = [];
+  let countList: any[] = [];
+
+
+  for (const countryName of countries) {
+    const data: any = {
+      name: countryName,
+      data: [],
+    };
+    const lProcessedList = processedList.filter((list: any) =>
+      list.dataValues.countryName == countryName
+    );
+
+    for (const seasonId of seasonIds) {
+
+      let totalArea = 0;
+      const gProcessedValue = lProcessedList.find((list: any) =>
+        list.dataValues.seasonId == seasonId
+      );
+
+      if (gProcessedValue) {
+        totalArea = formatNumber(gProcessedValue.dataValues.realisation);
+        if (!seasonList.includes(gProcessedValue.dataValues.seasonName))
+          seasonList.push(gProcessedValue.dataValues.seasonName);
+      } else {
+        seasons.forEach((season: any) => {
+          if (season.id == seasonId && !seasonList.includes(season.name)) {
+            seasonList.push(season.name);
+          }
+        });
+      }
+      data.data.push(totalArea);
+    }
+
+    countList.push(data);
+  }
+
+  return {
+    countList,
+    seasonList,
+  };
+};
+
 const getMonthDate = (
   from: string,
   to: string
@@ -2219,5 +2347,6 @@ export {
   getYarnProcessedByCountry,
   getYarnSoldByCountry,
   getYarnProducedByCountry,
-  getYarnStockByCountry
+  getYarnStockByCountry,
+  getYarnAverageRealisationByCountry
 };
