@@ -117,7 +117,6 @@ const connectToDb = async () => {
   try {
     await sequelize.authenticate();
       console.log("Database Connected successfully.");
-      cronWorker.stdin.write('executeCronJob\n');
       const used = process.memoryUsage();
       console.log(`Memory usage: ${JSON.stringify(used)}`);
       console.log("Current Server Time", moment());
@@ -177,28 +176,27 @@ cron.schedule(`0 ${checkTimeDiff(23,differenceInHours)} * * *`, async () => {
 cron.schedule(`0 ${checkTimeDiff(8,differenceInHours)} * * *`, async () => {
   console.log('Running a task at 8 am IST');
   // Add your task for 8 am IST here
-  exportReportsOnebyOne();
-
+  cronWorker.stdin.write('exportReportsOnebyOne\n');
 });
 // Schedule cron job for 4 pm in India time (UTC+5:30)
 cron.schedule(`0 ${checkTimeDiff(16,differenceInHours)} * * *`, async () => {
   console.log('Running a task at 4 pm IST');
   // Add your task for 4 pm IST here
-  exportReportsOnebyOne();
+   cronWorker.stdin.write('exportReportsOnebyOne\n');
 });
 
 // Schedule cron job for 12 am (midnight) in India time (UTC+5:30)
 cron.schedule(`0 ${checkTimeDiff(0,differenceInHours)} * * *`, async () => {
   console.log('Running a task at 12 am IST');
   // Add your task for 12 am IST here
-  exportReportsOnebyOne();
+   cronWorker.stdin.write('exportReportsOnebyOne\n');
 });
 
 // Schedule cron job for 2 am in India time (UTC+5:30)
 cron.schedule(`0 ${checkTimeDiff(2,differenceInHours)} * * *`, async () => {
   console.log('Running a task at 2 am IST');
   // Add your task for 2 am IST here
-  exportReportsTameTaking();
+  cronWorker.stdin.write('exportReportsTameTaking\n');
 });
 
 // ---------------------hostinger--------------------------------//
@@ -208,11 +206,6 @@ cron.schedule(`0 ${checkTimeDiff(2,differenceInHours)} * * *`, async () => {
 //   // Add your task for 1 am IST here
 //   exportReportsTameTaking();
 // });
-
-// Schedule the cron job to run at 1 AM IST
-cron.schedule(`25 ${checkTimeDiff(19,differenceInHours)} * * *`, () => {
-  console.log(`Cron job scheduled in server's timezone (${serverTimezone}) to run at IST`);
-});
 
 // cron.schedule('* * * * * *', async () => {
 //   console.log('Running a task at 2 am IST');

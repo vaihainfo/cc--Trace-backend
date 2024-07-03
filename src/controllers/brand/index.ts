@@ -435,6 +435,7 @@ const sumbrandginnerSales = async (brandId: any, seasonId: any) => {
         if (seasonId) {
             whereCondition.season_id = seasonId
         }
+
         const ginnerList = await GinSales.findAll({
             where: {
                 ...whereCondition,
@@ -451,13 +452,16 @@ const sumbrandginnerSales = async (brandId: any, seasonId: any) => {
                     attributes: [],
                 }
             ],
-            group: ['ginner.brand']
-        });
-        let cottonQty = 0;
-        ginnerList.forEach((value: any) => {
-            cottonQty = value.dataValues.total_lint_mt;
+            raw: true,
+            // group: ['ginner.brand'] // Remove the group clause if not necessary
         });
 
+        let cottonQty = 0;
+        if (ginnerList.length > 0) {
+            cottonQty = ginnerList[0].total_lint_mt;
+        }
+
+        console.log("cotton-----------", cottonQty);
         return cottonQty / 1000;
     } catch (error) {
         console.log(error);
@@ -619,7 +623,10 @@ const sumbrandspinnerYarnProcured = async (brandId: any, seasonId: any) => {
 
 const sumbrandspinnerYarnSales = async (brandId: any, seasonId: any) => {
     try {
-
+        let whereCondition: any = {}
+        if (seasonId) {
+            whereCondition.season_id = seasonId
+        }
         let data = await SpinSales.findAll({
             attributes: [
                 [Sequelize.literal('COALESCE(SUM(total_qty), 0)'), 'total_yarn_mt']
@@ -628,6 +635,7 @@ const sumbrandspinnerYarnSales = async (brandId: any, seasonId: any) => {
                 { model: Spinner, as: 'spinner', attributes: [] },
             ],
             where: {
+                ...whereCondition,
                 status: { [Op.in]: ['Sold', 'Pending', 'Pending for QR scanning'] },
                 '$spinner.brand$': { [Op.contains]: [Number(brandId)] }
             },

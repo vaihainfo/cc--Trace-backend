@@ -2540,24 +2540,23 @@ const _getSpinnerProcessTracingChartData = async (reelLotNo:any) => {
       const idArray = reelLotNo.split(",");
       whereCondition.reel_lot_no = { [Op.in]: idArray };
     }
-  
-    const BATCH_SIZE = 10;
-  
-    while (true) {
+    
+    // const BATCH_SIZE = 10;
+    // while (true) {
       let batchSpinData = await queryWithRetry(() =>
         SpinProcess.findAll({
           where: whereCondition,
           include: include,
           order: [['id', 'desc']],
-          limit: BATCH_SIZE,
-          offset: offset,
+        //   limit: BATCH_SIZE,
+        //   offset: offset,
           attributes: ['id', 'reel_lot_no']
         })
       );
   
-      if (batchSpinData.length === 0) break;
+    //   if (batchSpinData.length === 0) break;
   
-      offset += BATCH_SIZE;
+    //   offset += BATCH_SIZE;
   
       let spinWithGinSales = await Promise.all(
         batchSpinData.map(async (spin:any) => {
@@ -2599,7 +2598,7 @@ const _getSpinnerProcessTracingChartData = async (reelLotNo:any) => {
       );
   
       allSpinData = allSpinData.concat(spinWithGinSales);
-    }
+    // }
   
     return formatDataForSpinnerProcess(reelLotNo, allSpinData);
   };
@@ -2616,19 +2615,17 @@ const _getSpinnerProcessTracingChartData = async (reelLotNo:any) => {
       throw error; // Propagate other errors
     }
   }
-
-
+  
   const getSpinnerProcessTracingChartData = async (req: Request, res: Response) => {
     const { reelLotNo } = req.query;
 
-    await createIndexes();
+    // await createIndexes();
 
     const data = await _getSpinnerProcessTracingChartData(reelLotNo);
 
     // await createIndexes();
     res.sendSuccess(res, data);
   }
-
   const createIndexIfNotExists= async (tableName:any, indexName:any, fields:any) => {
     try {
         const indexExistsQuery = `

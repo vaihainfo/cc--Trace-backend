@@ -1652,11 +1652,14 @@ const chooseFabricProcess = async (req: Request, res: Response) => {
 
 
 
-const getKnitterProcessTracingChartData = async (
-  req: Request,
-  res: Response
-) => {
-  let query = req.query;
+const _getKnitterProcessTracingChartData = async (query:any) => {
+
+  let whereCondition: any = {};
+  if (query) {
+    const idArray = query.reel_lot_no.split(",");
+    whereCondition.reel_lot_no = { [Op.in]: idArray };
+  }
+
   let include = [
     {
       model: Knitter,
@@ -1718,8 +1721,18 @@ const getKnitterProcessTracingChartData = async (
     })
   );
 
-  let key = Object.keys(req.query)[0];
-  res.sendSuccess(res, formatDataFromKnitter(req.query[key], knitters));
+  let key = Object.keys(whereCondition)[0];
+  console.log(whereCondition[key])
+ return formatDataFromKnitter(whereCondition[key], knitters);
+};
+
+const getKnitterProcessTracingChartData = async (
+  req: Request,
+  res: Response
+) => {
+  let query = req.query;
+  let knitters = await _getKnitterProcessTracingChartData(query);
+  res.sendSuccess(res, knitters);
 };
 
 const exportKnitterTransactionList = async (req: Request, res: Response) => {
@@ -1908,5 +1921,6 @@ export {
   getChooseFabricFilters,
   chooseFabricProcess,
   getKnitterProcessTracingChartData,
-  exportKnitterTransactionList
+  exportKnitterTransactionList,
+  _getKnitterProcessTracingChartData
 };

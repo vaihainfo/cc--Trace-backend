@@ -1665,17 +1665,16 @@ const chooseWeaverFabric = async (req: Request, res: Response) => {
   }
 };
 
-const getWeaverProcessTracingChartData = async (
-  req: Request,
-  res: Response
+const _getWeaverProcessTracingChartData = async (
+  query:any
 ) => {
-  let query = req.query;
   let include = [
     {
       model: Weaver,
       as: "weaver",
     },
   ];
+  
   let weavers = await WeaverProcess.findAll({
     where: query,
     include,
@@ -1684,25 +1683,57 @@ const getWeaverProcessTracingChartData = async (
   weavers = await Promise.all(
     weavers.map(async (el: any) => {
       el = el.toJSON();
-      el.spin = await SpinSales.findAll({
+
+      el.WeavSele = await YarnSelection.findAll({
         where: {
-          buyer_id: el.weaver.id,
-        },
+          sales_id: el.id,
+        }
       });
-      el.spinsCount = el.spin.length;
-      el.spinskIds = el.spin.map((el: any) => el.knitter_id);
-      console.log("spins received ", el.spin.length);
+
       el.spin = await Promise.all(
-        el.spin.map(async (el: any) => {
-          console.log("getting data for ", el.reel_lot_no);
-          return _getSpinnerProcessTracingChartData(el.reel_lot_no);
+        el.WeavSele.map(async (weavSeleItem: any) => {
+          let spinSales = await SpinSales.findAll({
+            where: {
+              id: weavSeleItem.yarn_id, // Use yarn_id from KnitYarnSelection
+            },
+          });
+          return {
+            yarn_id: weavSeleItem.yarn_id,
+            spinSales: spinSales,
+          };
+        })); 
+
+      el.spinsCount = el.spin.reduce((total: number, item: any) => total + item.spinSales.length, 0);
+      el.spinskIds = el.spin.map((el: any) => el.buyer_id);
+
+      el.spin = await Promise.all(
+        el.spin.map(async (spinItem: any) => {
+          // if(el.reel_lot_no) return _getSpinnerProcessTracingChartData(el.reel_lot_no);
+          return await Promise.all(
+            spinItem.spinSales.map(async (sale: any) => {
+              if (sale.dataValues.reel_lot_no) {
+                return _getSpinnerProcessTracingChartData(sale.dataValues.reel_lot_no);
+              }
+              // Handle cases where reel_lot_no might be undefined/null
+              return null;
+            })
+          );
         })
       );
       return el;
     })
   );
-  let key = Object.keys(req.query)[0];
-  res.sendSuccess(res, formatDataFromWeaver(req.query[key], weavers));
+  let key = Object.keys(query)[0];
+  return formatDataFromWeaver(query[key], weavers);
+};
+
+const getWeaverProcessTracingChartData = async (
+  req: Request,
+  res: Response
+) => {
+  let query = req.query;
+  let weavers = await _getWeaverProcessTracingChartData(query);
+  res.sendSuccess(res, weavers);
 };
 
 const exportWeaverTransactionList = async (req: Request, res: Response) => {
@@ -1889,5 +1920,6 @@ export {
   fetchWeaverSale,
   chooseWeaverFabric,
   getWeaverProcessTracingChartData,
-  exportWeaverTransactionList
+  exportWeaverTransactionList,
+  _getWeaverProcessTracingChartData
 };

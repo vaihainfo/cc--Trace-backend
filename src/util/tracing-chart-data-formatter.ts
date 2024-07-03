@@ -146,10 +146,18 @@ export const formatDataForSpinnerProcess = (reelLotNo: any, data: any): any => {
     // return treeData;
 }
 
-export const formatDataFromKnitter = (title: any, data: any, width: number = 300, height: number =100) : any => {
-    let flattenedArray = data[0]?.spin?.flat(); // Using flat()
+export const formatDataFromKnitter = (title: any, data: any, width: number = 300, height: number =100,type?: any) : any => {
+    let flattenedArray;
+    let name;
+    if(type=='fabric'){
+      flattenedArray = data?.spin?.flat();
+      name=title
+    }else{
+      flattenedArray = data[0]?.spin?.flat();
+      name=data[0]?.reel_lot_no
+    }
      let treeData = {
-         name: title,
+         name: name,
          type: 'knitter_image',
          width: width,
          height: height,
@@ -164,18 +172,24 @@ export const formatDataFromKnitter = (title: any, data: any, width: number = 300
  }
  
  
- export const formatDataFromWeaver = (title: any, data: any, width: number = 300, height: number =100) : any => {
-     let treeData = {
+ export const formatDataFromWeaver = (title: any, data: any, width: number = 300, height: number =100,type?: any) : any => {
+    let flattenedArray;
+    if(type=='fabric'){
+      flattenedArray = data?.spin?.flat();
+    }else{
+      flattenedArray = data[0]?.spin?.flat();
+    }
+    let treeData = {
          name: title,
          type: 'weaver_image',
          width: width,
          height: height,
          isRoot: true,
-         children: data[0]? data[0].spin.filter((el: any) =>{
-             if(el && el.children){
-                 return el.children
-             }
-         }) : []
+         children: flattenedArray? flattenedArray.filter((el: any) =>{
+            if(el && el.children){
+                return el.children
+            }
+        }) : []
      };
      return treeData;
  }
@@ -199,7 +213,7 @@ export const formatDataForGarment = (title: any, data: any) : any => {
         width: 300,
         height: 100,
         isRoot: true,
-        children: data.map((el:any) => el.fabricChart)
+        children: data?.map((el:any) => el.fabricChart)
     };
     return treeData;
 }

@@ -4,10 +4,17 @@ import { exportReportsOnebyOne, exportReportsTameTaking } from '../controllers/r
 process.stdin.on('data', async (data) => {
   const command = data.toString().trim();
   
-  if (command === 'executeCronJob') {
+  if (command === 'exportReportsTameTaking') {
     try {
       console.log('Executing cron job logic...');
        exportReportsTameTaking();
+      console.log('Cron job execution completed.');
+    } catch (error) {
+      console.error('Error executing cron job:', error);
+    }
+  }else if(command === 'exportReportsOnebyOne'){
+    try {
+      console.log('Executing cron job logic...');
        exportReportsOnebyOne();
       console.log('Cron job execution completed.');
     } catch (error) {
