@@ -7,6 +7,8 @@ import Country from "../../../models/country.model";
 import State from "../../../models/state.model";
 import UserRole from "../../../models/user-role.model";
 import District from "../../../models/district.model";
+import * as ExcelJS from "exceljs";
+import * as path from "path";
 
 const createFabric = async (req: Request, res: Response) => {
     try {
@@ -106,7 +108,7 @@ const fetchFabricPagination = async (req: Request, res: Response) => {
             whereCondition.brand = { [Op.overlap]: idArray }
         }
 
-        if(status=='true'){
+        if (status == 'true') {
             whereCondition.status = true;
         }
 
@@ -132,7 +134,7 @@ const fetchFabricPagination = async (req: Request, res: Response) => {
                 offset: offset,
                 limit: limit
             });
-            for await (let item of rows){
+            for await (let item of rows) {
                 let users = await User.findAll({
                     where: {
                         id: item?.dataValues?.fabricUser_id
@@ -344,6 +346,130 @@ const checkFabric = async (req: Request, res: Response) => {
     }
 }
 
+const exportFabricRegistrationList = async (req: Request, res: Response) => {
+    const excelFilePath = path.join("./upload", "Fabric_registration_list.xlsx");
+
+    try {
+        // Create the excel workbook file
+        const {
+            countryId,
+            stateId,
+            brandId,
+            status,
+            sortOrder
+        }: any = req.query;
+
+        const workbook = new ExcelJS.Workbook();
+        const worksheet = workbook.addWorksheet("Sheet1");
+        worksheet.mergeCells('A1:U1');
+        const mergedCell = worksheet.getCell('A1');
+        mergedCell.value = 'CottonConnect | Fabric Registration List';
+        mergedCell.font = { bold: true };
+        mergedCell.alignment = { horizontal: 'center', vertical: 'middle' };
+        // Set bold font for header row
+        const headerRow = worksheet.addRow([
+            "Sr No.", 'Registration Date', 'Ginner Name', 'Address', 'Website',
+            'Contact Person Name', 'Mobile No', 'Land Line No', 'Email', 'Status'
+        ]);
+        headerRow.font = { bold: true };
+        const whereCondition: any = {}
+        if (countryId) {
+            const idArray: number[] = countryId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition.country_id = { [Op.in]: idArray };
+        }
+        if (stateId) {
+            const idArray: number[] = stateId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition.state_id = { [Op.in]: idArray };
+        }
+        if (brandId) {
+            const idArray: number[] = brandId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition.brand = { [Op.overlap]: idArray }
+        }
+
+        if (status == 'true') {
+            whereCondition.status = true;
+        }
+
+        let include = [
+            {
+                model: Country, as: 'country'
+            },
+            {
+                model: State, as: 'state'
+            },
+            {
+                model: District, as: 'district'
+            },
+        ]
+
+        let ginner: any = [];
+        const rows = await Fabric.findAll({
+            where: whereCondition,
+            order: [
+                ['name', sortOrder ?? 'asc'], // Sort the results based on the 'name' field and the specified order
+            ],
+            ...include
+        });
+        for await (let item of rows) {
+            let users = await User.findAll({
+                where: {
+                    id: item?.dataValues?.fabricUser_id
+                }
+            });
+
+            let newStatus = users.some((user: any) => user.status === true);
+
+            ginner.push({
+                ...item?.dataValues,
+                status: newStatus ? 'Active' : 'Inactive'
+            });
+        }
+        // Append data to worksheet
+        ginner.forEach((item: any, index: number) => {
+            const rowValues = Object.values({
+                index: index + 1,
+                date: item.createdAt,
+                ginner_name: item.name,
+                address: item.address,
+                website: item.website,
+                contact_person_name: item.contact_person,
+                mobile_no: item.mobile,
+                lang_line_no: item.landline,
+                email: item.email,
+                status: item.status,
+            });
+            worksheet.addRow(rowValues);
+        });
+        // Auto-adjust column widths based on content
+        worksheet.columns.forEach((column: any) => {
+            let maxCellLength = 0;
+            column.eachCell({ includeEmpty: true }, (cell: any) => {
+                const cellLength = (cell.value ? cell.value.toString() : '').length;
+                maxCellLength = Math.max(maxCellLength, cellLength);
+            });
+            column.width = Math.min(14, maxCellLength + 2); // Limit width to 30 characters
+        });
+
+        // Save the workbook
+        await workbook.xlsx.writeFile(excelFilePath);
+        res.status(200).send({
+            success: true,
+            messgage: "File successfully Generated",
+            data: process.env.BASE_URL + "Fabric_registration_list.xlsx",
+        });
+    } catch (error: any) {
+        console.error("Error appending data:", error);
+        return res.sendError(res, error.message);
+
+    }
+};
+
 
 export {
     createFabric,
@@ -351,5 +477,6 @@ export {
     fetchFabric,
     updateFabric,
     deleteFabric,
-    checkFabric
+    checkFabric,
+    exportFabricRegistrationList
 };  

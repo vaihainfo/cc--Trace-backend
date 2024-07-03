@@ -4,7 +4,8 @@ import {
     updateGarment,
     deleteGarment,
     fetchGarment,
-    checkGarment
+    checkGarment,
+    exportGarmentRegistrationList
 } from "../../controllers/process-registration/garment";
 import accessControl from "../../middleware/access-control";
 import { Router } from "express";
@@ -19,6 +20,7 @@ router.get('/get-garment', fetchGarment);
 router.put('/', updateGarment);
 router.delete('/', deleteGarment);
 router.post('/check-garment', checkGarment);
+router.get('/export/registration', exportGarmentRegistrationList);
 
 
 export default router;  
