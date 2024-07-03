@@ -317,7 +317,7 @@ const fetchSpinnerProcessPagination = async (req: Request, res: Response) => {
 
             let data = [];
 
-            for await (let row of rows) {
+            for await (let row of rows) {   
                 let yarncount = [];
 
                 if (row.dataValues?.yarn_count.length > 0) {
@@ -940,9 +940,9 @@ const fetchSpinnerSale = async (req: Request, res: Response) => {
 
         if (gin.dataValues?.yarn_count.length > 0) {
             yarnType = await YarnCount.findAll({
-            attributes: ["id", "yarnCount_name"],
-            where: { id: { [Op.in]: gin.dataValues?.yarn_count } },
-          });
+                attributes: ["id", "yarnCount_name"],
+                where: { id: { [Op.in]: gin.dataValues?.yarn_count } },
+            });
         }
         let data = { ...gin.dataValues, yarnType };
 
@@ -961,7 +961,7 @@ const fetchSpinSalesPagination = async (req: Request, res: Response) => {
     const { spinnerId, seasonId, programId, knitterId, weaverId, yarnType, type }: any = req.query;
     const offset = (page - 1) * limit;
     const whereCondition: any = {};
-    const yarnTypeArray = yarnType.split(',').map((item:any) => item.trim()); 
+    const yarnTypeArray = yarnType.split(',').map((item: any) => item.trim());
     try {
         if (searchTerm) {
             whereCondition[Op.or] = [
@@ -1016,9 +1016,9 @@ const fetchSpinSalesPagination = async (req: Request, res: Response) => {
                 .map((id: any) => parseInt(id, 10));
             whereCondition.buyer_id = { [Op.in]: idArray };
         }
-        
+
         if (yarnType) {
-            whereCondition.yarn_type = { [Op.contains]: yarnTypeArray }; 
+            whereCondition.yarn_type = { [Op.contains]: yarnTypeArray };
         }
 
 
@@ -1072,18 +1072,18 @@ const fetchSpinSalesPagination = async (req: Request, res: Response) => {
             let data = [];
 
             for await (let row of rows) {
-              const yarncount = await YarnCount.findAll({
-                where: {
-                  id: {
-                    [Op.in]: row.dataValues.yarn_count,
-                  },
-                },
-                attributes: ["id", "yarnCount_name"],
-              });
-              data.push({
-                ...row.dataValues,
-                yarncount,
-              });
+                const yarncount = await YarnCount.findAll({
+                    where: {
+                        id: {
+                            [Op.in]: row.dataValues.yarn_count,
+                        },
+                    },
+                    attributes: ["id", "yarnCount_name"],
+                });
+                data.push({
+                    ...row.dataValues,
+                    yarncount,
+                });
             }
             return res.sendPaginationSuccess(res, data, count);
         } else {
@@ -1099,18 +1099,18 @@ const fetchSpinSalesPagination = async (req: Request, res: Response) => {
             let data = [];
 
             for await (let row of gin) {
-              const yarncount = await YarnCount.findAll({
-                where: {
-                  id: {
-                    [Op.in]: row.dataValues.yarn_count,
-                  },
-                },
-                attributes: ["id", "yarnCount_name"],
-              });
-              data.push({
-                ...row.dataValues,
-                yarncount,
-              });
+                const yarncount = await YarnCount.findAll({
+                    where: {
+                        id: {
+                            [Op.in]: row.dataValues.yarn_count,
+                        },
+                    },
+                    attributes: ["id", "yarnCount_name"],
+                });
+                data.push({
+                    ...row.dataValues,
+                    yarncount,
+                });
             }
             return res.sendSuccess(res, data);
         }
@@ -1128,7 +1128,7 @@ const exportSpinnerSale = async (req: Request, res: Response) => {
     const { spinnerId, seasonId, programId, knitterId, weaverId, yarnType, type }: any = req.query;
     const offset = (page - 1) * limit;
     const whereCondition: any = {};
-    const yarnTypeArray = yarnType.split(',').map((item:any) => item.trim()); 
+    const yarnTypeArray = yarnType.split(',').map((item: any) => item.trim());
     try {
         if (searchTerm) {
             whereCondition[Op.or] = [
@@ -1143,7 +1143,7 @@ const exportSpinnerSale = async (req: Request, res: Response) => {
                 {
                     yarn_type: {
                         [Op.contains]: yarnTypeArray, // Check if yarn_type array contains any search term
-                        [Op.or]: yarnTypeArray.map((term:any) => ({
+                        [Op.or]: yarnTypeArray.map((term: any) => ({
                             [Op.iLike]: `%${term}%` // Apply iLike condition individually for each search term
                         }))
                     }
@@ -1189,9 +1189,9 @@ const exportSpinnerSale = async (req: Request, res: Response) => {
             whereCondition.buyer_id = { [Op.in]: idArray };
         }
         if (yarnType) {
-            whereCondition.yarn_type = { [Op.contains]: yarnTypeArray }; 
+            whereCondition.yarn_type = { [Op.contains]: yarnTypeArray };
         }
-        
+
         // Create the excel workbook file
         const workbook = new ExcelJS.Workbook();
         const worksheet = workbook.addWorksheet("Sheet1");
@@ -1245,20 +1245,20 @@ const exportSpinnerSale = async (req: Request, res: Response) => {
         });
         // Append data to worksheet
         for await (const [index, item] of gin.entries()) {
-            let yarnCount : string = "";
+            let yarnCount: string = "";
             let yarnTypeData: string = "";
-      
+
             if (item.yarn_count && item.yarn_count.length > 0) {
-              let type = await YarnCount.findAll({
-                where: { id: { [Op.in]: item.yarn_count } },
-              });
-              for (let i of type) {
-                yarnCount += `${i.yarnCount_name},`;
-              }
+                let type = await YarnCount.findAll({
+                    where: { id: { [Op.in]: item.yarn_count } },
+                });
+                for (let i of type) {
+                    yarnCount += `${i.yarnCount_name},`;
+                }
             }
-      
+
             yarnTypeData =
-              item?.yarn_type?.length > 0 ? item?.yarn_type.join(",") : "";
+                item?.yarn_type?.length > 0 ? item?.yarn_type.join(",") : "";
 
             const rowValues = Object.values({
                 index: index + 1,
@@ -1433,69 +1433,69 @@ const fetchTransactionAlert = async (req: Request, res: Response) => {
             }
         ];
         //fetch data with pagination
-            const rows = await GinSales.findAll({
-                where: whereCondition,
-                include: include,
-                order: [
-                    [
-                        'id', 'desc'
-                    ]
+        const rows = await GinSales.findAll({
+            where: whereCondition,
+            include: include,
+            order: [
+                [
+                    'id', 'desc'
                 ]
+            ]
+        });
+
+        let data = [];
+
+        for await (const row of rows) {
+            const bale_details = await BaleSelection.findOne({
+                attributes: [
+                    [Sequelize.fn('COUNT', Sequelize.literal('DISTINCT "bale"."id"')), 'no_of_bales'],
+                    [Sequelize.fn('COALESCE', Sequelize.fn('SUM', Sequelize.literal(
+                        'CAST("bale"."weight" AS DOUBLE PRECISION)'
+                    )), 0), 'total_qty']
+                    // Add other attributes here...
+                ],
+                where: {
+                    sales_id: row?.dataValues?.id,
+                    spinner_status: null,
+                },
+                include: [
+                    {
+                        model: GinBale,
+                        as: "bale",
+                        attributes: []
+                    },
+                ],
+                group: ["sales_id"],
             });
 
-            let data = [];
-
-            for await (const row of rows) {
-                const bale_details = await BaleSelection.findOne({
-                    attributes: [
-                        [Sequelize.fn('COUNT', Sequelize.literal('DISTINCT "bale"."id"')), 'no_of_bales'],
-                        [Sequelize.fn('COALESCE', Sequelize.fn('SUM', Sequelize.literal(
-                            'CAST("bale"."weight" AS DOUBLE PRECISION)'
-                        )), 0), 'total_qty']
-                      // Add other attributes here...
-                    ],
-                    where: {
-                      sales_id: row?.dataValues?.id,
-                      spinner_status: null,
+            const bales = await BaleSelection.findAll({
+                attributes: [
+                    'bale_id'
+                    // Add other attributes here...
+                ],
+                where: {
+                    sales_id: row?.dataValues?.id,
+                    spinner_status: null,
+                },
+                include: [
+                    {
+                        model: GinBale,
+                        as: "bale",
                     },
-                    include:[
-                        {
-                            model: GinBale,
-                            as: "bale",
-                            attributes: []
-                        },
-                    ],
-                    group: ["sales_id"],
-                  });
+                ],
+            });
 
-                  const bales = await BaleSelection.findAll({
-                    attributes: [
-                        'bale_id'
-                      // Add other attributes here...
-                    ],
-                    where: {
-                      sales_id: row?.dataValues?.id,
-                      spinner_status: null,
-                    },
-                    include:[
-                        {
-                            model: GinBale,
-                            as: "bale",
-                        },
-                    ],
-                  });
+            if (bales && bales.length > 0) {
+                data.push({
+                    ...row?.dataValues,
+                    bale_details,
+                    bales: bales.map((item: any) => item.bale)
+                })
 
-                  if(bales && bales.length > 0){
-                      data.push({
-                        ...row?.dataValues,
-                        bale_details,
-                        bales: bales.map((item:any) => item.bale)
-                      })
-
-                  }
             }
+        }
 
-            return res.sendSuccess(res, data);
+        return res.sendSuccess(res, data);
     } catch (error: any) {
         return res.sendError(res, error.message);
     }
@@ -1507,54 +1507,54 @@ const updateStatusSales = async (req: Request, res: Response) => {
         let update = []
         for (const obj of req.body.items) {
             let result;
-                let soldCount = 0;
-                let rejectedCount = 0;
-                let nullCount = 0;
+            let soldCount = 0;
+            let rejectedCount = 0;
+            let nullCount = 0;
 
-                let data:any = {
-                    accept_date: obj.status === 'Sold' ? new Date().toISOString() : null
-                };
+            let data: any = {
+                accept_date: obj.status === 'Sold' ? new Date().toISOString() : null
+            };
 
-                for (const bale of obj.bales) {
-                    if(obj.status !== 'Sold'){
-                        await GinBale.update({sold_status: false}, { where: { id: bale.id } });
-                    }
-                    await BaleSelection.update({spinner_status: obj.status === 'Sold' ? true : false}, { where: { bale_id: bale.id, sales_id: obj.id } });
-                    }
-
-                let bales = await BaleSelection.findAll({ where: { sales_id: obj.id} });
-                
-                for (const bale of bales) {
-                    if (bale.spinner_status === true) {
-                        soldCount++;
-                    } else if (bale.spinner_status === false) {
-                        rejectedCount++;
-                    }
+            for (const bale of obj.bales) {
+                if (obj.status !== 'Sold') {
+                    await GinBale.update({ sold_status: false }, { where: { id: bale.id } });
                 }
+                await BaleSelection.update({ spinner_status: obj.status === 'Sold' ? true : false }, { where: { bale_id: bale.id, sales_id: obj.id } });
+            }
 
-                // Update status based on counts
-                let status;
-                if (soldCount === bales.length) {
-                    status = 'Sold';
-                } else if (rejectedCount === bales.length) {
-                    status = 'Rejected';
-                } else if (soldCount > rejectedCount) {
-                    status = 'Partially Accepted';
-                } else {
-                    status = 'Partially Rejected';
+            let bales = await BaleSelection.findAll({ where: { sales_id: obj.id } });
+
+            for (const bale of bales) {
+                if (bale.spinner_status === true) {
+                    soldCount++;
+                } else if (bale.spinner_status === false) {
+                    rejectedCount++;
                 }
+            }
 
-                data = {...data,status: status}
+            // Update status based on counts
+            let status;
+            if (soldCount === bales.length) {
+                status = 'Sold';
+            } else if (rejectedCount === bales.length) {
+                status = 'Rejected';
+            } else if (soldCount > rejectedCount) {
+                status = 'Partially Accepted';
+            } else {
+                status = 'Partially Rejected';
+            }
 
-                const ginSale = await GinSales.findOne({ where: { id: obj.id } });
-                if (ginSale) {
-                    // Increment qty_stock by obj.qtyStock
-                    if(obj.status === 'Sold'){
-                        data.qty_stock = Number(ginSale.qty_stock) + Number(obj.qtyStock);
-                    }
-                    result = await GinSales.update(data, { where: { id: obj.id } });
+            data = { ...data, status: status }
+
+            const ginSale = await GinSales.findOne({ where: { id: obj.id } });
+            if (ginSale) {
+                // Increment qty_stock by obj.qtyStock
+                if (obj.status === 'Sold') {
+                    data.qty_stock = Number(ginSale.qty_stock) + Number(obj.qtyStock);
                 }
-                
+                result = await GinSales.update(data, { where: { id: obj.id } });
+            }
+
             update.push(result);
         }
         res.sendSuccess(res, { update });
@@ -1619,29 +1619,29 @@ const fetchTransactionList = async (req: Request, res: Response) => {
                 gs.invoice_no ILIKE '%${searchTerm}%'
               )
             `);
-          }
-          
-          if (seasonId) {
+        }
+
+        if (seasonId) {
             const idArray = seasonId.split(",").map((id: any) => parseInt(id, 10));
             whereCondition.push(`gs.season_id IN (${idArray.join(',')})`);
-          }
-          
-          if (ginnerId) {
+        }
+
+        if (ginnerId) {
             const idArray = ginnerId.split(",").map((id: any) => parseInt(id, 10));
             whereCondition.push(`gs.ginner_id IN (${idArray.join(',')})`);
-          }
-          
-          
-          if (programId) {
+        }
+
+
+        if (programId) {
             const idArray = programId.split(",").map((id: any) => parseInt(id, 10));
             whereCondition.push(`gs.program_id IN (${idArray.join(',')})`);
-          }
-          whereCondition.push(`gs.buyer = ${spinnerId}`)
-          whereCondition.push(`gs.status IN ('Sold', 'Partially Accepted', 'Partially Rejected')`)
+        }
+        whereCondition.push(`gs.buyer = ${spinnerId}`)
+        whereCondition.push(`gs.status IN ('Sold', 'Partially Accepted', 'Partially Rejected')`)
 
 
-          const whereClause = whereCondition.length > 0 ? `WHERE ${whereCondition.join(' AND ')}` : '';
-          
+        const whereClause = whereCondition.length > 0 ? `WHERE ${whereCondition.join(' AND ')}` : '';
+
         // let include = [
         //     {
         //         model: Ginner,
@@ -1719,8 +1719,8 @@ const fetchTransactionList = async (req: Request, res: Response) => {
         //           }
         //     }
 
-                // Count query
-            const countQuery = `
+        // Count query
+        const countQuery = `
             SELECT COUNT(*) AS total_count
             FROM 
                     gin_sales gs
@@ -1733,9 +1733,9 @@ const fetchTransactionList = async (req: Request, res: Response) => {
                 LEFT JOIN 
                     spinners sp ON gs.buyer = sp.id
             ${whereClause}`;
-    
 
-            let dataQuery = `
+
+        let dataQuery = `
                 WITH bale_details AS (
                     SELECT 
                         bs.sales_id,
@@ -1784,22 +1784,22 @@ const fetchTransactionList = async (req: Request, res: Response) => {
                 LIMIT 
                     :limit OFFSET :offset;`
 
-            const [countResult, rows] = await Promise.all([
-                sequelize.query(countQuery, {
-                    type: sequelize.QueryTypes.SELECT,
-                }),
-                sequelize.query(dataQuery, {
-                    replacements: { limit, offset },
-                    type: sequelize.QueryTypes.SELECT,
-                })
-                ]);
-            
-                const totalCount = countResult && countResult.length > 0 ?  Number(countResult[0].total_count) : 0;
+        const [countResult, rows] = await Promise.all([
+            sequelize.query(countQuery, {
+                type: sequelize.QueryTypes.SELECT,
+            }),
+            sequelize.query(dataQuery, {
+                replacements: { limit, offset },
+                type: sequelize.QueryTypes.SELECT,
+            })
+        ]);
 
-            // let result = data.slice(offset, offset + limit);
+        const totalCount = countResult && countResult.length > 0 ? Number(countResult[0].total_count) : 0;
 
-            // return res.sendPaginationSuccess(res, result, data.length);
-            return res.sendPaginationSuccess(res, rows, totalCount);
+        // let result = data.slice(offset, offset + limit);
+
+        // return res.sendPaginationSuccess(res, result, data.length);
+        return res.sendPaginationSuccess(res, rows, totalCount);
     } catch (error: any) {
         console.log(error)
         return res.sendError(res, error.message);
@@ -1885,28 +1885,28 @@ const exportSpinnerTransaction = async (req: Request, res: Response) => {
                 gs.invoice_no ILIKE '%${searchTerm}%'
               )
             `);
-          }
-          
-          if (seasonId) {
+        }
+
+        if (seasonId) {
             const idArray = seasonId.split(",").map((id: any) => parseInt(id, 10));
             whereCondition.push(`gs.season_id IN (${idArray.join(',')})`);
-          }
-          
-          if (ginnerId) {
+        }
+
+        if (ginnerId) {
             const idArray = ginnerId.split(",").map((id: any) => parseInt(id, 10));
             whereCondition.push(`gs.ginner_id IN (${idArray.join(',')})`);
-          }
-          
-          
-          if (programId) {
+        }
+
+
+        if (programId) {
             const idArray = programId.split(",").map((id: any) => parseInt(id, 10));
             whereCondition.push(`gs.program_id IN (${idArray.join(',')})`);
-          }
-          whereCondition.push(`gs.buyer = ${spinnerId}`)
-          whereCondition.push(`gs.status IN ('Sold', 'Partially Accepted', 'Partially Rejected')`)
+        }
+        whereCondition.push(`gs.buyer = ${spinnerId}`)
+        whereCondition.push(`gs.status IN ('Sold', 'Partially Accepted', 'Partially Rejected')`)
 
 
-          const whereClause = whereCondition.length > 0 ? `WHERE ${whereCondition.join(' AND ')}` : '';
+        const whereClause = whereCondition.length > 0 ? `WHERE ${whereCondition.join(' AND ')}` : '';
         // Create the excel workbook file
         const workbook = new ExcelJS.Workbook();
         const worksheet = workbook.addWorksheet("Sheet1");
@@ -2107,8 +2107,8 @@ const getKnitterWeaver = async (req: Request, res: Response) => {
 
     let whereCondition: any = {};
 
-    if(req.query.status=='true'){
-        whereCondition.status=true
+    if (req.query.status == 'true') {
+        whereCondition.status = true
     }
 
     if (!spinnerId) {
@@ -2121,11 +2121,11 @@ const getKnitterWeaver = async (req: Request, res: Response) => {
     let result: any = await Promise.all([
         Knitter.findAll({
             attributes: ['id', 'name', [sequelize.literal("'kniter'"), 'type']],
-            where: { ...whereCondition,brand: { [Op.overlap]: ress.dataValues.brand } }
+            where: { ...whereCondition, brand: { [Op.overlap]: ress.dataValues.brand } }
         }),
         Weaver.findAll({
             attributes: ['id', 'name', [sequelize.literal("'weaver'"), 'type']],
-            where: { ...whereCondition,brand: { [Op.overlap]: ress.dataValues.brand } }
+            where: { ...whereCondition, brand: { [Op.overlap]: ress.dataValues.brand } }
         })
     ])
     res.sendSuccess(res, result.flat());
@@ -2210,10 +2210,10 @@ const chooseLint = async (req: Request, res: Response) => {
             const idArray: any[] = invoiceNo
                 .split(",")
                 .map((id: any) => id);
-                whereCondition.invoice_no = { [Op.in]: idArray };
+            whereCondition.invoice_no = { [Op.in]: idArray };
 
-                const quotedIdArray = idArray.map(id => `'${id}'`).join(',');
-                sqlCondition.push(`gs.invoice_no IN (${quotedIdArray})`);
+            const quotedIdArray = idArray.map(id => `'${id}'`).join(',');
+            sqlCondition.push(`gs.invoice_no IN (${quotedIdArray})`);
         }
 
         whereCondition.status = { [Op.in]: ['Sold', 'Partially Accepted', 'Partially Rejected'] }
@@ -2226,7 +2226,7 @@ const chooseLint = async (req: Request, res: Response) => {
 
 
         const whereClause = sqlCondition.length > 0 ? `WHERE ${sqlCondition.join(' AND ')}` : '';
-        
+
         let include = [
             {
                 model: Season,
@@ -2295,7 +2295,7 @@ const chooseLint = async (req: Request, res: Response) => {
                 ORDER BY 
                     gs.id DESC;`
 
-        
+
             const items = await sequelize.query(dataQuery, {
                 type: sequelize.QueryTypes.SELECT,
             })

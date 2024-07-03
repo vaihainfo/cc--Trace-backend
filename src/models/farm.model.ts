@@ -86,10 +86,6 @@ const Farm = db.define('farms', {
     }
 });
 
-Farm.belongsTo(Farmer, {
-    foreignKey: "farmer_id",
-    as: "farmer",
-})
 
 Farm.belongsTo(Program, {
     foreignKey: "program_id",

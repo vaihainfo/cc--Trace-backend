@@ -30,7 +30,8 @@ const fetchFarmerReportPagination = async (req: Request, res: Response) => {
     villageId,
     type,
     startDate,
-    endDate
+    endDate,
+    seasonId
   }: any = req.query;
   const offset = (page - 1) * limit;
   const whereCondition: any = {};
@@ -43,7 +44,7 @@ const fetchFarmerReportPagination = async (req: Request, res: Response) => {
     if (searchTerm) {
       whereCondition[Op.or] = [
         { firstName: { [Op.iLike]: `%${searchTerm}%` } },
-        { lastName: { [Op.iLike]: `%${searchTerm}%` } }, 
+        { lastName: { [Op.iLike]: `%${searchTerm}%` } },
         { code: { [Op.iLike]: `%${searchTerm}%` } },
         { tracenet_id: { [Op.iLike]: `%${searchTerm}%` } },
         { "$country.county_name$": { [Op.iLike]: `%${searchTerm}%` } },
@@ -111,7 +112,13 @@ const fetchFarmerReportPagination = async (req: Request, res: Response) => {
       const endOfDay = new Date(endDate);
       endOfDay.setUTCHours(23, 59, 59, 999);
       whereCondition.createdAt = { [Op.between]: [startOfDay, endOfDay] }
-  }
+    }
+    if (seasonId) {
+      whereCondition.id = {
+        [Op.in]: Sequelize.literal(
+          '( SELECT farmer_id FROM farms WHERE season_id = ' + seasonId + ')')
+      }
+    }
 
     let include = [
       {
@@ -182,217 +189,225 @@ const exportNonOrganicFarmerReport = async (req: Request, res: Response) => {
       villageId,
       exportType,
       startDate,
-      endDate
+      endDate,
+      seasonId
     }: any = req.query;
 
     if (exportType === "all") {
 
-        return res.status(200).send({
-          success: true,
-          messgage: "File successfully Generated",
-          data: process.env.BASE_URL + "farmer-non-organic-report.xlsx",
-        });
-    
-      } else {
-
-    // Create the excel workbook file
-    const workbook = new ExcelJS.Workbook();
-    const worksheet = workbook.addWorksheet("Sheet1");
-    //mergin the cells for first row
-    worksheet.mergeCells("A1:M1");
-    const mergedCell = worksheet.getCell("A1");
-    mergedCell.value = "Cotton Connect | Farmer Report";
-    mergedCell.font = { bold: true };
-    mergedCell.alignment = { horizontal: "center", vertical: "middle" };
-
-    // Set bold font for header row
-    const headerRow = worksheet.addRow([
-      "S.No",
-      "Farmer Name",
-      "Farmer Code",
-      "Village",
-      "Block",
-      "District",
-      "State",
-      "Country",
-      "Brand Name",
-      "Program Name",
-      "Total Area",
-      "Cotton Area",
-      "Total Estimated Production",
-    ]);
-    headerRow.font = { bold: true };
-
-    whereCondition["$program.program_name$"] = { [Op.notILike]: `%Organic%` };
-
-    if (searchTerm) {
-      whereCondition[Op.or] = [
-        { firstName: { [Op.iLike]: `%${searchTerm}%` } },
-        { lastName: { [Op.iLike]: `%${searchTerm}%` } },
-        { code: { [Op.iLike]: `%${searchTerm}%` } },
-        { "$country.county_name$": { [Op.iLike]: `%${searchTerm}%` } },
-        { "$block.block_name$": { [Op.iLike]: `%${searchTerm}%` } },
-        { "$farmGroup.name$": { [Op.iLike]: `%${searchTerm}%` } },
-        { "$district.district_name$": { [Op.iLike]: `%${searchTerm}%` } },
-        { "$state.state_name$": { [Op.iLike]: `%${searchTerm}%` } },
-        { "$village.village_name$": { [Op.iLike]: `%${searchTerm}%` } },
-        { cert_status: { [Op.iLike]: `%${searchTerm}%` } },
-      ];
-    }
-    if (brandId) {
-      const idArray: number[] = brandId
-        .split(",")
-        .map((id: any) => parseInt(id, 10));
-
-      whereCondition.brand_id = { [Op.in]: idArray };
-    }
-    if (farmGroupId) {
-      const idArray: number[] = farmGroupId
-        .split(",")
-        .map((id: any) => parseInt(id, 10));
-      whereCondition.farmGroup_id = { [Op.in]: idArray };
-    }
-    if (countryId) {
-      const idArray: number[] = countryId
-        .split(",")
-        .map((id: any) => parseInt(id, 10));
-      whereCondition.country_id = { [Op.in]: idArray };
-    }
-    if (stateId) {
-      const idArray: number[] = stateId
-        .split(",")
-        .map((id: any) => parseInt(id, 10));
-      whereCondition.state_id = { [Op.in]: idArray };
-    }
-    if (districtId) {
-      const idArray: number[] = districtId
-        .split(",")
-        .map((id: any) => parseInt(id, 10));
-      whereCondition.district_id = { [Op.in]: idArray };
-    }
-    if (blockId) {
-      const idArray: number[] = blockId
-        .split(",")
-        .map((id: any) => parseInt(id, 10));
-      whereCondition.block_id = { [Op.in]: idArray };
-    }
-    if (villageId) {
-      const idArray: number[] = villageId
-        .split(",")
-        .map((id: any) => parseInt(id, 10));
-      whereCondition.village_id = { [Op.in]: idArray };
-    }
-    if (icsId) {
-      const idArray: number[] = icsId
-        .split(",")
-        .map((id: any) => parseInt(id, 10));
-      whereCondition.ics_id = { [Op.in]: idArray };
-    }
-    if (startDate && endDate) {
-      const startOfDay = new Date(startDate);
-      startOfDay.setUTCHours(0, 0, 0, 0);
-      const endOfDay = new Date(endDate);
-      endOfDay.setUTCHours(23, 59, 59, 999);
-      whereCondition.createdAt = { [Op.between]: [startOfDay, endOfDay] }
-  }
-    let farmer: any;
-    let include = [
-      {
-        model: Program,
-        as: "program",
-        attributes: ["id", "program_name"],
-      },
-      {
-        model: Brand,
-        as: "brand",
-        attributes: ["brand_name", "id"],
-      },
-      {
-        model: Country,
-        as: "country",
-        attributes: ["county_name", "id"],
-      },
-      {
-        model: Village,
-        as: "village",
-        attributes: ["village_name", "id"],
-      },
-      {
-        model: State,
-        as: "state",
-        attributes: ["state_name", "id"],
-      },
-      {
-        model: District,
-        as: "district",
-        attributes: ["district_name", "id"],
-      },
-      {
-        model: Block,
-        as: "block",
-        attributes: ["block_name", "id"],
-      },
-    ];
-    if (req.query.pagination === "true") {
-      const { count, rows } = await Farmer.findAndCountAll({
-        where: whereCondition,
-        order: [["id", "desc"]],
-        include: include,
-        offset: offset,
-        limit: limit,
+      return res.status(200).send({
+        success: true,
+        messgage: "File successfully Generated",
+        data: process.env.BASE_URL + "farmer-non-organic-report.xlsx",
       });
-      farmer = rows;
+
     } else {
-      farmer = await Farmer.findAll({
-        where: whereCondition,
-        include: include,
-        attributes: [
-          "firstName",
-          "lastName",
-          "code",
-          "id",
-          "agri_total_area",
-          "cotton_total_area",
-          "total_estimated_cotton",
-        ],
-      });
-    }
-    // Append data to worksheet
-    for await (const [index, item] of farmer.entries()) {
-      const rowValues = Object.values({
-        index: index + 1,
-        farmerName: item.firstName + " " + `${item.lastName ? item.lastName : ""}`,
-        Code: item.code,
-        village: item.village.village_name,
-        block: item.block.block_name,
-        district: item.district.district_name,
-        state: item.state.state_name,
-        country: item.country.county_name,
-        brand: item.brand.brand_name,
-        program: item.program.program_name,
-        totalArea: item ? Number(item.agri_total_area) : 0,
-        cottonArea: item ? Number(item.cotton_total_area) : 0,
-        totalEstimatedCotton: item ? Number(item.total_estimated_cotton) : 0,
-      });
-      worksheet.addRow(rowValues);
-    }
-    // // Auto-adjust column widths based on content
-    worksheet.columns.forEach((column: any) => {
-      let maxCellLength = 0;
-      column.eachCell({ includeEmpty: true }, (cell: any) => {
-        const cellLength = (cell.value ? cell.value.toString() : "").length;
-        maxCellLength = Math.max(maxCellLength, cellLength);
-      });
-      column.width = Math.min(15, maxCellLength + 2); // Limit width to 30 characters
-    });
 
-    // Save the workbook
-    await workbook.xlsx.writeFile(excelFilePath);
-    res.status(200).send({
-      success: true,
-      messgage: "File successfully Generated",
-      data: process.env.BASE_URL + "excel-farmer-non-organic-report.xlsx",
-    });
+      // Create the excel workbook file
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet("Sheet1");
+      //mergin the cells for first row
+      worksheet.mergeCells("A1:M1");
+      const mergedCell = worksheet.getCell("A1");
+      mergedCell.value = "Cotton Connect | Farmer Report";
+      mergedCell.font = { bold: true };
+      mergedCell.alignment = { horizontal: "center", vertical: "middle" };
+
+      // Set bold font for header row
+      const headerRow = worksheet.addRow([
+        "S.No",
+        "Farmer Name",
+        "Farmer Code",
+        "Village",
+        "Block",
+        "District",
+        "State",
+        "Country",
+        "Brand Name",
+        "Program Name",
+        "Total Area",
+        "Cotton Area",
+        "Total Estimated Production",
+      ]);
+      headerRow.font = { bold: true };
+
+      whereCondition["$program.program_name$"] = { [Op.notILike]: `%Organic%` };
+
+      if (searchTerm) {
+        whereCondition[Op.or] = [
+          { firstName: { [Op.iLike]: `%${searchTerm}%` } },
+          { lastName: { [Op.iLike]: `%${searchTerm}%` } },
+          { code: { [Op.iLike]: `%${searchTerm}%` } },
+          { "$country.county_name$": { [Op.iLike]: `%${searchTerm}%` } },
+          { "$block.block_name$": { [Op.iLike]: `%${searchTerm}%` } },
+          { "$farmGroup.name$": { [Op.iLike]: `%${searchTerm}%` } },
+          { "$district.district_name$": { [Op.iLike]: `%${searchTerm}%` } },
+          { "$state.state_name$": { [Op.iLike]: `%${searchTerm}%` } },
+          { "$village.village_name$": { [Op.iLike]: `%${searchTerm}%` } },
+          { cert_status: { [Op.iLike]: `%${searchTerm}%` } },
+        ];
+      }
+      if (brandId) {
+        const idArray: number[] = brandId
+          .split(",")
+          .map((id: any) => parseInt(id, 10));
+
+        whereCondition.brand_id = { [Op.in]: idArray };
+      }
+      if (farmGroupId) {
+        const idArray: number[] = farmGroupId
+          .split(",")
+          .map((id: any) => parseInt(id, 10));
+        whereCondition.farmGroup_id = { [Op.in]: idArray };
+      }
+      if (countryId) {
+        const idArray: number[] = countryId
+          .split(",")
+          .map((id: any) => parseInt(id, 10));
+        whereCondition.country_id = { [Op.in]: idArray };
+      }
+      if (stateId) {
+        const idArray: number[] = stateId
+          .split(",")
+          .map((id: any) => parseInt(id, 10));
+        whereCondition.state_id = { [Op.in]: idArray };
+      }
+      if (districtId) {
+        const idArray: number[] = districtId
+          .split(",")
+          .map((id: any) => parseInt(id, 10));
+        whereCondition.district_id = { [Op.in]: idArray };
+      }
+      if (blockId) {
+        const idArray: number[] = blockId
+          .split(",")
+          .map((id: any) => parseInt(id, 10));
+        whereCondition.block_id = { [Op.in]: idArray };
+      }
+      if (villageId) {
+        const idArray: number[] = villageId
+          .split(",")
+          .map((id: any) => parseInt(id, 10));
+        whereCondition.village_id = { [Op.in]: idArray };
+      }
+      if (icsId) {
+        const idArray: number[] = icsId
+          .split(",")
+          .map((id: any) => parseInt(id, 10));
+        whereCondition.ics_id = { [Op.in]: idArray };
+      }
+      if (startDate && endDate) {
+        const startOfDay = new Date(startDate);
+        startOfDay.setUTCHours(0, 0, 0, 0);
+        const endOfDay = new Date(endDate);
+        endOfDay.setUTCHours(23, 59, 59, 999);
+        whereCondition.createdAt = { [Op.between]: [startOfDay, endOfDay] }
+      }
+      if (seasonId) {
+        whereCondition.id = {
+          [Op.in]: Sequelize.literal(
+            '( SELECT farmer_id FROM farms WHERE season_id = ' + seasonId + ')')
+        }
+      }
+
+      let farmer: any;
+      let include = [
+        {
+          model: Program,
+          as: "program",
+          attributes: ["id", "program_name"],
+        },
+        {
+          model: Brand,
+          as: "brand",
+          attributes: ["brand_name", "id"],
+        },
+        {
+          model: Country,
+          as: "country",
+          attributes: ["county_name", "id"],
+        },
+        {
+          model: Village,
+          as: "village",
+          attributes: ["village_name", "id"],
+        },
+        {
+          model: State,
+          as: "state",
+          attributes: ["state_name", "id"],
+        },
+        {
+          model: District,
+          as: "district",
+          attributes: ["district_name", "id"],
+        },
+        {
+          model: Block,
+          as: "block",
+          attributes: ["block_name", "id"],
+        },
+      ];
+      if (req.query.pagination === "true") {
+        const { count, rows } = await Farmer.findAndCountAll({
+          where: whereCondition,
+          order: [["id", "desc"]],
+          include: include,
+          offset: offset,
+          limit: limit,
+        });
+        farmer = rows;
+      } else {
+        farmer = await Farmer.findAll({
+          where: whereCondition,
+          include: include,
+          attributes: [
+            "firstName",
+            "lastName",
+            "code",
+            "id",
+            "agri_total_area",
+            "cotton_total_area",
+            "total_estimated_cotton",
+          ],
+        });
+      }
+      // Append data to worksheet
+      for await (const [index, item] of farmer.entries()) {
+        const rowValues = Object.values({
+          index: index + 1,
+          farmerName: item.firstName + " " + `${item.lastName ? item.lastName : ""}`,
+          Code: item.code,
+          village: item.village.village_name,
+          block: item.block.block_name,
+          district: item.district.district_name,
+          state: item.state.state_name,
+          country: item.country.county_name,
+          brand: item.brand.brand_name,
+          program: item.program.program_name,
+          totalArea: item ? Number(item.agri_total_area) : 0,
+          cottonArea: item ? Number(item.cotton_total_area) : 0,
+          totalEstimatedCotton: item ? Number(item.total_estimated_cotton) : 0,
+        });
+        worksheet.addRow(rowValues);
+      }
+      // // Auto-adjust column widths based on content
+      worksheet.columns.forEach((column: any) => {
+        let maxCellLength = 0;
+        column.eachCell({ includeEmpty: true }, (cell: any) => {
+          const cellLength = (cell.value ? cell.value.toString() : "").length;
+          maxCellLength = Math.max(maxCellLength, cellLength);
+        });
+        column.width = Math.min(15, maxCellLength + 2); // Limit width to 30 characters
+      });
+
+      // Save the workbook
+      await workbook.xlsx.writeFile(excelFilePath);
+      res.status(200).send({
+        success: true,
+        messgage: "File successfully Generated",
+        data: process.env.BASE_URL + "excel-farmer-non-organic-report.xlsx",
+      });
     }
   } catch (error: any) {
     console.error("Error appending data:", error);
@@ -421,7 +436,8 @@ const exportOrganicFarmerReport = async (req: Request, res: Response) => {
     villageId,
     exportType,
     startDate,
-    endDate
+    endDate,
+    seasonId
   }: any = req.query;
 
   try {
@@ -533,8 +549,15 @@ const exportOrganicFarmerReport = async (req: Request, res: Response) => {
         const endOfDay = new Date(endDate);
         endOfDay.setUTCHours(23, 59, 59, 999);
         whereCondition.createdAt = { [Op.between]: [startOfDay, endOfDay] }
-    }
-  
+      }
+
+      if (seasonId) {
+        whereCondition.id = {
+          [Op.in]: Sequelize.literal(
+            '( SELECT farmer_id FROM farms WHERE season_id = ' + seasonId + ')')
+        }
+      }
+
 
       let farmer: any;
       let include = [
@@ -633,12 +656,12 @@ const exportOrganicFarmerReport = async (req: Request, res: Response) => {
       }
       // // Auto-adjust column widths based on content
       worksheet.columns.forEach((column: any) => {
-          let maxCellLength = 0;
-          column.eachCell({ includeEmpty: true }, (cell: any) => {
-              const cellLength = (cell.value ? cell.value.toString() : '').length;
-              maxCellLength = Math.max(maxCellLength, cellLength);
-          });
-          column.width = Math.min(15, maxCellLength + 2); // Limit width to 30 characters
+        let maxCellLength = 0;
+        column.eachCell({ includeEmpty: true }, (cell: any) => {
+          const cellLength = (cell.value ? cell.value.toString() : '').length;
+          maxCellLength = Math.max(maxCellLength, cellLength);
+        });
+        column.width = Math.min(15, maxCellLength + 2); // Limit width to 30 characters
       });
 
       // Save the workbook

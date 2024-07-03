@@ -5,6 +5,7 @@ import {
     deleteGinner,
     fetchGinner,
     checkGinner,
+    exportGinnerRegistrationList,
 } from "../../controllers/process-registration/ginner";
 import accessControl from "../../middleware/access-control";
 import { Router } from "express";
@@ -18,5 +19,6 @@ router.post('/', createGinner);
 router.put('/', updateGinner);
 router.delete('/', deleteGinner);
 router.post('/check-ginner', checkGinner);
+router.get('/export/registration', exportGinnerRegistrationList);
 
 export default router;  

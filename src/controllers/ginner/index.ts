@@ -1027,6 +1027,7 @@ const updateGinnerSales = async (req: Request, res: Response) => {
       transporter_name: req.body.transporterName,
       vehicle_no: req.body.vehicleNo,
       lrbl_no: req.body.lrblNo,
+      choosen_bale: req.body.choosen_bale
     };
     const ginSales = await GinSales.update(data, {
       where: { id: req.body.id },
