@@ -88,6 +88,10 @@ const formatNumber = (data: string): number => {
   return Number(Number(data ?? 0).toFixed(2));
 };
 
+const mtConversion = (value: number) => {
+  return value > 0 ? Number((value / 1000).toFixed(2)) : 0;
+}
+
 
 const getKnitterWhereQuery = (
   reqData: any,
@@ -516,7 +520,7 @@ const getBuyerChartDataRes = (
   buyerList.forEach((buyer: any) => {
     if (buyer.dataValues.buyerName && buyer.dataValues.buyerName.length) {
       name.push(buyer.dataValues.buyerName);
-      qty.push(formatNumber(buyer.dataValues.qty));
+      qty.push(mtConversion(buyer.dataValues.qty));
     }
   });
   return {
@@ -1249,18 +1253,18 @@ const getOverallChartDataRes = async (
     if (fProcured.length) {
       fProcured.forEach(procured => {
         data.seasonName = procured.dataValues.seasonName;
-        data.procured += formatNumber(procured.dataValues.qty);
+        data.procured += mtConversion(procured.dataValues.qty);
       });
     }
 
     if (fProcessed) {
       data.seasonName = fProcessed.dataValues.seasonName;
-      data.processed = formatNumber(fProcessed.dataValues.qty);
+      data.processed = mtConversion(fProcessed.dataValues.qty);
     }
 
     if (fSold) {
       data.seasonName = fSold.dataValues.seasonName;
-      data.sold = formatNumber(fSold.dataValues.qty);
+      data.sold = mtConversion(fSold.dataValues.qty);
     }
 
     if (!data.seasonName) {

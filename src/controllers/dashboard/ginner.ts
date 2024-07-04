@@ -359,7 +359,7 @@ const getTopVillagesRes = (
   for (const row of list) {
     if (row) {
       village.push(row.dataValues.villageName);
-      count.push(formatNumber(row.dataValues.total));
+      count.push(mtConversion(row.dataValues.total));
     }
   }
 
@@ -431,7 +431,7 @@ const getTopSpinnersRes = (
   for (const row of list) {
     if (row.dataValues) {
       spinners.push(row.dataValues.spinnerName);
-      count.push(formatNumber(row.dataValues.total));
+      count.push(mtConversion(row.dataValues.total));
     }
   }
 
@@ -517,12 +517,12 @@ const getProcuredProcessedRes = async (
     };
     if (fProcured) {
       data.seasonName = fProcured.dataValues.seasonName;
-      data.procured = formatNumber(fProcured.dataValues.procured);
+      data.procured = mtConversion(fProcured.dataValues.procured);
     }
 
     if (fProcessed) {
       data.seasonName = fProcessed.dataValues.seasonName;
-      data.processed = formatNumber(fProcessed.dataValues.processed);
+      data.processed = mtConversion(fProcessed.dataValues.processed);
     }
 
     if (!data.seasonName) {
@@ -685,15 +685,15 @@ const getLintProcuredSoldRes = async (
     };
     if (fProcured) {
       data.seasonName = fProcured.dataValues.seasonName;
-      data.procured = formatNumber(fProcured.dataValues.lintProcured);
+      data.procured = mtConversion(fProcured.dataValues.lintProcured);
     }
 
     if (fSold) {
       data.seasonName = fSold.dataValues.seasonName;
-      data.sold = formatNumber(fSold.dataValues.lintSold);
+      data.sold = mtConversion(fSold.dataValues.lintSold);
     }
 
-    data.stock = data.procured - data.sold;
+    data.stock = data.procured > data.sold ? Number(data.procured.toFixed(2)) - data.sold : 0;
 
     if (!data.seasonName) {
       const fSeason = seasons.find((season: any) =>
@@ -962,17 +962,17 @@ const getDataAllRes = (
       cottonStock: 0
     };
     if (fProcured) {
-      data.procured = formatNumber(fProcured.dataValues.lintProcured);
+      data.procured = mtConversion(fProcured.dataValues.lintProcured);
     }
-    if(fProcessed) {
-      data.cottonStock = formatNumber(fProcessed.dataValues.processed);
+    if (fProcessed) {
+      data.cottonStock = mtConversion(fProcessed.dataValues.processed);
     }
 
     if (fSold) {
-      data.sold = formatNumber(fSold.dataValues.lintSold);
+      data.sold = mtConversion(fSold.dataValues.lintSold);
     }
     if (fCotton) {
-      data.cottonProcured = (formatNumber(fCotton.dataValues.procured));
+      data.cottonProcured = (mtConversion(fCotton.dataValues.procured));
     }
 
     res.month.push(getMonthName(month.month));
@@ -1178,17 +1178,17 @@ const getBaleComparisonRes = async (
     };
     if (fProcured) {
       data.seasonName = fProcured.dataValues.seasonName;
-      data.procured = formatNumber(fProcured.dataValues.procured);
+      data.procured = mtConversion(fProcured.dataValues.procured);
     }
 
     if (fSold) {
       data.seasonName = fSold.dataValues.seasonName;
-      data.sold = formatNumber(fSold.dataValues.sold);
+      data.sold = mtConversion(fSold.dataValues.sold);
     }
 
     data.stock =
       data.procured > data.sold
-        ? data.procured - data.sold
+        ? Number((data.procured - data.sold).toFixed(2))
         : 0;
     if (!data.seasonName) {
       const fSeason = seasons.find((season: any) =>
@@ -1293,7 +1293,7 @@ const getTopGinnersRes = (
   for (const row of list) {
     if (row.dataValues) {
       ginners.push(row.dataValues.ginnerName);
-      count.push(formatNumber(row.dataValues.total));
+      count.push(mtConversion(row.dataValues.total));
     }
   }
 
@@ -1424,7 +1424,7 @@ const getLintStockTopGinnersRes = (
   for (const row of list) {
     if (row) {
       ginners.push(row.ginnerName);
-      count.push(formatNumber(row.total));
+      count.push(mtConversion(row.total));
     }
   }
   return {
@@ -1503,12 +1503,12 @@ const getLintProcessedRes = async (
       );
 
       if (gProcessedValue) {
-        totalArea = formatNumber(gProcessedValue.dataValues.lintProcured);
+        totalArea = mtConversion(gProcessedValue.dataValues.lintProcured);
         if (!seasonList.includes(gProcessedValue.dataValues.seasonName))
           seasonList.push(gProcessedValue.dataValues.seasonName);
       } else {
         seasons.forEach((season: any) => {
-          if (season.id == seasonId) {
+          if (season.id == seasonId && !seasonList.includes(season.seasonName)) {
             seasonList.push(season.name);
           }
         });
@@ -1596,12 +1596,12 @@ const getLintSoldRes = async (
       );
 
       if (gSoldValue) {
-        totalArea = formatNumber(gSoldValue.dataValues.lintSold);
+        totalArea = mtConversion(gSoldValue.dataValues.lintSold);
         if (!seasonList.includes(gSoldValue.dataValues.seasonName))
           seasonList.push(gSoldValue.dataValues.seasonName);
       } else {
         seasons.forEach((season: any) => {
-          if (season.id == seasonId) {
+          if (season.id == seasonId && !seasonList.includes(season.seasonName)) {
             seasonList.push(season.name);
           }
         });
@@ -1722,12 +1722,12 @@ const getProcuredAllocatedRes = async (
     };
     if (gProcured) {
       data.seasonName = gProcured.dataValues.seasonName;
-      data.procured = formatNumber(gProcured.dataValues.procured);
+      data.procured = mtConversion(gProcured.dataValues.procured);
     }
 
     if (gAllocated) {
       data.seasonName = gAllocated.dataValues.seasonName;
-      data.allocated = formatNumber(gAllocated.dataValues.allocated);
+      data.allocated = mtConversion(gAllocated.dataValues.allocated);
     }
 
     if (!data.seasonName) {
@@ -1880,6 +1880,10 @@ const getOutturnCountryRes = async (
   };
 };
 
+const mtConversion = (value: number) => {
+  return value > 0 ? Number((value / 1000).toFixed(2)) : 0
+}
+
 const getProcuredByCountry = async (
   req: Request, res: Response
 ) => {
@@ -1984,12 +1988,12 @@ const getProcuredDataRes = async (
       );
 
       if (fFarmerValue) {
-        farmerCount = formatNumber(fFarmerValue.dataValues.procured);
+        farmerCount = mtConversion(fFarmerValue.dataValues.procured);
         if (!seasonList.includes(fFarmerValue.dataValues.seasonName))
           seasonList.push(fFarmerValue.dataValues.seasonName);
       } else {
         seasons.forEach((season: any) => {
-          if (season.id == seasonId) {
+          if (season.id == seasonId && !seasonList.includes(season.seasonName)) {
             seasonList.push(season.name);
           }
         });
@@ -2110,12 +2114,12 @@ const getProcessedDataRes = async (
       );
 
       if (fFarmerValue) {
-        farmerCount = formatNumber(fFarmerValue.dataValues.processed);
+        farmerCount = mtConversion(fFarmerValue.dataValues.processed);
         if (!seasonList.includes(fFarmerValue.dataValues.seasonName))
           seasonList.push(fFarmerValue.dataValues.seasonName);
       } else {
         seasons.forEach((season: any) => {
-          if (season.id == seasonId) {
+          if (season.id == seasonId && !seasonList.includes(season.seasonName)) {
             seasonList.push(season.name);
           }
         });
@@ -2204,12 +2208,12 @@ const getBalesProcuredByCountryDataRes = async (
       );
 
       if (fFarmerValue) {
-        farmerCount = formatNumber(fFarmerValue.dataValues.procured);
+        farmerCount = mtConversion(fFarmerValue.dataValues.procured);
         if (!seasonList.includes(fFarmerValue.dataValues.seasonName))
           seasonList.push(fFarmerValue.dataValues.seasonName);
       } else {
         seasons.forEach((season: any) => {
-          if (season.id == seasonId) {
+          if (season.id == seasonId && !seasonList.includes(season.seasonName)) {
             seasonList.push(season.name);
           }
         });
@@ -2347,12 +2351,12 @@ const getBaleSoldByCountryRes = async (
       );
 
       if (fFarmerValue) {
-        farmerCount = formatNumber(fFarmerValue.dataValues.sold);
+        farmerCount = mtConversion(fFarmerValue.dataValues.sold);
         if (!seasonList.includes(fFarmerValue.dataValues.seasonName))
           seasonList.push(fFarmerValue.dataValues.seasonName);
       } else {
         seasons.forEach((season: any) => {
-          if (season.id == seasonId) {
+          if (season.id == seasonId && !seasonList.includes(season.seasonName)) {
             seasonList.push(season.name);
           }
         });
@@ -2525,19 +2529,19 @@ const getBaleStockDataRes = async (
         list.dataValues.seasonId == seasonId
       );
       if (fProcuredValue) {
-        farmerCount.procured = formatNumber(fProcuredValue.dataValues.procured);
+        farmerCount.procured = mtConversion(fProcuredValue.dataValues.procured);
         if (!seasonList.includes(fProcuredValue.dataValues.seasonName))
           seasonList.push(fProcuredValue.dataValues.seasonName);
       }
 
       if (fSoldValue) {
-        farmerCount.sold = formatNumber(fSoldValue.dataValues.sold);
+        farmerCount.sold = mtConversion(fSoldValue.dataValues.sold);
         if (!seasonList.includes(fSoldValue.dataValues.seasonName))
           seasonList.push(fSoldValue.dataValues.seasonName);
       }
       if (!fSoldValue && !fProcuredValue) {
         seasons.forEach((season: any) => {
-          if (season.id == seasonId) {
+          if (season.id == seasonId && !seasonList.includes(season.seasonName)) {
             seasonList.push(season.name);
           }
         });
