@@ -291,7 +291,7 @@ const getTopFabricRes = (
   for (const row of list) {
     if (row.dataValues && row.dataValues.name && name.length < 10) {
       name.push(row.dataValues.name);
-      count.push(formatNumber(row.dataValues.total));
+      count.push(mtConversion(row.dataValues.total));
     }
   }
 
@@ -368,6 +368,10 @@ const getTopGinnersData = async (
 
 };
 
+const mtConversion = (value: number) => {
+  return value > 0 ? Number((value / 1000).toFixed(2)) : 0
+}
+
 const getTopGinnersRes = (
   list: any[]
 ) => {
@@ -376,7 +380,7 @@ const getTopGinnersRes = (
   for (const row of list) {
     if (row.dataValues) {
       ginners.push(row.dataValues.ginnerName);
-      count.push(formatNumber(row.dataValues.total));
+      count.push(mtConversion(row.dataValues.total));
     }
   }
 
@@ -462,12 +466,12 @@ const getLintProcuredProcessedRes = async (
     };
     if (fProcured) {
       data.seasonName = fProcured.dataValues.seasonName;
-      data.lintProcured = formatNumber(fProcured.dataValues.lintProcured);
+      data.lintProcured = mtConversion(fProcured.dataValues.lintProcured);
     }
 
     if (fProcessed) {
       data.seasonName = fProcessed.dataValues.seasonName;
-      data.lintProcessed = formatNumber(fProcessed.dataValues.lintProcessed);
+      data.lintProcessed = mtConversion(fProcessed.dataValues.lintProcessed);
     }
 
     if (!data.seasonName) {
@@ -641,12 +645,12 @@ const getYarnProcuredSoldRes = async (
     };
     if (fProcured) {
       data.seasonName = fProcured.dataValues.seasonName;
-      data.yarnProcured = formatNumber(fProcured.dataValues.yarnProcured);
+      data.yarnProcured = mtConversion(fProcured.dataValues.yarnProcured);
     }
 
     if (fSold) {
       data.seasonName = fSold.dataValues.seasonName;
-      data.yarnSold = formatNumber(fSold.dataValues.yarnSold);
+      data.yarnSold = mtConversion(fSold.dataValues.yarnSold);
     }
 
     if (!data.seasonName) {
@@ -908,18 +912,18 @@ const getDataAllRes = (
       yarnSold: 0
     };
     if (fProcured) {
-      data.lintProcured = formatNumber(fProcured.dataValues.lintProcured);
+      data.lintProcured = mtConversion(fProcured.dataValues.lintProcured);
     }
 
     if (fSold) {
-      data.lintProcessed = formatNumber(fSold.dataValues.lintProcessed);
+      data.lintProcessed = mtConversion(fSold.dataValues.lintProcessed);
     }
     if (fYarnProcured) {
-      data.yarnProcured = formatNumber(fYarnProcured.dataValues.yarnProcured);
+      data.yarnProcured = mtConversion(fYarnProcured.dataValues.yarnProcured);
     }
 
     if (fYarnSold) {
-      data.yarnSold = formatNumber(fYarnSold.dataValues.yarnSold);
+      data.yarnSold = mtConversion(fYarnSold.dataValues.yarnSold);
     }
 
     res.month.push(getMonthName(month.month));
@@ -962,7 +966,7 @@ const getTopYarnCountRes = (
   for (const row of list) {
     if (row.dataValues && row.dataValues.buyerName) {
       name.push(row.dataValues.buyerName);
-      count.push(formatNumber(row.dataValues.qty));
+      count.push(mtConversion(row.dataValues.qty));
     }
   }
 
@@ -1067,7 +1071,7 @@ const getYarnTypeRes = (
         ));
 
         if (fYarnType)
-          qty = formatNumber(fYarnType.dataValues.qty);
+          qty = mtConversion(fYarnType.dataValues.qty);
         yarnData.data.push(qty);
       }
       res.month.push(getMonthName(month.month));
@@ -1183,13 +1187,13 @@ const getYarnProcuredStockRes = async (
     };
     if (fProcured) {
       data.seasonName = fProcured.dataValues.seasonName;
-      data.yarnProcessed = formatNumber(fProcured.dataValues.yarnProcured);
+      data.yarnProcessed = mtConversion(fProcured.dataValues.yarnProcured);
     }
 
     if (fSold) {
       data.seasonName = fSold.dataValues.seasonName;
       data.yarnStock = data.yarnProcessed > fSold.dataValues.yarnSold
-        ? formatNumber((formatNumber(fProcured.dataValues.yarnProcured) - formatNumber(fSold.dataValues.yarnSold)).toFixed(2))
+        ? Number((mtConversion(fProcured.dataValues.yarnProcured) - mtConversion(fSold.dataValues.yarnSold)).toFixed(2))
         : 0;
     }
 
@@ -1240,7 +1244,7 @@ const getTopYarnProcessedRes = (
   for (const row of list) {
     if (row.dataValues && row.dataValues.spinnerName) {
       spinners.push(row.dataValues.spinnerName);
-      processed.push(formatNumber(row.dataValues.processed));
+      processed.push(mtConversion(row.dataValues.processed));
     }
   }
 
@@ -1309,7 +1313,7 @@ const getTopYarnSoldRes = (
   for (const row of list) {
     if (row.dataValues && row.dataValues.spinnerName) {
       spinners.push(row.dataValues.spinnerName);
-      sold.push(formatNumber(row.dataValues.sold));
+      sold.push(mtConversion(row.dataValues.sold));
     }
   }
 
@@ -1378,7 +1382,7 @@ const getTopYarnStockRes = (
   for (const row of list) {
     if (row && row.spinnerName) {
       spinners.push(row.spinnerName);
-      stock.push(formatNumber(row.stock));
+      stock.push(mtConversion(row.stock));
     }
   }
 
@@ -1530,7 +1534,7 @@ const getLintProcessedByCountryDataRes = async (
       );
 
       if (fFarmerValue) {
-        processedCount = formatNumber(fFarmerValue.dataValues.processed);
+        processedCount = mtConversion(fFarmerValue.dataValues.processed);
         if (!seasonList.includes(fFarmerValue.dataValues.seasonName))
           seasonList.push(fFarmerValue.dataValues.seasonName);
       } else {
@@ -1652,7 +1656,7 @@ const getLintSoldByCountryRes = async (
       );
 
       if (gSoldValue) {
-        totalSold = formatNumber(gSoldValue.dataValues.sold);
+        totalSold = mtConversion(gSoldValue.dataValues.sold);
         if (!seasonList.includes(gSoldValue.dataValues.seasonName))
           seasonList.push(gSoldValue.dataValues.seasonName);
       }
@@ -1775,7 +1779,7 @@ const getYarnProcessedByCountryRes = async (
       );
 
       if (gSoldValue) {
-        totalProcessed = formatNumber(gSoldValue.dataValues.processed);
+        totalProcessed = mtConversion(gSoldValue.dataValues.processed);
         if (!seasonList.includes(gSoldValue.dataValues.seasonName))
           seasonList.push(gSoldValue.dataValues.seasonName);
       }
@@ -1898,7 +1902,7 @@ const getYarnSoldByCountryRes = async (
       );
 
       if (gSoldValue) {
-        totalSold = formatNumber(gSoldValue.dataValues.sold);
+        totalSold = mtConversion(gSoldValue.dataValues.sold);
         if (!seasonList.includes(gSoldValue.dataValues.seasonName))
           seasonList.push(gSoldValue.dataValues.seasonName);
       }
@@ -2021,7 +2025,7 @@ const getYarnProducedByCountryRes = async (
       );
 
       if (gProducedValue) {
-        totalProduced = formatNumber(gProducedValue.dataValues.produced.reduce((fValue: any, sValue: any) => fValue + sValue));
+        totalProduced = mtConversion(gProducedValue.dataValues.produced.reduce((fValue: any, sValue: any) => fValue + sValue));
         if (!seasonList.includes(gProducedValue.dataValues.seasonName))
           seasonList.push(gProducedValue.dataValues.seasonName);
       }
@@ -2139,7 +2143,7 @@ const getYarnStockByCountryRes = async (
       );
 
       if (gProducedValue) {
-        totalStock.processed = formatNumber(gProducedValue.dataValues.processed);
+        totalStock.processed = mtConversion(gProducedValue.dataValues.processed);
         if (!seasonList.includes(gProducedValue.dataValues.seasonName))
           seasonList.push(gProducedValue.dataValues.seasonName);
       }
@@ -2150,7 +2154,7 @@ const getYarnStockByCountryRes = async (
       }
 
       if (gSoldValue) {
-        totalStock.sold = formatNumber(gSoldValue.dataValues.sold);
+        totalStock.sold = mtConversion(gSoldValue.dataValues.sold);
         if (!seasonList.includes(gSoldValue.dataValues.seasonName))
           seasonList.push(gSoldValue.dataValues.seasonName);
       }
@@ -2160,7 +2164,7 @@ const getYarnStockByCountryRes = async (
           seasonList.push(season.dataValues.name);
       }
 
-      data.data.push(totalStock.processed > totalStock.sold ? totalStock.processed - totalStock.sold : 0);
+      data.data.push(totalStock.processed > totalStock.sold ? Number((totalStock.processed - totalStock.sold).toFixed(2)) : 0);
     }
 
     stockList.push(data);

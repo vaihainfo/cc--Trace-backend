@@ -67,6 +67,10 @@ const formatNumber = (data: string): number => {
   return Number(Number(data ?? 0).toFixed(2));
 };
 
+const mtConversion = (value: number) => {
+  return value > 0 ? Number((value / 1000).toFixed(2)) : 0
+}
+
 
 const getMonthDate = (
   from: string,
@@ -269,12 +273,12 @@ const getYarnCompareCountRes = async (
     };
     if (fProcured) {
       data.seasonName = fProcured.dataValues.seasonName;
-      data.yarnProcured = formatNumber(fProcured.dataValues.procured);
+      data.yarnProcured = mtConversion(fProcured.dataValues.procured);
     }
 
     if (fProcessed) {
       data.seasonName = fProcessed.dataValues.seasonName;
-      data.yarnProcessed = formatNumber(fProcessed.dataValues.processed);
+      data.yarnProcessed = mtConversion(fProcessed.dataValues.processed);
     }
 
     if (!data.seasonName) {
@@ -430,12 +434,12 @@ const getFabricCompareCountRes = async (
     };
     if (fProcessed) {
       data.seasonName = fProcessed.dataValues.seasonName;
-      data.fabricProcessed = formatNumber(fProcessed.dataValues.processed);
+      data.fabricProcessed = mtConversion(fProcessed.dataValues.processed);
     }
 
     if (fSold) {
       data.seasonName = fSold.dataValues.seasonName;
-      data.fabricSold = formatNumber(fSold.dataValues.sold);
+      data.fabricSold = mtConversion(fSold.dataValues.sold);
     }
 
     if (!data.seasonName) {
@@ -596,16 +600,16 @@ const getFabricYarnMonthlyDataRes = (
     };
 
     if (fYarnProcured)
-      data.yarnProcured = formatNumber(fYarnProcured.dataValues.procured);
+      data.yarnProcured = mtConversion(fYarnProcured.dataValues.procured);
 
     if (fYarnProcessed)
-      data.yarnProcessed = formatNumber(fYarnProcessed.dataValues.processed);
+      data.yarnProcessed = mtConversion(fYarnProcessed.dataValues.processed);
 
     if (fFabricProcessed)
-      data.fabricProcessed = formatNumber(fFabricProcessed.dataValues.processed);
+      data.fabricProcessed = mtConversion(fFabricProcessed.dataValues.processed);
 
     if (fFabricSold)
-      data.fabricSold = formatNumber(fFabricSold.dataValues.sold);
+      data.fabricSold = mtConversion(fFabricSold.dataValues.sold);
 
     res.month.push(getMonthName(month.month));
     res.yarnProcured.push(data.yarnProcured);
@@ -733,7 +737,7 @@ const getTopYarnProcuredRes = (yarnList: any) => {
   for (const row of yarnList) {
     if (row.dataValues && row.dataValues.buyerName) {
       name.push(row.dataValues.buyerName);
-      count.push(formatNumber(row.dataValues.qty));
+      count.push(mtConversion(row.dataValues.qty));
     }
   }
 
@@ -795,7 +799,7 @@ const getTopFabricSoldRes = (yarnList: any) => {
   for (const row of yarnList) {
     if (row.dataValues && row.dataValues.buyerName) {
       name.push(row.dataValues.buyerName);
-      count.push(formatNumber(row.dataValues.qty));
+      count.push(mtConversion(row.dataValues.qty));
     }
   }
 
@@ -902,7 +906,7 @@ const getFabricTypeRes = (
         ));
 
         if (fYarnType)
-          qty = formatNumber(fYarnType.dataValues.qty);
+          qty = mtConversion(fYarnType.dataValues.qty);
         yarnData.data.push(qty);
       }
       res.month.push(getMonthName(month.month));
@@ -985,7 +989,7 @@ const getKnitterFabricRes = (yarnList: any) => {
   }[] = [];
 
   for (const yarn of yarnList) {
-    const fabricWeight = formatNumber(yarn.dataValues.fabricWeight);
+    const fabricWeight = mtConversion(yarn.dataValues.fabricWeight);
     const fabricName = yarn.dataValues.fabricName ?? "";
 
     const fFabric = fabricList.find(fabric =>
