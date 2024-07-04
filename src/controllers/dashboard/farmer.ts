@@ -437,7 +437,7 @@ const getTotalAcres = async (
 const getAcreBySession = async (where: any) => {
   const result = await Farm.findAll({
     attributes: [
-      [Sequelize.fn('SUM', Sequelize.col('farms.agri_total_area')), 'acreCount'],
+      [Sequelize.fn('SUM', Sequelize.col('farms.cotton_total_area')), 'acreCount'],
       [Sequelize.col('season.name'), 'seasonName'],
       [Sequelize.col('season.id'), 'seasonId']
     ],
