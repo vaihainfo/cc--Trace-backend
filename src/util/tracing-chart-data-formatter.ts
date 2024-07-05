@@ -213,7 +213,7 @@ export const formatDataForGarment = (title: any, data: any) : any => {
         width: 300,
         height: 100,
         isRoot: true,
-        children: data?.map((el:any) => el.fabricChart)
+        children: data?.map((el:any) => el.fabricChart??[])
     };
     return treeData;
 }

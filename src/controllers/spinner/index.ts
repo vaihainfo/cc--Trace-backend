@@ -2536,7 +2536,7 @@ const _getSpinnerProcessTracingChartData = async (reelLotNo:any) => {
     let include = [{ model: Spinner, as: "spinner", attributes: ['id', 'name'] }];
     let whereCondition:any = {};
   
-    if (reelLotNo) {
+    if (reelLotNo!==null) {
       const idArray = reelLotNo.split(",");
       whereCondition.reel_lot_no = { [Op.in]: idArray };
     }

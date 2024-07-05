@@ -2516,21 +2516,28 @@ const getBuyerProcessors = async (req: Request, res: Response) => {
 const getGarmentProcessTracingChartData = async (req: Request, res: Response) => {
   try {
     const query = req.query;
+
+    if (!query?.reel_lot_no) {
+      return res.sendError(res, "Need Reel Lot No");
+    }
+
     let garments = await GarmentProcess.findAll({ where: query });
 
-    garments = await Promise.all(garments.map(async (el: any) => {
-      el = el.toJSON();
+    garments = await Promise.all(garments?.map(async (el: any) => {
+      el = el?.toJSON();
       let fabricChart: any;
 
       const garmentSelection = await FabricSelection.findAll({ where: { sales_id: el.id } });
 
-      const fabricChartPromises = garmentSelection.map(async (process: any) => {
-        const { processor, fabric_id } = process.dataValues;
+      const fabricChartPromises = garmentSelection?.map(async (process: any) => {
+        const { processor, fabric_id } = process?.dataValues;
 
         if (['dying', 'printing', 'washing', 'compacting'].includes(processor)) {
-          return await _getFabricProcessTracingChartData(processor, fabric_id);
+          if(fabric_id){
+            return await _getFabricProcessTracingChartData(processor, fabric_id);
+          }
         } 
-        else if (processor === 'knitter') {
+        else if (processor === 'knitter' && fabric_id) {
           const knitterChart = await KnitFabricSelection.findAll({ 
             where: { sales_id: fabric_id},
             include: [{ 
@@ -2538,8 +2545,10 @@ const getGarmentProcessTracingChartData = async (req: Request, res: Response) =>
             }]
            });
           const knitterChartData = await Promise.all(
-            knitterChart.map(async (knitSeleItem: any) => {
-              return await _getKnitterProcessTracingChartData({reel_lot_no:knitSeleItem.dataValues.process.reel_lot_no});
+            knitterChart?.map(async (knitSeleItem: any) => {
+              if(knitSeleItem?.dataValues?.process?.reel_lot_no){
+                return await _getKnitterProcessTracingChartData({reel_lot_no:knitSeleItem.dataValues.process.reel_lot_no});
+              }
             })
           );
           return knitterChartData[0];
@@ -2551,8 +2560,10 @@ const getGarmentProcessTracingChartData = async (req: Request, res: Response) =>
             }]
           });
           const weaverChartData = await Promise.all(
-            weaverChart.map(async (weavSeleItem: any) => {
-              return await _getWeaverProcessTracingChartData({reel_lot_no:weavSeleItem.dataValues.process.reel_lot_no});
+            weaverChart?.map(async (weavSeleItem: any) => {
+              if(weavSeleItem?.dataValues?.process?.reel_lot_no){
+                  return await _getWeaverProcessTracingChartData({reel_lot_no:weavSeleItem.dataValues.process.reel_lot_no});
+              }
             })
           );
           return weaverChartData[0];
@@ -2561,7 +2572,7 @@ const getGarmentProcessTracingChartData = async (req: Request, res: Response) =>
 
       // Resolve all fabric chart promises and assign the first non-null result to fabricChart
       const fabricChartResults = await Promise.all(fabricChartPromises);
-      fabricChart = fabricChartResults.find(result => result !== null);
+      fabricChart = fabricChartResults?.find(result => result !== null);
 
       el.fabricChart = fabricChart;
       return el;
