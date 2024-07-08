@@ -23,13 +23,17 @@ import SpinProcess from "../../models/spin-process.model";
 import { send_knitter_mail } from "../send-emails";
 import KnitFabric from "../../models/knit_fabric.model";
 import { _getSpinnerProcessTracingChartData } from "../spinner/index";
-import { formatDataFromKnitter } from "../../util/tracing-chart-data-formatter";
+import { formatDataForSpinnerProcess, formatDataFromKnitter } from "../../util/tracing-chart-data-formatter";
 import Country from "../../models/country.model";
 import PhysicalTraceabilityDataKnitter from "../../models/physical-traceability-data-knitter.model";
 import Brand from "../../models/brand.model";
 import PhysicalTraceabilityDataKnitterSample from "../../models/physical-traceability-data-knitter-sample.model";
-import QualityParameter from "../../models/quality-parameter.model";
-
+import Village from "../../models/village.model";
+import Farmer from "../../models/farmer.model";
+import FarmGroup from "../../models/farm-group.model";
+import Transaction from "../../models/transaction.model";
+import GinSales from "../../models/gin-sales.model";
+import Ginner from "../../models/ginner.model";
 const createKnitterProcess = async (req: Request, res: Response) => {
   try {
     let dyeing
@@ -1652,11 +1656,14 @@ const chooseFabricProcess = async (req: Request, res: Response) => {
 
 
 
-const getKnitterProcessTracingChartData = async (
-  req: Request,
-  res: Response
-) => {
-  let query = req.query;
+const _getKnitterProcessTracingChartData = async (query:any) => {
+
+  let whereCondition: any = {};
+  if (query) {
+    const idArray = query.reel_lot_no.split(",");
+    whereCondition.reel_lot_no = { [Op.in]: idArray };
+  }
+
   let include = [
     {
       model: Knitter,
@@ -1718,8 +1725,18 @@ const getKnitterProcessTracingChartData = async (
     })
   );
 
-  let key = Object.keys(req.query)[0];
-  res.sendSuccess(res, formatDataFromKnitter(req.query[key], knitters));
+  let key = Object.keys(whereCondition)[0];
+  console.log(whereCondition[key])
+ return formatDataFromKnitter(whereCondition[key], knitters);
+};
+
+const getKnitterProcessTracingChartData = async (
+  req: Request,
+  res: Response
+) => {
+  let query = req.query;
+  let knitters = await _getKnitterProcessTracingChartData(query);
+  res.sendSuccess(res, knitters);
 };
 
 const exportKnitterTransactionList = async (req: Request, res: Response) => {
@@ -1884,6 +1901,123 @@ const exportKnitterTransactionList = async (req: Request, res: Response) => {
   }
 };
 
+
+
+// Assuming fetchSpinData, fetchTracingChartData, fetchGinSales, and fetchTransactions are defined similarly as in your original code.
+
+
+const fetchSpinData = async (knitterId: any) => {
+  const spinData = await SpinSales.findAll({
+    where: { knitter_id: knitterId },
+    attributes: ['id', 'reel_lot_no', 'knitter_id'] // Fetch necessary fields only
+  });
+  return spinData.map((el: any) => el.toJSON());
+};
+
+const fetchTracingChartData = async (knitterData: any) => {
+  const batchSizeSpin = 100;
+  let offset = 0;
+  let allSpinData: any = [];
+
+  const include = [
+    {
+      model: Spinner,
+      as: "spinner",
+      attributes: ['id', 'name'] // Only fetch necessary fields
+    }
+  ];
+
+  const whereCondition = {
+    reel_lot_no: knitterData.reel_lot_no // Adjust as per your data structure
+  };
+
+  while (true) {
+    const spinBatch = await SpinProcess.findAll({
+      where: whereCondition,
+      include,
+      order: [['id', 'desc']],
+      limit: batchSizeSpin,
+      offset: offset,
+      attributes: ['id', 'reel_lot_no'] // Only fetch necessary fields
+    });
+
+    if (spinBatch.length === 0) break;
+
+    offset += batchSizeSpin;
+
+    const spinWithGinSales = await Promise.all(spinBatch.map(async (el: any) => {
+      el = el.toJSON();
+      el.ginSales = await fetchGinSales(el.spinner.id);
+      return el;
+    }));
+
+    allSpinData = allSpinData.concat(spinWithGinSales);
+  }
+
+  return { spin: allSpinData }; // Ensure this includes the required structure for children
+};
+
+const fetchGinSales = async (spinnerId: any) => {
+  const ginSales = await GinSales.findAll({
+    where: {
+      buyer: spinnerId
+    },
+    include: [
+      {
+        model: Ginner,
+        as: "ginner",
+        attributes: ['id', 'name'] // Only fetch necessary fields
+      }
+    ],
+    attributes: ['id', 'ginner_id'] // Only fetch necessary fields
+  });
+
+  return Promise.all(ginSales.map(async (sale: any) => {
+    sale = sale.toJSON();
+    sale.transaction = await fetchTransactions(sale.ginner_id);
+    return sale;
+  }));
+};
+
+const fetchTransactions = async (ginnerId: any) => {
+  const transactionInclude = [
+    {
+      model: Village,
+      as: 'village',
+      attributes: ['id', 'village_name'] // Only fetch necessary fields
+    },
+    {
+      model: Farmer,
+      as: 'farmer',
+      attributes: ['id', 'firstName', 'lastName', 'farmGroup_id', 'village_id'],
+      include: [
+        {
+          model: Village,
+          as: 'village',
+          attributes: ['id', 'village_name'] // Only fetch necessary fields
+        },
+        {
+          model: FarmGroup,
+          as: 'farmGroup',
+          attributes: ['id', 'name'] // Only fetch necessary fields
+        }
+      ]
+    }
+  ];
+
+  const transactions = await Transaction.findAll({
+    where: {
+      mapped_ginner: ginnerId
+    },
+    include: transactionInclude,
+    attributes: ['id', 'farmer_id', 'village_id'] // Only fetch necessary fields
+  });
+
+  return transactions.map((transaction: any) => transaction.toJSON());
+};
+
+
+
 export {
   createKnitterProcess,
   updateKnitterProcess,
@@ -1908,5 +2042,6 @@ export {
   getChooseFabricFilters,
   chooseFabricProcess,
   getKnitterProcessTracingChartData,
-  exportKnitterTransactionList
+  exportKnitterTransactionList,
+  _getKnitterProcessTracingChartData
 };

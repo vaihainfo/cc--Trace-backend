@@ -5,7 +5,8 @@ import {
     fetchPhysicalPartner,
     deletePhysicalPartner,
     checkPhysicalPartner,
-    getPhysicalPartnerBrand
+    getPhysicalPartnerBrand,
+    exportPhysicalPartnerRegistrationList
 } from "../../controllers/process-registration/physical-partner";
 
 const router = Router();
@@ -17,5 +18,6 @@ router.get('/get/physicalPartner/brand', getPhysicalPartnerBrand);
 router.get('/get-physical-partner', fetchPhysicalPartner);
 router.delete('/', deletePhysicalPartner);
 router.post('/check-physical-partner', checkPhysicalPartner);
+router.get('/export/registration', exportPhysicalPartnerRegistrationList);
 
 export default router;

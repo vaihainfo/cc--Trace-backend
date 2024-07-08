@@ -1027,6 +1027,7 @@ const updateGinnerSales = async (req: Request, res: Response) => {
       transporter_name: req.body.transporterName,
       vehicle_no: req.body.vehicleNo,
       lrbl_no: req.body.lrblNo,
+      choosen_bale: req.body.choosen_bale
     };
     const ginSales = await GinSales.update(data, {
       where: { id: req.body.id },
@@ -1565,7 +1566,7 @@ const _getGinnerProcessTracingChartData = async (
   reelLotNo:any
 ) => {
   try {
-     await createIndexes();
+    //  await createIndexes();
      
     let include = [
       {
@@ -1682,74 +1683,6 @@ const _getGinnerProcessTracingChartData = async (
   }
 };
 
-const createIndexes = async () => {
-  const indexQueries = [
-    {
-      indexName: 'idx_ginner_reel_lot_no',
-      query: `CREATE INDEX idx_ginner_reel_lot_no ON "Ginners" (reel_lot_no);`,
-      table: 'ginners'
-    },
-    {
-      indexName: 'idx_village_village_name',
-      query: `CREATE UNIQUE INDEX idx_village_village_name ON "Villages" (village_name);`,
-      table: 'villages'
-    },
-    {
-      indexName: 'idx_farmer_farmGroup_id_village_id',
-      query: `CREATE INDEX idx_farmer_farmGroup_id_village_id ON "Farmers" (farmGroup_id, village_id);`,
-      table: 'farmers'
-    },
-    {
-      indexName: 'idx_farmGroup_name',
-      query: `CREATE UNIQUE INDEX idx_farmGroup_name ON "FarmGroups" (name);`,
-      table: 'farm_groups'
-    },
-    {
-      indexName: 'idx_ginProcess_reel_lot_no',
-      query: `CREATE INDEX idx_ginProcess_reel_lot_no ON "GinProcesses" (reel_lot_no);`,
-      table: 'gin_processes'
-    },
-    {
-      indexName: 'idx_cottonSelection_process_id_transaction_id',
-      query: `CREATE INDEX idx_cottonSelection_process_id_transaction_id ON "CottonSelections" (process_id, transaction_id);`,
-      table: 'cotton_selections'
-    },
-    {
-      indexName: 'idx_transaction_farmer_id_village_id',
-      query: `CREATE INDEX idx_transaction_farmer_id_village_id ON "Transactions" (farmer_id, village_id);`,
-      table: 'transactions'
-    }
-  ];
-
-  for (const index of indexQueries) {
-    const indexExistsQuery = `
-      SELECT 1
-      FROM pg_indexes
-      WHERE tablename = :table
-      AND indexname = :indexName;
-    `;
-
-    const result = await sequelize.query(indexExistsQuery, {
-      type: sequelize.QueryTypes.SELECT,
-      replacements: {
-        table: index.table.toLowerCase(),
-        indexName: index.indexName
-      }
-    });
-    
-    if (result.length === 0) {
-      try {
-        await sequelize.query(index.query);
-        console.log(`Index ${index.indexName} created on table ${index.table}`);
-      } catch (error) {
-        console.error(`Error creating index ${index.indexName} on table ${index.table}`, error);
-      }
-    } else {
-      console.log(`Index ${index.indexName} already exists on table ${index.table}`);
-    }
-  }
-};
-
 const getGinnerProcessTracingChartData = async (
   req: Request,
   res: Response
@@ -1761,6 +1694,7 @@ const getGinnerProcessTracingChartData = async (
     const data = await _getGinnerProcessTracingChartData(reelLotNo);
     res.sendSuccess(res, data);
 };
+
 
 const checkReport = async (req: Request, res: Response) => {
   try {

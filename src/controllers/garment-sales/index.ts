@@ -56,6 +56,8 @@ import { formatDataForGarment } from '../../util/tracing-chart-data-formatter';
 import PhysicalTraceabilityDataGarment from "../../models/physical-traceability-data-garment.model";
 import PhysicalTraceabilityDataGarmentSample from "../../models/physical-traceability-data-garment-sample.model";
 import FabricType from "../../models/fabric-type.model";
+import { _getWeaverProcessTracingChartData } from "../weaver";
+import { _getKnitterProcessTracingChartData } from "../knitter";
 
 const fetchBrandQrGarmentSalesPagination = async (
   req: Request,
@@ -2512,27 +2514,77 @@ const getBuyerProcessors = async (req: Request, res: Response) => {
 };
 
 const getGarmentProcessTracingChartData = async (req: Request, res: Response) => {
-  const query = req.query;
-  let garments = await GarmentProcess.findAll({
-    where: query
-  });
+  try {
+    const query = req.query;
 
-  garments = await Promise.all(garments.map(async (el: any) => {
-    el = el.toJSON();
-    let fabricChart: any;
-    let process: any = ['dying', 'printing', 'washing', 'compacting'];
-    for (var i = 0; i < process.length; i++) {
-      fabricChart = await _getFabricProcessTracingChartData('dying', {
-        buyer_id: el.garment_id
+    if (!query?.reel_lot_no) {
+      return res.sendError(res, "Need Reel Lot No");
+    }
+
+    let garments = await GarmentProcess.findAll({ where: query });
+
+    garments = await Promise.all(garments?.map(async (el: any) => {
+      el = el?.toJSON();
+      let fabricChart: any;
+
+      const garmentSelection = await FabricSelection.findAll({ where: { sales_id: el.id } });
+
+      const fabricChartPromises = garmentSelection?.map(async (process: any) => {
+        const { processor, fabric_id } = process?.dataValues;
+
+        if (['dying', 'printing', 'washing', 'compacting'].includes(processor)) {
+          if(fabric_id){
+            return await _getFabricProcessTracingChartData(processor, fabric_id);
+          }
+        } 
+        else if (processor === 'knitter' && fabric_id) {
+          const knitterChart = await KnitFabricSelection.findAll({ 
+            where: { sales_id: fabric_id},
+            include: [{ 
+              model: KnitProcess, as: 'process', attributes: ['reel_lot_no']
+            }]
+           });
+          const knitterChartData = await Promise.all(
+            knitterChart?.map(async (knitSeleItem: any) => {
+              if(knitSeleItem?.dataValues?.process?.reel_lot_no){
+                return await _getKnitterProcessTracingChartData({reel_lot_no:knitSeleItem.dataValues.process.reel_lot_no});
+              }
+            })
+          );
+          return knitterChartData[0];
+        } else {
+          const weaverChart = await WeaverFabricSelection.findAll({ 
+            where: { sales_id: fabric_id },
+            include: [{ 
+              model: WeaverProcess, as: 'process', attributes: ['reel_lot_no']
+            }]
+          });
+          const weaverChartData = await Promise.all(
+            weaverChart?.map(async (weavSeleItem: any) => {
+              if(weavSeleItem?.dataValues?.process?.reel_lot_no){
+                  return await _getWeaverProcessTracingChartData({reel_lot_no:weavSeleItem.dataValues.process.reel_lot_no});
+              }
+            })
+          );
+          return weaverChartData[0];
+        }
       });
-      if (fabricChart) break;
-    };
-    el.fabricChart = fabricChart;
-    return el;
-  }));
-  let key = Object.keys(req.query)[0];
-  res.send(formatDataForGarment(req.query[key], garments));
-}
+
+      // Resolve all fabric chart promises and assign the first non-null result to fabricChart
+      const fabricChartResults = await Promise.all(fabricChartPromises);
+      fabricChart = fabricChartResults?.find(result => result !== null);
+
+      el.fabricChart = fabricChart;
+      return el;
+    }));
+
+    const key = Object.keys(req.query)[0];
+    res.send(formatDataForGarment(req.query[key], garments));
+  } catch (error) {
+    console.error("Error processing garment data: ", error);
+    res.status(500).send({ error: "An error occurred while processing garment data." });
+  }
+};
 
 
 const garmentTraceabilityMap = async (req: Request, res: Response) => {

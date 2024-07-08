@@ -91,6 +91,7 @@ Farm.belongsTo(Farmer, {
     as: "farmer",
 })
 
+
 Farm.belongsTo(Program, {
     foreignKey: "program_id",
     as: "program",

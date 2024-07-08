@@ -10,7 +10,8 @@ import {
     createTicketTracker,
     updateTicketTrackerStatus,
     fetchTicketTrackerStatus,
-    countTicketTracker
+    countTicketTracker,
+    exportTicketList
 } from "../../controllers/tickting";
 import accessControl from "../../middleware/access-control";
 import { Router } from "express";
@@ -28,4 +29,5 @@ router.get('/count', countTicketTracker);
 router.get('/escalation-type', fetchTicketEscalationPagination);
 router.post('/escalation-type', createTicketEscalations);
 router.delete('/escalation-type', deleteTicketEscalationTypes);
+router.get('/export/list', exportTicketList);
 export default router;  

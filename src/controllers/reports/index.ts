@@ -7379,6 +7379,7 @@ const exportGarmentFabricProcess = async (req: Request, res: Response) => {
       "Fabric Order Reference No.",
       "Brand Order Reference No.",
       "Factory Lot No.",
+      "REEL Lot No.",
       "Garment Type",
       "Style Mark No.",
       "No. of Pieces",
@@ -7463,6 +7464,7 @@ const exportGarmentFabricProcess = async (req: Request, res: Response) => {
         fabricOrderRef: item.fabric_order_ref ? item.fabric_order_ref : "",
         brandOrderRef: item.brand_order_ref ? item.brand_order_ref : "",
         lotNo: item.factory_lot_no ? item.factory_lot_no : "",
+        reelLotNo: item.reel_lot_no ? item.reel_lot_no : "",
         garmentType: item.garmentType ? item.garmentType : "",
         stylemarkNo: item.styleMarkNo ? item.styleMarkNo : "",
         noOfPieces: item.noOfPieces ? item.noOfPieces : "",
@@ -8776,6 +8778,7 @@ const fetchGinnerSummaryPagination = async (req: Request, res: Response) => {
   const transactionWhere: any = {};
   const ginBaleWhere: any = {};
   const baleSelectionWhere: any = {};
+  const cottenSectionWhere: any = {};
   try {
     if (searchTerm) {
       whereCondition[Op.or] = [{ name: { [Op.iLike]: `%${searchTerm}%` } }];
@@ -8809,6 +8812,7 @@ const fetchGinnerSummaryPagination = async (req: Request, res: Response) => {
       transactionWhere.program_id = { [Op.in]: idArray };
       ginBaleWhere["$ginprocess.program_id$"] = { [Op.in]: idArray };
       baleSelectionWhere["$sales.program_id$"] = { [Op.in]: idArray };
+      cottenSectionWhere["$ginprocess.program_id$"] = { [Op.in]: idArray };
     }
 
     if (seasonId) {
@@ -8818,6 +8822,7 @@ const fetchGinnerSummaryPagination = async (req: Request, res: Response) => {
       transactionWhere.season_id = { [Op.in]: idArray };
       ginBaleWhere["$ginprocess.season_id$"] = { [Op.in]: idArray };
       baleSelectionWhere["$sales.season_id$"] = { [Op.in]: idArray };
+      cottenSectionWhere["$ginprocess.season_id$"] = { [Op.in]: idArray };
     }
 
     let { count, rows } = await Ginner.findAndCountAll({
@@ -8879,10 +8884,11 @@ const fetchGinnerSummaryPagination = async (req: Request, res: Response) => {
               {
                 model: GinProcess,
                 as: 'ginprocess',
-                attributes: []
+                attributes: [],
               }
             ],
             where: {
+              ...cottenSectionWhere,
               '$ginprocess.ginner_id$': ginner.id
             },
             group: ["ginprocess.ginner_id"]

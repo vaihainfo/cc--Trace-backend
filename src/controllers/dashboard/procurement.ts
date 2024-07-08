@@ -235,8 +235,8 @@ const getCountryEstimateProductionRes = (estimateProductionList: any) => {
 
   for (const estimateProduction of estimateProductionList) {
     name.push(estimateProduction.dataValues.name);
-    estimate.push(formatNumber(estimateProduction.dataValues.estimate));
-    production.push(formatNumber(estimateProduction.dataValues.production));
+    estimate.push(mtConversion(estimateProduction.dataValues.estimate));
+    production.push(mtConversion(estimateProduction.dataValues.production));
   }
 
   return {
@@ -327,6 +327,10 @@ const getEstimateAndProcured = async (
 
 };
 
+const mtConversion = (value: number) => {
+  return value > 0 ? Number((value / 1000).toFixed(2)) : 0
+}
+
 
 const getEstimateAndProcuredRes = (
   estimateList: any,
@@ -365,12 +369,12 @@ const getEstimateAndProcuredRes = (
 
     if (fEstimate) {
       data.seasonName = fEstimate.dataValues.season.name;
-      data.estimate += formatNumber(fEstimate.dataValues.estimate);
+      data.estimate += mtConversion(fEstimate.dataValues.estimate);
     }
 
     if (fProcured) {
       data.seasonName = fProcured.dataValues.season.name;
-      data.procured += formatNumber(fProcured.dataValues.procured);
+      data.procured += mtConversion(fProcured.dataValues.procured);
     }
 
     season.push(data.seasonName);
@@ -378,6 +382,7 @@ const getEstimateAndProcuredRes = (
     procured.push(data.procured);
 
   }
+
 
   return {
     season,
@@ -512,14 +517,14 @@ const getProcuredProcessedRes = (
 
     if (fProcessed) {
       data.seasonName = fProcessed.dataValues.season.name;
-      data.processed += formatNumber(fProcessed.dataValues.processed);
+      data.processed += mtConversion(fProcessed.dataValues.processed);
     }
 
     if (fProcured) {
       data.seasonName = fProcured.dataValues.season.name;
-      data.procured += formatNumber(fProcured.dataValues.procured);
+      data.procured += mtConversion(fProcured.dataValues.procured);
     }
-    
+
 
     season.push(data.seasonName);
     processed.push(data.processed);
@@ -666,11 +671,11 @@ const getProcuredProcessedMonthlyRes = (
     };
 
     if (fProcessed) {
-      data.processed += formatNumber(fProcessed.dataValues.processed);
+      data.processed += mtConversion(fProcessed.dataValues.processed);
     }
 
     if (fProcured) {
-      data.procured += formatNumber(fProcured.dataValues.procured);
+      data.procured += mtConversion(fProcured.dataValues.procured);
     }
 
     month.push(getMonthName(mon.month));
@@ -786,17 +791,17 @@ const getEstimateProcuredAndProductionRes = (
 
     if (fProcessed) {
       data.seasonName = fProcessed.dataValues.season.name;
-      data.processed += formatNumber(fProcessed.dataValues.processed);
+      data.processed += mtConversion(fProcessed.dataValues.processed);
     }
 
     if (fProcured) {
       data.seasonName = fProcured.dataValues.season.name;
-      data.procured += formatNumber(fProcured.dataValues.procured);
+      data.procured += mtConversion(fProcured.dataValues.procured);
     }
 
     if (fEstimate) {
       data.seasonName = fEstimate.dataValues.season.name;
-      data.estimate += formatNumber(fEstimate.dataValues.estimate);
+      data.estimate += mtConversion(fEstimate.dataValues.estimate);
     }
 
     season.push(data.seasonName);
@@ -886,15 +891,15 @@ const getEstimateCottonRes = async (
       );
 
       if (fFarmerValue) {
-        totalArea = formatNumber(fFarmerValue.dataValues.procured);
+        totalArea = mtConversion(fFarmerValue.dataValues.procured);
         if (!seasonList.includes(fFarmerValue.dataValues.seasonName))
           seasonList.push(fFarmerValue.dataValues.seasonName);
       }
       else {
         seasons.forEach((season: any) => {
-            if(season.id == seasonId) {
-              seasonList.push(season.name);
-            }
+          if (season.id == seasonId) {
+            seasonList.push(season.name);
+          }
         })
       }
       data.data.push(totalArea);
@@ -1008,14 +1013,14 @@ const getProcessedCottonRes = async (
       );
 
       if (fFarmerValue) {
-        totalArea = formatNumber(fFarmerValue.dataValues.processed);
+        totalArea = mtConversion(fFarmerValue.dataValues.processed);
         if (!seasonList.includes(fFarmerValue.dataValues.seasonName))
           seasonList.push(fFarmerValue.dataValues.seasonName);
       } else {
         seasons.forEach((season: any) => {
-            if(season.id == seasonId) {
-              seasonList.push(season.name);
-            }
+          if (season.id == seasonId) {
+            seasonList.push(season.name);
+          }
         })
       }
       data.data.push(totalArea);
@@ -1172,7 +1177,7 @@ const getProcessedEstimatedProcessedCottonRes = async (
         procured: 0,
         processed: 0,
       };
-      
+
       const fProcessed = farmerProcessedList.find((list: any) =>
         list.dataValues.seasonId == seasonId
       );
@@ -1184,25 +1189,25 @@ const getProcessedEstimatedProcessedCottonRes = async (
       );
 
       if (fProcessed) {
-        countryCount.processed = formatNumber(fProcessed.dataValues.processed);
+        countryCount.processed = mtConversion(fProcessed.dataValues.processed);
         if (!seasonList.includes(fProcessed.dataValues.seasonName))
           seasonList.push(fProcessed.dataValues.seasonName);
       }
       if (fProcured) {
-        countryCount.procured = formatNumber(fProcured.dataValues.procured);
+        countryCount.procured = mtConversion(fProcured.dataValues.procured);
         if (!seasonList.includes(fProcured.dataValues.seasonName))
           seasonList.push(fProcured.dataValues.seasonName);
       }
       if (fEstimate) {
-        countryCount.estimated = formatNumber(fEstimate.dataValues.estimate);
+        countryCount.estimated = mtConversion(fEstimate.dataValues.estimate);
         if (!seasonList.includes(fEstimate.dataValues.seasonName))
           seasonList.push(fEstimate.dataValues.seasonName);
       }
-      if(!fProcessed && !fProcured && !fEstimate) {
+      if (!fProcessed && !fProcured && !fEstimate) {
         seasons.forEach((season: any) => {
-            if(season.id == seasonId) {
-              seasonList.push(season.name);
-            }
+          if (season.id == seasonId) {
+            seasonList.push(season.name);
+          }
         })
       }
       data.data.push(countryCount.estimated);

@@ -146,52 +146,65 @@ export const formatDataForSpinnerProcess = (reelLotNo: any, data: any): any => {
     // return treeData;
 }
 
-export const formatDataFromKnitter = (title: any, data: any) : any => {
-    console.log(data[0].spin,"----")
-   let flattenedArray = data[0]?.spin?.flat(); // Using flat()
+export const formatDataFromKnitter = (title: any, data: any, width: number = 300, height: number =100,type?: any) : any => {
+    let flattenedArray;
+    let name;
+    if(type=='fabric'){
+      flattenedArray = data?.spin?.flat();
+      name=title
+    }else{
+      flattenedArray = data[0]?.spin?.flat();
+      name=data[0]?.reel_lot_no
+    }
+     let treeData = {
+         name: name,
+         type: 'knitter_image',
+         width: width,
+         height: height,
+         isRoot: true,
+         children: flattenedArray? flattenedArray.filter((el: any) =>{
+             if(el && el.children){
+                 return el.children
+             }
+         }) : []
+     };
+     return treeData;
+ }
+ 
+ 
+ export const formatDataFromWeaver = (title: any, data: any, width: number = 300, height: number =100,type?: any) : any => {
+    let flattenedArray;
+    if(type=='fabric'){
+      flattenedArray = data?.spin?.flat();
+    }else{
+      flattenedArray = data[0]?.spin?.flat();
+    }
     let treeData = {
-        name: title,
-        type: 'knitter_image',
-        width: 300,
-        height: 100,
-        isRoot: true,
-        children: flattenedArray? flattenedArray.filter((el: any) =>{
+         name: title,
+         type: 'weaver_image',
+         width: width,
+         height: height,
+         isRoot: true,
+         children: flattenedArray? flattenedArray.filter((el: any) =>{
             if(el && el.children){
                 return el.children
             }
         }) : []
-    };
-    return treeData;
-}
-
-
-export const formatDataFromWeaver = (title: any, data: any) : any => {
-    let treeData = {
-        name: title,
-        type: 'weaver_image',
-        width: 300,
-        height: 100,
-        isRoot: true,
-        children: data[0]? data[0].spin.filter((el: any) =>{
-            if(el && el.children){
-                return el.children
-            }
-        }) : []
-    };
-    return treeData;
-}
-
-export const formartDataForFabric = (title: any, data: any) : any => {
-    let treeData = {
-        name: title,
-        type: 'fabric_image',
-        width: 300,
-        height: 100,
-        isRoot: true,
-        children: data.filter((el: any) => el.weavKnit.length > 0).map((el: any) => el.weavKnitChart)
-    };
-    return treeData;
-}
+     };
+     return treeData;
+ }
+ 
+ export const formartDataForFabric = (title: any, data: any, width: number = 300, height: number =100) : any => {
+     let treeData = {
+         name: title,
+         type: 'fabric_image',
+         width: width,
+         height: height,
+         isRoot: true,
+         children: data[0] ? data[0].weavKnitChart : []
+     };
+     return treeData;
+ }
 
 export const formatDataForGarment = (title: any, data: any) : any => {
     let treeData = {
@@ -200,7 +213,7 @@ export const formatDataForGarment = (title: any, data: any) : any => {
         width: 300,
         height: 100,
         isRoot: true,
-        children: data.map((el:any) => el.fabricChart)
+        children: data?.map((el:any) => el.fabricChart??[])
     };
     return treeData;
 }

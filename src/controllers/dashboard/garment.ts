@@ -46,7 +46,7 @@ const getTopSoldRes = (
     const name: string[] = [];
     for (const row of list) {
         if (row.dataValues && row.dataValues.garment_name) {
-            count.push(formatNumber(row.dataValues.quantity));
+            count.push(mtConversion(row.dataValues.quantity));
             name.push(row.dataValues.garment_name);
         }
     }
@@ -60,6 +60,10 @@ const getTopSoldRes = (
 const formatNumber = (data: string): number => {
     return Number(Number(data ?? 0).toFixed(2));
 };
+
+const mtConversion = (value: number) => {
+    return value > 0 ? Number((value / 1000).toFixed(2)) : 0;
+}
 
 const getTopSoldData = async (
     where: any
@@ -287,14 +291,14 @@ const getGarmentFabricRes = (
 
         if (fWeaver) {
             data.programName = fWeaver.dataValues.programName;
-            data.totalQty += formatNumber(fWeaver.dataValues.totalQty);
-            data.stockQty += formatNumber(fWeaver.dataValues.stockQty);
+            data.totalQty += mtConversion(fWeaver.dataValues.totalQty);
+            data.stockQty += mtConversion(fWeaver.dataValues.stockQty);
         }
 
         if (fKnit) {
             data.programName = fKnit.dataValues.programName;
-            data.totalQty += formatNumber(fKnit.dataValues.totalQty);
-            data.stockQty += formatNumber(fKnit.dataValues.stockQty);
+            data.totalQty += mtConversion(fKnit.dataValues.totalQty);
+            data.stockQty += mtConversion(fKnit.dataValues.stockQty);
         }
 
         program.push(data.programName);
@@ -392,7 +396,7 @@ const getKnitterFabricRes = (yarnList: any) => {
     }[] = [];
 
     for (const yarn of yarnList) {
-        const fabricWeight = formatNumber(yarn.dataValues.fabricWeight);
+        const fabricWeight = mtConversion(yarn.dataValues.fabricWeight);
         const fabricName = yarn.dataValues.fabricName ?? "";
 
         const fFabric = fabricList.find(fabric =>
@@ -685,13 +689,13 @@ const getFabricCompareCountRes = async (
         if (fProcured.length) {
             fProcured.forEach(procured => {
                 data.seasonName = procured.dataValues.seasonName;
-                data.fabricProcured += formatNumber(procured.dataValues.procured);
+                data.fabricProcured += mtConversion(procured.dataValues.procured);
             });
         }
 
         if (fProcessed) {
             data.seasonName = fProcessed.dataValues.seasonName;
-            data.fabricProcessed = formatNumber(fProcessed.dataValues.processed);
+            data.fabricProcessed = mtConversion(fProcessed.dataValues.processed);
         }
 
         if (!data.seasonName) {
@@ -1012,12 +1016,12 @@ const getGarmentCompareCountRes = async (
         };
         if (fProcessed) {
             data.seasonName = fProcessed.dataValues.seasonName;
-            data.fabricProcessed = formatNumber(fProcessed.dataValues.processed);
+            data.fabricProcessed = mtConversion(fProcessed.dataValues.processed);
         }
 
         if (fSold) {
             data.seasonName = fSold.dataValues.seasonName;
-            data.fabricSold = formatNumber(fSold.dataValues.sold);
+            data.fabricSold = mtConversion(fSold.dataValues.sold);
         }
 
         if (!data.seasonName) {
@@ -1177,16 +1181,16 @@ const getFabricGarmentMonthlyDataRes = (
         };
 
         if (fFabricProcured)
-            data.fabricProcured = formatNumber(fFabricProcured.dataValues.procured);
+            data.fabricProcured = mtConversion(fFabricProcured.dataValues.procured);
 
         if (fFabricProcessed)
-            data.fabricProcessed = formatNumber(fFabricProcessed.dataValues.processed);
+            data.fabricProcessed = mtConversion(fFabricProcessed.dataValues.processed);
 
         if (fGarmentProcessed)
-            data.garmentProcessed = formatNumber(fGarmentProcessed.dataValues.processed);
+            data.garmentProcessed = mtConversion(fGarmentProcessed.dataValues.processed);
 
         if (fGarmentSold)
-            data.garmentSold = formatNumber(fGarmentSold.dataValues.sold);
+            data.garmentSold = mtConversion(fGarmentSold.dataValues.sold);
 
         res.month.push(getMonthName(month.month));
         res.fabricProcured.push(data.fabricProcured);
@@ -1491,7 +1495,7 @@ const getTopProcuredRes = (
     for (const row of procuredList) {
         if (row.dataValues && row.dataValues.buyerName) {
             name.push(row.dataValues.buyerName);
-            count.push(formatNumber(row.dataValues.quantity));
+            count.push(mtConversion(row.dataValues.quantity));
         }
     }
 

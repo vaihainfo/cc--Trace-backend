@@ -1081,7 +1081,7 @@ const fetchWeaverDashBoard = async (req: Request, res: Response) => {
   const searchTerm = req.query.search || "";
   const page = Number(req.query.page) || 1;
   const limit = Number(req.query.limit) || 10;
-  const { weaverId, status, filter, programId, spinnerId, invoice, lotNo, yarnCount, yarnType, reelLotNo }: any = req.query;
+  const { seasonId, weaverId, status, filter, programId, spinnerId, invoice, lotNo, yarnCount, yarnType, reelLotNo }: any = req.query;
   const offset = (page - 1) * limit;
   const whereCondition: any = {};
   const yarnTypeArray = yarnType?.split(',')?.map((item: any) => item.trim());
@@ -1115,7 +1115,12 @@ const fetchWeaverDashBoard = async (req: Request, res: Response) => {
       whereCondition.buyer_id = weaverId
       whereCondition.status = 'Sold';
     }
-
+    if (seasonId) {
+      const idArray: number[] = seasonId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.season_id = { [Op.in]: idArray };
+    }
     if (spinnerId) {
       const idArray: number[] = spinnerId
         .split(",")
@@ -1660,17 +1665,16 @@ const chooseWeaverFabric = async (req: Request, res: Response) => {
   }
 };
 
-const getWeaverProcessTracingChartData = async (
-  req: Request,
-  res: Response
+const _getWeaverProcessTracingChartData = async (
+  query:any
 ) => {
-  let query = req.query;
   let include = [
     {
       model: Weaver,
       as: "weaver",
     },
   ];
+  
   let weavers = await WeaverProcess.findAll({
     where: query,
     include,
@@ -1679,25 +1683,57 @@ const getWeaverProcessTracingChartData = async (
   weavers = await Promise.all(
     weavers.map(async (el: any) => {
       el = el.toJSON();
-      el.spin = await SpinSales.findAll({
+
+      el.WeavSele = await YarnSelection.findAll({
         where: {
-          buyer_id: el.weaver.id,
-        },
+          sales_id: el.id,
+        }
       });
-      el.spinsCount = el.spin.length;
-      el.spinskIds = el.spin.map((el: any) => el.knitter_id);
-      console.log("spins received ", el.spin.length);
+
       el.spin = await Promise.all(
-        el.spin.map(async (el: any) => {
-          console.log("getting data for ", el.reel_lot_no);
-          return _getSpinnerProcessTracingChartData(el.reel_lot_no);
+        el.WeavSele.map(async (weavSeleItem: any) => {
+          let spinSales = await SpinSales.findAll({
+            where: {
+              id: weavSeleItem.yarn_id, // Use yarn_id from KnitYarnSelection
+            },
+          });
+          return {
+            yarn_id: weavSeleItem.yarn_id,
+            spinSales: spinSales,
+          };
+        })); 
+
+      el.spinsCount = el.spin.reduce((total: number, item: any) => total + item.spinSales.length, 0);
+      el.spinskIds = el.spin.map((el: any) => el.buyer_id);
+
+      el.spin = await Promise.all(
+        el.spin.map(async (spinItem: any) => {
+          // if(el.reel_lot_no) return _getSpinnerProcessTracingChartData(el.reel_lot_no);
+          return await Promise.all(
+            spinItem.spinSales.map(async (sale: any) => {
+              if (sale.dataValues.reel_lot_no) {
+                return _getSpinnerProcessTracingChartData(sale.dataValues.reel_lot_no);
+              }
+              // Handle cases where reel_lot_no might be undefined/null
+              return null;
+            })
+          );
         })
       );
       return el;
     })
   );
-  let key = Object.keys(req.query)[0];
-  res.sendSuccess(res, formatDataFromWeaver(req.query[key], weavers));
+  let key = Object.keys(query)[0];
+  return formatDataFromWeaver(query[key], weavers);
+};
+
+const getWeaverProcessTracingChartData = async (
+  req: Request,
+  res: Response
+) => {
+  let query = req.query;
+  let weavers = await _getWeaverProcessTracingChartData(query);
+  res.sendSuccess(res, weavers);
 };
 
 const exportWeaverTransactionList = async (req: Request, res: Response) => {
@@ -1706,7 +1742,7 @@ const exportWeaverTransactionList = async (req: Request, res: Response) => {
   try {
     const searchTerm = req.query.search || "";
     // Create the excel workbook file
-    const { weaverId, status, filter, programId, spinnerId, invoice, lotNo, yarnCount, yarnType, reelLotNo }: any = req.query;
+    const {seasonId, weaverId, status, filter, programId, spinnerId, invoice, lotNo, yarnCount, yarnType, reelLotNo }: any = req.query;
     const yarnTypeArray = yarnType?.split(',')?.map((item: any) => item.trim());
 
     if (!weaverId) {
@@ -1724,7 +1760,7 @@ const exportWeaverTransactionList = async (req: Request, res: Response) => {
     mergedCell.alignment = { horizontal: 'center', vertical: 'middle' };
     // Set bold font for header row
     const headerRow = worksheet.addRow([
-      "Sr No.", 'Date', 'Spinner Name', 'Order Reference', 'Invoice Number',
+      "Sr No.", 'Date', 'Season', 'Spinner Name', 'Order Reference', 'Invoice Number',
       'Spin Lot No', 'Yarn REEL Lot No', 'Yarn Type', 'Yarn Count', 'No of Boxes', 'Box Id',
       'Total Weight (Kgs)', 'Program', 'Vehicle No', 'Transaction Via Trader', 'Agent Details'
     ]);
@@ -1738,7 +1774,12 @@ const exportWeaverTransactionList = async (req: Request, res: Response) => {
       whereCondition.buyer_id = weaverId
       whereCondition.status = 'Sold';
     }
-
+    if (seasonId) {
+      const idArray: number[] = seasonId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.season_id = { [Op.in]: idArray };
+    }
     if (spinnerId) {
       const idArray: number[] = spinnerId
         .split(",")
@@ -1812,6 +1853,7 @@ const exportWeaverTransactionList = async (req: Request, res: Response) => {
       const rowValues = Object.values({
         index: index + 1,
         date: item.date ? item.date : '',
+        season: item.season ? item.season.name : item.season.name,
         spinner_name: item.spinner ? item.spinner.name : item.spinner.name,
         order_ref: item.order_ref ? item.order_ref : '',
         invoice_no: item.invoice_no ? item.invoice_no : '',
@@ -1878,5 +1920,6 @@ export {
   fetchWeaverSale,
   chooseWeaverFabric,
   getWeaverProcessTracingChartData,
-  exportWeaverTransactionList
+  exportWeaverTransactionList,
+  _getWeaverProcessTracingChartData
 };
