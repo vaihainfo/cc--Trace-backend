@@ -600,17 +600,7 @@ const exportTicketList = async (req: Request, res: Response) => {
                 process_sales: item.process_or_sales,
                 lot_mark_no: item.style_mark_no,
                 comments: item.comments,
-                status: item.status === "Rejected"
-                    ? "red"
-                    : item.status === "Pending"
-                        ? "orange"
-                        : item.status === "Resolved"
-                            ? "green"
-                            : item.status === "Approved"
-                                ? "blue"
-                                : item.status === "In Progress"
-                                    ? "orange"
-                                    : "black",
+                status: item.status,
                 resolved_date: item.status === "Resolved" && item.resolved_date
                     ? item.resolved_date
                     : item.status === "Approved"
