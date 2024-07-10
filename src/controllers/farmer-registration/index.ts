@@ -841,7 +841,6 @@ const exportFarmer = async (req: Request, res: Response) => {
           ]);
           headerRow.font = { bold: true };
         }
-        console.log("OFFSET---------------------->",offset, index)
         const rowValues = Object.values({
           index: (offset + index + 1),
           farmerName: item.farmerName ? item.farmerName : "",
@@ -874,6 +873,7 @@ const exportFarmer = async (req: Request, res: Response) => {
 
     // Save the workbook
     await workbook.xlsx.writeFile(excelFilePath);
+    console.log("File saved to:", excelFilePath);
     res.status(200).send({
       success: true,
       message: "File successfully Generated",
@@ -886,6 +886,22 @@ const exportFarmer = async (req: Request, res: Response) => {
 };
 
 //generate Qr for villages 
+
+
+// const exportFarmer = async (req: Request, res: Response) => {
+//   try {
+//   return res.status(200).send({
+//     success: true,
+//     messgage: "File successfully Generated",
+//     data: process.env.BASE_URL + "farmer-data.xlsx",
+//   });
+// } catch (error: any) {
+//   console.log(error);
+//   return res.sendError(res, error.message);
+// }
+// };
+
+
 const generateQrCodeVillage = async (req: Request, res: Response) => {
   try {
     if (!req.query.villageId) {

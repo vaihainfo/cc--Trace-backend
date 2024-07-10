@@ -83,15 +83,16 @@ const exportReportsOnebyOne = async () => {
   //call all export reports one by one on every cron
   await generateFaildReport("Farmer");
   await generateFaildReport("Procurement");
+  // await generateExportFarmer();
 
   // Procurement Reports 
   await generatePscpCottonProcurement();
   await generatePscpProcurementLiveTracker();
 
-  //brand wise report
+  // //brand wise report
   await generateBrandWiseData();
 
-  // Ginner Reports 
+  // // Ginner Reports 
   await generateGinnerSummary();
   await generateGinnerSales();
   await generatePendingGinnerSales();
@@ -397,6 +398,187 @@ const generateSpinnerLintCottonStock = async () => {
 }
 };
 //----------------------------------------- Farmer Reports ------------------------//
+
+
+const generateExportFarmer = async () => {
+  try {
+    const maxRowsPerWorksheet = 500000;
+    const batchSize = 100000;
+    let offset = 0;
+    let currentRow = 0;
+    let worksheetIndex = 0;
+
+    const workbook = new ExcelJS.stream.xlsx.WorkbookWriter({
+      stream: fs.createWriteStream("./upload/farmer-data-test.xlsx")
+    });
+
+    while (true) {
+      const farmers = await Farm.findAll({
+        attributes: [
+          [Sequelize.fn("concat", Sequelize.col("firstName"), Sequelize.col("lastName")), "farmerName"],
+          [Sequelize.col('"farmer"."code"'), 'fatherCode'],
+          [Sequelize.col('"farmer"."country"."county_name"'), 'country'],
+          [Sequelize.col('"farmer"."state"."state_name"'), 'state'],
+          [Sequelize.col('"farmer"."district"."district_name"'), 'district'],
+          [Sequelize.col('"farmer"."block"."block_name"'), 'block'],
+          [Sequelize.col('"farmer"."village"."village_name"'), 'village'],
+          [Sequelize.col('"season"."name"'), 'seasons'],
+          [Sequelize.col('"farmer"."farmGroup"."name"'), 'farmGroup'],
+          [Sequelize.col('"farmer"."brand"."brand_name"'), 'brand'],
+          [Sequelize.col('"farmer"."program"."program_name"'), 'program'],
+          [Sequelize.col('"farms"."agri_total_area"'), 'agriTotalArea'],
+          [Sequelize.col('"farms"."agri_estimated_yeld"'), 'agriEstimatedYield'],
+          [Sequelize.col('"farms"."agri_estimated_prod"'), 'agriEstimatedProd'],
+          [Sequelize.col('"farms"."total_estimated_cotton"'), 'totalEstimatedCotton'],
+          [Sequelize.col('"farms"."cotton_total_area"'), 'cottonTotalArea'],
+          [Sequelize.col('"farmer"."tracenet_id"'), 'tracenetId'],
+          [Sequelize.col('"farmer"."ics"."ics_name"'), 'iscName'],
+          [Sequelize.col('"farmer"."cert_status"'), 'cert'],
+        ],
+        include: [
+          {
+            model: Farmer,
+            as: "farmer",
+            attributes: [],
+            include: [
+              {
+                model: Program,
+                as: "program",
+                attributes: [],
+              },
+              {
+                model: Brand,
+                as: "brand",
+                attributes: [],
+              },
+              {
+                model: FarmGroup,
+                as: "farmGroup",
+                attributes: [],
+              },
+              {
+                model: Country,
+                as: "country",
+                attributes: [],
+              },
+              {
+                model: Village,
+                as: "village",
+                attributes: [],
+              },
+              {
+                model: State,
+                as: "state",
+                attributes: [],
+              },
+              {
+                model: District,
+                as: "district",
+                attributes: [],
+              },
+              {
+                model: Block,
+                as: "block",
+                attributes: [],
+              },
+              {
+                model: Block,
+                as: "block",
+                attributes: [],
+              },
+              {
+                model: ICS,
+                as: "ics",
+                attributes: [],
+              },
+            ]
+          },
+          {
+            model: Season,
+            as: "season",
+            attributes: [],
+          }
+        ],
+        raw: true,
+        offset,
+        limit: batchSize,
+      });
+
+      if (farmers.length === 0) {
+        break;
+      }
+      
+      if (currentRow === maxRowsPerWorksheet) {
+        worksheetIndex++;
+        currentRow = 0;
+      }
+
+      for (const [index,item] of farmers.entries()) {
+
+        let currentWorksheet = workbook.getWorksheet(`Farmer Report ${worksheetIndex}`);
+        if (!currentWorksheet) {
+          currentWorksheet = workbook.addWorksheet(`Farmer Report ${worksheetIndex}`);
+          if (worksheetIndex == 1) {
+            currentWorksheet.mergeCells('A1:O1');
+            const mergedCell = currentWorksheet.getCell('A1');
+            mergedCell.value = 'Cotton Connect | Farmer Report';
+            mergedCell.font = { bold: true };
+            mergedCell.alignment = { horizontal: 'center', vertical: 'middle' };
+          }
+         
+          // Set bold font for header row
+          const headerRow = currentWorksheet.addRow([
+            'S.No', 'Farmer Name', 'Farmer Code','Country', 'State', 'District', 'Block', 'Village',
+            'Seasons', 'Farm Group', 'Brand Name', 'Program Name', 'Total Agriculture Area', 'Estimated Yield (Kg/Ac)',
+            'Total estimated Production','Cotton Total Area', 'Total Estimated Cotton', 'Tracenet Id', 'ICS Name', 'Certification Status'
+          ]);
+          headerRow.font = { bold: true };
+        }
+        const rowValues = Object.values({
+          index: (offset + index + 1),
+          farmerName: item.farmerName ? item.farmerName : "",
+          code: item.fatherCode ? item.fatherCode : '',
+          country: item.country,
+          state: item.state,
+          district: item.district,
+          block: item.block,
+          village: item.village,
+          seasons: item.seasons,
+          farmGroup: item.farmGroup,
+          brand: item.brand,
+          program:item.program,
+          agriTotalArea: item.agriTotalArea,
+          agriEstimatedYield: item.agriEstimatedYield,
+          agriEstimatedProd: item.agriEstimatedProd,
+          totalEstimatedCotton: item.totalEstimatedCotton,
+          cottonTotalArea: item.cottonTotalArea,
+          tracenetId: item.tracenetId,
+          iscName: item.icsName ? item.icsName : '',
+          cert: item.cert ? item.cert : '',
+        });
+
+        currentWorksheet.addRow(rowValues).commit();
+        currentRow++;
+      }
+
+      offset += batchSize;
+    }
+
+    // Save the workbook
+    await workbook.commit()
+      .then(() => {
+        // Rename the temporary file to the final filename
+        fs.renameSync("./upload/farmer-data-test.xlsx", './upload/farmer-data.xlsx');
+        console.log('farmer-report report generation completed.');
+      })
+      .catch(error => {
+        console.log('Failed generation.');
+        throw error;
+      });
+  } catch (error: any) {
+    console.error("Error exporting farmer data:", error);
+  }
+};
 
 const generateOrganicFarmerReport = async () => {
   const maxRowsPerWorksheet = 500000; // Maximum number of rows per worksheet in Excel
