@@ -1178,12 +1178,12 @@ const getBaleComparisonRes = async (
     };
     if (fProcured) {
       data.seasonName = fProcured.dataValues.seasonName;
-      data.procured = mtConversion(fProcured.dataValues.procured);
+      data.procured = formatNumber(fProcured.dataValues.procured);
     }
 
     if (fSold) {
       data.seasonName = fSold.dataValues.seasonName;
-      data.sold = mtConversion(fSold.dataValues.sold);
+      data.sold = formatNumber(fSold.dataValues.sold);
     }
 
     data.stock =
