@@ -11,6 +11,7 @@ import GinProcess from "../../models/gin-process.model";
 import Season from "../../models/season.model";
 import Country from "../../models/country.model";
 import GinSales from "../../models/gin-sales.model";
+import sequelize from "../../util/dbConn";
 
 //create Quality Parameter 
 const createQualityParameter = async (req: Request, res: Response) => {
@@ -797,50 +798,87 @@ const reportDashBoardParameter = async (req: Request, res: Response) => {
         if (!seasonId) {
             return res.sendError(res, "Please select season");
         }
-        let ids = []
-        if (seasonId) {
-            let whereCondition: any = {};
-            if (countryId) {
-                whereCondition['$spinner.country_id$'] = countryId
-            }
-
-            if (brandId) {
-                const idArray = brandId.split(",").map((id: any) => parseInt(id, 10));
-                whereCondition['$spinner.brand$'] = { [Op.overlap]: idArray }
-            }
-
-            let seasons = await QualityParameter.findAll({
-                where: { '$sales.season_id$': seasonId, spinner_id: { [Op.not]: null }, ...whereCondition }, include: [
-                    {
-                        model: GinSales, as: 'sales'
-                    },
-                    {
-                        model: Spinner, as: 'spinner'
-                    }
-                ]
-            });
-            ids = seasons.map((season: any) => season.id);
+        let ids:any = []
+        let whereConditions = [];
+        let replacements: any = { seasonId };
+        
+        if (countryId) {
+            whereConditions.push(`pr.country_id = :countryId`);
+            replacements.countryId = countryId;
         }
+        
+        if (brandId) {
+            const idArray = brandId.split(",").map((id: any) => parseInt(id, 10));
+            whereConditions.push(`pr.brand_id IN (:brandIds)`);
+            replacements.brandIds = idArray;
+        }
+        
+        const whereCondition = whereConditions.length > 0 ? ' AND ' + whereConditions.join(' AND ') : '';
 
-        let spinner = await QualityParameter.findAll({
-            attributes: [
-                [Sequelize.fn('COALESCE', Sequelize.fn('AVG', Sequelize.col('sci')), 0), 'total_sci'],
-                [Sequelize.fn('COALESCE', Sequelize.fn('AVG', Sequelize.col('moisture')), 0), 'total_moisture'],
-                [Sequelize.fn('COALESCE', Sequelize.fn('AVG', Sequelize.col('mic')), 0), 'total_mic'],
-                [Sequelize.fn('COALESCE', Sequelize.fn('AVG', Sequelize.col('mat')), 0), 'total_mat'],
-                [Sequelize.fn('COALESCE', Sequelize.fn('AVG', Sequelize.col('uhml')), 0), 'total_uhml'],
-                [Sequelize.fn('COALESCE', Sequelize.fn('AVG', Sequelize.col('ui')), 0), 'total_ui'],
-                [Sequelize.fn('COALESCE', Sequelize.fn('AVG', Sequelize.col('sf')), 0), 'total_sf'],
-                [Sequelize.fn('COALESCE', Sequelize.fn('AVG', Sequelize.col('str')), 0), 'total_str'],
-                [Sequelize.fn('COALESCE', Sequelize.fn('AVG', Sequelize.col('elg')), 0), 'total_elg'],
-                [Sequelize.fn('COALESCE', Sequelize.fn('AVG', Sequelize.col('rd')), 0), 'total_rd'],
-                [Sequelize.fn('COALESCE', Sequelize.fn('AVG', Sequelize.literal("CAST(plusb AS DOUBLE PRECISION)")), 0), 'total_plusb'],
-            ],
-            where: {
-                id: ids,
-                spinner_id: { [Op.not]: null }
-            }
-        })
+            // let seasons = await QualityParameter.findAll({
+            //     where: { '$sales.season_id$': seasonId, spinner_id: { [Op.not]: null }, ...whereCondition }, include: [
+            //         {
+            //             model: GinSales, as: 'sales'
+            //         },
+            //         {
+            //             model: Spinner, as: 'spinner'
+            //         }
+            //     ]
+            // });
+            // ids = seasons.map((season: any) => season.id);
+        
+
+        // let spinner = await QualityParameter.findAll({
+        //     attributes: [
+        //         [Sequelize.fn('COALESCE', Sequelize.fn('AVG', Sequelize.col('sci')), 0), 'total_sci'],
+        //         [Sequelize.fn('COALESCE', Sequelize.fn('AVG', Sequelize.col('moisture')), 0), 'total_moisture'],
+        //         [Sequelize.fn('COALESCE', Sequelize.fn('AVG', Sequelize.col('mic')), 0), 'total_mic'],
+        //         [Sequelize.fn('COALESCE', Sequelize.fn('AVG', Sequelize.col('mat')), 0), 'total_mat'],
+        //         [Sequelize.fn('COALESCE', Sequelize.fn('AVG', Sequelize.col('uhml')), 0), 'total_uhml'],
+        //         [Sequelize.fn('COALESCE', Sequelize.fn('AVG', Sequelize.col('ui')), 0), 'total_ui'],
+        //         [Sequelize.fn('COALESCE', Sequelize.fn('AVG', Sequelize.col('sf')), 0), 'total_sf'],
+        //         [Sequelize.fn('COALESCE', Sequelize.fn('AVG', Sequelize.col('str')), 0), 'total_str'],
+        //         [Sequelize.fn('COALESCE', Sequelize.fn('AVG', Sequelize.col('elg')), 0), 'total_elg'],
+        //         [Sequelize.fn('COALESCE', Sequelize.fn('AVG', Sequelize.col('rd')), 0), 'total_rd'],
+        //         [Sequelize.fn('COALESCE', Sequelize.fn('AVG', Sequelize.literal("CAST(plusb AS DOUBLE PRECISION)")), 0), 'total_plusb'],
+        //     ],
+        //     where: {
+        //         id: ids,
+        //         spinner_id: { [Op.not]: null }
+        //     }
+        // })
+
+        let spinner = await sequelize.query(`
+            SELECT
+                CAST(COALESCE(AVG(qpg.sci::numeric), 0) AS INTEGER) AS total_sci,
+                CAST(COALESCE(AVG(qpg.moisture::numeric), 0) AS INTEGER) AS total_moisture,
+                CAST(COALESCE(AVG(qpg.mic::numeric), 0) AS INTEGER) AS total_mic,
+                CAST(COALESCE(AVG(qpg.mat::numeric), 0) AS INTEGER) AS total_mat,
+                CAST(COALESCE(AVG(qpg.uhml::numeric), 0) AS INTEGER) AS total_uhml,
+                CAST(COALESCE(AVG(qpg.ui::numeric), 0) AS INTEGER) AS total_ui,
+                CAST(COALESCE(AVG(qpg.sf::numeric), 0) AS INTEGER) AS total_sf,
+                CAST(COALESCE(AVG(qpg.str::numeric), 0) AS INTEGER) AS total_str,
+                CAST(COALESCE(AVG(qpg.elg::numeric), 0) AS INTEGER) AS total_elg,
+                CAST(COALESCE(AVG(qpg.rd::numeric), 0) AS INTEGER) AS total_rd,
+                CAST(COALESCE(AVG(qpg.plusb::numeric), 0) AS INTEGER) AS total_plusb
+            FROM
+                seasons ss
+            LEFT JOIN
+                gin_sales gp ON ss.id = gp.season_id
+            LEFT JOIN
+                spinners pr ON pr.id = gp.buyer
+            LEFT JOIN
+                "quality-parameters" qpg ON gp.id = qpg.sales_id
+            WHERE
+                ss.id = ${seasonId}
+                ${whereCondition}
+            GROUP BY
+            ss.id;
+        `,{
+            replacements,
+            type: sequelize.QueryTypes.SELECT
+        });
+        
         let id = []
         if (seasonId) {
             let whereCondition: any = {};
@@ -861,9 +899,6 @@ const reportDashBoardParameter = async (req: Request, res: Response) => {
                     },
                     {
                         model: Ginner, as: 'ginner'
-                    },
-                    {
-                        model: Spinner, as: 'spinner'
                     }
                 ]
             });

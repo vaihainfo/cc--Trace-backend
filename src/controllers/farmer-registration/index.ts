@@ -864,7 +864,7 @@ const exportFarmer = async (req: Request, res: Response) => {
           cert: item.cert ? item.cert : '',
         });
 
-        currentWorksheet.addRow(rowValues);
+        currentWorksheet.addRow(rowValues).commit();
         currentRow++;
       }
 
@@ -885,7 +885,7 @@ const exportFarmer = async (req: Request, res: Response) => {
   }
 };
 
-//generate Qr for villages 
+//cron job for farmer export
 
 
 // const exportFarmer = async (req: Request, res: Response) => {
