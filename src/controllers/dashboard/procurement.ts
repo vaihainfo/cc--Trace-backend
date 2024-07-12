@@ -897,7 +897,7 @@ const getEstimateCottonRes = async (
       }
       else {
         seasons.forEach((season: any) => {
-          if (season.id == seasonId) {
+          if (season.id == seasonId && !seasonList.includes(season.dataValues.name)) {
             seasonList.push(season.name);
           }
         })
@@ -995,7 +995,6 @@ const getProcessedCottonRes = async (
   let seasonList: any[] = [];
   let areaList: any[] = [];
 
-
   for (const countryName of countries) {
     const data: any = {
       name: countryName,
@@ -1018,7 +1017,7 @@ const getProcessedCottonRes = async (
           seasonList.push(fFarmerValue.dataValues.seasonName);
       } else {
         seasons.forEach((season: any) => {
-          if (season.id == seasonId) {
+          if (season.id == seasonId && !seasonList.includes(season.dataValues.name)) {
             seasonList.push(season.name);
           }
         })
@@ -1205,7 +1204,7 @@ const getProcessedEstimatedProcessedCottonRes = async (
       }
       if (!fProcessed && !fProcured && !fEstimate) {
         seasons.forEach((season: any) => {
-          if (season.id == seasonId) {
+          if (season.id == seasonId && !seasonList.includes(season.dataValues.name)) {
             seasonList.push(season.name);
           }
         })
