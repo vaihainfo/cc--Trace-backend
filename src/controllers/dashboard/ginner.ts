@@ -693,7 +693,7 @@ const getLintProcuredSoldRes = async (
       data.sold = mtConversion(fSold.dataValues.lintSold);
     }
 
-    data.stock = data.procured > data.sold ? Number(data.procured.toFixed(2)) - data.sold : 0;
+    data.stock = data.procured > data.sold ? Number((data.procured - data.sold).toFixed(2)) : 0;
 
     if (!data.seasonName) {
       const fSeason = seasons.find((season: any) =>
@@ -1178,12 +1178,12 @@ const getBaleComparisonRes = async (
     };
     if (fProcured) {
       data.seasonName = fProcured.dataValues.seasonName;
-      data.procured = mtConversion(fProcured.dataValues.procured);
+      data.procured = formatNumber(fProcured.dataValues.procured);
     }
 
     if (fSold) {
       data.seasonName = fSold.dataValues.seasonName;
-      data.sold = mtConversion(fSold.dataValues.sold);
+      data.sold = formatNumber(fSold.dataValues.sold);
     }
 
     data.stock =

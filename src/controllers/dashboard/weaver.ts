@@ -294,7 +294,7 @@ const getYarnCompareCountRes = async (
     season.push(data.seasonName);
     yarnProcured.push(data.yarnProcured);
     yarnProcessed.push(data.yarnProcessed);
-    yarnStock.push(data.yarnProcured - data.yarnProcessed);
+    yarnStock.push(data.yarnProcured > data.yarnProcessed ? Number((data.yarnProcured - data.yarnProcessed).toFixed(2)) : 0);
 
   }
 
