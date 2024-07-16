@@ -329,7 +329,8 @@ const fetchAgentTransactions = async (req: Request, res: Response) => {
                 .map((id) => parseInt(id, 10));
             whereCondition.mapped_ginner = { [Op.in]: idArray };
         }
-        whereCondition.agent_id = { [Op.not]: null };
+       
+        whereCondition.agent_id = { [Op.not]: null, [Op.ne]: 0 };
 
         if (agentId) {
             const idArray: number[] = agentId
@@ -587,7 +588,7 @@ const exportAgentTransactions = async (req: Request, res: Response) => {
                     .map((id) => parseInt(id, 10));
                 whereCondition.mapped_ginner = { [Op.in]: idArray };
             }
-            whereCondition.agent_id = { [Op.not]: null };
+            whereCondition.agent_id = { [Op.not]: null, [Op.ne]: 0 };
 
 
             if (agentId) {
@@ -708,9 +709,9 @@ const exportAgentTransactions = async (req: Request, res: Response) => {
                     block: item.block ? item.block.block_name : "",
                     village: item.village ? item.village.village_name : "",
                     transactionId: item.id,
-                    qty_purchased: item.qty_purchased,
+                    qty_purchased: item.qty_purchased ? Number(item.qty_purchased) : 0,
                     available_cotton: item.farm ? (Number(item.farm.total_estimated_cotton) > Number(item.farm.cotton_transacted) ? Number(item.farm.total_estimated_cotton) - Number(item.farm.cotton_transacted) : 0) : 0,
-                    rate: item.rate,
+                    rate: item.rate ? Number(item.rate) : 0,
                     program: item.program ? item.program.program_name : "",
                     vehicle: item.vehicle ? item.vehicle : "",
                     payment_method: item.payment_method ? item.payment_method : "",
@@ -835,7 +836,7 @@ const fetchQrDashboard = async (req: Request, res: Response) => {
             FROM transactions 
             INNER JOIN farmers ON transactions.farmer_id=farmers.id
             INNER JOIN farms ON transactions.farm_id=farms.id
-            ${buildWhereClause(whereCondition, "transactions") ? buildWhereClause(whereCondition, "transactions") + " AND transactions.agent_id IS NOT NULL" : "where transactions.agent_id IS NOT NULL"}`,
+            ${buildWhereClause(whereCondition, "transactions") ? buildWhereClause(whereCondition, "transactions") + " AND transactions.agent_id IS NOT NULL AND transactions.agent_id != 0" : "where transactions.agent_id IS NOT NULL AND transactions.agent_id != 0"}`,
         ),
         sequelize.query(`SELECT count(*) as totalfarmer
         FROM farmers
@@ -846,27 +847,27 @@ const fetchQrDashboard = async (req: Request, res: Response) => {
         FROM farmers
         LEFT JOIN transactions ON transactions.farmer_id=farmers.id
         LEFT JOIN farms ON transactions.farm_id=farms.id
-        ${buildWhereClause(whereCondition, "transactions") ? buildWhereClause(whereCondition, "transactions") + " AND transactions.agent_id IS NOT NULL" : "where transactions.agent_id IS NOT NULL"}`),
+        ${buildWhereClause(whereCondition, "transactions") ? buildWhereClause(whereCondition, "transactions") + " AND transactions.agent_id IS NOT NULL AND transactions.agent_id != 0" : "where transactions.agent_id IS NOT NULL AND transactions.agent_id != 0"}`),
         sequelize.query(`SELECT COUNT(*) as third FROM (
             SELECT transactions.district_id, transactions.block_id, transactions.village_id, transactions.program_id, transactions.farmer_id, COUNT(transactions.farmer_id), farmers.brand_id, farms.season_id 
             FROM transactions
             LEFT JOIN farmers ON transactions.farmer_id=farmers.id
             LEFT JOIN farms ON transactions.farm_id=farms.id
-            ${buildWhereClause(whereCondition, "transactions") ? buildWhereClause(whereCondition, "transactions") + " AND transactions.agent_id IS NOT NULL" : "where transactions.agent_id IS NOT NULL"}
+            ${buildWhereClause(whereCondition, "transactions") ? buildWhereClause(whereCondition, "transactions") + " AND transactions.agent_id IS NOT NULL AND transactions.agent_id != 0" : "where transactions.agent_id IS NOT NULL AND transactions.agent_id != 0"}
             group by transactions.district_id, transactions.block_id, transactions.village_id, transactions.program_id, transactions.farmer_id, farmers.brand_id, farms.season_id having COUNT(transactions.farmer_id)=1 ) AS DerivedTableAlias`),
         sequelize.query(`SELECT COUNT(*) as fourth FROM (
                 SELECT transactions.district_id, transactions.block_id, transactions.village_id, transactions.program_id, transactions.farmer_id, COUNT(transactions.farmer_id), farmers.brand_id, farms.season_id 
                 FROM transactions
                 LEFT JOIN farmers ON transactions.farmer_id=farmers.id
                 LEFT JOIN farms ON transactions.farm_id=farms.id
-                ${buildWhereClause(whereCondition, "transactions") ? buildWhereClause(whereCondition, "transactions") + " AND transactions.agent_id IS NOT NULL" : "where transactions.agent_id IS NOT NULL"}
+                ${buildWhereClause(whereCondition, "transactions") ? buildWhereClause(whereCondition, "transactions") + " AND transactions.agent_id IS NOT NULL AND transactions.agent_id != 0" : "where transactions.agent_id IS NOT NULL AND transactions.agent_id != 0"}
                 group by transactions.district_id, transactions.block_id, transactions.village_id, transactions.program_id, transactions.farmer_id, farmers.brand_id, farms.season_id having COUNT(transactions.farmer_id)=2 ) AS DerivedTableAlias`),
         sequelize.query(`SELECT COUNT(*) as fifth FROM (
                     SELECT transactions.district_id, transactions.block_id, transactions.village_id, transactions.program_id, transactions.farmer_id, COUNT(transactions.farmer_id), farmers.brand_id, farms.season_id 
                     FROM transactions
                     LEFT JOIN farmers ON transactions.farmer_id=farmers.id
                     LEFT JOIN farms ON transactions.farm_id=farms.id
-                    ${buildWhereClause(whereCondition, "transactions") ? buildWhereClause(whereCondition, "transactions") + " AND transactions.agent_id IS NOT NULL" : "where transactions.agent_id IS NOT NULL"}
+                    ${buildWhereClause(whereCondition, "transactions") ? buildWhereClause(whereCondition, "transactions") + " AND transactions.agent_id IS NOT NULL AND transactions.agent_id != 0" : "where transactions.agent_id IS NOT NULL AND transactions.agent_id != 0"}
                     group by transactions.district_id, transactions.block_id, transactions.village_id, transactions.program_id, transactions.farmer_id, farmers.brand_id, farms.season_id having COUNT(transactions.farmer_id)=3 ) AS DerivedTableAlias`)
         ])
 

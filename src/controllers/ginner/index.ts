@@ -56,7 +56,7 @@ const createGinnerProcess = async (req: Request, res: Response) => {
     const ginprocess = await GinProcess.create(data);
 
     let uniqueFilename = `gin_procees_qrcode_${Date.now()}.png`;
-    let da = encrypt(`${ginprocess.id}`);
+    let da = encrypt(`Ginner,Process,${ginprocess.id}`);
     let aa = await generateOnlyQrCode(da, uniqueFilename);
     const gin = await GinProcess.update(
       { qr: uniqueFilename },
@@ -980,7 +980,7 @@ const createGinnerSales = async (req: Request, res: Response) => {
       despatch_from: req.body.despatchFrom,
       press_no: req.body.pressNo,
       status: "To be Submitted",
-      qty_stock: req.body.totalQty,
+      qty_stock: 0,
     };
     const ginSales = await GinSales.create(data);
     let uniqueFilename = `gin_sales_qrcode_${Date.now()}.png`;
@@ -1027,6 +1027,7 @@ const updateGinnerSales = async (req: Request, res: Response) => {
       transporter_name: req.body.transporterName,
       vehicle_no: req.body.vehicleNo,
       lrbl_no: req.body.lrblNo,
+      choosen_bale: req.body.choosen_bale
     };
     const ginSales = await GinSales.update(data, {
       where: { id: req.body.id },
@@ -1561,94 +1562,139 @@ const getVillageAndFarmer = async (req: Request, res: Response) => {
   res.sendSuccess(res, { farmers, village });
 };
 
+const _getGinnerProcessTracingChartData = async (
+  reelLotNo:any
+) => {
+  try {
+    //  await createIndexes();
+     
+    let include = [
+      {
+        model: Ginner,
+        as: "ginner",
+        attributes: ['id', 'name'], // Only fetch necessary fields
+      },
+    ];
+
+    let transactionInclude = [
+      {
+        model: Village,
+        as: "village",
+        attributes: ['id', 'village_name'], // Only fetch necessary fields
+      },
+      {
+        model: Farmer,
+        as: "farmer",
+        attributes: ['id', 'firstName',"lastName", 'farmGroup_id', 'village_id'],
+        include: [
+          {
+            model: Village,
+            as: "village",
+            attributes: ['id', 'village_name'], // Only fetch necessary fields
+          },
+          {
+            model: FarmGroup,
+            as: "farmGroup",
+            attributes: ['id', 'name'], // Only fetch necessary fields
+          },
+        ],
+      },
+    ];
+
+    let whereCondition: any = {};
+
+    if (reelLotNo) {
+      const idArray: number[] = reelLotNo
+        .split(",")
+      whereCondition.reel_lot_no = { [Op.in]: idArray };
+    }
+
+
+    const batchSize = 100;
+    let offset = 0;
+    let allGinData: any[] = [];
+
+    while (true) {
+      let ginBatch = await GinProcess.findAll({
+        where: whereCondition,
+        include: include,
+        order: [["id", "desc"]],
+        limit: batchSize,
+        offset: offset,
+        attributes: ['id', 'reel_lot_no'] // Only fetch necessary fields
+      });
+
+      if (ginBatch.length === 0) break;
+
+      offset += batchSize;
+
+      let ginWithTransactions = await Promise.all(
+        ginBatch.map(async (el: any) => {
+          el = el.toJSON();
+          let processTransactions = await CottonSelection.findAll({
+            where: {
+              process_id: el.id
+            },
+            attributes: ['id', 'process_id', 'transaction_id'] // Only fetch necessary fields
+          });
+
+          el.transaction = await Transaction.findAll({
+            where: {
+              id: {
+                [Op.in]: processTransactions.map((pt: any) => pt.transaction_id)
+              }
+            },
+            include: transactionInclude,
+            attributes: ['id', 'farmer_id', 'village_id'] // Only fetch necessary fields
+          });
+
+          return el;
+        })
+      );
+
+      allGinData = allGinData.concat(ginWithTransactions);
+    }
+
+    let formattedData: any = {};
+
+    allGinData.forEach((el: any) => {
+      el.transaction.forEach((tx: any) => {
+        if (!formattedData[tx.farmer.farmGroup_id]) {
+          formattedData[tx.farmer.farmGroup_id] = {
+            farm_name: tx.farmer.farmGroup.name,
+            villages: [],
+          };
+        }
+
+        const village_name = tx.farmer.village.village_name;
+        if (!formattedData[tx.farmer.farmGroup_id].villages.includes(village_name)) {
+          formattedData[tx.farmer.farmGroup_id].villages.push(village_name);
+        }
+      });
+    });
+
+    formattedData = Object.keys(formattedData).map((key: any) => {
+      return formattedData[key];
+    });
+
+    return formatDataForGinnerProcess(reelLotNo, formattedData);
+  } catch (error) {
+    console.error(error);
+  }
+};
+
 const getGinnerProcessTracingChartData = async (
   req: Request,
   res: Response
 ) => {
-  const { reelLotNo } = req.query;
-  let include = [
-    {
-      model: Ginner,
-      as: "ginner",
-    },
-  ];
-
-  let transactionInclude = [
-    {
-      model: Village,
-      as: "village",
-    },
-    {
-      model: Farmer,
-      as: "farmer",
-      include: [
-        {
-          model: Village,
-          as: "village",
-        },
-        {
-          model: FarmGroup,
-          as: "farmGroup",
-        },
-      ],
-    },
-  ];
-
-  let whereCondition = {
-    reel_lot_no: reelLotNo,
-  };
-
-  let gin = await GinProcess.findAll({
-    where: whereCondition,
-    include: include,
-    order: [["id", "desc"]],
-  });
-
-  gin = await Promise.all(
-    gin.map(async (el: any) => {
-      el = el.toJSON();
-      let processTransactions = await CottonSelection.findAll({
-        where: {
-          process_id: el.id
-        }
-      })
-      el.transaction = await Transaction.findAll({
-        where: {
-          id: {
-            [Op.in]: processTransactions.map((el: any) => el.transaction_id)
-          }
-        },
-        include: transactionInclude,
-      });
-      return el;
-    })
-  );
-
-  let formattedData: any = {};
-
-  gin.forEach((el: any) => {
-    el.transaction.forEach((el: any) => {
-      if (!formattedData[el.farmer.farmGroup_id]) {
-        formattedData[el.farmer.farmGroup_id] = {
-          farm_name: el.farmer.farmGroup.name,
-          villages: [],
-        };
-      }
-
-      const village_name = el.farmer.village.village_name;
-      if (
-        !formattedData[el.farmer.farmGroup_id].villages.includes(village_name)
-      ) {
-        formattedData[el.farmer.farmGroup_id].villages.push(village_name);
-      }
-    });
-  });
-
-  formattedData = Object.keys(formattedData).map((el: any) => {
-    return formattedData[el];
-  });
-  res.sendSuccess(res, formatDataForGinnerProcess(reelLotNo, formattedData));
+    const { reelLotNo }:any = req.query;
+    if (!reelLotNo) {
+      return res.status(400).send({ error: "reelLotNo is required" });
+    }
+    const data = await _getGinnerProcessTracingChartData(reelLotNo);
+    res.sendSuccess(res, data);
 };
+
 
 const checkReport = async (req: Request, res: Response) => {
   try {
@@ -1717,4 +1763,5 @@ export {
   fetchGinProcess,
   exportGinnerProcess,
   checkReport,
+  _getGinnerProcessTracingChartData
 };

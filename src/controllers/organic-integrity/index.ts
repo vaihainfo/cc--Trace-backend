@@ -110,7 +110,8 @@ const fetchOrganicIntegrityPagination = async (req: Request, res: Response) => {
                 where: whereCondition,
                 include: include,
                 offset: offset,
-                limit: limit
+                limit: limit,
+                order: [["date", "desc"]]
             });
             return res.sendPaginationSuccess(res, rows, count);
         } else {

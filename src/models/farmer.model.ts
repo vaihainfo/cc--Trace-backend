@@ -10,6 +10,7 @@ import District from "./district.model";
 import Block from "./block.model";
 import State from "./state.model";
 import ICS from "./ics.model";
+import Farm from "./farm.model";
 
 const Farmer = db.define("farmers", {
   id: {
@@ -163,7 +164,6 @@ Farmer.belongsTo(ICS, {
   foreignKey: "ics_id",
   as: "ics",
 });
-
 
 Farmer.associate = (models: any) => {
   Farmer.hasMany(models.FarmerAsset, {
