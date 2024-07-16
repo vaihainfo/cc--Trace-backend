@@ -2547,7 +2547,7 @@ const getBaleStockDataRes = async (
         });
       }
 
-      data.data.push(farmerCount.procured > farmerCount.sold ? farmerCount.procured - farmerCount.sold : 0);
+      data.data.push(farmerCount.procured > farmerCount.sold ? Number((farmerCount.procured - farmerCount.sold).toFixed(2)) : 0);
     }
 
     soldList.push(data);
