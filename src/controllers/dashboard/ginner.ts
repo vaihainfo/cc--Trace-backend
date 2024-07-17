@@ -891,20 +891,21 @@ const getDataAll = async (
       }
     });
     reqData.season = seasonOne.id;
-    const procuredWhere = await getGinBaleQuery(reqData);
+    const procuredWhere = await getGinBaleQuery(reqData); //yes
     const baleSel = getBaleSelectionQuery(reqData);
     const transactionWhere = getTransactionDataQuery(reqData);
-    const processedWhere = getOverAllDataQuery(reqData);
-    const procuredData = await getLintProcuredDataByMonth(procuredWhere);
-    const processedData = await getProcessedDataByMonth(processedWhere);
+    const processedWhere = getOverAllDataQuery(reqData); //yes
+    const procuredData = await getLintProcuredDataByMonth(procuredWhere); //yes
+    const processedData = await getProcessedDataByMonth(processedWhere); //yes
     const soldData = await getLintSoldDataByMonth(baleSel);
-    const procuredProcessedData = await getProcuredDataByMonth(transactionWhere);
+    const procuredProcessedData = await getProcuredDataByMonth(transactionWhere); 
+
     const data = getDataAllRes(
-      procuredData,
+      procuredData, //yes
       soldData,
       procuredProcessedData,
-      processedData,
-      seasonOne
+      processedData,//yes
+      seasonOne//yes
     );
     return res.sendSuccess(res, data);
 

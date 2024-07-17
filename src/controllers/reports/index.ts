@@ -11274,9 +11274,10 @@ const fetchPscpProcurementLiveTracker = async (req: Request, res: Response) => {
           attributes: ["id", "county_name"],
         },
       ],
-      offset: offset,
-      limit: limit,
+      // offset: offset,
+      // limit: limit,
     });
+
     for await (const [index, ginner] of rows.entries()) {
       let programs = ginner.dataValues.program_id;
       for await (let program of programs) {
@@ -11536,16 +11537,19 @@ const fetchPscpProcurementLiveTracker = async (req: Request, res: Response) => {
       }
     }
 
+    let paginationData = data.slice(offset, offset + limit);
+
     return res.sendPaginationSuccess(
       res,
-      data,
-      count
+      paginationData,
+      data.length,
     );
   } catch (error: any) {
     console.error("Error appending data:", error);
     return res.sendError(res, error.message);
   }
 };
+
 
 
 const exportPscpProcurementLiveTracker = async (
