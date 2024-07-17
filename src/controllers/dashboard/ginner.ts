@@ -2208,7 +2208,7 @@ const getBalesProcuredByCountryDataRes = async (
       );
 
       if (fFarmerValue) {
-        farmerCount = mtConversion(fFarmerValue.dataValues.procured);
+        farmerCount = formatNumber(fFarmerValue.dataValues.procured);
         if (!seasonList.includes(fFarmerValue.dataValues.seasonName))
           seasonList.push(fFarmerValue.dataValues.seasonName);
       } else {
@@ -2351,7 +2351,7 @@ const getBaleSoldByCountryRes = async (
       );
 
       if (fFarmerValue) {
-        farmerCount = mtConversion(fFarmerValue.dataValues.sold);
+        farmerCount = formatNumber(fFarmerValue.dataValues.sold);
         if (!seasonList.includes(fFarmerValue.dataValues.seasonName))
           seasonList.push(fFarmerValue.dataValues.seasonName);
       } else {
@@ -2529,13 +2529,13 @@ const getBaleStockDataRes = async (
         list.dataValues.seasonId == seasonId
       );
       if (fProcuredValue) {
-        farmerCount.procured = mtConversion(fProcuredValue.dataValues.procured);
+         farmerCount.procured = formatNumber(fProcuredValue.dataValues.procured);
         if (!seasonList.includes(fProcuredValue.dataValues.seasonName))
           seasonList.push(fProcuredValue.dataValues.seasonName);
       }
 
       if (fSoldValue) {
-        farmerCount.sold = mtConversion(fSoldValue.dataValues.sold);
+         farmerCount.sold = formatNumber(fSoldValue.dataValues.sold);
         if (!seasonList.includes(fSoldValue.dataValues.seasonName))
           seasonList.push(fSoldValue.dataValues.seasonName);
       }
