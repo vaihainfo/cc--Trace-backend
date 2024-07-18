@@ -1279,7 +1279,7 @@ const getOverallChartDataRes = async (
     season.push(data.seasonName);
     processed.push(data.processed);
     sold.push(data.sold);
-    procured.push(data.procured);
+    procured.push(Number(data.procured.toFixed(2)));
   }
 
   return {

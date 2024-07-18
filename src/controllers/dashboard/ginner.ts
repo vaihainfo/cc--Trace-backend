@@ -891,20 +891,21 @@ const getDataAll = async (
       }
     });
     reqData.season = seasonOne.id;
-    const procuredWhere = await getGinBaleQuery(reqData);
+    const procuredWhere = await getGinBaleQuery(reqData); //yes
     const baleSel = getBaleSelectionQuery(reqData);
     const transactionWhere = getTransactionDataQuery(reqData);
-    const processedWhere = getOverAllDataQuery(reqData);
-    const procuredData = await getLintProcuredDataByMonth(procuredWhere);
-    const processedData = await getProcessedDataByMonth(processedWhere);
+    const processedWhere = getOverAllDataQuery(reqData); //yes
+    const procuredData = await getLintProcuredDataByMonth(procuredWhere); //yes
+    const processedData = await getProcessedDataByMonth(processedWhere); //yes
     const soldData = await getLintSoldDataByMonth(baleSel);
-    const procuredProcessedData = await getProcuredDataByMonth(transactionWhere);
+    const procuredProcessedData = await getProcuredDataByMonth(transactionWhere); 
+
     const data = getDataAllRes(
-      procuredData,
+      procuredData, //yes
       soldData,
       procuredProcessedData,
-      processedData,
-      seasonOne
+      processedData,//yes
+      seasonOne//yes
     );
     return res.sendSuccess(res, data);
 
@@ -2208,7 +2209,7 @@ const getBalesProcuredByCountryDataRes = async (
       );
 
       if (fFarmerValue) {
-        farmerCount = mtConversion(fFarmerValue.dataValues.procured);
+        farmerCount = formatNumber(fFarmerValue.dataValues.procured);
         if (!seasonList.includes(fFarmerValue.dataValues.seasonName))
           seasonList.push(fFarmerValue.dataValues.seasonName);
       } else {
@@ -2351,7 +2352,7 @@ const getBaleSoldByCountryRes = async (
       );
 
       if (fFarmerValue) {
-        farmerCount = mtConversion(fFarmerValue.dataValues.sold);
+        farmerCount = formatNumber(fFarmerValue.dataValues.sold);
         if (!seasonList.includes(fFarmerValue.dataValues.seasonName))
           seasonList.push(fFarmerValue.dataValues.seasonName);
       } else {
@@ -2529,13 +2530,13 @@ const getBaleStockDataRes = async (
         list.dataValues.seasonId == seasonId
       );
       if (fProcuredValue) {
-        farmerCount.procured = mtConversion(fProcuredValue.dataValues.procured);
+         farmerCount.procured = formatNumber(fProcuredValue.dataValues.procured);
         if (!seasonList.includes(fProcuredValue.dataValues.seasonName))
           seasonList.push(fProcuredValue.dataValues.seasonName);
       }
 
       if (fSoldValue) {
-        farmerCount.sold = mtConversion(fSoldValue.dataValues.sold);
+         farmerCount.sold = formatNumber(fSoldValue.dataValues.sold);
         if (!seasonList.includes(fSoldValue.dataValues.seasonName))
           seasonList.push(fSoldValue.dataValues.seasonName);
       }
@@ -2547,7 +2548,7 @@ const getBaleStockDataRes = async (
         });
       }
 
-      data.data.push(farmerCount.procured > farmerCount.sold ? farmerCount.procured - farmerCount.sold : 0);
+      data.data.push(farmerCount.procured > farmerCount.sold ? Number((farmerCount.procured - farmerCount.sold).toFixed(2)) : 0);
     }
 
     soldList.push(data);
