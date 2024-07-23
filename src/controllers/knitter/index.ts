@@ -1563,7 +1563,7 @@ const getFabrics = async (req: Request, res: Response) => {
 };
 
 const chooseFabricProcess = async (req: Request, res: Response) => {
-  const { knitterId, programId, lotNo, reelLotNo, noOfRolls, fabricType }: any =
+  const { knitterId, programId, lotNo, reelLotNo, noOfRolls, fabricType, seasonId }: any =
     req.query;
 
   const whereCondition: any = {};
@@ -1592,6 +1592,13 @@ const chooseFabricProcess = async (req: Request, res: Response) => {
         .split(",")
         .map((id: any) => parseInt(id, 10));
       whereCondition.fabric_type = { [Op.overlap]: idArray };
+    }
+
+    if (seasonId) {
+      const idArray: any[] = seasonId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.season_id = { [Op.in]: idArray };
     }
 
     let include = [
@@ -1650,6 +1657,8 @@ const chooseFabricProcess = async (req: Request, res: Response) => {
   }
 };
 
+
+
 const getKnitterProcessTracingChartData = async (
   req: Request,
   res: Response
@@ -1661,31 +1670,61 @@ const getKnitterProcessTracingChartData = async (
       as: "knitter",
     },
   ];
+
   let knitters = await KnitProcess.findAll({
     where: query,
     include,
   });
 
+  // Fetching yarn_ids from KnitYarnSelection for each KnitProcess
   knitters = await Promise.all(
     knitters.map(async (el: any) => {
       el = el.toJSON();
-      el.spin = await SpinSales.findAll({
+
+      el.knitSele = await KnitYarnSelection.findAll({
         where: {
-          knitter_id: el.knitter.id,
-        },
+          sales_id: el.id,
+        }
       });
-      el.spinsCount = el.spin.length;
-      el.spinskIds = el.spin.map((el: any) => el.knitter_id);
-      console.log("spins received ", el.spin.length);
+
+      // Fetch spin sales for each yarn_id in KnitYarnSelection
       el.spin = await Promise.all(
-        el.spin.map(async (el: any) => {
-          console.log("getting data for ", el.reel_lot_no);
-          return _getSpinnerProcessTracingChartData(el.reel_lot_no);
+        el.knitSele.map(async (knitSeleItem: any) => {
+          let spinSales = await SpinSales.findAll({
+            where: {
+              id: knitSeleItem.yarn_id, // Use yarn_id from KnitYarnSelection
+            },
+          });
+          return {
+            yarn_id: knitSeleItem.yarn_id,
+            spinSales: spinSales,
+          };
         })
       );
+
+      // Count total spins and gather spin ids
+      el.spinsCount = el.spin.reduce((total: number, item: any) => total + item.spinSales.length, 0);
+      el.spinskIds = el.spin.map((item: any) => item.yarn_id);
+
+      // Optional: Fetch more details for each spin (if needed)
+      el.spin = await Promise.all(
+        el.spin.map(async (spinItem: any) => {
+          return await Promise.all(
+            spinItem.spinSales.map(async (sale: any) => {
+              if (sale.reel_lot_no) {
+                return _getSpinnerProcessTracingChartData(sale.reel_lot_no);
+              }
+              // Handle cases where reel_lot_no might be undefined/null
+              return null;
+            })
+          );
+        })
+      );
+
       return el;
     })
   );
+
   let key = Object.keys(req.query)[0];
   res.sendSuccess(res, formatDataFromKnitter(req.query[key], knitters));
 };

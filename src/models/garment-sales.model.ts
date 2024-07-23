@@ -144,6 +144,9 @@ const GarmentSales = db.define('garment_sales', {
   qr: {
     type: DataTypes.STRING
   },
+  coc_doc: {
+    type: DataTypes.STRING
+  },
   garment_size: {
     type: DataTypes.ARRAY(DataTypes.STRING)
   },
