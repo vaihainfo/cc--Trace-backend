@@ -9462,14 +9462,14 @@ const fetchGinnerCottonStock = async (req: Request, res: Response) => {
         [Sequelize.literal('"season"."id"'), "season_id"],
         [Sequelize.col('"season"."name"'), "season_name"],
         // [Sequelize.literal('"program"."program_name"'), 'program_name'],
-        [
-          sequelize.fn(
-            "COALESCE",
-            sequelize.fn("SUM", sequelize.col("total_qty")),
-            0
-          ),
-          "cotton_processed",
-        ],
+        // [
+        //   sequelize.fn(
+        //     "COALESCE",
+        //     sequelize.fn("SUM", sequelize.col("total_qty")),
+        //     0
+        //   ),
+        //   "cotton_processed",
+        // ],
       ],
       where: whereCondition,
       include: include,
@@ -9478,6 +9478,7 @@ const fetchGinnerCottonStock = async (req: Request, res: Response) => {
       limit: limit,
       offset: offset,
     });
+
     let result: any = [];
     for await (let ginner of rows) {
       let obj: any = {};
@@ -9509,12 +9510,14 @@ const fetchGinnerCottonStock = async (req: Request, res: Response) => {
         where: {
           ...transactionWhere,
           mapped_ginner: ginner.ginner_id,
+          season_id: ginner.season_id,
           status: "Sold",
         },
       });
 
       obj.cotton_procured = cottonProcured?.dataValues?.cotton_procured ?? 0;
       obj.cotton_stock = cottonProcured?.dataValues?.cotton_stock ?? 0;
+      obj.cotton_processed =  obj.cotton_procured  - obj.cotton_stock;
       result.push({ ...ginner?.dataValues, ...obj });
     }
     //fetch data with pagination
@@ -9637,14 +9640,14 @@ const exportGinnerCottonStock = async (req: Request, res: Response) => {
           [Sequelize.literal('"season"."id"'), "season_id"],
           [Sequelize.col('"season"."name"'), "season_name"],
           // [Sequelize.literal('"program"."program_name"'), 'program_name'],
-          [
-            sequelize.fn(
-              "COALESCE",
-              sequelize.fn("SUM", sequelize.col("total_qty")),
-              0
-            ),
-            "cotton_processed",
-          ],
+          // [
+          //   sequelize.fn(
+          //     "COALESCE",
+          //     sequelize.fn("SUM", sequelize.col("total_qty")),
+          //     0
+          //   ),
+          //   "cotton_processed",
+          // ],
         ],
         where: whereCondition,
         include: include,
@@ -9684,19 +9687,21 @@ const exportGinnerCottonStock = async (req: Request, res: Response) => {
           where: {
             ...transactionWhere,
             mapped_ginner: item.ginner_id,
+            season_id: item.season_id,
             status: "Sold",
           },
         });
 
         obj.cotton_procured = cottonProcured?.dataValues?.cotton_procured ?? 0;
         obj.cotton_stock = cottonProcured?.dataValues?.cotton_stock ?? 0;
+        obj.cotton_processed =  obj.cotton_procured  - obj.cotton_stock;
 
         const rowValues = Object.values({
           index: index + 1,
           ginner: item?.dataValues.ginner_name ? item?.dataValues.ginner_name : "",
           season: item?.dataValues.season_name ? item?.dataValues.season_name : "",
           cotton_procured: obj.cotton_procured ? obj.cotton_procured : 0,
-          cotton_processed: item?.dataValues?.cotton_processed ? item?.dataValues?.cotton_processed : 0,
+          cotton_processed:  obj.cotton_processed ?  obj.cotton_processed : 0,
           cotton_stock: obj.cotton_stock ? obj.cotton_stock : 0,
         });
         worksheet.addRow(rowValues);
