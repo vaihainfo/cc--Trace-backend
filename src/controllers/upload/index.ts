@@ -1,6 +1,7 @@
 import uploadFile from "../../middleware/upload";
 import fs from "fs";
 import path from "path";
+import uploadFileMiddleware from "../../middleware/upload";
 
 const upload = async (req: any, res: any) => {
     try {

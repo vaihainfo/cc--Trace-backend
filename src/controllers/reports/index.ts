@@ -3949,11 +3949,11 @@ const fetchKnitterYarnPagination = async (req: Request, res: Response) => {
 
 const exportKnitterYarn = async (req: Request, res: Response) => {
   // knitter_yarn_receipt_load
-  await ExportData.update({
-    knitter_yarn_receipt_load: true
-  }, { where: { knitter_yarn_receipt_load: false } })
-  res.send({ status: 200, message: "export file processing" })
-  const excelFilePath = path.join("./upload", "knitter-yarn-receipt.xlsx");
+  // await ExportData.update({
+  //   knitter_yarn_receipt_load: true
+  // }, { where: { knitter_yarn_receipt_load: false } })
+  // res.send({ status: 200, message: "export file processing" })
+  const excelFilePath = path.join("./upload", "Knitter_yarn_receipt.xlsx");
   const searchTerm = req.query.search || "";
   const page = Number(req.query.page) || 1;
   const limit = Number(req.query.limit) || 10;
@@ -4162,25 +4162,26 @@ const exportKnitterYarn = async (req: Request, res: Response) => {
           "sales.program.id",
         ],
         order: [["sales_id", "desc"]],
-        // offset: offset,
-        // limit: limit,
+        offset: offset,
+        limit: limit,
       }
     );
 
+    const yarnCountIds = rows.flatMap((row: any) => row.dataValues.yarn_count || []);
+    const yarnCounts = await YarnCount.findAll({
+      where: {
+        id: { [Op.in]: yarnCountIds }
+      },
+      attributes: ["id", "yarnCount_name"]
+    });
+
+    const yarnCountMap = yarnCounts.reduce((map: any, yarnCount: any) => {
+      map[yarnCount.id] = yarnCount.yarnCount_name;
+      return map;
+    }, {});
+
     // Append data to worksheet
     for await (const [index, item] of rows.entries()) {
-      const yarnCountIds = rows.flatMap((row: any) => row.dataValues.yarn_count || []);
-      const yarnCounts = await YarnCount.findAll({
-        where: {
-          id: { [Op.in]: yarnCountIds }
-        },
-        attributes: ["id", "yarnCount_name"]
-      });
-
-      const yarnCountMap = yarnCounts.reduce((map: any, yarnCount: any) => {
-        map[yarnCount.id] = yarnCount.yarnCount_name;
-        return map;
-      }, {});
       const rowValues = Object.values({
         index: index + 1,
         accept_date: item.dataValues.accept_date
@@ -4211,20 +4212,20 @@ const exportKnitterYarn = async (req: Request, res: Response) => {
 
     // Save the workbook
     await workbook.xlsx.writeFile(excelFilePath);
-    // res.status(200).send({
-    //   success: true,
-    //   messgage: "File successfully Generated",
-    //   data: process.env.BASE_URL + "knitter-yarn-receipt.xlsx",
-    // });
-    await ExportData.update({
-      knitter_yarn_receipt_load: false
-    }, { where: { knitter_yarn_receipt_load: true } })
+    res.status(200).send({
+      success: true,
+      messgage: "File successfully Generated",
+      data: process.env.BASE_URL + "Knitter_yarn_receipt.xlsx",
+    });
+    // await ExportData.update({
+    //   knitter_yarn_receipt_load: false
+    // }, { where: { knitter_yarn_receipt_load: true } })
   } catch (error: any) {
-    (async () => {
-      await ExportData.update({
-        knitter_yarn_receipt_load: false
-      }, { where: { knitter_yarn_receipt_load: true } })
-    })()
+    // (async () => {
+    //   await ExportData.update({
+    //     knitter_yarn_receipt_load: false
+    //   }, { where: { knitter_yarn_receipt_load: true } })
+    // })()
     console.error("Error appending data:", error);
     return res.sendError(res, error.message);
   }
@@ -4378,11 +4379,11 @@ const fetchKnitterYarnProcess = async (req: Request, res: Response) => {
 
 const exportKnitterYarnProcess = async (req: Request, res: Response) => {
   // knitter_yarn_process_load
-  await ExportData.update({
-    knitter_yarn_process_load: true
-  }, { where: { knitter_yarn_process_load: false } })
-  res.send({ status: 200, message: "export file processing" })
-  const excelFilePath = path.join("./upload", "knitter-yarn-process.xlsx");
+  // await ExportData.update({
+  //   knitter_yarn_process_load: true
+  // }, { where: { knitter_yarn_process_load: false } })
+  // res.send({ status: 200, message: "export file processing" })
+  const excelFilePath = path.join("./upload", "Knitter_yarn_process.xlsx");
   const searchTerm = req.query.search || "";
   const page = Number(req.query.page) || 1;
   const limit = Number(req.query.limit) || 10;
@@ -4582,20 +4583,20 @@ const exportKnitterYarnProcess = async (req: Request, res: Response) => {
 
     // Save the workbook
     await workbook.xlsx.writeFile(excelFilePath);
-    // return res.status(200).send({
-    //   success: true,
-    //   messgage: "File successfully Generated",
-    //   data: process.env.BASE_URL + "knitter-yarn-process.xlsx",
-    // });
-    await ExportData.update({
-      knitter_yarn_process_load: false
-    }, { where: { knitter_yarn_process_load: true } })
+    res.status(200).send({
+      success: true,
+      messgage: "File successfully Generated",
+      data: process.env.BASE_URL + "Knitter_yarn_process.xlsx",
+    });
+    // await ExportData.update({
+    //   knitter_yarn_process_load: false
+    // }, { where: { knitter_yarn_process_load: true } })
   } catch (error: any) {
-    (async () => {
-      await ExportData.update({
-        knitter_yarn_process_load: false
-      }, { where: { knitter_yarn_process_load: true } })
-    })()
+    // (async () => {
+    //   await ExportData.update({
+    //     knitter_yarn_process_load: false
+    //   }, { where: { knitter_yarn_process_load: true } })
+    // })()
     console.log(error);
     return res.sendError(res, error.message);
   }
@@ -4807,13 +4808,13 @@ const fetchKnitterSalesPagination = async (req: Request, res: Response) => {
 
 const exportKnitterSale = async (req: Request, res: Response) => {
   // knitter_fabric_sales_load
-  await ExportData.update({
-    knitter_fabric_sales_load: true
-  }, { where: { knitter_fabric_sales_load: false } })
-  res.send({ status: 200, message: "export file processing" })
+  // await ExportData.update({
+  //   knitter_fabric_sales_load: true
+  // }, { where: { knitter_fabric_sales_load: false } })
+  // res.send({ status: 200, message: "export file processing" })
   const excelFilePath = path.join(
     "./upload",
-    "knitter-fabric-sale-report.xlsx"
+    "Knitter_fabric_sale_report.xlsx"
   );
 
   try {
@@ -5065,20 +5066,20 @@ const exportKnitterSale = async (req: Request, res: Response) => {
 
     // Save the workbook
     await workbook.xlsx.writeFile(excelFilePath);
-    // res.status(200).send({
-    //   success: true,
-    //   messgage: "File successfully Generated",
-    //   data: process.env.BASE_URL + "knitter-fabric-sale-report.xlsx",
-    // });
-    await ExportData.update({
-      knitter_fabric_sales_load: false
-    }, { where: { knitter_fabric_sales_load: true } })
+    res.status(200).send({
+      success: true,
+      messgage: "File successfully Generated",
+      data: process.env.BASE_URL + "Knitter_fabric_sale_report.xlsx",
+    });
+    // await ExportData.update({
+    //   knitter_fabric_sales_load: false
+    // }, { where: { knitter_fabric_sales_load: true } })
   } catch (error: any) {
-    (async () => {
-      await ExportData.update({
-        knitter_fabric_sales_load: false
-      }, { where: { knitter_fabric_sales_load: true } })
-    })()
+    // (async () => {
+    //   await ExportData.update({
+    //     knitter_fabric_sales_load: false
+    //   }, { where: { knitter_fabric_sales_load: true } })
+    // })()
     console.error("Error appending data:", error);
     return res.sendError(res, error.message);
   }
@@ -5309,11 +5310,11 @@ const fetchWeaverYarnPagination = async (req: Request, res: Response) => {
 
 const exportWeaverYarn = async (req: Request, res: Response) => {
   // weaver_yarn_receipt_load
-  await ExportData.update({
-    weaver_yarn_receipt_load: true
-  }, { where: { weaver_yarn_receipt_load: false } })
-  res.send({ status: 200, message: "export file processing" })
-  const excelFilePath = path.join("./upload", "weaver-yarn.xlsx");
+  // await ExportData.update({
+  //   weaver_yarn_receipt_load: true
+  // }, { where: { weaver_yarn_receipt_load: false } })
+  // res.send({ status: 200, message: "export file processing" })
+  const excelFilePath = path.join("./upload", "Weaver_yarn.xlsx");
   const searchTerm = req.query.search || "";
   const page = Number(req.query.page) || 1;
   const limit = Number(req.query.limit) || 10;
@@ -5406,8 +5407,8 @@ const exportWeaverYarn = async (req: Request, res: Response) => {
       "Spinner Name",
       "Weaving Unit Name",
       "Invoice Number",
-      "Lot/Batch Number",
       "Yarn Reel No",
+      "Lot/Batch Number",
       "Yarn Count",
       "No of Boxes",
       "Box ID",
@@ -5527,20 +5528,22 @@ const exportWeaverYarn = async (req: Request, res: Response) => {
         limit: limit,
       }
     );
+
+    const yarnCountIds = rows.flatMap((row: any) => row.dataValues.yarn_count || []);
+    const yarnCounts = await YarnCount.findAll({
+      where: {
+        id: { [Op.in]: yarnCountIds }
+      },
+      attributes: ["id", "yarnCount_name"]
+    });
+
+    const yarnCountMap = yarnCounts.reduce((map: any, yarnCount: any) => {
+      map[yarnCount.id] = yarnCount.yarnCount_name;
+      return map;
+    }, {});
+
     // Append data to worksheet
     for await (const [index, item] of rows.entries()) {
-      const yarnCountIds = rows.flatMap((row: any) => row.dataValues.yarn_count || []);
-      const yarnCounts = await YarnCount.findAll({
-        where: {
-          id: { [Op.in]: yarnCountIds }
-        },
-        attributes: ["id", "yarnCount_name"]
-      });
-
-      const yarnCountMap = yarnCounts.reduce((map: any, yarnCount: any) => {
-        map[yarnCount.id] = yarnCount.yarnCount_name;
-        return map;
-      }, {});
 
       const rowValues = Object.values({
         index: index + 1,
@@ -5551,8 +5554,8 @@ const exportWeaverYarn = async (req: Request, res: Response) => {
         spinner: item.dataValues.spinner ? item.dataValues.spinner : "",
         buyer_id: item.dataValues.weaver ? item.dataValues.weaver : "",
         invoice: item.dataValues.invoice_no ? item.dataValues.invoice_no : "",
-        lotNo: item.dataValues.batch_lot_no ? item.dataValues.batch_lot_no : "",
         reelLot: item.dataValues.reel_lot_no ? item.dataValues.reel_lot_no : "",
+        lotNo: item.dataValues.batch_lot_no ? item.dataValues.batch_lot_no : "",
         count: item.dataValues.yarn_count.map((id: number) => yarnCountMap[id] || null).join(", "),
         boxes: item.dataValues.no_of_boxes ? item.dataValues.no_of_boxes : "",
         boxId: item.dataValues.box_ids ? item.dataValues.box_ids : "",
@@ -5572,20 +5575,20 @@ const exportWeaverYarn = async (req: Request, res: Response) => {
 
     // Save the workbook
     await workbook.xlsx.writeFile(excelFilePath);
-    // res.status(200).send({
-    //   success: true,
-    //   messgage: "File successfully Generated",
-    //   data: process.env.BASE_URL + "weaver-yarn.xlsx",
-    // });
-    await ExportData.update({
-      weaver_yarn_receipt_load: false
-    }, { where: { weaver_yarn_receipt_load: true } })
+    res.status(200).send({
+      success: true,
+      messgage: "File successfully Generated",
+      data: process.env.BASE_URL + "Weaver_yarn.xlsx",
+    });
+    // await ExportData.update({
+    //   weaver_yarn_receipt_load: false
+    // }, { where: { weaver_yarn_receipt_load: true } })
   } catch (error: any) {
-    (async () => {
-      await ExportData.update({
-        weaver_yarn_receipt_load: false
-      }, { where: { weaver_yarn_receipt_load: true } })
-    })()
+    // (async () => {
+    //   await ExportData.update({
+    //     weaver_yarn_receipt_load: false
+    //   }, { where: { weaver_yarn_receipt_load: true } })
+    // })()
     console.error("Error appending data:", error);
     return res.sendError(res, error.message);
   }
@@ -5732,11 +5735,11 @@ const fetchWeaverYarnProcess = async (req: Request, res: Response) => {
 
 const exportWeaverYarnProcess = async (req: Request, res: Response) => {
   // weaver_yarn_process_load
-  await ExportData.update({
-    weaver_yarn_process_load: true
-  }, { where: { weaver_yarn_process_load: false } })
-  res.send({ status: 200, message: "export file processing" })
-  const excelFilePath = path.join("./upload", "weaver-yarn-process.xlsx");
+  // await ExportData.update({
+  //   weaver_yarn_process_load: true
+  // }, { where: { weaver_yarn_process_load: false } })
+  // res.send({ status: 200, message: "export file processing" })
+  const excelFilePath = path.join("./upload", "Weaver_yarn_process.xlsx");
   const searchTerm = req.query.search || "";
   const page = Number(req.query.page) || 1;
   const limit = Number(req.query.limit) || 10;
@@ -5930,22 +5933,22 @@ const exportWeaverYarnProcess = async (req: Request, res: Response) => {
 
     // Save the workbook
     await workbook.xlsx.writeFile(excelFilePath);
-    // return res.status(200).send({
-    //   success: true,
-    //   messgage: "File successfully Generated",
-    //   data: process.env.BASE_URL + "weaver-yarn-process.xlsx",
-    // });
-    await ExportData.update({
-      weaver_yarn_process_load: false
-    }, { where: { weaver_yarn_process_load: true } })
+    res.status(200).send({
+      success: true,
+      messgage: "File successfully Generated",
+      data: process.env.BASE_URL + "Weaver_yarn_process.xlsx",
+    });
+    // await ExportData.update({
+    //   weaver_yarn_process_load: false
+    // }, { where: { weaver_yarn_process_load: true } })
   } catch (error: any) {
-    console.log(error);
-    (async () => {
-      await ExportData.update({
-        weaver_yarn_process_load: false
-      }, { where: { weaver_yarn_process_load: true } })
-      return res.sendError(res, error.message);
-    })()
+    console.error("Error appending data:", error);
+    return res.sendError(res, error.message);
+    // (async () => {
+    // await ExportData.update({
+    //   weaver_yarn_process_load: false
+    // }, { where: { weaver_yarn_process_load: true } })
+    // })()
 
   }
 };
@@ -6168,11 +6171,11 @@ const fetchWeaverSalesPagination = async (req: Request, res: Response) => {
 
 const exportWeaverSale = async (req: Request, res: Response) => {
   // weaver_yarn_sales_load
-  await ExportData.update({
-    weaver_yarn_sales_load: true
-  }, { where: { weaver_yarn_sales_load: false } })
-  res.send({ status: 200, message: "export file processing" })
-  const excelFilePath = path.join("./upload", "weaver-fabric-sale-report.xlsx");
+  // await ExportData.update({
+  //   weaver_yarn_sales_load: true
+  // }, { where: { weaver_yarn_sales_load: false } })
+  // res.send({ status: 200, message: "export file processing" })
+  const excelFilePath = path.join("./upload", "Weaver_fabric_sale_report.xlsx");
   try {
     const searchTerm = req.query.search || "";
     const page = Number(req.query.page) || 1;
@@ -6423,20 +6426,20 @@ const exportWeaverSale = async (req: Request, res: Response) => {
 
     // Save the workbook
     await workbook.xlsx.writeFile(excelFilePath);
-    // res.status(200).send({
-    //   success: true,
-    //   messgage: "File successfully Generated",
-    //   data: process.env.BASE_URL + "weaver-fabric-sale-report.xlsx",
-    // });
-    await ExportData.update({
-      weaver_yarn_sales_load: false
-    }, { where: { weaver_yarn_sales_load: true } })
+    res.status(200).send({
+      success: true,
+      messgage: "File successfully Generated",
+      data: process.env.BASE_URL + "Weaver_fabric_sale_report.xlsx",
+    });
+    // await ExportData.update({
+    //   weaver_yarn_sales_load: false
+    // }, { where: { weaver_yarn_sales_load: true } })
   } catch (error: any) {
-    (async () => {
-      await ExportData.update({
-        weaver_yarn_sales_load: false
-      }, { where: { weaver_yarn_sales_load: true } })
-    })()
+    // (async () => {
+    //   await ExportData.update({
+    //     weaver_yarn_sales_load: false
+    //   }, { where: { weaver_yarn_sales_load: true } })
+    // })()
     console.error("Error appending data:", error);
     return res.sendError(res, error.message);
   }

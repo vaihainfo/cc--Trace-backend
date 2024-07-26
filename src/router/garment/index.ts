@@ -27,7 +27,9 @@ import {
     updateGarmentSales,
     getGarmentProcessTracingChartData,
     garmentTraceabilityMap,
-    exportGarmentTransactionList
+    exportGarmentTransactionList,
+    getCOCDocumentData,
+    updateCOCDoc
 } from "../../controllers/garment-sales";
 import accessControl from "../../middleware/access-control";
 import { Router } from "express";
@@ -67,5 +69,8 @@ router.get('/get-choose-garment-filter', getChooseGarmentFilters);
 router.get('/get-buyer-processors', getBuyerProcessors);
 router.get('/tracing/chart', getGarmentProcessTracingChartData);
 router.get('/export/transaction', exportGarmentTransactionList);
+router.get('/coc/document', getCOCDocumentData);
+router.put('/coc/doc/update', updateCOCDoc);
+
 
 export default router;
