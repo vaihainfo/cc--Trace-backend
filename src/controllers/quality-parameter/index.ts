@@ -1041,15 +1041,15 @@ const reportNationalQualityParameter = async (req: Request, res: Response) => {
             return res.sendError(res, "Please select season");
         }
 
-        let nationalSpin: any = {};
+        let nationalSpin: any = "";
         if (countryId) {
-            nationalSpin['$spinner.country_id$'] = countryId
+            nationalSpin= `AND pr.country_id =${countryId}`  
         }
 
-        if (brandId) {
-            const idArray = brandId.split(",").map((id: any) => parseInt(id, 10));
-            nationalSpin['$spinner.brand$'] = { [Op.overlap]: idArray }
-        }
+        // if (brandId) {
+        //     const idArray = brandId.split(",").map((id: any) => parseInt(id, 10));
+        //     nationalSpin['$spinner.brand$'] = { [Op.overlap]: idArray }
+        // }
 
         // let spinner = await QualityParameter.findAll({
         //     attributes: [
@@ -1107,7 +1107,7 @@ const reportNationalQualityParameter = async (req: Request, res: Response) => {
             WHERE
                 ss.id = ${seasonId}
                 AND pr.id IS NOT NULL
-                AND pr.country_id = ${countryId}
+            ${nationalSpin}       
             GROUP BY
             pr.country_id;
         `,{
@@ -1182,7 +1182,7 @@ const reportNationalQualityParameter = async (req: Request, res: Response) => {
                 where: {
                     '$process.season_id$': seasonId,
                     ginner_id: { [Op.not]: null },
-                    '$ginner.state_id$': stateId
+                    '$ginner.state_id$': stateId || null
                 },
                 group: ['ginner.state_id']
             })
@@ -1242,7 +1242,7 @@ const reportNationalQualityParameter = async (req: Request, res: Response) => {
                 WHERE
                     ss.id = ${seasonId}
                     AND pr.id IS NOT NULL 
-                    AND pr.state_id = ${stateId}
+                    AND pr.state_id = ${stateId || null}
                 GROUP BY
                 pr.state_id;
             `, { type: sequelize.QueryTypes.SELECT });
