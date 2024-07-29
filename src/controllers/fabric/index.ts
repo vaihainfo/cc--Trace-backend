@@ -1379,16 +1379,33 @@ const deleteWashingProcess = async (req: Request, res: Response) => {
 const fetchPrintingTransactions = async (req: Request, res: Response) => {
   try {
     let fabricId = req.query.fabricId || "";
+    let programId = req.query.programId || "";
+    let seasonId = req.query.seasonId || "";
+    let whereCondition: any = {};
     if (!fabricId) {
       return res.sendError(res, "Need Fabric Id");
+    }
+
+    if (programId) {
+      const idArray: any[] = (programId as string).split(",");
+      whereCondition.program_id = { [Op.in]: idArray };
+    }
+
+    if (seasonId) {
+      const idArray: any[] = (seasonId as string).split(",");
+      whereCondition.season_id = { [Op.in]: idArray };
     }
 
     let include = [
       {
         model: Program,
         as: "program",
+      }, {
+        model: Season,
+        as: "season",
       },
     ];
+
     let data = await WashingSales.findAll({
       where: { status: "Pending", buyer_type: "Printing", fabric_id: fabricId },
       include: [
@@ -3010,27 +3027,21 @@ const getWashData = async (fabrics: any) => {
                     "fabric"."id" AS "fabric_id",
                     "fabric"."name" AS "fabric_name",
                     ARRAY_AGG(CAST(CASE
-                          WHEN
-LOWER("fabric_selections"."process_type") = 'knitter'
+                          WHEN LOWER("fabric_selections"."process_type") = 'knitter'
                           THEN "fabric_selections"."process_id"
                           ELSE NULL END AS INTEGER))
-                    FILTER (WHERE "fabric_selections"."process_type" =
-'Knitter')
+                    FILTER (WHERE "fabric_selections"."process_type" = 'Knitter')
                     AS "knit_sales_ids",
                     ARRAY_AGG(CAST(CASE
-                          WHEN
-LOWER("fabric_selections"."process_type") ='weaver'
+                          WHEN LOWER("fabric_selections"."process_type") ='weaver'
                           THEN "fabric_selections"."process_id"
                           ELSE NULL END AS INTEGER))
                     FILTER (WHERE "fabric_selections"."process_type" = 'Weaver')
                     AS "weav_sales_ids"
                     FROM dying_fabric_selections fabric_selections
-                    INNER JOIN dying_sales AS "fabricprocess" ON
-"fabric_selections"."sales_id" = "fabricprocess"."id"
-                    LEFT JOIN "fabrics" AS "fabric" ON
-"fabricprocess"."dying_id" = "fabric"."id"
-                     WHERE fabric_selections.sales_id IN
-(${fabrics[0].dying_sales_ids})
+                    INNER JOIN dying_sales AS "fabricprocess" ON "fabric_selections"."sales_id" = "fabricprocess"."id"
+                    LEFT JOIN "fabrics" AS "fabric" ON "fabricprocess"."dying_id" = "fabric"."id"
+                     WHERE fabric_selections.sales_id IN (${fabrics[0].dying_sales_ids})
                     GROUP BY
                         "fabricprocess"."id",
                         "fabric"."id";`)
@@ -3056,14 +3067,12 @@ LOWER("fabric_selections"."process_type") ='weaver'
 
     if (knitSales && knitSales.length > 0) {
       knitData = await Promise.all(knitSales.map(async (el: any) => {
-        let spinSales = await getSpinSales('knit_yarn_selections',
-el.knit_process_ids)
+        let spinSales = await getSpinSales('knit_yarn_selections', el.knit_process_ids)
         return {
           ...el,
           type: 'knitter',
           spinsCount: spinSales && spinSales.length > 0 ? spinSales.length : 0,
-          spin: spinSales && spinSales.length > 0 ? await Promise.all( spinSales.map((it:
-            any) => it.reel_lot_no!==null? _getSpinnerProcessTracingChartData(it.reel_lot_no):[])) : []
+          spin: spinSales && spinSales.length > 0 ? spinSales.map((it: any) => _getSpinnerProcessTracingChartData(it.reel_lot_no)) : []
           // spin: []
         }
       })
@@ -3072,81 +3081,67 @@ el.knit_process_ids)
 
     if (weavSales && weavSales.length > 0) {
       weavData = await Promise.all(weavSales.map(async (el: any) => {
-        let spinSales = await getSpinSales('yarn_selections',
-el.weav_process_ids)
+        let spinSales = await getSpinSales('yarn_selections', el.weav_process_ids)
         return {
           ...el,
           type: 'weaver',
           spinsCount: spinSales && spinSales.length > 0 ? spinSales.length : 0,
-          spin: spinSales && spinSales.length > 0 ? await Promise.all( spinSales.map((it:
-            any) => it.reel_lot_no!==null?_getSpinnerProcessTracingChartData(it.reel_lot_no):[])) : []
+          spin: spinSales && spinSales.length > 0 ? spinSales.map((it: any) => _getSpinnerProcessTracingChartData(it.reel_lot_no)) : []
           // spin: []
         }
       }))
     }
     let weavKnit = [...knitData, ...weavData];
 
-    let weavKnitChart = weavKnit && weavKnit.length > 0 ?
-weavKnit.map(((el: any) => el.type === 'knitter' ?
-formatDataFromKnitter(el.knit_name, el, 300, 100) :
-formatDataFromWeaver(el.weav_name, el, 300, 100))) : [];
+    let weavKnitChart = weavKnit && weavKnit.length > 0 ? weavKnit.map(((el: any) => el.type === 'knitter' ? formatDataFromKnitter(el.knit_name, el) : formatDataFromWeaver(el.weav_name, el))) : [];
 
-    data.weavKnit = data && data.weavKnitChart ? [...data.weavKnit,
-...weavKnit] : weavKnit;
-    data.weavKnitChart = data && data.weavKnitChart ?
-[...data.weavKnitChart, ...weavKnitChart] : weavKnitChart;
+    data.weavKnit = data && data.weavKnitChart ? [...data.weavKnit, ...weavKnit] : weavKnit;
+    data.weavKnitChart = data && data.weavKnitChart ? [...data.weavKnitChart, ...weavKnitChart] : weavKnitChart;
 
   }
 
   return data;
 }
 
-const getPrintData = async (fabrics: any) =>{
+const getPrintData = async (fabrics: any) => {
   let data: any = {};
-  if(fabrics && fabrics[0]){
-    if(fabrics[0].wash_sales_ids && fabrics[0].wash_sales_ids.length > 0){
+  if (fabrics && fabrics[0]) {
+    if (fabrics[0].wash_sales_ids && fabrics[0].wash_sales_ids.length > 0) {
       let [printFabrics] = await sequelize.query(`
-        SELECT
+        SELECT 
                     "fabricprocess"."id" AS "fabricprocess_id",
                     "fabricprocess"."batch_lot_no" AS "batch_lot_no",
                     "fabric"."id" AS "fabric_id",
                     "fabric"."name" AS "fabric_name",
-                    ARRAY_AGG(CAST(CASE
-                          WHEN
-LOWER("fabric_selections"."process_type") = 'knitter'
-                          THEN "fabric_selections"."process_id"
-                          ELSE NULL END AS INTEGER))
-                    FILTER (WHERE "fabric_selections"."process_type" =
-'Knitter')
+                    ARRAY_AGG(CAST(CASE 
+                          WHEN LOWER("fabric_selections"."process_type") = 'knitter'
+                          THEN "fabric_selections"."process_id" 
+                          ELSE NULL END AS INTEGER)) 
+                    FILTER (WHERE "fabric_selections"."process_type" = 'Knitter') 
                     AS "knit_sales_ids",
-                    ARRAY_AGG(CAST(CASE
-                          WHEN
-LOWER("fabric_selections"."process_type") ='weaver'
-                          THEN "fabric_selections"."process_id"
-                          ELSE NULL END AS INTEGER))
-                    FILTER (WHERE "fabric_selections"."process_type" = 'weaver')
+                    ARRAY_AGG(CAST(CASE 
+                          WHEN LOWER("fabric_selections"."process_type") ='weaver' 
+                          THEN "fabric_selections"."process_id" 
+                          ELSE NULL END AS INTEGER)) 
+                    FILTER (WHERE "fabric_selections"."process_type" = 'Weaver') 
                     AS "weav_sales_ids",
-                    ARRAY_AGG(CAST(CASE
-                          WHEN
-LOWER("fabric_selections"."process_type") ='dying'
-                          THEN "fabric_selections"."process_id"
-                          ELSE NULL END AS INTEGER))
-                    FILTER (WHERE "fabric_selections"."process_type" = 'dying')
+                    ARRAY_AGG(CAST(CASE 
+                          WHEN LOWER("fabric_selections"."process_type") ='dying' 
+                          THEN "fabric_selections"."process_id" 
+                          ELSE NULL END AS INTEGER)) 
+                    FILTER (WHERE "fabric_selections"."process_type" = 'dying') 
                     AS "dying_sales_ids"
                     FROM washing_fabric_selections fabric_selections
-                    INNER JOIN washing_sales AS "fabricprocess" ON
-"fabric_selections"."sales_id" = "fabricprocess"."id"
-                    LEFT JOIN "fabrics" AS "fabric" ON
-"fabricprocess"."washing_id" = "fabric"."id"
-                     WHERE fabric_selections.sales_id IN
-(${fabrics[0].wash_sales_ids})
-                    GROUP BY
+                    INNER JOIN washing_sales AS "fabricprocess" ON "fabric_selections"."sales_id" = "fabricprocess"."id"
+                    LEFT JOIN "fabrics" AS "fabric" ON "fabricprocess"."washing_id" = "fabric"."id"
+                     WHERE fabric_selections.sales_id IN (${fabrics[0].wash_sales_ids})
+                    GROUP BY 
                         "fabricprocess"."id",
                         "fabric"."id";`)
 
-                        if(printFabrics ){
-                          data = await getWashData(printFabrics)
-                        }
+      if (printFabrics) {
+        data = await getWashData(printFabrics)
+      }
     }
   }
   return data;
@@ -3172,14 +3167,12 @@ const getDyingData = async (fabrics: any) => {
 
     if (knitSales && knitSales.length > 0) {
       knitData = await Promise.all(knitSales.map(async (el: any) => {
-        let spinSales = await getSpinSales('knit_yarn_selections',
-el.knit_process_ids)
+        let spinSales = await getSpinSales('knit_yarn_selections', el.knit_process_ids)
         return {
           ...el,
           type: 'knitter',
           spinsCount: spinSales && spinSales.length > 0 ? spinSales.length : 0,
-          spin: spinSales && spinSales.length > 0 ? await Promise.all( spinSales.map((it:
-            any) => it.reel_lot_no!==null? _getSpinnerProcessTracingChartData(it.reel_lot_no):[])) : []
+          spin: spinSales && spinSales.length > 0 ? spinSales.map((it: any) => _getSpinnerProcessTracingChartData(it.reel_lot_no)) : []
           // spin: []
         }
       })
@@ -3193,19 +3186,14 @@ el.knit_process_ids)
           ...el,
           type: 'weaver',
           spinsCount: spinSales && spinSales.length > 0 ? spinSales.length : 0,
-          
-          spin: spinSales && spinSales.length > 0 ? await Promise.all( spinSales.map((it:
-            any) => it.reel_lot_no!==null?_getSpinnerProcessTracingChartData(it.reel_lot_no):[])) : []
+          spin: spinSales && spinSales.length > 0 ? spinSales.map((it: any) => _getSpinnerProcessTracingChartData(it.reel_lot_no)) : []
           // spin: []
         }
       }))
     }
     let weavKnit = [...knitData, ...weavData];
 
-    let weavKnitChart = weavKnit && weavKnit.length > 0 ?
-weavKnit.map(((el: any) => el.type === 'knitter' ?
-formatDataFromKnitter(el.knit_name, el, 300, 100,'fabric') :
-formatDataFromWeaver(el.weav_name, el, 300, 100,'fabric'))) : [];
+    let weavKnitChart = weavKnit && weavKnit.length > 0 ? weavKnit.map(((el: any) => el.type === 'knitter' ? formatDataFromKnitter(el.knit_name, el) : formatDataFromWeaver(el.weav_name, el))) : [];
 
     data = {
       weavKnit,
@@ -3222,97 +3210,86 @@ const _getFabricProcessTracingChartData = async (type: any, id: any) => {
   let JoinConditon: any;
   let addedQuery: any;
   switch (type) {
-    case 'dying': Model = 'dying_fabric_selections'; Sales =
-'dying_sales'; JoinConditon = 'dying_id'; break;
-    case 'printing': Model = 'printing_fabric_selections'; Sales =
-'printing_sales'; JoinConditon = 'printing_id'; break;
-    case 'washing': Model = 'washing_fabric_selections'; Sales =
-'washing_sales'; JoinConditon = 'washing_id'; break;
-    case 'compacting': Model = 'compacting_fabric_selections'; Sales =
-'compacting_sales'; JoinConditon = 'compacting_id'; break;
+    case 'dying': Model = 'dying_fabric_selections'; Sales = 'dying_sales'; JoinConditon = 'dying_id'; break;
+    case 'printing': Model = 'printing_fabric_selections'; Sales = 'printing_sales'; JoinConditon = 'printing_id'; break;
+    case 'washing': Model = 'washing_fabric_selections'; Sales = 'washing_sales'; JoinConditon = 'washing_id'; break;
+    case 'compacting': Model = 'compacting_fabric_selections'; Sales = 'compacting_sales'; JoinConditon = 'compacting_id'; break;
   };
 
 
-  switch (type){
+  switch (type) {
     case 'dying':
-        addedQuery = `
-            ARRAY_AGG(CAST(CASE
+      addedQuery = `
+            ARRAY_AGG(CAST(CASE 
                 WHEN LOWER("fabric_selections"."process_type") = 'knitter'
-                THEN "fabric_selections"."process_id"
-                ELSE NULL END AS INTEGER)
-            ) FILTER (WHERE LOWER("fabric_selections"."process_type")
-= 'knitter')
+                THEN "fabric_selections"."process_id" 
+                ELSE NULL END AS INTEGER) 
+            ) FILTER (WHERE LOWER("fabric_selections"."process_type") = 'knitter') 
             AS "knit_sales_ids",
-            ARRAY_AGG(CAST(CASE
-                WHEN LOWER("fabric_selections"."process_type") = 'weaver'
-                THEN "fabric_selections"."process_id"
-                ELSE NULL END AS INTEGER)
-            ) FILTER (WHERE LOWER("fabric_selections"."process_type")
-= 'weaver')
+            ARRAY_AGG(CAST(CASE 
+                WHEN LOWER("fabric_selections"."process_type") = 'weaver' 
+                THEN "fabric_selections"."process_id" 
+                ELSE NULL END AS INTEGER) 
+            ) FILTER (WHERE LOWER("fabric_selections"."process_type") = 'weaver') 
             AS "weav_sales_ids"`;
-        break;
+      break;
     case 'printing':
-        addedQuery = `
-            ARRAY_AGG(CAST(CASE
+      addedQuery = `
+            ARRAY_AGG(CAST(CASE 
                 WHEN LOWER("fabric_selections"."process_type") = 'washing_sales'
-                THEN "fabric_selections"."process_id"
-                ELSE NULL END AS INTEGER)
-            ) FILTER (WHERE LOWER("fabric_selections"."process_type")
-= 'washing_sales')
+                THEN "fabric_selections"."process_id" 
+                ELSE NULL END AS INTEGER) 
+            ) FILTER (WHERE LOWER("fabric_selections"."process_type") = 'washing_sales') 
             AS "wash_sales_ids"`;
-        break;
+      break;
     case 'washing':
-        addedQuery = `
-            ARRAY_AGG(CAST(CASE
+      addedQuery = `
+            ARRAY_AGG(CAST(CASE 
                 WHEN LOWER("fabric_selections"."process_type") = 'knitter'
-                THEN "fabric_selections"."process_id"
-                ELSE NULL END AS INTEGER)
-            ) FILTER (WHERE LOWER("fabric_selections"."process_type")
-= 'knitter')
+                THEN "fabric_selections"."process_id" 
+                ELSE NULL END AS INTEGER) 
+            ) FILTER (WHERE LOWER("fabric_selections"."process_type") = 'knitter') 
             AS "knit_sales_ids",
-            ARRAY_AGG(CAST(CASE
-                WHEN LOWER("fabric_selections"."process_type") = 'weaver'
-                THEN "fabric_selections"."process_id"
-                ELSE NULL END AS INTEGER)
-            ) FILTER (WHERE LOWER("fabric_selections"."process_type")
-= 'weaver')
+            ARRAY_AGG(CAST(CASE 
+                WHEN LOWER("fabric_selections"."process_type") = 'weaver' 
+                THEN "fabric_selections"."process_id" 
+                ELSE NULL END AS INTEGER) 
+            ) FILTER (WHERE LOWER("fabric_selections"."process_type") = 'weaver') 
             AS "weav_sales_ids",
-            ARRAY_AGG(CAST(CASE
-                WHEN LOWER("fabric_selections"."process_type") = 'dying'
-                THEN "fabric_selections"."process_id"
-                ELSE NULL END AS INTEGER)
-            ) FILTER (WHERE LOWER("fabric_selections"."process_type") = 'dying')
+            ARRAY_AGG(CAST(CASE 
+                WHEN LOWER("fabric_selections"."process_type") = 'dying' 
+                THEN "fabric_selections"."process_id" 
+                ELSE NULL END AS INTEGER) 
+            ) FILTER (WHERE LOWER("fabric_selections"."process_type") = 'dying') 
             AS "dying_sales_ids"`;
-        break;
+      break;
     case 'compacting':
-        addedQuery = `
-            ARRAY_AGG(CAST(CASE
+      addedQuery = `
+            ARRAY_AGG(CAST(CASE 
                 WHEN LOWER("fabric_selections"."process_type") = 'dying'
-                THEN "fabric_selections"."process_id"
-                ELSE NULL END AS INTEGER)
-            ) FILTER (WHERE LOWER("fabric_selections"."process_type") = 'dying')
+                THEN "fabric_selections"."process_id" 
+                ELSE NULL END AS INTEGER) 
+            ) FILTER (WHERE LOWER("fabric_selections"."process_type") = 'dying') 
             AS "dying_sales_ids",
-            ARRAY_AGG(CAST(CASE
-                WHEN LOWER("fabric_selections"."process_type") = 'washing'
-                THEN "fabric_selections"."process_id"
-                ELSE NULL END AS INTEGER)
-            ) FILTER (WHERE LOWER("fabric_selections"."process_type")
-= 'washing')
+            ARRAY_AGG(CAST(CASE 
+                WHEN LOWER("fabric_selections"."process_type") = 'washing' 
+                THEN "fabric_selections"."process_id" 
+                ELSE NULL END AS INTEGER) 
+            ) FILTER (WHERE LOWER("fabric_selections"."process_type") = 'washing') 
             AS "wash_sales_ids",
-            ARRAY_AGG(CAST(CASE
-                WHEN LOWER("fabric_selections"."process_type") = 'printing'
-                THEN "fabric_selections"."process_id"
-                ELSE NULL END AS INTEGER)
-            ) FILTER (WHERE LOWER("fabric_selections"."process_type")
-= 'printing')
+            ARRAY_AGG(CAST(CASE 
+                WHEN LOWER("fabric_selections"."process_type") = 'printing' 
+                THEN "fabric_selections"."process_id" 
+                ELSE NULL END AS INTEGER) 
+            ) FILTER (WHERE LOWER("fabric_selections"."process_type") = 'printing') 
             AS "print_sales_ids"`;
-        break;
-}
+      break;
+  }
 
-let whereClause = `WHERE fabricprocess.id = ${id}`
+  let whereClause = `WHERE fabricprocess.id = ${id}`
 
-let [fabrics] = await sequelize.query(`
-    SELECT
+  let [fabrics] = await sequelize.query(`
+    SELECT 
         "fabricprocess"."id" AS "fabricprocess_id",
         "fabricprocess"."date" AS "date",
         "fabricprocess"."createdAt" AS "createdAt",
@@ -3323,163 +3300,83 @@ let [fabrics] = await sequelize.query(`
         "fabricprocess"."qr" AS "qr",
         ${addedQuery}
     FROM ${Model} fabric_selections
-    INNER JOIN ${Sales} AS "fabricprocess" ON
-"fabric_selections"."sales_id" = "fabricprocess"."id"
-    LEFT JOIN "fabrics" AS "fabric" ON
-"fabricprocess"."${JoinConditon}" = "fabric"."id"
+    INNER JOIN ${Sales} AS "fabricprocess" ON "fabric_selections"."sales_id" = "fabricprocess"."id"
+    LEFT JOIN "fabrics" AS "fabric" ON "fabricprocess"."${JoinConditon}" = "fabric"."id"
     ${whereClause}
-    GROUP BY
+    GROUP BY 
         "fabricprocess"."id",
         "fabric"."id";
 `);
 
   let data: any = {};
 
-  if(fabrics && fabrics[0]){
+  if (fabrics && fabrics[0]) {
     data = {
       ...fabrics[0],
     }
 
-  if(type === 'dying'){
-    let ndata = await getDyingData(fabrics);
+    if (type === 'dying') {
+      let ndata = await getDyingData(fabrics);
 
-    data = {
-      ...data,
-      ...ndata
-    }
-  }
-
-  if(type === 'washing'){
-    let ndata = await getWashData(fabrics);
-
-    data = {
-      ...data,
-      ...ndata
-    }
-  }
-
-  if(type === 'printing'){
-    let ndata = await getPrintData(fabrics);
-
-    data = {
-      ...data,
-      ...ndata
-    }
-  }
-
-  if(type === 'compacting'){
-    
-  if(fabrics && fabrics[0]){
-    let ndata;
-    if(fabrics[0].dying_sales_ids && fabrics[0].dying_sales_ids.length > 0){
-      let [dyingFabrics] = await sequelize.query(`
-        SELECT
-                    "fabricprocess"."id" AS "fabricprocess_id",
-                    "fabricprocess"."batch_lot_no" AS "batch_lot_no",
-                    "fabric"."id" AS "fabric_id",
-                    "fabric"."name" AS "fabric_name",
-                    ARRAY_AGG(CAST(CASE
-                          WHEN
-LOWER("fabric_selections"."process_type") = 'knitter'
-                          THEN "fabric_selections"."process_id"
-                          ELSE NULL END AS INTEGER))
-                    FILTER (WHERE "fabric_selections"."process_type" =
-'Knitter')
-                    AS "knit_sales_ids",
-                    ARRAY_AGG(CAST(CASE
-                          WHEN
-LOWER("fabric_selections"."process_type") ='weaver'
-                          THEN "fabric_selections"."process_id"
-                          ELSE NULL END AS INTEGER))
-                    FILTER (WHERE "fabric_selections"."process_type" = 'Weaver')
-                    AS "weav_sales_ids"
-                    FROM dying_fabric_selections fabric_selections
-                    INNER JOIN dying_sales AS "fabricprocess" ON
-"fabric_selections"."sales_id" = "fabricprocess"."id"
-                    LEFT JOIN "fabrics" AS "fabric" ON
-"fabricprocess"."dying_id" = "fabric"."id"
-                     WHERE fabric_selections.sales_id IN
-(${fabrics[0].dying_sales_ids})
-                    GROUP BY
-                        "fabricprocess"."id",
-                        "fabric"."id";`)
-
-      if (dyingFabrics) {
-        ndata = await getDyingData(dyingFabrics);
-      }
       data = {
         ...data,
         ...ndata
       }
     }
-    if(fabrics[0].wash_sales_ids && fabrics[0].wash_sales_ids.length > 0){
+
+    if (type === 'washing') {
+      let ndata = await getWashData(fabrics);
+
+      data = {
+        ...data,
+        ...ndata
+      }
+    }
+
+    if (type === 'printing') {
       let ndata = await getPrintData(fabrics);
-      console.log(ndata)
-      data.weavKnitChart = data && data.weavKnitChart ?
-      [...data.weavKnitChart, {spin:ndata.weavKnit[0].spin}] : ndata.weavKnitChart;
+
+      data = {
+        ...data,
+        ...ndata
+      }
     }
 
-    if(fabrics[0].print_sales_ids && fabrics[0].print_sales_ids.length > 0){
-      let ndata
-      let [printFabrics] = await sequelize.query(`
-        SELECT
-                    "fabricprocess"."id" AS "fabricprocess_id",
-                    "fabricprocess"."batch_lot_no" AS "batch_lot_no",
-                    "fabric"."id" AS "fabric_id",
-                    "fabric"."name" AS "fabric_name",
-                    ARRAY_AGG(CAST(CASE
-                          WHEN
-LOWER("fabric_selections"."process_type") = 'knitter'
-                          THEN "fabric_selections"."process_id"
-                          ELSE NULL END AS INTEGER))
-                    FILTER (WHERE "fabric_selections"."process_type" =
-'Knitter')
-                    AS "knit_sales_ids",
-                    ARRAY_AGG(CAST(CASE
-                          WHEN
-LOWER("fabric_selections"."process_type") ='weaver'
-                          THEN "fabric_selections"."process_id"
-                          ELSE NULL END AS INTEGER))
-                    FILTER (WHERE "fabric_selections"."process_type" = 'Weaver')
-                    AS "weav_sales_ids",
-                    ARRAY_AGG(CAST(CASE
-                          WHEN
-LOWER("fabric_selections"."process_type") ='dying'
-                          THEN "fabric_selections"."process_id"
-                          ELSE NULL END AS INTEGER))
-                    FILTER (WHERE "fabric_selections"."process_type" = 'dying')
-                    AS "dying_sales_ids"
-                    FROM washing_fabric_selections fabric_selections
-                    INNER JOIN washing_sales AS "fabricprocess" ON
-"fabric_selections"."sales_id" = "fabricprocess"."id"
-                    LEFT JOIN "fabrics" AS "fabric" ON
-"fabricprocess"."washing_id" = "fabric"."id"
-                     WHERE fabric_selections.sales_id IN
-(${fabrics[0].print_sales_ids})
-                    GROUP BY
-                        "fabricprocess"."id",
-                        "fabric"."id";`)
+    if (type === 'compacting') {
+      if (fabrics && fabrics[0]) {
+        if (fabrics[0].dying_sales_ids && fabrics[0].dying_sales_ids.length > 0) {
+          let ndata = await getDyingData(fabrics);
 
-                        if(printFabrics ){
-                          ndata= await getPrintData(printFabrics);
-                        }
-      data.weavKnit = data && data.weavKnitChart ? [...data.weavKnit,
-...ndata.weavKnit] : ndata.weavKnit;
-      data.weavKnitChart = data && data.weavKnitChart ?
-[...data.weavKnitChart, ...ndata.weavKnitChart] : ndata.weavKnitChart;
+          data = {
+            ...data,
+            ...ndata
+          }
+        }
+        if (fabrics[0].wash_sales_ids && fabrics[0].wash_sales_ids.length > 0) {
+          let ndata = await getWashData(fabrics);
+
+          data.weavKnit = data && data.weavKnitChart ? [...data.weavKnit, ...ndata.weavKnit] : ndata.weavKnit;
+          data.weavKnitChart = data && data.weavKnitChart ? [...data.weavKnitChart, ...ndata.weavKnitChart] : ndata.weavKnitChart;
+        }
+
+        if (fabrics[0].print_sales_ids && fabrics[0].print_sales_ids.length > 0) {
+          let ndata = await getPrintData(fabrics);
+
+          data.weavKnit = data && data.weavKnitChart ? [...data.weavKnit, ...ndata.weavKnit] : ndata.weavKnit;
+          data.weavKnitChart = data && data.weavKnitChart ? [...data.weavKnitChart, ...ndata.weavKnitChart] : ndata.weavKnitChart;
+        }
+      }
     }
   }
-  }
-}
 
   return formartDataForFabric(data.fabric_name, [data]);
 }
 
-const getFabricProcessTracingChartData = async (req: Request, res:
-Response) => {
+const getFabricProcessTracingChartData = async (req: Request, res: Response) => {
   const { type, id } = req.query;
   res.send(await _getFabricProcessTracingChartData(type, id));
 }
+
 
 const exportTransactionList = async (req: Request, res: Response) => {
   const excelFilePath = path.join("./upload", "Fabric_dying_transaction_list.xlsx");

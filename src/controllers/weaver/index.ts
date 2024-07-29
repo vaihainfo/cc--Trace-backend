@@ -1578,7 +1578,7 @@ const getFabrics = async (req: Request, res: Response) => {
 };
 
 const chooseWeaverFabric = async (req: Request, res: Response) => {
-  const { weaverId, programId, lotNo, reelLotNo, noOfRolls, fabricType }: any =
+  const { weaverId, programId, lotNo, reelLotNo, noOfRolls, fabricType, seasonId }: any =
     req.query;
 
   const whereCondition: any = {};
@@ -1607,6 +1607,13 @@ const chooseWeaverFabric = async (req: Request, res: Response) => {
         .split(",")
         .map((id: any) => parseInt(id, 10));
       whereCondition.fabric_type = { [Op.overlap]: idArray };
+    }
+
+    if (seasonId) {
+      const idArray: any[] = seasonId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.season_id = { [Op.in]: idArray };
     }
 
     let include = [

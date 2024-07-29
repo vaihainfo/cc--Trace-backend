@@ -2586,14 +2586,14 @@ const generateGinnerCottonStock = async () => {
           [Sequelize.literal('"season"."id"'), "season_id"],
           [Sequelize.col('"season"."name"'), "season_name"],
           // [Sequelize.literal('"program"."program_name"'), 'program_name'],
-          [
-            sequelize.fn(
-              "COALESCE",
-              sequelize.fn("SUM", sequelize.col("total_qty")),
-              0
-            ),
-            "cotton_processed",
-          ],
+          // [
+          //   sequelize.fn(
+          //     "COALESCE",
+          //     sequelize.fn("SUM", sequelize.col("total_qty")),
+          //     0
+          //   ),
+          //   "cotton_processed",
+          // ],
         ],
         include: include,
         group: ["ginner.id", "season.id"],
@@ -2663,19 +2663,21 @@ const generateGinnerCottonStock = async () => {
           ],
           where: {
             mapped_ginner: item.ginner_id,
+            season_id: item.season_id,
             status: "Sold",
           },
         });
 
         obj.cotton_procured = cottonProcured?.dataValues?.cotton_procured ?? 0;
         obj.cotton_stock = cottonProcured?.dataValues?.cotton_stock ?? 0;
+        obj.cotton_processed =  obj.cotton_procured  - obj.cotton_stock;
 
         const rowValues = Object.values({
           index: index + offset + 1,
           ginner: item?.dataValues.ginner_name ? item?.dataValues.ginner_name : "",
           season: item?.dataValues.season_name ? item?.dataValues.season_name : "",
           cotton_procured: obj.cotton_procured ? Number(obj.cotton_procured) : 0,
-          cotton_processed: item?.dataValues?.cotton_processed ? Number(item?.dataValues?.cotton_processed) : 0,
+          cotton_processed: obj.cotton_processed ? Number(obj.cotton_processed) : 0,
           cotton_stock: obj.cotton_stock ? Number(obj.cotton_stock) : 0,
         });
         currentWorksheet.addRow(rowValues).commit();
