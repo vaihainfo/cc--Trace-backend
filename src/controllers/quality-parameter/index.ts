@@ -811,7 +811,7 @@ const reportDashBoardParameter = async (req: Request, res: Response) => {
         
         if (brandId) {
             const idArray = brandId.split(",").map((id: any) => parseInt(id, 10));
-            whereConditions.push(`pr.brand_id IN (:brandIds)`);
+            whereConditions.push(`pr.brand && ARRAY[:brandIds]`);
             replacements.brandIds = idArray;
         }
         
