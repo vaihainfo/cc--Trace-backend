@@ -390,7 +390,9 @@ const getTopSpinners = async (
 const getTopSpinnersData = async (
   where: any
 ) => {
-
+  where['$buyerdata.name$'] = {
+    [Op.not]: null
+  };
   const result = await GinSales.findAll({
     attributes: [
       [Sequelize.fn('SUM', Sequelize.col('gin_sales.total_qty')), 'total'],
@@ -1400,19 +1402,45 @@ const getLintStockTopGinnersData = async (
 ) => {
 
 
-  const [result] = await sequelize.query(`
-      select  g.name                                  as "ginnerName",
-              sum(gp.total_qty) - sum(gs.no_of_bales) as total
-      from public.ginners g
-        left join public.gin_processes gp on g.id = gp.ginner_id
-        left join public.gin_sales gs on g.id = gs.ginner_id
-      where g.name is not null ${reqData?.country ? " and g.country_id = reqData?.country" : ""}
-      group by g.id
-      order by total DESC nulls last
-      limit 10;
+  const [processedList] = await sequelize.query(`
+    select g.name                                    as "ginnerName",
+         g.id                                      as "id",
+         sum(CAST(gbp.weight AS DOUBLE PRECISION)) as "processed"
+    from public.ginners g
+         left join public.gin_processes gp on gp.ginner_id = g.id
+         left join public."gin-bales" gbp on gbp.process_id = gp.id
+    where g.name is not null ${reqData?.country ? " and g.country_id = reqData?.country" : ""}
+    group by g.id; 
     `);
 
-  return result;
+  const [soldList] = await sequelize.query(`
+      select g.name                                   as "ginnerName",
+         g.id                                      as "id",
+        sum(CAST(gb.weight AS DOUBLE PRECISION)) as "sold"
+      from public.ginners g
+         left join public.gin_sales gs on g.id = gs.ginner_id
+         left join public.bale_selections bs on bs.sales_id = gs.id
+         left join public."gin-bales" gb on gb.id = bs.bale_id
+    where g.name is not null ${reqData?.country ? " and g.country_id = reqData?.country" : ""}
+    group by g.id;
+      `);
+
+  let ginnerIds = soldList.map((row: any) => row.id)
+  ginnerIds.push([...processedList.map((row: any) => row.id)]);
+
+  ginnerIds = [...new Set(ginnerIds)];
+  const data = []
+  for(const ginnerId of ginnerIds) {
+    const fProcessed = processedList.find((processed: any) => processed.id === ginnerId);
+    const fSold = soldList.find((sold: any) => sold.id === ginnerId);
+    data.push({
+      ginnerName: fProcessed ? fProcessed.ginnerName: fSold ? fSold.ginnerName : '',
+      total: (fProcessed?.processed ?? 0 ) - (fSold?.sold ?? 0)
+    })
+  }
+
+  
+  return data.sort((a,b) => b.total - a.total).splice(0,10);
 
 };
 
@@ -1881,8 +1909,8 @@ const getOutturnCountryRes = async (
 };
 
 const mtConversion = (value: number) => {
-  return value > 0 ? Number((value / 1000).toFixed(2)) : 0
-}
+  return value > 0 ? Number((value / 1000).toFixed(2)) : 0;
+};
 
 const getProcuredByCountry = async (
   req: Request, res: Response
@@ -2529,13 +2557,13 @@ const getBaleStockDataRes = async (
         list.dataValues.seasonId == seasonId
       );
       if (fProcuredValue) {
-         farmerCount.procured = formatNumber(fProcuredValue.dataValues.procured);
+        farmerCount.procured = formatNumber(fProcuredValue.dataValues.procured);
         if (!seasonList.includes(fProcuredValue.dataValues.seasonName))
           seasonList.push(fProcuredValue.dataValues.seasonName);
       }
 
       if (fSoldValue) {
-         farmerCount.sold = formatNumber(fSoldValue.dataValues.sold);
+        farmerCount.sold = formatNumber(fSoldValue.dataValues.sold);
         if (!seasonList.includes(fSoldValue.dataValues.seasonName))
           seasonList.push(fSoldValue.dataValues.seasonName);
       }
