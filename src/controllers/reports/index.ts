@@ -17049,6 +17049,121 @@ const exportBrandWiseDataReport = async (req: Request, res: Response) => {
   }
 }
 
+const fetchEntryDataPagination = async (req: Request, res: Response) => {
+  const page = Number(req.query.page) || 1;
+  const limit = Number(req.query.limit) || 10;
+  const { seasonId, countryId, type, duration, processor, sort }: any = req.query;
+  const offset = (page - 1) * limit;
+  const whereCondition: any = [];
+  try {
+    if (processor == 'Ginner') {
+      if (seasonId) {
+        const idArray: number[] = seasonId
+          .split(",")
+          .map((id: any) => parseInt(id, 10));
+        whereCondition.push(`PR.season_id in (${idArray})`)
+      }
+
+      if (countryId) {
+        const idArray: number[] = countryId
+          .split(",")
+          .map((id: any) => parseInt(id, 10));
+        whereCondition.push(`GN.country_id in (${idArray})`)
+      }
+
+      let durationDate: any;
+      if (duration) {
+        const date = new Date();
+        date.setDate(date.getDate() - duration);
+        durationDate = moment(date).format('YYYY-MM-DD 00:00:00')
+      }
+      const whereClause = whereCondition.length > 0 ? `WHERE ${whereCondition.join(' AND ')} ` : '';
+
+      //fetch process data with pagination
+      if (type == 'Process') {
+        const [raws] = await sequelize.query(`
+              select GN.id                                            as "ginner_id",
+                  GN.name                                             as "ginner_name",
+                  max(PR.date)                                        as "date",
+                  CO.id                                               as "country_id",
+                  CO.county_name                                      as "country_name",
+                  array_to_string(array_agg(distinct SE.id), ',')     as "season_id",
+                  array_to_string(array_agg(distinct SE.name), ',')   as "season_name"
+              from ginners GN
+                      left join gin_processes GP
+                                on GN.id = GP.ginner_id and date between '${durationDate}' and now()
+                      left join gin_processes PR on GN.id = PR.ginner_id
+                      left join countries CO on CO.id = GN.country_id
+                      left join seasons SE on SE.id = PR.season_id
+              ${whereClause}
+              group by GN.id, CO.id
+              having count(GP.id) = 0
+              order by date ${sort ?? 'asc'} nulls last
+              limit ${limit}
+              offset ${offset}
+      `);
+
+        const [raw, result] = await sequelize.query(`
+          select 
+            GN.id
+          from ginners GN
+                  left join gin_processes GP
+                            on GN.id = GP.ginner_id and date between '${durationDate}' and now()
+                  left join gin_processes PR on GN.id = PR.ginner_id
+                  left join countries CO on CO.id = GN.country_id
+                  left join seasons SE on SE.id = PR.season_id
+          ${whereClause}
+          group by GN.id, CO.id
+          having count(GP.id) = 0
+        `);
+
+        return res.sendPaginationSuccess(res, raws, result.rowCount);
+      } else {
+        const [raws] = await sequelize.query(`
+            select GN.id                                          as "ginner_id",
+              GN.name                                             as "ginner_name",
+              max(PR.date)                                        as "date",
+              CO.id                                               as "country_id",
+              CO.county_name                                      as "country_name",
+              array_to_string(array_agg(distinct SE.id), ',')     as "season_id",
+              array_to_string(array_agg(distinct SE.name), ',')   as "season_name"
+            from ginners GN
+                    left join gin_sales GS
+                              on GN.id = GS.ginner_id and date between '${durationDate}' and now()
+                    left join gin_sales PR on GN.id = PR.ginner_id
+                    left join countries CO on CO.id = GN.country_id
+                    left join seasons SE on SE.id = PR.season_id
+            ${whereClause}
+            group by GN.id, CO.id
+            having count(GS.id) = 0
+            order by date ${sort ?? 'asc'} nulls last
+            limit ${limit}
+            offset ${offset}
+      `);
+
+        const [raw, result] = await sequelize.query(`
+        select 
+          GN.id
+        from ginners GN
+                left join gin_sales GP
+                          on GN.id = GP.ginner_id and date between '${durationDate}' and now()
+                    left join gin_sales PR on GN.id = PR.ginner_id
+                    left join countries CO on CO.id = GN.country_id
+                    left join seasons SE on SE.id = PR.season_id
+        ${whereClause}
+        group by GN.id
+        having count(GP.id) = 0
+      `);
+
+        return res.sendPaginationSuccess(res, raws, result.rowCount);
+      }
+    }
+  } catch (error: any) {
+    console.error(error);
+    return res.sendError(res, error.message);
+  }
+};
+
 
 export {
   fetchBaleProcess,
@@ -17113,5 +17228,6 @@ export {
   exportBrandWiseDataReport,
   fetchSpinnerGreyOutReport,
   exportSpinnerGreyOutReport,
+  fetchEntryDataPagination
 };
 
