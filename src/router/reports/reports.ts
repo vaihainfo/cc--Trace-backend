@@ -65,7 +65,8 @@ import {
     spinnerProcessBackwardTraceabiltyReport,
     exportSpinProcessBackwardfTraceabilty,
     brandWiseDataReport,
-    exportBrandWiseDataReport
+    exportBrandWiseDataReport,
+    fetchEntryDataPagination
 } from "../../controllers/reports";
 import accessControl from "../../middleware/access-control";
 
@@ -157,5 +158,7 @@ router.get('/export-spin-process-backward-traceability-report', exportSpinProces
 
 router.get('/get-brand-wise-data-report', brandWiseDataReport);
 router.get('/export-brand-wise-data-report', exportBrandWiseDataReport);
+
+router.get('/entry/data', fetchEntryDataPagination);
 
 export default router;  

@@ -1043,9 +1043,9 @@ const updateGinnerSales = async (req: Request, res: Response) => {
         });
         if (bale) {
           await GinBale.update(
-            { 
-              old_weight: Sequelize.literal('weight'),  
-              weight: obj.newWeight 
+            {
+              old_weight: Sequelize.literal('weight'),
+              weight: obj.newWeight
             },
             { where: { id: bale.dataValues.id } }
           );
@@ -1228,15 +1228,15 @@ const fetchGinSale = async (req: Request, res: Response) => {
     });
 
     const baleData = await BaleSelection.findAll({
-      where:  {
+      where: {
         sales_id: gin.id,
       },
-      include: [{ model: GinBale,  as: "bale" }],    
+      include: [{ model: GinBale, as: "bale" }],
     });
 
     const response = {
       gin,
-      bale: baleData?.map((item:any)=> item.bale),
+      bale: baleData?.map((item: any) => item.bale),
     };
     return res.sendSuccess(res, response);
   } catch (error: any) {
@@ -1465,7 +1465,7 @@ const getReelBaleId = async (req: Request, res: Response) => {
 
     let prcs_date = day + month + year;
     var bale_no = baleCount ? Number(baleCount ?? 0) + 1 : 1;
-    const random_number = +performance.now().toString().replace('.', '7').substring(0,4)
+    const random_number = +performance.now().toString().replace('.', '7').substring(0, 4)
     var reelbale_id = baleid_prefix + prcs_date + "/" + String(random_number);
     res.sendSuccess(res, { id: reelbale_id });
   } catch (error: any) {
@@ -1504,8 +1504,8 @@ const getSpinner = async (req: Request, res: Response) => {
   if (!ginnerId) {
     return res.sendError(res, "Need Ginner Id ");
   }
-  if(req.query.status=='true'){
-    whereCondition.status=true
+  if (req.query.status == 'true') {
+    whereCondition.status = true
   }
 
   let ginner = await Ginner.findOne({ where: { id: ginnerId } });
@@ -1514,7 +1514,7 @@ const getSpinner = async (req: Request, res: Response) => {
   }
   let result = await Spinner.findAll({
     attributes: ["id", "name"],
-    where: { ...whereCondition,brand: { [Op.overlap]: ginner.dataValues.brand } },
+    where: { ...whereCondition, brand: { [Op.overlap]: ginner.dataValues.brand } },
   });
   res.sendSuccess(res, result);
 };

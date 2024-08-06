@@ -25,14 +25,14 @@ import {
     updateGinnerProcess,
     updateGinnerSalesField,
     fetchGinProcess,
-    checkReport
+    checkReport,
 } from "../../controllers/ginner";
 import accessControl from "../../middleware/access-control";
 import { Router } from "express";
 
 const router = Router();
 
-router.use(accessControl);
+// router.use(accessControl);
 
 // Ginner Routes
 router.get('/', fetchGinProcessPagination);
@@ -64,5 +64,6 @@ router.get('/get-village-farmer', getVillageAndFarmer);
 router.get('/export-ginner-transactions', exportGinnerProcurement);
 router.get('/tracing/chart', getGinnerProcessTracingChartData);
 router.get('/check-report', checkReport);
+
 
 export default router;
