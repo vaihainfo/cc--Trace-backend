@@ -45,7 +45,7 @@ const fetchOldGarmentSales = async (req: Request, res: Response) => {
 
         if (brandId)
             queryOptions.where = {
-                ["$garment.brand$"]: { [Op.contained]: [brandId] }
+                ["$garment.brand$"]: { [Op.contains]: [brandId] }
             }
         if (req.query.pagination === "true") {
             queryOptions.offset = offset;
