@@ -66,7 +66,7 @@ import {
     exportSpinProcessBackwardfTraceabilty,
     brandWiseDataReport,
     exportBrandWiseDataReport,
-    fetchEntryDataPagination
+    fetchDataEntryMonitorDashboardPagination,
 } from "../../controllers/reports";
 import accessControl from "../../middleware/access-control";
 
@@ -159,6 +159,6 @@ router.get('/export-spin-process-backward-traceability-report', exportSpinProces
 router.get('/get-brand-wise-data-report', brandWiseDataReport);
 router.get('/export-brand-wise-data-report', exportBrandWiseDataReport);
 
-router.get('/entry/data', fetchEntryDataPagination);
+router.get('/entry/data/monitoring/dashboard', fetchDataEntryMonitorDashboardPagination);
 
 export default router;  
