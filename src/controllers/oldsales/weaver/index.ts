@@ -4,7 +4,8 @@ import OldWeaverSales from "../../../models/old-weaver-sales.model";
 import Season from "../../../models/season.model";
 import FabricType from "../../../models/fabric-type.model";
 import Program from "../../../models/program.model";
-import Garment from "../../../models/garment.model";
+import { Op } from "sequelize";
+import Weaver from "../../../models/weaver.model";
 
 const fetchOldWeaverSales = async (req: Request, res: Response) => {
     // const searchTerm = req.query.search || "";
@@ -13,6 +14,7 @@ const fetchOldWeaverSales = async (req: Request, res: Response) => {
     const page = Number(req.query.page) || 1;
     const limit = Number(req.query.limit) || 10;
     const offset = (page - 1) * limit;
+    const brandId = Number(req.query.brandId) || null;
 
     try {
         let queryOptions: any = {
@@ -23,8 +25,8 @@ const fetchOldWeaverSales = async (req: Request, res: Response) => {
                     as: "program_data",
                 },
                 {
-                    model: Garment,
-                    as: "garment",
+                    model: Weaver,
+                    as: "weaver",
                 },
                 {
                     model: FabricType,
@@ -40,6 +42,11 @@ const fetchOldWeaverSales = async (req: Request, res: Response) => {
             let sort = sortOrder === 'asc' ? 'ASC' : 'DESC';
             queryOptions.order = [[sortField, sort]];
         }
+        if (brandId)
+            queryOptions.where = {
+                ["$weaver.brand$"]: { [Op.contained]: [brandId] }
+            }
+
         if (req.query.pagination === "true") {
             queryOptions.offset = offset;
             queryOptions.limit = limit;

@@ -1,16 +1,17 @@
 import { Request, Response } from "express";
-// import { Op } from "sequelize";
+import { Op, Sequelize } from "sequelize";
 import OldKnitterSales from "../../../models/old-knitter-sales.model";
 import Season from "../../../models/season.model";
 import FabricType from "../../../models/fabric-type.model";
 import Program from "../../../models/program.model";
-import Garment from "../../../models/garment.model";
+import Knitter from "../../../models/knitter.model";
 
 const fetchOldKnitterSales = async (req: Request, res: Response) => {
     // const searchTerm = req.query.search || "";
     const sortOrder = req.query.sort || "desc";
     const sortField = req.query.sortBy || "id";
     const page = Number(req.query.page) || 1;
+    const brandId = Number(req.query.brandId) || null;
     const limit = Number(req.query.limit) || 10;
     const offset = (page - 1) * limit;
 
@@ -23,8 +24,8 @@ const fetchOldKnitterSales = async (req: Request, res: Response) => {
                     as: "program_data",
                 },
                 {
-                    model: Garment,
-                    as: "garment",
+                    model: Knitter,
+                    as: "knitter",
                 },
                 {
                     model: FabricType,
@@ -39,6 +40,12 @@ const fetchOldKnitterSales = async (req: Request, res: Response) => {
         if (sortOrder === "asc" || sortOrder === "desc") {
             let sort = sortOrder === 'asc' ? 'ASC' : 'DESC';
             queryOptions.order = [[sortField, sort]];
+        }
+
+        if (brandId) {
+            queryOptions.where = {
+                ["$knitter.brand$"]: { [Op.contained]: [brandId] }
+            }
         }
         if (req.query.pagination === "true") {
             queryOptions.offset = offset;
