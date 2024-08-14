@@ -170,7 +170,7 @@ const getUserInfo = async (req: Request, res: Response) => {
             Brand.findOne({ where: { 
                 [Op.or] : [{
                 brandUser_id: { [Op.contains]: [user.dataValues.id] } },
-                {id: { [Op.in]: [user.dataValues.brand_mapped ? user.dataValues.brand_mapped : 0] } }
+                {id: { [Op.in]: [user.dataValues.brand_mapped.length ? user.dataValues.brand_mapped : 0] } }
          ] }}),
             PhysicalPartner.findOne({ where: { physicalPartnerUser_id: { [Op.contains]: [user.dataValues.id] } } })
         ]);
