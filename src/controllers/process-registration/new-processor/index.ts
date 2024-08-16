@@ -324,7 +324,6 @@ const updateProcessor = async (req: Request, res: Response) => {
     try {
         let userIds = [];
         let allUserInactive = false; 
-        console.log("------------------------------------HELLLLLLLLO I AM HERE-------------------------------------",req.body)
 
         for await (let user of req.body.userData) {
             const userData = {
