@@ -71,10 +71,10 @@ import { NUMBER } from "sequelize";
 
 const exportReportsTameTaking = async () => {
   // //call all export reports one by one on every cron
-  await generateOrganicFarmerReport();
-  await generateNonOrganicFarmerReport();
+  // await generateOrganicFarmerReport();
+  // await generateNonOrganicFarmerReport();
   await generateProcurementReport(); // taking time
-  await generateAgentTransactions(); // taking time
+  // await generateAgentTransactions(); // taking time
   
   console.log('TameTaking Cron Job Completed to execute all reports.');
 }
