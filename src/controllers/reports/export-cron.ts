@@ -930,10 +930,10 @@ const generateProcurementReport = async () => {
     const batchSize = 100000; // Number of transactions to fetch per batch
     const maxRowsPerWorksheet = 500000; // Maximum number of rows per worksheet in Excel
 
+    console.log("Report generation start--------------------");
     const workbook = new ExcelJS.stream.xlsx.WorkbookWriter({
       stream: fs.createWriteStream("./upload/procurement-report-test.xlsx")
     });
-
     let worksheetIndex = 0;
     let offset = 0;
     // Function to write a batch of transactions to the worksheet
