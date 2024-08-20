@@ -1365,7 +1365,11 @@ const fetchTransactionAlert = async (req: Request, res: Response) => {
     const limit = Number(req.query.limit) || 10;
     const { ginnerId, status, filter, programId, spinnerId, seasonId }: any = req.query;
     const offset = (page - 1) * limit;
-    const whereCondition: any = {};
+    const afterDate = new Date('2019-11-01');
+    const whereCondition: any = {
+        date: { [Op.gte]: afterDate }
+    };
+
     try {
         if (searchTerm) {
             whereCondition[Op.or] = [
@@ -1376,6 +1380,7 @@ const fetchTransactionAlert = async (req: Request, res: Response) => {
                 { '$season.name$': { [Op.iLike]: `%${searchTerm}%` } }, // Search by crop Type
             ];
         }
+        
         if (status === 'Pending') {
             whereCondition.buyer = spinnerId
             whereCondition.status = { [Op.in]: ['Pending', 'Pending for QR scanning', 'Partially Accepted', 'Partially Rejected'] }

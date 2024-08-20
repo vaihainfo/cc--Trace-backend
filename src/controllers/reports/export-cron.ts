@@ -595,6 +595,7 @@ const generateOrganicFarmerReport = async () => {
     while (true) {
       const farmer = await sequelize.query(`
         SELECT
+          "fr"."id",
           "fr"."firstName" AS "Farmer Name",
           "fr"."lastName" AS "Farmer Last Name",
           fr.tracenet_id AS "Tracenet ID",
@@ -632,6 +633,7 @@ const generateOrganicFarmerReport = async () => {
           LEFT JOIN
               farm_groups fg ON "fr"."farmGroup_id" = fg.id
           WHERE "pr"."program_name" ILIKE '%Organic%'
+          ORDER BY "fr"."id" ASC
           LIMIT :limit OFFSET :offset`, {
             replacements: { limit: batchSize, offset },
             type: sequelize.QueryTypes.SELECT,
@@ -724,6 +726,7 @@ const generateNonOrganicFarmerReport = async () => {
     while (true) {
       const farmer = await sequelize.query(`
         SELECT
+          "fr"."id",
           "fr"."firstName" AS "Farmer Name",
           "fr"."lastName" AS "Farmer Last Name",
           fr.agri_total_area AS "Total Agricultural Area",
@@ -756,6 +759,7 @@ const generateNonOrganicFarmerReport = async () => {
               villages vt ON fr.village_id = vt.id
           WHERE
               pr.program_name NOT LIKE '%Organic%'
+          ORDER BY "fr"."id" ASC
           LIMIT :limit OFFSET :offset`, {
             replacements: { limit: batchSize, offset },
             type: sequelize.QueryTypes.SELECT,
@@ -1010,6 +1014,7 @@ const generateProcurementReport = async () => {
       LEFT JOIN users_apps ag ON tr.agent_id = ag.id
       WHERE
           tr.status = 'Sold'
+      ORDER BY tr.id ASC
       LIMIT :limit OFFSET :offset`, {
       replacements: { limit: batchSize, offset },
       type: sequelize.QueryTypes.SELECT,
@@ -1030,7 +1035,7 @@ const generateProcurementReport = async () => {
         currentWorksheet = workbook.addWorksheet(`Procurement Report ${worksheetIndex}`);
 
         if (worksheetIndex == 1) {
-          currentWorksheet.mergeCells('A1:O1');
+          currentWorksheet.mergeCells('A1:T1');
           const mergedCell = currentWorksheet.getCell('A1');
           mergedCell.value = 'Cotton Connect | Procurement Report';
           mergedCell.font = { bold: true };
@@ -1749,6 +1754,7 @@ const generateAgentTransactions = async () => {
         WHERE
           tr.agent_id IS NOT NULL
           AND tr.agent_id <> 0
+        ORDER BY tr.id ASC
         LIMIT :limit OFFSET :offset`, {
         replacements: { limit: batchSize, offset },
         type: sequelize.QueryTypes.SELECT,
