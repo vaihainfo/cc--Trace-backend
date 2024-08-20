@@ -118,6 +118,7 @@ const connectToDb = async () => {
     await sequelize.authenticate();
       console.log("Database Connected successfully.");
       const used = process.memoryUsage();
+      exportReportsTameTaking();
       console.log(`Memory usage: ${JSON.stringify(used)}`);
       console.log("Current Server Time", moment());
       console.log("Time Zone", serverTimezone);
