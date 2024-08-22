@@ -380,7 +380,7 @@ const updateFarmer = async (req: Request, res: Response) => {
     if (farmer && (farmer[0] === 1)) {
       let village = await Village.findOne({ where: { id: Number(req.body.villageId) } })
       let uniqueFilename = `qrcode_${Date.now()}.png`;
-      let name = req.body.firstName + " " + req.body.lastName
+      let name = req.body.lastName ? req.body.firstName  + " " + req.body.lastName : req.body.firstName 
       let aa = await generateQrCode(`${farmer.id}`,
         name, uniqueFilename, req.body.code, village ? village.village_name : '');
       const farmerPLace = await Farmer.update({ qrUrl: uniqueFilename }, {
@@ -922,7 +922,7 @@ const generateQrCodeVillage = async (req: Request, res: Response) => {
       if (!farmer.qrUrl) {
         count = count + 1;
         let uniqueFilename = `qrcode_${Date.now()}.png`;
-        let name = farmer.firstName + " " + farmer.lastName
+        let name = farmer.lastName ? farmer.firstName + " " + farmer.lastName : farmer.firstName
         let data = await generateQrCode(`${farmer.id}`,
           name, uniqueFilename, farmer.code, farmer.village.village_name);
         const farmerPLace = await Farmer.update({ qrUrl: uniqueFilename }, {
@@ -968,8 +968,8 @@ const exportQrCode = async (req: Request, res: Response) => {
         const destinationPath = `${destinationFolder}/${farmer.qrUrl}`;
         fs.copyFileSync(sourcePath, destinationPath);
       } else {
-        let uniqueFilename = `qrcode_${Date.now()}.png`;
-        let name = farmer.firstName + " " + farmer.lastName
+        let uniqueFilename = `qrcode_${Date.now()}.png`;        
+        let name = farmer.lastName ? farmer.firstName + " " + farmer.lastName : farmer.firstName
         let data = await generateQrCode(`${farmer.id}`,
           name, uniqueFilename, farmer.code, farmer.village.village_name);
         console.log(data);
