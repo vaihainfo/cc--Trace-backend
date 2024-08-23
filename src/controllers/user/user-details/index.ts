@@ -167,11 +167,15 @@ const getUserInfo = async (req: Request, res: Response) => {
             Garment.findOne({ where: { garmentUser_id: { [Op.contains]: [user.dataValues.id] } } }),
             Trader.findOne({ where: { traderUser_id: { [Op.contains]: [user.dataValues.id] } } }),
             Fabric.findOne({ where: { fabricUser_id: { [Op.contains]: [user.dataValues.id] } } }),
-            Brand.findOne({ where: { 
-                [Op.or] : [{
-                brandUser_id: { [Op.contains]: [user.dataValues.id] } },
-                {id: { [Op.in]: [user.dataValues.brand_mapped.length ? user.dataValues.brand_mapped : 0] } }
-         ] }}),
+            Brand.findOne({
+                where: {
+                    [Op.or]: [{
+                        brandUser_id: { [Op.contains]: [user.dataValues.id] }
+                    },
+                    { id: { [Op.in]: [user.dataValues.brand_mapped?.length ? user.dataValues.brand_mapped : 0] } }
+                    ]
+                }
+            }),
             PhysicalPartner.findOne({ where: { physicalPartnerUser_id: { [Op.contains]: [user.dataValues.id] } } })
         ]);
 
