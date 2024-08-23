@@ -2349,6 +2349,7 @@ const chooseYarn = async (req: Request, res: Response) => {
             whereCondition.reel_lot_no = { [Op.in]: idArray };
         }
         whereCondition.qty_stock = { [Op.gt]: 0 }
+        // whereCondition.greyout_status = { [Op.not]: true };
         let include = [
             {
                 model: Season,
@@ -2389,7 +2390,7 @@ const chooseYarn = async (req: Request, res: Response) => {
         for await (let item of result) {
             let items = await SpinProcess.findAll({
                 where: { ...whereCondition, season_id: item.dataValues.season_id },
-                attributes: ['id', 'yarn_type', 'yarn_count', 'net_yarn_qty', 'reel_lot_no', 'batch_lot_no', 'qty_stock',],
+                attributes: ['id', 'yarn_type', 'yarn_count', 'net_yarn_qty', 'reel_lot_no', 'batch_lot_no', 'qty_stock', 'greyout_status'],
                 include: [
                     {
                         model: Program,
@@ -2422,7 +2423,7 @@ const chooseYarn = async (req: Request, res: Response) => {
                         {
                             model: SpinProcess,
                             as: 'spinprocess',
-                            attributes: ['id', 'batch_lot_no', 'date', 'yarn_type', 'net_yarn_qty', 'qty_stock', 'reel_lot_no'],
+                            attributes: ['id', 'batch_lot_no', 'date', 'yarn_type', 'net_yarn_qty', 'qty_stock', 'reel_lot_no', 'greyout_status'],
                             where: { id: row?.dataValues?.id },
                         },
                     ],

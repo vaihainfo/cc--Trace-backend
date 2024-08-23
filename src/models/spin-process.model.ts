@@ -114,6 +114,10 @@ const SpinProcess = db.define('spin_processes', {
   comber_noil_stock: {
     type: DataTypes.DOUBLE
   },
+  greyout_status: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+  },
 });
 
 
