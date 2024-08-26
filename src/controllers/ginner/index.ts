@@ -615,13 +615,15 @@ const chooseBale = async (req: Request, res: Response) => {
             'lot_no', gp.lot_no,
             'date', gp.date,
             'press_no', gp.press_no,
-            'reel_lot_no', gp.reel_lot_no
+            'reel_lot_no', gp.reel_lot_no,
+            'greyout_status', gp.greyout_status
         ),
         'weight', SUM(CAST(gb.weight AS DOUBLE PRECISION)),
         'bales', jsonb_agg(jsonb_build_object(
             'id', gb.id,
             'bale_no', gb.bale_no,
-            'weight', gb.weight
+            'weight', gb.weight,
+            'greyout_status', gp.greyout_status
         ))
     ) AS result
 FROM 

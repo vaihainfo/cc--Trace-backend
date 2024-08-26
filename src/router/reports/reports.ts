@@ -67,6 +67,10 @@ import {
     brandWiseDataReport,
     exportBrandWiseDataReport,
     fetchDataEntryMonitorDashboardPagination,
+    fetchGinnerProcessGreyOutReport,
+    fetchSpinnerProcessGreyOutReport,
+    exportGinnerProcessGreyOutReport,
+    exportSpinnerProcessGreyOutReport,
 } from "../../controllers/reports";
 import accessControl from "../../middleware/access-control";
 
@@ -98,8 +102,12 @@ router.get('/export-gin-sales-report', exportGinnerSales);
 
 // Grey Out Report
 
+router.get('/get-gin-process-grey-out-report', fetchGinnerProcessGreyOutReport);
+router.get('/get-spin-process-grey-out-report', fetchSpinnerProcessGreyOutReport);
 router.get('/get-spin-grey-out-report', fetchSpinnerGreyOutReport);
 router.get('/export-spin-grey-out-report', exportSpinnerGreyOutReport);
+router.get('/export-gin-process-grey-out-report', exportGinnerProcessGreyOutReport);
+router.get('/export-spin-process-grey-out-report', exportSpinnerProcessGreyOutReport);
 
 router.get('/get-spinner-bale-report', fetchSpinnerBalePagination);
 router.get('/get-spinner-pending-bale-report', fetchSpinnerPendingBale);

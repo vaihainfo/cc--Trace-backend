@@ -107,6 +107,9 @@ const exportReportsOnebyOne = async () => {
   await generateSpinnerLintCottonStock();
   await generateSpinProcessBackwardfTraceabilty();
   await exportSpinnerGreyOutReport();
+  await exportGinnerProcessGreyOutReport();
+  await exportSpinnerProcessGreyOutReport();
+
 
   console.log('Cron Job Completed to execute all reports.');
 }
@@ -193,6 +196,181 @@ const exportSpinnerGreyOutReport = async () => {
        lot_no: item.dataValues.lot_no ? item.dataValues.lot_no : "",
        lint_quantity: item.dataValues.qty_stock? Number(item.dataValues.qty_stock): 0,
      });
+     worksheet.addRow(rowValues);
+   }
+
+   // Auto-adjust column widths based on content
+   worksheet.columns.forEach((column: any) => {
+     let maxCellLength = 0;
+     column.eachCell({ includeEmpty: true }, (cell: any) => {
+       const cellLength = (cell.value ? cell.value.toString() : "").length;
+       maxCellLength = Math.max(maxCellLength, cellLength);
+     });
+     column.width = Math.min(14, maxCellLength + 2); // Limit width to 30 characters
+   });
+
+   // Save the workbook
+   await workbook.xlsx.writeFile(excelFilePath);
+};
+
+const exportGinnerProcessGreyOutReport = async () => {
+  // spinner_bale_receipt_load
+  const excelFilePath = path.join(
+   "./upload",
+   "ginner-process-grey-out-report.xlsx"
+ );
+
+   let include = [
+     {
+       model: Ginner,
+       as: "ginner",
+       attributes: [],
+     },
+     {
+       model: Season,
+       as: "season",
+       attributes: [],
+     },
+     {
+       model: Program,
+       as: "program",
+       attributes: [],
+     }
+   ];
+
+   // Create the excel workbook file
+   const workbook = new ExcelJS.Workbook();
+   const worksheet = workbook.addWorksheet("Sheet1");
+   worksheet.mergeCells("A1:M1");
+   const mergedCell = worksheet.getCell("A1");
+   mergedCell.value = "CottonConnect | Ginner Process Grey Out Report";
+   mergedCell.font = { bold: true };
+   mergedCell.alignment = { horizontal: "center", vertical: "middle" };
+   // Set bold font for header row
+   const headerRow = worksheet.addRow([
+    "Sr No.",
+    "Season",
+    "Ginner Name",
+    "REEL Lot No",
+    "Press Number",
+    "Bale Lot No",
+    "Total Quantity",
+   ]);
+   headerRow.font = { bold: true };
+
+   // //fetch data with pagination
+
+   const { count, rows }: any = await GinProcess.findAndCountAll({
+     where: {greyout_status : true},
+     include: include,
+     attributes: [
+      [Sequelize.col('"season"."name"'), 'season_name'],
+      [Sequelize.literal('"ginner"."name"'), "ginner_name"],
+      [Sequelize.fn('MAX', Sequelize.col('press_no')), 'press_no'],
+      [Sequelize.fn('MAX', Sequelize.col('lot_no')), 'lot_no'],
+      [Sequelize.fn('MAX', Sequelize.col('reel_lot_no')), 'reel_lot_no'],
+      [Sequelize.fn('MAX', Sequelize.col('total_qty')), 'total_qty'],
+     ],
+     group: ['season.id', 'ginner.id'], 
+   });    
+
+   // // Append data to worksheet
+   for await (const [index, item] of rows.entries()) {
+     const rowValues = Object.values({
+       index: index + 1,
+       season: item.dataValues.season_name ? item.dataValues.season_name : "",
+       ginner: item.dataValues.ginner_name ? item.dataValues.ginner_name : "",
+       reel_lot_no: item.dataValues.reel_lot_no ? item.dataValues.reel_lot_no : "",
+       press: item.dataValues.press_no ? item.dataValues.press_no : "",
+       lot_no: item.dataValues.lot_no ? item.dataValues.lot_no : "",
+       total_qty: item.dataValues.total_qty ? item.dataValues.total_qty : "",
+     });
+     worksheet.addRow(rowValues);
+   }
+
+   // Auto-adjust column widths based on content
+   worksheet.columns.forEach((column: any) => {
+     let maxCellLength = 0;
+     column.eachCell({ includeEmpty: true }, (cell: any) => {
+       const cellLength = (cell.value ? cell.value.toString() : "").length;
+       maxCellLength = Math.max(maxCellLength, cellLength);
+     });
+     column.width = Math.min(14, maxCellLength + 2); // Limit width to 30 characters
+   });
+
+   // Save the workbook
+   await workbook.xlsx.writeFile(excelFilePath);
+};
+
+const exportSpinnerProcessGreyOutReport = async () => {
+  // spinner_bale_receipt_load
+  const excelFilePath = path.join(
+   "./upload",
+   "spinner-process-grey-out-report.xlsx"
+ );
+
+   let include = [
+     {
+       model: Season,
+       as: "season",
+       attributes: [],
+     },
+     {
+       model: Program,
+       as: "program",
+       attributes: [],
+     },
+     {
+       model: Spinner,
+       as: "spinner",
+       attributes: [],
+     },
+   ];
+
+   // Create the excel workbook file
+   const workbook = new ExcelJS.Workbook();
+   const worksheet = workbook.addWorksheet("Sheet1");
+   worksheet.mergeCells("A1:M1");
+   const mergedCell = worksheet.getCell("A1");
+   mergedCell.value = "CottonConnect | Spinner Process Grey Out Report";
+   mergedCell.font = { bold: true };
+   mergedCell.alignment = { horizontal: "center", vertical: "middle" };
+   // Set bold font for header row
+   const headerRow = worksheet.addRow([
+    "Sr No.",
+    "Season",
+    "Spinner Name",
+    "REEL Lot No",
+    "Batch Number",
+    "Quantity Stock",
+   ]);
+   headerRow.font = { bold: true };
+
+   // //fetch data with pagination
+
+   const { count, rows }: any = await SpinProcess.findAndCountAll({
+     where: {greyout_status : true},
+     include: include,
+     attributes: [
+       [Sequelize.col('"season"."name"'), 'season_name'],
+       [Sequelize.col('"season"."name"'), 'season_name'],
+       [Sequelize.col('"spinner"."name"'), 'spinner_name'],
+       [Sequelize.col('batch_lot_no'), 'batch_lot_no'],
+       [Sequelize.col('reel_lot_no'), 'reel_lot_no'],
+       [Sequelize.col('qty_stock'), 'qty_stock'],
+     ],
+   });    
+
+   // // Append data to worksheet
+   for await (const [index, item] of rows.entries()) {
+     const rowValues = Object.values({
+       index: index + 1,
+       season: item.dataValues.season_name ? item.dataValues.season_name : "",
+       spinner: item.dataValues.spinner_name ? item.dataValues.spinner_name : "",
+       reel_lot_no: item.dataValues.reel_lot_no ? item.dataValues.reel_lot_no : "",
+       batch_lot_no: item.dataValues.batch_lot_no ? item.dataValues.batch_lot_no : "",
+       lint_quantity: item.dataValues.qty_stock ? item.dataValues.qty_stock : "",
+      });
      worksheet.addRow(rowValues);
    }
 

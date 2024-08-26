@@ -2222,11 +2222,11 @@ const chooseLint = async (req: Request, res: Response) => {
         }
 
         whereCondition.status = { [Op.in]: ['Sold', 'Partially Accepted', 'Partially Rejected'] }
-        whereCondition.greyout_status = { [Op.not]: true };
+        // whereCondition.greyout_status = { [Op.not]: true };
         whereCondition.qty_stock = { [Op.gt]: 0 }
 
         sqlCondition.push(`gs.status IN ('Sold', 'Partially Accepted', 'Partially Rejected')`)
-        sqlCondition.push(`gs.greyout_status IS NOT TRUE`)
+        // sqlCondition.push(`gs.greyout_status IS NOT TRUE`)
         sqlCondition.push(`gs.qty_stock > 0`)
 
 
@@ -2437,7 +2437,13 @@ const chooseYarn = async (req: Request, res: Response) => {
                             model: YarnCount,
                             as: 'yarncount',
                             attributes: ['id', 'yarnCount_name'],
-                        }],
+                        },
+                        {
+                            model: SpinProcess,
+                            as: 'spinprocess',
+                            attributes: ['greyout_status'],
+                        }
+                    ],
                         order: [["id", "desc"]],
                         where: {
                             process_id: row?.dataValues?.id,

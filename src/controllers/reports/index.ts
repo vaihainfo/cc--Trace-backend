@@ -907,6 +907,191 @@ const exportPendingGinnerSales = async (req: Request, res: Response) => {
   }
 };
 
+const fetchGinnerProcessGreyOutReport = async (req: Request, res: Response) => {
+  const searchTerm = req.query.search || "";
+  const page = Number(req.query.page) || 1;
+  const limit = Number(req.query.limit) || 10;
+
+  const { ginnerId, seasonId, programId, brandId, countryId }: any =
+    req.query;
+  const offset = (page - 1) * limit;
+  const whereCondition: any = {};
+  try {
+    if (searchTerm) {
+      whereCondition[Op.or] = [
+        { "$season.name$": { [Op.iLike]: `%${searchTerm}%` } },
+        { "$ginner.name$": { [Op.iLike]: `%${searchTerm}%` } },
+        { "$program.program_name$": { [Op.iLike]: `%${searchTerm}%` } },
+        { lot_no: { [Op.iLike]: `%${searchTerm}%` } },
+        { reel_lot_no: { [Op.iLike]: `%${searchTerm}%` } },
+        { press_no: { [Op.iLike]: `%${searchTerm}%` } },
+      ];
+    }
+    if (ginnerId) {
+      const idArray: number[] = ginnerId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.ginner_id = { [Op.in]: idArray };
+    }
+
+    if (brandId) {
+      const idArray: number[] = brandId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition["$ginner.brand$"] = { [Op.overlap]: idArray };
+    }
+
+    if (countryId) {
+      const idArray: number[] = countryId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition["$ginner.country_id$"] = { [Op.in]: idArray };
+    }
+
+    if (seasonId) {
+      const idArray: number[] = seasonId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.season_id = { [Op.in]: idArray };
+    }
+
+    // whereCondition.total_qty = {
+    //   [Op.gt]: 0,
+    // };
+    whereCondition.greyout_status = true;
+
+    if (programId) {
+      const idArray: number[] = programId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.program_id = { [Op.in]: idArray };
+    }
+
+    let include = [
+      {
+        model: Ginner,
+        as: "ginner",
+        attributes: ["id", "name"],
+      },
+      {
+        model: Season,
+        as: "season",
+        attributes: ["id", "name"],
+      },
+      {
+        model: Program,
+        as: "program",
+        attributes: ["id", "program_name"],
+      }
+    ];
+
+    const { count, rows } = await GinProcess.findAndCountAll({
+      where: whereCondition,
+      include: include,
+      offset: offset,
+      limit: limit,
+    });
+    return res.sendPaginationSuccess(res, rows, count);
+  } catch (error: any) {
+    console.log(error)
+    return res.sendError(res, error.message);
+  }
+};
+
+const fetchSpinnerProcessGreyOutReport = async (req: Request, res: Response) => {
+  const searchTerm = req.query.search || "";
+  const page = Number(req.query.page) || 1;
+  const limit = Number(req.query.limit) || 10;
+
+  const {spinnerId, seasonId, programId, brandId, countryId }: any =
+    req.query;
+  const offset = (page - 1) * limit;
+  const whereCondition: any = {};
+  try {
+    if (searchTerm) {
+      whereCondition[Op.or] = [
+        { "$season.name$": { [Op.iLike]: `%${searchTerm}%` } },
+        { "$spinner.name$": { [Op.iLike]: `%${searchTerm}%` } },
+        { "$program.program_name$": { [Op.iLike]: `%${searchTerm}%` } },
+        { batch_lot_no: { [Op.iLike]: `%${searchTerm}%` } },
+        { reel_lot_no: { [Op.iLike]: `%${searchTerm}%` } },
+      ];
+    }
+    if (spinnerId) {
+      const idArray: number[] = spinnerId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.spinner_id = { [Op.in]: idArray };
+    } else {
+      whereCondition.spinner_id = {
+        [Op.ne]: null,
+      };
+    }
+
+    if (brandId) {
+      const idArray: number[] = brandId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition["$spinner_id.brand$"] = { [Op.overlap]: idArray };
+    }
+
+    if (countryId) {
+      const idArray: number[] = countryId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition["$spinner_id.country_id$"] = { [Op.in]: idArray };
+    }
+
+    if (seasonId) {
+      const idArray: number[] = seasonId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.season_id = { [Op.in]: idArray };
+    }
+
+    // whereCondition.total_qty = {
+    //   [Op.gt]: 0,
+    // };
+    whereCondition.greyout_status = true;
+
+    if (programId) {
+      const idArray: number[] = programId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.program_id = { [Op.in]: idArray };
+    }
+
+    let include = [
+      {
+        model: Season,
+        as: "season",
+        attributes: ["id", "name"],
+      },
+      {
+        model: Program,
+        as: "program",
+        attributes: ["id", "program_name"],
+      },
+      {
+        model: Spinner,
+        as: "spinner",
+        attributes: ["id", "name"],
+      },
+    ];
+
+    const { count, rows } = await SpinProcess.findAndCountAll({
+      where: whereCondition,
+      include: include,
+      offset: offset,
+      limit: limit,
+    });
+    return res.sendPaginationSuccess(res, rows, count);
+  } catch (error: any) {
+    console.log(error)
+    return res.sendError(res, error.message);
+  }
+};
+
 
 const fetchSpinnerGreyOutReport = async (req: Request, res: Response) => {
   const searchTerm = req.query.search || "";
@@ -1507,6 +1692,335 @@ const fetchGinSalesPagination = async (req: Request, res: Response) => {
 //   }
 // };
 
+const exportGinnerProcessGreyOutReport = async (req: Request, res: Response) => {
+  // spinner_bale_receipt_load
+  const excelFilePath = path.join(
+    "./upload",
+    "excel-ginner-process-grey-out-report.xlsx"
+  );
+
+  const searchTerm = req.query.search || "";
+  const page = Number(req.query.page) || 1;
+  const limit = Number(req.query.limit) || 10;
+  const { exportType, ginnerId, seasonId, programId, brandId, countryId }: any =
+    req.query;
+  const offset = (page - 1) * limit;
+  const whereCondition: any = {};
+  try {
+
+    if (exportType === "all") {
+      return res.status(200).send({
+        success: true,
+        messgage: "File successfully Generated",
+        data: process.env.BASE_URL + "ginner-process-grey-out-report.xlsx",
+      });
+    } else {
+
+      if (searchTerm) {
+        whereCondition[Op.or] = [
+          { "$season.name$": { [Op.iLike]: `%${searchTerm}%` } },
+          { "$ginner.name$": { [Op.iLike]: `%${searchTerm}%` } },
+          { "$program.program_name$": { [Op.iLike]: `%${searchTerm}%` } },
+          { lot_no: { [Op.iLike]: `%${searchTerm}%` } },
+          { invoice_no: { [Op.iLike]: `%${searchTerm}%` } },
+          { reel_lot_no: { [Op.iLike]: `%${searchTerm}%` } },
+          { press_no: { [Op.iLike]: `%${searchTerm}%` } },
+          { vehicle_no: { [Op.iLike]: `%${searchTerm}%` } },
+        ];
+      }
+
+      if (ginnerId) {
+        const idArray: number[] = ginnerId
+          .split(",")
+          .map((id: any) => parseInt(id, 10));
+        whereCondition["$ginner_id$"] = { [Op.in]: idArray };
+      }
+
+      if (brandId) {
+        const idArray: number[] = brandId
+          .split(",")
+          .map((id: any) => parseInt(id, 10));
+        whereCondition["$ginner.brand$"] = { [Op.overlap]: idArray };
+      }
+
+      if (countryId) {
+        const idArray: number[] = countryId
+          .split(",")
+          .map((id: any) => parseInt(id, 10));
+        whereCondition["$ginner.country_id$"] = { [Op.in]: idArray };
+      }
+
+      if (seasonId) {
+        const idArray: number[] = seasonId
+          .split(",")
+          .map((id: any) => parseInt(id, 10));
+        whereCondition["$season_id$"] = { [Op.in]: idArray };
+      }
+
+      whereCondition.greyout_status = true;
+
+      if (programId) {
+        const idArray: number[] = programId
+          .split(",")
+          .map((id: any) => parseInt(id, 10));
+        whereCondition["$program_id$"] = { [Op.in]: idArray };
+      }
+
+      let include = [
+        {
+          model: Ginner,
+          as: "ginner",
+          attributes: [],
+        },
+        {
+          model: Season,
+          as: "season",
+          attributes: [],
+        },
+        {
+          model: Program,
+          as: "program",
+          attributes: [],
+        }
+      ];
+
+      // Create the excel workbook file
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet("Sheet1");
+      worksheet.mergeCells("A1:M1");
+      const mergedCell = worksheet.getCell("A1");
+      mergedCell.value = "CottonConnect | Ginner Process Grey Out Report";
+      mergedCell.font = { bold: true };
+      mergedCell.alignment = { horizontal: "center", vertical: "middle" };
+      // Set bold font for header row
+      const headerRow = worksheet.addRow([
+        "Sr No.",
+        "Season",
+        "Ginner Name",
+        "REEL Lot No",
+        "Press Number",
+        "Bale Lot No",
+        "Total Quantity",
+      ]);
+      headerRow.font = { bold: true };
+
+      // //fetch data with pagination
+
+      const { count, rows }: any = await GinProcess.findAndCountAll({
+        where: whereCondition,
+        include: include,
+        attributes: [
+          [Sequelize.col('"season"."name"'), 'season_name'],
+          [Sequelize.literal('"ginner"."name"'), "ginner_name"],
+          [Sequelize.fn('MAX', Sequelize.col('press_no')), 'press_no'],
+          [Sequelize.fn('MAX', Sequelize.col('lot_no')), 'lot_no'],
+          [Sequelize.fn('MAX', Sequelize.col('reel_lot_no')), 'reel_lot_no'],
+          [Sequelize.fn('MAX', Sequelize.col('total_qty')), 'total_qty'],
+        ],
+        group: ['season.id', 'ginner.id'],
+        offset: offset,
+        limit: limit,
+      });
+
+      // // Append data to worksheet
+      for await (const [index, item] of rows.entries()) {
+        const rowValues = Object.values({
+          index: index + 1,
+          season: item.dataValues.season_name ? item.dataValues.season_name : "",
+          ginner: item.dataValues.ginner_name ? item.dataValues.ginner_name : "",
+          reel_lot_no: item.dataValues.reel_lot_no ? item.dataValues.reel_lot_no : "",
+          press: item.dataValues.press_no ? item.dataValues.press_no : "",
+          lot_no: item.dataValues.lot_no ? item.dataValues.lot_no : "",
+          total_qty: item.dataValues.total_qty ? item.dataValues.total_qty : "",
+        });
+        worksheet.addRow(rowValues);
+      }
+
+      // Auto-adjust column widths based on content
+      worksheet.columns.forEach((column: any) => {
+        let maxCellLength = 0;
+        column.eachCell({ includeEmpty: true }, (cell: any) => {
+          const cellLength = (cell.value ? cell.value.toString() : "").length;
+          maxCellLength = Math.max(maxCellLength, cellLength);
+        });
+        column.width = Math.min(14, maxCellLength + 2); // Limit width to 30 characters
+      });
+
+      // Save the workbook
+      await workbook.xlsx.writeFile(excelFilePath);
+      return res.status(200).send({
+        success: true,
+        messgage: "File successfully Generated",
+        data: process.env.BASE_URL + "excel-ginner-process-grey-out-report.xlsx",
+      });
+    }
+  } catch (error: any) {
+    console.log(error);
+    return res.sendError(res, error.message);
+  }
+};
+
+const exportSpinnerProcessGreyOutReport = async (req: Request, res: Response) => {
+  // spinner_bale_receipt_load
+  const excelFilePath = path.join(
+    "./upload",
+    "excel-spinner-process-grey-out-report.xlsx"
+  );
+
+  const searchTerm = req.query.search || "";
+  const page = Number(req.query.page) || 1;
+  const limit = Number(req.query.limit) || 10;
+  const { exportType, spinnerId, seasonId, programId, brandId, countryId }: any =
+    req.query;
+  const offset = (page - 1) * limit;
+  const whereCondition: any = {};
+  try {
+
+    if (exportType === "all") {
+      return res.status(200).send({
+        success: true,
+        messgage: "File successfully Generated",
+        data: process.env.BASE_URL + "spinner-process-grey-out-report.xlsx",
+      });
+    } else {
+
+      if (searchTerm) {
+        whereCondition[Op.or] = [
+          { "$season.name$": { [Op.iLike]: `%${searchTerm}%` } },
+          { "$spinner.name$": { [Op.iLike]: `%${searchTerm}%` } },
+          { "$program.program_name$": { [Op.iLike]: `%${searchTerm}%` } },
+          { batch_lot_no: { [Op.iLike]: `%${searchTerm}%` } },
+          { reel_lot_no: { [Op.iLike]: `%${searchTerm}%` } },
+        ];
+      }
+      if (spinnerId) {
+        const idArray: number[] = spinnerId
+          .split(",")
+          .map((id: any) => parseInt(id, 10));
+        whereCondition["$spinner_id$"] = { [Op.in]: idArray };
+      }
+
+      if (brandId) {
+        const idArray: number[] = brandId
+          .split(",")
+          .map((id: any) => parseInt(id, 10));
+        whereCondition["$spinner.brand$"] = { [Op.overlap]: idArray };
+      }
+
+      if (countryId) {
+        const idArray: number[] = countryId
+          .split(",")
+          .map((id: any) => parseInt(id, 10));
+        whereCondition["$spinner.country_id$"] = { [Op.in]: idArray };
+      }
+
+      if (seasonId) {
+        const idArray: number[] = seasonId
+          .split(",")
+          .map((id: any) => parseInt(id, 10));
+        whereCondition["$season_id$"] = { [Op.in]: idArray };
+      }
+
+      whereCondition.greyout_status = true;
+
+      if (programId) {
+        const idArray: number[] = programId
+          .split(",")
+          .map((id: any) => parseInt(id, 10));
+        whereCondition["$program_id$"] = { [Op.in]: idArray };
+      }
+
+      let include = [
+        {
+          model: Season,
+          as: "season",
+          attributes: [],
+        },
+        {
+          model: Program,
+          as: "program",
+          attributes: [],
+        },
+        {
+          model: Spinner,
+          as: "spinner",
+          attributes: [],
+        },
+      ];
+
+      // Create the excel workbook file
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet("Sheet1");
+      worksheet.mergeCells("A1:M1");
+      const mergedCell = worksheet.getCell("A1");
+      mergedCell.value = "CottonConnect | Spinner Process Grey Out Report";
+      mergedCell.font = { bold: true };
+      mergedCell.alignment = { horizontal: "center", vertical: "middle" };
+      // Set bold font for header row
+      const headerRow = worksheet.addRow([
+        "Sr No.",
+        "Season",
+        "Spinner Name",
+        "REEL Lot No",
+        "Batch Number",
+        "Quantity Stock",
+      ]);
+      headerRow.font = { bold: true };
+
+      // //fetch data with pagination
+
+      const { count, rows }: any = await SpinProcess.findAndCountAll({
+        where: whereCondition,
+        include: include,
+        attributes: [
+          [Sequelize.col('"season"."name"'), 'season_name'],
+          [Sequelize.col('"spinner"."name"'), 'spinner_name'],
+          [Sequelize.col('batch_lot_no'), 'batch_lot_no'],
+          [Sequelize.col('reel_lot_no'), 'reel_lot_no'],
+          [Sequelize.col('qty_stock'), 'qty_stock'],
+        ],
+        // group: ['season.id', 'spinner.id'],
+        offset: offset,
+        limit: limit,
+      });
+
+      // // Append data to worksheet
+      for await (const [index, item] of rows.entries()) {
+        console.log(item)
+        const rowValues = Object.values({
+          index: index + 1,
+          season: item.dataValues.season_name ? item.dataValues.season_name : "",
+          spinner: item.dataValues.spinner_name ? item.dataValues.spinner_name : "",
+          reel_lot_no: item.dataValues.reel_lot_no ? item.dataValues.reel_lot_no : "",
+          batch_lot_no: item.dataValues.batch_lot_no ? item.dataValues.batch_lot_no : "",
+          lint_quantity: item.dataValues.qty_stock ? item.dataValues.qty_stock : "",
+        });
+        worksheet.addRow(rowValues);
+      }
+
+      // Auto-adjust column widths based on content
+      worksheet.columns.forEach((column: any) => {
+        let maxCellLength = 0;
+        column.eachCell({ includeEmpty: true }, (cell: any) => {
+          const cellLength = (cell.value ? cell.value.toString() : "").length;
+          maxCellLength = Math.max(maxCellLength, cellLength);
+        });
+        column.width = Math.min(14, maxCellLength + 2); // Limit width to 30 characters
+      });
+
+      // Save the workbook
+      await workbook.xlsx.writeFile(excelFilePath);
+      return res.status(200).send({
+        success: true,
+        messgage: "File successfully Generated",
+        data: process.env.BASE_URL + "excel-spinner-process-grey-out-report.xlsx",
+      });
+    }
+  } catch (error: any) {
+    console.log(error);
+    return res.sendError(res, error.message);
+  }
+};
 
 
 const exportSpinnerGreyOutReport = async (req: Request, res: Response) => {
@@ -17266,6 +17780,10 @@ export {
   exportBrandWiseDataReport,
   fetchSpinnerGreyOutReport,
   exportSpinnerGreyOutReport,
-  fetchDataEntryMonitorDashboardPagination
+  fetchDataEntryMonitorDashboardPagination,
+  fetchGinnerProcessGreyOutReport,
+  fetchSpinnerProcessGreyOutReport,
+  exportGinnerProcessGreyOutReport,
+  exportSpinnerProcessGreyOutReport
 };
 
