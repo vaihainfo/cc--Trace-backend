@@ -3871,7 +3871,7 @@ const getCOCDocumentData = async (
               array_to_string(array_agg(distinct kys.yarn_id), ',') as spin_sale_ids
       from knit_processes kp
               left join knit_yarn_selections kys on kys.sales_id = kp.id
-      where kp.id in (94)
+      where kp.id in (:ids)
       group by kp.id;
     `, {
         replacements: { ids: kProcessIds },
@@ -3916,16 +3916,15 @@ const getCOCDocumentData = async (
       const spinLotNo: any[] = [];
       const spinNetWeight: any[] = []
       for (const spinner of spinSales) {
-        if (spinner.spnr_lint_ids)
-          lintIds.push(...spinner.spnr_lint_ids.split(','));
         if (!spiName.includes(spinner.spnr_name))
           spiName.push(spinner.spnr_name);
 
         if (spinner.spnr_net_weight)
           spinNetWeight.push(spinner.spnr_net_weight);
-
-        if (!processIds.includes(spinner.process_ids))
-          processIds.push(spinner.process_ids);
+        spinner?.process_ids?.split(',').forEach((process: any) => {
+          if (!processIds.includes(process))
+            processIds.push(process);
+        });
       }
 
       if (processIds.length) {
@@ -4007,7 +4006,7 @@ const getCOCDocumentData = async (
     }
 
     if (processIds.length) {
-      const [ginProcess] = await sequelize.query(`
+      const ginProcess = await sequelize.query(`
       select  gp.id,
               array_to_string(array_agg(distinct cs.transaction_id), ',') as transaction_ids
       from gin_processes gp
@@ -4022,6 +4021,11 @@ const getCOCDocumentData = async (
         type: sequelize.QueryTypes.SELECT
       });
 
+      const transaction_ids: any[] = [];
+      ginProcess?.forEach((process: any) => {
+        transaction_ids.push(...process.transaction_ids.split(','));
+      })
+
       const transactions = await sequelize.query(`
       select  tr.qty_purchased as frmr_qty,
               tr.id            as frmr_transaction_id,
@@ -4033,7 +4037,7 @@ const getCOCDocumentData = async (
       group by tr.id,fg.name;
       `, {
         replacements: {
-          ids: ginProcess ? ginProcess.transaction_ids.split(',') : null
+          ids: transaction_ids
         },
         type: sequelize.QueryTypes.SELECT
       });
