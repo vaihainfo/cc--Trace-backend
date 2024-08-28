@@ -58,6 +58,11 @@ import PhysicalTraceabilityDataGarmentSample from "../../models/physical-traceab
 import FabricType from "../../models/fabric-type.model";
 import { _getWeaverProcessTracingChartData } from "../weaver";
 import { _getKnitterProcessTracingChartData } from "../knitter";
+import sequelize from "../../util/dbConn";
+import CompactingFabricSelections from "../../models/compacting-fabric-selection.model";
+import PrintingFabricSelection from "../../models/printing-fabric-selection.model";
+import WashingFabricSelection from "../../models/washing-fabric-selection.model";
+import DyingFabricSelection from "../../models/dying-fabric-selection.model";
 
 const fetchBrandQrGarmentSalesPagination = async (
   req: Request,
@@ -1654,7 +1659,7 @@ const fetchGarmentSalesPagination = async (req: Request, res: Response) => {
         const department = await Department.findAll({
           where: {
             id: {
-              [Op.in]: row.dataValues.department_id,
+              [Op.in]: row.dataValues.department_id ?? undefined,
             },
           },
           attributes: ["id", "dept_name"],
@@ -2648,11 +2653,204 @@ const garmentTraceabilityMap = async (req: Request, res: Response) => {
     });
 
     let knit_fabric_ids = fabric
-      .filter((obj: any) => obj?.dataValues?.processor === "knitter")
-      .map((obj: any) => obj?.dataValues?.fabric_id);
-    let weaver_fabric_ids = fabric
-      .filter((obj: any) => obj?.dataValues?.processor === "weaver")
-      .map((obj: any) => obj?.dataValues?.fabric_id);
+    .filter((obj: any) => obj?.dataValues?.processor.toLowerCase() === "knitter")
+    .map((obj: any) => obj?.dataValues?.fabric_id);
+  let weaver_fabric_ids = fabric
+    .filter((obj: any) => obj?.dataValues?.processor.toLowerCase() === "weaver")
+    .map((obj: any) => obj?.dataValues?.fabric_id);
+  let compacting_fabric_ids = fabric
+    .filter((obj: any) => obj?.dataValues?.processor.toLowerCase() === "compacting")
+    .map((obj: any) => obj?.dataValues?.fabric_id);
+  let printing_fabric_ids = fabric
+    .filter((obj: any) => obj?.dataValues?.processor.toLowerCase() === "printing")
+    .map((obj: any) => obj?.dataValues?.fabric_id);
+  let washing_fabric_ids = fabric
+    .filter((obj: any) => obj?.dataValues?.processor.toLowerCase() === "washing")
+    .map((obj: any) => obj?.dataValues?.fabric_id);
+  let dying_fabric_ids = fabric
+    .filter((obj: any) => obj?.dataValues?.processor.toLowerCase() === "dying")
+    .map((obj: any) => obj?.dataValues?.fabric_id);
+
+
+    let compactingSales: any = [];
+      if (compacting_fabric_ids.length > 0) {
+        const rows = await CompactingSales.findAll({
+          attributes: [
+            "id",
+            "date",
+            "invoice_no",
+            "batch_lot_no",
+            "total_fabric_quantity",
+            "fabric_net_weight",
+            "buyer_id",
+          ],
+          include: [
+            {
+              model: Fabric,
+              as: "compacting",
+              attributes: ["id", "name"],
+            },
+          ],
+          where: {
+            id: {
+              [Op.in]: compacting_fabric_ids,
+            },
+          },
+          raw: true, // Return raw data
+        });
+
+        compactingSales = rows;
+        let selection = await CompactingFabricSelections.findAll({
+          where: {
+            sales_id: rows.map((obj: any) => obj.id),
+          },
+          raw: true,
+        });
+        let printing_fabric = selection
+          .filter((obj: any) => obj?.process_type === "Printing")
+          .map((obj: any) => obj?.process_id);
+        printing_fabric_ids = [...printing_fabric_ids, ...printing_fabric];
+        let washing_fabric = selection
+          .filter((obj: any) => obj?.process_type === "Washing")
+          .map((obj: any) => obj?.process_id);
+        washing_fabric_ids = [...washing_fabric_ids, ...washing_fabric];
+        let dying_fabric = selection
+          .filter((obj: any) => obj?.process_type === "Dying")
+          .map((obj: any) => obj?.process_id);
+        dying_fabric_ids = [...dying_fabric_ids, ...dying_fabric];
+      }
+
+      let printingSales: any = [];
+      if (printing_fabric_ids.length > 0) {
+        const rows = await PrintingSales.findAll({
+          attributes: [
+            "id",
+            "date",
+            "invoice_no",
+            "batch_lot_no",
+            "total_fabric_quantity",
+            "fabric_net_weight",
+            "buyer_id",
+          ],
+          include: [
+            {
+              model: Fabric,
+              as: "printing",
+              attributes: ["id", "name"],
+            },
+          ],
+          where: {
+            id: {
+              [Op.in]: printing_fabric_ids,
+            },
+          },
+          raw: true, // Return raw data
+        });
+
+        printingSales = rows;
+        let selection = await PrintingFabricSelection.findAll({
+          where: {
+            sales_id: rows.map((obj: any) => obj.id),
+          },
+          raw: true,
+        });
+        let washing_fabric = selection.map((obj: any) => obj?.process_id);
+        washing_fabric_ids = [...washing_fabric_ids, ...washing_fabric];
+      }
+
+      let washingSales: any = [];
+      if (washing_fabric_ids.length > 0) {
+        const rows = await WashingSales.findAll({
+          attributes: [
+            "id",
+            "date",
+            "invoice_no",
+            "batch_lot_no",
+            "total_fabric_quantity",
+            "fabric_net_weight",
+            "buyer_id",
+          ],
+          include: [
+            {
+              model: Fabric,
+              as: "washing",
+              attributes: ["id", "name"],
+            },
+          ],
+          where: {
+            id: {
+              [Op.in]: washing_fabric_ids,
+            },
+          },
+          raw: true, // Return raw data
+        });
+
+        washingSales = rows;
+        let selection = await WashingFabricSelection.findAll({
+          where: {
+            sales_id: rows.map((obj: any) => obj.id),
+          },
+          raw: true,
+        });
+        let knitter_fabric = selection
+          .filter((obj: any) => obj?.process_type === "knitter")
+          .map((obj: any) => obj?.process_id);
+        knit_fabric_ids = [...knit_fabric_ids, ...knitter_fabric];
+        let weaver_fabric = selection
+          .filter((obj: any) => obj?.process_type === "weaver")
+          .map((obj: any) => obj?.process_id);
+        weaver_fabric_ids = [...weaver_fabric_ids, ...weaver_fabric];
+        let dying_fabric = selection
+          .filter((obj: any) => obj?.process_type === "dying")
+          .map((obj: any) => obj?.process_id);
+        dying_fabric_ids = [...dying_fabric_ids, ...dying_fabric];
+      }
+
+      let dyingSales: any = [];
+      if (dying_fabric_ids.length > 0) {
+        const rows = await DyingSales.findAll({
+          attributes: [
+            "id",
+            "date",
+            "invoice_no",
+            "batch_lot_no",
+            "total_fabric_quantity",
+            "fabric_net_weight",
+            "buyer_id",
+          ],
+          include: [
+            {
+              model: Fabric,
+              as: "dying_fabric",
+              attributes: ["id", "name"],
+            },
+          ],
+          where: {
+            id: {
+              [Op.in]: dying_fabric_ids,
+            },
+          },
+          raw: true, // Return raw data
+        });
+
+        dyingSales = rows;
+        let selection = await DyingFabricSelection.findAll({
+          where: {
+            sales_id: rows.map((obj: any) => obj.id),
+          },
+          raw: true,
+        });
+
+        let knitter_fabric = selection
+          .filter((obj: any) => obj?.process_type.toLowerCase() === "knitter")
+          .map((obj: any) => obj?.process_id);
+        knit_fabric_ids = [...knit_fabric_ids, ...knitter_fabric];
+        let weaver_fabric = selection
+          .filter((obj: any) => obj?.process_type.toLowerCase() === "weaver")
+          .map((obj: any) => obj?.process_id);
+        weaver_fabric_ids = [...weaver_fabric_ids, ...weaver_fabric];
+      }
+
 
     let knitSales: any = [];
     let knit_yarn_ids: any = [];
@@ -2784,9 +2982,10 @@ const garmentTraceabilityMap = async (req: Request, res: Response) => {
             [Op.in]: weaver_fabric_ids,
           },
         },
-        raw: true, // Return raw data
+        // raw: true, // Return raw data
       });
 
+      console.log(rows,weaver_fabric_ids,"rows,,,,,.....................................")     
       for await (let row of rows) {
         let fabrictypes: any = [];
         if (
@@ -2807,10 +3006,9 @@ const garmentTraceabilityMap = async (req: Request, res: Response) => {
           fabrictypes,
         });
       }
-
       let weaveProcess = await WeaverFabricSelection.findAll({
         where: {
-          sales_id: rows.map((obj: any) => obj.id),
+          sales_id: rows.map((obj: any) => obj.dataValues.id),
         },
         attributes: ["id", "fabric_id", "sales_id"],
         include: [{
@@ -2822,13 +3020,14 @@ const garmentTraceabilityMap = async (req: Request, res: Response) => {
       fabric_gsm = weaveProcess.map((obj: any) => obj?.dataValues?.process?.fabric_gsm);
       let weaverYarn = await YarnSelection.findAll({
         where: {
-          sales_id: weaveProcess.map((obj: any) => obj.id),
+          sales_id: weaveProcess.map((obj: any) => obj?.dataValues?.process?.id),
         },
         attributes: ["id", "yarn_id"],
 
       });
       weave_yarn_ids = weaverYarn.map((obj: any) => obj.dataValues.yarn_id);
     }
+
     let spinSales: any = [];
     let spnr_lint_ids: any = [];
     let blendqty = [];
@@ -3730,6 +3929,417 @@ const exportGarmentTransactionList = async (req: Request, res: Response) => {
   }
 };
 
+const getCOCDocumentData = async (
+  req: Request, res: Response
+) => {
+  try {
+    const id = req.query.id;
+    if (!id)
+      return res.sendError(res, "Need Garment Sales Id");
+
+    const cocRes = {
+      garmentName: '',
+      address: '',
+      brandName: '',
+      brandLogo: '',
+      reelAuthorizationCode: '',
+      garmentItemDescription: '',
+      frmrFarmGroup: '',
+      fbrcProcessor: '',
+      fbrcLotNo: '',
+      fbrcFabricType: '',
+      fbrcNetWeight: '',
+      spnrName: '',
+      spinnerReelLotNo: '',
+      spnrNetWeight: '',
+      gnrName: '',
+      reelLotno: '',
+      gnrTotalQty: '',
+      date: '',
+    };
+
+    let [result] = await sequelize.query(`
+      SELECT  gts.id                                         as id,
+              grm.name                                       as garment_name,
+              grm.address                                    as address,
+              ''                                             as reel_authorization_code,
+              case
+                  when br.brand_name is not null
+                      then br.brand_name
+                  else processor_name
+                  end                                        as brand_name,
+              case
+                  when br.logo is not null
+                      then br.logo
+                  end                                        as brand_logo,
+              array_to_string(gts.style_mark_no, ',')        as garment_style_mark_no,
+              array_to_string(gts.garment_type, ',')         as garment_item_description,
+              gts.no_of_pieces                               as garment_no_of_pcs,
+              array_to_string(array_agg(gs.garment_id), ',') as process_ids
+      FROM garment_sales gts
+              LEFT JOIN garments grm on gts.garment_id = grm.id
+              LEFT JOIN garment_selections gs on gts.id = gs.sales_id
+              LEFT JOIN brands br on gts.buyer_id = br.id
+      where gts.id = :id
+      group by gts.id, grm.id, br.id;
+    `, {
+      replacements: { id },
+      type: sequelize.QueryTypes.SELECT,
+      raw: true
+    });
+    if (result) {
+      cocRes.garmentName = result.garment_name;
+      cocRes.address = result.address;
+      cocRes.brandName = result.brand_name;
+      cocRes.brandLogo = result.brand_logo;
+      cocRes.reelAuthorizationCode = result.reel_authorization_code;
+      cocRes.garmentItemDescription = result.garment_item_description;
+    }
+
+    let knitOrWeaData: any;
+    if (result.process_ids) {
+      [knitOrWeaData] = await sequelize.query(`
+      SELECT array_to_string(array_agg(distinct case
+                                              when fs.processor = 'knitter' and fs.fabric_id is not null
+                                                  then fs.fabric_id
+                end), ',')        as knit_sale_ids,
+              array_to_string(array_agg(distinct case
+                                                      when fs.processor = 'weaver' and fs.fabric_id is not null
+                                                          then fs.fabric_id
+                  end), ',') as weaver_sale_ids
+      FROM garment_processes gp
+              LEFT JOIN fabric_selections fs on gp.id = fs.sales_id
+      where gp.id = :ids;
+    `, {
+        replacements: { ids: result.process_ids.split(',') },
+        type: sequelize.QueryTypes.SELECT,
+        raw: true
+      });
+    }
+
+    const spinSalesIds: any[] = [];
+    const salesRes: any = [];
+    if (knitOrWeaData.weaver_sale_ids) {
+      const weaverSales = await sequelize.query(`
+      select  ws.id                                                          as id,
+              array_to_string(array_agg(distinct ft."fabricType_name"), ',') as fbrc_fabric_type,
+              wr.name                                                        as fbrc_processor,
+              array_to_string(array_agg(DISTINCT ws.batch_lot_no), ',')      as fbrc_lot_no,
+              ws.total_fabric_length                                         as fbrc_net_weight,
+              ws.date                                                        as fbrc_sales_date,
+              array_to_string(array_agg(distinct fs.fabric_id), ',')         as wea_process_ids,
+              (SUM(ws.total_yarn_qty) / 2)                                   as fbrc_total_yarn_weight
+      from weaver_sales ws
+              left join weavers wr on wr.id = ws.weaver_id
+              left join garments prs on prs.id = ws.buyer_id
+              left join weaver_fabric_selections fs on fs.sales_id = ws.id
+              left join fabric_types ft on ft.id = any (ws.fabric_type)
+      where ws.id in (:ids)
+      group by ws.id, wr.id;
+      `, {
+        replacements: { ids: knitOrWeaData.weaver_sale_ids.split(',') },
+        type: sequelize.QueryTypes.SELECT
+      });
+
+      salesRes.push(...weaverSales);
+    }
+
+    if (knitOrWeaData.knit_sale_ids) {
+      const knitSales = await sequelize.query(`
+      select  ks.id                                                          as id,
+              array_to_string(array_agg(distinct ft."fabricType_name"), ',') as fbrc_fabric_type,
+              kr.name                                                        as fbrc_processor,
+              array_to_string(array_agg(DISTINCT ks.batch_lot_no), ',')      as fbrc_lot_no,
+              ks.total_fabric_weight                                         as fbrc_net_weight,
+              ks.date                                                        as fbrc_sales_date,
+              array_to_string(array_agg(DISTINCT fs.fabric_id), ',')         as knit_process_ids,
+              ks.fabric_type                                                 as fabric_type,
+              (SUM(ks.total_yarn_qty) / 2)                                   as fbrc_total_yarn_weight
+      from knit_sales ks
+              left join knitters kr on kr.id = ks.knitter_id
+              left join fabric_types ft on ft.id = any (ks.fabric_type)
+              left join knit_fabric_selections fs on fs.sales_id = ks.id
+      where ks.id in (:ids)
+      group by ks.id, kr.id;
+      `, {
+        replacements: { ids: knitOrWeaData.knit_sale_ids.split(',') },
+        type: sequelize.QueryTypes.SELECT
+      });
+
+      salesRes.push(...knitSales);
+    }
+
+    const wProcessIds: any[] = [];
+    const kProcessIds: any[] = [];
+    if (salesRes.length) {
+      const fbrcNetWeight: any[] = [];
+      for (const sale of salesRes) {
+
+        if (sale.wea_process_ids && !wProcessIds.includes(sale.wea_process_ids))
+          wProcessIds.push(sale.wea_process_ids);
+
+        if (sale.knit_process_ids && !kProcessIds.includes(sale.knit_process_ids))
+          kProcessIds.push(sale.knit_process_ids);
+
+        if (sale.fbrc_lot_no)
+          cocRes.fbrcLotNo = sale.fbrc_lot_no;
+
+        if (sale.fbrc_processor)
+          cocRes.fbrcProcessor = sale.fbrc_processor;
+        if (sale.fbrc_fabric_type)
+          cocRes.fbrcFabricType = sale.fbrc_fabric_type;
+
+        if (sale.fbrc_net_weight)
+          fbrcNetWeight.push(sale.fbrc_net_weight);
+      }
+
+      cocRes.fbrcNetWeight = fbrcNetWeight.length ? fbrcNetWeight?.join(', ') : '';
+    }
+
+
+    if (wProcessIds.length) {
+      const WeaverProcess = await sequelize.query(`
+        select wp.id, array_to_string(array_agg(distinct ys.yarn_id), ',') as spin_sale_ids
+        from weaver_processes wp
+                left join yarn_selections ys on ys.sales_id = wp.id
+        where wp.id in (:ids)
+        group by wp.id;
+      `, {
+        replacements: { ids: wProcessIds },
+        type: sequelize.QueryTypes.SELECT
+      });
+
+      WeaverProcess?.forEach((sale: any) => {
+        if (!spinSalesIds.includes(sale.spin_sale_ids))
+          spinSalesIds.push(sale.spin_sale_ids);
+      });
+    }
+
+    if (kProcessIds.length) {
+      const KnitProcess = await sequelize.query(`
+      select  kp.id, 
+              array_to_string(array_agg(distinct kys.yarn_id), ',') as spin_sale_ids
+      from knit_processes kp
+              left join knit_yarn_selections kys on kys.sales_id = kp.id
+      where kp.id in (:ids)
+      group by kp.id;
+    `, {
+        replacements: { ids: kProcessIds },
+        type: sequelize.QueryTypes.SELECT
+      });
+
+      KnitProcess?.forEach((sale: any) => {
+        if (!spinSalesIds.includes(sale.spin_sale_ids))
+          spinSalesIds.push(sale.spin_sale_ids);
+      });
+    }
+
+
+    let spinSales: any[] = [];
+    if (spinSalesIds.length) {
+      spinSales = await sequelize.query(`
+      select  ss.id                                                 as id,
+              sr.name                                               as spnr_name,
+              ss.date                                               as spnr_sale_date,
+              ss.total_qty                                          as spnr_net_weight,
+              ss.batch_lot_no                                       as spnr_lot_no,
+              array_to_string(array_agg(spys.spin_process_id), ',') as process_ids
+      from spin_sales ss
+              left join yarn_counts yc on yc.id = any (ss.yarn_count)
+              left join spinners sr on sr.id = ss.spinner_id
+              left join spin_process_yarn_selections spys on spys.sales_id = ss.id
+      where ss.id in (:ids)
+      group by ss.id, sr.name;
+      `, {
+        replacements: {
+          ids: spinSalesIds
+        },
+        type: sequelize.QueryTypes.SELECT
+      });
+    }
+
+    const lintIds: any[] = [];
+    if (spinSales.length) {
+
+      const processIds: any[] = [];
+      const spiName: any[] = [];
+      const spinLotNo: any[] = [];
+      const spinNetWeight: any[] = []
+      for (const spinner of spinSales) {
+        if (!spiName.includes(spinner.spnr_name))
+          spiName.push(spinner.spnr_name);
+
+        if (spinner.spnr_net_weight)
+          spinNetWeight.push(spinner.spnr_net_weight);
+        spinner?.process_ids?.split(',').forEach((process: any) => {
+          if (!processIds.includes(process))
+            processIds.push(process);
+        });
+      }
+
+      if (processIds.length) {
+        const spinProcess: any[] = await sequelize.query(`
+        select  sp.id,
+                sp.reel_lot_no,
+                array_to_string(array_agg(distinct ls.lint_id), ',') as lint_ids
+        from spin_processes sp
+                left join lint_selections ls on sp.id = ls.process_id
+        where sp.id in (:ids)
+        group by sp.id;
+      `, {
+          replacements: { ids: processIds },
+          type: sequelize.QueryTypes.SELECT
+        });
+
+        spinProcess?.forEach((sProcess: any) => {
+          if (!lintIds.includes(sProcess.lint_ids))
+            lintIds.push(sProcess.lint_ids);
+
+          if (!spinLotNo.includes(sProcess.reel_lot_no))
+            spinLotNo.push(sProcess.reel_lot_no);
+
+        });
+      }
+      cocRes.spnrNetWeight = spinNetWeight.length ? spinNetWeight.join(', ') : '';
+      cocRes.spinnerReelLotNo = spinLotNo.length ? spinLotNo.join(', ') : '';
+      cocRes.spnrName = spiName.length ? spiName.join(', ') : '';
+    }
+
+    let ginners: any[] = [];
+    if (lintIds.length) {
+      ginners = await sequelize.query(`
+      select  gs.id                                                   as id,
+              gs.reel_lot_no                                          as reel_lotno,
+              gs.date                                                 as gnr_sales_date,
+              gnr.name                                                as gnr_name,
+              gs.total_qty                                            as gnr_total_qty,
+              array_to_string(array_agg(distinct gb.process_id), ',') as process_ids
+      from gin_sales gs
+              left join ginners gnr on gnr.id = gs.ginner_id
+              left join spinners prg on prg.id = gs.buyer
+              left join bale_selections bs on bs.sales_id = gs.id
+              left join "gin-bales" gb on gb.id = bs.bale_id
+      where gs.id in (:ids)
+      group by bs.sales_id, gs.id, gnr.id;
+      `, {
+        replacements: {
+          ids: lintIds
+        },
+        type: sequelize.QueryTypes.SELECT
+      });
+    }
+
+    const processIds: any[] = [];
+    if (ginners.length) {
+      const ginLotNo: any[] = [];
+      const ginName: any[] = [];
+      const gnrTotalQty: any[] = [];
+      for (const ginner of ginners) {
+        if (ginner.process_ids)
+          processIds.push(...ginner.process_ids.split(','));
+        if (!ginName.includes(ginner.gnr_name))
+          ginName.push(ginner.gnr_name);
+        if (ginner.gnr_total_qty)
+          gnrTotalQty.push(ginner.gnr_total_qty);
+
+        if (ginner.reel_lotno) {
+          const ReelLotNos = ginner.reel_lotno.split(',');
+          ReelLotNos.forEach((lotNo: any) => {
+            if (!ginLotNo.includes(lotNo))
+              ginLotNo.push(lotNo);
+          });
+        }
+      }
+      cocRes.gnrTotalQty = gnrTotalQty.length ? gnrTotalQty.join(', ') : '';
+      cocRes.reelLotno = ginLotNo.length ? ginLotNo.join(', ') : '';
+      cocRes.gnrName = ginName.length ? ginName.join(', ') : '';
+    }
+
+    if (processIds.length) {
+      const ginProcess = await sequelize.query(`
+      select  gp.id,
+              array_to_string(array_agg(distinct cs.transaction_id), ',') as transaction_ids
+      from gin_processes gp
+              left join "gin-bales" gb on gp.id = gb.process_id
+              left join cotton_selections cs on gp.id = cs.process_id
+      where gp.id in (:ids)
+      group by gp.id;
+      `, {
+        replacements: {
+          ids: processIds
+        },
+        type: sequelize.QueryTypes.SELECT
+      });
+
+      const transaction_ids: any[] = [];
+      ginProcess?.forEach((process: any) => {
+        transaction_ids.push(...process.transaction_ids.split(','));
+      })
+
+      const transactions = await sequelize.query(`
+      select  tr.qty_purchased as frmr_qty,
+              tr.id            as frmr_transaction_id,
+              fg.name          as frmr_farm_group
+      from transactions tr
+              left join farmers fr on tr.farmer_id = fr.id
+              left join farm_groups fg on fg.id = fr."farmGroup_id"
+      where tr.id in (:ids)
+      group by tr.id,fg.name;
+      `, {
+        replacements: {
+          ids: transaction_ids
+        },
+        type: sequelize.QueryTypes.SELECT
+      });
+
+      const farmGroupNames: any = [];
+      for (const transaction of transactions) {
+        if (transaction.frmr_farm_group && !farmGroupNames.includes(transaction.frmr_farm_group))
+          farmGroupNames.push(transaction.frmr_farm_group);
+      }
+      cocRes.frmrFarmGroup = farmGroupNames.length ? farmGroupNames.join(', ') : '';
+    }
+    cocRes.date = moment(new Date()).format('DD-MM-YYYY');
+
+    return res.sendSuccess(res, cocRes);
+  } catch (error: any) {
+    console.error("Error appending data:", error);
+    return res.sendError(res, error.message);
+  }
+}
+
+const updateCOCDoc = async (
+  req: Request, res: Response
+) => {
+
+  try {
+
+    const { id, cocDoc } = req.body;
+    if (!id) {
+      return res.sendError(res, "need sales id");
+    }
+    if (!cocDoc) {
+      return res.sendError(res, "need COC Document id");
+    }
+    const garmentSale = await GarmentSales.update(
+      {
+        coc_doc: cocDoc
+      },
+      {
+        where: {
+          id
+        },
+      }
+    );
+
+
+    return res.sendSuccess(res, garmentSale);
+  } catch (error: any) {
+    console.log(error);
+    return res.sendError(res, error.meessage);
+  }
+}
+
 export {
   fetchBrandQrGarmentSalesPagination,
   exportBrandQrGarmentSales,
@@ -3759,5 +4369,7 @@ export {
   getBuyerProcessors,
   getGarmentProcessTracingChartData,
   garmentTraceabilityMap,
-  exportGarmentTransactionList
+  exportGarmentTransactionList,
+  getCOCDocumentData,
+  updateCOCDoc,
 };

@@ -127,23 +127,23 @@ const connectToDb = async () => {
   }
 };
 
-const { spawn } = require('child_process');
+// const { spawn } = require('child_process');
 
-const cronWorkerPath = path.join(__dirname, 'util', 'cron_worker.js');
+// const cronWorkerPath = path.join(__dirname, 'util', 'cron_worker.js');
 
-const cronWorker = spawn('node', [cronWorkerPath]);
+// const cronWorker = spawn('node', [cronWorkerPath]);
 
-cronWorker.stdout.on('data', (data:any) => {
-  console.log(`Cron Worker stdout: ${data}`);
-});
+// cronWorker.stdout.on('data', (data:any) => {
+//   console.log(`Cron Worker stdout: ${data}`);
+// });
 
-cronWorker.stderr.on('data', (data:any) => {
-  console.error(`Cron Worker stderr: ${data}`);
-});
+// cronWorker.stderr.on('data', (data:any) => {
+//   console.error(`Cron Worker stderr: ${data}`);
+// });
 
-cronWorker.on('close', (code:any) => {
-  console.log(`Cron Worker process exited with code ${code}`);
-});
+// cronWorker.on('close', (code:any) => {
+//   console.log(`Cron Worker process exited with code ${code}`);
+// });
 
 var cron = require('node-cron');
 
@@ -176,27 +176,31 @@ cron.schedule(`0 ${checkTimeDiff(23,differenceInHours)} * * *`, async () => {
 cron.schedule(`0 ${checkTimeDiff(8,differenceInHours)} * * *`, async () => {
   console.log('Running a task at 8 am IST');
   // Add your task for 8 am IST here
-  cronWorker.stdin.write('exportReportsOnebyOne\n');
+  exportReportsOnebyOne();
+  // cronWorker.stdin.write('exportReportsOnebyOne\n');
 });
 // Schedule cron job for 4 pm in India time (UTC+5:30)
 cron.schedule(`0 ${checkTimeDiff(16,differenceInHours)} * * *`, async () => {
   console.log('Running a task at 4 pm IST');
   // Add your task for 4 pm IST here
-   cronWorker.stdin.write('exportReportsOnebyOne\n');
+  exportReportsOnebyOne();
+  //  cronWorker.stdin.write('exportReportsOnebyOne\n');
 });
 
 // Schedule cron job for 12 am (midnight) in India time (UTC+5:30)
 cron.schedule(`0 ${checkTimeDiff(0,differenceInHours)} * * *`, async () => {
   console.log('Running a task at 12 am IST');
   // Add your task for 12 am IST here
-   cronWorker.stdin.write('exportReportsOnebyOne\n');
+  exportReportsOnebyOne();
+  //  cronWorker.stdin.write('exportReportsOnebyOne\n');
 });
 
 // Schedule cron job for 2 am in India time (UTC+5:30)
 cron.schedule(`0 ${checkTimeDiff(2,differenceInHours)} * * *`, async () => {
   console.log('Running a task at 2 am IST');
   // Add your task for 2 am IST here
-  cronWorker.stdin.write('exportReportsTameTaking\n');
+  exportReportsTameTaking();
+  // cronWorker.stdin.write('exportReportsTameTaking\n');
 });
 
 // ---------------------hostinger--------------------------------//

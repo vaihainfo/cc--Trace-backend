@@ -75,6 +75,7 @@ const fetchCropsPagination = async (req: Request, res: Response) => {
         if (searchTerm) {
             whereCondition.crop_name = { [Op.iLike]: `%${searchTerm}%` }
         }
+
         //fetch data with pagination
         if (req.query.pagination === "true") {
             const { count, rows } = await Crop.findAndCountAll({

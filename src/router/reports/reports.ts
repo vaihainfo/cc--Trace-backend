@@ -1,4 +1,4 @@
-import { fetchValidationProjectReport } from "../../controllers/reports/validation-project-report";
+import { fetchValidationProjectReport, fetchValidationProjectReportTemplate } from "../../controllers/reports/validation-project-report";
 import { getOrganicIntegrityReport } from "../../controllers/reports/integrity-report";
 import { fetchTransactionsReport, fetchSumOfQtyPurchasedByProgram, exportProcurementReport } from "../../controllers/reports/procurement-report";
 import { Router } from "express";
@@ -65,7 +65,12 @@ import {
     spinnerProcessBackwardTraceabiltyReport,
     exportSpinProcessBackwardfTraceabilty,
     brandWiseDataReport,
-    exportBrandWiseDataReport
+    exportBrandWiseDataReport,
+    fetchDataEntryMonitorDashboardPagination,
+    fetchGinnerProcessGreyOutReport,
+    fetchSpinnerProcessGreyOutReport,
+    exportGinnerProcessGreyOutReport,
+    exportSpinnerProcessGreyOutReport,
 } from "../../controllers/reports";
 import accessControl from "../../middleware/access-control";
 
@@ -82,6 +87,7 @@ router.get('/get-procured-quantities', fetchSumOfQtyPurchasedByProgram);
 router.get('/get-organic-integrity-report', getOrganicIntegrityReport);
 
 router.get('/get-validation-project-report', fetchValidationProjectReport);
+router.get('/get-validation-project-report-template', fetchValidationProjectReportTemplate);
 //farmer Report for Organic and Non Organic
 router.get('/get-farmer-report', fetchFarmerReportPagination);
 router.get('/export-non-farmer-report', exportNonOrganicFarmerReport);
@@ -96,8 +102,12 @@ router.get('/export-gin-sales-report', exportGinnerSales);
 
 // Grey Out Report
 
+router.get('/get-gin-process-grey-out-report', fetchGinnerProcessGreyOutReport);
+router.get('/get-spin-process-grey-out-report', fetchSpinnerProcessGreyOutReport);
 router.get('/get-spin-grey-out-report', fetchSpinnerGreyOutReport);
 router.get('/export-spin-grey-out-report', exportSpinnerGreyOutReport);
+router.get('/export-gin-process-grey-out-report', exportGinnerProcessGreyOutReport);
+router.get('/export-spin-process-grey-out-report', exportSpinnerProcessGreyOutReport);
 
 router.get('/get-spinner-bale-report', fetchSpinnerBalePagination);
 router.get('/get-spinner-pending-bale-report', fetchSpinnerPendingBale);
@@ -157,5 +167,7 @@ router.get('/export-spin-process-backward-traceability-report', exportSpinProces
 
 router.get('/get-brand-wise-data-report', brandWiseDataReport);
 router.get('/export-brand-wise-data-report', exportBrandWiseDataReport);
+
+router.get('/entry/data/monitoring/dashboard', fetchDataEntryMonitorDashboardPagination);
 
 export default router;  

@@ -107,6 +107,9 @@ const exportReportsOnebyOne = async () => {
   await generateSpinnerLintCottonStock();
   await generateSpinProcessBackwardfTraceabilty();
   await exportSpinnerGreyOutReport();
+  await exportGinnerProcessGreyOutReport();
+  await exportSpinnerProcessGreyOutReport();
+
 
   console.log('Cron Job Completed to execute all reports.');
 }
@@ -193,6 +196,181 @@ const exportSpinnerGreyOutReport = async () => {
        lot_no: item.dataValues.lot_no ? item.dataValues.lot_no : "",
        lint_quantity: item.dataValues.qty_stock? Number(item.dataValues.qty_stock): 0,
      });
+     worksheet.addRow(rowValues);
+   }
+
+   // Auto-adjust column widths based on content
+   worksheet.columns.forEach((column: any) => {
+     let maxCellLength = 0;
+     column.eachCell({ includeEmpty: true }, (cell: any) => {
+       const cellLength = (cell.value ? cell.value.toString() : "").length;
+       maxCellLength = Math.max(maxCellLength, cellLength);
+     });
+     column.width = Math.min(14, maxCellLength + 2); // Limit width to 30 characters
+   });
+
+   // Save the workbook
+   await workbook.xlsx.writeFile(excelFilePath);
+};
+
+const exportGinnerProcessGreyOutReport = async () => {
+  // spinner_bale_receipt_load
+  const excelFilePath = path.join(
+   "./upload",
+   "ginner-process-grey-out-report.xlsx"
+ );
+
+   let include = [
+     {
+       model: Ginner,
+       as: "ginner",
+       attributes: [],
+     },
+     {
+       model: Season,
+       as: "season",
+       attributes: [],
+     },
+     {
+       model: Program,
+       as: "program",
+       attributes: [],
+     }
+   ];
+
+   // Create the excel workbook file
+   const workbook = new ExcelJS.Workbook();
+   const worksheet = workbook.addWorksheet("Sheet1");
+   worksheet.mergeCells("A1:M1");
+   const mergedCell = worksheet.getCell("A1");
+   mergedCell.value = "CottonConnect | Ginner Process Grey Out Report";
+   mergedCell.font = { bold: true };
+   mergedCell.alignment = { horizontal: "center", vertical: "middle" };
+   // Set bold font for header row
+   const headerRow = worksheet.addRow([
+    "Sr No.",
+    "Season",
+    "Ginner Name",
+    "REEL Lot No",
+    "Press Number",
+    "Bale Lot No",
+    "Total Quantity",
+   ]);
+   headerRow.font = { bold: true };
+
+   // //fetch data with pagination
+
+   const { count, rows }: any = await GinProcess.findAndCountAll({
+     where: {greyout_status : true},
+     include: include,
+     attributes: [
+      [Sequelize.col('"season"."name"'), 'season_name'],
+      [Sequelize.literal('"ginner"."name"'), "ginner_name"],
+      [Sequelize.fn('MAX', Sequelize.col('press_no')), 'press_no'],
+      [Sequelize.fn('MAX', Sequelize.col('lot_no')), 'lot_no'],
+      [Sequelize.fn('MAX', Sequelize.col('reel_lot_no')), 'reel_lot_no'],
+      [Sequelize.fn('MAX', Sequelize.col('total_qty')), 'total_qty'],
+     ],
+     group: ['season.id', 'ginner.id'], 
+   });    
+
+   // // Append data to worksheet
+   for await (const [index, item] of rows.entries()) {
+     const rowValues = Object.values({
+       index: index + 1,
+       season: item.dataValues.season_name ? item.dataValues.season_name : "",
+       ginner: item.dataValues.ginner_name ? item.dataValues.ginner_name : "",
+       reel_lot_no: item.dataValues.reel_lot_no ? item.dataValues.reel_lot_no : "",
+       press: item.dataValues.press_no ? item.dataValues.press_no : "",
+       lot_no: item.dataValues.lot_no ? item.dataValues.lot_no : "",
+       total_qty: item.dataValues.total_qty ? item.dataValues.total_qty : "",
+     });
+     worksheet.addRow(rowValues);
+   }
+
+   // Auto-adjust column widths based on content
+   worksheet.columns.forEach((column: any) => {
+     let maxCellLength = 0;
+     column.eachCell({ includeEmpty: true }, (cell: any) => {
+       const cellLength = (cell.value ? cell.value.toString() : "").length;
+       maxCellLength = Math.max(maxCellLength, cellLength);
+     });
+     column.width = Math.min(14, maxCellLength + 2); // Limit width to 30 characters
+   });
+
+   // Save the workbook
+   await workbook.xlsx.writeFile(excelFilePath);
+};
+
+const exportSpinnerProcessGreyOutReport = async () => {
+  // spinner_bale_receipt_load
+  const excelFilePath = path.join(
+   "./upload",
+   "spinner-process-grey-out-report.xlsx"
+ );
+
+   let include = [
+     {
+       model: Season,
+       as: "season",
+       attributes: [],
+     },
+     {
+       model: Program,
+       as: "program",
+       attributes: [],
+     },
+     {
+       model: Spinner,
+       as: "spinner",
+       attributes: [],
+     },
+   ];
+
+   // Create the excel workbook file
+   const workbook = new ExcelJS.Workbook();
+   const worksheet = workbook.addWorksheet("Sheet1");
+   worksheet.mergeCells("A1:M1");
+   const mergedCell = worksheet.getCell("A1");
+   mergedCell.value = "CottonConnect | Spinner Process Grey Out Report";
+   mergedCell.font = { bold: true };
+   mergedCell.alignment = { horizontal: "center", vertical: "middle" };
+   // Set bold font for header row
+   const headerRow = worksheet.addRow([
+    "Sr No.",
+    "Season",
+    "Spinner Name",
+    "REEL Lot No",
+    "Batch Number",
+    "Quantity Stock",
+   ]);
+   headerRow.font = { bold: true };
+
+   // //fetch data with pagination
+
+   const { count, rows }: any = await SpinProcess.findAndCountAll({
+     where: {greyout_status : true},
+     include: include,
+     attributes: [
+       [Sequelize.col('"season"."name"'), 'season_name'],
+       [Sequelize.col('"season"."name"'), 'season_name'],
+       [Sequelize.col('"spinner"."name"'), 'spinner_name'],
+       [Sequelize.col('batch_lot_no'), 'batch_lot_no'],
+       [Sequelize.col('reel_lot_no'), 'reel_lot_no'],
+       [Sequelize.col('qty_stock'), 'qty_stock'],
+     ],
+   });    
+
+   // // Append data to worksheet
+   for await (const [index, item] of rows.entries()) {
+     const rowValues = Object.values({
+       index: index + 1,
+       season: item.dataValues.season_name ? item.dataValues.season_name : "",
+       spinner: item.dataValues.spinner_name ? item.dataValues.spinner_name : "",
+       reel_lot_no: item.dataValues.reel_lot_no ? item.dataValues.reel_lot_no : "",
+       batch_lot_no: item.dataValues.batch_lot_no ? item.dataValues.batch_lot_no : "",
+       lint_quantity: item.dataValues.qty_stock ? item.dataValues.qty_stock : "",
+      });
      worksheet.addRow(rowValues);
    }
 
@@ -595,6 +773,7 @@ const generateOrganicFarmerReport = async () => {
     while (true) {
       const farmer = await sequelize.query(`
         SELECT
+          "fr"."id",
           "fr"."firstName" AS "Farmer Name",
           "fr"."lastName" AS "Farmer Last Name",
           fr.tracenet_id AS "Tracenet ID",
@@ -632,6 +811,7 @@ const generateOrganicFarmerReport = async () => {
           LEFT JOIN
               farm_groups fg ON "fr"."farmGroup_id" = fg.id
           WHERE "pr"."program_name" ILIKE '%Organic%'
+          ORDER BY "fr"."id" ASC
           LIMIT :limit OFFSET :offset`, {
             replacements: { limit: batchSize, offset },
             type: sequelize.QueryTypes.SELECT,
@@ -724,6 +904,7 @@ const generateNonOrganicFarmerReport = async () => {
     while (true) {
       const farmer = await sequelize.query(`
         SELECT
+          "fr"."id",
           "fr"."firstName" AS "Farmer Name",
           "fr"."lastName" AS "Farmer Last Name",
           fr.agri_total_area AS "Total Agricultural Area",
@@ -756,6 +937,7 @@ const generateNonOrganicFarmerReport = async () => {
               villages vt ON fr.village_id = vt.id
           WHERE
               pr.program_name NOT LIKE '%Organic%'
+          ORDER BY "fr"."id" ASC
           LIMIT :limit OFFSET :offset`, {
             replacements: { limit: batchSize, offset },
             type: sequelize.QueryTypes.SELECT,
@@ -1010,6 +1192,7 @@ const generateProcurementReport = async () => {
       LEFT JOIN users_apps ag ON tr.agent_id = ag.id
       WHERE
           tr.status = 'Sold'
+      ORDER BY tr.id ASC
       LIMIT :limit OFFSET :offset`, {
       replacements: { limit: batchSize, offset },
       type: sequelize.QueryTypes.SELECT,
@@ -1030,7 +1213,7 @@ const generateProcurementReport = async () => {
         currentWorksheet = workbook.addWorksheet(`Procurement Report ${worksheetIndex}`);
 
         if (worksheetIndex == 1) {
-          currentWorksheet.mergeCells('A1:O1');
+          currentWorksheet.mergeCells('A1:T1');
           const mergedCell = currentWorksheet.getCell('A1');
           mergedCell.value = 'Cotton Connect | Procurement Report';
           mergedCell.font = { bold: true };
@@ -1749,6 +1932,7 @@ const generateAgentTransactions = async () => {
         WHERE
           tr.agent_id IS NOT NULL
           AND tr.agent_id <> 0
+        ORDER BY tr.id ASC
         LIMIT :limit OFFSET :offset`, {
         replacements: { limit: batchSize, offset },
         type: sequelize.QueryTypes.SELECT,
@@ -2586,14 +2770,14 @@ const generateGinnerCottonStock = async () => {
           [Sequelize.literal('"season"."id"'), "season_id"],
           [Sequelize.col('"season"."name"'), "season_name"],
           // [Sequelize.literal('"program"."program_name"'), 'program_name'],
-          [
-            sequelize.fn(
-              "COALESCE",
-              sequelize.fn("SUM", sequelize.col("total_qty")),
-              0
-            ),
-            "cotton_processed",
-          ],
+          // [
+          //   sequelize.fn(
+          //     "COALESCE",
+          //     sequelize.fn("SUM", sequelize.col("total_qty")),
+          //     0
+          //   ),
+          //   "cotton_processed",
+          // ],
         ],
         include: include,
         group: ["ginner.id", "season.id"],
@@ -2663,19 +2847,21 @@ const generateGinnerCottonStock = async () => {
           ],
           where: {
             mapped_ginner: item.ginner_id,
+            season_id: item.season_id,
             status: "Sold",
           },
         });
 
         obj.cotton_procured = cottonProcured?.dataValues?.cotton_procured ?? 0;
         obj.cotton_stock = cottonProcured?.dataValues?.cotton_stock ?? 0;
+        obj.cotton_processed =  obj.cotton_procured  - obj.cotton_stock;
 
         const rowValues = Object.values({
           index: index + offset + 1,
           ginner: item?.dataValues.ginner_name ? item?.dataValues.ginner_name : "",
           season: item?.dataValues.season_name ? item?.dataValues.season_name : "",
           cotton_procured: obj.cotton_procured ? Number(obj.cotton_procured) : 0,
-          cotton_processed: item?.dataValues?.cotton_processed ? Number(item?.dataValues?.cotton_processed) : 0,
+          cotton_processed: obj.cotton_processed ? Number(obj.cotton_processed) : 0,
           cotton_stock: obj.cotton_stock ? Number(obj.cotton_stock) : 0,
         });
         currentWorksheet.addRow(rowValues).commit();
