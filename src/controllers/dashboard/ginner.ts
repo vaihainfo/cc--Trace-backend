@@ -2236,7 +2236,7 @@ const getBalesProcuredByCountryDataRes = async (
       );
 
       if (fFarmerValue) {
-        farmerCount = formatNumber(fFarmerValue.dataValues.procured);
+        farmerCount = Math.round(Number(fFarmerValue.dataValues.procured));
         if (!seasonList.includes(fFarmerValue.dataValues.seasonName))
           seasonList.push(fFarmerValue.dataValues.seasonName);
       } else {
@@ -2379,7 +2379,7 @@ const getBaleSoldByCountryRes = async (
       );
 
       if (fFarmerValue) {
-        farmerCount = formatNumber(fFarmerValue.dataValues.sold);
+        farmerCount = Math.round(Number(fFarmerValue.dataValues.sold));
         if (!seasonList.includes(fFarmerValue.dataValues.seasonName))
           seasonList.push(fFarmerValue.dataValues.seasonName);
       } else {
@@ -2557,13 +2557,13 @@ const getBaleStockDataRes = async (
         list.dataValues.seasonId == seasonId
       );
       if (fProcuredValue) {
-        farmerCount.procured = formatNumber(fProcuredValue.dataValues.procured);
+        farmerCount.procured = Math.round(Number(fProcuredValue.dataValues.procured));
         if (!seasonList.includes(fProcuredValue.dataValues.seasonName))
           seasonList.push(fProcuredValue.dataValues.seasonName);
       }
 
       if (fSoldValue) {
-        farmerCount.sold = formatNumber(fSoldValue.dataValues.sold);
+        farmerCount.sold = Math.round(Number(fSoldValue.dataValues.sold));
         if (!seasonList.includes(fSoldValue.dataValues.seasonName))
           seasonList.push(fSoldValue.dataValues.seasonName);
       }
@@ -2575,7 +2575,7 @@ const getBaleStockDataRes = async (
         });
       }
 
-      data.data.push(farmerCount.procured > farmerCount.sold ? Number((farmerCount.procured - farmerCount.sold).toFixed(2)) : 0);
+      data.data.push(farmerCount.procured > farmerCount.sold ? Math.round(Number((farmerCount.procured - farmerCount.sold))) : 0);
     }
 
     soldList.push(data);
