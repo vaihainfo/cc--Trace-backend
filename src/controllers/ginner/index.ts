@@ -1656,6 +1656,7 @@ const _getGinnerProcessTracingChartData = async (
     let offset = 0;
     let allGinData: any[] = [];
 
+
     while (true) {
       let ginBatch = await GinProcess.findAll({
         where: whereCondition,
