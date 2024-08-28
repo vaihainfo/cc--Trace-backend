@@ -278,8 +278,8 @@ const getEstimateProductionByCountry = async (
 
   const estimateAndProduction = await Farm.findAll({
     attributes: [
-      [Sequelize.fn('SUM', Sequelize.col('farms.total_estimated_cotton')), 'estimate'],
-      [Sequelize.fn('SUM', Sequelize.col('farms.agri_estimated_prod')), 'production'],
+      [Sequelize.fn('SUM', Sequelize.col('farmer.total_estimated_cotton')), 'estimate'],
+      [Sequelize.fn('SUM', Sequelize.col('farmer.agri_estimated_prod')), 'production'],
       [Sequelize.col(`farmer.${tableName}.${colName}`), 'name']
     ],
     include: [
@@ -308,13 +308,8 @@ const getEstimateAndProcured = async (
 
     const reqData = await getQueryParams(req, res);
     const farmWhere = getFarmWhereQuery(reqData);
-    const transactionWhere = getTransactionWhereQuery(reqData);
     const estimateList = await getEstimateData(farmWhere);
-    const procuredList = await getProcuredData(transactionWhere);
-    const data = getEstimateAndProcuredRes(
-      estimateList,
-      procuredList
-    );
+    const data = getEstimateAndProcuredRes(estimateList);
     return res.sendSuccess(res, data);
   }
 
@@ -333,8 +328,7 @@ const mtConversion = (value: number) => {
 
 
 const getEstimateAndProcuredRes = (
-  estimateList: any,
-  procuredList: any
+  estimateList: any
 ) => {
   let seasonIds: number[] = [];
 
@@ -343,10 +337,6 @@ const getEstimateAndProcuredRes = (
       seasonIds.push(estimate.dataValues.season.id);
   });
 
-  procuredList.forEach((procured: any) => {
-    if (!seasonIds.includes(procured.dataValues.season.id))
-      seasonIds.push(procured.dataValues.season.id);
-  });
 
   seasonIds = seasonIds.sort((a, b) => a - b);
 
@@ -358,9 +348,6 @@ const getEstimateAndProcuredRes = (
     const fEstimate = estimateList.find((estimate: any) =>
       estimate.dataValues.season.id == sessionId
     );
-    const fProcured = procuredList.find((procured: any) =>
-      procured.dataValues.season.id == sessionId
-    );
     let data = {
       seasonName: '',
       estimate: 0,
@@ -370,12 +357,9 @@ const getEstimateAndProcuredRes = (
     if (fEstimate) {
       data.seasonName = fEstimate.dataValues.season.name;
       data.estimate += mtConversion(fEstimate.dataValues.estimate);
+      data.procured += mtConversion(fEstimate.dataValues.production);
     }
 
-    if (fProcured) {
-      data.seasonName = fProcured.dataValues.season.name;
-      data.procured += mtConversion(fProcured.dataValues.procured);
-    }
 
     season.push(data.seasonName);
     estimate.push(data.estimate);
@@ -399,8 +383,8 @@ const getEstimateData = async (
 
   const estimateAndProduction = await Farm.findAll({
     attributes: [
-      [Sequelize.fn('SUM', Sequelize.col('farms.total_estimated_cotton')), 'estimate'],
-      [Sequelize.fn('SUM', Sequelize.col('farms.agri_estimated_prod')), 'production'],
+      [Sequelize.fn('SUM', Sequelize.col('farmer.total_estimated_cotton')), 'estimate'],
+      [Sequelize.fn('SUM', Sequelize.col('farmer.agri_estimated_prod')), 'production'],
       [Sequelize.col('season.id'), 'seasonId']
     ],
     include: [
