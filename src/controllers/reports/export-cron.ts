@@ -3451,6 +3451,7 @@ const generateSpinnerYarnProcess = async () => {
   
         const rowValues = Object.values({
           index: index + offset + 1,
+          createdAt: item.createdAt ? item.createdAt : "",
           date: item.date ? item.date : "",
           season: item.season_name ? item.season_name : "",
           spinner: item.spinner_name ? item.spinner_name : "",
@@ -3477,7 +3478,7 @@ const generateSpinnerYarnProcess = async () => {
         if (!currentWorksheet) {
           currentWorksheet = workbook.addWorksheet(`Spinner Yarn Process ${worksheetIndex}`);
           if (worksheetIndex == 1) {
-            currentWorksheet.mergeCells("A1:S1");
+            currentWorksheet.mergeCells("A1:R1");
             const mergedCell = currentWorksheet.getCell("A1");
             mergedCell.value = "CottonConnect | Spinner Yarn Process Report";
             mergedCell.font = { bold: true };
@@ -3486,7 +3487,8 @@ const generateSpinnerYarnProcess = async () => {
 
           const headerRow = currentWorksheet.addRow([
             "Sr No.",
-            "Date",
+            "Date and Time",
+            "Process Date",
             "Season",
             "Spinner Name",
             "Spin Lot No",
@@ -3671,6 +3673,7 @@ const generateSpinnerSale = async () => {
           item.dataValues?.yarn_type?.length > 0 ? item.dataValues?.yarn_type.join(",") : "";
         const rowValues = Object.values({
           index: index + offset + 1,
+          createdAt: item.dataValues.createdAt ? item.dataValues.createdAt : "",
           date: item.dataValues.date ? item.dataValues.date : "",
           season: item.dataValues.season_name ? item.dataValues.season_name : "",
           spinner: item.dataValues.spinner ? item.dataValues.spinner : "",
@@ -3706,7 +3709,7 @@ const generateSpinnerSale = async () => {
         if (!currentWorksheet) {
           currentWorksheet = workbook.addWorksheet(`Spinner Yarn Sales ${worksheetIndex}`);
           if (worksheetIndex == 1) {
-            currentWorksheet.mergeCells("A1:Q1");
+            currentWorksheet.mergeCells("A1:R1");
             const mergedCell = currentWorksheet.getCell("A1");
             mergedCell.value = "CottonConnect | Spinner Yarn Sales Report";
             mergedCell.font = { bold: true };
@@ -3715,6 +3718,7 @@ const generateSpinnerSale = async () => {
 
           const headerRow = currentWorksheet.addRow([
             "Sr No.",
+            "Created Date and Time",
             "Date",
             "Season",
             "Spinner Name",
@@ -4107,6 +4111,7 @@ const generatePendingSpinnerBale = async () => {
       for await (const [index, item] of rows.entries()) {
         const rowValues = Object.values({
           index: index + offset + 1,
+          createdAt: item.dataValues.createdAt ? item.dataValues.createdAt : "",
           date: item.dataValues.date ? item.dataValues.date : "",
           season: item.dataValues.season_name ? item.dataValues.season_name : "",
           ginner: item.dataValues.ginner ? item.dataValues.ginner : "",
@@ -4133,7 +4138,7 @@ const generatePendingSpinnerBale = async () => {
         if (!currentWorksheet) {
           currentWorksheet = workbook.addWorksheet(`Spinner Pending Bales ${worksheetIndex}`);
           if (worksheetIndex == 1) {
-            currentWorksheet.mergeCells("A1:M1");
+            currentWorksheet.mergeCells("A1:N1");
             const mergedCell = currentWorksheet.getCell("A1");
             mergedCell.value = "CottonConnect | Spinner Pending Bales Receipt Report";
             mergedCell.font = { bold: true };
@@ -4142,6 +4147,7 @@ const generatePendingSpinnerBale = async () => {
 
           const headerRow = currentWorksheet.addRow([
             "Sr No.",
+            "Date and Time",
             "Date",
             "Season",
             "Ginner Name",
