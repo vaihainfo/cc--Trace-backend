@@ -1003,7 +1003,7 @@ const fetchSpinnerProcessGreyOutReport = async (req: Request, res: Response) => 
   const page = Number(req.query.page) || 1;
   const limit = Number(req.query.limit) || 10;
 
-  const {spinnerId, seasonId, programId, brandId, countryId }: any =
+  const { spinnerId, seasonId, programId, brandId, countryId }: any =
     req.query;
   const offset = (page - 1) * limit;
   const whereCondition: any = {};
@@ -10040,7 +10040,7 @@ const fetchGinnerCottonStock = async (req: Request, res: Response) => {
 
       obj.cotton_procured = cottonProcured?.dataValues?.cotton_procured ?? 0;
       obj.cotton_stock = cottonProcured?.dataValues?.cotton_stock ?? 0;
-      obj.cotton_processed =  obj.cotton_procured  - obj.cotton_stock;
+      obj.cotton_processed = obj.cotton_procured - obj.cotton_stock;
       result.push({ ...ginner?.dataValues, ...obj });
     }
     //fetch data with pagination
@@ -10217,14 +10217,14 @@ const exportGinnerCottonStock = async (req: Request, res: Response) => {
 
         obj.cotton_procured = cottonProcured?.dataValues?.cotton_procured ?? 0;
         obj.cotton_stock = cottonProcured?.dataValues?.cotton_stock ?? 0;
-        obj.cotton_processed =  obj.cotton_procured  - obj.cotton_stock;
+        obj.cotton_processed = obj.cotton_procured - obj.cotton_stock;
 
         const rowValues = Object.values({
           index: index + 1,
           ginner: item?.dataValues.ginner_name ? item?.dataValues.ginner_name : "",
           season: item?.dataValues.season_name ? item?.dataValues.season_name : "",
           cotton_procured: obj.cotton_procured ? obj.cotton_procured : 0,
-          cotton_processed:  obj.cotton_processed ?  obj.cotton_processed : 0,
+          cotton_processed: obj.cotton_processed ? obj.cotton_processed : 0,
           cotton_stock: obj.cotton_stock ? obj.cotton_stock : 0,
         });
         worksheet.addRow(rowValues);
@@ -11738,7 +11738,7 @@ const exportPscpGinnerCottonProcurement = async (
 
 const fetchPscpProcurementLiveTracker = async (req: Request, res: Response) => {
   try {
-    const { seasonId, countryId, brandId, ginnerId, search, page = 1, limit = 10 }:any = req.query;
+    const { seasonId, countryId, brandId, ginnerId, search, page = 1, limit = 10 }: any = req.query;
     const offset = (Number(page) - 1) * Number(limit);
 
     let whereCondition: string[] = [];
@@ -11777,16 +11777,23 @@ const fetchPscpProcurementLiveTracker = async (req: Request, res: Response) => {
     const seasonConditionSql = seasonCondition.length ? `${seasonCondition.join(' AND ')}` : '1=1';
     const brandConditionSql = brandCondition.length ? `${brandCondition.join(' AND ')}` : '1=1';
     const baleConditionSql = baleCondition.length ? `${baleCondition.join(' AND ')}` : '1=1';
-
-    const count = await sequelize.query(
-      `SELECT 
-        COUNT(*)
-      FROM
+    
+    let countQuery = `
+  SELECT 
+      COUNT(*)
+  FROM
       ginners g
-      JOIN programs p ON p.id = ANY(g.program_id)
-      `
-    )
+  JOIN
+      programs p ON p.id = ANY(g.program_id)
+`;
 
+    if (brandId) {
+      countQuery += ` WHERE ${brandId} = ANY(g.brand)`;
+    }
+
+    const [countResult] = await sequelize.query(countQuery);
+    const count = countResult[0].count;
+    
     const data = await sequelize.query(
       `
       WITH
@@ -11973,13 +11980,13 @@ const fetchPscpProcurementLiveTracker = async (req: Request, res: Response) => {
           limit: Number(limit),
           offset: Number(offset)
         },
-        type:  sequelize.QueryTypes.SELECT
+        type: sequelize.QueryTypes.SELECT
       }
     );
     return res.sendPaginationSuccess(
       res,
       data,
-      count[0][0].count
+      count
     );
   } catch (error: any) {
     console.error("Error appending data:", error);

@@ -10,7 +10,7 @@ export const formatDataForGinnerProcess = (reelLotNo: any, data: any): any => {
                 name: el.farm_name,
                 type: 'farm',
                 width: 300,
-                height: 40,
+                height: 100,
                 children: [
                     {
                         name: el.farm_name,

@@ -435,7 +435,7 @@ const getTotalAcres = async (
 };
 
 const getAcreBySession = async (where: any) => {
-  const result = await Farm.findAll({ 
+  const result = await Farm.findAll({
     attributes: [
       [Sequelize.fn('SUM', Sequelize.col('farms.cotton_total_area')), 'acreCount'],
       [Sequelize.col('season.name'), 'seasonName'],
@@ -551,8 +551,8 @@ const getEstimateProductionList = (estimateProductionList: any) => {
 };
 
 const mtConversion = (value: number) => {
-  return value > 0 ? Number((value / 1000).toFixed(2)) : 0
-}
+  return value > 0 ? Number((value / 1000).toFixed(2)) : 0;
+};
 
 const formatNumber = (data: string): number => {
   return Number(Number(data).toFixed(2));
@@ -917,17 +917,29 @@ const getCountryCountRes = async (
 
     for (const seasonId of seasonIds) {
 
-      let farmerCount = 0;
+      let farmerCount = {
+        count: 0,
+        name: ''
+      };
       const fFarmerValue = farmerList.find((list: any) =>
         list.dataValues.seasonId == seasonId
       );
 
       if (fFarmerValue) {
-        farmerCount = formatNumber(fFarmerValue.dataValues.farmerCount);
-        if (!seasonList.includes(fFarmerValue.dataValues.seasonName))
-          seasonList.push(fFarmerValue.dataValues.seasonName);
+        farmerCount.count = formatNumber(fFarmerValue.dataValues.farmerCount);
+        farmerCount.name = fFarmerValue.dataValues.seasonName;
       }
-      data.data.push(farmerCount);
+      if (!farmerCount.name) {
+        const fSeason = seasons.find((season: any) =>
+          season.id == seasonId
+        );
+        if (fSeason) {
+          farmerCount.name = fSeason.name;
+        }
+      }
+      data.data.push(farmerCount.count);
+      if (!seasonList.includes(farmerCount.name))
+        seasonList.push(farmerCount.name);
     }
 
     countList.push(data);
@@ -1035,17 +1047,29 @@ const getCountryAreaRes = async (
 
     for (const seasonId of seasonIds) {
 
-      let totalArea = 0;
+      let totalArea = {
+        area: 0,
+        name: ''
+      };
       const fFarmerValue = farmerList.find((list: any) =>
         list.dataValues.seasonId == seasonId
       );
 
       if (fFarmerValue) {
-        totalArea = mtConversion(fFarmerValue.dataValues.area);
-        if (!seasonList.includes(fFarmerValue.dataValues.seasonName))
-          seasonList.push(fFarmerValue.dataValues.seasonName);
+        totalArea.area = mtConversion(fFarmerValue.dataValues.area);
+        totalArea.name = fFarmerValue.dataValues.seasonName;
       }
-      data.data.push(totalArea);
+      if (!totalArea.name) {
+        const fSeason = seasons.find((season: any) =>
+          season.id == seasonId
+        );
+        if (fSeason) {
+          totalArea.name = fSeason.name;
+        }
+      }
+      data.data.push(totalArea.area);
+      if (!seasonList.includes(totalArea.name))
+        seasonList.push(totalArea.name);
     }
 
     areaList.push(data);
@@ -1155,17 +1179,29 @@ const getEstimateCottonRes = async (
 
     for (const seasonId of seasonIds) {
 
-      let totalArea = 0;
+      let totalArea = {
+        area: 0,
+        name: ''
+      };
       const fFarmerValue = farmerList.find((list: any) =>
         list.dataValues.seasonId == seasonId
       );
 
       if (fFarmerValue) {
-        totalArea = mtConversion(fFarmerValue.dataValues.estimate);
-        if (!seasonList.includes(fFarmerValue.dataValues.seasonName))
-          seasonList.push(fFarmerValue.dataValues.seasonName);
+        totalArea.area = mtConversion(fFarmerValue.dataValues.estimate);
+        totalArea.name = fFarmerValue.dataValues.seasonName;
       }
-      data.data.push(totalArea);
+      if (!totalArea.name) {
+        const fSeason = seasons.find((season: any) =>
+          season.id == seasonId
+        );
+        if (fSeason) {
+          totalArea.name = fSeason.name;
+        }
+      }
+      data.data.push(totalArea.area);
+      if (!seasonList.includes(totalArea.name))
+        seasonList.push(totalArea.name);
     }
 
     areaList.push(data);

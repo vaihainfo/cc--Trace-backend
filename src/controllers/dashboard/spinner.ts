@@ -289,8 +289,8 @@ const getTopFabricRes = (
   const name: string[] = [];
   const count: number[] = [];
   for (const row of list) {
-    if (row.dataValues && row.dataValues.name && name.length < 10) {
-      name.push(row.dataValues.name);
+    if (row.dataValues && row.dataValues.sale_name && name.length < 10) {
+      name.push(row.dataValues.sale_name);
       count.push(mtConversion(row.dataValues.total));
     }
   }
@@ -313,7 +313,7 @@ const getTopFabricData = async (
           then knitter.name 
         when weaver.id is not null 
           then weaver.name 
-        else processor_name end`), 'name']
+        else processor_name end`), 'sale_name']
     ],
     include: [{
       model: Spinner,
@@ -331,7 +331,7 @@ const getTopFabricData = async (
     where,
     order: [['total', 'desc']],
     limit: 15,
-    group: ['knitter.id', 'weaver.id', 'processor_name',]
+    group: ['sale_name']
   });
 
   return result;
@@ -1397,15 +1397,14 @@ const getTopYarnStockData = async (
 ) => {
 
   const [result] = await sequelize.query(`
-    select sn.name                                  as "spinnerName",
-           sum(sp.net_yarn_qty) - sum(ss.total_qty) as stock
-    from public.spinners sn
-        left join public.spin_processes sp on sn.id = sp.spinner_id
-        left join public.spin_sales ss on sn.id = ss.spinner_id
-    where sn.name is not null ${reqData?.country ? " and g.country_id = reqData?.country" : ""}
-    group by sn.id
-    order by stock desc nulls last
-    limit 10
+    select sn.name                                                                            as "spinnerName",
+       ((select sum(sp.net_yarn_qty) from public.spin_processes sp where sp.spinner_id = sn.id) -
+        (select sum(sp.total_qty) from public.spin_sales sp where sp.spinner_id = sn.id)) as stock
+from public.spinners sn
+where sn.name is not null ${reqData?.country ? " and g.country_id = reqData?.country" : ""}
+group by sn.id
+order by stock desc nulls last
+limit 10
   `);
 
   return result;
