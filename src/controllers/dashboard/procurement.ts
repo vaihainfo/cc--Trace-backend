@@ -211,11 +211,19 @@ const getCountryEstimateAndProduction = async (
   try {
     const reqData = await getQueryParams(req, res);
     const where = getFarmWhereQuery(reqData);
-    const estimateProductionList = await getEstimateProductionByCountry(
+    const transactionWhere = getTransactionWhereQuery(reqData);
+    const estimateList = await getEstimateProductionByCountry(
       where,
       reqData
     );
-    const data = getCountryEstimateProductionRes(estimateProductionList);
+    const procuredList = await getProcuredByCountry(
+      transactionWhere,
+      reqData
+    );
+    const data = getCountryEstimateProductionRes(
+      estimateList,
+      procuredList
+    );
     return res.sendSuccess(res, data);
   }
   catch (error: any) {
@@ -228,15 +236,52 @@ const getCountryEstimateAndProduction = async (
 };
 
 
-const getCountryEstimateProductionRes = (estimateProductionList: any) => {
+const getCountryEstimateProductionRes = (
+  estimateList: any,
+  procuredList: any
+) => {
   let name: any = [];
   let estimate: any = [];
   let production: any = [];
 
-  for (const estimateProduction of estimateProductionList) {
-    name.push(estimateProduction.dataValues.name);
-    estimate.push(mtConversion(estimateProduction.dataValues.estimate));
-    production.push(mtConversion(estimateProduction.dataValues.production));
+  const ids: number[] = [];
+
+  estimateList.forEach((estimate: any) => {
+    if (!ids.includes(estimate.dataValues.id))
+      ids.push(estimate.dataValues.id);
+  });
+  procuredList.forEach((procured: any) => {
+    if (!ids.includes(procured.dataValues.id))
+      ids.push(procured.dataValues.id);
+  });
+
+
+  for (const id of ids) {
+    const data = {
+      name: '',
+      estimate: 0,
+      production: 0
+    };
+    const fEstimate = estimateList.find((estimate: any) =>
+      estimate.dataValues.id == id
+    );
+    const fProcured = procuredList.find((procured: any) =>
+      procured.dataValues.id == id
+    );
+    if (fEstimate) {
+      data.name = fEstimate.dataValues.name;
+      data.estimate = fEstimate.dataValues.estimate;
+    }
+    if (fProcured) {
+      data.name = fProcured.dataValues.name;
+      data.production = fProcured.dataValues.procured;
+    }
+    if (data.name) {
+      name.push(data.name);
+      estimate.push(mtConversion(data.estimate));
+      production.push(mtConversion(data.production));
+    }
+
   }
 
   return {
@@ -244,6 +289,55 @@ const getCountryEstimateProductionRes = (estimateProductionList: any) => {
     estimate,
     production
   };
+};
+
+
+const getProcuredByCountry = async (
+  where: any,
+  reqData: any
+) => {
+  let tableName = 'country';
+  let colName = 'county_name';
+  let model = Country;
+
+  if (reqData.block) {
+    tableName = 'village';
+    colName = 'village_name';
+    model = Village;
+  }
+  else if (reqData.district) {
+    tableName = 'block';
+    colName = 'block_name';
+    model = Block;
+  }
+  else if (reqData.state) {
+    tableName = 'district';
+    colName = 'district_name';
+    model = District;
+  }
+  else if (reqData.country) {
+    tableName = 'state';
+    colName = 'state_name';
+    model = State;
+  }
+
+  const result = await Transaction.findAll({
+    attributes: [
+      [Sequelize.fn('SUM', Sequelize.literal('CAST(qty_purchased  as numeric)')), 'procured'],
+      [Sequelize.col(`${tableName}.${colName}`), 'name'],
+      [Sequelize.col(`${tableName}.id`), 'id']
+    ],
+    include: [{
+      model: model,
+      as: tableName,
+      attributes: []
+    }],
+    where,
+    group: [`${tableName}.id`]
+  });
+
+  return result;
+
 };
 
 
@@ -280,7 +374,8 @@ const getEstimateProductionByCountry = async (
     attributes: [
       [Sequelize.fn('SUM', Sequelize.col('farmer.total_estimated_cotton')), 'estimate'],
       [Sequelize.fn('SUM', Sequelize.col('farmer.agri_estimated_prod')), 'production'],
-      [Sequelize.col(`farmer.${tableName}.${colName}`), 'name']
+      [Sequelize.col(`farmer.${tableName}.${colName}`), 'name'],
+      [Sequelize.col(`farmer.${tableName}.id`), 'id']
     ],
     include: [
       {
@@ -323,8 +418,8 @@ const getEstimateAndProcured = async (
 };
 
 const mtConversion = (value: number) => {
-  return value > 0 ? Number((value / 1000).toFixed(2)) : 0
-}
+  return value > 0 ? Number((value / 1000).toFixed(2)) : 0;
+};
 
 
 const getEstimateAndProcuredRes = (
@@ -884,7 +979,7 @@ const getEstimateCottonRes = async (
           if (season.id == seasonId && !seasonList.includes(season.dataValues.name)) {
             seasonList.push(season.name);
           }
-        })
+        });
       }
       data.data.push(totalArea);
     }
@@ -1004,7 +1099,7 @@ const getProcessedCottonRes = async (
           if (season.id == seasonId && !seasonList.includes(season.dataValues.name)) {
             seasonList.push(season.name);
           }
-        })
+        });
       }
       data.data.push(totalArea);
     }
@@ -1191,7 +1286,7 @@ const getProcessedEstimatedProcessedCottonRes = async (
           if (season.id == seasonId && !seasonList.includes(season.dataValues.name)) {
             seasonList.push(season.name);
           }
-        })
+        });
       }
       data.data.push(countryCount.estimated);
       data.data.push(countryCount.procured);
