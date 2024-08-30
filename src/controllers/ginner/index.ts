@@ -558,55 +558,97 @@ const chooseBale = async (req: Request, res: Response) => {
     ];
     //fetch data with pagination
 
-    let result = await GinProcess.findAll({
-      where: whereCondition,
-      include: include,
-      order: [["id", "DESC"]],
-    });
-    const id_array = result.map((item: any) => item.id);
-    const bales_list = [];
-    for await (const id of id_array) {
-      const lot_details = await GinBale.findAll({
-        attributes: [
-          [
-            sequelize.fn(
-              "SUM",
-              Sequelize.literal(
-                'CAST("gin-bales"."weight" AS DOUBLE PRECISION)'
-              )
-            ),
-            "weight",
-          ],
-          // Add other attributes here...
-        ],
-        where: {
-          sold_status: false,
-        },
-        include: [
-          {
-            model: GinProcess,
-            as: "ginprocess",
-            attributes: ["id", "lot_no", "date", "press_no", "reel_lot_no"],
-            where: { id: id },
-          },
-        ],
-        group: ["ginprocess.id", "ginprocess.lot_no"],
-      });
-      if (lot_details.length > 0) {
-        const bales = await GinBale.findAll({
-          where: {
-            process_id: id,
-            sold_status: false,
-          },
-        });
+    // let result = await GinProcess.findAll({
+    //   where: whereCondition,
+    //   include: include,
+    //   order: [["id", "DESC"]],
+    // });
+    // const id_array = result.map((item: any) => item.id);
+    // const bales_list = [];
+    // for await (const id of id_array) {
+    //   const lot_details = await GinBale.findAll({
+    //     attributes: [
+    //       [
+    //         sequelize.fn(
+    //           "SUM",
+    //           Sequelize.literal(
+    //             'CAST("gin-bales"."weight" AS DOUBLE PRECISION)'
+    //           )
+    //         ),
+    //         "weight",
+    //       ],
+    //       // Add other attributes here...
+    //     ],
+    //     where: {
+    //       sold_status: false,
+    //     },
+    //     include: [
+    //       {
+    //         model: GinProcess,
+    //         as: "ginprocess",
+    //         attributes: ["id", "lot_no", "date", "press_no", "reel_lot_no"],
+    //         where: { id: id },
+    //       },
+    //     ],
+    //     group: ["ginprocess.id", "ginprocess.lot_no"],
+    //   });
+    //   if (lot_details.length > 0) {
+    //     const bales = await GinBale.findAll({
+    //       where: {
+    //         process_id: id,
+    //         sold_status: false,
+    //       },
+    //     });
 
-        if (bales.length > 0) {
-          lot_details[0].dataValues.bales = bales;
-          bales_list.push(lot_details[0]);
-        }
-      }
-    }
-    return res.sendSuccess(res, bales_list);
+    //     if (bales.length > 0) {
+    //       lot_details[0].dataValues.bales = bales;
+    //       bales_list.push(lot_details[0]);
+    //     }
+    //   }
+    // }
+
+    const [results, metadata] = await sequelize.query(
+      `SELECT 
+    jsonb_build_object(
+        'ginprocess', jsonb_build_object(
+            'id', gp.id,
+            'lot_no', gp.lot_no,
+            'date', gp.date,
+            'press_no', gp.press_no,
+            'reel_lot_no', gp.reel_lot_no,
+            'greyout_status', gp.greyout_status
+        ),
+        'weight', SUM(CAST(gb.weight AS DOUBLE PRECISION)),
+        'bales', jsonb_agg(jsonb_build_object(
+            'id', gb.id,
+            'bale_no', gb.bale_no,
+            'weight', gb.weight,
+            'greyout_status', gp.greyout_status
+        ))
+    ) AS result
+FROM 
+    gin_processes gp
+JOIN 
+    "gin-bales" gb ON gp.id = gb.process_id
+JOIN 
+    ginners g ON gp.ginner_id = g.id
+JOIN 
+    seasons s ON gp.season_id = s.id
+JOIN 
+    programs p ON gp.program_id = p.id
+WHERE 
+    gp.ginner_id = ${ginnerId}
+    AND gp.program_id IN (${programId})
+    AND gb.sold_status = false
+GROUP BY 
+    gp.id, gp.lot_no, gp.date, gp.press_no, gp.reel_lot_no
+ORDER BY 
+    gp.id DESC;
+`
+    )
+
+    const simplifiedResults = results.map((item:any) => item.result);
+    return res.sendSuccess(res,simplifiedResults); //bales_list
   } catch (error: any) {
     console.error(error);
     return res.sendError(res, error.meessage);
@@ -1563,11 +1605,11 @@ const getVillageAndFarmer = async (req: Request, res: Response) => {
 };
 
 const _getGinnerProcessTracingChartData = async (
-  reelLotNo:any
+  reelLotNo: any
 ) => {
   try {
     //  await createIndexes();
-     
+
     let include = [
       {
         model: Ginner,
@@ -1585,7 +1627,7 @@ const _getGinnerProcessTracingChartData = async (
       {
         model: Farmer,
         as: "farmer",
-        attributes: ['id', 'firstName',"lastName", 'farmGroup_id', 'village_id'],
+        attributes: ['id', 'firstName', "lastName", 'farmGroup_id', 'village_id'],
         include: [
           {
             model: Village,
@@ -1687,12 +1729,12 @@ const getGinnerProcessTracingChartData = async (
   req: Request,
   res: Response
 ) => {
-    const { reelLotNo }:any = req.query;
-    if (!reelLotNo) {
-      return res.status(400).send({ error: "reelLotNo is required" });
-    }
-    const data = await _getGinnerProcessTracingChartData(reelLotNo);
-    res.sendSuccess(res, data);
+  const { reelLotNo }: any = req.query;
+  if (!reelLotNo) {
+    return res.status(400).send({ error: "reelLotNo is required" });
+  }
+  const data = await _getGinnerProcessTracingChartData(reelLotNo);
+  res.sendSuccess(res, data);
 };
 
 

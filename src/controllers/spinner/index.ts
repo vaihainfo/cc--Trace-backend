@@ -1365,7 +1365,11 @@ const fetchTransactionAlert = async (req: Request, res: Response) => {
     const limit = Number(req.query.limit) || 10;
     const { ginnerId, status, filter, programId, spinnerId, seasonId }: any = req.query;
     const offset = (page - 1) * limit;
-    const whereCondition: any = {};
+    const afterDate = new Date('2019-11-01');
+    const whereCondition: any = {
+        date: { [Op.gte]: afterDate }
+    };
+
     try {
         if (searchTerm) {
             whereCondition[Op.or] = [
@@ -1376,6 +1380,7 @@ const fetchTransactionAlert = async (req: Request, res: Response) => {
                 { '$season.name$': { [Op.iLike]: `%${searchTerm}%` } }, // Search by crop Type
             ];
         }
+        
         if (status === 'Pending') {
             whereCondition.buyer = spinnerId
             whereCondition.status = { [Op.in]: ['Pending', 'Pending for QR scanning', 'Partially Accepted', 'Partially Rejected'] }
@@ -2217,11 +2222,11 @@ const chooseLint = async (req: Request, res: Response) => {
         }
 
         whereCondition.status = { [Op.in]: ['Sold', 'Partially Accepted', 'Partially Rejected'] }
-        whereCondition.greyout_status = { [Op.not]: true };
+        // whereCondition.greyout_status = { [Op.not]: true };
         whereCondition.qty_stock = { [Op.gt]: 0 }
 
         sqlCondition.push(`gs.status IN ('Sold', 'Partially Accepted', 'Partially Rejected')`)
-        sqlCondition.push(`gs.greyout_status IS NOT TRUE`)
+        // sqlCondition.push(`gs.greyout_status IS NOT TRUE`)
         sqlCondition.push(`gs.qty_stock > 0`)
 
 
@@ -2344,6 +2349,7 @@ const chooseYarn = async (req: Request, res: Response) => {
             whereCondition.reel_lot_no = { [Op.in]: idArray };
         }
         whereCondition.qty_stock = { [Op.gt]: 0 }
+        // whereCondition.greyout_status = { [Op.not]: true };
         let include = [
             {
                 model: Season,
@@ -2384,7 +2390,7 @@ const chooseYarn = async (req: Request, res: Response) => {
         for await (let item of result) {
             let items = await SpinProcess.findAll({
                 where: { ...whereCondition, season_id: item.dataValues.season_id },
-                attributes: ['id', 'yarn_type', 'yarn_count', 'net_yarn_qty', 'reel_lot_no', 'batch_lot_no', 'qty_stock',],
+                attributes: ['id', 'yarn_type', 'yarn_count', 'net_yarn_qty', 'reel_lot_no', 'batch_lot_no', 'qty_stock', 'greyout_status'],
                 include: [
                     {
                         model: Program,
@@ -2417,7 +2423,7 @@ const chooseYarn = async (req: Request, res: Response) => {
                         {
                             model: SpinProcess,
                             as: 'spinprocess',
-                            attributes: ['id', 'batch_lot_no', 'date', 'yarn_type', 'net_yarn_qty', 'qty_stock', 'reel_lot_no'],
+                            attributes: ['id', 'batch_lot_no', 'date', 'yarn_type', 'net_yarn_qty', 'qty_stock', 'reel_lot_no', 'greyout_status'],
                             where: { id: row?.dataValues?.id },
                         },
                     ],
@@ -2431,7 +2437,13 @@ const chooseYarn = async (req: Request, res: Response) => {
                             model: YarnCount,
                             as: 'yarncount',
                             attributes: ['id', 'yarnCount_name'],
-                        }],
+                        },
+                        {
+                            model: SpinProcess,
+                            as: 'spinprocess',
+                            attributes: ['greyout_status'],
+                        }
+                    ],
                         order: [["id", "desc"]],
                         where: {
                             process_id: row?.dataValues?.id,

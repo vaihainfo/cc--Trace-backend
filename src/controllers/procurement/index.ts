@@ -662,7 +662,7 @@ const deleteTransaction = async (req: Request, res: Response) => {
     if (trans.dataValues.farm_id) {
       let farm = await Farm.findOne({ where: { id: trans.dataValues.farm_id } })
       let s = await Farm.update({
-        cotton_transacted: (Number(farm.cotton_transacted) || 0) + (Number(trans.dataValues.qty_purchased) || 0)
+        cotton_transacted: (Number(farm.cotton_transacted) || 0) - (Number(trans.dataValues.qty_purchased) || 0)
       }, { where: { id: trans.dataValues.farm_id } });
     }
 
@@ -1274,15 +1274,16 @@ const uploadTransactionBulk = async (req: Request, res: Response) => {
             let available_cotton = Number(farm.available_cotton) - Number(farm.cotton_transacted);
             transactionData.estimated_cotton = Number(farm.total_estimated_cotton);
             transactionData.available_cotton = available_cotton;
-            if (farm.cotton_transacted==0) {
+            if (farm.cotton_transacted==0 && farm.available_cotton <= farm.total_estimated_cotton) {
                   transactionData.available_cotton += (0.15 * Number(farm.total_estimated_cotton));
                   // transactionData.qty_stock += 0.15 * Number(transactionData.estimated_cotton);
                 }
-            if (data.qtyPurchased > available_cotton) {
+            if (available_cotton && data.qtyPurchased > available_cotton) {
               transactionData.qty_purchased = available_cotton;
               transactionData.qty_stock = available_cotton;
               transactionData.total_amount = available_cotton * data.rate;
             }
+        
             const result = await Transaction.create(transactionData);
             let s = await Farm.update({
               cotton_transacted: (Number(farm.cotton_transacted) || 0) + (Number(transactionData.qty_purchased) || 0)

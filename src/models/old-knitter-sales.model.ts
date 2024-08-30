@@ -4,6 +4,7 @@ import Season from './season.model';
 import FabricType from './fabric-type.model';
 import Program from './program.model';
 import Garment from './garment.model';
+import Knitter from './knitter.model';
 
 const OldKnitterSales = db.define('old_knitter_sales', {
     id: {
@@ -186,6 +187,11 @@ OldKnitterSales.belongsTo(FabricType, {
 OldKnitterSales.belongsTo(Season, {
     foreignKey: "season_id",
     as: "season"
+});
+
+OldKnitterSales.belongsTo(Knitter, {
+    foreignKey: "knitter_id",
+    as: "knitter"
 });
 
 OldKnitterSales.sync();

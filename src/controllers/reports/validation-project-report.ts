@@ -97,4 +97,41 @@ const fetchValidationProjectReport = async (req: Request, res: Response) => {
   }
 };
 
-export { fetchValidationProjectReport };
+const fetchValidationProjectReportTemplate = async (req: Request, res: Response) => {
+  try {
+    let include = [
+      {
+        model: FarmGroup,
+        as: "farmGroup",
+        attributes: ["id", "name", "status"],
+      },
+      {
+        model: Brand,
+        as: "brand",
+        attributes: ["id", "brand_name", "address"],
+      },
+      {
+        model: Season,
+        as: "season",
+        attributes: ["id", "name"],
+      },
+    ];
+
+      const rows  = await ValidationProject.findOne({
+        where: { id: req.query.id },
+        include: include
+    });
+
+      const response = {
+        ...rows.dataValues,
+        premium_transfered_cost: rows.dataValues.premium_transfered_cost && rows.dataValues.premium_transfered_cost.length > 0 ? rows.dataValues.premium_transfered_cost.reduce((acc: any, val: any) => acc + parseFloat(val), 0) : 0,
+      }
+
+      return res.sendSuccess(res, response);
+  } catch (error: any) {
+    console.log(error)
+    return res.sendError(res, error.message);
+  }
+};
+
+export { fetchValidationProjectReport, fetchValidationProjectReportTemplate };
