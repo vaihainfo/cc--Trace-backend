@@ -1191,9 +1191,10 @@ const getYarnProcuredStockRes = async (
     }
 
     if (fSold) {
+      fSold.dataValues.yarnSold = mtConversion(fSold.dataValues.yarnSold)
       data.seasonName = fSold.dataValues.seasonName;
       data.yarnStock = data.yarnProcessed > fSold.dataValues.yarnSold
-        ? Number((mtConversion(fProcured.dataValues.yarnProcured) - mtConversion(fSold.dataValues.yarnSold)).toFixed(2))
+        ? Number((data.yarnProcessed - fSold.dataValues.yarnSold).toFixed(2))
         : 0;
     }
 
