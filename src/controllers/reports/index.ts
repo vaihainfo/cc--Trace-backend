@@ -816,8 +816,8 @@ const exportPendingGinnerSales = async (req: Request, res: Response) => {
         "Press/Bale No",
         "Rate/Kg",
         "Total Quantity",
-        "Program",
-        "status",
+        "Programme",
+        "Status",
       ]);
       headerRow.font = { bold: true };
 
@@ -2250,6 +2250,7 @@ const exportGinnerSales = async (req: Request, res: Response) => {
   const searchTerm = req.query.search || "";
   const page = Number(req.query.page) || 1;
   const limit = Number(req.query.limit) || 10;
+  const isBrand = req.query.isBrand || false;
   const { exportType, ginnerId, seasonId, programId, brandId, countryId, startDate, endDate }: any = req.query;
   const offset = (page - 1) * limit;
   const whereCondition: any = {};
@@ -2320,17 +2321,30 @@ const exportGinnerSales = async (req: Request, res: Response) => {
       // Create the excel workbook file
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet("Sheet1");
-      worksheet.mergeCells('A1:T1');
+      if(isBrand === 'true'){
+        worksheet.mergeCells('A1:R1');
+      }else{
+        worksheet.mergeCells('A1:T1');
+      }
       const mergedCell = worksheet.getCell('A1');
       mergedCell.value = 'CottonConnect | Ginner Sales Report';
       mergedCell.font = { bold: true };
       mergedCell.alignment = { horizontal: 'center', vertical: 'middle' };
       // Set bold font for header row
-      const headerRow = worksheet.addRow([
+      let headerRow;
+      if(isBrand === 'true'){
+        headerRow = worksheet.addRow([
+          "Sr No.", "Process Date", "Data Entry Date", "Season", "Ginner Name",
+          "Invoice No", "Sold To", "Heap Number", "Bale Lot No", "REEL Lot No", "No of Bales", "Press/Bale No", "Rate/Kg",
+          "Total Quantity", "Vehicle No", "Transporter Name", "Programme", "Agent Detials"
+          ]);
+      }else{
+        headerRow = worksheet.addRow([
         "Sr No.", "Process Date", "Data Entry Date", "Season", "Ginner Name",
         "Invoice No", "Sold To", "Heap Number", "Bale Lot No", "REEL Lot No", "No of Bales", "Press/Bale No", "Rate/Kg",
-        "Total Quantity", "Sales Value", "Vehicle No", "Transporter Name", "Program", "Agent Detials", "Status"
-      ]);
+        "Total Quantity", "Sales Value", "Vehicle No", "Transporter Name", "Programme", "Agent Detials", "Status"
+        ]);
+      }
       headerRow.font = { bold: true };
       let include = [
         {
@@ -2416,8 +2430,31 @@ const exportGinnerSales = async (req: Request, res: Response) => {
 
       // Append data to worksheet
       for await (const [index, item] of rows.entries()) {
-        const rowValues = Object.values({
-          index: index + 1,
+        let rowValues;
+        if(isBrand === 'true'){
+          rowValues = Object.values({
+            index: index + 1,
+          date: item.dataValues.date ? item.dataValues.date : '',
+          created_at: item.dataValues.createdAt ? item.dataValues.createdAt : '',
+          season: item.dataValues.season_name ? item.dataValues.season_name : '',
+          ginner: item.dataValues.ginner ? item.dataValues.ginner : '',
+          invoice: item.dataValues.invoice_no ? item.dataValues.invoice_no : '',
+          buyer: item.dataValues.buyerdata ? item.dataValues.buyerdata : '',
+          heap: '',
+          lot_no: item.dataValues.lot_no ? item.dataValues.lot_no : '',
+          reel_lot_no: item.dataValues.reel_lot_no ? item.dataValues.reel_lot_no : '',
+          no_of_bales: item.dataValues.no_of_bales ? Number(item.dataValues.no_of_bales) : 0,
+          press_no: item.dataValues.press_no ? item.dataValues.press_no : '',
+          rate: item.dataValues.rate ? Number(item.dataValues.rate) : 0,
+          lint_quantity: item.dataValues.lint_quantity ? item.dataValues.lint_quantity : '',
+          vehicle_no: item.dataValues.vehicle_no ? item.dataValues.vehicle_no : '',
+          transporter_name: item.dataValues.transporter_name ? item.dataValues.transporter_name : '',
+          program: item.dataValues.program ? item.dataValues.program : '',
+          agentDetails: item.dataValues.transaction_agent ? item.dataValues.transaction_agent : 'NA'
+        });
+        }else{
+          rowValues = Object.values({
+            index: index + 1,
           date: item.dataValues.date ? item.dataValues.date : '',
           created_at: item.dataValues.createdAt ? item.dataValues.createdAt : '',
           season: item.dataValues.season_name ? item.dataValues.season_name : '',
@@ -2438,6 +2475,7 @@ const exportGinnerSales = async (req: Request, res: Response) => {
           agentDetails: item.dataValues.transaction_agent ? item.dataValues.transaction_agent : 'NA',
           status: item.dataValues.status === 'Sold' ? 'Sold' : `Available [Stock : ${item.dataValues.qty_stock ? item.dataValues.qty_stock : 0}]`
         });
+        }
         worksheet.addRow(rowValues);
       }
       // Auto-adjust column widths based on content
@@ -3091,6 +3129,7 @@ const exportPendingSpinnerBale = async (req: Request, res: Response) => {
   const page = Number(req.query.page) || 1;
   const limit = Number(req.query.limit) || 10;
   const pagination = req.query.pagination;
+  const isBrand = req.query.isBrand || false;
   const { exportType, ginnerId, spinnerId, seasonId, programId, brandId, countryId, startDate, endDate }: any =
     req.query;
   const offset = (page - 1) * limit;
@@ -3182,28 +3221,52 @@ const exportPendingSpinnerBale = async (req: Request, res: Response) => {
       // Create the excel workbook file
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet("Sheet1");
-      worksheet.mergeCells("A1:N1");
+      if(isBrand === 'true'){
+        worksheet.mergeCells('A1:M1');
+      }else{
+        worksheet.mergeCells("A1:N1");
+      }
       const mergedCell = worksheet.getCell("A1");
       mergedCell.value = "CottonConnect | Spinner Pending Bales Receipt Report";
       mergedCell.font = { bold: true };
       mergedCell.alignment = { horizontal: "center", vertical: "middle" };
       // Set bold font for header row
-      const headerRow = worksheet.addRow([
-        "Sr No.",
-        "Date and Time",
-        "Date",
-        "Season",
-        "Ginner Name",
-        "Spinner Name",
-        "Invoice No",
-        "No of Bales",
-        "Bale Lot No",
-        "REEL Lot No",
-        "Quantity(KGs)",
-        "Actual Qty(KGs)",
-        "Program",
-        "Vehicle No",
-      ]);
+      let headerRow;
+      if(isBrand === 'true'){
+        headerRow = worksheet.addRow([
+          "Sr No.",
+          "Date and Time",
+          "Date",
+          "Season",
+          "Ginner Name",
+          "Spinner Name",
+          "Invoice No",
+          "No of Bales",
+          "Bale Lot No",
+          "REEL Lot No",
+          "Quantity(KGs)",
+          "Programme",
+          "Vehicle No",
+        ]);
+      }else{
+        headerRow = worksheet.addRow([
+          "Sr No.",
+          "Date and Time",
+          "Date",
+          "Season",
+          "Ginner Name",
+          "Spinner Name",
+          "Invoice No",
+          "No of Bales",
+          "Bale Lot No",
+          "REEL Lot No",
+          "Quantity(KGs)",
+          "Actual Qty(KGs)",
+          "Programme",
+          "Vehicle No",
+        ]);
+      }
+
       headerRow.font = { bold: true };
       let include = [
         {
@@ -3285,30 +3348,55 @@ const exportPendingSpinnerBale = async (req: Request, res: Response) => {
 
       // Append data to worksheet
       for await (const [index, item] of rows.entries()) {
-        const rowValues = Object.values({
-          index: index + 1,
-          createdAt: item.dataValues.createdAt ? item.dataValues.createdAt : "",
-          date: item.dataValues.date ? item.dataValues.date : "",
-          season: item.dataValues.season_name ? item.dataValues.season_name : "",
-          ginner: item.dataValues.ginner ? item.dataValues.ginner : "",
-          spinner: item.dataValues.spinner ? item.dataValues.spinner : "",
-          invoice: item.dataValues.invoice_no ? item.dataValues.invoice_no : "",
-          no_of_bales: item.dataValues.no_of_bales
-            ? item.dataValues.no_of_bales
-            : "",
-          lot_no: item.dataValues.lot_no ? item.dataValues.lot_no : "",
-          reel_lot_no: item.dataValues.reel_lot_no
-            ? item.dataValues.reel_lot_no
-            : "",
-          total_qty: item.dataValues.lint_quantity
-            ? item.dataValues.lint_quantity
-            : "",
-          actual_qty: item.dataValues.lint_quantity
-            ? item.dataValues.lint_quantity
-            : "",
-          program: item.dataValues.program ? item.dataValues.program : "",
-          village: item.dataValues.vehicle_no ? item.dataValues.vehicle_no : ""
-        });
+        let rowValues;
+        if(isBrand === 'true'){
+          rowValues = Object.values({
+            index: index + 1,
+            createdAt: item.dataValues.createdAt ? item.dataValues.createdAt : "",
+            date: item.dataValues.date ? item.dataValues.date : "",
+            season: item.dataValues.season_name ? item.dataValues.season_name : "",
+            ginner: item.dataValues.ginner ? item.dataValues.ginner : "",
+            spinner: item.dataValues.spinner ? item.dataValues.spinner : "",
+            invoice: item.dataValues.invoice_no ? item.dataValues.invoice_no : "",
+            no_of_bales: item.dataValues.no_of_bales
+              ? item.dataValues.no_of_bales
+              : "",
+            lot_no: item.dataValues.lot_no ? item.dataValues.lot_no : "",
+            reel_lot_no: item.dataValues.reel_lot_no
+              ? item.dataValues.reel_lot_no
+              : "",
+            total_qty: item.dataValues.lint_quantity
+              ? item.dataValues.lint_quantity
+              : "",
+            program: item.dataValues.program ? item.dataValues.program : "",
+            village: item.dataValues.vehicle_no ? item.dataValues.vehicle_no : ""
+          });
+        }else{
+          rowValues = Object.values({
+            index: index + 1,
+            createdAt: item.dataValues.createdAt ? item.dataValues.createdAt : "",
+            date: item.dataValues.date ? item.dataValues.date : "",
+            season: item.dataValues.season_name ? item.dataValues.season_name : "",
+            ginner: item.dataValues.ginner ? item.dataValues.ginner : "",
+            spinner: item.dataValues.spinner ? item.dataValues.spinner : "",
+            invoice: item.dataValues.invoice_no ? item.dataValues.invoice_no : "",
+            no_of_bales: item.dataValues.no_of_bales
+              ? item.dataValues.no_of_bales
+              : "",
+            lot_no: item.dataValues.lot_no ? item.dataValues.lot_no : "",
+            reel_lot_no: item.dataValues.reel_lot_no
+              ? item.dataValues.reel_lot_no
+              : "",
+            total_qty: item.dataValues.lint_quantity
+              ? item.dataValues.lint_quantity
+              : "",
+            actual_qty: item.dataValues.lint_quantity
+              ? item.dataValues.lint_quantity
+              : "",
+            program: item.dataValues.program ? item.dataValues.program : "",
+            village: item.dataValues.vehicle_no ? item.dataValues.vehicle_no : ""
+          });
+        }
         worksheet.addRow(rowValues);
       }
       // Auto-adjust column widths based on content
@@ -3602,7 +3690,7 @@ const exportSpinnerYarnProcess = async (req: Request, res: Response) => {
         "Blend Material",
         "Blend Quantity (Kgs)",
         "Total Lint cotton consumed (Kgs)",
-        "Program",
+        "Programme",
         "Total Yarn weight (Kgs)",
         "Total yarn sold (Kgs)",
         "Total Yarn in stock (Kgs)",
@@ -3998,6 +4086,7 @@ const exportSpinnerSale = async (req: Request, res: Response) => {
   const searchTerm = req.query.search || "";
   const page = Number(req.query.page) || 1;
   const limit = Number(req.query.limit) || 10;
+  const isBrand = req.query.isBrand || false;
   const { exportType, spinnerId, seasonId, programId, brandId, countryId, startDate, endDate }: any = req.query;
   const offset = (page - 1) * limit;
   const whereCondition: any = {};
@@ -4073,13 +4162,40 @@ const exportSpinnerSale = async (req: Request, res: Response) => {
       // Create the excel workbook file
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet("Sheet1");
-      worksheet.mergeCells("A1:R1");
+      if(isBrand === 'true'){
+        worksheet.mergeCells('A1:R1');
+      }else{
+        worksheet.mergeCells("A1:T1");
+      }
       const mergedCell = worksheet.getCell("A1");
       mergedCell.value = "CottonConnect | Spinner Yarn Sales Report";
       mergedCell.font = { bold: true };
       mergedCell.alignment = { horizontal: "center", vertical: "middle" };
       // Set bold font for header row
-      const headerRow = worksheet.addRow([
+      let headerRow;
+      if(isBrand === 'true'){
+        headerRow = worksheet.addRow([
+          "Sr No.",
+          "Created Date and Time",
+          "Date",
+          "Season",
+          "Spinner Name",
+          "Knitter/Weaver Name",
+          "Invoice Number",
+          "Order Reference",
+          "Lot/Batch Number",
+          "Reel Lot No",
+          "Programme",
+          "Yarn Type",
+          "Yarn Count",
+          "No of Boxes",
+          "Box ID",
+          "Price",
+          "Yarn Net Weight(Kgs)",
+          "Agent Details",
+        ]);
+      }else{
+      headerRow = worksheet.addRow([
         "Sr No.",
         "Created Date and Time",
         "Date",
@@ -4090,16 +4206,18 @@ const exportSpinnerSale = async (req: Request, res: Response) => {
         "Order Reference",
         "Lot/Batch Number",
         "Reel Lot No",
+        "Programme",
         "Yarn Type",
         "Yarn Count",
         "No of Boxes",
         "Box ID",
-        "price",
+        "Price",
         "Yarn Net Weight(Kgs)",
         "Transporter Name",
         "Vehicle No",
         "Agent Details",
       ]);
+      }
       headerRow.font = { bold: true };
 
       let include = [
@@ -4224,39 +4342,74 @@ const exportSpinnerSale = async (req: Request, res: Response) => {
 
         yarnTypeData =
           item.dataValues?.yarn_type?.length > 0 ? item.dataValues?.yarn_type.join(",") : "";
-        const rowValues = Object.values({
-          index: index + 1,
-          createdAt: item.dataValues.createdAt ? item.dataValues.createdAt : "",
-          date: item.dataValues.date ? item.dataValues.date : "",
-          season: item.dataValues.season_name ? item.dataValues.season_name : "",
-          spinner: item.dataValues.spinner ? item.dataValues.spinner : "",
-          buyer_id: item.dataValues.weaver
-            ? item.dataValues.weaver
-            : item.dataValues.knitter
-              ? item.dataValues.knitter
-              : item.dataValues.processor_name,
-          invoice: item.dataValues.invoice_no ? item.dataValues.invoice_no : "",
-          order_ref: item.dataValues.order_ref ? item.dataValues.order_ref : "",
-          lotNo: item.dataValues.batch_lot_no ? item.dataValues.batch_lot_no : "",
-          reelLot: item.dataValues.reel_lot_no ? item.dataValues.reel_lot_no : "",
-          yarnType: yarnTypeData ? yarnTypeData : "",
-          count: yarnCount
-            ? yarnCount
-            : "",
-          boxes: item.dataValues.no_of_boxes ? item.dataValues.no_of_boxes : "",
-          boxId: item.dataValues.box_ids ? item.dataValues.box_ids : "",
-          price: item.dataValues.price ? item.dataValues.price : "",
-          total: item.dataValues.total_qty ? item.dataValues.total_qty : 0,
-          transporter_name: item.dataValues.transporter_name
-            ? item.dataValues.transporter_name
-            : "",
-          vehicle_no: item.dataValues.vehicle_no
-            ? item.dataValues.vehicle_no
-            : "",
-          agent: item.dataValues.transaction_agent
-            ? item.dataValues.transaction_agent
-            : "",
-        });
+
+
+        let rowValues;
+        if(isBrand === 'true'){
+          rowValues = Object.values({
+            index: index + 1,
+            createdAt: item.dataValues.createdAt ? item.dataValues.createdAt : "",
+            date: item.dataValues.date ? item.dataValues.date : "",
+            season: item.dataValues.season_name ? item.dataValues.season_name : "",
+            spinner: item.dataValues.spinner ? item.dataValues.spinner : "",
+            buyer_id: item.dataValues.weaver
+              ? item.dataValues.weaver
+              : item.dataValues.knitter
+                ? item.dataValues.knitter
+                : item.dataValues.processor_name,
+            invoice: item.dataValues.invoice_no ? item.dataValues.invoice_no : "",
+            order_ref: item.dataValues.order_ref ? item.dataValues.order_ref : "",
+            lotNo: item.dataValues.batch_lot_no ? item.dataValues.batch_lot_no : "",
+            reelLot: item.dataValues.reel_lot_no ? item.dataValues.reel_lot_no : "",
+            program: item.dataValues.program ? item.dataValues.program : "",
+            yarnType: yarnTypeData ? yarnTypeData : "",
+            count: yarnCount
+              ? yarnCount
+              : "",
+            boxes: item.dataValues.no_of_boxes ? item.dataValues.no_of_boxes : "",
+            boxId: item.dataValues.box_ids ? item.dataValues.box_ids : "",
+            price: item.dataValues.price ? item.dataValues.price : "",
+            total: item.dataValues.total_qty ? item.dataValues.total_qty : 0,
+            agent: item.dataValues.transaction_agent
+              ? item.dataValues.transaction_agent
+              : "",
+              });
+          }else{
+          rowValues = Object.values({
+            index: index + 1,
+            createdAt: item.dataValues.createdAt ? item.dataValues.createdAt : "",
+            date: item.dataValues.date ? item.dataValues.date : "",
+            season: item.dataValues.season_name ? item.dataValues.season_name : "",
+            spinner: item.dataValues.spinner ? item.dataValues.spinner : "",
+            buyer_id: item.dataValues.weaver
+              ? item.dataValues.weaver
+              : item.dataValues.knitter
+                ? item.dataValues.knitter
+                : item.dataValues.processor_name,
+            invoice: item.dataValues.invoice_no ? item.dataValues.invoice_no : "",
+            order_ref: item.dataValues.order_ref ? item.dataValues.order_ref : "",
+            lotNo: item.dataValues.batch_lot_no ? item.dataValues.batch_lot_no : "",
+            reelLot: item.dataValues.reel_lot_no ? item.dataValues.reel_lot_no : "",
+            program: item.dataValues.program ? item.dataValues.program : "",
+            yarnType: yarnTypeData ? yarnTypeData : "",
+            count: yarnCount
+              ? yarnCount
+              : "",
+            boxes: item.dataValues.no_of_boxes ? item.dataValues.no_of_boxes : "",
+            boxId: item.dataValues.box_ids ? item.dataValues.box_ids : "",
+            price: item.dataValues.price ? item.dataValues.price : "",
+            total: item.dataValues.total_qty ? item.dataValues.total_qty : 0,
+            transporter_name: item.dataValues.transporter_name
+              ? item.dataValues.transporter_name
+              : "",
+            vehicle_no: item.dataValues.vehicle_no
+              ? item.dataValues.vehicle_no
+              : "",
+            agent: item.dataValues.transaction_agent
+              ? item.dataValues.transaction_agent
+              : "",
+          });
+        }
 
         worksheet.addRow(rowValues);
       }
@@ -12281,6 +12434,7 @@ const exportPscpProcurementLiveTracker = async (
     const page = Number(req.query.page) || 1;
     const limit = Number(req.query.limit) || 10;
     const exportType = req.query.exportType || "";
+    const isBrand = req.query.isBrand || false;
     const offset = (page - 1) * limit;
     let whereCondition: any = {};
     let seasonCondition: any = {};
@@ -12336,13 +12490,41 @@ const exportPscpProcurementLiveTracker = async (
       // Create the excel workbook file
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet("Sheet1");
-      worksheet.mergeCells("A1:R1");
+      
+      if(isBrand === 'true'){
+        worksheet.mergeCells('A1:Q1');
+      }else{
+        worksheet.mergeCells("A1:R1");
+      }
       const mergedCell = worksheet.getCell("A1");
       mergedCell.value = "CottonConnect | PSCP Procurement and Sell Live Tracker";
       mergedCell.font = { bold: true };
       mergedCell.alignment = { horizontal: "center", vertical: "middle" };
       // Set bold font for header row
-      const headerRow = worksheet.addRow([
+      let headerRow;
+      if(isBrand === 'true'){
+        headerRow = worksheet.addRow([
+          "Sr No.",
+          "Ginning Mill",
+          "Country",
+          "State",
+          "Program",
+          "Expected Seed Cotton (KG)",
+          "Expected Lint (MT)",
+          "Procurement-Seed Cotton (KG)",
+          "Procurement %",
+          "Procurement-Seed Cotton Pending at Ginner (KG)",
+          "Procurement Lint in (KG)",
+          "Procurement Lint (MT)",
+          "No. of Bales of produced",
+          "Bales Sold for this season",
+          "LINT Sold for this season (MT)",
+          "Balance stock in  bales with Ginner",
+          "Balance stock with Ginner (MT)",
+          "Ginner Sale %",
+        ]);
+      }else{
+      headerRow = worksheet.addRow([
         "Sr No.",
         "Ginning Mill",
         "Country",
@@ -12363,6 +12545,7 @@ const exportPscpProcurementLiveTracker = async (
         "Balance stock with Ginner (MT)",
         "Ginner Sale %",
       ]);
+    }
       headerRow.font = { bold: true };
 
       let data: any = [];
@@ -12643,7 +12826,34 @@ const exportPscpProcurementLiveTracker = async (
       let ndata = data.length > 0 ? data.slice(offset, offset + limit) : [];
       let index = 0;
       for await (const obj of ndata) {
-        const rowValues = Object.values({
+        let rowValues;
+        if(isBrand === 'true'){
+          rowValues = Object.values({
+            index: index + 1,
+            name: obj?.ginner ? obj.ginner.name : "",
+            country: obj.state ? obj.country?.county_name : "",
+            state: obj.state ? obj.state?.state_name : "",
+            program: obj.program ? obj.program?.program_name : "",
+            expected_seed_cotton: obj.expected_seed_cotton ? Number(obj.expected_seed_cotton) : 0,
+            expected_lint: obj.expected_lint ? Number(obj.expected_lint) : 0,
+            procurement_seed_cotton: obj.procurement_seed_cotton ? Number(formatDecimal(obj.procurement_seed_cotton)) : 0,
+            procurement: obj.procurement ? Number(obj.procurement) : 0,
+            pending_seed_cotton: obj.pending_seed_cotton
+              ? Number(formatDecimal(obj.pending_seed_cotton))
+              : 0,
+            procured_lint_cotton_kgs: Number(formatDecimal(obj.procured_lint_cotton_kgs)),
+            procured_lint_cotton_mt: Number(formatDecimal(obj.procured_lint_cotton_mt)),
+            no_of_bales: obj.no_of_bales ? Number(obj.no_of_bales) : 0,
+            sold_bales: obj.sold_bales ? Number(obj.sold_bales) : 0,
+            total_qty_sold_lint: obj.total_qty_sold_lint
+              ? Number(formatDecimal(obj.total_qty_sold_lint))
+              : 0,
+            balace_stock: obj.balace_stock ? Number(obj.balace_stock) : 0,
+            balance_lint_quantity: obj.balance_lint_quantity ? Number(formatDecimal(obj.balance_lint_quantity)) : 0,
+            ginner_sale_percentage: Number(obj.ginner_sale_percentage),
+          });
+        }else{
+         rowValues = Object.values({
           index: index + 1,
           name: obj?.ginner ? obj.ginner.name : "",
           country: obj.state ? obj.country?.county_name : "",
@@ -12668,6 +12878,7 @@ const exportPscpProcurementLiveTracker = async (
           balance_lint_quantity: obj.balance_lint_quantity ? Number(formatDecimal(obj.balance_lint_quantity)) : 0,
           ginner_sale_percentage: Number(obj.ginner_sale_percentage),
         });
+        }
         index++;
         worksheet.addRow(rowValues);
       }
