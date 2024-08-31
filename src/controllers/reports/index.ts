@@ -10877,8 +10877,8 @@ const exportSpinnerCottonStock = async (req: Request, res: Response) => {
           batch_lot_no: spinner?.dataValues.bale_lot_no ? spinner?.dataValues.bale_lot_no : "",
           reel_lot_no: reelLotNo,
           invoice_no: spinner?.dataValues.invoice_no ? spinner?.dataValues.invoice_no : "",
-          cotton_procured: procuredCotton ? procuredCotton?.dataValues?.cotton_procured : 0,
-          cotton_consumed: spinner ? spinner?.dataValues?.cotton_consumed : 0,
+          cotton_procured: procuredCotton ? Number(procuredCotton?.dataValues?.cotton_procured) : 0,
+          cotton_consumed: spinner ? Number(spinner?.dataValues?.cotton_consumed) : 0,
           cotton_stock: cotton_stock,
         });
         worksheet.addRow(rowValues);

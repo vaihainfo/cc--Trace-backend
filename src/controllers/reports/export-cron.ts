@@ -426,8 +426,10 @@ const generateSpinnerLintCottonStock = async () => {
         [Sequelize.col('"spinprocess"."spinner"."name"'), "spinner_name"],
         [Sequelize.col('"spinprocess"."season"."id"'), "season_id"],
         [Sequelize.col('"spinprocess"."season"."name"'), "season_name"],
-        [Sequelize.fn('STRING_AGG', Sequelize.literal('DISTINCT "spinprocess"."batch_lot_no"'), ', ' ) , "batch_lot_no"],
-        [Sequelize.fn('STRING_AGG', Sequelize.literal('DISTINCT "ginsales"."invoice_no"'), ', ' ) , "invoice_no"],
+        [Sequelize.fn('STRING_AGG', Sequelize.literal('DISTINCT "spinprocess"."batch_lot_no"'), ', '), "batch_lot_no"],
+        [Sequelize.fn('ARRAY_AGG', Sequelize.literal('DISTINCT "spinprocess"."date"')), "date"],
+        [Sequelize.fn('STRING_AGG', Sequelize.literal('DISTINCT "ginsales"."lot_no"'), ', '), "bale_lot_no"],
+        [Sequelize.fn('STRING_AGG', Sequelize.literal('DISTINCT "ginsales"."invoice_no"'), ', '), "invoice_no"],
         [Sequelize.fn('ARRAY_AGG', Sequelize.literal('DISTINCT "ginsales"."id"')), "sales_ids"],
         [
           sequelize.fn(
@@ -504,12 +506,21 @@ const generateSpinnerLintCottonStock = async () => {
             ),
             "cotton_procured",
           ],
+          [Sequelize.fn('STRING_AGG', Sequelize.literal('DISTINCT "ginner"."name"'), ', '), "ginner_name"],
         ],
         where: {
           buyer: spinner?.dataValues?.spinner_id,
           season_id: spinner?.dataValues?.season_id,
           status: "Sold",
         },
+        include:[
+          {
+            model: Ginner,
+            as: "ginner",
+            attributes: [],
+          }
+        ],
+        group: ["buyer", "season_id"],
       });
 
       let cotton_stock = 
@@ -522,8 +533,10 @@ const generateSpinnerLintCottonStock = async () => {
       const rowValues = [
         offset + index + 1,
         spinner?.dataValues.spinner_name ? spinner?.dataValues.spinner_name : "",
+        procuredCotton ? procuredCotton?.dataValues?.ginner_name : "",
+        spinner?.dataValues.date && spinner?.dataValues.date.length > 0 ? spinner.dataValues.date.map((date: any) => moment(date).format('DD-MM-YYYY')).join(", ") : "",
         spinner?.dataValues.season_name ? spinner?.dataValues.season_name : "",
-        spinner?.dataValues.batch_lot_no ? spinner?.dataValues.batch_lot_no : "",
+        spinner?.dataValues.bale_lot_no ? spinner?.dataValues.bale_lot_no : "",
         reelLotNo,
         spinner?.dataValues.invoice_no ? spinner?.dataValues.invoice_no : "",
         procuredCotton ? Number(procuredCotton?.dataValues?.cotton_procured): 0,
@@ -535,7 +548,7 @@ const generateSpinnerLintCottonStock = async () => {
       if (!currentWorksheet) {
         currentWorksheet = workbook.addWorksheet(`Lint Cotton Stock Report ${worksheetIndex}`);
         if (worksheetIndex == 1) {
-          currentWorksheet.mergeCells("A1:I1");
+          currentWorksheet.mergeCells("A1:K1");
           const mergedCell = currentWorksheet.getCell("A1");
           mergedCell.value = "CottonConnect | Spinner Lint Cotton Stock Report";
           mergedCell.font = { bold: true };
@@ -545,8 +558,10 @@ const generateSpinnerLintCottonStock = async () => {
           const headerRow = currentWorksheet.addRow([
             "Sr No.",
             "Spinner Name",
+            "Ginner Name",
+            "Created Date",
             "Season",
-            "Spin Lot No",
+            "Bale Lot No",
             "Reel Lot No",
             "Invoice No",
             "Total Lint Cotton Received (Kgs)",
