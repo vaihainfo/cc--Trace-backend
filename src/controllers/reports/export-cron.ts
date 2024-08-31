@@ -2265,13 +2265,16 @@ const generateGinnerProcess = async () => {
             cotton_selection_data AS (
                 SELECT
                     cs.process_id,
-                    STRING_AGG(DISTINCT v.village_name, ', ') AS villages
+                    STRING_AGG(DISTINCT v.village_name, ', ') AS villages,
+                    STRING_AGG(DISTINCT s.name, ', ') AS seasons
                 FROM
                     cotton_selections cs
                 LEFT JOIN
                     transactions t ON cs.transaction_id = t.id
                 LEFT JOIN
                     villages v ON t.village_id = v.id
+                LEFT JOIN
+                    seasons s ON t.season_id = s.id
                 GROUP BY
                     cs.process_id
             ),
@@ -2307,7 +2310,8 @@ const generateGinnerProcess = async () => {
                 (COALESCE(gb.lint_quantity, 0) - COALESCE(sd.lint_quantity_sold, 0)) AS lint_stock,
                 (COALESCE(gd.no_of_bales, 0) - COALESCE(sd.sold_bales, 0)) AS bale_stock,
                 gd.program AS program,
-                cs.villages AS village_names
+                cs.villages AS village_names,
+                cs.seasons AS seed_consumed_seasons
             FROM
                 gin_process_data gd
             LEFT JOIN
@@ -2335,7 +2339,7 @@ const generateGinnerProcess = async () => {
       if (!currentWorksheet) {
         currentWorksheet = workbook.addWorksheet(`Sheet${worksheetIndex}`);
         if (worksheetIndex == 1) {
-          currentWorksheet.mergeCells('A1:T1');
+          currentWorksheet.mergeCells('A1:U1');
           const mergedCell = currentWorksheet.getCell('A1');
           mergedCell.value = 'CottonConnect | Ginner Bale Process Report';
           mergedCell.font = { bold: true };
@@ -2345,7 +2349,7 @@ const generateGinnerProcess = async () => {
         // Set bold font for header row
         // Set bold font for header row
         const headerRow = currentWorksheet.addRow([
-          "Sr No.", "Process Date", "Data Entry Date", "Season", "Ginner Name", "Heap Number", "Gin Lot No", "Gin Press No", "REEL Lot No", "REEL Process Nos", "No of Bales", "Lint Quantity(Kgs)", "Total Seed Cotton Consumed(Kgs)", "GOT", "Total lint cotton sold(Kgs)", "Total Bales Sold", "Total lint cotton in stock(Kgs)", "Total Bales in stock", "Program", "Village"
+          "Sr No.", "Process Date", "Data Entry Date", "Seed Cotton Consumed Season" ,"Lint process Season choosen", "Ginner Name", "Heap Number", "Gin Lot No", "Gin Press No", "REEL Lot No", "REEL Process Nos", "No of Bales", "Lint Quantity(Kgs)", "Total Seed Cotton Consumed(Kgs)", "GOT", "Total lint cotton sold(Kgs)", "Total Bales Sold", "Total lint cotton in stock(Kgs)", "Total Bales in stock", "Programme", "Village"
         ]);
         headerRow.font = { bold: true };
       }
@@ -2356,6 +2360,7 @@ const generateGinnerProcess = async () => {
           index: index + offset + 1,
           date: item.date ? item.date : "",
           created_date: item.createdAt ? item.createdAt : "",
+          seed_consumed_seasons: item.seed_consumed_seasons ? item.seed_consumed_seasons : "",
           season: item.season ? item.season : "",
           ginner: item.ginner_name ? item.ginner_name : "",
           heap: item.heap_number ?  item.heap_number : '',

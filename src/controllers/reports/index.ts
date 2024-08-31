@@ -181,13 +181,16 @@ const fetchBaleProcess = async (req: Request, res: Response) => {
           cotton_selection_data AS (
               SELECT
                   cs.process_id,
-                  STRING_AGG(DISTINCT v.village_name, ', ') AS villages
+                  STRING_AGG(DISTINCT v.village_name, ', ') AS villages,
+                  STRING_AGG(DISTINCT s.name, ', ') AS seasons
               FROM
                   cotton_selections cs
               LEFT JOIN
                   transactions t ON cs.transaction_id = t.id
               LEFT JOIN
                   villages v ON t.village_id = v.id
+              LEFT JOIN
+                  seasons s ON t.season_id = s.id
               GROUP BY
                   cs.process_id
           ),
@@ -226,6 +229,7 @@ const fetchBaleProcess = async (req: Request, res: Response) => {
               (COALESCE(gd.no_of_bales, 0) - COALESCE(sd.sold_bales, 0)) AS bale_stock,
               gd.program AS program,
               cs.villages AS village_names,
+              cs.seasons AS seed_consumed_seasons,
               gd.weigh_bridge,
               gd.delivery_challan,
               gd.qr
@@ -280,6 +284,7 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
   const searchTerm = req.query.search || "";
   const page = Number(req.query.page) || 1;
   const limit = Number(req.query.limit) || 10;
+  const isBrand = Number(req.query.isBrand) || false;
   const { exportType, ginnerId, seasonId, programId, brandId, countryId, startDate, endDate }: any = req.query;
   const offset = (page - 1) * limit;
   const whereCondition: any = [];
@@ -343,15 +348,26 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
       // Create the excel workbook file
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet("Sheet1");
-      worksheet.mergeCells('A1:T1');
+      if(isBrand){
+      worksheet.mergeCells('A1:N1');
+      }else{
+        worksheet.mergeCells('A1:U1');
+      }
       const mergedCell = worksheet.getCell('A1');
       mergedCell.value = 'CottonConnect | Ginner Bale Process Report';
       mergedCell.font = { bold: true };
       mergedCell.alignment = { horizontal: 'center', vertical: 'middle' };
       // Set bold font for header row
-      const headerRow = worksheet.addRow([
-        "Sr No.", "Process Date", "Data Entry Date", "Season", "Ginner Name", "Heap Number", "Gin Lot No", "Gin Press No", "REEL Lot No", "REEL Process Nos", "No of Bales", "Lint Quantity(Kgs)", "Total Seed Cotton Consumed(Kgs)", "GOT", "Total lint cotton sold(Kgs)", "Total Bales Sold", "Total lint cotton in stock(Kgs)", "Total Bales in stock", "Program", "Village"
-      ]);
+      let headerRow;
+      if(isBrand){
+        headerRow = worksheet.addRow([
+          "Sr No.", "Process Date", "Data Entry Date and Time", "Seed Cotton Consumed Season" ,"Lint process Season choosen", "Ginner Name", "Heap Number", "Gin Lot No", "Gin Press No", "REEL Lot No", "REEL Process Nos", "No of Bales", "Lint Quantity(Kgs)", "Programme"
+        ]);
+      }else{
+        headerRow = worksheet.addRow([
+          "Sr No.", "Process Date", "Data Entry Date and Time", "Seed Cotton Consumed Season" ,"Lint process Season choosen", "Ginner Name", "Heap Number", "Gin Lot No", "Gin Press No", "REEL Lot No", "REEL Process Nos", "No of Bales", "Lint Quantity(Kgs)", "Total Seed Cotton Consumed(Kgs)", "GOT", "Total lint cotton sold(Kgs)", "Total Bales Sold", "Total lint cotton in stock(Kgs)", "Total Bales in stock", "Programme", "Village"
+        ]);
+      }
       headerRow.font = { bold: true };
 
       const rows = await sequelize.query(
@@ -399,13 +415,16 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
             cotton_selection_data AS (
                 SELECT
                     cs.process_id,
-                    STRING_AGG(DISTINCT v.village_name, ', ') AS villages
+                    STRING_AGG(DISTINCT v.village_name, ', ') AS villages,
+                    STRING_AGG(DISTINCT s.name, ', ') AS seasons
                 FROM
                     cotton_selections cs
                 LEFT JOIN
                     transactions t ON cs.transaction_id = t.id
                 LEFT JOIN
                     villages v ON t.village_id = v.id
+                LEFT JOIN
+                    seasons s ON t.season_id = s.id
                 GROUP BY
                     cs.process_id
             ),
@@ -444,6 +463,7 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
                 (COALESCE(gd.no_of_bales, 0) - COALESCE(sd.sold_bales, 0)) AS bale_stock,
                 gd.program AS program,
                 cs.villages AS village_names,
+                cs.seasons AS seed_consumed_seasons,
                 gd.weigh_bridge,
                 gd.delivery_challan,
                 gd.qr
@@ -463,30 +483,49 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
       });
       // Append data to worksheet
       for await (const [index, item] of rows.entries()) {
-
-        const rowValues = Object.values({
-          index: index + 1,
-          date: item.date ? item.date : "",
-          created_date: item.createdAt ? item.createdAt : "",
-          season: item.season ? item.season : "",
-          ginner: item.ginner_name ? item.ginner_name : "",
-          heap: item.heap_number ? item.heap_number : '',
-          lot_no: item.lot_no ? item.lot_no : "",
-          press_no: item.press_no ? item.press_no : "",
-          reel_lot_no: item.reel_lot_no ? item.reel_lot_no : "",
-          reel_press_no: item.reel_press_no ? item.reel_press_no : "",
-          noOfBales: item.no_of_bales ? Number(item.no_of_bales) : 0,
-          lint_quantity: item.lint_quantity ? Number(item.lint_quantity) : 0,
-          seedConsmed: item.total_qty ? Number(item.total_qty) : 0,
-          got: item.gin_out_turn ? item.gin_out_turn : "",
-          lint_quantity_sold: item.lint_quantity_sold ? Number(item.lint_quantity_sold) : 0,
-          sold_bales: item.sold_bales ? Number(item.sold_bales) : 0,
-          lint_stock: item.lint_stock && Number(item.lint_stock) > 0 ? Number(item.lint_stock) : 0,
-          bale_stock: item.bale_stock && Number(item.bale_stock) > 0 ? Number(item.bale_stock) : 0,
-          program: item.program ? item.program : "",
-          village_names: item.village_names ? item.village_names : "",
-        });
-
+        let rowValues;
+        if(isBrand){
+          rowValues = Object.values({
+            index: index + 1,
+            date: item.date ? item.date : "",
+            created_date: item.createdAt ? item.createdAt : "",
+            seed_consumed_seasons: item.seed_consumed_seasons ? item.seed_consumed_seasons : "",
+            season: item.season ? item.season : "",
+            ginner: item.ginner_name ? item.ginner_name : "",
+            heap: item.heap_number ? item.heap_number : '',
+            lot_no: item.lot_no ? item.lot_no : "",
+            press_no: item.press_no ? item.press_no : "",
+            reel_lot_no: item.reel_lot_no ? item.reel_lot_no : "",
+            reel_press_no: item.reel_press_no ? item.reel_press_no : "",
+            noOfBales: item.no_of_bales ? Number(item.no_of_bales) : 0,
+            lint_quantity: item.lint_quantity ? Number(item.lint_quantity) : 0,
+            program: item.program ? item.program : "",
+          }); 
+        }else{
+          rowValues = Object.values({
+            index: index + 1,
+            date: item.date ? item.date : "",
+            created_date: item.createdAt ? item.createdAt : "",
+            seed_consumed_seasons: item.seed_consumed_seasons ? item.seed_consumed_seasons : "",
+            season: item.season ? item.season : "",
+            ginner: item.ginner_name ? item.ginner_name : "",
+            heap: item.heap_number ? item.heap_number : '',
+            lot_no: item.lot_no ? item.lot_no : "",
+            press_no: item.press_no ? item.press_no : "",
+            reel_lot_no: item.reel_lot_no ? item.reel_lot_no : "",
+            reel_press_no: item.reel_press_no ? item.reel_press_no : "",
+            noOfBales: item.no_of_bales ? Number(item.no_of_bales) : 0,
+            lint_quantity: item.lint_quantity ? Number(item.lint_quantity) : 0,
+            seedConsmed: item.total_qty ? Number(item.total_qty) : 0,
+            got: item.gin_out_turn ? item.gin_out_turn : "",
+            lint_quantity_sold: item.lint_quantity_sold ? Number(item.lint_quantity_sold) : 0,
+            sold_bales: item.sold_bales ? Number(item.sold_bales) : 0,
+            lint_stock: item.lint_stock && Number(item.lint_stock) > 0 ? Number(item.lint_stock) : 0,
+            bale_stock: item.bale_stock && Number(item.bale_stock) > 0 ? Number(item.bale_stock) : 0,
+            program: item.program ? item.program : "",
+            village_names: item.village_names ? item.village_names : "",
+          });
+        }
         worksheet.addRow(rowValues);
       }
       // Auto-adjust column widths based on content
