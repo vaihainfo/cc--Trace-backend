@@ -10727,7 +10727,7 @@ const exportSpinnerCottonStock = async (req: Request, res: Response) => {
       // Create the excel workbook file
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet("Sheet1");
-      worksheet.mergeCells("A1:I1");
+      worksheet.mergeCells("A1:K1");
       const mergedCell = worksheet.getCell("A1");
       mergedCell.value = "CottonConnect | Spinner Lint Cotton Stock Report";
       mergedCell.font = { bold: true };
@@ -10736,8 +10736,10 @@ const exportSpinnerCottonStock = async (req: Request, res: Response) => {
       const headerRow = worksheet.addRow([
         "Sr No.",
         "Spinner Name",
+        "Ginner Name",
+        "Created Date",
         "Season",
-        "Spin Lot No",
+        "Bale Lot No",
         "Reel Lot No",
         "Invoice No",
         "Total Lint Cotton Received (Kgs)",
@@ -10772,6 +10774,8 @@ const exportSpinnerCottonStock = async (req: Request, res: Response) => {
           [Sequelize.col('"spinprocess"."season"."id"'), "season_id"],
           [Sequelize.col('"spinprocess"."season"."name"'), "season_name"],
           [Sequelize.fn('STRING_AGG', Sequelize.literal('DISTINCT "spinprocess"."batch_lot_no"'), ', '), "batch_lot_no"],
+          [Sequelize.fn('ARRAY_AGG', Sequelize.literal('DISTINCT "spinprocess"."date"')), "date"],
+          [Sequelize.fn('STRING_AGG', Sequelize.literal('DISTINCT "ginsales"."lot_no"'), ', '), "bale_lot_no"],
           [Sequelize.fn('STRING_AGG', Sequelize.literal('DISTINCT "ginsales"."invoice_no"'), ', '), "invoice_no"],
           [Sequelize.fn('ARRAY_AGG', Sequelize.literal('DISTINCT "ginsales"."id"')), "sales_ids"],
           [
@@ -10839,12 +10843,21 @@ const exportSpinnerCottonStock = async (req: Request, res: Response) => {
               ),
               "cotton_procured",
             ],
+            [Sequelize.fn('STRING_AGG', Sequelize.literal('DISTINCT "ginner"."name"'), ', '), "ginner_name"],
           ],
           where: {
             buyer: spinner?.dataValues?.spinner_id,
             season_id: spinner?.dataValues?.season_id,
             status: "Sold",
           },
+          include:[
+            {
+              model: Ginner,
+              as: "ginner",
+              attributes: [],
+            }
+          ],
+          group: ["buyer", "season_id"],
         });
 
         let cotton_stock =
@@ -10857,8 +10870,11 @@ const exportSpinnerCottonStock = async (req: Request, res: Response) => {
         const rowValues = Object.values({
           index: index + 1,
           spinner: spinner?.dataValues.spinner_name ? spinner?.dataValues.spinner_name : "",
+          ginner_names: procuredCotton ? procuredCotton?.dataValues?.ginner_name
+          : "",
+          date: spinner?.dataValues.date && spinner?.dataValues.date.length > 0 ? spinner.dataValues.date.map((date: any) => moment(date).format('DD-MM-YYYY')).join(", ") : "",
           season: spinner?.dataValues.season_name ? spinner?.dataValues.season_name : "",
-          batch_lot_no: spinner?.dataValues.batch_lot_no ? spinner?.dataValues.batch_lot_no : "",
+          batch_lot_no: spinner?.dataValues.bale_lot_no ? spinner?.dataValues.bale_lot_no : "",
           reel_lot_no: reelLotNo,
           invoice_no: spinner?.dataValues.invoice_no ? spinner?.dataValues.invoice_no : "",
           cotton_procured: procuredCotton ? procuredCotton?.dataValues?.cotton_procured : 0,
