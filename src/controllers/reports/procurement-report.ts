@@ -388,7 +388,7 @@ const exportProcurementReport = async (req: Request, res: Response) => {
       "Quantity Purchased (Kgs)",
       "Available Cotton(Kgs)",
       "Price/Kg (Local Currency)",
-      "Program",
+      "Programme",
       "Transport Vehicle No",
       "Payment Method",
       "Ginner Name",

@@ -394,7 +394,7 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
       "Reel Press No",
       "No of Bales",
       "Lint Quantity(kgs)",
-      "Program",
+      "Programme",
       "Got",
       "Total Seed Cotton Consumed(kgs)",
       "Village",
@@ -530,7 +530,7 @@ const chooseBale = async (req: Request, res: Response) => {
       return res.sendError(res, "Ginner Id is required");
     }
     if (!programId) {
-      return res.sendError(res, "Program Id is required");
+      return res.sendError(res, "Programme Id is required");
     }
     if (ginnerId) {
       whereCondition.ginner_id = ginnerId;
@@ -773,7 +773,7 @@ const chooseCotton = async (req: Request, res: Response) => {
       return res.sendError(res, "Need Ginner Id");
     }
     if (!programId) {
-      return res.sendError(res, "Need Program Id");
+      return res.sendError(res, "Need Programme Id");
     }
     let villageId: any = req.query.villageId;
     let seasonId: any = req.query.seasonId;
@@ -936,7 +936,7 @@ const exportGinnerSales = async (req: Request, res: Response) => {
       "Bale Lot",
       "Bale/press No",
       "REEL Lot No",
-      "Program",
+      "Programme",
     ]);
     headerRow.font = { bold: true };
     let include = [

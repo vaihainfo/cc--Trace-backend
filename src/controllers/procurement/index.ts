@@ -1400,7 +1400,7 @@ const exportProcurement = async (req: Request, res: Response) => {
       "Quantity Purchased",
       "Price/Kg",
       "Total Amount",
-      "Program",
+      "Programme",
       "Country",
       "Village",
       "Ginner Name",
@@ -1559,7 +1559,7 @@ const exportGinnerProcurement = async (req: Request, res: Response) => {
       "Farmer Name",
       "Village",
       "Quantity",
-      "Program",
+      "Programme",
       "Vehicle Information",
     ]);
     headerRow.font = { bold: true };

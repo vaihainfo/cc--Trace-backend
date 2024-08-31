@@ -682,7 +682,7 @@ const exportWeaverSale = async (req: Request, res: Response) => {
     mergedCell.alignment = { horizontal: 'center', vertical: 'middle' };
     // Set bold font for header row
     const headerRow = worksheet.addRow([
-      "Sr No.", "Date", "Season", "Sold To", "Program", "Garment Order Reference", "Brand Order Reference",
+      "Sr No.", "Date", "Season", "Sold To", "Programme", "Garment Order Reference", "Brand Order Reference",
       "Invoice No", "Batch Lot No", "Quanitity in Mts",
       "Vehicle No", "Transcation via trader", "Agent Details"
     ]);
@@ -846,7 +846,7 @@ const exportWeaverProcess = async (req: Request, res: Response) => {
     mergedCell.alignment = { horizontal: 'center', vertical: 'middle' };
     // Set bold font for header row
     const headerRow = worksheet.addRow([
-      "Sr No.", "Date", "Season", "Finished Batch Lot No", "Fabric Reel Lot No", "Garment Order Reference", "Brand Order Reference", "Program",
+      "Sr No.", "Date", "Season", "Finished Batch Lot No", "Fabric Reel Lot No", "Garment Order Reference", "Brand Order Reference", "Programme",
       "Job Details from garment", "Knit Fabric Type", "Fabric Length in Mts", "Fabric GSM", "Total Finished Fabric Length in Mts", "Total Yarn Utilized"
     ]);
     headerRow.font = { bold: true };

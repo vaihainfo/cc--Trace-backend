@@ -707,7 +707,7 @@ const generateExportFarmer = async () => {
           // Set bold font for header row
           const headerRow = currentWorksheet.addRow([
             'S.No', 'Farmer Name', 'Farmer Code','Country', 'State', 'District', 'Block', 'Village',
-            'Seasons', 'Farm Group', 'Brand Name', 'Program Name', 'Total Agriculture Area', 'Estimated Yield (Kg/Ac)',
+            'Seasons', 'Farm Group', 'Brand Name', 'Programme Name', 'Total Agriculture Area', 'Estimated Yield (Kg/Ac)',
             'Total estimated Production','Cotton Total Area', 'Total Estimated Cotton', 'Tracenet Id', 'ICS Name', 'Certification Status'
           ]);
           headerRow.font = { bold: true };
@@ -966,7 +966,7 @@ const generateNonOrganicFarmerReport = async () => {
           // Set bold font for header row
           const headerRow = currentWorksheet.addRow([
             'S.No', 'Farmer Name', 'Farmer Code', 'Village',
-            'Block', 'District', 'State', 'Country', 'Brand Name', 'Program Name', 'Total Area',
+            'Block', 'District', 'State', 'Country', 'Brand Name', 'Programme Name', 'Total Area',
             'Cotton Area', 'Total Estimated Cotton', 'Total Estimated Production'
           ]);
           headerRow.font = { bold: true };
@@ -1238,7 +1238,7 @@ const generateProcurementReport = async () => {
           "Available Cotton(Kgs)",
           "Quantity in stock(Kgs)",
           "Price/Kg (Local Currency)",
-          "Program",
+          "Programme",
           "Transport Vehicle No",
           "Payment Method",
           "Ginner Name",
@@ -1840,7 +1840,7 @@ const generatePscpProcurementLiveTracker = async () => {
             "Ginning Mill",
             "Country",
             "State",
-            "Program",
+            "Programme",
             "Expected Seed Cotton (KG)",
             "Expected Lint (MT)",
             "Procurement-Seed Cotton (KG)",
@@ -1961,7 +1961,7 @@ const generateAgentTransactions = async () => {
         const headerRow = currentWorksheet.addRow([
           "Sr No.", 'Date', 'Farmer Code', 'Farmer Name', 'Season', 'Country',
           'State', 'District', 'Block', 'Village', 'Transaction Id', 'Quantity Purchased (Kgs)',
-          'Available Cotton (Kgs)', 'Price/KG(Local Currency)', 'Program', 'Transport Vehicle No', 'Payment Method', 'Ginner Name', 'Agent'
+          'Available Cotton (Kgs)', 'Price/KG(Local Currency)', 'Programme', 'Transport Vehicle No', 'Payment Method', 'Ginner Name', 'Agent'
         ]);
         headerRow.font = { bold: true };
       }
@@ -2518,7 +2518,7 @@ const generateGinnerSales = async () => {
         const headerRow = currentWorksheet.addRow([
           "Sr No.", "Process Date", "Data Entry Date", "Season", "Ginner Name",
           "Invoice No", "Sold To", "Heap Number", "Bale Lot No", "REEL Lot No", "No of Bales", "Press/Bale No", "Rate/Kg",
-          "Total Quantity", "Sales Value", "Vehicle No", "Transporter Name", "Program", "Agent Detials", "Status"
+          "Total Quantity", "Sales Value", "Vehicle No", "Transporter Name", "Programme", "Agent Detials", "Status"
         ]);
         headerRow.font = { bold: true };
       }
@@ -2690,7 +2690,7 @@ const generatePendingGinnerSales = async () => {
           "Press/Bale No",
           "Rate/Kg",
           "Total Quantity",
-          "Program",
+          "Programme",
           "status",
         ]);
         headerRow.font = { bold: true };
@@ -3295,7 +3295,7 @@ const generateSpinnerBale = async () => {
             "Press/Bale No",
             "No of Bales",
             "Total Lint Quantity(Kgs)",
-            "Program",
+            "Programme",
           ]);
           headerRow.font = { bold: true };
         }
@@ -3505,7 +3505,7 @@ const generateSpinnerYarnProcess = async () => {
             "Blend Material",
             "Blend Quantity (Kgs)",
             "Total Lint cotton consumed (Kgs)",
-            "Program",
+            "Programme",
             "Total Yarn weight (Kgs)",
             "Total yarn sold (Kgs)",
             "Total Yarn in stock (Kgs)",
@@ -4163,7 +4163,7 @@ const generatePendingSpinnerBale = async () => {
             "REEL Lot No",
             "Quantity(KGs)",
             "Actual Qty(KGs)",
-            "Program",
+            "Programme",
             "Vehicle No",
           ]);
           headerRow.font = { bold: true };

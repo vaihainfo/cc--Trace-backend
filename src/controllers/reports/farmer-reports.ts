@@ -224,7 +224,7 @@ const exportNonOrganicFarmerReport = async (req: Request, res: Response) => {
         "State",
         "Country",
         "Brand Name",
-        "Program Name",
+        "Programme Name",
         "Total Area",
         "Cotton Area",
         "Total Estimated Production",

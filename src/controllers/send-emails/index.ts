@@ -872,7 +872,7 @@ const bale_process_report = async (brandId: any, type: any, programIds: any, cou
         // Set bold font for header row
         const headerRow = worksheet.addRow([
             "Sr No.", "Date", "Season", "Ginner Name", "Gin Lot No", "Gin Press No", "REEL Lot No", "REEL Process Nos", "No of Bales"
-            , "Staple Length(mm)", "Strength (g/tex)", "Mic", "Uniformity", "RD Value", "Quantity(Kgs)", "Program",
+            , "Staple Length(mm)", "Strength (g/tex)", "Mic", "Uniformity", "RD Value", "Quantity(Kgs)", "Programme",
             "Status"
         ]);
         headerRow.font = { bold: true };
@@ -983,7 +983,7 @@ const pendingGinnerSales = async (brandId: any, type: any, programIds: any, coun
         const headerRow = worksheet.addRow([
             "Sr No.", "Date", "Season", "Ginner Name",
             "Invoice No", "Sold To", "Bale Lot No", "REEL Lot No", "No of Bales", "Press/Bale No", "Rate/Kg",
-            "Total Quantity", "Program", "status"
+            "Total Quantity", "Programme", "status"
         ]);
         headerRow.font = { bold: true };
         let include = [
@@ -1090,7 +1090,7 @@ const ginnerSales = async (brandId: any, type: any, programId: any, countryId: a
         const headerRow = worksheet.addRow([
             "Sr No.", "Date", "Season", "Ginner Name",
             "Invoice No", "Sold To", "Bale Lot No", "REEL Lot No", "No of Bales", "Press/Bale No", "Rate/Kg",
-            "Total Quantity", "Program", "status"
+            "Total Quantity", "Programme", "status"
         ]);
         headerRow.font = { bold: true };
         let include = [
@@ -1199,7 +1199,7 @@ const spinnerBale = async (brandId: any, type: any, programId: any, countryId: a
         const headerRow = worksheet.addRow([
             "Sr No.", "Date", "Season", "Spinner Name", "Ginner Name",
             "Invoice No", "No of Bales", "Lot No", "REEL Lot No", "Press/Bale No",
-            "Total Quantity", "Program"
+            "Total Quantity", "Programme"
         ]);
         headerRow.font = { bold: true };
         let include = [
@@ -1999,7 +1999,7 @@ const nonOrganicFarmerReport = async (brandId: any, type: any, programId: any, c
         // Set bold font for header row
         const headerRow = worksheet.addRow([
             'S.No', 'Farmer Name', 'Farmer Code', 'Village',
-            'Block', 'District', 'State', 'Country', 'Brand Name', 'Program Name', 'Total Area',
+            'Block', 'District', 'State', 'Country', 'Brand Name', 'Programme Name', 'Total Area',
             'Cotton Area', 'Total Estimated Production',
         ]);
         headerRow.font = { bold: true };
@@ -2233,7 +2233,7 @@ const procurementReport = async (brandId: any, type: any, programId: any, countr
             "Quantity Purchased",
             "Price/Kg",
             "Total Amount",
-            "Program",
+            "Programme",
             "Country",
             "Village",
             "Ginner Name",

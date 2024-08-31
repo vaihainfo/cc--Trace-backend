@@ -8882,7 +8882,7 @@ const exportQrCodeTrack = async (req: Request, res: Response) => {
       "Garment Type",
       "Style/Mark No",
       "Total No. of Pieces",
-      "Program",
+      "Programme",
     ]);
     headerRow.font = { bold: true };
     let include = [
@@ -12508,7 +12508,7 @@ const exportPscpProcurementLiveTracker = async (
           "Ginning Mill",
           "Country",
           "State",
-          "Program",
+          "Programme",
           "Expected Seed Cotton (KG)",
           "Expected Lint (MT)",
           "Procurement-Seed Cotton (KG)",
@@ -12529,7 +12529,7 @@ const exportPscpProcurementLiveTracker = async (
         "Ginning Mill",
         "Country",
         "State",
-        "Program",
+        "Programme",
         "Expected Seed Cotton (KG)",
         "Expected Lint (MT)",
         "Procurement-Seed Cotton (KG)",
@@ -14241,7 +14241,7 @@ const exportConsolidatedTraceability = async (req: Request, res: Response) => {
       "Transaction Id",
       "Village",
       "State",
-      "Program",
+      "Programme",
     ]);
     headerRow.font = { bold: true };
 
