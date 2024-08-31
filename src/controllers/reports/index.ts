@@ -284,7 +284,7 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
   const searchTerm = req.query.search || "";
   const page = Number(req.query.page) || 1;
   const limit = Number(req.query.limit) || 10;
-  const isBrand = Boolean(req.query.isBrand) || false;
+  const isBrand = req.query.isBrand || false;
   const { exportType, ginnerId, seasonId, programId, brandId, countryId, startDate, endDate }: any = req.query;
   const offset = (page - 1) * limit;
   const whereCondition: any = [];
@@ -348,7 +348,7 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
       // Create the excel workbook file
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet("Sheet1");
-      if(isBrand){
+      if(isBrand === 'true'){
       worksheet.mergeCells('A1:N1');
       }else{
         worksheet.mergeCells('A1:U1');
@@ -359,7 +359,7 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
       mergedCell.alignment = { horizontal: 'center', vertical: 'middle' };
       // Set bold font for header row
       let headerRow;
-      if(isBrand){
+      if(isBrand === 'true'){
         headerRow = worksheet.addRow([
           "Sr No.", "Process Date", "Data Entry Date and Time", "Seed Cotton Consumed Season" ,"Lint process Season choosen", "Ginner Name", "Heap Number", "Gin Lot No", "Gin Press No", "REEL Lot No", "REEL Process Nos", "No of Bales", "Lint Quantity(Kgs)", "Programme"
         ]);
@@ -484,7 +484,7 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
       // Append data to worksheet
       for await (const [index, item] of rows.entries()) {
         let rowValues;
-        if(isBrand){
+        if(isBrand === 'true'){
           rowValues = Object.values({
             index: index + 1,
             date: item.date ? item.date : "",
