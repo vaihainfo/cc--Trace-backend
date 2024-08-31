@@ -284,7 +284,7 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
   const searchTerm = req.query.search || "";
   const page = Number(req.query.page) || 1;
   const limit = Number(req.query.limit) || 10;
-  const isBrand = Number(req.query.isBrand) || false;
+  const isBrand = Boolean(req.query.isBrand) || false;
   const { exportType, ginnerId, seasonId, programId, brandId, countryId, startDate, endDate }: any = req.query;
   const offset = (page - 1) * limit;
   const whereCondition: any = [];
