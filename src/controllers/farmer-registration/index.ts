@@ -836,7 +836,7 @@ const exportFarmer = async (req: Request, res: Response) => {
           // Set bold font for header row
           const headerRow = currentWorksheet.addRow([
             'S.No', 'Farmer Name', 'Farmer Code','Country', 'State', 'District', 'Block', 'Village',
-            'Seasons', 'Farm Group', 'Brand Name', 'Program Name', 'Total Agriculture Area', 'Estimated Yield (Kg/Ac)',
+            'Seasons', 'Farm Group', 'Brand Name', 'Programme Name', 'Total Agriculture Area', 'Estimated Yield (Kg/Ac)',
             'Total estimated Production','Cotton Total Area', 'Total Estimated Cotton', 'Tracenet Id', 'ICS Name', 'Certification Status'
           ]);
           headerRow.font = { bold: true };

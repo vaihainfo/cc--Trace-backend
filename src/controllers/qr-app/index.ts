@@ -509,7 +509,7 @@ const exportAgentTransactions = async (req: Request, res: Response) => {
             const headerRow = worksheet.addRow([
                 "Sr No.", 'Date', 'Farmer Code', 'Farmer Name', 'Season', 'Country',
                 'State', 'District', 'Block', 'Village', 'Transaction Id', 'Quantity Purchased (Kgs)',
-                'Available Cotton (Kgs)', 'Price/KG(Local Currency)', 'Program', 'Transport Vehicle No', 'Payment Method', 'Ginner Name', 'Agent'
+                'Available Cotton (Kgs)', 'Price/KG(Local Currency)', 'Programme', 'Transport Vehicle No', 'Payment Method', 'Ginner Name', 'Agent'
             ]);
             headerRow.font = { bold: true };
             const whereCondition: any = {}

@@ -67,7 +67,7 @@ const uploadGinnerOrder = async (req: Request, res: Response) => {
                 fail.push({
                     success: false,
                     id: data.uploadDate ? data.uploadDate : '',
-                    message: "Program cannot be empty"
+                    message: "Programme cannot be empty"
                 })
             } else if (!data.confirmedBales) {
                 fail.push({
@@ -110,7 +110,7 @@ const uploadGinnerOrder = async (req: Request, res: Response) => {
                         fail.push({
                             success: false,
                             id: data.uploadDate ? data.uploadDate : '',
-                            message: "Program not found"
+                            message: "Programme not found"
                         })
                     }
                 }
@@ -271,7 +271,7 @@ const uploadGinnerExpectedSeed = async (req: Request, res: Response) => {
             } else if (!data.program) {
                 fail.push({
                     success: false,
-                    message: "Program cannot be empty"
+                    message: "Programme cannot be empty"
                 })
             } else if (!data.expectedSeedCotton) {
                 fail.push({
@@ -311,7 +311,7 @@ const uploadGinnerExpectedSeed = async (req: Request, res: Response) => {
                     if (!program) {
                         fail.push({
                             success: false,
-                            message: "Program not found"
+                            message: "Programme not found"
                         })
                     }
                 }
@@ -427,7 +427,7 @@ const uploadFarmer = async (req: Request, res: Response) => {
         if (!req.body.program) {
             fail.push({
                 success: false,
-                message: "Program cannot be empty"
+                message: "Programme cannot be empty"
             });
             let failedRecord = {
                 type: 'Farmer',
@@ -435,7 +435,7 @@ const uploadFarmer = async (req: Request, res: Response) => {
                 farmerCode: '',
                 farmerName: '',
                 body: {},
-                reason: "Program cannot be empty"
+                reason: "Programme cannot be empty"
             }
             saveFailedRecord(failedRecord)
             return res.sendSuccess(res, { pass, fail });
@@ -448,7 +448,7 @@ const uploadFarmer = async (req: Request, res: Response) => {
             if (!program) {
                 fail.push({
                     success: false,
-                    message: "Program not found"
+                    message: "Programme not found"
                 })
                 let failedRecord = {
                     type: 'Farmer',
@@ -456,7 +456,7 @@ const uploadFarmer = async (req: Request, res: Response) => {
                     farmerCode: '',
                     farmerName: '',
                     body: {},
-                    reason: "Program not found"
+                    reason: "Programme not found"
                 }
                 saveFailedRecord(failedRecord)
                 return res.sendSuccess(res, { pass, fail });
@@ -689,7 +689,7 @@ const uploadFarmer = async (req: Request, res: Response) => {
                 fail.push({
                     success: false,
                     data: { farmerCode: data.farmerCode, farmerName: data.firstName },
-                    message: "Tracenet Id is only for Organic Program"
+                    message: "Tracenet Id is only for Organic Programme"
                 });
                 let failedRecord = {
                     type: 'Farmer',
@@ -697,14 +697,14 @@ const uploadFarmer = async (req: Request, res: Response) => {
                     farmerCode: data.farmerCode ? data.farmerCode : '',
                     farmerName: data.firstName ? data.firstName : '',
                     body: { ...data },
-                    reason: "Tracenet Id is only for Organic Program"
+                    reason: "Tracenet Id is only for Organic Programme"
                 }
                 saveFailedRecord(failedRecord)
             } else if (program.program_name !== "Organic" && data.icsName) {
                 fail.push({
                     success: false,
                     data: { farmerCode: data.farmerCode, farmerName: data.firstName },
-                    message: "ICS name is only for Organic Program"
+                    message: "ICS name is only for Organic Programme"
                 })
                 let failedRecord = {
                     type: 'Farmer',
@@ -712,14 +712,14 @@ const uploadFarmer = async (req: Request, res: Response) => {
                     farmerCode: data.farmerCode ? data.farmerCode : '',
                     farmerName: data.firstName ? data.firstName : '',
                     body: { ...data },
-                    reason: "ICS name is only for Organic Program"
+                    reason: "ICS name is only for Organic Programme"
                 }
                 saveFailedRecord(failedRecord)
             } else if (program.program_name !== "Organic" && data.certStatus) {
                 fail.push({
                     success: false,
                     data: { farmerCode: data.farmerCode, farmerName: data.firstName },
-                    message: "Cert Status is only for Organic Program"
+                    message: "Cert Status is only for Organic Programme"
                 })
                 let failedRecord = {
                     type: 'Farmer',
@@ -727,7 +727,7 @@ const uploadFarmer = async (req: Request, res: Response) => {
                     farmerCode: data.farmerCode ? data.farmerCode : '',
                     farmerName: data.firstName ? data.firstName : '',
                     body: { ...data },
-                    reason: "Cert Status is only for Organic Program"
+                    reason: "Cert Status is only for Organic Programme"
                 }
                 saveFailedRecord(failedRecord)
             } else {
@@ -1879,7 +1879,7 @@ const uploadFarmGroupEvaluationData = async (req: Request, res: Response) => {
             } else if (!data.program_wise_no_farmers_in_other_sustain_cotton_program) {
                 fail.push({
                     success: false,
-                    message: "Program wise number of farmers in other sustainable cotton programs cannot be empty"
+                    message: "Programme wise number of farmers in other sustainable cotton programs cannot be empty"
                 });
             } else if (!data.total_number_of_current_ics) {
                 fail.push({
@@ -2242,7 +2242,7 @@ const uploadOrganicFarmer = async (req: Request, res: Response) => {
         if (!req.body.program) {
             fail.push({
                 success: false,
-                message: "Program cannot be empty"
+                message: "Programme cannot be empty"
             });
             return res.sendSuccess(res, { pass, fail });
         } else {
@@ -2251,7 +2251,7 @@ const uploadOrganicFarmer = async (req: Request, res: Response) => {
             if (!program) {
                 fail.push({
                     success: false,
-                    message: "Program not found"
+                    message: "Programme not found"
                 });
                 return res.sendSuccess(res, { pass, fail });
             }
@@ -2358,19 +2358,19 @@ const uploadOrganicFarmer = async (req: Request, res: Response) => {
                 fail.push({
                     success: false,
                     data: { farmerCode: data.farmerCode, farmerName: data.firstName },
-                    message: "Tracenet Id is only for Organic Program"
+                    message: "Tracenet Id is only for Organic Programme"
                 });
             } else if (program.program_name !== "Organic" && data.icsName) {
                 fail.push({
                     success: false,
                     data: { farmerCode: data.farmerCode, farmerName: data.firstName },
-                    message: "ICS name is only for Organic Program"
+                    message: "ICS name is only for Organic Programme"
                 });
             } else if (program.program_name !== "Organic" && data.certStatus) {
                 fail.push({
                     success: false,
                     data: { farmerCode: data.farmerCode, farmerName: data.firstName },
-                    message: "Cert Status is only for Organic Program"
+                    message: "Cert Status is only for Organic Programme"
                 });
             } else {
                 let country;

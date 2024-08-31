@@ -136,7 +136,7 @@ const exportBrandQrGarmentSales = async (req: Request, res: Response) => {
       "Garment Type",
       "Style/Mark No",
       "Total No. of pieces",
-      "Program",
+      "Programme",
     ]);
     headerRow.font = { bold: true };
 
@@ -3700,7 +3700,7 @@ const exportGarmentTransactionList = async (req: Request, res: Response) => {
     // Set bold font for header row
     const headerRow = worksheet.addRow([
       "Sr No.", 'Date', 'Processor Name', 'Garment Order Reference No', 'Brand Order Reference No', 'Invoice Number',
-      'Finished Batch/Lot No', 'Total Weight', 'Program', 'Vehicle No', 'Transaction Via Trader', 'Agent Details'
+      'Finished Batch/Lot No', 'Total Weight', 'Programme', 'Vehicle No', 'Transaction Via Trader', 'Agent Details'
     ]);
     headerRow.font = { bold: true };
     if (fabricType) {

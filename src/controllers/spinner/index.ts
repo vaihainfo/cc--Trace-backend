@@ -1204,7 +1204,7 @@ const exportSpinnerSale = async (req: Request, res: Response) => {
         const headerRow = worksheet.addRow([
             "Sr No.", "Date", "Season",
             "Invoice No", "Spin Lot No", "Reel Lot No", "Yarn Type", "Yarn Count", "No of Boxes", "Buyer Name",
-            "Box ID", "Blend", "Blend Qty", "Total weight (Kgs)", "Price/Kg", "Program", "Vehicle No",
+            "Box ID", "Blend", "Blend Qty", "Total weight (Kgs)", "Price/Kg", "Programme", "Vehicle No",
             "Transcation via trader", "Agent Details"
         ]);
         headerRow.font = { bold: true };
@@ -1919,7 +1919,7 @@ const exportSpinnerTransaction = async (req: Request, res: Response) => {
         const headerRow = worksheet.addRow([
             "Sr No.", "Date", "Season", "Ginner Name",
             "Invoice No", "Bale Lot", "No of Bales",
-            "REEL Lot No", "Quantity", "Program",
+            "REEL Lot No", "Quantity", "Programme",
             "Vehicle No"
         ]);
         headerRow.font = { bold: true };
@@ -2171,7 +2171,7 @@ const chooseLint = async (req: Request, res: Response) => {
             return res.sendError(res, 'Spinner Id is required')
         }
         if (!programId) {
-            return res.sendError(res, 'Program Id is required')
+            return res.sendError(res, 'Programme Id is required')
         }
         if (spinnerId) {
             whereCondition.buyer = spinnerId;
@@ -2322,7 +2322,7 @@ const chooseYarn = async (req: Request, res: Response) => {
             return res.sendError(res, 'Spinner Id is required')
         }
         if (!programId) {
-            return res.sendError(res, 'Program Id is required')
+            return res.sendError(res, 'Programme Id is required')
         }
         if (spinnerId) {
             whereCondition.spinner_id = spinnerId;
@@ -2478,7 +2478,7 @@ const getInvoiceAndReelLotNo = async (req: Request, res: Response) => {
             return res.sendError(res, 'Spinner Id is required')
         }
         if (!programId) {
-            return res.sendError(res, 'Program Id is required')
+            return res.sendError(res, 'Programme Id is required')
         }
         if (programId) {
             const idArray: number[] = programId
