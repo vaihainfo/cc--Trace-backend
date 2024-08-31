@@ -10542,6 +10542,8 @@ const fetchSpinnerLintCottonStock = async (req: Request, res: Response) => {
         [Sequelize.col('"spinprocess"."season"."id"'), "season_id"],
         [Sequelize.col('"spinprocess"."season"."name"'), "season_name"],
         [Sequelize.fn('STRING_AGG', Sequelize.literal('DISTINCT "spinprocess"."batch_lot_no"'), ', '), "batch_lot_no"],
+        [Sequelize.fn('ARRAY_AGG', Sequelize.literal('DISTINCT "spinprocess"."date"')), "date"],
+        [Sequelize.fn('STRING_AGG', Sequelize.literal('DISTINCT "ginsales"."lot_no"'), ', '), "bale_lot_no"],
         [Sequelize.fn('STRING_AGG', Sequelize.literal('DISTINCT "ginsales"."invoice_no"'), ', '), "invoice_no"],
         [Sequelize.fn('ARRAY_AGG', Sequelize.literal('DISTINCT "ginsales"."id"')), "sales_ids"],
         [
@@ -10610,12 +10612,21 @@ const fetchSpinnerLintCottonStock = async (req: Request, res: Response) => {
             ),
             "cotton_procured",
           ],
+          [Sequelize.fn('STRING_AGG', Sequelize.literal('DISTINCT "ginner"."name"'), ', '), "ginner_name"],
         ],
         where: {
           buyer: spinner?.dataValues?.spinner_id,
           season_id: spinner?.dataValues?.season_id,
           status: "Sold",
         },
+        include:[
+          {
+            model: Ginner,
+            as: "ginner",
+            attributes: [],
+          }
+        ],
+        group: ["buyer", "season_id"],
       });
 
       ndata.push({
@@ -10630,7 +10641,8 @@ const fetchSpinnerLintCottonStock = async (req: Request, res: Response) => {
             ? Number(procuredCotton?.dataValues?.cotton_procured) -
             Number(spinner?.dataValues?.cotton_consumed)
             : 0,
-
+        ginner_names: procuredCotton ? procuredCotton?.dataValues?.ginner_name
+        : "",
       })
 
     }
