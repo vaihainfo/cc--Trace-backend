@@ -280,10 +280,16 @@ const fetchGinProcessPagination = async (req: Request, res: Response) => {
             [
               Sequelize.fn(
                 "SUM",
-                Sequelize.literal("CAST(weight AS DOUBLE PRECISION)")
+                Sequelize.literal(`
+                  CASE
+                    WHEN old_weight IS NOT NULL THEN CAST(old_weight AS DOUBLE PRECISION)
+                    ELSE CAST(weight AS DOUBLE PRECISION)
+                  END
+                `)
               ),
               "lint_quantity",
             ],
+            
             [sequelize.fn("min", sequelize.col("bale_no")), "pressno_from"],
             [sequelize.fn("max", Sequelize.literal("LPAD(bale_no, 10, ' ')")), "pressno_to"],
           ],
@@ -413,7 +419,12 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
         [
           Sequelize.fn(
             "SUM",
-            Sequelize.literal("CAST(weight AS DOUBLE PRECISION)")
+            Sequelize.literal(`
+              CASE
+                WHEN old_weight IS NOT NULL THEN CAST(old_weight AS DOUBLE PRECISION)
+                ELSE CAST(weight AS DOUBLE PRECISION)
+              END
+            `)
           ),
           "lint_quantity",
         ],
