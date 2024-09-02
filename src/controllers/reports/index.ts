@@ -375,7 +375,7 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
       let headerRow;
       if (isBrand === 'true') {
         headerRow = worksheet.addRow([
-          "Sr No.", "Process Date", "Data Entry Date and Time", "Seed Cotton Consumed Season", "Lint process Season choosen", "Ginner Name", "Heap Number", "Gin Lot No", "Gin Press No", "REEL Lot No", "REEL Process Nos", "No of Bales", "Lint Quantity(Kgs)", "Programme"
+          "Sr No.", "Process Date", "Data Entry Date and Time", "Lint process Season choosen", "Ginner Name", "Heap Number", "Gin Lot No", "Gin Press No", "REEL Lot No", "REEL Process Nos", "No of Bales", "Lint Quantity(Kgs)", "Programme"
         ]);
       } else {
         headerRow = worksheet.addRow([
@@ -517,7 +517,6 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
             index: index + 1,
             date: item.date ? item.date : "",
             created_date: item.createdAt ? item.createdAt : "",
-            seed_consumed_seasons: item.seed_consumed_seasons ? item.seed_consumed_seasons : "",
             season: item.season ? item.season : "",
             ginner: item.ginner_name ? item.ginner_name : "",
             heap: item.heap_number ? item.heap_number : '',
@@ -2362,13 +2361,13 @@ const exportGinnerSales = async (req: Request, res: Response) => {
       let headerRow;
       if (isBrand === 'true') {
         headerRow = worksheet.addRow([
-          "Sr No.", "Process Date", "Data Entry Date", "Season", "Ginner Name",
+          "Sr No.", "Process Date", "Data Entry Date", "Lint sale chosen season", "Ginner Name",
           "Invoice No", "Sold To", "Heap Number", "Bale Lot No", "REEL Lot No", "No of Bales", "Press/Bale No", "Rate/Kg",
           "Total Quantity", "Vehicle No", "Transporter Name", "Programme", "Agent Detials"
         ]);
       } else {
         headerRow = worksheet.addRow([
-          "Sr No.", "Process Date", "Data Entry Date", "Season", "Ginner Name",
+          "Sr No.", "Process Date", "Data Entry Date", "Lint sale chosen season", "Ginner Name",
           "Invoice No", "Sold To", "Heap Number", "Bale Lot No", "REEL Lot No", "No of Bales", "Press/Bale No", "Rate/Kg",
           "Total Quantity", "Sales Value", "Vehicle No", "Transporter Name", "Programme", "Agent Detials", "Status"
         ]);
@@ -9108,7 +9107,7 @@ const fetchSpinnerSummaryPagination = async (req: Request, res: Response) => {
             buyer: spinner.id,
             // status: "Pending for QR scanning",
             status: {
-              [sequelize.Op.or]: ["Pending", "Pending for QR scanning"]
+              [Op.or]: ["Pending", "Pending for QR scanning"]
             },
           },
         }),
