@@ -124,7 +124,7 @@ const fetchValidationProjectReportTemplate = async (req: Request, res: Response)
 
       const response = {
         ...rows.dataValues,
-        premium_transfered_cost: rows.dataValues.premium_transfered_cost && rows.dataValues.premium_transfered_cost.length > 0 ? rows.dataValues.premium_transfered_cost.reduce((acc: any, val: any) => acc + parseFloat(val), 0) : 0,
+        premium_transfered_total_cost: rows.dataValues.premium_transfered_cost && rows.dataValues.premium_transfered_cost.length > 0 ? rows.dataValues.premium_transfered_cost.reduce((acc: any, val: any) => acc + parseFloat(val), 0) : 0,
       }
 
       return res.sendSuccess(res, response);
