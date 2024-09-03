@@ -577,6 +577,7 @@ const getYarnProcuredSold = async (
   try {
     const reqData = await getQueryParams(req, res);
     const where = getSpinnerProcessWhereQuery(reqData);
+    delete where.status
     const procuredData = await getYarnProcuredData(where);
     const soldData = await getYarnSoldData(where);
     const data = await getYarnProcuredSoldRes(
@@ -1819,6 +1820,7 @@ const getYarnSoldByCountry = async (
 
     const reqData = await getQueryParams(req, res);
     const where = getSpinnerProcessWhereQuery(reqData);
+    delete where.status
     const processedList = await getYarnSoldByCountryData(where);
     const data = await getYarnSoldByCountryRes(processedList, reqData.season);
     return res.sendSuccess(res, data);
