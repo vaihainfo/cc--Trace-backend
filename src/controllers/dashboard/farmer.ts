@@ -1056,7 +1056,7 @@ const getCountryAreaRes = async (
       );
 
       if (fFarmerValue) {
-        totalArea.area = mtConversion(fFarmerValue.dataValues.area);
+        totalArea.area = formatNumber(fFarmerValue.dataValues.area);
         totalArea.name = fFarmerValue.dataValues.seasonName;
       }
       if (!totalArea.name) {
