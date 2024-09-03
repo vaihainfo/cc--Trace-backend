@@ -2485,6 +2485,8 @@ const generateGinnerSales = async () => {
           [Sequelize.literal('"sales"."invoice_no"'), "invoice_no"],
           [Sequelize.col('"sales"."lot_no"'), "lot_no"],
           [Sequelize.fn('STRING_AGG', Sequelize.literal('DISTINCT "bale->ginprocess"."reel_lot_no"'), ',' ) , "reel_lot_no"],
+          [Sequelize.fn('STRING_AGG', Sequelize.literal('DISTINCT "bale->ginprocess->season"."name"'), ', '), "lint_process_seasons"],
+          [Sequelize.fn('ARRAY_AGG', Sequelize.literal('DISTINCT "bale->ginprocess"."id"')), "process_ids"],
           [Sequelize.literal('"sales"."rate"'), "rate"],
           [Sequelize.literal('"sales"."candy_rate"'), "candy_rate"],
           [Sequelize.literal('"sales"."total_qty"'), "lint_quantity"],
@@ -2512,6 +2514,11 @@ const generateGinnerSales = async () => {
           include: [{
             model: GinProcess,
             as: "ginprocess",
+            include: [{
+              model: Season,
+              as: "season",
+              attributes: [],
+            }],
             attributes: []
           }]
         }],
@@ -2536,7 +2543,7 @@ const generateGinnerSales = async () => {
       if (!currentWorksheet) {
         currentWorksheet = workbook.addWorksheet(`Sheet${worksheetIndex}`);
         if (worksheetIndex == 1) {
-          currentWorksheet.mergeCells('A1:T1');
+          currentWorksheet.mergeCells('A1:V1');
           const mergedCell = currentWorksheet.getCell('A1');
           mergedCell.value = 'CottonConnect | Ginner Sales Report';
           mergedCell.font = { bold: true };
@@ -2545,7 +2552,7 @@ const generateGinnerSales = async () => {
         }
         // Set bold font for header row
         const headerRow = currentWorksheet.addRow([
-          "Sr No.", "Process Date", "Data Entry Date", "Season", "Ginner Name",
+          "Sr No.", "Process Date", "Data Entry Date", "Seed Cotton Consumed Season", "Lint Process Season", "Lint sale chosen season", "Ginner Name",
           "Invoice No", "Sold To", "Heap Number", "Bale Lot No", "REEL Lot No", "No of Bales", "Press/Bale No", "Rate/Kg",
           "Total Quantity", "Sales Value", "Vehicle No", "Transporter Name", "Programme", "Agent Detials", "Status"
         ]);
@@ -2554,10 +2561,27 @@ const generateGinnerSales = async () => {
 
       // Append data to worksheet
       for await (const [index, item] of rows.entries()) {
+        const [seedSeason] =  await sequelize.query(`
+          SELECT 
+              STRING_AGG(DISTINCT s.name, ', ') AS seasons
+          FROM
+              cotton_selections cs
+          LEFT JOIN
+              transactions t ON cs.transaction_id = t.id
+          LEFT JOIN
+              villages v ON t.village_id = v.id
+          LEFT JOIN
+              seasons s ON t.season_id = s.id
+          WHERE 
+              cs.process_id IN (${item?.dataValues?.process_ids.join(',')}) 
+          `)
+
         const rowValues = Object.values({
           index: index + offset + 1,
           date: item.dataValues.date ? item.dataValues.date : '',
           created_at: item.dataValues.createdAt ? item.dataValues.createdAt : '',
+          seed_consumed_seasons: seedSeason ? seedSeason[0]?.seasons : "",
+          lint_process_seasons: item.dataValues.lint_process_seasons ? item.dataValues.lint_process_seasons : '',
           season: item.dataValues.season_name ? item.dataValues.season_name : '',
           ginner: item.dataValues.ginner ? item.dataValues.ginner : '',
           invoice: item.dataValues.invoice_no ? item.dataValues.invoice_no : '',
@@ -3407,10 +3431,15 @@ const generateSpinnerYarnProcess = async () => {
         ),
         cotton_consumed_data AS (
           SELECT
-            process_id,
-            COALESCE(SUM(qty_used), 0) AS cotton_consumed
+            ls.process_id,
+            COALESCE(SUM(ls.qty_used), 0) AS cotton_consumed,
+            STRING_AGG(DISTINCT s.name, ', ') AS seasons
           FROM
-            lint_selections
+            lint_selections ls
+          LEFT JOIN
+            gin_sales gs ON ls.lint_id = gs.id
+          LEFT JOIN
+            seasons s ON gs.season_id = s.id
           GROUP BY
             process_id
         ),
@@ -3437,6 +3466,7 @@ const generateSpinnerYarnProcess = async () => {
         SELECT
           spd.*,
           COALESCE(ccd.cotton_consumed, 0) AS cotton_consumed,
+          ccd.seasons AS lint_consumed_seasons,
           COALESCE(ysd.yarn_sold, 0) AS yarn_sold,
           ycd.yarncount
         FROM
@@ -3487,6 +3517,7 @@ const generateSpinnerYarnProcess = async () => {
           index: index + offset + 1,
           createdAt: item.createdAt ? item.createdAt : "",
           date: item.date ? item.date : "",
+          lint_consumed_seasons: item.lint_consumed_seasons ? item.lint_consumed_seasons : "",
           season: item.season_name ? item.season_name : "",
           spinner: item.spinner_name ? item.spinner_name : "",
           lotNo: item.batch_lot_no ? item.batch_lot_no : "",
@@ -3512,7 +3543,7 @@ const generateSpinnerYarnProcess = async () => {
         if (!currentWorksheet) {
           currentWorksheet = workbook.addWorksheet(`Spinner Yarn Process ${worksheetIndex}`);
           if (worksheetIndex == 1) {
-            currentWorksheet.mergeCells("A1:R1");
+            currentWorksheet.mergeCells("A1:S1");
             const mergedCell = currentWorksheet.getCell("A1");
             mergedCell.value = "CottonConnect | Spinner Yarn Process Report";
             mergedCell.font = { bold: true };
@@ -3523,7 +3554,8 @@ const generateSpinnerYarnProcess = async () => {
             "Sr No.",
             "Date and Time",
             "Process Date",
-            "Season",
+            "Lint Cotton Consumed Season",
+            "Yarn Process Season",
             "Spinner Name",
             "Spin Lot No",
             "Yarn Reel Lot No",
@@ -3634,6 +3666,7 @@ const generateSpinnerSale = async () => {
             [Sequelize.literal('"sales"."invoice_no"'), "invoice_no"],
             [Sequelize.literal('"sales"."batch_lot_no"'), "batch_lot_no"],
             [Sequelize.fn('STRING_AGG', Sequelize.literal('DISTINCT "process"."reel_lot_no"'), ',' ) , "reel_lot_no"],
+            [Sequelize.fn('ARRAY_AGG', Sequelize.literal('DISTINCT "process"."id"')), "process_ids"],
             [Sequelize.literal('"sales"."no_of_boxes"'), "no_of_boxes"],
             [Sequelize.literal('"sales"."price"'), "price"],
             [Sequelize.literal('"sales"."box_ids"'), "box_ids"],
@@ -3691,6 +3724,21 @@ const generateSpinnerSale = async () => {
       }
 
       for await (const [index, item] of rows.entries()) {
+
+      const [seedSeason] =  await sequelize.query(`
+        SELECT 
+              STRING_AGG(DISTINCT s.name, ', ') AS seasons
+          FROM
+            lint_selections ls
+          LEFT JOIN
+            gin_sales gs ON ls.lint_id = gs.id
+          LEFT JOIN
+            seasons s ON gs.season_id = s.id
+        WHERE 
+            ls.process_id IN (${item?.dataValues?.process_ids.join(',')}) 
+        `)
+
+
         let yarnCount: string = "";
         let yarnTypeData: string = "";
 
@@ -3709,6 +3757,7 @@ const generateSpinnerSale = async () => {
           index: index + offset + 1,
           createdAt: item.dataValues.createdAt ? item.dataValues.createdAt : "",
           date: item.dataValues.date ? item.dataValues.date : "",
+          lint_consumed_seasons: seedSeason ? seedSeason[0]?.seasons : "",
           season: item.dataValues.season_name ? item.dataValues.season_name : "",
           spinner: item.dataValues.spinner ? item.dataValues.spinner : "",
           buyer_id: item.dataValues.weaver
@@ -3720,6 +3769,7 @@ const generateSpinnerSale = async () => {
           order_ref: item.dataValues.order_ref ? item.dataValues.order_ref : "",
           lotNo: item.dataValues.batch_lot_no ? item.dataValues.batch_lot_no : "",
           reelLot: item.dataValues.reel_lot_no ? item.dataValues.reel_lot_no : "",
+          program: item.dataValues.program ? item.dataValues.program : "",
           yarnType: yarnTypeData ? yarnTypeData : "",
           count: yarnCount
             ? Number(yarnCount)
@@ -3743,7 +3793,7 @@ const generateSpinnerSale = async () => {
         if (!currentWorksheet) {
           currentWorksheet = workbook.addWorksheet(`Spinner Yarn Sales ${worksheetIndex}`);
           if (worksheetIndex == 1) {
-            currentWorksheet.mergeCells("A1:R1");
+            currentWorksheet.mergeCells("A1:U1");
             const mergedCell = currentWorksheet.getCell("A1");
             mergedCell.value = "CottonConnect | Spinner Yarn Sales Report";
             mergedCell.font = { bold: true };
@@ -3754,13 +3804,15 @@ const generateSpinnerSale = async () => {
             "Sr No.",
             "Created Date and Time",
             "Date",
-            "Season",
+            "Lint Cotton Consumed Season",
+            "Yarn sale season chosen",
             "Spinner Name",
             "Knitter/Weaver Name",
             "Invoice Number",
             "Order Reference",
             "Lot/Batch Number",
             "Reel Lot No",
+            "Programme",
             "Yarn Type",
             "Yarn Count",
             "No of Boxes",
