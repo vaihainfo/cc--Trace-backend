@@ -170,7 +170,14 @@ const fetchBaleProcess = async (req: Request, res: Response) => {
         gin_bale_data AS (
               SELECT
                   gb.process_id,
-                  COALESCE(SUM(CAST(gb.weight AS DOUBLE PRECISION)), 0) AS lint_quantity,
+                  COALESCE(
+  SUM(
+    CASE
+      WHEN gb.old_weight IS NOT NULL THEN CAST(gb.old_weight AS DOUBLE PRECISION)
+      ELSE CAST(gb.weight AS DOUBLE PRECISION)
+    END
+  ), 0
+) AS lint_quantity,
                   COALESCE(MIN(CASE WHEN gb.bale_no ~ '^[0-9]+$' THEN CAST(gb.bale_no AS BIGINT) ELSE 0 END), 0) AS pressno_from,
                   COALESCE(MAX(CASE WHEN gb.bale_no ~ '^[0-9]+$' THEN CAST(gb.bale_no AS BIGINT) ELSE 0 END), 0) AS pressno_to
               FROM
@@ -198,7 +205,14 @@ const fetchBaleProcess = async (req: Request, res: Response) => {
               SELECT
                   gb.process_id,
                   COUNT(gb.id) AS sold_bales,
-                  COALESCE(SUM(CAST(gb.weight AS DOUBLE PRECISION)), 0) AS lint_quantity_sold
+                 COALESCE(
+                  SUM(
+                    CASE
+                      WHEN gb.old_weight IS NOT NULL THEN CAST(gb.old_weight AS DOUBLE PRECISION)
+                      ELSE CAST(gb.weight AS DOUBLE PRECISION)
+                    END
+                  ), 0
+              ) AS lint_quantity_sold
               FROM
                   "gin-bales" gb
               WHERE
@@ -348,9 +362,9 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
       // Create the excel workbook file
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet("Sheet1");
-      if(isBrand === 'true'){
-      worksheet.mergeCells('A1:N1');
-      }else{
+      if (isBrand === 'true') {
+        worksheet.mergeCells('A1:N1');
+      } else {
         worksheet.mergeCells('A1:U1');
       }
       const mergedCell = worksheet.getCell('A1');
@@ -359,13 +373,13 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
       mergedCell.alignment = { horizontal: 'center', vertical: 'middle' };
       // Set bold font for header row
       let headerRow;
-      if(isBrand === 'true'){
+      if (isBrand === 'true') {
         headerRow = worksheet.addRow([
-          "Sr No.", "Process Date", "Data Entry Date and Time", "Seed Cotton Consumed Season" ,"Lint process Season choosen", "Ginner Name", "Heap Number", "Gin Lot No", "Gin Press No", "REEL Lot No", "REEL Process Nos", "No of Bales", "Lint Quantity(Kgs)", "Programme"
+          "Sr No.", "Process Date", "Data Entry Date and Time", "Lint process Season choosen", "Ginner Name", "Heap Number", "Gin Lot No", "Gin Press No", "REEL Lot No", "REEL Process Nos", "No of Bales", "Lint Quantity(Kgs)", "Programme"
         ]);
-      }else{
+      } else {
         headerRow = worksheet.addRow([
-          "Sr No.", "Process Date", "Data Entry Date and Time", "Seed Cotton Consumed Season" ,"Lint process Season choosen", "Ginner Name", "Heap Number", "Gin Lot No", "Gin Press No", "REEL Lot No", "REEL Process Nos", "No of Bales", "Lint Quantity(Kgs)", "Total Seed Cotton Consumed(Kgs)", "GOT", "Total lint cotton sold(Kgs)", "Total Bales Sold", "Total lint cotton in stock(Kgs)", "Total Bales in stock", "Programme", "Village"
+          "Sr No.", "Process Date", "Data Entry Date and Time", "Seed Cotton Consumed Season", "Lint process Season choosen", "Ginner Name", "Heap Number", "Gin Lot No", "Gin Press No", "REEL Lot No", "REEL Process Nos", "No of Bales", "Lint Quantity(Kgs)", "Total Seed Cotton Consumed(Kgs)", "GOT", "Total lint cotton sold(Kgs)", "Total Bales Sold", "Total lint cotton in stock(Kgs)", "Total Bales in stock", "Programme", "Village"
         ]);
       }
       headerRow.font = { bold: true };
@@ -404,7 +418,14 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
           gin_bale_data AS (
                 SELECT
                     gb.process_id,
-                    COALESCE(SUM(CAST(gb.weight AS DOUBLE PRECISION)), 0) AS lint_quantity,
+                    COALESCE(
+                  SUM(
+                    CASE
+                      WHEN gb.old_weight IS NOT NULL THEN CAST(gb.old_weight AS DOUBLE PRECISION)
+                      ELSE CAST(gb.weight AS DOUBLE PRECISION)
+                    END
+                  ), 0
+              ) AS lint_quantity,
                     COALESCE(MIN(CASE WHEN gb.bale_no ~ '^[0-9]+$' THEN CAST(gb.bale_no AS BIGINT) ELSE 0 END), 0) AS pressno_from,
                     COALESCE(MAX(CASE WHEN gb.bale_no ~ '^[0-9]+$' THEN CAST(gb.bale_no AS BIGINT) ELSE 0 END), 0) AS pressno_to
                 FROM
@@ -432,7 +453,14 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
                 SELECT
                     gb.process_id,
                     COUNT(gb.id) AS sold_bales,
-                    COALESCE(SUM(CAST(gb.weight AS DOUBLE PRECISION)), 0) AS lint_quantity_sold
+                    COALESCE(
+                  SUM(
+                    CASE
+                      WHEN gb.old_weight IS NOT NULL THEN CAST(gb.old_weight AS DOUBLE PRECISION)
+                      ELSE CAST(gb.weight AS DOUBLE PRECISION)
+                    END
+                  ), 0
+              ) AS lint_quantity_sold
                 FROM
                     "gin-bales" gb
                 WHERE
@@ -484,12 +512,11 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
       // Append data to worksheet
       for await (const [index, item] of rows.entries()) {
         let rowValues;
-        if(isBrand === 'true'){
+        if (isBrand === 'true') {
           rowValues = Object.values({
             index: index + 1,
             date: item.date ? item.date : "",
             created_date: item.createdAt ? item.createdAt : "",
-            seed_consumed_seasons: item.seed_consumed_seasons ? item.seed_consumed_seasons : "",
             season: item.season ? item.season : "",
             ginner: item.ginner_name ? item.ginner_name : "",
             heap: item.heap_number ? item.heap_number : '',
@@ -500,8 +527,8 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
             noOfBales: item.no_of_bales ? Number(item.no_of_bales) : 0,
             lint_quantity: item.lint_quantity ? Number(item.lint_quantity) : 0,
             program: item.program ? item.program : "",
-          }); 
-        }else{
+          });
+        } else {
           rowValues = Object.values({
             index: index + 1,
             date: item.date ? item.date : "",
@@ -2321,9 +2348,9 @@ const exportGinnerSales = async (req: Request, res: Response) => {
       // Create the excel workbook file
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet("Sheet1");
-      if(isBrand === 'true'){
+      if (isBrand === 'true') {
         worksheet.mergeCells('A1:R1');
-      }else{
+      } else {
         worksheet.mergeCells('A1:T1');
       }
       const mergedCell = worksheet.getCell('A1');
@@ -2332,17 +2359,17 @@ const exportGinnerSales = async (req: Request, res: Response) => {
       mergedCell.alignment = { horizontal: 'center', vertical: 'middle' };
       // Set bold font for header row
       let headerRow;
-      if(isBrand === 'true'){
+      if (isBrand === 'true') {
         headerRow = worksheet.addRow([
-          "Sr No.", "Process Date", "Data Entry Date", "Season", "Ginner Name",
+          "Sr No.", "Process Date", "Data Entry Date", "Lint sale chosen season", "Ginner Name",
           "Invoice No", "Sold To", "Heap Number", "Bale Lot No", "REEL Lot No", "No of Bales", "Press/Bale No", "Rate/Kg",
           "Total Quantity", "Vehicle No", "Transporter Name", "Programme", "Agent Detials"
-          ]);
-      }else{
+        ]);
+      } else {
         headerRow = worksheet.addRow([
-        "Sr No.", "Process Date", "Data Entry Date", "Season", "Ginner Name",
-        "Invoice No", "Sold To", "Heap Number", "Bale Lot No", "REEL Lot No", "No of Bales", "Press/Bale No", "Rate/Kg",
-        "Total Quantity", "Sales Value", "Vehicle No", "Transporter Name", "Programme", "Agent Detials", "Status"
+          "Sr No.", "Process Date", "Data Entry Date", "Lint sale chosen season", "Ginner Name",
+          "Invoice No", "Sold To", "Heap Number", "Bale Lot No", "REEL Lot No", "No of Bales", "Press/Bale No", "Rate/Kg",
+          "Total Quantity", "Sales Value", "Vehicle No", "Transporter Name", "Programme", "Agent Detials", "Status"
         ]);
       }
       headerRow.font = { bold: true };
@@ -2431,50 +2458,50 @@ const exportGinnerSales = async (req: Request, res: Response) => {
       // Append data to worksheet
       for await (const [index, item] of rows.entries()) {
         let rowValues;
-        if(isBrand === 'true'){
+        if (isBrand === 'true') {
           rowValues = Object.values({
             index: index + 1,
-          date: item.dataValues.date ? item.dataValues.date : '',
-          created_at: item.dataValues.createdAt ? item.dataValues.createdAt : '',
-          season: item.dataValues.season_name ? item.dataValues.season_name : '',
-          ginner: item.dataValues.ginner ? item.dataValues.ginner : '',
-          invoice: item.dataValues.invoice_no ? item.dataValues.invoice_no : '',
-          buyer: item.dataValues.buyerdata ? item.dataValues.buyerdata : '',
-          heap: '',
-          lot_no: item.dataValues.lot_no ? item.dataValues.lot_no : '',
-          reel_lot_no: item.dataValues.reel_lot_no ? item.dataValues.reel_lot_no : '',
-          no_of_bales: item.dataValues.no_of_bales ? Number(item.dataValues.no_of_bales) : 0,
-          press_no: item.dataValues.press_no ? item.dataValues.press_no : '',
-          rate: item.dataValues.rate ? Number(item.dataValues.rate) : 0,
-          lint_quantity: item.dataValues.lint_quantity ? item.dataValues.lint_quantity : '',
-          vehicle_no: item.dataValues.vehicle_no ? item.dataValues.vehicle_no : '',
-          transporter_name: item.dataValues.transporter_name ? item.dataValues.transporter_name : '',
-          program: item.dataValues.program ? item.dataValues.program : '',
-          agentDetails: item.dataValues.transaction_agent ? item.dataValues.transaction_agent : 'NA'
-        });
-        }else{
+            date: item.dataValues.date ? item.dataValues.date : '',
+            created_at: item.dataValues.createdAt ? item.dataValues.createdAt : '',
+            season: item.dataValues.season_name ? item.dataValues.season_name : '',
+            ginner: item.dataValues.ginner ? item.dataValues.ginner : '',
+            invoice: item.dataValues.invoice_no ? item.dataValues.invoice_no : '',
+            buyer: item.dataValues.buyerdata ? item.dataValues.buyerdata : '',
+            heap: '',
+            lot_no: item.dataValues.lot_no ? item.dataValues.lot_no : '',
+            reel_lot_no: item.dataValues.reel_lot_no ? item.dataValues.reel_lot_no : '',
+            no_of_bales: item.dataValues.no_of_bales ? Number(item.dataValues.no_of_bales) : 0,
+            press_no: item.dataValues.press_no ? item.dataValues.press_no : '',
+            rate: item.dataValues.rate ? Number(item.dataValues.rate) : 0,
+            lint_quantity: item.dataValues.lint_quantity ? item.dataValues.lint_quantity : '',
+            vehicle_no: item.dataValues.vehicle_no ? item.dataValues.vehicle_no : '',
+            transporter_name: item.dataValues.transporter_name ? item.dataValues.transporter_name : '',
+            program: item.dataValues.program ? item.dataValues.program : '',
+            agentDetails: item.dataValues.transaction_agent ? item.dataValues.transaction_agent : 'NA'
+          });
+        } else {
           rowValues = Object.values({
             index: index + 1,
-          date: item.dataValues.date ? item.dataValues.date : '',
-          created_at: item.dataValues.createdAt ? item.dataValues.createdAt : '',
-          season: item.dataValues.season_name ? item.dataValues.season_name : '',
-          ginner: item.dataValues.ginner ? item.dataValues.ginner : '',
-          invoice: item.dataValues.invoice_no ? item.dataValues.invoice_no : '',
-          buyer: item.dataValues.buyerdata ? item.dataValues.buyerdata : '',
-          heap: '',
-          lot_no: item.dataValues.lot_no ? item.dataValues.lot_no : '',
-          reel_lot_no: item.dataValues.reel_lot_no ? item.dataValues.reel_lot_no : '',
-          no_of_bales: item.dataValues.no_of_bales ? Number(item.dataValues.no_of_bales) : 0,
-          press_no: item.dataValues.press_no ? item.dataValues.press_no : '',
-          rate: item.dataValues.rate ? Number(item.dataValues.rate) : 0,
-          lint_quantity: item.dataValues.lint_quantity ? item.dataValues.lint_quantity : '',
-          sales_value: item.dataValues.sale_value ? Number(item.dataValues.sale_value) : 0,
-          vehicle_no: item.dataValues.vehicle_no ? item.dataValues.vehicle_no : '',
-          transporter_name: item.dataValues.transporter_name ? item.dataValues.transporter_name : '',
-          program: item.dataValues.program ? item.dataValues.program : '',
-          agentDetails: item.dataValues.transaction_agent ? item.dataValues.transaction_agent : 'NA',
-          status: item.dataValues.status === 'Sold' ? 'Sold' : `Available [Stock : ${item.dataValues.qty_stock ? item.dataValues.qty_stock : 0}]`
-        });
+            date: item.dataValues.date ? item.dataValues.date : '',
+            created_at: item.dataValues.createdAt ? item.dataValues.createdAt : '',
+            season: item.dataValues.season_name ? item.dataValues.season_name : '',
+            ginner: item.dataValues.ginner ? item.dataValues.ginner : '',
+            invoice: item.dataValues.invoice_no ? item.dataValues.invoice_no : '',
+            buyer: item.dataValues.buyerdata ? item.dataValues.buyerdata : '',
+            heap: '',
+            lot_no: item.dataValues.lot_no ? item.dataValues.lot_no : '',
+            reel_lot_no: item.dataValues.reel_lot_no ? item.dataValues.reel_lot_no : '',
+            no_of_bales: item.dataValues.no_of_bales ? Number(item.dataValues.no_of_bales) : 0,
+            press_no: item.dataValues.press_no ? item.dataValues.press_no : '',
+            rate: item.dataValues.rate ? Number(item.dataValues.rate) : 0,
+            lint_quantity: item.dataValues.lint_quantity ? item.dataValues.lint_quantity : '',
+            sales_value: item.dataValues.sale_value ? Number(item.dataValues.sale_value) : 0,
+            vehicle_no: item.dataValues.vehicle_no ? item.dataValues.vehicle_no : '',
+            transporter_name: item.dataValues.transporter_name ? item.dataValues.transporter_name : '',
+            program: item.dataValues.program ? item.dataValues.program : '',
+            agentDetails: item.dataValues.transaction_agent ? item.dataValues.transaction_agent : 'NA',
+            status: item.dataValues.status === 'Sold' ? 'Sold' : `Available [Stock : ${item.dataValues.qty_stock ? item.dataValues.qty_stock : 0}]`
+          });
         }
         worksheet.addRow(rowValues);
       }
@@ -3221,9 +3248,9 @@ const exportPendingSpinnerBale = async (req: Request, res: Response) => {
       // Create the excel workbook file
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet("Sheet1");
-      if(isBrand === 'true'){
+      if (isBrand === 'true') {
         worksheet.mergeCells('A1:M1');
-      }else{
+      } else {
         worksheet.mergeCells("A1:N1");
       }
       const mergedCell = worksheet.getCell("A1");
@@ -3232,7 +3259,7 @@ const exportPendingSpinnerBale = async (req: Request, res: Response) => {
       mergedCell.alignment = { horizontal: "center", vertical: "middle" };
       // Set bold font for header row
       let headerRow;
-      if(isBrand === 'true'){
+      if (isBrand === 'true') {
         headerRow = worksheet.addRow([
           "Sr No.",
           "Date and Time",
@@ -3248,7 +3275,7 @@ const exportPendingSpinnerBale = async (req: Request, res: Response) => {
           "Programme",
           "Vehicle No",
         ]);
-      }else{
+      } else {
         headerRow = worksheet.addRow([
           "Sr No.",
           "Date and Time",
@@ -3349,7 +3376,7 @@ const exportPendingSpinnerBale = async (req: Request, res: Response) => {
       // Append data to worksheet
       for await (const [index, item] of rows.entries()) {
         let rowValues;
-        if(isBrand === 'true'){
+        if (isBrand === 'true') {
           rowValues = Object.values({
             index: index + 1,
             createdAt: item.dataValues.createdAt ? item.dataValues.createdAt : "",
@@ -3371,7 +3398,7 @@ const exportPendingSpinnerBale = async (req: Request, res: Response) => {
             program: item.dataValues.program ? item.dataValues.program : "",
             village: item.dataValues.vehicle_no ? item.dataValues.vehicle_no : ""
           });
-        }else{
+        } else {
           rowValues = Object.values({
             index: index + 1,
             createdAt: item.dataValues.createdAt ? item.dataValues.createdAt : "",
@@ -4162,9 +4189,9 @@ const exportSpinnerSale = async (req: Request, res: Response) => {
       // Create the excel workbook file
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet("Sheet1");
-      if(isBrand === 'true'){
+      if (isBrand === 'true') {
         worksheet.mergeCells('A1:R1');
-      }else{
+      } else {
         worksheet.mergeCells("A1:T1");
       }
       const mergedCell = worksheet.getCell("A1");
@@ -4173,7 +4200,7 @@ const exportSpinnerSale = async (req: Request, res: Response) => {
       mergedCell.alignment = { horizontal: "center", vertical: "middle" };
       // Set bold font for header row
       let headerRow;
-      if(isBrand === 'true'){
+      if (isBrand === 'true') {
         headerRow = worksheet.addRow([
           "Sr No.",
           "Created Date and Time",
@@ -4194,29 +4221,29 @@ const exportSpinnerSale = async (req: Request, res: Response) => {
           "Yarn Net Weight(Kgs)",
           "Agent Details",
         ]);
-      }else{
-      headerRow = worksheet.addRow([
-        "Sr No.",
-        "Created Date and Time",
-        "Date",
-        "Season",
-        "Spinner Name",
-        "Knitter/Weaver Name",
-        "Invoice Number",
-        "Order Reference",
-        "Lot/Batch Number",
-        "Reel Lot No",
-        "Programme",
-        "Yarn Type",
-        "Yarn Count",
-        "No of Boxes",
-        "Box ID",
-        "Price",
-        "Yarn Net Weight(Kgs)",
-        "Transporter Name",
-        "Vehicle No",
-        "Agent Details",
-      ]);
+      } else {
+        headerRow = worksheet.addRow([
+          "Sr No.",
+          "Created Date and Time",
+          "Date",
+          "Season",
+          "Spinner Name",
+          "Knitter/Weaver Name",
+          "Invoice Number",
+          "Order Reference",
+          "Lot/Batch Number",
+          "Reel Lot No",
+          "Programme",
+          "Yarn Type",
+          "Yarn Count",
+          "No of Boxes",
+          "Box ID",
+          "Price",
+          "Yarn Net Weight(Kgs)",
+          "Transporter Name",
+          "Vehicle No",
+          "Agent Details",
+        ]);
       }
       headerRow.font = { bold: true };
 
@@ -4345,7 +4372,7 @@ const exportSpinnerSale = async (req: Request, res: Response) => {
 
 
         let rowValues;
-        if(isBrand === 'true'){
+        if (isBrand === 'true') {
           rowValues = Object.values({
             index: index + 1,
             createdAt: item.dataValues.createdAt ? item.dataValues.createdAt : "",
@@ -4373,8 +4400,8 @@ const exportSpinnerSale = async (req: Request, res: Response) => {
             agent: item.dataValues.transaction_agent
               ? item.dataValues.transaction_agent
               : "",
-              });
-          }else{
+          });
+        } else {
           rowValues = Object.values({
             index: index + 1,
             createdAt: item.dataValues.createdAt ? item.dataValues.createdAt : "",
@@ -9078,7 +9105,10 @@ const fetchSpinnerSummaryPagination = async (req: Request, res: Response) => {
             ...wheree,
             ...ginSalesCondition,
             buyer: spinner.id,
-            status: "Pending for QR scanning",
+            // status: "Pending for QR scanning",
+            status: {
+              [Op.or]: ["Pending", "Pending for QR scanning"]
+            },
           },
         }),
         LintSelections.findOne({
@@ -9338,7 +9368,9 @@ const exportSpinnerSummary = async (req: Request, res: Response) => {
               ...wheree,
               ...ginSalesCondition,
               buyer: item.id,
-              status: "Pending for QR scanning",
+              status: {
+                [sequelize.Op.or]: ["Pending", "Pending for QR scanning"]
+              },
             },
           }),
           LintSelections.findOne({
@@ -10619,7 +10651,7 @@ const fetchSpinnerLintCottonStock = async (req: Request, res: Response) => {
           season_id: spinner?.dataValues?.season_id,
           status: "Sold",
         },
-        include:[
+        include: [
           {
             model: Ginner,
             as: "ginner",
@@ -10642,7 +10674,7 @@ const fetchSpinnerLintCottonStock = async (req: Request, res: Response) => {
             Number(spinner?.dataValues?.cotton_consumed)
             : 0,
         ginner_names: procuredCotton ? procuredCotton?.dataValues?.ginner_name
-        : "",
+          : "",
       })
 
     }
@@ -10850,7 +10882,7 @@ const exportSpinnerCottonStock = async (req: Request, res: Response) => {
             season_id: spinner?.dataValues?.season_id,
             status: "Sold",
           },
-          include:[
+          include: [
             {
               model: Ginner,
               as: "ginner",
@@ -10871,7 +10903,7 @@ const exportSpinnerCottonStock = async (req: Request, res: Response) => {
           index: index + 1,
           spinner: spinner?.dataValues.spinner_name ? spinner?.dataValues.spinner_name : "",
           ginner_names: procuredCotton ? procuredCotton?.dataValues?.ginner_name
-          : "",
+            : "",
           date: spinner?.dataValues.date && spinner?.dataValues.date.length > 0 ? spinner.dataValues.date.map((date: any) => moment(date).format('DD-MM-YYYY')).join(", ") : "",
           season: spinner?.dataValues.season_name ? spinner?.dataValues.season_name : "",
           batch_lot_no: spinner?.dataValues.bale_lot_no ? spinner?.dataValues.bale_lot_no : "",
@@ -11590,7 +11622,7 @@ const exportPscpCottonProcurement = async (req: Request, res: Response) => {
 
 const fetchPscpGinnerPrecurement = async (req: Request, res: Response) => {
   try {
-    let { seasonId, countryId }: any = req.query;
+    let { seasonId, countryId, brandId }: any = req.query;
     const searchTerm = req.query.search || "";
     let whereCondition: any = {};
     const page = Number(req.query.page) || 1;
@@ -11608,6 +11640,13 @@ const fetchPscpGinnerPrecurement = async (req: Request, res: Response) => {
         .split(",")
         .map((id: any) => parseInt(id, 10));
       whereCondition.country_id = { [Op.in]: idArray };
+    }
+
+    if (brandId) {
+      const idArray: number[] = brandId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.brand_id = { [Op.in]: idArray };
     }
 
     const result = await Transaction.findAll({
@@ -11641,6 +11680,7 @@ const fetchPscpGinnerPrecurement = async (req: Request, res: Response) => {
         },
       ],
       group: ["mapped_ginner", "ginner.id"],
+
     });
     let data: any = [];
     for await (const [index, item] of result.entries()) {
@@ -11997,7 +12037,7 @@ const fetchPscpProcurementLiveTracker = async (req: Request, res: Response) => {
     const seasonConditionSql = seasonCondition.length ? `${seasonCondition.join(' AND ')}` : '1=1';
     const brandConditionSql = brandCondition.length ? `${brandCondition.join(' AND ')}` : '1=1';
     const baleConditionSql = baleCondition.length ? `${baleCondition.join(' AND ')}` : '1=1';
-    
+
     let countQuery = `
   SELECT 
       COUNT(*)
@@ -12013,7 +12053,7 @@ const fetchPscpProcurementLiveTracker = async (req: Request, res: Response) => {
 
     const [countResult] = await sequelize.query(countQuery);
     const count = countResult[0].count;
-    
+
     const data = await sequelize.query(
       `
       WITH
@@ -12518,10 +12558,10 @@ const exportPscpProcurementLiveTracker = async (
       // Create the excel workbook file
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet("Sheet1");
-      
-      if(isBrand === 'true'){
+
+      if (isBrand === 'true') {
         worksheet.mergeCells('A1:Q1');
-      }else{
+      } else {
         worksheet.mergeCells("A1:R1");
       }
       const mergedCell = worksheet.getCell("A1");
@@ -12530,7 +12570,7 @@ const exportPscpProcurementLiveTracker = async (
       mergedCell.alignment = { horizontal: "center", vertical: "middle" };
       // Set bold font for header row
       let headerRow;
-      if(isBrand === 'true'){
+      if (isBrand === 'true') {
         headerRow = worksheet.addRow([
           "Sr No.",
           "Ginning Mill",
@@ -12551,29 +12591,29 @@ const exportPscpProcurementLiveTracker = async (
           "Balance stock with Ginner (MT)",
           "Ginner Sale %",
         ]);
-      }else{
-      headerRow = worksheet.addRow([
-        "Sr No.",
-        "Ginning Mill",
-        "Country",
-        "State",
-        "Programme",
-        "Expected Seed Cotton (KG)",
-        "Expected Lint (MT)",
-        "Procurement-Seed Cotton (KG)",
-        "Procurement %",
-        "Procurement-Seed Cotton Pending at Ginner (KG)",
-        "Procurement Lint in (KG)",
-        "Procurement Lint (MT)",
-        "No. of Bales of produced",
-        "Bales Sold for this season",
-        "LINT Sold for this season (MT)",
-        "Ginner Order in Hand (MT)",
-        "Balance stock in  bales with Ginner",
-        "Balance stock with Ginner (MT)",
-        "Ginner Sale %",
-      ]);
-    }
+      } else {
+        headerRow = worksheet.addRow([
+          "Sr No.",
+          "Ginning Mill",
+          "Country",
+          "State",
+          "Programme",
+          "Expected Seed Cotton (KG)",
+          "Expected Lint (MT)",
+          "Procurement-Seed Cotton (KG)",
+          "Procurement %",
+          "Procurement-Seed Cotton Pending at Ginner (KG)",
+          "Procurement Lint in (KG)",
+          "Procurement Lint (MT)",
+          "No. of Bales of produced",
+          "Bales Sold for this season",
+          "LINT Sold for this season (MT)",
+          "Ginner Order in Hand (MT)",
+          "Balance stock in  bales with Ginner",
+          "Balance stock with Ginner (MT)",
+          "Ginner Sale %",
+        ]);
+      }
       headerRow.font = { bold: true };
 
       let data: any = [];
@@ -12855,7 +12895,7 @@ const exportPscpProcurementLiveTracker = async (
       let index = 0;
       for await (const obj of ndata) {
         let rowValues;
-        if(isBrand === 'true'){
+        if (isBrand === 'true') {
           rowValues = Object.values({
             index: index + 1,
             name: obj?.ginner ? obj.ginner.name : "",
@@ -12880,32 +12920,32 @@ const exportPscpProcurementLiveTracker = async (
             balance_lint_quantity: obj.balance_lint_quantity ? Number(formatDecimal(obj.balance_lint_quantity)) : 0,
             ginner_sale_percentage: Number(obj.ginner_sale_percentage),
           });
-        }else{
-         rowValues = Object.values({
-          index: index + 1,
-          name: obj?.ginner ? obj.ginner.name : "",
-          country: obj.state ? obj.country?.county_name : "",
-          state: obj.state ? obj.state?.state_name : "",
-          program: obj.program ? obj.program?.program_name : "",
-          expected_seed_cotton: obj.expected_seed_cotton ? Number(obj.expected_seed_cotton) : 0,
-          expected_lint: obj.expected_lint ? Number(obj.expected_lint) : 0,
-          procurement_seed_cotton: obj.procurement_seed_cotton ? Number(formatDecimal(obj.procurement_seed_cotton)) : 0,
-          procurement: obj.procurement ? Number(obj.procurement) : 0,
-          pending_seed_cotton: obj.pending_seed_cotton
-            ? Number(formatDecimal(obj.pending_seed_cotton))
-            : 0,
-          procured_lint_cotton_kgs: Number(formatDecimal(obj.procured_lint_cotton_kgs)),
-          procured_lint_cotton_mt: Number(formatDecimal(obj.procured_lint_cotton_mt)),
-          no_of_bales: obj.no_of_bales ? Number(obj.no_of_bales) : 0,
-          sold_bales: obj.sold_bales ? Number(obj.sold_bales) : 0,
-          total_qty_sold_lint: obj.total_qty_sold_lint
-            ? Number(formatDecimal(obj.total_qty_sold_lint))
-            : 0,
-          order_in_hand: obj.order_in_hand ? Number(formatDecimal(obj.order_in_hand)) : 0,
-          balace_stock: obj.balace_stock ? Number(obj.balace_stock) : 0,
-          balance_lint_quantity: obj.balance_lint_quantity ? Number(formatDecimal(obj.balance_lint_quantity)) : 0,
-          ginner_sale_percentage: Number(obj.ginner_sale_percentage),
-        });
+        } else {
+          rowValues = Object.values({
+            index: index + 1,
+            name: obj?.ginner ? obj.ginner.name : "",
+            country: obj.state ? obj.country?.county_name : "",
+            state: obj.state ? obj.state?.state_name : "",
+            program: obj.program ? obj.program?.program_name : "",
+            expected_seed_cotton: obj.expected_seed_cotton ? Number(obj.expected_seed_cotton) : 0,
+            expected_lint: obj.expected_lint ? Number(obj.expected_lint) : 0,
+            procurement_seed_cotton: obj.procurement_seed_cotton ? Number(formatDecimal(obj.procurement_seed_cotton)) : 0,
+            procurement: obj.procurement ? Number(obj.procurement) : 0,
+            pending_seed_cotton: obj.pending_seed_cotton
+              ? Number(formatDecimal(obj.pending_seed_cotton))
+              : 0,
+            procured_lint_cotton_kgs: Number(formatDecimal(obj.procured_lint_cotton_kgs)),
+            procured_lint_cotton_mt: Number(formatDecimal(obj.procured_lint_cotton_mt)),
+            no_of_bales: obj.no_of_bales ? Number(obj.no_of_bales) : 0,
+            sold_bales: obj.sold_bales ? Number(obj.sold_bales) : 0,
+            total_qty_sold_lint: obj.total_qty_sold_lint
+              ? Number(formatDecimal(obj.total_qty_sold_lint))
+              : 0,
+            order_in_hand: obj.order_in_hand ? Number(formatDecimal(obj.order_in_hand)) : 0,
+            balace_stock: obj.balace_stock ? Number(obj.balace_stock) : 0,
+            balance_lint_quantity: obj.balance_lint_quantity ? Number(formatDecimal(obj.balance_lint_quantity)) : 0,
+            ginner_sale_percentage: Number(obj.ginner_sale_percentage),
+          });
         }
         index++;
         worksheet.addRow(rowValues);
