@@ -713,7 +713,7 @@ const getYarnProcuredData = async (
 
   const result = await SpinProcess.findAll({
     attributes: [
-      [Sequelize.fn('SUM', Sequelize.col('net_yarn_qty')), 'yarnProcured'],
+      [Sequelize.fn('SUM', Sequelize.col('total_qty')), 'yarnProcured'],
       [Sequelize.col('season.name'), 'seasonName'],
       [Sequelize.col('season.id'), 'seasonId']
     ],
@@ -814,8 +814,8 @@ const getYarnProcuredDataByMonth = async (
 
   const result = await SpinProcess.findAll({
     attributes: [
-      [Sequelize.fn('SUM', Sequelize.col('net_yarn_qty')), 'yarnProcured'],
-      [Sequelize.literal('sum(net_yarn_qty) - sum(qty_stock)'), 'yarnSold'],
+      [Sequelize.fn('SUM', Sequelize.col('total_qty')), 'yarnProcured'],
+      [Sequelize.literal('sum(total_qty) - sum(qty_stock)'), 'yarnSold'],
       [Sequelize.literal("date_part('Month', date)"), 'month'],
       [Sequelize.literal("date_part('Year', date)"), 'year'],
     ],
@@ -1272,7 +1272,7 @@ const getTopYarnProcessedData = async (
 
   const result = await SpinProcess.findAll({
     attributes: [
-      [Sequelize.fn('SUM', Sequelize.col('net_yarn_qty')), 'processed'],
+      [Sequelize.fn('SUM', Sequelize.col('total_qty')), 'processed'],
       [Sequelize.col('spinner.name'), 'spinnerName']
     ],
     include: [{
@@ -1400,7 +1400,7 @@ const getTopYarnStockData = async (
 
   const [result] = await sequelize.query(`
     select sn.name                                                                            as "spinnerName",
-       ((select sum(sp.net_yarn_qty) from public.spin_processes sp where sp.spinner_id = sn.id) -
+       ((select sum(sp.total_qty) from public.spin_processes sp where sp.spinner_id = sn.id) -
         (select sum(sp.total_qty) from public.spin_sales sp where sp.spinner_id = sn.id)) as stock
 from public.spinners sn
 where sn.name is not null ${reqData?.country ? " and g.country_id = reqData?.country" : ""}
@@ -1713,7 +1713,7 @@ const getYarnProcessedByCountryData = async (where: any) => {
 
   const result = await SpinProcess.findAll({
     attributes: [
-      [Sequelize.fn('SUM', Sequelize.col('net_yarn_qty')), 'processed'],
+      [Sequelize.fn('SUM', Sequelize.col('total_qty')), 'processed'],
       [Sequelize.col('spinner.country.id'), 'countryId'],
       [Sequelize.col('spinner.country.county_name'), 'countryName'],
       [Sequelize.col('season.id'), 'seasonId'],
@@ -1964,7 +1964,7 @@ const getYarnProducedByCountry = async (
 const getYarnProducedByCountryData = async (where: any) => {
   const result = await SpinProcess.findAll({
     attributes: [
-      [Sequelize.col('yarn_qty_produced'), 'produced'],
+      [Sequelize.col('total_qty'), 'produced'],
       [Sequelize.col('spinner.country.id'), 'countryId'],
       [Sequelize.col('spinner.country.county_name'), 'countryName'],
       [Sequelize.col('season.id'), 'seasonId'],
@@ -2043,7 +2043,7 @@ const getYarnProducedByCountryRes = async (
       );
 
       if (gProducedValue) {
-        totalProduced = mtConversion(gProducedValue.dataValues.produced.reduce((fValue: any, sValue: any) => fValue + sValue));
+        totalProduced = mtConversion(gProducedValue.dataValues.produced);
         if (!seasonList.includes(gProducedValue.dataValues.seasonName))
           seasonList.push(gProducedValue.dataValues.seasonName);
       }
