@@ -176,12 +176,12 @@ const exportSpinnerGreyOutReport = async () => {
        [Sequelize.col('"season"."name"'), 'season_name'],
        [Sequelize.literal('"ginner"."name"'), "ginner_name"],
        [Sequelize.col('"buyerdata"."name"'), 'spinner'],
-       [Sequelize.fn('MAX', Sequelize.col('invoice_no')), 'invoice_no'],
-       [Sequelize.fn('MAX', Sequelize.col('lot_no')), 'lot_no'],
-       [Sequelize.fn('MAX', Sequelize.col('reel_lot_no')), 'reel_lot_no'],
-       [Sequelize.fn('MAX', Sequelize.col('qty_stock')), 'qty_stock'],
+       [Sequelize.col('invoice_no'), 'invoice_no'],
+       [Sequelize.col('lot_no'), 'lot_no'],
+       [Sequelize.col('reel_lot_no'), 'reel_lot_no'],
+       [Sequelize.col('qty_stock'), 'qty_stock'],
      ],
-     group: ['season.id', 'ginner.id', 'buyerdata.id'], 
+    //  group: ['season.id', 'ginner.id', 'buyerdata.id'], 
    });    
 
    // // Append data to worksheet
@@ -266,12 +266,12 @@ const exportGinnerProcessGreyOutReport = async () => {
      attributes: [
       [Sequelize.col('"season"."name"'), 'season_name'],
       [Sequelize.literal('"ginner"."name"'), "ginner_name"],
-      [Sequelize.fn('MAX', Sequelize.col('press_no')), 'press_no'],
-      [Sequelize.fn('MAX', Sequelize.col('lot_no')), 'lot_no'],
-      [Sequelize.fn('MAX', Sequelize.col('reel_lot_no')), 'reel_lot_no'],
-      [Sequelize.fn('MAX', Sequelize.col('total_qty')), 'total_qty'],
+      [Sequelize.col('press_no'), 'press_no'],
+      [Sequelize.col('lot_no'), 'lot_no'],
+      [Sequelize.col('reel_lot_no'), 'reel_lot_no'],
+      [Sequelize.col('total_qty'), 'total_qty'],
      ],
-     group: ['season.id', 'ginner.id'], 
+    //  group: ['season.id', 'ginner.id'], 
    });    
 
    // // Append data to worksheet
