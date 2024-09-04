@@ -7,6 +7,7 @@ import Country from "../../../models/country.model";
 import State from "../../../models/state.model";
 import UserRole from "../../../models/user-role.model";
 import District from "../../../models/district.model";
+import Brand from "../../../models/brand.model";
 import * as ExcelJS from "exceljs";
 import * as path from "path";
 
@@ -196,6 +197,7 @@ const fetchWeaver = async (req: Request, res: Response) => {
             ]
         });
         let userData = [];
+        let brands;
         if (result) {
             for await (let user of result.weaverUser_id) {
                 let us = await User.findOne({
@@ -211,8 +213,11 @@ const fetchWeaver = async (req: Request, res: Response) => {
                 });
                 userData.push(us)
             }
+            brands = await Brand.findAll({
+                where: { id: result.brand },
+            });
         }
-        return res.sendSuccess(res, result ? { ...result.dataValues, userData } : null);
+        return res.sendSuccess(res, result ? { ...result.dataValues, userData, brands } : null);
 
     } catch (error: any) {
         console.log(error);
