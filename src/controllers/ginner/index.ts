@@ -1719,11 +1719,6 @@ const _getGinnerProcessTracingChartData = async (
             villages: [],
           };
         }
-
-        const village_name = tx.farmer.village.village_name;
-        if (!formattedData[tx.farmer.farmGroup_id].villages.includes(village_name)) {
-          formattedData[tx.farmer.farmGroup_id].villages.push(village_name);
-        }
       });
     });
 
