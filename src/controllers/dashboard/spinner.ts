@@ -69,7 +69,7 @@ const getGinnerSalesWhereQuery = (
   reqData: any
 ) => {
   const where: any = {
-    status: "Sold"
+    
   };
 
   if (reqData?.program)
@@ -114,7 +114,6 @@ const getSpinnerProcessWhereQuery = (
   reqData: any
 ) => {
   const where: any = {
-    status: "Sold"
   };
 
   if (reqData?.program)
@@ -158,7 +157,6 @@ const getSpinnerLintQuery = (
   reqData: any
 ) => {
   const where: any = {
-    '$spinprocess.status$': "Sold"
   };
 
   if (reqData?.program)
@@ -201,7 +199,6 @@ const getSpinnerSalesWhereQuery = (
   reqData: any
 ) => {
   const where: any = {
-    status: "Sold"
   };
 
   if (reqData?.program)
@@ -270,6 +267,7 @@ const getTopFabric = async (
   try {
     const reqData = await getQueryParams(req, res);
     const where = getSpinnerProcessWhereQuery(reqData);
+    delete where.status;
     const spinnersData = await getTopFabricData(where);
     const data = getTopFabricRes(spinnersData);
     return res.sendSuccess(res, data);
@@ -713,7 +711,7 @@ const getYarnProcuredData = async (
 
   const result = await SpinProcess.findAll({
     attributes: [
-      [Sequelize.fn('SUM', Sequelize.col('total_qty')), 'yarnProcured'],
+      [Sequelize.fn('SUM', Sequelize.col('net_yarn_qty')), 'yarnProcured'],
       [Sequelize.col('season.name'), 'seasonName'],
       [Sequelize.col('season.id'), 'seasonId']
     ],
@@ -767,7 +765,7 @@ const getLintProcessedDataByMonth = async (
 
   const result = await SpinProcess.findAll({
     attributes: [
-      [Sequelize.fn('SUM', Sequelize.col('total_qty')), 'lintProcessed'],
+      [Sequelize.fn('SUM', Sequelize.col('net_yarn_qty')), 'lintProcessed'],
       [Sequelize.literal("date_part('Month', date)"), 'month'],
       [Sequelize.literal("date_part('Year', date)"), 'year'],
     ],
@@ -814,7 +812,7 @@ const getYarnProcuredDataByMonth = async (
 
   const result = await SpinProcess.findAll({
     attributes: [
-      [Sequelize.fn('SUM', Sequelize.col('total_qty')), 'yarnProcured'],
+      [Sequelize.fn('SUM', Sequelize.col('net_yarn_qty')), 'yarnProcured'],
       [Sequelize.literal('sum(total_qty) - sum(qty_stock)'), 'yarnSold'],
       [Sequelize.literal("date_part('Month', date)"), 'month'],
       [Sequelize.literal("date_part('Year', date)"), 'year'],
@@ -1272,7 +1270,7 @@ const getTopYarnProcessedData = async (
 
   const result = await SpinProcess.findAll({
     attributes: [
-      [Sequelize.fn('SUM', Sequelize.col('total_qty')), 'processed'],
+      [Sequelize.fn('SUM', Sequelize.col('net_yarn_qty')), 'processed'],
       [Sequelize.col('spinner.name'), 'spinnerName']
     ],
     include: [{
@@ -1400,7 +1398,7 @@ const getTopYarnStockData = async (
 
   const [result] = await sequelize.query(`
     select sn.name                                                                            as "spinnerName",
-       ((select sum(sp.total_qty) from public.spin_processes sp where sp.spinner_id = sn.id) -
+       ((select sum(sp.net_yarn_qty) from public.spin_processes sp where sp.spinner_id = sn.id) -
         (select sum(sp.total_qty) from public.spin_sales sp where sp.spinner_id = sn.id)) as stock
 from public.spinners sn
 where sn.name is not null ${reqData?.country ? " and g.country_id = reqData?.country" : ""}
@@ -1713,7 +1711,7 @@ const getYarnProcessedByCountryData = async (where: any) => {
 
   const result = await SpinProcess.findAll({
     attributes: [
-      [Sequelize.fn('SUM', Sequelize.col('total_qty')), 'processed'],
+      [Sequelize.fn('SUM', Sequelize.col('net_yarn_qty')), 'processed'],
       [Sequelize.col('spinner.country.id'), 'countryId'],
       [Sequelize.col('spinner.country.county_name'), 'countryName'],
       [Sequelize.col('season.id'), 'seasonId'],
@@ -1964,7 +1962,7 @@ const getYarnProducedByCountry = async (
 const getYarnProducedByCountryData = async (where: any) => {
   const result = await SpinProcess.findAll({
     attributes: [
-      [Sequelize.col('total_qty'), 'produced'],
+      [Sequelize.col('net_yarn_qty'), 'produced'],
       [Sequelize.col('spinner.country.id'), 'countryId'],
       [Sequelize.col('spinner.country.county_name'), 'countryName'],
       [Sequelize.col('season.id'), 'seasonId'],
