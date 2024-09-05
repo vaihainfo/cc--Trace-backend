@@ -129,10 +129,14 @@ const getTransactionDataQuery = (
   if (reqData?.program)
     where.program_id = reqData.program;
 
+  // if (reqData?.brand)
+  //   where['$ginner.brand$'] = {
+  //     [Op.contains]: Sequelize.literal(`ARRAY [${reqData.brand}]`)
+  //   };
+
   if (reqData?.brand)
-    where['$ginner.brand$'] = {
-      [Op.contains]: Sequelize.literal(`ARRAY [${reqData.brand}]`)
-    };
+    where.brand_id = reqData.brand;
+
 
   if (reqData?.season)
     where.season_id = reqData.season;
@@ -584,7 +588,7 @@ const getLintProcessedData = async (
 const getProcuredProcessedData = async (
   where: any
 ) => {
-  where.status = 'Sold';
+  // where.status = 'Sold';
   const result = await Transaction.findAll({
     attributes: [
       [Sequelize.fn('SUM', Sequelize.literal('CAST(qty_purchased  as numeric)')), 'procured'],
@@ -1655,7 +1659,8 @@ const getProcuredAllocated = async (
     const reqData = await getQueryParams(req, res);
     const where = getOverAllDataQuery(reqData);
     const allocationWhere = getGinnerAllocationQuery(reqData);
-    const procuredData = await getProcuredProcessedData(where);
+    const transactionWhere = getTransactionDataQuery(reqData);
+    const procuredData = await getProcuredProcessedData(transactionWhere);
     const allocatedData = await getAllocatedData(allocationWhere);
     const data = await getProcuredAllocatedRes(
       procuredData,
