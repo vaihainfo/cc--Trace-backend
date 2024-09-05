@@ -7,7 +7,7 @@ import District from "../../models/district.model";
 import Country from "../../models/country.model";
 import Farm from "../../models/farm.model";
 import Season from "../../models/season.model";
-import { getProcuredData, getTransactionWhereQuery } from "./procurement";
+import { getProcuredByCountryData, getProcuredData, getTransactionWhereQuery } from "./procurement";
 
 const getOverallArea = async (
   req: Request, res: Response
@@ -1304,9 +1304,9 @@ const getProductionCottonByCountry = async (
   try {
 
     const reqData = await getQueryParams(req, res);
-    const where = getOverAllDataQuery(reqData);
-    const productionList = await getEstimateAndProcuredByCountryData(where);
-    const data = await getProductionCottonRes(productionList, reqData.season);
+    const transactionWhere = getTransactionWhereQuery(reqData);
+    const procuredList = await getProcuredByCountryData(transactionWhere);
+    const data = await getProductionCottonRes(procuredList, reqData.season);
     return res.sendSuccess(res, data);
 
   } catch (error: any) {
@@ -1319,13 +1319,13 @@ const getProductionCottonByCountry = async (
 
 
 const getProductionCottonRes = async (
-  productionList: any = [],
+  estimatedList: any = [],
   reqSeason: any
 ) => {
   let seasonIds: number[] = [];
   let countries: number[] = [];
 
-  productionList.forEach((list: any) => {
+  estimatedList.forEach((list: any) => {
     if (!countries.includes(list.dataValues.countryName))
       countries.push(list.dataValues.countryName);
 
@@ -1357,7 +1357,7 @@ const getProductionCottonRes = async (
       name: countryName,
       data: [],
     };
-    const farmerList = productionList.filter((list: any) =>
+    const farmerList = estimatedList.filter((list: any) =>
       list.dataValues.countryName == countryName
     );
 
@@ -1369,9 +1369,16 @@ const getProductionCottonRes = async (
       );
 
       if (fFarmerValue) {
-        totalArea = formatNumber(fFarmerValue.dataValues.production);
+        totalArea = mtConversion(fFarmerValue.dataValues.procured);
         if (!seasonList.includes(fFarmerValue.dataValues.seasonName))
           seasonList.push(fFarmerValue.dataValues.seasonName);
+      }
+      else {
+        seasons.forEach((season: any) => {
+          if (season.id == seasonId && !seasonList.includes(season.dataValues.name)) {
+            seasonList.push(season.name);
+          }
+        });
       }
       data.data.push(totalArea);
     }

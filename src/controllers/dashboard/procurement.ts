@@ -1408,5 +1408,6 @@ export {
   getProcessedCottonByCountry,
   getProcessedEstimatedProcessedCottonByCountry,
   getTransactionWhereQuery,
-  getProcuredData
+  getProcuredData,
+  getProcuredByCountryData
 };
