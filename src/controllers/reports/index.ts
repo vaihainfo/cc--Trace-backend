@@ -4426,19 +4426,40 @@ const exportSpinnerSale = async (req: Request, res: Response) => {
         yarnTypeData =
           item.dataValues?.yarn_type?.length > 0 ? item.dataValues?.yarn_type.join(",") : "";
 
-        const [seedSeason] = await sequelize.query(`
-            SELECT 
-                 STRING_AGG(DISTINCT s.name, ', ') AS seasons
-              FROM
-                lint_selections ls
-              LEFT JOIN
-                gin_sales gs ON ls.lint_id = gs.id
-              LEFT JOIN
-                seasons s ON gs.season_id = s.id
-            WHERE 
-                ls.process_id IN (${item?.dataValues?.process_ids.join(',')}) 
-            `)
+        // const [seedSeason] = await sequelize.query(`
+        //     SELECT 
+        //          STRING_AGG(DISTINCT s.name, ', ') AS seasons
+        //       FROM
+        //         lint_selections ls
+        //       LEFT JOIN
+        //         gin_sales gs ON ls.lint_id = gs.id
+        //       LEFT JOIN
+        //         seasons s ON gs.season_id = s.id
+        //     WHERE 
+        //         ls.process_id IN (${item?.dataValues?.process_ids.join(',')}) 
+        //     `)
 
+
+        let processIds = item?.dataValues?.process_ids && Array.isArray(item?.dataValues?.process_ids)
+        ? item.dataValues.process_ids.filter((id: any) => id !== null && id !== undefined)
+        : [];
+
+      let seedSeason = [];
+
+      if (processIds.length > 0) {
+        [seedSeason] = await sequelize.query(`
+          SELECT 
+              STRING_AGG(DISTINCT s.name, ', ') AS seasons
+          FROM
+              lint_selections ls
+          LEFT JOIN
+              gin_sales gs ON ls.lint_id = gs.id
+          LEFT JOIN
+              seasons s ON gs.season_id = s.id
+          WHERE 
+              ls.process_id IN (${processIds.join(',')})
+      `);
+      }
 
 
         let rowValues;

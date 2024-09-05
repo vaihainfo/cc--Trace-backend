@@ -3714,6 +3714,7 @@ const generateSpinnerSale = async () => {
         }
       );
 
+      
       if (rows.length === 0) {
         hasNextBatch = false;
         break;
@@ -3725,19 +3726,26 @@ const generateSpinnerSale = async () => {
 
       for await (const [index, item] of rows.entries()) {
 
-      const [seedSeason] =  await sequelize.query(`
-        SELECT 
+        let processIds = item?.dataValues?.process_ids && Array.isArray(item?.dataValues?.process_ids)
+        ? item.dataValues.process_ids.filter((id: any) => id !== null && id !== undefined)
+        : [];
+
+      let seedSeason = [];
+
+      if (processIds.length > 0) {
+        [seedSeason] = await sequelize.query(`
+          SELECT 
               STRING_AGG(DISTINCT s.name, ', ') AS seasons
           FROM
-            lint_selections ls
+              lint_selections ls
           LEFT JOIN
-            gin_sales gs ON ls.lint_id = gs.id
+              gin_sales gs ON ls.lint_id = gs.id
           LEFT JOIN
-            seasons s ON gs.season_id = s.id
-        WHERE 
-            ls.process_id IN (${item?.dataValues?.process_ids.join(',')}) 
-        `)
-
+              seasons s ON gs.season_id = s.id
+          WHERE 
+              ls.process_id IN (${processIds.join(',')})
+      `);
+      }
 
         let yarnCount: string = "";
         let yarnTypeData: string = "";
