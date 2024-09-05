@@ -402,9 +402,14 @@ const getEstimateAndProcured = async (
   try {
 
     const reqData = await getQueryParams(req, res);
+    // const farmWhere = getFarmWhereQuery(reqData);
+    // const estimateList = await getEstimateData(farmWhere);
+    // const data = getEstimateAndProcuredRes(estimateList);
+    const transactionWhere = getTransactionWhereQuery(reqData);
     const farmWhere = getFarmWhereQuery(reqData);
+    const procuredList = await getProcuredData(transactionWhere);
     const estimateList = await getEstimateData(farmWhere);
-    const data = getEstimateAndProcuredRes(estimateList);
+    const data = getEstimateAndProcuredRes(estimateList, procuredList);
     return res.sendSuccess(res, data);
   }
 
@@ -423,7 +428,8 @@ const mtConversion = (value: number) => {
 
 
 const getEstimateAndProcuredRes = (
-  estimateList: any
+  estimateList: any,
+  procuredList: any
 ) => {
   let seasonIds: number[] = [];
 
@@ -433,6 +439,42 @@ const getEstimateAndProcuredRes = (
   });
 
 
+  // seasonIds = seasonIds.sort((a, b) => a - b);
+
+  // let season: string[] = [];
+  // let estimate: number[] = [];
+  // let procured: number[] = [];
+
+  // for (const sessionId of seasonIds) {
+  //   const fEstimate = estimateList.find((estimate: any) =>
+  //     estimate.dataValues.season.id == sessionId
+  //   );
+  //   let data = {
+  //     seasonName: '',
+  //     estimate: 0,
+  //     procured: 0
+  //   };
+
+  //   if (fEstimate) {
+  //     data.seasonName = fEstimate.dataValues.season.name;
+  //     data.estimate += mtConversion(fEstimate.dataValues.estimate);
+  //     data.procured += mtConversion(fEstimate.dataValues.production);
+  //   }
+
+
+  //   season.push(data.seasonName);
+  //   estimate.push(data.estimate);
+  //   procured.push(data.procured);
+
+  // }
+
+
+
+  procuredList.forEach((procured: any) => {
+    if (!seasonIds.includes(procured.dataValues.season.id))
+      seasonIds.push(procured.dataValues.season.id);
+  });
+
   seasonIds = seasonIds.sort((a, b) => a - b);
 
   let season: string[] = [];
@@ -441,7 +483,10 @@ const getEstimateAndProcuredRes = (
 
   for (const sessionId of seasonIds) {
     const fEstimate = estimateList.find((estimate: any) =>
-      estimate.dataValues.season.id == sessionId
+          estimate.dataValues.season.id == sessionId
+        );
+    const fProcured = procuredList.find((procured: any) =>
+      procured.dataValues.season.id == sessionId
     );
     let data = {
       seasonName: '',
@@ -450,9 +495,13 @@ const getEstimateAndProcuredRes = (
     };
 
     if (fEstimate) {
-      data.seasonName = fEstimate.dataValues.season.name;
-      data.estimate += mtConversion(fEstimate.dataValues.estimate);
-      data.procured += mtConversion(fEstimate.dataValues.production);
+          data.seasonName = fEstimate.dataValues.season.name;
+          data.estimate += mtConversion(fEstimate.dataValues.estimate);
+        }
+
+    if (fProcured) {
+      data.seasonName = fProcured.dataValues.season.name;
+      data.procured += mtConversion(fProcured.dataValues.procured);
     }
 
 
@@ -461,7 +510,6 @@ const getEstimateAndProcuredRes = (
     procured.push(data.procured);
 
   }
-
 
   return {
     season,
@@ -1358,5 +1406,7 @@ export {
   getEstimateProcuredAndProduction,
   getProcuredCottonByCountry,
   getProcessedCottonByCountry,
-  getProcessedEstimatedProcessedCottonByCountry
+  getProcessedEstimatedProcessedCottonByCountry,
+  getTransactionWhereQuery,
+  getProcuredData
 };

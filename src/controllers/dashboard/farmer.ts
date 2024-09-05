@@ -7,6 +7,7 @@ import District from "../../models/district.model";
 import Country from "../../models/country.model";
 import Farm from "../../models/farm.model";
 import Season from "../../models/season.model";
+import { getProcuredData, getTransactionWhereQuery } from "./procurement";
 
 const getOverallArea = async (
   req: Request, res: Response
@@ -487,8 +488,10 @@ const getEstimateAndProduction = async (
     if (req.query.type == "2")
       reqData.season = undefined;
     const where = getOverAllDataQuery(reqData);
+    const transactionWhere = getTransactionWhereQuery(reqData);
     const estimateProductionList = await getEstimateProductionBySeason(where);
-    const data = getEstimateProductionList(estimateProductionList);
+    const procuredList = await getProcuredData(transactionWhere);
+    const data = getEstimateProductionList(estimateProductionList, procuredList);
     return res.sendSuccess(res, data);
   }
 
@@ -531,17 +534,66 @@ const getEstimateProductionBySeason = async (where: any) => {
 
 };
 
-const getEstimateProductionList = (estimateProductionList: any) => {
-  let season: any = [];
-  let estimate: any = [];
-  let production: any = [];
-  estimateProductionList = estimateProductionList.sort((a: any, b: any) =>
-    a.dataValues.seasonId - b.dataValues.seasonId).slice(-3);
-  for (const estimateProduction of estimateProductionList) {
-    season.push(estimateProduction.dataValues.season.name);
-    estimate.push(mtConversion(estimateProduction.dataValues.estimate));
-    production.push(mtConversion(estimateProduction.dataValues.production));
+const getEstimateProductionList = (estimateProductionList: any, procuredList: any) => {
+  // let season: any = [];
+  // let estimate: any = [];
+  // let production: any = [];
+  // estimateProductionList = estimateProductionList.sort((a: any, b: any) =>
+  //   a.dataValues.seasonId - b.dataValues.seasonId).slice(-3);
+  // for (const estimateProduction of estimateProductionList) {
+  //   season.push(estimateProduction.dataValues.season.name);
+  //   estimate.push(mtConversion(estimateProduction.dataValues.estimate));
+  //   production.push(mtConversion(estimateProduction.dataValues.production));
+  // }
+
+  let seasonIds: number[] = [];
+
+  estimateProductionList.forEach((estimate: any) => {
+    if (estimate.dataValues.season.id)
+      seasonIds.push(estimate.dataValues.season.id);
+  });
+
+  procuredList.forEach((procured: any) => {
+    if (!seasonIds.includes(procured.dataValues.season.id))
+      seasonIds.push(procured.dataValues.season.id);
+  });
+
+  seasonIds = seasonIds.sort((a, b) => a - b);
+
+  let season: string[] = [];
+  let estimate: number[] = [];
+  let production: number[] = [];
+
+  for (const sessionId of seasonIds) {
+    const fEstimate = estimateProductionList.find((estimate: any) =>
+          estimate.dataValues.season.id == sessionId
+        );
+    const fProcured = procuredList.find((procured: any) =>
+      procured.dataValues.season.id == sessionId
+    );
+    let data = {
+      seasonName: '',
+      estimate: 0,
+      procured: 0
+    };
+
+    if (fEstimate) {
+          data.seasonName = fEstimate.dataValues.season.name;
+          data.estimate += mtConversion(fEstimate.dataValues.estimate);
+        }
+
+    if (fProcured) {
+      data.seasonName = fProcured.dataValues.season.name;
+      data.procured += mtConversion(fProcured.dataValues.procured);
+    }
+
+
+    season.push(data.seasonName);
+    estimate.push(data.estimate);
+    production.push(data.procured);
+
   }
+
 
   return {
     season,
