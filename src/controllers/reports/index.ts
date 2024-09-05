@@ -1433,7 +1433,7 @@ const fetchGinSalesPagination = async (req: Request, res: Response) => {
     });
 
     for await (let item of rows) {
-      const [seedSeason] =  await sequelize.query(`
+      const [seedSeason] = await sequelize.query(`
                             SELECT 
                                 STRING_AGG(DISTINCT s.name, ', ') AS seasons
                             FROM
@@ -1447,19 +1447,19 @@ const fetchGinSalesPagination = async (req: Request, res: Response) => {
                             WHERE 
                                 cs.process_id IN (${item?.dataValues?.process_ids.join(',')}) 
                             `)
-      
+
       const lotNo: string[] = item?.dataValues?.lot_no
         .split(", ")
         .map((id: any) => id);
-        let qualityReport = await QualityParameter.findAll({
-          where: {
-            process_id: { [Op.in]: item?.dataValues?.process_ids },
-            ginner_id: item?.dataValues?.ginner_id,
-            lot_no: { [Op.in]: lotNo },
-          },
-          raw: true
-        });
-        
+      let qualityReport = await QualityParameter.findAll({
+        where: {
+          process_id: { [Op.in]: item?.dataValues?.process_ids },
+          ginner_id: item?.dataValues?.ginner_id,
+          lot_no: { [Op.in]: lotNo },
+        },
+        raw: true
+      });
+
       nData.push({
         ...item.dataValues,
         seed_consumed_seasons: seedSeason ? seedSeason[0].seasons : "",
@@ -2464,7 +2464,7 @@ const exportGinnerSales = async (req: Request, res: Response) => {
             agentDetails: item.dataValues.transaction_agent ? item.dataValues.transaction_agent : 'NA'
           });
         } else {
-          const [seedSeason] =  await sequelize.query(`
+          const [seedSeason] = await sequelize.query(`
             SELECT 
                 STRING_AGG(DISTINCT s.name, ', ') AS seasons
             FROM
@@ -4099,18 +4099,39 @@ const fetchSpinSalesPagination = async (req: Request, res: Response) => {
 
     for await (let row of rows) {
 
-      const [seedSeason] =  await sequelize.query(`
-        SELECT 
-             STRING_AGG(DISTINCT s.name, ', ') AS seasons
+      // const [seedSeason] =  await sequelize.query(`
+      //   SELECT 
+      //        STRING_AGG(DISTINCT s.name, ', ') AS seasons
+      //     FROM
+      //       lint_selections ls
+      //     LEFT JOIN
+      //       gin_sales gs ON ls.lint_id = gs.id
+      //     LEFT JOIN
+      //       seasons s ON gs.season_id = s.id
+      //   WHERE 
+      //       ls.process_id IN (${row?.dataValues?.process_ids.join(',')}) 
+      //   `)
+
+      let processIds = row?.dataValues?.process_ids && Array.isArray(row?.dataValues?.process_ids)
+        ? row.dataValues.process_ids.filter((id: any) => id !== null && id !== undefined)
+        : [];
+
+      let seedSeason = [];
+
+      if (processIds.length > 0) {
+        [seedSeason] = await sequelize.query(`
+          SELECT 
+              STRING_AGG(DISTINCT s.name, ', ') AS seasons
           FROM
-            lint_selections ls
+              lint_selections ls
           LEFT JOIN
-            gin_sales gs ON ls.lint_id = gs.id
+              gin_sales gs ON ls.lint_id = gs.id
           LEFT JOIN
-            seasons s ON gs.season_id = s.id
-        WHERE 
-            ls.process_id IN (${row?.dataValues?.process_ids.join(',')}) 
-        `)
+              seasons s ON gs.season_id = s.id
+          WHERE 
+              ls.process_id IN (${processIds.join(',')})
+      `);
+      }
 
 
       let yarnCount: string = "";
@@ -4405,7 +4426,7 @@ const exportSpinnerSale = async (req: Request, res: Response) => {
         yarnTypeData =
           item.dataValues?.yarn_type?.length > 0 ? item.dataValues?.yarn_type.join(",") : "";
 
-          const [seedSeason] =  await sequelize.query(`
+        const [seedSeason] = await sequelize.query(`
             SELECT 
                  STRING_AGG(DISTINCT s.name, ', ') AS seasons
               FROM
@@ -4417,7 +4438,7 @@ const exportSpinnerSale = async (req: Request, res: Response) => {
             WHERE 
                 ls.process_id IN (${item?.dataValues?.process_ids.join(',')}) 
             `)
-    
+
 
 
         let rowValues;
