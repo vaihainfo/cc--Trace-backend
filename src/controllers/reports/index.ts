@@ -4441,13 +4441,13 @@ const exportSpinnerSale = async (req: Request, res: Response) => {
 
 
         let processIds = item?.dataValues?.process_ids && Array.isArray(item?.dataValues?.process_ids)
-        ? item.dataValues.process_ids.filter((id: any) => id !== null && id !== undefined)
-        : [];
+          ? item.dataValues.process_ids.filter((id: any) => id !== null && id !== undefined)
+          : [];
 
-      let seedSeason = [];
+        let seedSeason = [];
 
-      if (processIds.length > 0) {
-        [seedSeason] = await sequelize.query(`
+        if (processIds.length > 0) {
+          [seedSeason] = await sequelize.query(`
           SELECT 
               STRING_AGG(DISTINCT s.name, ', ') AS seasons
           FROM
@@ -4459,7 +4459,7 @@ const exportSpinnerSale = async (req: Request, res: Response) => {
           WHERE 
               ls.process_id IN (${processIds.join(',')})
       `);
-      }
+        }
 
 
         let rowValues;

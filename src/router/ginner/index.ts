@@ -26,6 +26,7 @@ import {
     updateGinnerSalesField,
     fetchGinProcess,
     checkReport,
+    fetchGinSaleAllBales,
 } from "../../controllers/ginner";
 import accessControl from "../../middleware/access-control";
 import { Router } from "express";
@@ -52,6 +53,8 @@ router.put('/sales/update', updateGinnerSalesField);
 router.delete('/sales', deleteGinSales);
 router.get('/sales/export', exportGinnerSales);
 router.get('/sales/bale', fetchGinSaleBale);
+router.get('/sales/all-bales', fetchGinSaleAllBales);
+
 // router.post('/sales/spinner', createSpinnerProcess);
 router.put('/update-status-transaction', updateTransactionStatus);
 router.get('/dashboard', dashboardGraphWithProgram);

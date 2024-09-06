@@ -1358,6 +1358,51 @@ const fetchGinSaleBale = async (req: Request, res: Response) => {
   }
 };
 
+
+
+const fetchGinSaleAllBales = async (req: Request, res: Response) => {
+  const whereCondition: any = {};
+  try {
+    whereCondition.sales_id = req.query.saleId;
+    //fetch data with process id
+    const { count, rows } = await BaleSelection.findAndCountAll({
+      where: whereCondition,
+      include: [
+        {
+          model: GinBale,
+          as: "bale",
+        },
+        {
+          model: GinSales,
+          as: "sales",
+          include: [
+            {
+              model: Ginner,
+              as: "ginner",
+              attributes: ["id", "name", "address", "brand"],
+            },
+          ],
+        },
+      ],
+      order: [["id", "DESC"]],
+    });
+    let data = [];
+    for await (let obj of rows) {
+      if (obj.dataValues.sales.ginner) {
+        let brands = await Brand.findAll({
+          where: { id: obj.dataValues.sales.ginner.brand },
+        });
+        data.push({ ...obj.dataValues, brands });
+      }
+    }
+    return res.sendPaginationSuccess(res, data, count);
+  } catch (error: any) {
+    console.error(error);
+    return res.sendError(res, error.meessage);
+  }
+};
+
+
 const updateGinSaleBale = async (req: Request, res: Response) => {
   try {
     //fetch data with process id
@@ -1795,6 +1840,7 @@ export {
   exportGinnerSales,
   updateGinnerSales,
   fetchGinSaleBale,
+  fetchGinSaleAllBales,
   chooseCotton,
   updateTransactionStatus,
   dashboardGraphWithProgram,
