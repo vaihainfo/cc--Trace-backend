@@ -623,7 +623,7 @@ const getLintProcuredSold = async (
     const procuredWhere = await getGinBaleQuery(reqData);
     const baleSel = getBaleSelectionQuery(reqData);
     const procuredData = await getBaleProcuredData(procuredWhere);
-    const soldData = await getBaleSoldData(baleSel);
+    const soldData = await getBaleSoldData(procuredWhere);
     const data = await getLintProcuredSoldRes(
       procuredData,
       soldData,
@@ -741,14 +741,17 @@ const getLintProcuredDataByMonth = async (
       ],
       [
         sequelize.fn(
-          "COALESCE",
-          sequelize.fn(
-            "SUM",
-            sequelize.literal(
-              'CAST("gin-bales"."weight" AS DOUBLE PRECISION)'
-            )
-          ),
-          0
+              "COALESCE",
+        Sequelize.fn(
+          "SUM",
+          Sequelize.literal(`
+            CASE
+              WHEN "gin-bales"."old_weight" IS NOT NULL THEN CAST("gin-bales"."old_weight" AS DOUBLE PRECISION)
+              ELSE CAST("gin-bales"."weight" AS DOUBLE PRECISION)
+            END
+          `)
+        ),
+        0
         ),
         "lintProcured",
       ],
@@ -789,9 +792,12 @@ const getLintSoldDataByMonth = async (
           "COALESCE",
           sequelize.fn(
             "SUM",
-            sequelize.literal(
-              'CAST("bale"."weight" AS DOUBLE PRECISION)'
-            )
+            Sequelize.literal(`
+              CASE
+                WHEN "bale"."old_weight" IS NOT NULL THEN CAST("bale"."old_weight" AS DOUBLE PRECISION)
+                ELSE CAST("bale"."weight" AS DOUBLE PRECISION)
+              END
+            `)
           ),
           0
         ),
@@ -1002,7 +1008,7 @@ const getBaleComparison = async (
     const ginBale = getGinBaleQuery(reqData);
     const baleSel = getBaleSelectionQuery(reqData);
     const procuredData = await getBaleProcuredData(ginBale);
-    const soldData = await getBaleSoldData(baleSel);
+    const soldData = await getBaleSoldData(ginBale);
     const data = await getBaleComparisonRes(
       procuredData,
       soldData,
@@ -1034,14 +1040,17 @@ const getBaleProcuredData = async (
       ],
       [
         sequelize.fn(
-          "COALESCE",
-          sequelize.fn(
-            "SUM",
-            sequelize.literal(
-              'CAST("gin-bales"."weight" AS DOUBLE PRECISION)'
-            )
-          ),
-          0
+              "COALESCE",
+        Sequelize.fn(
+          "SUM",
+          Sequelize.literal(`
+            CASE
+              WHEN "gin-bales"."old_weight" IS NOT NULL THEN CAST("gin-bales"."old_weight" AS DOUBLE PRECISION)
+              ELSE CAST("gin-bales"."weight" AS DOUBLE PRECISION)
+            END
+          `)
+        ),
+        0
         ),
         "lintProcured",
       ],
@@ -1078,32 +1087,39 @@ const getBaleProcuredData = async (
 const getBaleSoldData = async (
   where: any
 ) => {
-  const result = await BaleSelection.findAll({
+  where.sold_status = true
+  const result = await GinBale.findAll({
     attributes: [
       [
         sequelize.fn(
-          "COALESCE",
-          sequelize.fn(
-            "SUM",
-            sequelize.literal(
-              'CAST("bale"."weight" AS DOUBLE PRECISION)'
-            )
-          ),
-          0
+          "COUNT",
+          Sequelize.literal('DISTINCT "gin-bales"."id"')
+        ),
+        "sold",
+      ],
+      [
+        sequelize.fn(
+              "COALESCE",
+        Sequelize.fn(
+          "SUM",
+          Sequelize.literal(`
+            CASE
+              WHEN "gin-bales"."old_weight" IS NOT NULL THEN CAST("gin-bales"."old_weight" AS DOUBLE PRECISION)
+              ELSE CAST("gin-bales"."weight" AS DOUBLE PRECISION)
+            END
+          `)
+        ),
+        0
         ),
         "lintSold",
       ],
-      [
-        sequelize.fn("COUNT", Sequelize.literal("DISTINCT bale_id")),
-        "sold",
-      ],
-      [Sequelize.col('sales.season.name'), 'seasonName'],
-      [Sequelize.col('sales.season.id'), 'seasonId']
+      [Sequelize.col('ginprocess.season.name'), 'seasonName'],
+      [Sequelize.col('ginprocess.season.id'), 'seasonId']
     ],
     include: [
       {
-        model: GinSales,
-        as: "sales",
+        model: GinProcess,
+        as: "ginprocess",
         attributes: [],
         include: [{
           model: Season,
@@ -1113,19 +1129,13 @@ const getBaleSoldData = async (
           model: Ginner,
           as: 'ginner',
           attributes: []
-        }
-        ],
-      },
-      {
-        model: GinBale,
-        as: "bale",
-        attributes: [],
+        }],
       },
     ],
     where,
     limit: 3,
     order: [['seasonId', 'desc']],
-    group: ["sales.season.id"],
+    group: ["ginprocess.season.id"],
   });
 
   return result;
@@ -1257,14 +1267,17 @@ const getLintProcessedTopGinnersData = async (
     attributes: [
       [
         sequelize.fn(
-          "COALESCE",
-          sequelize.fn(
-            "SUM",
-            sequelize.literal(
-              'CAST("gin-bales"."weight" AS DOUBLE PRECISION)'
-            )
-          ),
-          0
+              "COALESCE",
+        Sequelize.fn(
+          "SUM",
+          Sequelize.literal(`
+            CASE
+              WHEN "gin-bales"."old_weight" IS NOT NULL THEN CAST("gin-bales"."old_weight" AS DOUBLE PRECISION)
+              ELSE CAST("gin-bales"."weight" AS DOUBLE PRECISION)
+            END
+          `)
+        ),
+        0
         ),
         "total",
       ],
@@ -1347,9 +1360,12 @@ const getLintSoldTopGinnersData = async (
           "COALESCE",
           sequelize.fn(
             "SUM",
-            sequelize.literal(
-              'CAST("bale"."weight" AS DOUBLE PRECISION)'
-            )
+            Sequelize.literal(`
+              CASE
+                WHEN "bale"."old_weight" IS NOT NULL THEN CAST("bale"."old_weight" AS DOUBLE PRECISION)
+                ELSE CAST("bale"."weight" AS DOUBLE PRECISION)
+              END
+            `)
           ),
           0
         ),
@@ -1410,7 +1426,14 @@ const getLintStockTopGinnersData = async (
   const [processedList] = await sequelize.query(`
     select g.name                                    as "ginnerName",
          g.id                                      as "id",
-         sum(CAST(gbp.weight AS DOUBLE PRECISION)) as "processed"
+         COALESCE(
+                  SUM(
+                    CASE
+                      WHEN gbp.old_weight IS NOT NULL THEN CAST(gbp.old_weight AS DOUBLE PRECISION)
+                      ELSE CAST(gbp.weight AS DOUBLE PRECISION)
+                    END
+                  ), 0
+              ) AS "processed"
     from public.ginners g
          left join public.gin_processes gp on gp.ginner_id = g.id
          left join public."gin-bales" gbp on gbp.process_id = gp.id
@@ -1421,7 +1444,14 @@ const getLintStockTopGinnersData = async (
   const [soldList] = await sequelize.query(`
       select g.name                                   as "ginnerName",
          g.id                                      as "id",
-        sum(CAST(gb.weight AS DOUBLE PRECISION)) as "sold"
+        COALESCE(
+                  SUM(
+                    CASE
+                      WHEN gb.old_weight IS NOT NULL THEN CAST(gb.old_weight AS DOUBLE PRECISION)
+                      ELSE CAST(gb.weight AS DOUBLE PRECISION)
+                    END
+                  ), 0
+              ) AS "sold"
       from public.ginners g
          left join public.gin_sales gs on g.id = gs.ginner_id
          left join public.bale_selections bs on bs.sales_id = gs.id
