@@ -961,7 +961,7 @@ const fetchSpinSalesPagination = async (req: Request, res: Response) => {
     const { spinnerId, seasonId, programId, knitterId, weaverId, yarnType, type }: any = req.query;
     const offset = (page - 1) * limit;
     const whereCondition: any = {};
-    const yarnTypeArray = yarnType.split(',').map((item: any) => item.trim());
+    const yarnTypeArray = yarnType?.split(',')?.map((item: any) => item.trim());
     try {
         if (searchTerm) {
             whereCondition[Op.or] = [
@@ -1128,7 +1128,7 @@ const exportSpinnerSale = async (req: Request, res: Response) => {
     const { spinnerId, seasonId, programId, knitterId, weaverId, yarnType, type }: any = req.query;
     const offset = (page - 1) * limit;
     const whereCondition: any = {};
-    const yarnTypeArray = yarnType.split(',').map((item: any) => item.trim());
+    const yarnTypeArray = yarnType?.split(',')?.map((item: any) => item.trim());
     try {
         if (searchTerm) {
             whereCondition[Op.or] = [
