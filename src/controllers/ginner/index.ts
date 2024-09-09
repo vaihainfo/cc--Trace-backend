@@ -635,7 +635,7 @@ const chooseBale = async (req: Request, res: Response) => {
             'bale_no', gb.bale_no,
             'weight', gb.weight,
             'greyout_status', gp.greyout_status
-        ))
+        ) ORDER BY gb.id ASC)
     ) AS result
 FROM 
     gin_processes gp
