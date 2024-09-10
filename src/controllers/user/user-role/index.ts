@@ -193,15 +193,19 @@ const updateUserRole = async (req: Request, res: Response) => {
             });
 
             if (existingPrivilege) {
-                let update = await UserPrivilege.update({
-                    userRole_id: roleId,
-                    menu_id: privilege.menuId,
-                    create_privilege: privilege.create,
-                    view_privilege: privilege.view,
-                    edit_privilege: privilege.edit,
-                    delete_privilege: privilege.delete,
-                    status: existingPrivilege.status
-                }, { where: { id: existingPrivilege.id } })
+                if(!privilege.create && !privilege.view && !privilege.edit && !privilege.delete){
+                    let update = await UserPrivilege.destroy({ where: { id: existingPrivilege.id } })
+                }else{
+                    let update = await UserPrivilege.update({
+                        userRole_id: roleId,
+                        menu_id: privilege.menuId,
+                        create_privilege: privilege.create,
+                        view_privilege: privilege.view,
+                        edit_privilege: privilege.edit,
+                        delete_privilege: privilege.delete,
+                        status: existingPrivilege.status
+                    }, { where: { id: existingPrivilege.id } })
+                }
             } else {
                 let create = await UserPrivilege.create({
                     userRole_id: roleId,
