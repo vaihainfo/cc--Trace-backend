@@ -372,7 +372,6 @@ const organicCottonSpecialUsersOverview = async (req: Request, res: Response) =>
             whereCondition.season_id = req.query.seasonId
         }
 
-
         let total_lint_procured = await sumbrandginnerProcured(brandId, seasonId);
         let total_lint_sold = await sumbrandginnerSales(brandId, seasonId);
         let total_lint_stock = await sumbrandginnerStock(brandId, seasonId);
@@ -460,8 +459,6 @@ const sumbrandginnerSales = async (brandId: any, seasonId: any) => {
         if (ginnerList.length > 0) {
             cottonQty = ginnerList[0].total_lint_mt;
         }
-
-        console.log("cotton-----------", cottonQty);
         return cottonQty / 1000;
     } catch (error) {
         console.log(error);
