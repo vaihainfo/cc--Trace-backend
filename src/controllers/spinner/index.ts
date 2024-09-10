@@ -214,7 +214,20 @@ const yarnId = async (id: any, date: any) => {
             raw: true
         }
     )
-    let spin = await SpinProcess.count({
+    // let spin = await SpinProcess.count({
+    //     include: [
+    //         {
+    //             model: Program,
+    //             as: 'program',
+    //             where: { program_name: { [Op.iLike]: 'Reel' } }
+    //         }
+    //     ],
+    //     where: {
+    //         spinner_id: id
+    //     }
+    // })
+
+    let spinLatest = await SpinProcess.findOne({
         include: [
             {
                 model: Program,
@@ -224,8 +237,21 @@ const yarnId = async (id: any, date: any) => {
         ],
         where: {
             spinner_id: id
-        }
+        },
+        order: [
+            [
+                'id', 'desc'
+            ]
+        ],
     })
+
+    let count = 0;
+
+    if(spinLatest){
+        let reelLot = spinLatest?.dataValues?.reel_lot_no;
+        let split = reelLot ? reelLot.split('/') : [];
+        count = split && split.length > 0 ? Number(split[1]) : 0;
+    }
 
     let currentDate = new Date();
     let day = String(currentDate.getUTCDate()).padStart(2, "0");
@@ -234,7 +260,7 @@ const yarnId = async (id: any, date: any) => {
 
     let prcs_date = day + month + year;
 
-    return a[0].idprefix + prcs_date + '/' + (((spin) ?? 1) + 1)
+    return a[0].idprefix + prcs_date + '/' + (((count) ?? 1) + 1)
 }
 
 //fetch Spinner Process with filters
