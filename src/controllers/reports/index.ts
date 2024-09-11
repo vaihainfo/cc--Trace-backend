@@ -9461,7 +9461,7 @@ const exportSpinnerSummary = async (req: Request, res: Response) => {
               ...ginSalesCondition,
               buyer: item.id,
               status: {
-                [sequelize.Op.or]: ["Pending", "Pending for QR scanning"]
+                [Op.or]: ["Pending", "Pending for QR scanning"]
               },
             },
           }),
