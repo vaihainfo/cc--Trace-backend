@@ -1,10 +1,9 @@
 import { DataTypes } from 'sequelize';
 import db from '../util/dbConn';
-import Transaction from './transaction.model';
 import GinProcess from './gin-process.model';
 import GinHeap from './gin-heap.model';
 
-const CottonSelection = db.define('cotton_selections', {
+const CottonSelection = db.define('heap_selections', {
   id: {
     allowNull: false,
     autoIncrement: true,
@@ -21,7 +20,11 @@ const CottonSelection = db.define('cotton_selections', {
   },
   transaction_id: {
     allowNull: false,
-    type: DataTypes.INTEGER
+    type: DataTypes.ARRAY(DataTypes.INTEGER)
+  },
+  village_id: {
+    allowNull: false,
+    type: DataTypes.ARRAY(DataTypes.INTEGER)
   },
   qty_used: {
     allowNull: false,
@@ -30,11 +33,6 @@ const CottonSelection = db.define('cotton_selections', {
   status: {
     type: DataTypes.BOOLEAN,
   },
-});
-
-CottonSelection.belongsTo(Transaction, {
-  foreignKey: "transaction_id",
-  as: "transaction",
 });
 
 CottonSelection.belongsTo(GinProcess, {

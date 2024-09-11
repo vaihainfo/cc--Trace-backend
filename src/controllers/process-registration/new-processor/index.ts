@@ -338,12 +338,9 @@ const updateProcessor = async (req: Request, res: Response) => {
                 id: user.id
             };
             if (user.id) {
-                console.log("if-------",{...userData, username: user.username, email: user.email })
                 const result = await User.update({...userData, username: user.username, email: user.email }, { where: { id: user.id } });
                 userIds.push(user.id);
             } else {
-                console.log("else-------",{...userData, username: user.username, email: user.email })
-
                 const result = await User.create({ ...userData, username: user.username, email: user.email });
                 userIds.push(result.id);
             }

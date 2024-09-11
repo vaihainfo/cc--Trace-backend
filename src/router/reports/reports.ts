@@ -67,6 +67,8 @@ import {
     brandWiseDataReport,
     exportBrandWiseDataReport,
     fetchDataEntryMonitorDashboardPagination,
+    fetchGinHeapReport,
+    exportGinHeapReport,
     fetchGinnerProcessGreyOutReport,
     fetchSpinnerProcessGreyOutReport,
     exportGinnerProcessGreyOutReport,
@@ -167,7 +169,8 @@ router.get('/export-spin-process-backward-traceability-report', exportSpinProces
 
 router.get('/get-brand-wise-data-report', brandWiseDataReport);
 router.get('/export-brand-wise-data-report', exportBrandWiseDataReport);
-
 router.get('/entry/data/monitoring/dashboard', fetchDataEntryMonitorDashboardPagination);
+router.get('/get-gin-heap-report', fetchGinHeapReport);
+router.get('/export-gin-heap-report', exportGinHeapReport);
 
 export default router;  
