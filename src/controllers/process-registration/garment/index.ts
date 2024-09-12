@@ -75,6 +75,7 @@ const fetchGarmentPagination = async (req: Request, res: Response) => {
     const countryId: any = req.query.countryId;
     const brandId: any = req.query.brandId;
     const stateId: any = req.query.stateId;
+    const all = req.query.all || '';
     const offset = (page - 1) * limit;
     const whereCondition: any = {}
     try {
@@ -152,6 +153,7 @@ const fetchGarmentPagination = async (req: Request, res: Response) => {
             }
             return res.sendPaginationSuccess(res, data, count);
         } else {
+            let dataAll: any = [];
             const result = await Garment.findAll({
                 where: whereCondition,
                 include: [
@@ -169,8 +171,22 @@ const fetchGarmentPagination = async (req: Request, res: Response) => {
                     ['id', 'desc'], // Sort the results based on the 'name' field and the specified order
                 ]
             });
+            for await (let item of result) {
+                let users = await User.findAll({
+                    where: {
+                        id: item?.dataValues?.garmentUser_id
+                    }
+                });
 
-            return res.sendSuccess(res, result);
+                let newStatus = users.some((user: any) => user.status === true);
+
+                dataAll.push({
+                    ...item?.dataValues,
+                    status: newStatus ? 'Active' : 'Inactive'
+                });
+            }
+            const activeUsers = dataAll.filter((item:any)=> item.status === 'Active');
+            return res.sendSuccess(res, all === 'true' ? activeUsers : dataAll);
         }
     } catch (error: any) {
         console.log(error);

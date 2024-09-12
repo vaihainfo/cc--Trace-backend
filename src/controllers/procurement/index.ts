@@ -698,9 +698,11 @@ const deleteBulkTransactions = async (req: Request, res: Response) => {
         } else {
           if (trans.dataValues.farm_id) {
             let farm = await Farm.findOne({ where: { id: trans.dataValues.farm_id } })
-            let s = await Farm.update({
-              cotton_transacted: (Number(farm.cotton_transacted) || 0) + (Number(trans.dataValues.qty_purchased) || 0)
-            }, { where: { id: trans.dataValues.farm_id } });
+            if (farm) {
+              let s = await Farm.update({
+                cotton_transacted: (Number(farm.cotton_transacted) || 0) + (Number(trans.dataValues.qty_purchased) || 0)
+              }, { where: { id: trans.dataValues.farm_id } });
+            }
           }
           const transaction = await Transaction.destroy({
             where: {

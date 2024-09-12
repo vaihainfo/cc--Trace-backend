@@ -445,6 +445,7 @@ const uploadFarmer = async (req: Request, res: Response) => {
                     program_name: req.body.program
                 }
             });
+
             if (!program) {
                 fail.push({
                     success: false,
@@ -500,6 +501,36 @@ const uploadFarmer = async (req: Request, res: Response) => {
                 saveFailedRecord(failedRecord)
                 return res.sendSuccess(res, { pass, fail });
             }
+            
+            else {
+                let brandCheck;
+                if (req.body.brand) {
+                    brandCheck = await Brand.findOne({
+                        where: {
+                            programs_id: {
+                                [Op.contains]: [program.id] 
+                            },
+                            id: brand.id
+                        }
+                    });
+                    if (!brandCheck) {
+                        fail.push({
+                            success: false,
+                            message: "Brand is not associated with the entered Programme"
+                        });
+                        let failedRecord = {
+                            type: 'Farmer',
+                            season: '',
+                            farmerCode: '',
+                            farmerName: '',
+                            body: {},
+                            reason: "Brand is not associated with the entered Programme"
+                        }
+                        saveFailedRecord(failedRecord)
+                        return res.sendSuccess(res, { pass, fail });
+                    } 
+                }
+            }
         }
         if (!req.body.farmGroup) {
             fail.push({
@@ -538,6 +569,33 @@ const uploadFarmer = async (req: Request, res: Response) => {
                 }
                 saveFailedRecord(failedRecord)
                 return res.sendSuccess(res, { pass, fail });
+            }
+            else {
+                let farmCheck;
+                if (req.body.brand) {
+                    farmCheck = await FarmGroup.findOne({
+                        where: {
+                            brand_id: brand.id,
+                            id: farmGroup.id
+                        }
+                    });
+                    if (!farmCheck) {
+                        fail.push({
+                            success: false,
+                            message: "Farm Group is not associated with the entered brand"
+                        });
+                        let failedRecord = {
+                            type: 'Farmer',
+                            season: '',
+                            farmerCode: '',
+                            farmerName: '',
+                            body: {},
+                            reason: "Farm Group is not associated with the entered brand"
+                        }
+                        saveFailedRecord(failedRecord)
+                        return res.sendSuccess(res, { pass, fail });
+                    } 
+                }
             }
         }
         if (!req.body.season) {
