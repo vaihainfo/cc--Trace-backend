@@ -80,6 +80,7 @@ const fetchGinnerPagination = async (req: Request, res: Response) => {
     const stateId: any = req.query.stateId as string;
     const districtId: any = req.query.districtId as string;
     const offset = (page - 1) * limit;
+    const all = req.query.all || '';
     const whereCondition: any = {};
 
     try {
@@ -165,7 +166,7 @@ const fetchGinnerPagination = async (req: Request, res: Response) => {
             }
             return res.sendPaginationSuccess(res, data, count);
         } else {
-            let users: any = [];
+            let dataAll: any = [];
             const result = await Ginner.findAll({
                 where: whereCondition,
                 include: [
@@ -184,7 +185,22 @@ const fetchGinnerPagination = async (req: Request, res: Response) => {
                     ['id', 'desc'], // Sort the results based on the 'name' field and the specified order
                 ]
             });
-            return res.sendSuccess(res, result);
+            for await (let item of result) {
+                let users = await User.findAll({
+                    where: {
+                        id: item?.dataValues?.ginnerUser_id
+                    }
+                });
+
+                let newStatus = users.some((user: any) => user.status === true);
+
+                dataAll.push({
+                    ...item?.dataValues,
+                    status: newStatus ? 'Active' : 'Inactive'
+                });
+            }
+            const activeUsers = dataAll.filter((item:any)=> item.status === 'Active');
+            return res.sendSuccess(res, all === 'true' ? activeUsers : dataAll);
         }
     } catch (error: any) {
         console.log(error);
