@@ -24,6 +24,7 @@ const fetchPhysicalPartnerPagination = async (req: Request, res: Response) => {
     const brandId: any = req.query.brandId;
     const stateId: any = req.query.stateId as string;
     const districtId: any = req.query.districtId as string;
+    const all = req.query.all || '';
     const offset = (page - 1) * limit;
     const whereCondition: any = {};
 
@@ -102,6 +103,7 @@ const fetchPhysicalPartnerPagination = async (req: Request, res: Response) => {
             }
             return res.sendPaginationSuccess(res, data, count);
         } else {
+            let dataAll: any = [];
             const result = await PhysicalPartner.findAll({
                 where: whereCondition,
                 include: [
@@ -113,7 +115,22 @@ const fetchPhysicalPartnerPagination = async (req: Request, res: Response) => {
                     ['id', 'desc']
                 ]
             });
-            return res.sendSuccess(res, result);
+            for await (let item of result) {
+                let users = await User.findAll({
+                    where: {
+                        id: item?.dataValues?.physicalPartnerUser_id
+                    }
+                });
+
+                let newStatus = users.some((user: any) => user.status === true);
+
+                dataAll.push({
+                    ...item?.dataValues,
+                    status: newStatus ? 'Active' : 'Inactive'
+                });
+            }
+            const activeUsers = dataAll.filter((item:any)=> item.status === 'Active');
+            return res.sendSuccess(res, all === 'true' ? activeUsers : dataAll);
         }
     } catch (error: any) {
         console.log(error);
