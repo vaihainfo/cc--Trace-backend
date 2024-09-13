@@ -165,6 +165,13 @@ const fetchBrandById = async (req: Request, res: Response) => {
                 {
                     model: UserRole,
                     as: "user_role",
+                    include: [
+                        {
+                            model: Brand,
+                            as: 'brand',
+                            attributes: ['id', 'brand_name'],
+                        }
+                    ]
                 },
             ],
         });
