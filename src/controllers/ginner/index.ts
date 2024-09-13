@@ -1786,7 +1786,7 @@ const fetchGinSaleBale = async (req: Request, res: Response) => {
             {
               model: GinProcess,
               as: "ginprocess",
-              attributes: ["date"],
+              attributes: ["date","lot_no", "reel_lot_no"],
             },
           ],
         },
@@ -1839,7 +1839,7 @@ const fetchGinSaleAllBales = async (req: Request, res: Response) => {
             {
               model: GinProcess,
               as: "ginprocess",
-              attributes: ["date"],
+              attributes: ["date","lot_no", "reel_lot_no"],
             },
           ],
         },

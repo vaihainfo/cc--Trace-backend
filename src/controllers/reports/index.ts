@@ -158,6 +158,7 @@ const fetchBaleProcess = async (req: Request, res: Response) => {
             gp.total_qty AS seed_consumed,
             gp.gin_out_turn AS got,
             gp.bale_process,
+            gp.greyout_status,
             pr.program_name AS program
         FROM
             gin_processes gp
@@ -281,7 +282,8 @@ const fetchBaleProcess = async (req: Request, res: Response) => {
               gd.season_name AS seed_consumed_seasons,
               gd.weigh_bridge,
               gd.delivery_challan,
-              gd.qr
+              gd.qr,
+              gd.greyout_status
           FROM
               gin_process_data gd
           LEFT JOIN

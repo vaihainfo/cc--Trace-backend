@@ -468,7 +468,7 @@ const sumbrandginnerSales = async (brandId: any, seasonId: any) => {
 function convert_kg_to_mt(number: any) {
     return (number / 1000).toFixed(2);
   }
-  const sumbrandginnerStock = async (brandId: any, seasonId: any) => {
+  const sumBrandginnerStock = async (brandId: any, seasonId: any) => {
     try {
         let whereCondition: any = {};
         const ginBaleWhere: any = {};
@@ -592,6 +592,80 @@ function convert_kg_to_mt(number: any) {
         throw new Error('Error in sumbrandginnerStock function: ' + error.message);
     }
 };
+
+const sumbrandginnerStock = async (brandId: any, seasonId: any | null) => {
+    try {
+      const query = `
+        WITH
+          filtered_ginners AS (
+            SELECT
+              g.id AS ginner_id
+            FROM
+              ginners g
+            WHERE
+              g.brand @> ARRAY[:brandId]::int[]
+          ),
+          gin_bale_data AS (
+            SELECT
+              gp.ginner_id,
+              SUM(CAST(gb.weight AS DOUBLE PRECISION)) AS total_qty_procured
+            FROM
+              "gin-bales" gb
+              JOIN gin_processes gp ON gb.process_id = gp.id
+              JOIN filtered_ginners fg ON gp.ginner_id = fg.ginner_id
+            WHERE
+              (:seasonId IS NULL OR gp.season_id = ANY(string_to_array(:seasonId, ',')::int[]))
+            GROUP BY
+              gp.ginner_id
+          ),
+          bale_selection_data AS (
+            SELECT
+              gs.ginner_id,
+              SUM(CAST(gb.weight AS DOUBLE PRECISION)) AS total_qty_sold
+            FROM
+              bale_selections bs
+              JOIN gin_sales gs ON bs.sales_id = gs.id
+              JOIN "gin-bales" gb ON bs.bale_id = gb.id
+              JOIN filtered_ginners fg ON gs.ginner_id = fg.ginner_id
+            WHERE
+              (:seasonId IS NULL OR gs.season_id = ANY(string_to_array(:seasonId, ',')::int[]))
+            GROUP BY
+              gs.ginner_id
+          )
+        SELECT
+          fg.ginner_id,
+          COALESCE(gb.total_qty_procured, 0) / 1000 AS lint_procured_mt,
+          COALESCE(bs.total_qty_sold, 0) / 1000 AS lint_sold_mt,
+          CASE
+            WHEN COALESCE(gb.total_qty_procured, 0) > COALESCE(bs.total_qty_sold, 0)
+            THEN COALESCE(gb.total_qty_procured, 0) / 1000 - COALESCE(bs.total_qty_sold, 0) / 1000
+            ELSE 0
+          END AS lint_stock_mt
+        FROM
+          filtered_ginners fg
+          LEFT JOIN gin_bale_data gb ON fg.ginner_id = gb.ginner_id
+          LEFT JOIN bale_selection_data bs ON fg.ginner_id = bs.ginner_id;
+      `;
+  
+      const data = await sequelize.query(query, {
+        replacements: {
+          brandId: Number(brandId),
+          seasonId: seasonId || null
+        },
+        type: sequelize.QueryTypes.SELECT
+      });
+  
+      // Sum the lint stock from all ginners
+      let cottonQty = 0;
+      data.forEach((row: any) => {
+        cottonQty += Number(row.lint_stock_mt);
+      });
+  
+      return cottonQty;
+    } catch (error:any) {
+      throw new Error('Error in sumBrandGinnerStock function: ' + error.message);
+    }
+  };
 const sumbrandspinnerYarnProcured = async (brandId: any, seasonId: any) => {
     try {
 
