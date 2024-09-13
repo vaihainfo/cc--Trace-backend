@@ -12,7 +12,7 @@ import Trader from "../../models/trader.model";
 import Fabric from "../../models/fabric.model";
 import { Op } from "sequelize";
 import Brand from "../../models/brand.model";
-import { sendEmail } from "../../provider/send-mail";
+import { sendOTP } from "../../provider/send-mail";
 import UserRole from "../../models/user-role.model";
 import UserCategory from "../../models/user-category.model";
 
@@ -58,7 +58,7 @@ const login = async (req: Request, res: Response) => {
             <p style="font-size: 10px; color: #aaa; margin-top: 20px;">Regards,<br/>COTTON CONNECT Inc</p>
         </div>
       </div>`
-      sendEmail(body, user.dataValues.email,"Your OTP for Cotton Connect Account Verification",process.env.VERIFICATION_SENDER_EMAIL_ADDRESS)
+      sendOTP(body, user.dataValues.email,"Your OTP for Cotton Connect Account Verification",process.env.VERIFICATION_SENDER_EMAIL_ADDRESS)
 
       const updateAuth = await User.update({ otp: await hash.generate(OTP.otp), expiry: OTP.expiresAt }, { where: { id: user.id } });
       // var { accessToken } = await generateTokens(user.dataValues.id, user.dataValues.name);
@@ -181,7 +181,7 @@ const resendOTP = async (req: Request, res: Response) => {
             <p style="font-size: 10px; color: #aaa; margin-top: 20px;">Regards,<br/>COTTON CONNECT Inc</p>
         </div>
       </div>`
-    await sendEmail(body, user.dataValues.email, "Your OTP for Cotton Connect Account Verification",process.env.VERIFICATION_SENDER_EMAIL_ADDRESS)
+    await sendOTP(body, user.dataValues.email, "Your OTP for Cotton Connect Account Verification",process.env.VERIFICATION_SENDER_EMAIL_ADDRESS)
 
     return res.sendSuccess(res,{message: "OTP resent successfully" });
   } catch (error) {
