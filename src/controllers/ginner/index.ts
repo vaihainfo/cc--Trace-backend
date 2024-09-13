@@ -1340,6 +1340,13 @@ const fetchGinSaleBale = async (req: Request, res: Response) => {
         {
           model: GinBale,
           as: "bale",
+          include: [
+            {
+              model: GinProcess,
+              as: "ginprocess",
+              attributes: ["date"],
+            },
+          ],
         },
         {
           model: GinSales,
@@ -1386,6 +1393,13 @@ const fetchGinSaleAllBales = async (req: Request, res: Response) => {
         {
           model: GinBale,
           as: "bale",
+          include: [
+            {
+              model: GinProcess,
+              as: "ginprocess",
+              attributes: ["date"],
+            },
+          ],
         },
         {
           model: GinSales,

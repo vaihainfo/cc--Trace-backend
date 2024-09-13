@@ -36,9 +36,10 @@ const login = async (req: Request, res: Response) => {
               },
           ],
       });
+      const userCategory = role?.dataValues?.userCategory?.dataValues?.category_name?.toLowerCase();
 
-    // if(user.dataValues.role !==1 && user.dataValues.role !==2){
-      if(role?.dataValues?.userCategory?.dataValues?.category_name?.toLowerCase() !== "superadmin" && role?.dataValues?.userCategory?.dataValues?.category_name?.toLowerCase() !== "admin"){
+      const allowedCategories = ["superadmin", "admin", "brand", "special_user"];
+      if ((!allowedCategories.includes(userCategory)) && (user.dataValues.is_otp_required !== false)) {
       const OTP = generateOTP()
       
       let body = `<div style="font-family: Arial, sans-serif; max-width: 800px; padding: 20px;">
