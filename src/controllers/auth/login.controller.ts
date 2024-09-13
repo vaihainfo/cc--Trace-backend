@@ -22,7 +22,11 @@ const login = async (req: Request, res: Response) => {
     if (!user) {
       return res.sendError(res, "ERR_AUTH_WRONG_USERNAME");
     }
-    
+    let activeUser = user.dataValues.status ;
+    if (!activeUser) { 
+      return res.sendError(res, "ERR_AUTH_USER_NOT_ACTIVE"); 
+    };
+
     if (user) {
       let verifyPassword = await hash.compare(req.body.password, user.dataValues.password)
       if (!verifyPassword) { return res.sendError(res, "ERR_AUTH_WRONG_PASSWORD"); };
