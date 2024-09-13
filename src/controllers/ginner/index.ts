@@ -404,6 +404,7 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
       "Got",
       "Total Seed Cotton Consumed(kgs)",
       "Village",
+      "Grey Out Status"
     ]);
     headerRow.font = { bold: true };
     const gin = await GinProcess.findAll({
@@ -498,6 +499,7 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
             cottonSelectionsForProcess.map((obj: any) => obj.dataValues.name)
           ),
         ].join(", "),
+        greyout_status: item.greyout_status ? "Yes" : "No",
       });
       worksheet.addRow(rowValues);
     }
@@ -948,6 +950,7 @@ const exportGinnerSales = async (req: Request, res: Response) => {
       "Bale/press No",
       "REEL Lot No",
       "Programme",
+      "Grey Out Status"
     ]);
     headerRow.font = { bold: true };
     let include = [
@@ -985,6 +988,7 @@ const exportGinnerSales = async (req: Request, res: Response) => {
         press_no: item.press_no ? item.press_no : "",
         reel_lot_no: item.reel_lot_no ? item.reel_lot_no : "",
         program: item.program ? item.program.program_name : "",
+        grey_out_status: item.greyout_status ? "Yes" : "No",
       });
       worksheet.addRow(rowValues);
     }
