@@ -1439,7 +1439,13 @@ const fetchGinSalesPagination = async (req: Request, res: Response) => {
     });
 
     for await (let item of rows) {
-      const [seedSeason] = await sequelize.query(`
+      let processIds = item?.dataValues?.process_ids && Array.isArray(item?.dataValues?.process_ids)
+      ? item.dataValues.process_ids.filter((id: any) => id !== null && id !== undefined)
+      : [];
+
+      let seedSeason = [];
+      if (processIds.length > 0) {
+        [seedSeason]  = await sequelize.query(`
                             SELECT 
                                 STRING_AGG(DISTINCT s.name, ', ') AS seasons
                             FROM
@@ -1451,8 +1457,9 @@ const fetchGinSalesPagination = async (req: Request, res: Response) => {
                             LEFT JOIN
                                 seasons s ON t.season_id = s.id
                             WHERE 
-                                cs.process_id IN (${item?.dataValues?.process_ids.join(',')}) 
+                                cs.process_id IN  (${processIds.join(',')})
                             `)
+        }
 
       const lotNo: string[] = item?.dataValues?.lot_no
         .split(", ")
@@ -2470,7 +2477,14 @@ const exportGinnerSales = async (req: Request, res: Response) => {
             agentDetails: item.dataValues.transaction_agent ? item.dataValues.transaction_agent : 'NA'
           });
         } else {
-          const [seedSeason] = await sequelize.query(`
+          let processIds = item?.dataValues?.process_ids && Array.isArray(item?.dataValues?.process_ids)
+          ? item.dataValues.process_ids?.filter((id: any) => id !== null && id !== undefined)
+          : [];
+
+        let seedSeason = [];
+
+        if (processIds.length > 0) {
+          [seedSeason] = await sequelize.query(`
             SELECT 
                 STRING_AGG(DISTINCT s.name, ', ') AS seasons
             FROM
@@ -2482,9 +2496,9 @@ const exportGinnerSales = async (req: Request, res: Response) => {
             LEFT JOIN
                 seasons s ON t.season_id = s.id
             WHERE 
-                cs.process_id IN (${item?.dataValues?.process_ids.join(',')}) 
-            `)
-
+                cs.process_id IN (${processIds.join(',')})
+            `);
+          }
 
           rowValues = Object.values({
             index: index + 1,
@@ -4127,12 +4141,12 @@ const fetchSpinSalesPagination = async (req: Request, res: Response) => {
       //   `)
 
       let processIds = row?.dataValues?.process_ids && Array.isArray(row?.dataValues?.process_ids)
-        ? row.dataValues.process_ids.filter((id: any) => id !== null && id !== undefined)
+        ? row.dataValues.process_ids?.filter((id: any) => id !== null && id !== undefined)
         : [];
 
       let seedSeason = [];
 
-      if (processIds.length > 0) {
+      if (processIds?.length > 0) {
         [seedSeason] = await sequelize.query(`
           SELECT 
               STRING_AGG(DISTINCT s.name, ', ') AS seasons
@@ -4143,7 +4157,7 @@ const fetchSpinSalesPagination = async (req: Request, res: Response) => {
           LEFT JOIN
               seasons s ON gs.season_id = s.id
           WHERE 
-              ls.process_id IN (${processIds.join(',')})
+              ls.process_id IN (${processIds?.join(',')})
       `);
       }
 
@@ -4455,12 +4469,12 @@ const exportSpinnerSale = async (req: Request, res: Response) => {
 
 
         let processIds = item?.dataValues?.process_ids && Array.isArray(item?.dataValues?.process_ids)
-          ? item.dataValues.process_ids.filter((id: any) => id !== null && id !== undefined)
+          ? item.dataValues.process_ids?.filter((id: any) => id !== null && id !== undefined)
           : [];
 
         let seedSeason = [];
 
-        if (processIds.length > 0) {
+        if (processIds?.length > 0) {
           [seedSeason] = await sequelize.query(`
           SELECT 
               STRING_AGG(DISTINCT s.name, ', ') AS seasons
@@ -4471,7 +4485,7 @@ const exportSpinnerSale = async (req: Request, res: Response) => {
           LEFT JOIN
               seasons s ON gs.season_id = s.id
           WHERE 
-              ls.process_id IN (${processIds.join(',')})
+              ls.process_id IN (${processIds?.join(',')})
       `);
         }
 
