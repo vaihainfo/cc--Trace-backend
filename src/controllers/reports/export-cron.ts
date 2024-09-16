@@ -2359,6 +2359,7 @@ const generateGinnerProcess = async () => {
               gp.total_qty AS seed_consumed,
               gp.gin_out_turn AS got,
               gp.bale_process,
+              gp.greyout_status,
               pr.program_name AS program
           FROM
               gin_processes gp
@@ -2475,6 +2476,7 @@ const generateGinnerProcess = async () => {
                 (COALESCE(gb.lint_quantity, 0) - COALESCE(sd.lint_quantity_sold, 0)) AS lint_stock,
                 (COALESCE(gd.no_of_bales, 0) - COALESCE(sd.sold_bales, 0)) AS bale_stock,
                 gd.program AS program,
+                gd.greyout_status,
                vnd.village_names AS village_names
                 gd.season_name AS seed_consumed_seasons
             FROM
@@ -2504,7 +2506,7 @@ const generateGinnerProcess = async () => {
       if (!currentWorksheet) {
         currentWorksheet = workbook.addWorksheet(`Sheet${worksheetIndex}`);
         if (worksheetIndex == 1) {
-          currentWorksheet.mergeCells('A1:U1');
+          currentWorksheet.mergeCells('A1:V1');
           const mergedCell = currentWorksheet.getCell('A1');
           mergedCell.value = 'CottonConnect | Ginner Bale Process Report';
           mergedCell.font = { bold: true };
@@ -2514,7 +2516,7 @@ const generateGinnerProcess = async () => {
         // Set bold font for header row
         // Set bold font for header row
         const headerRow = currentWorksheet.addRow([
-          "Sr No.", "Process Date", "Data Entry Date", "Seed Cotton Consumed Season" ,"Lint process Season choosen", "Ginner Name", "Heap Number", "Gin Lot No", "Gin Press No", "REEL Lot No", "REEL Process Nos", "No of Bales", "Lint Quantity(Kgs)", "Total Seed Cotton Consumed(Kgs)", "GOT", "Total lint cotton sold(Kgs)", "Total Bales Sold", "Total lint cotton in stock(Kgs)", "Total Bales in stock", "Programme", "Village"
+          "Sr No.", "Process Date", "Data Entry Date", "Seed Cotton Consumed Season" ,"Lint process Season choosen", "Ginner Name", "Heap Number", "Gin Lot No", "Gin Press No", "REEL Lot No", "REEL Process Nos", "No of Bales", "Lint Quantity(Kgs)", "Total Seed Cotton Consumed(Kgs)", "GOT", "Total lint cotton sold(Kgs)", "Total Bales Sold", "Total lint cotton in stock(Kgs)", "Total Bales in stock", "Programme", "Village", "Grey Out Status"
         ]);
         headerRow.font = { bold: true };
       }
@@ -2543,6 +2545,7 @@ const generateGinnerProcess = async () => {
           bale_stock: item.bale_stock && Number(item.bale_stock) > 0 ? Number(item.bale_stock) : 0,
           program: item.program ? item.program : "",
           village_names: item.village_names ? item.village_names : "",
+          greyout_status: item.greyout_status ? "Yes" : "No",
         });
 
         currentWorksheet.addRow(rowValues).commit();
@@ -3392,6 +3395,7 @@ const generateSpinnerBale = async () => {
           [Sequelize.literal('"sales"."qty_stock"'), "qty_stock"],
           [Sequelize.literal('"sales"."weight_loss"'), "weight_loss"],
           [Sequelize.literal('"sales"."status"'), "status"],
+          [Sequelize.literal('"sales"."greyout_status"'), "greyout_status"],
         ],
         where: whereCondition,
         include: [
@@ -3458,13 +3462,14 @@ const generateSpinnerBale = async () => {
             ? Number(item.dataValues.lint_quantity)
             : 0,
           program: item.dataValues.program ? item.dataValues.program : "",
+          greyout_status: item.dataValues.greyout_status ? "Yes" : "No",
         });
 
         let currentWorksheet = workbook.getWorksheet(`Spinner Bale Receipt ${worksheetIndex}`);
         if (!currentWorksheet) {
           currentWorksheet = workbook.addWorksheet(`Spinner Bale Receipt ${worksheetIndex}`);
           if (worksheetIndex == 1) {
-            currentWorksheet.mergeCells("A1:M1");
+            currentWorksheet.mergeCells("A1:N1");
             const mergedCell = currentWorksheet.getCell("A1");
             mergedCell.value = "CottonConnect | Spinner Bale Receipt Report";
             mergedCell.alignment = { horizontal: "center", vertical: "middle" };
@@ -3485,6 +3490,7 @@ const generateSpinnerBale = async () => {
             "No of Bales",
             "Total Lint Quantity(Kgs)",
             "Programme",
+            "Grey Out Status",
           ]);
           headerRow.font = { bold: true };
         }
@@ -3555,6 +3561,7 @@ const generateSpinnerYarnProcess = async () => {
             spin_process.yarn_qty_produced,
             spin_process.accept_date,
             spin_process.qr,
+            spin_process.greyout_status,
             program.program_name AS program
           FROM
             spin_processes spin_process
@@ -3673,13 +3680,14 @@ const generateSpinnerYarnProcess = async () => {
           ? Number(item?.yarn_sold)
           : 0,
           yarn_stock: item.qty_stock ? Number(item.qty_stock) : 0,
+          greyout_status: item.greyout_status ? "Yes" : "No",
         });
 
         let currentWorksheet = workbook.getWorksheet(`Spinner Yarn Process ${worksheetIndex}`);
         if (!currentWorksheet) {
           currentWorksheet = workbook.addWorksheet(`Spinner Yarn Process ${worksheetIndex}`);
           if (worksheetIndex == 1) {
-            currentWorksheet.mergeCells("A1:S1");
+            currentWorksheet.mergeCells("A1:T1");
             const mergedCell = currentWorksheet.getCell("A1");
             mergedCell.value = "CottonConnect | Spinner Yarn Process Report";
             mergedCell.font = { bold: true };
@@ -3706,6 +3714,7 @@ const generateSpinnerYarnProcess = async () => {
             "Total Yarn weight (Kgs)",
             "Total yarn sold (Kgs)",
             "Total Yarn in stock (Kgs)",
+            "Grey Out Status",
           ]);
           headerRow.font = { bold: true };
         }

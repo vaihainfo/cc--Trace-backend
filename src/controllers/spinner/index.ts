@@ -642,7 +642,7 @@ const exportSpinnerProcess = async (req: Request, res: Response) => {
         const headerRow = worksheet.addRow([
             "Sr No.", "Date", "Season",
             "Spin Lot No", "Yarn Type", "Yarn Count", "Yarn Realisation %", "No of Boxes",
-            "Box ID", "Blend", "Blend Qty", "Total Yarn weight (Kgs)"
+            "Box ID", "Blend", "Blend Qty", "Total Yarn weight (Kgs)", "Grey Out Status"
         ]);
         headerRow.font = { bold: true };
         let include = [
@@ -704,7 +704,8 @@ const exportSpinnerProcess = async (req: Request, res: Response) => {
                 boxId: item.box_id ? item.box_id : '',
                 blend: blendValue,
                 blendqty: blendqty,
-                total: item.net_yarn_qty
+                total: item.net_yarn_qty,
+                grey_out_status: item.greyout_status ? "Yes" : "No",
             });
             worksheet.addRow(rowValues);
         }

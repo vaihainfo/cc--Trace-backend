@@ -652,9 +652,9 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet("Sheet1");
       if (isBrand === 'true') {
-        worksheet.mergeCells('A1:N1');
+        worksheet.mergeCells('A1:O1');
       } else {
-        worksheet.mergeCells('A1:U1');
+        worksheet.mergeCells('A1:V1');
       }
       const mergedCell = worksheet.getCell('A1');
       mergedCell.value = 'CottonConnect | Ginner Bale Process Report';
@@ -664,11 +664,11 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
       let headerRow;
       if (isBrand === 'true') {
         headerRow = worksheet.addRow([
-          "Sr No.", "Process Date", "Data Entry Date and Time", "Lint process Season choosen", "Ginner Name", "Heap Number", "Gin Lot No", "Gin Press No", "REEL Lot No", "REEL Process Nos", "No of Bales", "Lint Quantity(Kgs)", "Programme"
+          "Sr No.", "Process Date", "Data Entry Date and Time", "Lint process Season choosen", "Ginner Name", "Heap Number", "Gin Lot No", "Gin Press No", "REEL Lot No", "REEL Process Nos", "No of Bales", "Lint Quantity(Kgs)", "Programme", "Grey Out Status"
         ]);
       } else {
         headerRow = worksheet.addRow([
-          "Sr No.", "Process Date", "Data Entry Date and Time", "Seed Cotton Consumed Season", "Lint process Season choosen", "Ginner Name", "Heap Number", "Gin Lot No", "Gin Press No", "REEL Lot No", "REEL Process Nos", "No of Bales", "Lint Quantity(Kgs)", "Total Seed Cotton Consumed(Kgs)", "GOT", "Total lint cotton sold(Kgs)", "Total Bales Sold", "Total lint cotton in stock(Kgs)", "Total Bales in stock", "Programme", "Village"
+          "Sr No.", "Process Date", "Data Entry Date and Time", "Seed Cotton Consumed Season", "Lint process Season choosen", "Ginner Name", "Heap Number", "Gin Lot No", "Gin Press No", "REEL Lot No", "REEL Process Nos", "No of Bales", "Lint Quantity(Kgs)", "Total Seed Cotton Consumed(Kgs)", "GOT", "Total lint cotton sold(Kgs)", "Total Bales Sold", "Total lint cotton in stock(Kgs)", "Total Bales in stock", "Programme", "Village", "Grey Out Status"
         ]);
       }
       headerRow.font = { bold: true };
@@ -693,6 +693,7 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
               gp.total_qty AS seed_consumed,
               gp.gin_out_turn AS got,
               gp.bale_process,
+              gp.greyout_status,
               pr.program_name AS program
           FROM
               gin_processes gp
@@ -816,7 +817,8 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
                 gd.season_name AS seed_consumed_seasons,
                 gd.weigh_bridge,
                 gd.delivery_challan,
-                gd.qr
+                gd.qr,
+                gd.greyout_status
             FROM
                 gin_process_data gd
             LEFT JOIN
@@ -849,6 +851,7 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
             noOfBales: item.no_of_bales ? Number(item.no_of_bales) : 0,
             lint_quantity: item.lint_quantity ? Number(item.lint_quantity) : 0,
             program: item.program ? item.program : "",
+            greyout_status: item.greyout_status ? "Yes" : "No",
           });
         } else {
           rowValues = Object.values({
@@ -873,6 +876,7 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
             bale_stock: item.bale_stock && Number(item.bale_stock) > 0 ? Number(item.bale_stock) : 0,
             program: item.program ? item.program : "",
             village_names: item.village_names ? item.village_names : "",
+            greyout_status: item.greyout_status ? "Yes" : "No",
           });
         }
         worksheet.addRow(rowValues);
@@ -1755,7 +1759,13 @@ const fetchGinSalesPagination = async (req: Request, res: Response) => {
     });
 
     for await (let item of rows) {
-      const [seedSeason] = await sequelize.query(`
+      let processIds = item?.dataValues?.process_ids && Array.isArray(item?.dataValues?.process_ids)
+      ? item.dataValues.process_ids.filter((id: any) => id !== null && id !== undefined)
+      : [];
+
+      let seedSeason = [];
+      if (processIds.length > 0) {
+        [seedSeason]  = await sequelize.query(`
                             SELECT 
                                 STRING_AGG(DISTINCT s.name, ', ') AS seasons
                             FROM
@@ -1767,8 +1777,9 @@ const fetchGinSalesPagination = async (req: Request, res: Response) => {
                             LEFT JOIN
                                 seasons s ON t.season_id = s.id
                             WHERE 
-                                cs.process_id IN (${item?.dataValues?.process_ids.join(',')}) 
+                                cs.process_id IN  (${processIds.join(',')})
                             `)
+        }
 
       const lotNo: string[] = item?.dataValues?.lot_no
         .split(", ")
@@ -2786,7 +2797,14 @@ const exportGinnerSales = async (req: Request, res: Response) => {
             agentDetails: item.dataValues.transaction_agent ? item.dataValues.transaction_agent : 'NA'
           });
         } else {
-          const [seedSeason] = await sequelize.query(`
+          let processIds = item?.dataValues?.process_ids && Array.isArray(item?.dataValues?.process_ids)
+          ? item.dataValues.process_ids?.filter((id: any) => id !== null && id !== undefined)
+          : [];
+
+        let seedSeason = [];
+
+        if (processIds.length > 0) {
+          [seedSeason] = await sequelize.query(`
             SELECT 
                 STRING_AGG(DISTINCT s.name, ', ') AS seasons
             FROM
@@ -2798,9 +2816,9 @@ const exportGinnerSales = async (req: Request, res: Response) => {
             LEFT JOIN
                 seasons s ON t.season_id = s.id
             WHERE 
-                cs.process_id IN (${item?.dataValues?.process_ids.join(',')}) 
-            `)
-
+                cs.process_id IN (${processIds.join(',')})
+            `);
+          }
 
           rowValues = Object.values({
             index: index + 1,
@@ -2983,6 +3001,7 @@ const fetchSpinnerBalePagination = async (req: Request, res: Response) => {
         [Sequelize.literal('"sales"."transaction_agent"'), "transaction_agent"],
         [Sequelize.literal('"sales"."status"'), "status"],
         [Sequelize.literal('"sales"."qr"'), "qr"],
+        [Sequelize.literal('"sales"."greyout_status"'), "greyout_status"],
       ],
       where: whereCondition,
       include: [
@@ -3334,7 +3353,7 @@ const exportSpinnerBale = async (req: Request, res: Response) => {
       // Create the excel workbook file
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet("Sheet1");
-      worksheet.mergeCells("A1:M1");
+      worksheet.mergeCells("A1:N1");
       const mergedCell = worksheet.getCell("A1");
       mergedCell.value = "CottonConnect | Spinner Bale Receipt Report";
       mergedCell.font = { bold: true };
@@ -3354,6 +3373,7 @@ const exportSpinnerBale = async (req: Request, res: Response) => {
         "No of Bales",
         "Total Lint Quantity(Kgs)",
         "Programme",
+        "Grey Out Status",
       ]);
       headerRow.font = { bold: true };
 
@@ -3384,6 +3404,7 @@ const exportSpinnerBale = async (req: Request, res: Response) => {
           [Sequelize.literal('"sales"."qty_stock"'), "qty_stock"],
           [Sequelize.literal('"sales"."weight_loss"'), "weight_loss"],
           [Sequelize.literal('"sales"."status"'), "status"],
+          [Sequelize.literal('"sales"."greyout_status"'), "greyout_status"],
         ],
         where: whereCondition,
         include: [
@@ -3443,6 +3464,7 @@ const exportSpinnerBale = async (req: Request, res: Response) => {
             ? Number(item.dataValues.lint_quantity)
             : 0,
           program: item.dataValues.program ? item.dataValues.program : "",
+          greyout_status: item.dataValues.greyout_status ? "Yes" : "No",
         });
         worksheet.addRow(rowValues);
       }
@@ -3870,6 +3892,7 @@ const fetchSpinnerYarnProcessPagination = async (
         spin_process.yarn_qty_produced,
         spin_process.accept_date,
         spin_process.qr,
+        spin_process.greyout_status,
         program.program_name AS program
       FROM
         spin_processes spin_process
@@ -4026,7 +4049,7 @@ const exportSpinnerYarnProcess = async (req: Request, res: Response) => {
       // Create the excel workbook file
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet("Sheet1");
-      worksheet.mergeCells("A1:S1");
+      worksheet.mergeCells("A1:T1");
       const mergedCell = worksheet.getCell("A1");
       mergedCell.value = "CottonConnect | Spinner Yarn Process Report";
       mergedCell.font = { bold: true };
@@ -4052,6 +4075,7 @@ const exportSpinnerYarnProcess = async (req: Request, res: Response) => {
         "Total Yarn weight (Kgs)",
         "Total yarn sold (Kgs)",
         "Total Yarn in stock (Kgs)",
+        "Grey Out Status",
       ]);
       headerRow.font = { bold: true };
 
@@ -4103,6 +4127,7 @@ const exportSpinnerYarnProcess = async (req: Request, res: Response) => {
         spin_process.yarn_qty_produced,
         spin_process.accept_date,
         spin_process.qr,
+        spin_process.greyout_status,
         program.program_name AS program
       FROM
         spin_processes spin_process
@@ -4214,6 +4239,7 @@ const exportSpinnerYarnProcess = async (req: Request, res: Response) => {
             ? Number(item?.yarn_sold)
             : 0,
           yarn_stock: item.qty_stock ? Number(item.qty_stock) : 0,
+          greyout_status: item.greyout_status ? "Yes" : "No",
         });
         worksheet.addRow(rowValues);
       }
@@ -4435,12 +4461,12 @@ const fetchSpinSalesPagination = async (req: Request, res: Response) => {
       //   `)
 
       let processIds = row?.dataValues?.process_ids && Array.isArray(row?.dataValues?.process_ids)
-        ? row.dataValues.process_ids.filter((id: any) => id !== null && id !== undefined)
+        ? row.dataValues.process_ids?.filter((id: any) => id !== null && id !== undefined)
         : [];
 
       let seedSeason = [];
 
-      if (processIds.length > 0) {
+      if (processIds?.length > 0) {
         [seedSeason] = await sequelize.query(`
           SELECT 
               STRING_AGG(DISTINCT s.name, ', ') AS seasons
@@ -4451,7 +4477,7 @@ const fetchSpinSalesPagination = async (req: Request, res: Response) => {
           LEFT JOIN
               seasons s ON gs.season_id = s.id
           WHERE 
-              ls.process_id IN (${processIds.join(',')})
+              ls.process_id IN (${processIds?.join(',')})
       `);
       }
 
@@ -4763,12 +4789,12 @@ const exportSpinnerSale = async (req: Request, res: Response) => {
 
 
         let processIds = item?.dataValues?.process_ids && Array.isArray(item?.dataValues?.process_ids)
-          ? item.dataValues.process_ids.filter((id: any) => id !== null && id !== undefined)
+          ? item.dataValues.process_ids?.filter((id: any) => id !== null && id !== undefined)
           : [];
 
         let seedSeason = [];
 
-        if (processIds.length > 0) {
+        if (processIds?.length > 0) {
           [seedSeason] = await sequelize.query(`
           SELECT 
               STRING_AGG(DISTINCT s.name, ', ') AS seasons
@@ -4779,7 +4805,7 @@ const exportSpinnerSale = async (req: Request, res: Response) => {
           LEFT JOIN
               seasons s ON gs.season_id = s.id
           WHERE 
-              ls.process_id IN (${processIds.join(',')})
+              ls.process_id IN (${processIds?.join(',')})
       `);
         }
 
