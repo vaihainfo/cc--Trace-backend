@@ -111,7 +111,7 @@ const fetchFarmerReportPagination = async (req: Request, res: Response) => {
       startOfDay.setUTCHours(0, 0, 0, 0);
       const endOfDay = new Date(endDate);
       endOfDay.setUTCHours(23, 59, 59, 999);
-      whereCondition.createdAt = { [Op.between]: [startOfDay, endOfDay] }
+      whereCondition.joining_date = { [Op.between]: [startOfDay, endOfDay] }
     }
     if (seasonId) {
       whereCondition.id = {
@@ -301,7 +301,7 @@ const exportNonOrganicFarmerReport = async (req: Request, res: Response) => {
         startOfDay.setUTCHours(0, 0, 0, 0);
         const endOfDay = new Date(endDate);
         endOfDay.setUTCHours(23, 59, 59, 999);
-        whereCondition.createdAt = { [Op.between]: [startOfDay, endOfDay] }
+        whereCondition.joining_date = { [Op.between]: [startOfDay, endOfDay] }
       }
       if (seasonId) {
         whereCondition.id = {
@@ -548,7 +548,7 @@ const exportOrganicFarmerReport = async (req: Request, res: Response) => {
         startOfDay.setUTCHours(0, 0, 0, 0);
         const endOfDay = new Date(endDate);
         endOfDay.setUTCHours(23, 59, 59, 999);
-        whereCondition.createdAt = { [Op.between]: [startOfDay, endOfDay] }
+        whereCondition.joining_date = { [Op.between]: [startOfDay, endOfDay] }
       }
 
       if (seasonId) {

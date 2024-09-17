@@ -93,7 +93,7 @@ const fetchTransactionsReport = async (req: Request, res: Response) => {
       startOfDay.setUTCHours(0, 0, 0, 0);
       const endOfDay = new Date(endDate);
       endOfDay.setUTCHours(23, 59, 59, 999);
-      whereCondition.createdAt = { [Op.between]: [startOfDay, endOfDay] }
+      whereCondition.date = { [Op.between]: [startOfDay, endOfDay] }
   }
     // apply search
     if (searchTerm) {
