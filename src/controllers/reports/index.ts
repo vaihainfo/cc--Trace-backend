@@ -12133,7 +12133,7 @@ const fetchPscpProcurementLiveTracker = async (req: Request, res: Response) => {
     if (countryId) {
       const idArray = countryId.split(",").map((id: string) => parseInt(id, 10));
       whereCondition.push(`country_id IN (:countryIds)`);
-      brandCondition.push(`country_id IN (:countryIds)`);
+      brandCondition.push(`g.country_id IN (:countryIds)`);
     }
 
     if (brandId) {
@@ -12163,16 +12163,29 @@ const fetchPscpProcurementLiveTracker = async (req: Request, res: Response) => {
       COUNT(*)
   FROM
       ginners g
-  JOIN
-      programs p ON p.id = ANY(g.program_id)
+  JOIN states s ON g.state_id = s.id
+            JOIN countries c ON g.country_id = c.id
+            JOIN programs p ON p.id = ANY(g.program_id)
+      WHERE ${brandConditionSql}
 `;
 
-    if (brandId) {
-      countQuery += ` WHERE ${brandId} = ANY(g.brand)`;
-    }
+    // if (brandId) {
+    //   countQuery += ` WHERE ${brandId} = ANY(g.brand)`;
+    // }
 
-    const [countResult] = await sequelize.query(countQuery);
-    const count = countResult[0].count;
+    const [countResult] = await sequelize.query(countQuery,
+      {
+        replacements: {
+          searchTerm: `%${search}%`,
+          countryIds: countryId ? countryId.split(",").map((id: string) => parseInt(id, 10)) : [],
+          brandIds: brandId ? brandId.split(",").map((id: string) => parseInt(id, 10)) : [],
+          seasonIds: seasonId ? seasonId.split(",").map((id: string) => parseInt(id, 10)) : [],
+          ginnerIds: ginnerId ? ginnerId.split(",").map((id: string) => parseInt(id, 10)) : []
+        },
+        type: sequelize.QueryTypes.SELECT
+      });
+
+    const count = countResult ? Number(countResult.count) : 0;
 
     const data = await sequelize.query(
       `
