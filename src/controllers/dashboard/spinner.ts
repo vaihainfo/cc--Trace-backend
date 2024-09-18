@@ -15,7 +15,6 @@ import YarnCount from "../../models/yarn-count.model";
 import Country from "../../models/country.model";
 import sequelize from "../../util/dbConn";
 import LintSelections from "../../models/lint-seletions.model";
-import BaleSelection from "../../models/bale-selection.model";
 
 const getQueryParams = async (
   req: Request, res: Response
