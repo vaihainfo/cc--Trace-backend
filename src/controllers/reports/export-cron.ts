@@ -2344,7 +2344,7 @@ const generateGinnerProcess = async () => {
 
 
 const generateGinnerSales = async () => {
-  const maxRowsPerWorksheet = 500000; // Maximum number of rows per worksheet in Excel
+  const maxRowsPerWorksheet = 100000; // Maximum number of rows per worksheet in Excel
 
   const whereCondition: any = {};
   try {
