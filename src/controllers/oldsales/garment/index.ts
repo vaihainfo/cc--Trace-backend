@@ -15,6 +15,8 @@ const fetchOldGarmentSales = async (req: Request, res: Response) => {
     const limit = Number(req.query.limit) || 10;
     const offset = (page - 1) * limit;
     const brandId = Number(req.query.brandId) || null;
+    const garmentId = Number(req.query.garmentId) || null;
+
 
     try {
         let queryOptions: any = {
@@ -47,6 +49,12 @@ const fetchOldGarmentSales = async (req: Request, res: Response) => {
             queryOptions.where = {
                 ["$garment.brand$"]: { [Op.contains]: [brandId] }
             }
+
+            if (garmentId) {
+                queryOptions.where = {
+                    garment_id : garmentId
+                };
+              } 
         if (req.query.pagination === "true") {
             queryOptions.offset = offset;
             queryOptions.limit = limit;
