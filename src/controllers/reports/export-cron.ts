@@ -3698,7 +3698,7 @@ const generateSpinnerSale = async () => {
           program: item.dataValues.program ? item.dataValues.program : "",
           yarnType: yarnTypeData ? yarnTypeData : "",
           count: yarnCount
-            ? Number(yarnCount)
+            ? yarnCount
             : 0,
           boxes: item.dataValues.no_of_boxes ? Number(item.dataValues.no_of_boxes) : 0,
           boxId: item.dataValues.box_ids ? item.dataValues.box_ids : "",
