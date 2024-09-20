@@ -79,7 +79,9 @@ const fetchSpinnerPagination = async (req: Request, res: Response) => {
     const stateId: any = req.query.stateId;
     const brandId: any = req.query.brandId;
     const offset = (page - 1) * limit;
+    const all = req.query.all || '';
     const whereCondition: any = {}
+
     try {
         if (searchTerm) {
             whereCondition[Op.or] = [
@@ -154,7 +156,8 @@ const fetchSpinnerPagination = async (req: Request, res: Response) => {
             }
             return res.sendPaginationSuccess(res, data, count);
         } else {
-            const cooperative = await Spinner.findAll({
+            let dataAll: any = [];
+            const spinner = await Spinner.findAll({
                 where: whereCondition,
                 include: [
                     {
@@ -171,8 +174,22 @@ const fetchSpinnerPagination = async (req: Request, res: Response) => {
                     ['id', 'desc'], // Sort the results based on the 'name' field and the specified order
                 ]
             });
+            for await (let item of spinner) {
+                let users = await User.findAll({
+                    where: {
+                        id: item?.dataValues?.spinnerUser_id
+                    }
+                });
 
-            return res.sendSuccess(res, cooperative);
+                let newStatus = users.some((user: any) => user.status === true);
+
+                dataAll.push({
+                    ...item?.dataValues,
+                    status: newStatus ? 'Active' : 'Inactive'
+                });
+            }
+            const activeUsers = dataAll.filter((item:any)=> item.status === 'Active');
+            return res.sendSuccess(res, all === 'true' ? activeUsers : dataAll);
         }
     } catch (error: any) {
         console.log(error);

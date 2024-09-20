@@ -75,6 +75,7 @@ const fetchWeaverPagination = async (req: Request, res: Response) => {
     const countryId: any = req.query.countryId;
     const stateId: any = req.query.stateId;
     const brandId: any = req.query.brandId;
+    const all = req.query.all || '';
     const offset = (page - 1) * limit;
     const whereCondition: any = {}
     try {
@@ -152,6 +153,7 @@ const fetchWeaverPagination = async (req: Request, res: Response) => {
             }
             return res.sendPaginationSuccess(res, data, count);
         } else {
+            let dataAll: any = [];
             const result = await Weaver.findAll({
                 where: whereCondition,
                 include: [
@@ -170,7 +172,22 @@ const fetchWeaverPagination = async (req: Request, res: Response) => {
                 ]
             });
 
-            return res.sendSuccess(res, result);
+            for await (let item of result) {
+                let users = await User.findAll({
+                    where: {
+                        id: item?.dataValues?.weaverUser_id
+                    }
+                });
+
+                let newStatus = users.some((user: any) => user.status === true);
+
+                dataAll.push({
+                    ...item?.dataValues,
+                    status: newStatus ? 'Active' : 'Inactive'
+                });
+            }
+            const activeUsers = dataAll.filter((item:any)=> item.status === 'Active');
+            return res.sendSuccess(res, all === 'true' ? activeUsers : dataAll);
         }
     } catch (error: any) {
         console.log(error);

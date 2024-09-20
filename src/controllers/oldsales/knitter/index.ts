@@ -12,6 +12,7 @@ const fetchOldKnitterSales = async (req: Request, res: Response) => {
     const sortField = req.query.sortBy || "id";
     const page = Number(req.query.page) || 1;
     const brandId = Number(req.query.brandId) || null;
+    const knitterId = Number(req.query.knitterId) || null;
     const limit = Number(req.query.limit) || 10;
     const offset = (page - 1) * limit;
 
@@ -47,6 +48,13 @@ const fetchOldKnitterSales = async (req: Request, res: Response) => {
                 ["$knitter.brand$"]: { [Op.contained]: [brandId] }
             }
         }
+
+        if (knitterId) {
+            queryOptions.where = {
+                knitter_id : knitterId
+            };
+          }
+
         if (req.query.pagination === "true") {
             queryOptions.offset = offset;
             queryOptions.limit = limit;

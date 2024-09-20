@@ -62,7 +62,7 @@ const fetchFailedRecords = async (req: Request, res: Response) => {
             startOfDay.setUTCHours(0, 0, 0, 0);
             const endOfDay = new Date(endDate);
             endOfDay.setUTCHours(23, 59, 59, 999);
-            whereCondition.createdAt = { [Op.between]: [startOfDay, endOfDay] }
+            whereCondition.date = { [Op.between]: [startOfDay, endOfDay] }
         }
 
         const { count, rows } = await FailedRecords.findAndCountAll({
@@ -132,7 +132,7 @@ const exportFailedRecords = async (req: Request, res: Response) => {
                 startOfDay.setUTCHours(0, 0, 0, 0);
                 const endOfDay = new Date(endDate);
                 endOfDay.setUTCHours(23, 59, 59, 999);
-                whereCondition.createdAt = { [Op.between]: [startOfDay, endOfDay] }
+                whereCondition.date = { [Op.between]: [startOfDay, endOfDay] }
             }
 
             // Create the excel workbook file

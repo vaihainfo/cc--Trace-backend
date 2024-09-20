@@ -655,6 +655,7 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
       "Got",
       "Total Seed Cotton Consumed(kgs)",
       "Village",
+      "Grey Out Status"
     ]);
     headerRow.font = { bold: true };
     const gin = await GinProcess.findAll({
@@ -753,6 +754,7 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
         gin_out_turn: item.gin_out_turn ? item.gin_out_turn : "",
         total_qty: item.total_qty ? item.total_qty : "",
         a: village.map((obj: any) => obj?.dataValues?.village?.village_name)?.toString() ?? '',
+        greyout_status: item.greyout_status ? "Yes" : "No",
       });
       worksheet.addRow(rowValues);
     }
@@ -1390,6 +1392,7 @@ const exportGinnerSales = async (req: Request, res: Response) => {
       "Bale/press No",
       "REEL Lot No",
       "Programme",
+      "Grey Out Status"
     ]);
     headerRow.font = { bold: true };
     let include = [
@@ -1427,6 +1430,7 @@ const exportGinnerSales = async (req: Request, res: Response) => {
         press_no: item.press_no ? item.press_no : "",
         reel_lot_no: item.reel_lot_no ? item.reel_lot_no : "",
         program: item.program ? item.program.program_name : "",
+        grey_out_status: item.greyout_status ? "Yes" : "No",
       });
       worksheet.addRow(rowValues);
     }
@@ -1510,7 +1514,7 @@ const createGinnerSales = async (req: Request, res: Response) => {
 //update Ginner Sale
 const updateGinnerSales = async (req: Request, res: Response) => {
   try {
-    const data = {
+    const data: any = {
       status: "Pending for QR scanning",
       weight_loss: req.body.weightLoss,
       sale_value: req.body.saleValue,
@@ -1524,9 +1528,7 @@ const updateGinnerSales = async (req: Request, res: Response) => {
       lrbl_no: req.body.lrblNo,
       choosen_bale: req.body.choosen_bale
     };
-    const ginSales = await GinSales.update(data, {
-      where: { id: req.body.id },
-    });
+
     if (req.body.weightLoss) {
       for await (let obj of req.body.lossData) {
         let bale = await GinBale.findOne({
@@ -1546,7 +1548,24 @@ const updateGinnerSales = async (req: Request, res: Response) => {
           );
         }
       }
+
+      let [newSum] = await sequelize.query(`
+        SELECT COALESCE(
+            SUM(CAST(gb.weight AS DOUBLE PRECISION)), 0) AS lint_quantity 
+			  FROM "gin-bales" gb
+        LEFT JOIN bale_selections bs ON gb.id = bs.bale_id
+        LEFT JOIN gin_sales gs ON bs.sales_id = gs.id
+        WHERE bs.sales_id = ${req.body.id}`);
+
+        if(newSum && newSum[0]){
+          let newQuantity = newSum[0]?.lint_quantity;
+          data.total_qty = newQuantity;
+        }
     }
+
+        const ginSales = await GinSales.update(data, {
+      where: { id: req.body.id },
+    });
 
     if (ginSales && ginSales[0] === 1) {
       await send_gin_mail(req.body.id);
@@ -1767,6 +1786,13 @@ const fetchGinSaleBale = async (req: Request, res: Response) => {
         {
           model: GinBale,
           as: "bale",
+          include: [
+            {
+              model: GinProcess,
+              as: "ginprocess",
+              attributes: ["date","lot_no", "reel_lot_no"],
+            },
+          ],
         },
         {
           model: GinSales,
@@ -1813,6 +1839,13 @@ const fetchGinSaleAllBales = async (req: Request, res: Response) => {
         {
           model: GinBale,
           as: "bale",
+          include: [
+            {
+              model: GinProcess,
+              as: "ginprocess",
+              attributes: ["date","lot_no", "reel_lot_no"],
+            },
+          ],
         },
         {
           model: GinSales,

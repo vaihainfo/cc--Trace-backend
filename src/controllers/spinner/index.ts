@@ -253,12 +253,13 @@ const yarnId = async (id: any, date: any) => {
         count = split && split.length > 0 ? Number(split[1]) : 0;
     }
 
-    let currentDate = new Date();
-    let day = String(currentDate.getUTCDate()).padStart(2, "0");
-    let month = String(currentDate.getUTCMonth() + 1).padStart(2, "0"); // UTC months are zero-indexed, so we add 1
-    let year = String(currentDate.getUTCFullYear());
+    let currentDate = date ? new Date(date) : new Date();
+    let day = String(currentDate.getDate()).padStart(2, "0"); 
+    let month = String(currentDate.getMonth() + 1).padStart(2, "0"); // Local month, zero-indexed, so add 1
+    let year = String(currentDate.getFullYear()); 
 
     let prcs_date = day + month + year;
+
 
     return a[0].idprefix + prcs_date + '/' + (((count) ?? 1) + 1)
 }
@@ -642,7 +643,7 @@ const exportSpinnerProcess = async (req: Request, res: Response) => {
         const headerRow = worksheet.addRow([
             "Sr No.", "Date", "Season",
             "Spin Lot No", "Yarn Type", "Yarn Count", "Yarn Realisation %", "No of Boxes",
-            "Box ID", "Blend", "Blend Qty", "Total Yarn weight (Kgs)"
+            "Box ID", "Blend", "Blend Qty", "Total Yarn weight (Kgs)", "Grey Out Status"
         ]);
         headerRow.font = { bold: true };
         let include = [
@@ -704,7 +705,8 @@ const exportSpinnerProcess = async (req: Request, res: Response) => {
                 boxId: item.box_id ? item.box_id : '',
                 blend: blendValue,
                 blendqty: blendqty,
-                total: item.net_yarn_qty
+                total: item.net_yarn_qty,
+                grey_out_status: item.greyout_status ? "Yes" : "No",
             });
             worksheet.addRow(rowValues);
         }
