@@ -1626,7 +1626,7 @@ const getLintSoldByCountry = async (
   try {
 
     const reqData = await getQueryParams(req, res);
-    const where = getSpinnerLintQuery(reqData);
+    const where = getGinnerSalesWhereQuery(reqData);
     const soldList = await getLintSoldByCountryData(where);
     const data = await getLintSoldByCountryRes(soldList, reqData.season);
     return res.sendSuccess(res, data);
