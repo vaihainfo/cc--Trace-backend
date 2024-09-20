@@ -939,6 +939,7 @@ const getCountryCountRes = async (
 
   const seasons = await Season.findAll({
     limit: 3,
+    offset: 1,
     order: [
       ["id", "DESC"],
     ],
@@ -1071,6 +1072,7 @@ const getCountryAreaRes = async (
 
   const seasons = await Season.findAll({
     limit: 3,
+    offset:1,
     order: [
       ["id", "DESC"],
     ],
@@ -1203,6 +1205,7 @@ const getEstimateCottonRes = async (
 
   const seasons = await Season.findAll({
     limit: 3,
+    offset:1,
     order: [
       ["id", "DESC"],
     ],
@@ -1335,6 +1338,7 @@ const getProductionCottonRes = async (
 
   const seasons = await Season.findAll({
     limit: 3,
+    offset:1,
     order: [
       ["id", "DESC"],
     ],
