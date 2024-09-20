@@ -1582,7 +1582,7 @@ const updateStatusSales = async (req: Request, res: Response) => {
             const ginSale = await GinSales.findOne({ where: { id: obj.id } });
             if (ginSale) {
                 // Increment qty_stock by obj.qtyStock
-                if (obj.status === 'Sold') {
+                if (obj.status === 'Sold' && (ginSale.qty_stock < ginSale.total_qty)) {
                     data.qty_stock = Number(ginSale.qty_stock) + Number(obj.qtyStock);
                 }
                 result = await GinSales.update(data, { where: { id: obj.id } });
