@@ -83,7 +83,6 @@ const fetchBaleProcess = async (req: Request, res: Response) => {
         )
       `);
     }
-
     if (brandId) {
       const idArray = brandId.split(",").map((id: any) => parseInt(id, 10));
       whereCondition.push(`g.brand && ARRAY[${idArray.join(',')}]`);
