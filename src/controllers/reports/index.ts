@@ -1724,6 +1724,7 @@ const fetchGinSalesPagination = async (req: Request, res: Response) => {
         [Sequelize.literal('"sales"."transaction_agent"'), "transaction_agent"],
         [Sequelize.literal('"sales"."status"'), "status"],
         [Sequelize.literal('"sales"."qr"'), "qr"],
+        //[Sequelize.fn('SUM', Sequelize.col('"bale"."old_weight"')), "total_old_weight"], // Sum of old_Weight
       ],
       where: whereCondition,
       include: [
@@ -1786,6 +1787,24 @@ const fetchGinSalesPagination = async (req: Request, res: Response) => {
                             `)
         }
 
+        let totalOldWeight = 0;
+        if (processIds.length > 0) {
+          const [result] = await sequelize.query(`
+            SELECT 
+              COALESCE(
+                SUM(
+                  CAST(b.old_weight AS DOUBLE PRECISION)
+                ), 0
+              ) AS total_old_weight
+            FROM 
+              "gin-bales" b
+            WHERE 
+              b.process_id IN (${processIds.join(',')})
+          `);
+          
+          totalOldWeight = result[0] ? result[0].total_old_weight : 0; // Default to 0 if no results
+        }
+
       const lotNo: string[] = item?.dataValues?.lot_no
         .split(", ")
         .map((id: any) => id);
@@ -1800,11 +1819,14 @@ const fetchGinSalesPagination = async (req: Request, res: Response) => {
 
       nData.push({
         ...item.dataValues,
+        total_old_weight: totalOldWeight,
+        //total_old_weight: item.dataValues.total_old_weight,
         seed_consumed_seasons: seedSeason ? seedSeason[0].seasons : "",
         quality_report: qualityReport ? qualityReport : null,
       });
     }
-
+    console.log("=======nData=====");
+    console.log(nData);
     // Apply pagination to the combined result
 
     return res.sendPaginationSuccess(res, nData, count.length);
