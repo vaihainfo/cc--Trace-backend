@@ -180,6 +180,11 @@ const fetchBaleProcess = async (req: Request, res: Response) => {
     END
   ), 0
 ) AS lint_quantity,
+ COALESCE(
+  SUM(
+    CAST(gb.old_weight AS DOUBLE PRECISION)
+  ), 0
+) AS old_weight_total,
                   COALESCE(MIN(CASE WHEN gb.bale_no ~ '^[0-9]+$' THEN CAST(gb.bale_no AS BIGINT) ELSE 0 END), 0) AS pressno_from,
                   COALESCE(MAX(CASE WHEN gb.bale_no ~ '^[0-9]+$' THEN CAST(gb.bale_no AS BIGINT) ELSE 0 END), 0) AS pressno_to
               FROM
@@ -273,6 +278,7 @@ const fetchBaleProcess = async (req: Request, res: Response) => {
               gd.seed_consumed AS total_qty,
               gd.got AS gin_out_turn,
               COALESCE(sd.lint_quantity_sold, 0) AS lint_quantity_sold,
+              gb.old_weight_total AS old_weight_total,
               COALESCE(sd.sold_bales, 0) AS sold_bales,
               (COALESCE(gb.lint_quantity, 0) - COALESCE(sd.lint_quantity_sold, 0)) AS lint_stock,
               (COALESCE(gd.no_of_bales, 0) - COALESCE(sd.sold_bales, 0)) AS bale_stock,
@@ -9994,7 +10000,7 @@ const fetchGinnerSummaryPagination = async (req: Request, res: Response) => {
     for await (let ginner of rows) {
       let obj: any = {};
 
-      let [cottonProcured, cottonProcessed,cottonProcessedByHeap, lintProcured, lintSold]: any =
+      let [cottonProcured, cottonProcessed,cottonProcessedByHeap, lintProcured, lintSold, old_weight]: any =
         await Promise.all([
           // Transaction.findOne({
           //   attributes: [
@@ -10143,12 +10149,38 @@ const fetchGinnerSummaryPagination = async (req: Request, res: Response) => {
             },
             group: ["sales.ginner_id"],
           }),
+          GinBale.findOne({
+            attributes: [
+              [
+                sequelize.fn(
+                  "COALESCE",
+                  sequelize.fn(
+                    "SUM",
+                    sequelize.literal('CAST("gin-bales"."old_weight" AS DOUBLE PRECISION)')
+                  ),
+                  0
+                ),
+                "total_old_weight", // Use a meaningful alias
+              ],
+            ],
+            include: [
+              {
+                model: GinProcess,
+                as: "ginprocess",
+                attributes: [],
+              },
+            ],
+            where: {
+              ...ginBaleWhere,
+              "$ginprocess.ginner_id$": ginner.id,
+            },
+            raw: true // Get raw data for easier access
+          }),
         ]);
-
       const cottonProcessedQty = isNaN(cottonProcessed?.dataValues?.qty) ? 0 : cottonProcessed?.dataValues?.qty;
       const cottonProcessedByHeapQty = isNaN(cottonProcessedByHeap?.dataValues?.qty) ? 0 : cottonProcessedByHeap?.dataValues?.qty;
       const totalCottonProcessedQty = cottonProcessedQty + cottonProcessedByHeapQty;
-
+      obj.old_weight = old_weight?.total_old_weight ? parseFloat(Number(old_weight.total_old_weight).toFixed(2)) : 0;
       obj.cottonProcuredKg = cottonProcured?.dataValues?.qty ?? 0;
       obj.cottonProcessedKg = totalCottonProcessedQty ?? 0;
       obj.cottonStockKg = cottonProcured ? cottonProcured?.dataValues?.qty - (cottonProcessed ? totalCottonProcessedQty : 0) : 0;
