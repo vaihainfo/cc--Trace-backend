@@ -1816,7 +1816,7 @@ const fetchGinSalesPagination = async (req: Request, res: Response) => {
         },
         raw: true
       });
-
+  
       nData.push({
         ...item.dataValues,
         total_old_weight: totalOldWeight,
