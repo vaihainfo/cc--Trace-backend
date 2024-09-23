@@ -394,7 +394,7 @@ const getFarmerBySeasons = async (where: any) => {
     ],
     where,
     order: [['seasonId', 'desc']],
-    limit: 3,
+    // limit: 3,
     group: ['season.id']
   });
 
@@ -456,7 +456,7 @@ const getAcreBySession = async (where: any) => {
       }
     ],
     order: [['seasonId', 'desc']],
-    limit: 3,
+    // limit: 3,
     where,
     group: ['season.id']
   });
@@ -528,7 +528,7 @@ const getEstimateProductionBySeason = async (where: any) => {
       }
     ],
     order: [['seasonId', 'desc']],
-    limit: 3,
+    // limit: 3,
     where,
     group: ['season.id']
   });
@@ -537,7 +537,7 @@ const getEstimateProductionBySeason = async (where: any) => {
 
 };
 
-const getEstimateProductionList = (estimateProductionList: any, procuredList: any) => {
+const getEstimateProductionList = async (estimateProductionList: any, procuredList: any) => {
   // let season: any = [];
   // let estimate: any = [];
   // let production: any = [];
@@ -560,6 +560,26 @@ const getEstimateProductionList = (estimateProductionList: any, procuredList: an
     if (!seasonIds.includes(procured.dataValues.season.id))
       seasonIds.push(procured.dataValues.season.id);
   });
+
+  const seasons = await Season.findAll({
+    // limit: 3,
+    order: [
+      ["id", "DESC"],
+    ],
+  });
+  if (seasonIds.length != 3) {
+    for (const season of seasons) {
+      let currentDate = moment(); // Current date using moment
+      let checkDate = moment('2024-10-01'); // October 1st, 2024
+      
+      if (currentDate.isSameOrAfter(checkDate) && season.name === '2024-25') {
+        seasonIds.push(season.id);
+      } else if(currentDate.isBefore(checkDate) && season.name === '2024-25' && seasonIds.includes(season.id)){
+        seasonIds = seasonIds.filter((id: number) => id != season.id)
+      }
+    }
+  }
+
 
   seasonIds = seasonIds.sort((a, b) => a - b);
 
@@ -656,17 +676,24 @@ const getFarmerCountAndAreaRes = async (
   });
 
   const seasons = await Season.findAll({
-    limit: 3,
+    // limit: 3,
     order: [
       ["id", "DESC"],
     ],
   });
   if (seasonIds.length != 3 && !reqSeason) {
     for (const season of seasons) {
-      if (!seasonIds.includes(season.id))
+      let currentDate = moment(); // Current date using moment
+      let checkDate = moment('2024-10-01'); // October 1st, 2024
+      
+      if (currentDate.isSameOrAfter(checkDate) && season.name === '2024-25') {
         seasonIds.push(season.id);
+      } else if(currentDate.isBefore(checkDate) && season.name === '2024-25' && seasonIds.includes(season.id)){
+        seasonIds = seasonIds.filter((id: number) => id != season.id)
+      }
     }
   }
+
 
   seasonIds = seasonIds.sort((a, b) => a - b).slice(-3);
 
@@ -774,17 +801,24 @@ const getFarmerAllDataRes = async (
   });
 
   const seasons = await Season.findAll({
-    limit: 3,
+    // limit: 3,
     order: [
       ["id", "DESC"],
     ],
   });
   if (seasonIds.length != 3 && !reqSeason) {
     for (const season of seasons) {
-      if (!seasonIds.includes(season.id))
+      let currentDate = moment(); // Current date using moment
+      let checkDate = moment('2024-10-01'); // October 1st, 2024
+      
+      if (currentDate.isSameOrAfter(checkDate) && season.name === '2024-25') {
         seasonIds.push(season.id);
+      } else if(currentDate.isBefore(checkDate) && season.name === '2024-25' && seasonIds.includes(season.id)){
+        seasonIds = seasonIds.filter((id: number) => id != season.id)
+      }
     }
   }
+
 
   seasonIds = seasonIds.sort((a, b) => a - b).slice(-3);
 

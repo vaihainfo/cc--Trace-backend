@@ -427,7 +427,7 @@ const mtConversion = (value: number) => {
 };
 
 
-const getEstimateAndProcuredRes = (
+const getEstimateAndProcuredRes = async (
   estimateList: any,
   procuredList: any
 ) => {
@@ -474,6 +474,26 @@ const getEstimateAndProcuredRes = (
     if (!seasonIds.includes(procured.dataValues.season.id))
       seasonIds.push(procured.dataValues.season.id);
   });
+
+  const seasons = await Season.findAll({
+    // limit: 3,
+    order: [
+      ["id", "DESC"],
+    ],
+  });
+  if (seasonIds.length != 3) {
+    for (const season of seasons) {
+      let currentDate = moment(); // Current date using moment
+      let checkDate = moment('2024-10-01'); // October 1st, 2024
+      
+      if (currentDate.isSameOrAfter(checkDate) && season.name === '2024-25') {
+        seasonIds.push(season.id);
+      } else if(currentDate.isBefore(checkDate) && season.name === '2024-25' && seasonIds.includes(season.id)){
+        seasonIds = seasonIds.filter((id: number) => id != season.id)
+      }
+    }
+  }
+
 
   seasonIds = seasonIds.sort((a, b) => a - b);
 
@@ -543,7 +563,7 @@ const getEstimateData = async (
       }
     ],
     order: [['seasonId', 'desc']],
-    limit: 3,
+    // limit: 3,
     where,
     group: ['season.id']
   });
@@ -572,7 +592,7 @@ const getProcuredData = async (
     }],
     where,
     order: [['seasonId', 'desc']],
-    limit: 3,
+    // limit: 3,
     group: ['season.id']
   });
 
@@ -607,7 +627,7 @@ const getProcuredProcessed = async (
 
 
 
-const getProcuredProcessedRes = (
+const getProcuredProcessedRes = async (
   processedList: any,
   procuredList: any
 ) => {
@@ -622,6 +642,26 @@ const getProcuredProcessedRes = (
     if (!seasonIds.includes(procured.dataValues.season.id))
       seasonIds.push(procured.dataValues.season.id);
   });
+
+  const seasons = await Season.findAll({
+    // limit: 3,
+    order: [
+      ["id", "DESC"],
+    ],
+  });
+  if (seasonIds.length != 3) {
+    for (const season of seasons) {
+      let currentDate = moment(); // Current date using moment
+      let checkDate = moment('2024-10-01'); // October 1st, 2024
+      
+      if (currentDate.isSameOrAfter(checkDate) && season.name === '2024-25') {
+        seasonIds.push(season.id);
+      } else if(currentDate.isBefore(checkDate) && season.name === '2024-25' && seasonIds.includes(season.id)){
+        seasonIds = seasonIds.filter((id: number) => id != season.id)
+      }
+    }
+  }
+
 
   seasonIds = seasonIds.sort((a, b) => a - b);
 
@@ -688,7 +728,7 @@ const getProcessedData = async (
     }],
     where,
     order: [['seasonId', 'desc']],
-    limit: 3,
+    // limit: 3,
     group: ['season.id']
   });
 
@@ -869,7 +909,7 @@ const getEstimateProcuredAndProduction = async (
 };
 
 
-const getEstimateProcuredAndProductionRes = (
+const getEstimateProcuredAndProductionRes = async (
   processedList: any,
   procuredList: any,
   estimateList: any
@@ -890,6 +930,26 @@ const getEstimateProcuredAndProductionRes = (
     if (!seasonIds.includes(estimate.dataValues.season.id))
       seasonIds.push(estimate.dataValues.season.id);
   });
+
+  const seasons = await Season.findAll({
+    // limit: 3,
+    order: [
+      ["id", "DESC"],
+    ],
+  });
+  if (seasonIds.length != 3) {
+    for (const season of seasons) {
+      let currentDate = moment(); // Current date using moment
+      let checkDate = moment('2024-10-01'); // October 1st, 2024
+      
+      if (currentDate.isSameOrAfter(checkDate) && season.name === '2024-25') {
+        seasonIds.push(season.id);
+      } else if(currentDate.isBefore(checkDate) && season.name === '2024-25' && seasonIds.includes(season.id)){
+        seasonIds = seasonIds.filter((id: number) => id != season.id)
+      }
+    }
+  }
+
 
   seasonIds = seasonIds.sort((a, b) => a - b);
 
