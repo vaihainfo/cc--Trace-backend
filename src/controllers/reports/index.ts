@@ -1788,6 +1788,10 @@ const fetchGinSalesPagination = async (req: Request, res: Response) => {
         }
 
         let totalOldWeight = 0;
+        const ltval : string[] = item?.dataValues?.lot_no
+        .split(", ")
+        .map((id: any) => id);
+        console.log("LOT VAL======>"+ltval);
         if (processIds.length > 0) {
           const [result] = await sequelize.query(`
             SELECT 
@@ -1799,9 +1803,10 @@ const fetchGinSalesPagination = async (req: Request, res: Response) => {
             FROM 
               "gin-bales" b
             WHERE 
-              b.process_id IN (${processIds.join(',')})
+              b.bale_no = '${ltval}'
           `);
-          
+          //b.bal_no IN (${ltval})
+          //b.process_id IN (${processIds.join(',')})
           totalOldWeight = result[0] ? result[0].total_old_weight : 0; // Default to 0 if no results
         }
 
