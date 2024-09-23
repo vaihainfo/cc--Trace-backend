@@ -495,7 +495,7 @@ const getEstimateAndProcuredRes = async (
   }
 
 
-  seasonIds = seasonIds.sort((a, b) => a - b);
+  seasonIds = seasonIds.sort((a, b) => a - b).slice(-3);
 
   let season: string[] = [];
   let estimate: number[] = [];
@@ -663,7 +663,7 @@ const getProcuredProcessedRes = async (
   }
 
 
-  seasonIds = seasonIds.sort((a, b) => a - b);
+  seasonIds = seasonIds.sort((a, b) => a - b).slice(-3);
 
   let season: string[] = [];
   let processed: number[] = [];
@@ -951,7 +951,7 @@ const getEstimateProcuredAndProductionRes = async (
   }
 
 
-  seasonIds = seasonIds.sort((a, b) => a - b);
+  seasonIds = seasonIds.sort((a, b) => a - b).slice(-3);
 
   let season: string[] = [];
   let processed: number[] = [];

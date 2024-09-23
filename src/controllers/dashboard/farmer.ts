@@ -581,7 +581,7 @@ const getEstimateProductionList = async (estimateProductionList: any, procuredLi
   }
 
 
-  seasonIds = seasonIds.sort((a, b) => a - b);
+  seasonIds = seasonIds.sort((a, b) => a - b).slice(-3);
 
   let season: string[] = [];
   let estimate: number[] = [];
