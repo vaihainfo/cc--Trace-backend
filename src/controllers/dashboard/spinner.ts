@@ -248,7 +248,7 @@ const getTopGinners = async (
     const reqData = await getQueryParams(req, res);
     const where = getGinnerSalesWhereQuery(reqData);
     const ginnersData = await getTopGinnersData(where);
-    const data = getTopGinnersRes(ginnersData);
+    const data = await getTopGinnersRes(ginnersData);
     return res.sendSuccess(res, data);
 
   } catch (error: any) {
@@ -269,7 +269,7 @@ const getTopFabric = async (
     const where = getSpinnerProcessWhereQuery(reqData);
     delete where.status;
     const spinnersData = await getTopFabricData(where);
-    const data = getTopFabricRes(spinnersData);
+    const data = await getTopFabricRes(spinnersData);
     return res.sendSuccess(res, data);
 
   } catch (error: any) {
@@ -901,7 +901,7 @@ const getDataAll = async (
     const lintSoldData = await getLintProcessedDataByMonth(spinProcessWhere);
     const yarnProcuredSoldData = await getYarnProcuredDataByMonth(spinProcessWhere);
     const yarnSoldData = await getYarnSoldDataByMonth(spinProcessWhere);
-    const data = getDataAllRes(
+    const data = await getDataAllRes(
       lintProcuredData,
       lintSoldData,
       yarnProcuredSoldData,
@@ -999,7 +999,7 @@ const getTopYarnCount = async (
     const reqData = await getQueryParams(req, res);
     const where = getSpinnerSalesWhereQuery(reqData);
     const spinnersData = await getTopYarnCountData(where);
-    const data = getTopYarnCountRes(spinnersData);
+    const data = await getTopYarnCountRes(spinnersData);
     return res.sendSuccess(res, data);
 
   } catch (error: any) {
@@ -1076,7 +1076,7 @@ const getYarnType = async (
     reqData.season = seasonOne.id;
     const saleWhere = getSpinnerSalesWhereQuery(reqData);
     const spinnersData = await getYarnTypeData(saleWhere);
-    const data = getYarnTypeRes(spinnersData, seasonOne);
+    const data = await getYarnTypeRes(spinnersData, seasonOne);
     return res.sendSuccess(res, data);
 
   } catch (error: any) {
@@ -1284,7 +1284,7 @@ const getTopYarnProcessed = async (
   try {
     const reqData = await getQueryParams(req, res);
     const spinnersData = await getTopYarnProcessedData(reqData);
-    const data = getTopYarnProcessedRes(spinnersData);
+    const data = await getTopYarnProcessedRes(spinnersData);
     return res.sendSuccess(res, data);
 
   } catch (error: any) {
