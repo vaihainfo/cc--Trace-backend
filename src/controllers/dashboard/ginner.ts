@@ -129,13 +129,13 @@ const getTransactionDataQuery = (
   if (reqData?.program)
     where.program_id = reqData.program;
 
-  // if (reqData?.brand)
-  //   where['$ginner.brand$'] = {
-  //     [Op.contains]: Sequelize.literal(`ARRAY [${reqData.brand}]`)
-  //   };
-
   if (reqData?.brand)
-    where.brand_id = reqData.brand;
+    where['$ginner.brand$'] = {
+      [Op.contains]: Sequelize.literal(`ARRAY [${reqData.brand}]`)
+    };
+
+  // if (reqData?.brand)
+  //   where.brand_id = reqData.brand;
 
 
   if (reqData?.season)
@@ -1359,9 +1359,40 @@ const getLintProcessedTopGinnersData = async (
   if (reqData?.country)
     where['$ginprocess.ginner.country_id$'] = reqData.country;
 
+  if (reqData?.brand){
+    where['$ginprocess.ginner.brand$'] = {
+      [Op.contains]: Sequelize.literal(`ARRAY [${reqData.brand}]`)
+    };
+  }
+
+
+  if (reqData?.season)
+    where['$ginprocess.season_id$'] = reqData.season;
+
+  if (reqData?.state)
+    where['$ginprocess.ginner.state_id$'] = reqData.state;
+
+  if (reqData?.district)
+    where['$ginprocess.ginner.district_id$'] = reqData.district;
+
+  if (reqData?.ginner)
+    where['$ginprocess.ginner.id$'] = reqData.ginner;
+
+  if (reqData?.fromDate)
+     where['$ginprocess.date$'] = { [Op.gte]: reqData.fromDate };
+
+  if (reqData?.toDate)
+     where['$ginprocess.date$'] = { [Op.lt]: reqData.toDate };
+
+  if (reqData?.fromDate && reqData?.toDate)
+     where['$ginprocess.date$'] = { [Op.between]: [reqData.fromDate, reqData.toDate] };
+
+
   where['$ginprocess.ginner.name$'] = {
     [Op.not]: null
   };
+
+
 
   const result = await GinBale.findAll({
     attributes: [
@@ -1428,7 +1459,8 @@ const getLintSoldTopGinners = async (
 ) => {
   try {
     const reqData = await getQueryParams(req, res);
-    const ginnersData = await getLintSoldTopGinnersData(reqData);
+    const baleSel = getBaleSelectionQuery(reqData);
+    const ginnersData = await getLintSoldTopGinnersData(baleSel);
     const data = await getTopGinnersRes(ginnersData);
     return res.sendSuccess(res, data);
 
@@ -1441,13 +1473,8 @@ const getLintSoldTopGinners = async (
 };
 
 const getLintSoldTopGinnersData = async (
-  reqData: any
+  where: any
 ) => {
-  const where: any = {
-  };
-
-  if (reqData?.country)
-    where['$sales.ginner.country_id$'] = reqData.country;
 
   where['$sales.ginner.name$'] = {
     [Op.not]: null
@@ -1537,7 +1564,7 @@ const getLintStockTopGinnersData = async (
     from public.ginners g
          left join public.gin_processes gp on gp.ginner_id = g.id
          left join public."gin-bales" gbp on gbp.process_id = gp.id
-    where g.name is not null ${reqData?.country ? " and g.country_id = reqData?.country" : ""}
+    where g.name is not null ${reqData?.country ? " and g.country_id = reqData?.country" : ""} ${reqData?.ginner ? " and g.id = " + reqData?.ginner : ""} ${reqData?.brand ? " and g.brand @> ARRAY[" + reqData.brand + "]" : ""}
     group by g.id; 
     `);
 
@@ -1556,7 +1583,7 @@ const getLintStockTopGinnersData = async (
          left join public.gin_sales gs on g.id = gs.ginner_id
          left join public.bale_selections bs on bs.sales_id = gs.id
          left join public."gin-bales" gb on gb.id = bs.bale_id
-    where g.name is not null ${reqData?.country ? " and g.country_id = reqData?.country" : ""}
+    where g.name is not null ${reqData?.country ? " and g.country_id = reqData?.country" : ""}  ${reqData?.ginner ? " and g.id = " + reqData?.ginner : ""} ${reqData?.brand ? " and g.brand @> ARRAY[" + reqData.brand + "]" : ""}
     group by g.id;
       `);
 
