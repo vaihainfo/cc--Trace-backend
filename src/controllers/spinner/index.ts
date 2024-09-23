@@ -190,8 +190,17 @@ const updateSpinProcess = async (req: Request, res: Response) => {
                 process_id: req.body.id,
                 yarn_count: yarn.yarnCount,
                 yarn_produced: yarn.yarnProduced,
+                yarn_qty_stock: yarn.yarnProduced
             }
             const yarns = await SpinYarn.create(yarnData);
+            let uniqueFilename = `spin_yarn_qrcode_${Date.now()}.png`;
+            let da = encrypt(`Spinner,Yarn, ${yarns.id}`);
+            let aa = await generateOnlyQrCode(da, uniqueFilename);
+            const gin = await SpinYarn.update({ qr: uniqueFilename }, {
+                where: {
+                    id: yarns.id
+                }
+            });
         }
 
         res.sendSuccess(res, { spin });
