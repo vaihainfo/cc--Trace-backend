@@ -492,7 +492,7 @@ const getEstimateAndProduction = async (
     const transactionWhere = getTransactionWhereQuery(reqData);
     const estimateProductionList = await getEstimateProductionBySeason(where);
     const procuredList = await getProcuredData(transactionWhere);
-    const data = getEstimateProductionList(estimateProductionList, procuredList);
+    const data = await getEstimateProductionList(estimateProductionList, procuredList);
     return res.sendSuccess(res, data);
   }
 

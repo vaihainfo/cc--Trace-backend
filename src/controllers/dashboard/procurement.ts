@@ -220,7 +220,7 @@ const getCountryEstimateAndProduction = async (
       transactionWhere,
       reqData
     );
-    const data = getCountryEstimateProductionRes(
+    const data = await getCountryEstimateProductionRes(
       estimateList,
       procuredList
     );
@@ -409,7 +409,7 @@ const getEstimateAndProcured = async (
     const farmWhere = getFarmWhereQuery(reqData);
     const procuredList = await getProcuredData(transactionWhere);
     const estimateList = await getEstimateData(farmWhere);
-    const data = getEstimateAndProcuredRes(estimateList, procuredList);
+    const data = await getEstimateAndProcuredRes(estimateList, procuredList);
     return res.sendSuccess(res, data);
   }
 
@@ -610,7 +610,7 @@ const getProcuredProcessed = async (
     const ginnerProcessQuery = getGinnerProcessWhereQuery(reqData);
     const procuredList = await getProcuredData(transactionQuery);
     const processedList = await getProcessedData(ginnerProcessQuery);
-    const data = getProcuredProcessedRes(
+    const data = await getProcuredProcessedRes(
       processedList,
       procuredList,
     );
@@ -752,7 +752,7 @@ const getProcuredProcessedMonthly = async (
     const ginnerProcessWhere = getGinnerProcessWhereQuery(reqData);
     const procuredList = await getProcuredDataByMonth(transactionWhere);
     const processedList = await getProcessedDataByMonth(ginnerProcessWhere);
-    const data = getProcuredProcessedMonthlyRes(
+    const data = await getProcuredProcessedMonthlyRes(
       processedList,
       procuredList,
       seasonOne
@@ -892,7 +892,7 @@ const getEstimateProcuredAndProduction = async (
     const procuredList = await getProcuredData(transactionWhere);
     const processedList = await getProcessedData(ginnerProcessWhere);
     const estimateList = await getEstimateData(farmWhere);
-    const data = getEstimateProcuredAndProductionRes(
+    const data = await getEstimateProcuredAndProductionRes(
       processedList,
       procuredList,
       estimateList

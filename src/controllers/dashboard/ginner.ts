@@ -971,7 +971,7 @@ const getDataAll = async (
     const soldData = await getLintSoldDataByMonth(baleSel);
     const procuredProcessedData = await getProcuredDataByMonth(transactionWhere); 
 
-    const data = getDataAllRes(
+    const data = await getDataAllRes(
       procuredData, //yes
       soldData,
       procuredProcessedData,
@@ -1338,7 +1338,7 @@ const getLintProcessedTopGinners = async (
   try {
     const reqData = await getQueryParams(req, res);
     const ginnersData = await getLintProcessedTopGinnersData(reqData);
-    const data = getTopGinnersRes(ginnersData);
+    const data = await getTopGinnersRes(ginnersData);
     return res.sendSuccess(res, data);
 
   } catch (error: any) {
@@ -1429,7 +1429,7 @@ const getLintSoldTopGinners = async (
   try {
     const reqData = await getQueryParams(req, res);
     const ginnersData = await getLintSoldTopGinnersData(reqData);
-    const data = getTopGinnersRes(ginnersData);
+    const data = await getTopGinnersRes(ginnersData);
     return res.sendSuccess(res, data);
 
   } catch (error: any) {
@@ -1507,7 +1507,7 @@ const getLintStockTopGinners = async (
   try {
     const reqData = await getQueryParams(req, res);
     const ginnersData = await getLintStockTopGinnersData(reqData);
-    const data = getLintStockTopGinnersRes(ginnersData);
+    const data = await getLintStockTopGinnersRes(ginnersData);
     return res.sendSuccess(res, data);
 
   } catch (error: any) {
