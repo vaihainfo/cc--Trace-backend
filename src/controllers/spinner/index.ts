@@ -873,9 +873,8 @@ const createSpinnerSales = async (req: Request, res: Response) => {
         if (req.body.chooseYarn && req.body.chooseYarn.length > 0) {
             for await (let obj of req.body.chooseYarn) {
                 const spinProcessData = await SpinProcess.findOne({ where: { id: obj.process_id } });
-
                 let update = await SpinProcess.update({ qty_stock: spinProcessData.qty_stock - obj.qtyUsed, status: 'Sold' }, { where: { id: obj.process_id } });
-                const spinYarnData = await SpinYarn.findOne({ where: { id: obj.id } });
+                 const spinYarnData = await SpinYarn.findOne({ where: { id: obj.id } });
 
                 let updateyarns = {}
                 if (spinYarnData.yarn_qty_stock - obj.qtyUsed <= 0) {
