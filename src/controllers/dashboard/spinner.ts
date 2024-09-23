@@ -590,14 +590,12 @@ const getLintProcessedData = async (
       },
     ],
     order: [['seasonId', 'desc']],
-    limit: 3,
     where:{
      '$spinprocess.season_id$': { [Op.ne]: null },
      ...where
     },
     group: ['spinprocess.season.id']
   });
-
   return result;
 
 };
