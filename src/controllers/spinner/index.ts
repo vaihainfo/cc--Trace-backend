@@ -191,8 +191,17 @@ const updateSpinProcess = async (req: Request, res: Response) => {
                 process_id: req.body.id,
                 yarn_count: yarn.yarnCount,
                 yarn_produced: yarn.yarnProduced,
+                yarn_qty_stock: yarn.yarnProduced
             }
             const yarns = await SpinYarn.create(yarnData);
+            let uniqueFilename = `spin_yarn_qrcode_${Date.now()}.png`;
+            let da = encrypt(`Spinner,Yarn, ${yarns.id}`);
+            let aa = await generateOnlyQrCode(da, uniqueFilename);
+            const gin = await SpinYarn.update({ qr: uniqueFilename }, {
+                where: {
+                    id: yarns.id
+                }
+            });
         }
 
         res.sendSuccess(res, { spin });
@@ -864,8 +873,9 @@ const createSpinnerSales = async (req: Request, res: Response) => {
 
         if (req.body.chooseYarn && req.body.chooseYarn.length > 0) {
             for await (let obj of req.body.chooseYarn) {
-                let update = await SpinProcess.update({ qty_stock: obj.totalQty - obj.qtyUsed, status: 'Sold' }, { where: { id: obj.process_id } });
-                const spinYarnData = await SpinYarn.findOne({ where: { id: obj.id } });
+                const spinProcessData = await SpinProcess.findOne({ where: { id: obj.process_id } });
+                let update = await SpinProcess.update({ qty_stock: spinProcessData.qty_stock - obj.qtyUsed, status: 'Sold' }, { where: { id: obj.process_id } });
+                 const spinYarnData = await SpinYarn.findOne({ where: { id: obj.id } });
 
                 let updateyarns = {}
                 if (spinYarnData.yarn_qty_stock - obj.qtyUsed <= 0) {
@@ -1583,7 +1593,7 @@ const updateStatusSales = async (req: Request, res: Response) => {
             const ginSale = await GinSales.findOne({ where: { id: obj.id } });
             if (ginSale) {
                 // Increment qty_stock by obj.qtyStock
-                if (obj.status === 'Sold') {
+                if (obj.status === 'Sold' && (ginSale.qty_stock < ginSale.total_qty)) {
                     data.qty_stock = Number(ginSale.qty_stock) + Number(obj.qtyStock);
                 }
                 result = await GinSales.update(data, { where: { id: obj.id } });
