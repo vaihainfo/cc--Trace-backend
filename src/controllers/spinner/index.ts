@@ -1865,7 +1865,7 @@ const exportSpinnerTransaction = async (req: Request, res: Response) => {
         const headerRow = worksheet.addRow([
             "Sr No.", "Date", "Season", "Ginner Name",
             "Invoice No", "Bale Lot", "No of Bales",
-            "REEL Lot No", "Quantity", "Programme",
+            "REEL Lot No", "Received Lint Quantity (Kgs)", "Accepted Lint Quantity (Kgs)", "Programme",
             "Vehicle No"
         ]);
         headerRow.font = { bold: true };
@@ -1875,7 +1875,15 @@ const exportSpinnerTransaction = async (req: Request, res: Response) => {
                     SELECT 
                         bs.sales_id,
                         COUNT(DISTINCT gb.id) AS no_of_bales,
-                        COALESCE(SUM(CAST(gb.weight AS DOUBLE PRECISION)), 0) AS total_qty
+                        COALESCE(SUM(CAST(gb.weight AS DOUBLE PRECISION)), 0) AS received_qty,
+                        COALESCE(
+                            SUM(
+                                CASE
+                                WHEN gb.accepted_weight IS NOT NULL THEN gb.accepted_weight
+                                ELSE CAST(gb.weight AS DOUBLE PRECISION)
+                                END
+                            ), 0
+                        ) AS total_qty
                     FROM 
                         bale_selections bs
                     JOIN 
@@ -1900,7 +1908,8 @@ const exportSpinnerTransaction = async (req: Request, res: Response) => {
                     sp.name AS buyerdata_name, 
                     sp.address AS buyerdata_address, 
                     bd.no_of_bales AS accepted_no_of_bales, 
-                    bd.total_qty AS accepted_total_qty
+                    bd.total_qty AS accepted_total_qty,
+                    bd.received_qty AS received_total_qty
                 FROM 
                     gin_sales gs
                 LEFT JOIN 
@@ -1933,6 +1942,7 @@ const exportSpinnerTransaction = async (req: Request, res: Response) => {
                 lot_no: item.lot_no ? item.lot_no : '',
                 no_of_bales: item.accepted_no_of_bales ? item?.accepted_no_of_bales : '',
                 reel_lot_no: item.reel_lot_no ? item.reel_lot_no : '',
+                receive_quantity: item?.received_total_qty ? item?.received_total_qty : '',
                 quantity: item?.accepted_total_qty ? item?.accepted_total_qty : '',
                 program: item.program_name ? item.program_name : '',
                 vehicle: item.vehicle_no ? item.vehicle_no : ''
