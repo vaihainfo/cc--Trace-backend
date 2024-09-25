@@ -44,6 +44,9 @@ const GinBale = db.define('gin-bales', {
   },
   old_weight: {
     type: DataTypes.STRING
+  },
+  accepted_weight: {
+    type: DataTypes.DOUBLE
   }
 });
 

@@ -6,7 +6,6 @@ import {
     exportSpinnerSale,
     fetchSpinSalesPagination,
     fetchSpinnerProcessPagination,
-    updateSpinnerProcess,
     updateStatusSales,
     exportSpinnerTransaction,
     getProgram,

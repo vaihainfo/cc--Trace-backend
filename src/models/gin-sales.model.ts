@@ -147,6 +147,9 @@ const GinSales = db.define('gin_sales', {
     type: DataTypes.BOOLEAN,
     defaultValue: false,
   },
+  accepted_bales_weight: {
+    type: DataTypes.DOUBLE
+  },
 });
 
 GinSales.belongsTo(Ginner, {
