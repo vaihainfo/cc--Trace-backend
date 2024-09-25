@@ -151,7 +151,7 @@ const exportSpinnerGreyOutReport = async () => {
    const worksheet = workbook.addWorksheet("Sheet1");
    worksheet.mergeCells("A1:M1");
    const mergedCell = worksheet.getCell("A1");
-   mergedCell.value = "CottonConnect | Spinner Grey Out Report";
+   mergedCell.value = "CottonConnect | Spinner Lint Process Greyout Report";
    mergedCell.font = { bold: true };
    mergedCell.alignment = { horizontal: "center", vertical: "middle" };
    // Set bold font for header row
@@ -332,7 +332,7 @@ const exportSpinnerProcessGreyOutReport = async () => {
    const worksheet = workbook.addWorksheet("Sheet1");
    worksheet.mergeCells("A1:M1");
    const mergedCell = worksheet.getCell("A1");
-   mergedCell.value = "CottonConnect | Spinner Process Grey Out Report";
+   mergedCell.value = "CottonConnect | Spinner Yarn Greyout Report";
    mergedCell.font = { bold: true };
    mergedCell.alignment = { horizontal: "center", vertical: "middle" };
    // Set bold font for header row
