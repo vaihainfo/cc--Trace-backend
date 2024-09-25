@@ -13,7 +13,7 @@ function excelDateToJSDate(excelDate) {
     return date.toISOString().split('T')[0]; 
 } 
 
-const excelFilePath = path.join(__dirname, 'Leaspin Process Report - Need to be grey out.xlsx');
+const excelFilePath = path.join(__dirname, 'Leaspin Process Report - Need to be greyout.xlsx');
 const workbook = xlsx.readFile(excelFilePath);
 const sheetName = workbook.SheetNames[0];
 const sheet = workbook.Sheets[sheetName];
@@ -31,7 +31,6 @@ dataArr = dataArr.map(row => {
     }
     return row;
 });
-
 // console.log("============dataArr========");
 // console.log(dataArr);
 /* for (let i = 0; i < 2; i++) { 
