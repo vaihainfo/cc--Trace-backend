@@ -1735,6 +1735,7 @@ const fetchTransactionList = async (req: Request, res: Response) => {
                     gs."updatedAt" DESC
                 LIMIT 
                     :limit OFFSET :offset;`
+                    
 
         const [countResult, rows] = await Promise.all([
             sequelize.query(countQuery, {
