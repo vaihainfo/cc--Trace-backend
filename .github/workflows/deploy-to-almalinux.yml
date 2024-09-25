@@ -1,0 +1,53 @@
+name: Deploy to AlmaLinux EC2
+
+on:
+  push:
+    branches:
+      - development  
+
+jobs:
+  Deploy:
+    name: Deploy to EC2 (AlmaLinux)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+
+      - name: Set up SSH for Deployment
+        run: |
+          # Install sshpass to use password for SSH
+          sudo apt-get install -y sshpass
+
+          # Add EC2 server to known hosts (to prevent prompt)
+          ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Deploy to Backend Directory
+        env:
+          HOSTNAME: ${{ secrets.SSH_HOST }}         
+          USER_NAME: ${{ secrets.EC2_USER }}        
+          PASSWORD: ${{ secrets.SSH_PASSWORD }}     
+          TOKEN: ${{ secrets.TOKEN }}                
+          
+        run: |
+          # Connect via SSH using username and password
+          sshpass -p "$PASSWORD" ssh -o StrictHostKeyChecking=no ${USER_NAME}@${HOSTNAME} '
+              # Navigate to the backend directory
+              cd /home/newtracebale/public_html/backend &&
+
+              # Configure Git to use SSH instead of HTTPS
+              git config --global url."git@github.com:".insteadOf "https://github.com/" &&
+
+              # Fetch the latest code from the development branch
+              git checkout development &&
+              git fetch --all &&
+              git reset --hard origin/development &&
+              git pull origin development &&
+
+              # Install dependencies and build the project
+              npm install --legacy-peer-deps &&  # Install dependencies
+              npm run build &&
+
+              # Restart the backend using PM2
+              pm2 restart backend
+          '
