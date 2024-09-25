@@ -1303,7 +1303,19 @@ const fetchGinSale = async (req: Request, res: Response) => {
       where: {
         sales_id: gin.id,
       },
-      include: [{ model: GinBale, as: "bale" }],
+      include: [
+        { 
+          model: GinBale, 
+          as: "bale" ,
+          include: [
+            {
+              model: GinProcess,
+              as: "ginprocess",
+              attributes: ['reel_lot_no'],
+            },
+          ],
+        }
+      ],
     });
 
     const response = {

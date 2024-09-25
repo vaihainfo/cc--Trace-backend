@@ -1104,14 +1104,14 @@ const fetchSpinnerProcessGreyOutReport = async (req: Request, res: Response) => 
       const idArray: number[] = brandId
         .split(",")
         .map((id: any) => parseInt(id, 10));
-      whereCondition["$spinner_id.brand$"] = { [Op.overlap]: idArray };
+      whereCondition["$spinner.brand$"] = { [Op.overlap]: idArray };
     }
 
     if (countryId) {
       const idArray: number[] = countryId
         .split(",")
         .map((id: any) => parseInt(id, 10));
-      whereCondition["$spinner_id.country_id$"] = { [Op.in]: idArray };
+      whereCondition["$spinner.country_id$"] = { [Op.in]: idArray };
     }
 
     if (seasonId) {
@@ -1771,7 +1771,6 @@ const exportGinnerProcessGreyOutReport = async (req: Request, res: Response) => 
         data: process.env.BASE_URL + "ginner-process-grey-out-report.xlsx",
       });
     } else {
-
       if (searchTerm) {
         whereCondition[Op.or] = [
           { "$season.name$": { [Op.iLike]: `%${searchTerm}%` } },
@@ -1819,7 +1818,7 @@ const exportGinnerProcessGreyOutReport = async (req: Request, res: Response) => 
         const idArray: number[] = programId
           .split(",")
           .map((id: any) => parseInt(id, 10));
-        whereCondition["$program_id$"] = { [Op.in]: idArray };
+        whereCondition.program_id = { [Op.in]: idArray };
       }
 
       let include = [
@@ -3598,6 +3597,20 @@ const fetchSpinnerYarnProcessPagination = async (
       GROUP BY
         process_id
     ),
+     comber_consumed_data AS (
+      SELECT
+        cs.process_id,
+        COALESCE(SUM(cs.qty_used), 0) AS comber_consumed,
+        STRING_AGG(DISTINCT s.name, ', ') AS seasons
+      FROM
+        comber_selections cs
+      LEFT JOIN
+        gin_sales gs ON cs.yarn_id = gs.id
+      LEFT JOIN
+        seasons s ON gs.season_id = s.id
+      GROUP BY
+        process_id
+    ),
     yarn_sold_data AS (
       SELECT
         spin_process_id,
@@ -3621,6 +3634,7 @@ const fetchSpinnerYarnProcessPagination = async (
     SELECT
       spd.*,
       COALESCE(ccd.cotton_consumed, 0) AS cotton_consumed,
+      COALESCE(csd.comber_consumed, 0) AS comber_consumed,
       ccd.seasons AS lint_consumed_seasons,
       COALESCE(ysd.yarn_sold, 0) AS yarn_sold,
       ycd.yarncount
@@ -3628,6 +3642,8 @@ const fetchSpinnerYarnProcessPagination = async (
       spin_process_data spd
     LEFT JOIN
       cotton_consumed_data ccd ON spd.process_id = ccd.process_id
+    LEFT JOIN
+      comber_consumed_data csd ON spd.process_id = csd.process_id
     LEFT JOIN
       yarn_sold_data ysd ON spd.process_id = ysd.spin_process_id
     LEFT JOIN
@@ -3751,6 +3767,8 @@ const exportSpinnerYarnProcess = async (req: Request, res: Response) => {
         "Blend Material",
         "Blend Quantity (Kgs)",
         "Total Lint cotton consumed (Kgs)",
+        "Total comber consumed(kgs)",
+        "Total lint+Blend material consumed",
         "Programme",
         "Total Yarn weight (Kgs)",
         "Total yarn sold (Kgs)",
@@ -3833,6 +3851,20 @@ const exportSpinnerYarnProcess = async (req: Request, res: Response) => {
       GROUP BY
         process_id
     ),
+    comber_consumed_data AS (
+      SELECT
+        cs.process_id,
+        COALESCE(SUM(cs.qty_used), 0) AS comber_consumed,
+        STRING_AGG(DISTINCT s.name, ', ') AS seasons
+      FROM
+        comber_selections cs
+      LEFT JOIN
+        gin_sales gs ON cs.yarn_id = gs.id
+      LEFT JOIN
+        seasons s ON gs.season_id = s.id
+      GROUP BY
+        process_id
+    ),
     yarn_sold_data AS (
       SELECT
         spin_process_id,
@@ -3856,7 +3888,8 @@ const exportSpinnerYarnProcess = async (req: Request, res: Response) => {
     SELECT
       spd.*,
       COALESCE(ccd.cotton_consumed, 0) AS cotton_consumed,
-       ccd.seasons AS lint_consumed_seasons,
+      COALESCE(csd.comber_consumed, 0) AS comber_consumed,
+      ccd.seasons AS lint_consumed_seasons,
       COALESCE(ysd.yarn_sold, 0) AS yarn_sold,
       ycd.yarncount
     FROM
@@ -3864,6 +3897,8 @@ const exportSpinnerYarnProcess = async (req: Request, res: Response) => {
     LEFT JOIN
       cotton_consumed_data ccd ON spd.process_id = ccd.process_id
     LEFT JOIN
+      comber_consumed_data csd ON spd.process_id = csd.process_id
+      LEFT JOIN
       yarn_sold_data ysd ON spd.process_id = ysd.spin_process_id
     LEFT JOIN
       yarn_count_data ycd ON spd.process_id = ycd.process_id
@@ -3913,6 +3948,12 @@ const exportSpinnerYarnProcess = async (req: Request, res: Response) => {
           cotton_consumed: item?.cotton_consumed
             ? Number(item?.cotton_consumed)
             : 0,
+          comber_consumed: item?.comber_consumed
+            ? Number(item?.comber_consumed)
+            : 0,
+          total_lint_blend_consumed: item?.total_qty
+          ? Number(item?.total_qty)
+          : 0,
           program: item.program ? item.program : "",
           total: item.net_yarn_qty ? Number(item.net_yarn_qty) : 0,
           yarn_sold: item?.yarn_sold
