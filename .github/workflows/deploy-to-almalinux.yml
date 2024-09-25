@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - development  
-
 jobs:
   Deploy:
     name: Deploy to EC2 (AlmaLinux)
@@ -16,8 +15,8 @@ jobs:
 
       - name: Set up SSH for Deployment
         run: |
-          # Install sshpass to use password for SSH
-          sudo apt-get install -y sshpass
+          # Ensure the .ssh directory exists
+          mkdir -p ~/.ssh
 
           # Add EC2 server to known hosts (to prevent prompt)
           ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
@@ -27,7 +26,6 @@ jobs:
           HOSTNAME: ${{ secrets.SSH_HOST }}         
           USER_NAME: ${{ secrets.EC2_USER }}        
           PASSWORD: ${{ secrets.SSH_PASSWORD }}     
-          TOKEN: ${{ secrets.TOKEN }}                
           
         run: |
           # Connect via SSH using username and password
@@ -39,7 +37,6 @@ jobs:
               git config --global url."git@github.com:".insteadOf "https://github.com/" &&
 
               # Fetch the latest code from the development branch
-              git checkout development &&
               git fetch --all &&
               git reset --hard origin/development &&
               git pull origin development &&
