@@ -1,0 +1,41 @@
+name: Deploy to AlmaLinux EC2
+
+on:
+  push:
+    branches: 
+      - development  # Trigger on pushes to the development branch
+
+jobs:
+  Deploy:
+    name: Deploy to EC2 (AlmaLinux)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+
+      - name: Deploy to Backend Directory
+        env:
+          HOSTNAME: ${{ secrets.SSH_HOST }}         # Your EC2 instance hostname
+          USER_NAME: ${{ secrets.EC2_USER }}        # Your EC2 username
+          PASSWORD: ${{ secrets.SSH_PASSWORD }}     # Your SSH password secret
+      
+        run: |
+          # Connect via SSH using username and password
+          sshpass -p "$PASSWORD" ssh -o StrictHostKeyChecking=no ${USER_NAME}@${HOSTNAME} '
+              # Navigate to the backend directory
+              cd /home/newtracebale/public_html/backend &&
+
+              # Fetch the latest code from the development branch
+              git checkout development &&
+              git fetch --all &&
+              git reset --hard origin/development &&
+              git pull origin development &&
+
+              # Install dependencies and build the project
+              npm install --legacy-peer-deps &&  # Install dependencies
+              npm run build &&
+
+              # Restart the backend using PM2
+              pm2 restart backend
+          '
