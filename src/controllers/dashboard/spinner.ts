@@ -2054,9 +2054,14 @@ const getYarnProducedByCountry = async (
 
 
 const getYarnProducedByCountryData = async (where: any) => {
+
+  where['$spinner.country_id$'] = {
+    [Op.notIn]: [34]
+  };
+
   const result = await SpinProcess.findAll({
     attributes: [
-      [Sequelize.col('net_yarn_qty'), 'produced'],
+      [Sequelize.fn('SUM', Sequelize.col('net_yarn_qty')), 'processed'],
       [Sequelize.col('spinner.country.id'), 'countryId'],
       [Sequelize.col('spinner.country.county_name'), 'countryName'],
       [Sequelize.col('season.id'), 'seasonId'],
@@ -2077,7 +2082,7 @@ const getYarnProducedByCountryData = async (where: any) => {
       attributes: []
     }],
     where,
-    group: ['spinner.country.id', 'season.id', 'spin_processes.id']
+    group: ['spinner.country.id', 'season.id']
   });
 
   return result;
@@ -2117,6 +2122,7 @@ const getYarnProducedByCountryRes = async (
       }
     }
   }
+
   seasonIds = seasonIds.sort((a, b) => a - b).slice(-3);
 
   let seasonList: any[] = [];
@@ -2128,28 +2134,28 @@ const getYarnProducedByCountryRes = async (
       name: countryName,
       data: [],
     };
-    const fProducedList = producedCountList.filter((list: any) =>
+    const fProcessedList = producedCountList.filter((list: any) =>
       list.dataValues.countryName == countryName
     );
 
     for (const seasonId of seasonIds) {
 
-      let totalProduced = 0;
-      const gProducedValue = fProducedList.find((list: any) =>
+      let totalProcessed = 0;
+      const gSoldValue = fProcessedList.find((list: any) =>
         list.dataValues.seasonId == seasonId
       );
 
-      if (gProducedValue) {
-        totalProduced = mtConversion(gProducedValue.dataValues.produced);
-        if (!seasonList.includes(gProducedValue.dataValues.seasonName))
-          seasonList.push(gProducedValue.dataValues.seasonName);
+      if (gSoldValue) {
+        totalProcessed = mtConversion(gSoldValue.dataValues.processed);
+        if (!seasonList.includes(gSoldValue.dataValues.seasonName))
+          seasonList.push(gSoldValue.dataValues.seasonName);
       }
       else {
         const season = seasons.find((season: any) => season.dataValues.id == seasonId);
         if (!seasonList.includes(season.dataValues.name))
           seasonList.push(season.dataValues.name);
       }
-      data.data.push(totalProduced);
+      data.data.push(totalProcessed);
     }
 
     producedList.push(data);

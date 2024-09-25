@@ -154,7 +154,7 @@ const exportSpinnerGreyOutReport = async () => {
    const worksheet = workbook.addWorksheet("Sheet1");
    worksheet.mergeCells("A1:M1");
    const mergedCell = worksheet.getCell("A1");
-   mergedCell.value = "CottonConnect | Spinner Grey Out Report";
+   mergedCell.value = "CottonConnect | Spinner Lint Process Greyout Report";
    mergedCell.font = { bold: true };
    mergedCell.alignment = { horizontal: "center", vertical: "middle" };
    // Set bold font for header row
@@ -418,7 +418,7 @@ const exportSpinnerProcessGreyOutReport = async () => {
    const worksheet = workbook.addWorksheet("Sheet1");
    worksheet.mergeCells("A1:M1");
    const mergedCell = worksheet.getCell("A1");
-   mergedCell.value = "CottonConnect | Spinner Process Grey Out Report";
+   mergedCell.value = "CottonConnect | Spinner Yarn Greyout Report";
    mergedCell.font = { bold: true };
    mergedCell.alignment = { horizontal: "center", vertical: "middle" };
    // Set bold font for header row
@@ -3495,6 +3495,20 @@ const generateSpinnerYarnProcess = async () => {
           GROUP BY
             process_id
         ),
+        comber_consumed_data AS (
+      SELECT
+        cs.process_id,
+        COALESCE(SUM(cs.qty_used), 0) AS comber_consumed,
+        STRING_AGG(DISTINCT s.name, ', ') AS seasons
+      FROM
+        comber_selections cs
+      LEFT JOIN
+        gin_sales gs ON cs.yarn_id = gs.id
+      LEFT JOIN
+        seasons s ON gs.season_id = s.id
+      GROUP BY
+        process_id
+    ),
         yarn_sold_data AS (
           SELECT
             spin_process_id,
@@ -3518,6 +3532,7 @@ const generateSpinnerYarnProcess = async () => {
         SELECT
           spd.*,
           COALESCE(ccd.cotton_consumed, 0) AS cotton_consumed,
+          COALESCE(csd.comber_consumed, 0) AS comber_consumed,
           ccd.seasons AS lint_consumed_seasons,
           COALESCE(ysd.yarn_sold, 0) AS yarn_sold,
           ycd.yarncount
@@ -3525,6 +3540,8 @@ const generateSpinnerYarnProcess = async () => {
           spin_process_data spd
         LEFT JOIN
           cotton_consumed_data ccd ON spd.process_id = ccd.process_id
+        LEFT JOIN
+          comber_consumed_data csd ON spd.process_id = csd.process_id
         LEFT JOIN
           yarn_sold_data ysd ON spd.process_id = ysd.spin_process_id
         LEFT JOIN
@@ -3581,8 +3598,14 @@ const generateSpinnerYarnProcess = async () => {
           blend: blendValue,
           blendqty: blendqty,
           cotton_consumed: item?.cotton_consumed
-            ? Number(item?.cotton_consumed)
-            : 0,
+          ? Number(item?.cotton_consumed)
+          : 0,
+        comber_consumed: item?.comber_consumed
+          ? Number(item?.comber_consumed)
+          : 0,
+        total_lint_blend_consumed: item?.total_qty
+        ? Number(item?.total_qty)
+        : 0,
           program: item.program ? item.program : "",
           total: item.net_yarn_qty ? Number(item.net_yarn_qty) : 0,
           yarn_sold: item?.yarn_sold
@@ -3619,6 +3642,8 @@ const generateSpinnerYarnProcess = async () => {
             "Blend Material",
             "Blend Quantity (Kgs)",
             "Total Lint cotton consumed (Kgs)",
+            "Total comber consumed(kgs)",
+            "Total lint+Blend material consumed",
             "Programme",
             "Total Yarn weight (Kgs)",
             "Total yarn sold (Kgs)",

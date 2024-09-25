@@ -176,6 +176,7 @@ const updateSpinProcess = async (req: Request, res: Response) => {
             yarn_qty_produced: req.body.yarnQtyProduced,
             yarn_realisation: req.body.yarnRealisation,
             net_yarn_qty: req.body.netYarnQty,
+            qty_stock: req.body.netYarnQty,
             comber_noil: req.body.comber_noil,
             process_complete: req.body.processComplete,
         };
@@ -1734,6 +1735,7 @@ const fetchTransactionList = async (req: Request, res: Response) => {
                     gs."updatedAt" DESC
                 LIMIT 
                     :limit OFFSET :offset;`
+                    
 
         const [countResult, rows] = await Promise.all([
             sequelize.query(countQuery, {
