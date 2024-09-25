@@ -2370,8 +2370,8 @@ const exportSpinnerProcessGreyOutReport = async (req: Request, res: Response) =>
         "Season",
         "Spinner Name",
         "REEL Lot No",
-        "Batch Number",
-        "Quantity Stock",
+        "Spin Lot No",
+        "Total Yarn Greyout Quantity (KGs)",
       ]);
       headerRow.font = { bold: true };
 
@@ -2552,7 +2552,7 @@ const exportSpinnerGreyOutReport = async (req: Request, res: Response) => {
         "REEL Lot No",
         "Invoice Number",
         "Bale Lot No",
-        "Quantity Stock",
+        "Total Lint Greyout Quantity (KGs)",
       ]);
       headerRow.font = { bold: true };
 
