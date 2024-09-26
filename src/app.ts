@@ -90,6 +90,7 @@ import labMasterRouter from './router/master/lab-master';
 import seedCompanyRouter from './router/master/seed-company';
 import cropCurrentSeasonRouter from './router/master/crop-current-season';
 import organicProgramDataDigitizationRouter from './router/services/organic-program-data-digitization';
+import dataMonitorRouter from './router/data-monitoring';
 import { sendScheduledEmails } from "./controllers/email-management/scheduled-email.controller";
 import ExportData from "./models/export-data-check.model";
 import { exportReportsTameTaking, exportReportsOnebyOne } from "./controllers/reports/export-cron";
@@ -291,6 +292,7 @@ app.use("/lab-master", labMasterRouter);
 app.use("/seed-company", seedCompanyRouter);
 app.use("/crop-current-season", cropCurrentSeasonRouter);
 app.use("/organic-program-data-digitization", organicProgramDataDigitizationRouter);
+app.use("/data-monitoring", dataMonitorRouter);
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument, { customCss }));
 
 app.use(errorMiddleware);
