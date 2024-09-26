@@ -4097,7 +4097,7 @@ const exportSpinnerYarnProcess = async (req: Request, res: Response) => {
       // Create the excel workbook file
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet("Sheet1");
-      worksheet.mergeCells("A1:T1");
+      worksheet.mergeCells("A1:V1");
       const mergedCell = worksheet.getCell("A1");
       mergedCell.value = "CottonConnect | Spinner Yarn Process Report";
       mergedCell.font = { bold: true };
@@ -4119,8 +4119,8 @@ const exportSpinnerYarnProcess = async (req: Request, res: Response) => {
         "Blend Material",
         "Blend Quantity (Kgs)",
         "Total Lint cotton consumed (Kgs)",
-        "Total comber consumed(kgs)",
-        "Total lint+Blend material consumed",
+        "Total Comber Noil Consumed(kgs)",
+        "Total lint+Blend material + Comber Noil consumed",
         "Programme",
         "Total Yarn weight (Kgs)",
         "Total yarn sold (Kgs)",

@@ -80,7 +80,7 @@ const fetchTicketTracker = async (req: Request, res: Response) => {
     const offset = (page - 1) * limit;
     const whereCondition: any = {}
 
-    const { status, processor, from, to, processSale, processorId, brandId, countryId }: any = req.query;
+    const { status, processor, from, to, processSale, processorId, brandId, countryId, spinnerId }: any = req.query;
 
     try {
         if (status) {
@@ -188,6 +188,33 @@ const fetchTicketTracker = async (req: Request, res: Response) => {
                 whereCondition[Op.or] = searchConditions;
             }
         }
+        const addProcessorFilter = (type: any, idArray: Array<number>) => {
+            if (idArray && idArray.length > 0) {
+                return {
+                    processor_type: { [Op.iLike]: type },
+                    process_id: { [Op.in]: idArray }
+                };
+            }
+            return null;
+        };
+
+        let proConditions = [];
+        if (spinnerId) {
+            proConditions.push(addProcessorFilter('spinner', spinnerId?.split(",").map((id: any) => parseInt(id, 10))));
+        }
+
+          // Filter out null values
+          const validProcessorFilters = proConditions.filter(filter => filter !== null);
+
+        if (validProcessorFilters.length > 0) {
+            if (whereCondition[Op.or]) {
+                whereCondition[Op.and] = whereCondition[Op.and] || [];
+                whereCondition[Op.and].push({ [Op.or]: validProcessorFilters });
+            } else {
+                whereCondition[Op.or] = validProcessorFilters;
+            }
+        }
+
 
         let queryOptions: any = {
             where: whereCondition,

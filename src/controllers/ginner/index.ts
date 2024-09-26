@@ -1525,8 +1525,7 @@ const updateGinnerSales = async (req: Request, res: Response) => {
       delivery_notes: req.body.deliveryNotes,
       transporter_name: req.body.transporterName,
       vehicle_no: req.body.vehicleNo,
-      lrbl_no: req.body.lrblNo,
-      choosen_bale: req.body.choosen_bale
+      lrbl_no: req.body.lrblNo
     };
 
     if (req.body.weightLoss) {

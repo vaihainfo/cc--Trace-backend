@@ -3619,7 +3619,7 @@ const generateSpinnerYarnProcess = async () => {
         if (!currentWorksheet) {
           currentWorksheet = workbook.addWorksheet(`Spinner Yarn Process ${worksheetIndex}`);
           if (worksheetIndex == 1) {
-            currentWorksheet.mergeCells("A1:T1");
+            currentWorksheet.mergeCells("A1:V1");
             const mergedCell = currentWorksheet.getCell("A1");
             mergedCell.value = "CottonConnect | Spinner Yarn Process Report";
             mergedCell.font = { bold: true };
@@ -3642,8 +3642,8 @@ const generateSpinnerYarnProcess = async () => {
             "Blend Material",
             "Blend Quantity (Kgs)",
             "Total Lint cotton consumed (Kgs)",
-            "Total comber consumed(kgs)",
-            "Total lint+Blend material consumed",
+            "Total Comber Noil Consumed(kgs)",
+            "Total lint+Blend material + Comber Noil consumed",
             "Programme",
             "Total Yarn weight (Kgs)",
             "Total yarn sold (Kgs)",
