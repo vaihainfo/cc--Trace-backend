@@ -130,9 +130,7 @@ const getTransactionDataQuery = (
     where.program_id = reqData.program;
 
   if (reqData?.brand)
-    where['$ginner.brand$'] = {
-      [Op.contains]: Sequelize.literal(`ARRAY [${reqData.brand}]`)
-    };
+    where.brand_id = reqData.brand;
 
   // if (reqData?.brand)
   //   where.brand_id = reqData.brand;
@@ -506,8 +504,7 @@ const getProcuredProcessed = async (
     const processedData = await getLintProcessedData(ginnerWhere);
     const data = await getProcuredProcessedRes(
       procuredData,
-      processedData,
-      reqData.season
+      processedData
     );
     return res.sendSuccess(res, data);
 
@@ -523,7 +520,6 @@ const getProcuredProcessed = async (
 const getProcuredProcessedRes = async (
   procuredData: any[],
   processedData: any[],
-  reqSeason: any
 ) => {
   let seasonIds: number[] = [];
 
@@ -543,7 +539,7 @@ const getProcuredProcessedRes = async (
       ["id", "DESC"],
     ],
   });
-  if (seasonIds.length != 3 && !reqSeason) {
+  if (seasonIds.length != 3) {
     for (const season of seasons) {
       let currentDate = moment(); // Current date using moment
       let checkDate = moment('2024-10-01'); // October 1st, 2024
