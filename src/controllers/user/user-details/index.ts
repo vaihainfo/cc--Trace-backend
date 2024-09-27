@@ -178,7 +178,6 @@ const getUserInfo = async (req: Request, res: Response) => {
             }),
             PhysicalPartner.findOne({ where: { physicalPartnerUser_id: { [Op.contains]: [user.dataValues.id] } } })
         ]);
-
         let processor = [];
         spinner ? processor.push('Spinner') : "";
         ginner ? processor.push('Ginner') : "";

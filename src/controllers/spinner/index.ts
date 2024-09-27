@@ -176,6 +176,7 @@ const updateSpinProcess = async (req: Request, res: Response) => {
             yarn_qty_produced: req.body.yarnQtyProduced,
             yarn_realisation: req.body.yarnRealisation,
             net_yarn_qty: req.body.netYarnQty,
+            qty_stock: req.body.netYarnQty,
             comber_noil: req.body.comber_noil,
             process_complete: req.body.processComplete,
         };
@@ -190,8 +191,17 @@ const updateSpinProcess = async (req: Request, res: Response) => {
                 process_id: req.body.id,
                 yarn_count: yarn.yarnCount,
                 yarn_produced: yarn.yarnProduced,
+                yarn_qty_stock: yarn.yarnProduced
             }
             const yarns = await SpinYarn.create(yarnData);
+            let uniqueFilename = `spin_yarn_qrcode_${Date.now()}.png`;
+            let da = encrypt(`Spinner,Yarn, ${yarns.id}`);
+            let aa = await generateOnlyQrCode(da, uniqueFilename);
+            const gin = await SpinYarn.update({ qr: uniqueFilename }, {
+                where: {
+                    id: yarns.id
+                }
+            });
         }
 
         res.sendSuccess(res, { spin });
@@ -214,7 +224,20 @@ const yarnId = async (id: any, date: any) => {
             raw: true
         }
     )
-    let spin = await SpinProcess.count({
+    // let spin = await SpinProcess.count({
+    //     include: [
+    //         {
+    //             model: Program,
+    //             as: 'program',
+    //             where: { program_name: { [Op.iLike]: 'Reel' } }
+    //         }
+    //     ],
+    //     where: {
+    //         spinner_id: id
+    //     }
+    // })
+
+    let spinLatest = await SpinProcess.findOne({
         include: [
             {
                 model: Program,
@@ -224,17 +247,31 @@ const yarnId = async (id: any, date: any) => {
         ],
         where: {
             spinner_id: id
-        }
+        },
+        order: [
+            [
+                'id', 'desc'
+            ]
+        ],
     })
 
-    let currentDate = new Date();
-    let day = String(currentDate.getUTCDate()).padStart(2, "0");
-    let month = String(currentDate.getUTCMonth() + 1).padStart(2, "0"); // UTC months are zero-indexed, so we add 1
-    let year = String(currentDate.getUTCFullYear());
+    let count = 0;
+
+    if(spinLatest){
+        let reelLot = spinLatest?.dataValues?.reel_lot_no;
+        let split = reelLot ? reelLot.split('/') : [];
+        count = split && split.length > 0 ? Number(split[1]) : 0;
+    }
+
+    let currentDate = date ? new Date(date) : new Date();
+    let day = String(currentDate.getDate()).padStart(2, "0"); 
+    let month = String(currentDate.getMonth() + 1).padStart(2, "0"); // Local month, zero-indexed, so add 1
+    let year = String(currentDate.getFullYear()); 
 
     let prcs_date = day + month + year;
 
-    return a[0].idprefix + prcs_date + '/' + (((spin) ?? 1) + 1)
+
+    return a[0].idprefix + prcs_date + '/' + (((count) ?? 1) + 1)
 }
 
 //fetch Spinner Process with filters
@@ -616,7 +653,7 @@ const exportSpinnerProcess = async (req: Request, res: Response) => {
         const headerRow = worksheet.addRow([
             "Sr No.", "Date", "Season",
             "Spin Lot No", "Yarn Type", "Yarn Count", "Yarn Realisation %", "No of Boxes",
-            "Box ID", "Blend", "Blend Qty", "Total Yarn weight (Kgs)"
+            "Box ID", "Blend", "Blend Qty", "Total Yarn weight (Kgs)", "Grey Out Status"
         ]);
         headerRow.font = { bold: true };
         let include = [
@@ -678,7 +715,8 @@ const exportSpinnerProcess = async (req: Request, res: Response) => {
                 boxId: item.box_id ? item.box_id : '',
                 blend: blendValue,
                 blendqty: blendqty,
-                total: item.net_yarn_qty
+                total: item.net_yarn_qty,
+                grey_out_status: item.greyout_status ? "Yes" : "No",
             });
             worksheet.addRow(rowValues);
         }
@@ -835,8 +873,9 @@ const createSpinnerSales = async (req: Request, res: Response) => {
 
         if (req.body.chooseYarn && req.body.chooseYarn.length > 0) {
             for await (let obj of req.body.chooseYarn) {
-                let update = await SpinProcess.update({ qty_stock: obj.totalQty - obj.qtyUsed, status: 'Sold' }, { where: { id: obj.process_id } });
-                const spinYarnData = await SpinYarn.findOne({ where: { id: obj.id } });
+                const spinProcessData = await SpinProcess.findOne({ where: { id: obj.process_id } });
+                let update = await SpinProcess.update({ qty_stock: spinProcessData.qty_stock - obj.qtyUsed, status: 'Sold' }, { where: { id: obj.process_id } });
+                 const spinYarnData = await SpinYarn.findOne({ where: { id: obj.id } });
 
                 let updateyarns = {}
                 if (spinYarnData.yarn_qty_stock - obj.qtyUsed <= 0) {
@@ -961,7 +1000,7 @@ const fetchSpinSalesPagination = async (req: Request, res: Response) => {
     const { spinnerId, seasonId, programId, knitterId, weaverId, yarnType, type }: any = req.query;
     const offset = (page - 1) * limit;
     const whereCondition: any = {};
-    const yarnTypeArray = yarnType.split(',').map((item: any) => item.trim());
+    const yarnTypeArray = yarnType?.split(',')?.map((item: any) => item.trim());
     try {
         if (searchTerm) {
             whereCondition[Op.or] = [
@@ -1128,7 +1167,7 @@ const exportSpinnerSale = async (req: Request, res: Response) => {
     const { spinnerId, seasonId, programId, knitterId, weaverId, yarnType, type }: any = req.query;
     const offset = (page - 1) * limit;
     const whereCondition: any = {};
-    const yarnTypeArray = yarnType.split(',').map((item: any) => item.trim());
+    const yarnTypeArray = yarnType?.split(',')?.map((item: any) => item.trim());
     try {
         if (searchTerm) {
             whereCondition[Op.or] = [
@@ -1524,6 +1563,10 @@ const updateStatusSales = async (req: Request, res: Response) => {
                 if (obj.status !== 'Sold') {
                     await GinBale.update({ sold_status: false }, { where: { id: bale.id } });
                 }
+
+                if (obj.status === 'Sold') {
+                    await GinBale.update({ accepted_weight: bale.qtyUsed ? Number(bale.qtyUsed) : 0 }, { where: { id: bale.id } });
+                }
                 await BaleSelection.update({ spinner_status: obj.status === 'Sold' ? true : false }, { where: { bale_id: bale.id, sales_id: obj.id } });
             }
 
@@ -1552,10 +1595,18 @@ const updateStatusSales = async (req: Request, res: Response) => {
             data = { ...data, status: status }
 
             const ginSale = await GinSales.findOne({ where: { id: obj.id } });
+            const lintSale = await LintSelections.findAll({ where: { lint_id: obj.id } });
             if (ginSale) {
                 // Increment qty_stock by obj.qtyStock
-                if (obj.status === 'Sold') {
+                if (obj.status === 'Sold' && (ginSale.qty_stock < ginSale.total_qty)) {
                     data.qty_stock = Number(ginSale.qty_stock) + Number(obj.qtyStock);
+                    if(lintSale && lintSale?.length > 0){
+                        let sum = lintSale?.reduce((acc: any, value:any) => Number(value?.qty_used) + acc,0);
+
+                        data.accepted_bales_weight = Number(ginSale.qty_stock) + Number(obj.qtyStock) + sum;  
+                    }else{
+                        data.accepted_bales_weight = Number(ginSale.qty_stock) + Number(obj.qtyStock);
+                    }
                 }
                 result = await GinSales.update(data, { where: { id: obj.id } });
             }
@@ -1577,42 +1628,6 @@ const fetchTransactionList = async (req: Request, res: Response) => {
     const offset = (page - 1) * limit;
     const whereCondition: any = [];
     try {
-        // if (searchTerm) {
-        //     whereCondition[Op.or] = [
-        //         { lot_no: { [Op.iLike]: `%${searchTerm}%` } }, // Search by
-        //         { invoice_no: { [Op.iLike]: `%${searchTerm}%` } }, // Search by
-        //         { "$ginner.name$": { [Op.iLike]: `%${searchTerm}%` } }, // Search by
-        //         { '$program.program_name$': { [Op.iLike]: `%${searchTerm}%` } }, // Search by program
-        //         { '$season.name$': { [Op.iLike]: `%${searchTerm}%` } }, // Search by crop Type
-        //     ];
-        // }
-
-        // whereCondition.buyer = spinnerId
-        // whereCondition.status = { [Op.in]: ['Sold', 'Partially Accepted', 'Partially Rejected'] }
-
-        // if (ginnerId) {
-        //     const idArray: number[] = ginnerId
-        //         .split(",")
-        //         .map((id: any) => parseInt(id, 10));
-        //     whereCondition.ginner_id = { [Op.in]: idArray };
-        // }
-        // if (filter === 'Quantity') {
-        //     whereCondition.qty_stock = { [Op.gt]: 0 }
-        // }
-        // if (programId) {
-        //     const idArray: number[] = programId
-        //         .split(",")
-        //         .map((id: any) => parseInt(id, 10));
-        //     whereCondition.program_id = { [Op.in]: idArray };
-        // }
-
-        // if (seasonId) {
-        //     const idArray: number[] = seasonId
-        //         .split(",")
-        //         .map((id: any) => parseInt(id, 10));
-        //     whereCondition.season_id = { [Op.in]: idArray };
-        // }
-
         if (searchTerm) {
             whereCondition.push(`
               (
@@ -1647,83 +1662,6 @@ const fetchTransactionList = async (req: Request, res: Response) => {
 
         const whereClause = whereCondition.length > 0 ? `WHERE ${whereCondition.join(' AND ')}` : '';
 
-        // let include = [
-        //     {
-        //         model: Ginner,
-        //         as: "ginner",
-        //         attributes: ['id', 'name'],
-        //         include: [{
-        //             model: State,
-        //             as: "state"
-        //         }]
-        //     },
-        //     {
-        //         model: Season,
-        //         as: "season",
-        //     },
-        //     {
-        //         model: Program,
-        //         as: "program",
-        //     },
-        //     {
-        //         model: Spinner,
-        //         as: "buyerdata",
-        //         attributes: ['id', 'name', 'address'],
-        //     }
-        // ];
-        // //fetch data with pagination
-        //     const { count, rows } = await GinSales.findAndCountAll({
-        //         where: whereCondition,
-        //         include: include,
-        //         order: [
-        //             [
-        //                 'updatedAt', 'desc'
-        //             ]
-        //         ],
-        //     });
-
-        //     let data = [];
-
-        //     for await (const row of rows) {
-        //         const bale_details = await BaleSelection.findOne({
-        //             attributes: [
-        //                 [Sequelize.fn('COUNT', Sequelize.literal('DISTINCT "bale"."id"')), 'no_of_bales'],
-        //                 [Sequelize.fn('COALESCE', Sequelize.fn('SUM', Sequelize.literal(
-        //                     'CAST("bale"."weight" AS DOUBLE PRECISION)'
-        //                 )), 0), 'total_qty']
-        //               // Add other attributes here...
-        //             ],
-        //             where: {
-        //               sales_id: row?.dataValues?.id,
-        //               [Op.or]:[
-        //                 {"$sales.status$": 'Sold'},
-        //                 {"$sales.status$":{ [Op.in]: ['Partially Accepted', 'Partially Rejected'] }, spinner_status: true,}
-        //               ]
-        //             },
-        //             include:[
-        //                 {
-        //                     model: GinSales,
-        //                     as: "sales",
-        //                     attributes: []
-        //                 },
-        //                 {
-        //                     model: GinBale,
-        //                     as: "bale",
-        //                     attributes: []
-        //                 },
-        //             ],
-        //             group: ["sales_id", "sales.id"],
-        //           });
-
-        //           if(bale_details){
-        //               data.push({
-        //                 ...row?.dataValues,
-        //                 bale_details,
-        //               })
-
-        //           }
-        //     }
-
         // Count query
         const countQuery = `
             SELECT COUNT(*) AS total_count
@@ -1745,7 +1683,15 @@ const fetchTransactionList = async (req: Request, res: Response) => {
                     SELECT 
                         bs.sales_id,
                         COUNT(DISTINCT gb.id) AS no_of_bales,
-                        COALESCE(SUM(CAST(gb.weight AS DOUBLE PRECISION)), 0) AS total_qty
+                        COALESCE(SUM(CAST(gb.weight AS DOUBLE PRECISION)), 0) AS received_qty,
+                        COALESCE(
+                            SUM(
+                                CASE
+                                WHEN gb.accepted_weight IS NOT NULL THEN gb.accepted_weight
+                                ELSE CAST(gb.weight AS DOUBLE PRECISION)
+                                END
+                            ), 0
+                        ) AS total_qty
                     FROM 
                         bale_selections bs
                     JOIN 
@@ -1770,7 +1716,8 @@ const fetchTransactionList = async (req: Request, res: Response) => {
                     sp.name AS buyerdata_name, 
                     sp.address AS buyerdata_address, 
                     bd.no_of_bales AS accepted_no_of_bales, 
-                    bd.total_qty AS accepted_total_qty
+                    bd.total_qty AS accepted_total_qty,
+                    bd.received_qty AS received_total_qty
                 FROM 
                     gin_sales gs
                 LEFT JOIN 
@@ -1788,6 +1735,7 @@ const fetchTransactionList = async (req: Request, res: Response) => {
                     gs."updatedAt" DESC
                 LIMIT 
                     :limit OFFSET :offset;`
+                    
 
         const [countResult, rows] = await Promise.all([
             sequelize.query(countQuery, {
@@ -1919,7 +1867,7 @@ const exportSpinnerTransaction = async (req: Request, res: Response) => {
         const headerRow = worksheet.addRow([
             "Sr No.", "Date", "Season", "Ginner Name",
             "Invoice No", "Bale Lot", "No of Bales",
-            "REEL Lot No", "Quantity", "Programme",
+            "REEL Lot No", "Received Lint Quantity (Kgs)", "Accepted Lint Quantity (Kgs)", "Programme",
             "Vehicle No"
         ]);
         headerRow.font = { bold: true };
@@ -1929,7 +1877,15 @@ const exportSpinnerTransaction = async (req: Request, res: Response) => {
                     SELECT 
                         bs.sales_id,
                         COUNT(DISTINCT gb.id) AS no_of_bales,
-                        COALESCE(SUM(CAST(gb.weight AS DOUBLE PRECISION)), 0) AS total_qty
+                        COALESCE(SUM(CAST(gb.weight AS DOUBLE PRECISION)), 0) AS received_qty,
+                        COALESCE(
+                            SUM(
+                                CASE
+                                WHEN gb.accepted_weight IS NOT NULL THEN gb.accepted_weight
+                                ELSE CAST(gb.weight AS DOUBLE PRECISION)
+                                END
+                            ), 0
+                        ) AS total_qty
                     FROM 
                         bale_selections bs
                     JOIN 
@@ -1954,7 +1910,8 @@ const exportSpinnerTransaction = async (req: Request, res: Response) => {
                     sp.name AS buyerdata_name, 
                     sp.address AS buyerdata_address, 
                     bd.no_of_bales AS accepted_no_of_bales, 
-                    bd.total_qty AS accepted_total_qty
+                    bd.total_qty AS accepted_total_qty,
+                    bd.received_qty AS received_total_qty
                 FROM 
                     gin_sales gs
                 LEFT JOIN 
@@ -1987,6 +1944,7 @@ const exportSpinnerTransaction = async (req: Request, res: Response) => {
                 lot_no: item.lot_no ? item.lot_no : '',
                 no_of_bales: item.accepted_no_of_bales ? item?.accepted_no_of_bales : '',
                 reel_lot_no: item.reel_lot_no ? item.reel_lot_no : '',
+                receive_quantity: item?.received_total_qty ? item?.received_total_qty : '',
                 quantity: item?.accepted_total_qty ? item?.accepted_total_qty : '',
                 program: item.program_name ? item.program_name : '',
                 vehicle: item.vehicle_no ? item.vehicle_no : ''
@@ -2257,7 +2215,14 @@ const chooseLint = async (req: Request, res: Response) => {
                     SELECT 
                         bs.sales_id,
                         COUNT(DISTINCT gb.id) AS no_of_bales,
-                        COALESCE(SUM(CAST(gb.weight AS DOUBLE PRECISION)), 0) AS total_qty
+                        COALESCE(
+                            SUM(
+                                CASE
+                                WHEN gb.accepted_weight IS NOT NULL THEN gb.accepted_weight
+                                ELSE CAST(gb.weight AS DOUBLE PRECISION)
+                                END
+                            ), 0
+                        ) AS total_qty
                     FROM 
                         bale_selections bs
                     JOIN 
@@ -2364,6 +2329,7 @@ const chooseYarn = async (req: Request, res: Response) => {
                 [Sequelize.col('"spinprocess"."season"."name"'), 'season_name'],
                 // [Sequelize.fn('SUM', Sequelize.col('yarn_produced')), 'available_yarn']
                 [Sequelize.fn('SUM', Sequelize.col('yarn_qty_stock')), 'available_yarn']
+                // spinprocess.qty_stock
             ],
             include: [{
                 model: SpinProcess,
@@ -2686,7 +2652,7 @@ export {
     createSpinnerProcess,
     fetchSpinnerProcessPagination,
     exportSpinnerProcess,
-    updateSpinnerProcess,
+    // updateSpinnerProcess,
     createSpinnerSales,
     updateSpinnerSales,
     fetchSpinnerSale,

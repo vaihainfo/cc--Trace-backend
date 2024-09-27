@@ -7,6 +7,8 @@ import District from "../../models/district.model";
 import Country from "../../models/country.model";
 import Farm from "../../models/farm.model";
 import Season from "../../models/season.model";
+import { getProcuredByCountryData, getProcuredData, getTransactionWhereQuery } from "./procurement";
+import moment from "moment";
 
 const getOverallArea = async (
   req: Request, res: Response
@@ -392,7 +394,7 @@ const getFarmerBySeasons = async (where: any) => {
     ],
     where,
     order: [['seasonId', 'desc']],
-    limit: 3,
+    // limit: 3,
     group: ['season.id']
   });
 
@@ -454,7 +456,7 @@ const getAcreBySession = async (where: any) => {
       }
     ],
     order: [['seasonId', 'desc']],
-    limit: 3,
+    // limit: 3,
     where,
     group: ['season.id']
   });
@@ -487,8 +489,10 @@ const getEstimateAndProduction = async (
     if (req.query.type == "2")
       reqData.season = undefined;
     const where = getOverAllDataQuery(reqData);
+    const transactionWhere = getTransactionWhereQuery(reqData);
     const estimateProductionList = await getEstimateProductionBySeason(where);
-    const data = getEstimateProductionList(estimateProductionList);
+    const procuredList = await getProcuredData(transactionWhere);
+    const data = await getEstimateProductionList(estimateProductionList, procuredList);
     return res.sendSuccess(res, data);
   }
 
@@ -503,9 +507,11 @@ const getEstimateAndProduction = async (
 
 const getEstimateProductionBySeason = async (where: any) => {
 
+  delete where.status;
+
   const estimateAndProduction = await Farm.findAll({
     attributes: [
-      [Sequelize.fn('SUM', Sequelize.col('farmer.total_estimated_cotton')), 'estimate'],
+      [Sequelize.fn('SUM', Sequelize.col('farms.total_estimated_cotton')), 'estimate'],
       [Sequelize.fn('SUM', Sequelize.col('farmer.agri_estimated_prod')), 'production'],
       [Sequelize.col('season.id'), 'seasonId']
     ],
@@ -522,7 +528,7 @@ const getEstimateProductionBySeason = async (where: any) => {
       }
     ],
     order: [['seasonId', 'desc']],
-    limit: 3,
+    // limit: 3,
     where,
     group: ['season.id']
   });
@@ -531,17 +537,86 @@ const getEstimateProductionBySeason = async (where: any) => {
 
 };
 
-const getEstimateProductionList = (estimateProductionList: any) => {
-  let season: any = [];
-  let estimate: any = [];
-  let production: any = [];
-  estimateProductionList = estimateProductionList.sort((a: any, b: any) =>
-    a.dataValues.seasonId - b.dataValues.seasonId).slice(-3);
-  for (const estimateProduction of estimateProductionList) {
-    season.push(estimateProduction.dataValues.season.name);
-    estimate.push(mtConversion(estimateProduction.dataValues.estimate));
-    production.push(mtConversion(estimateProduction.dataValues.production));
+const getEstimateProductionList = async (estimateProductionList: any, procuredList: any) => {
+  // let season: any = [];
+  // let estimate: any = [];
+  // let production: any = [];
+  // estimateProductionList = estimateProductionList.sort((a: any, b: any) =>
+  //   a.dataValues.seasonId - b.dataValues.seasonId).slice(-3);
+  // for (const estimateProduction of estimateProductionList) {
+  //   season.push(estimateProduction.dataValues.season.name);
+  //   estimate.push(mtConversion(estimateProduction.dataValues.estimate));
+  //   production.push(mtConversion(estimateProduction.dataValues.production));
+  // }
+
+  let seasonIds: number[] = [];
+
+  estimateProductionList.forEach((estimate: any) => {
+    if (estimate.dataValues.season.id)
+      seasonIds.push(estimate.dataValues.season.id);
+  });
+
+  procuredList.forEach((procured: any) => {
+    if (!seasonIds.includes(procured.dataValues.season.id))
+      seasonIds.push(procured.dataValues.season.id);
+  });
+
+  const seasons = await Season.findAll({
+    // limit: 3,
+    order: [
+      ["id", "DESC"],
+    ],
+  });
+  if (seasonIds.length != 3) {
+    for (const season of seasons) {
+      let currentDate = moment(); // Current date using moment
+      let checkDate = moment('2024-10-01'); // October 1st, 2024
+      
+      if (currentDate.isSameOrAfter(checkDate) && season.name === '2024-25') {
+        seasonIds.push(season.id);
+      } else if(currentDate.isBefore(checkDate) && season.name === '2024-25' && seasonIds.includes(season.id)){
+        seasonIds = seasonIds.filter((id: number) => id != season.id)
+      }
+    }
   }
+
+
+  seasonIds = seasonIds.sort((a, b) => a - b).slice(-3);
+
+  let season: string[] = [];
+  let estimate: number[] = [];
+  let production: number[] = [];
+
+  for (const sessionId of seasonIds) {
+    const fEstimate = estimateProductionList.find((estimate: any) =>
+          estimate.dataValues.season.id == sessionId
+        );
+    const fProcured = procuredList.find((procured: any) =>
+      procured.dataValues.season.id == sessionId
+    );
+    let data = {
+      seasonName: '',
+      estimate: 0,
+      procured: 0
+    };
+
+    if (fEstimate) {
+          data.seasonName = fEstimate.dataValues.season.name;
+          data.estimate += mtConversion(fEstimate.dataValues.estimate);
+        }
+
+    if (fProcured) {
+      data.seasonName = fProcured.dataValues.season.name;
+      data.procured += mtConversion(fProcured.dataValues.procured);
+    }
+
+
+    season.push(data.seasonName);
+    estimate.push(data.estimate);
+    production.push(data.procured);
+
+  }
+
 
   return {
     season,
@@ -601,17 +676,24 @@ const getFarmerCountAndAreaRes = async (
   });
 
   const seasons = await Season.findAll({
-    limit: 3,
+    // limit: 3,
     order: [
       ["id", "DESC"],
     ],
   });
   if (seasonIds.length != 3 && !reqSeason) {
     for (const season of seasons) {
-      if (!seasonIds.includes(season.id))
+      let currentDate = moment(); // Current date using moment
+      let checkDate = moment('2024-10-01'); // October 1st, 2024
+      
+      if (currentDate.isSameOrAfter(checkDate) && season.name === '2024-25') {
         seasonIds.push(season.id);
+      } else if(currentDate.isBefore(checkDate) && season.name === '2024-25' && seasonIds.includes(season.id)){
+        seasonIds = seasonIds.filter((id: number) => id != season.id)
+      }
     }
   }
+
 
   seasonIds = seasonIds.sort((a, b) => a - b).slice(-3);
 
@@ -719,17 +801,24 @@ const getFarmerAllDataRes = async (
   });
 
   const seasons = await Season.findAll({
-    limit: 3,
+    // limit: 3,
     order: [
       ["id", "DESC"],
     ],
   });
   if (seasonIds.length != 3 && !reqSeason) {
     for (const season of seasons) {
-      if (!seasonIds.includes(season.id))
+      let currentDate = moment(); // Current date using moment
+      let checkDate = moment('2024-10-01'); // October 1st, 2024
+      
+      if (currentDate.isSameOrAfter(checkDate) && season.name === '2024-25') {
         seasonIds.push(season.id);
+      } else if(currentDate.isBefore(checkDate) && season.name === '2024-25' && seasonIds.includes(season.id)){
+        seasonIds = seasonIds.filter((id: number) => id != season.id)
+      }
     }
   }
+
 
   seasonIds = seasonIds.sort((a, b) => a - b).slice(-3);
 
@@ -886,15 +975,21 @@ const getCountryCountRes = async (
   });
 
   const seasons = await Season.findAll({
-    limit: 3,
+    // limit: 3,
     order: [
       ["id", "DESC"],
     ],
   });
   if (seasonIds.length != 3 && !reqSeason) {
     for (const season of seasons) {
-      if (!seasonIds.includes(season.id))
+      let currentDate = moment(); // Current date using moment
+      let checkDate = moment('2024-10-01'); // October 1st, 2024
+      
+      if (currentDate.isSameOrAfter(checkDate) && season.name === '2024-25') {
         seasonIds.push(season.id);
+      } else if(currentDate.isBefore(checkDate) && season.name === '2024-25' && seasonIds.includes(season.id)){
+        seasonIds = seasonIds.filter((id: number) => id != season.id)
+      }
     }
   }
 
@@ -1018,15 +1113,21 @@ const getCountryAreaRes = async (
   });
 
   const seasons = await Season.findAll({
-    limit: 3,
+    // limit: 3,
     order: [
       ["id", "DESC"],
     ],
   });
   if (seasonIds.length != 3 && !reqSeason) {
     for (const season of seasons) {
-      if (!seasonIds.includes(season.id))
+      let currentDate = moment(); // Current date using moment
+      let checkDate = moment('2024-10-01'); // October 1st, 2024
+      
+      if (currentDate.isSameOrAfter(checkDate) && season.name === '2024-25') {
         seasonIds.push(season.id);
+      } else if(currentDate.isBefore(checkDate) && season.name === '2024-25' && seasonIds.includes(season.id)){
+        seasonIds = seasonIds.filter((id: number) => id != season.id)
+      }
     }
   }
 
@@ -1056,7 +1157,7 @@ const getCountryAreaRes = async (
       );
 
       if (fFarmerValue) {
-        totalArea.area = mtConversion(fFarmerValue.dataValues.area);
+        totalArea.area = formatNumber(fFarmerValue.dataValues.area);
         totalArea.name = fFarmerValue.dataValues.seasonName;
       }
       if (!totalArea.name) {
@@ -1085,7 +1186,7 @@ const getCountryAreaRes = async (
 const getAreaByCountry = async (where: any) => {
   const result = await Farm.findAll({
     attributes: [
-      [Sequelize.fn('sum', Sequelize.col('farms.agri_total_area')), 'area'],
+      [Sequelize.fn('sum', Sequelize.col('farms.cotton_total_area')), 'area'],
       [Sequelize.col('farmer.country.id'), 'countryId'],
       [Sequelize.col('farmer.country.county_name'), 'countryName'],
       [Sequelize.col('season.id'), 'seasonId'],
@@ -1150,15 +1251,21 @@ const getEstimateCottonRes = async (
   });
 
   const seasons = await Season.findAll({
-    limit: 3,
+    // limit: 3,
     order: [
       ["id", "DESC"],
     ],
   });
   if (seasonIds.length != 3 && !reqSeason) {
     for (const season of seasons) {
-      if (!seasonIds.includes(season.id))
+      let currentDate = moment(); // Current date using moment
+      let checkDate = moment('2024-10-01'); // October 1st, 2024
+      
+      if (currentDate.isSameOrAfter(checkDate) && season.name === '2024-25') {
         seasonIds.push(season.id);
+      } else if(currentDate.isBefore(checkDate) && season.name === '2024-25' && seasonIds.includes(season.id)){
+        seasonIds = seasonIds.filter((id: number) => id != season.id)
+      }
     }
   }
 
@@ -1217,7 +1324,7 @@ const getEstimateCottonRes = async (
 const getEstimateAndProcuredByCountryData = async (where: any) => {
   const result = await Farm.findAll({
     attributes: [
-      [Sequelize.fn('SUM', Sequelize.col('farmer.total_estimated_cotton')), 'estimate'],
+      [Sequelize.fn('SUM', Sequelize.col('farms.total_estimated_cotton')), 'estimate'],
       [Sequelize.fn('SUM', Sequelize.col('farmer.agri_estimated_prod')), 'production'],
       [Sequelize.col('farmer.country.id'), 'countryId'],
       [Sequelize.col('farmer.country.county_name'), 'countryName'],
@@ -1252,9 +1359,9 @@ const getProductionCottonByCountry = async (
   try {
 
     const reqData = await getQueryParams(req, res);
-    const where = getOverAllDataQuery(reqData);
-    const productionList = await getEstimateAndProcuredByCountryData(where);
-    const data = await getProductionCottonRes(productionList, reqData.season);
+    const transactionWhere = getTransactionWhereQuery(reqData);
+    const procuredList = await getProcuredByCountryData(transactionWhere);
+    const data = await getProductionCottonRes(procuredList, reqData.season);
     return res.sendSuccess(res, data);
 
   } catch (error: any) {
@@ -1267,13 +1374,13 @@ const getProductionCottonByCountry = async (
 
 
 const getProductionCottonRes = async (
-  productionList: any = [],
+  estimatedList: any = [],
   reqSeason: any
 ) => {
   let seasonIds: number[] = [];
   let countries: number[] = [];
 
-  productionList.forEach((list: any) => {
+  estimatedList.forEach((list: any) => {
     if (!countries.includes(list.dataValues.countryName))
       countries.push(list.dataValues.countryName);
 
@@ -1282,15 +1389,21 @@ const getProductionCottonRes = async (
   });
 
   const seasons = await Season.findAll({
-    limit: 3,
+    // limit: 3,
     order: [
       ["id", "DESC"],
     ],
   });
   if (seasonIds.length != 3 && !reqSeason) {
     for (const season of seasons) {
-      if (!seasonIds.includes(season.id))
+      let currentDate = moment(); // Current date using moment
+      let checkDate = moment('2024-10-01'); // October 1st, 2024
+      
+      if (currentDate.isSameOrAfter(checkDate) && season.name === '2024-25') {
         seasonIds.push(season.id);
+      } else if(currentDate.isBefore(checkDate) && season.name === '2024-25' && seasonIds.includes(season.id)){
+        seasonIds = seasonIds.filter((id: number) => id != season.id)
+      }
     }
   }
 
@@ -1305,7 +1418,7 @@ const getProductionCottonRes = async (
       name: countryName,
       data: [],
     };
-    const farmerList = productionList.filter((list: any) =>
+    const farmerList = estimatedList.filter((list: any) =>
       list.dataValues.countryName == countryName
     );
 
@@ -1317,9 +1430,16 @@ const getProductionCottonRes = async (
       );
 
       if (fFarmerValue) {
-        totalArea = formatNumber(fFarmerValue.dataValues.production);
+        totalArea = mtConversion(fFarmerValue.dataValues.procured);
         if (!seasonList.includes(fFarmerValue.dataValues.seasonName))
           seasonList.push(fFarmerValue.dataValues.seasonName);
+      }
+      else {
+        seasons.forEach((season: any) => {
+          if (season.id == seasonId && !seasonList.includes(season.dataValues.name)) {
+            seasonList.push(season.name);
+          }
+        });
       }
       data.data.push(totalArea);
     }

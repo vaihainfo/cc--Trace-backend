@@ -15,7 +15,9 @@ const fetchOldWeaverSales = async (req: Request, res: Response) => {
     const limit = Number(req.query.limit) || 10;
     const offset = (page - 1) * limit;
     const brandId = Number(req.query.brandId) || null;
+    const weaverId = Number(req.query.weaverId) || null;
 
+    
     try {
         let queryOptions: any = {
             // where: { garment_name: { [Op.iLike]: `%${searchTerm}%` } },
@@ -46,7 +48,11 @@ const fetchOldWeaverSales = async (req: Request, res: Response) => {
             queryOptions.where = {
                 ["$weaver.brand$"]: { [Op.contained]: [brandId] }
             }
-
+            if (weaverId) {
+                queryOptions.where = {
+                    weaver_id : weaverId
+                };
+              }
         if (req.query.pagination === "true") {
             queryOptions.offset = offset;
             queryOptions.limit = limit;
