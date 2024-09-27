@@ -979,6 +979,7 @@ const exportPendingGinnerSales = async (req: Request, res: Response) => {
   }
 };
 
+
 const fetchGinnerProcessGreyOutReport = async (req: Request, res: Response) => {
   const searchTerm = req.query.search || "";
   const page = Number(req.query.page) || 1;
@@ -1062,8 +1063,71 @@ const fetchGinnerProcessGreyOutReport = async (req: Request, res: Response) => {
       include: include,
       offset: offset,
       limit: limit,
+      order: [["id", "asc"]],
     });
-    return res.sendPaginationSuccess(res, rows, count);
+    let sendData: any = [];
+    for await (let row of rows) {
+      let cotton = await CottonSelection.findAll({
+        attributes: ["transaction_id"],
+        where: { process_id: row.dataValues.id },
+      });
+      let village = [];
+      if (cotton.length > 0) {
+        village = await Transaction.findAll({
+          attributes: ["village_id"],
+          where: {
+            id: cotton.map((obj: any) => obj.dataValues.transaction_id),
+          },
+          include: [
+            {
+              model: Village,
+              as: "village",
+              attributes: ["id", "village_name"],
+            },
+          ],
+          group: ["village_id", "village.id"],
+        });
+      }
+      let bale = await GinBale.findOne({
+        attributes: [
+          [
+            Sequelize.fn(
+              "SUM",
+              Sequelize.literal(`
+                CASE
+                  WHEN old_weight IS NOT NULL THEN CAST(old_weight AS DOUBLE PRECISION)
+                  ELSE CAST(weight AS DOUBLE PRECISION)
+                END
+              `)
+            ),
+            "lint_quantity",
+          ],
+          
+          [sequelize.fn("min", sequelize.col("bale_no")), "pressno_from"],
+          [sequelize.fn("max", Sequelize.literal("LPAD(bale_no, 10, ' ')")), "pressno_to"],
+        ],
+        where: { process_id: row.dataValues.id },
+      });
+      sendData.push({
+        ...row.dataValues,
+        village: village,
+        gin_press_no:
+          (bale.dataValues.pressno_from || "") +
+          "-" +
+          (bale.dataValues.pressno_to || "").trim(),
+        lint_quantity: bale.dataValues.lint_quantity,
+        reel_press_no:
+          row.dataValues.no_of_bales === 0
+            ? ""
+            : `001-${row.dataValues.no_of_bales < 9
+              ? `00${row.dataValues.no_of_bales}`
+              : row.dataValues.no_of_bales < 99
+                ? `0${row.dataValues.no_of_bales}`
+                : row.dataValues.no_of_bales
+            }`,
+      });
+    }
+    return res.sendPaginationSuccess(res, sendData, count);
   } catch (error: any) {
     console.log(error)
     return res.sendError(res, error.message);
@@ -1855,7 +1919,7 @@ const exportGinnerProcessGreyOutReport = async (req: Request, res: Response) => 
         "REEL Lot No",
         "Press Number",
         "Bale Lot No",
-        "Total Quantity",
+        "Total Lint Greyout Quantity (Kgs)",
       ]);
       headerRow.font = { bold: true };
 
@@ -1865,6 +1929,7 @@ const exportGinnerProcessGreyOutReport = async (req: Request, res: Response) => 
         where: whereCondition,
         include: include,
         attributes: [
+          [Sequelize.col('id'), "id"],
           [Sequelize.col('"season"."name"'), 'season_name'],
           [Sequelize.literal('"ginner"."name"'), "ginner_name"],
           [Sequelize.literal('press_no'), 'press_no'],
@@ -1879,6 +1944,48 @@ const exportGinnerProcessGreyOutReport = async (req: Request, res: Response) => 
 
       // // Append data to worksheet
       for await (const [index, item] of rows.entries()) {
+        let cotton = await CottonSelection.findAll({
+          attributes: ["transaction_id"],
+          where: { process_id: item.dataValues.id },
+        });
+        let village = [];
+        if (cotton.length > 0) {
+          village = await Transaction.findAll({
+            attributes: ["village_id"],
+            where: {
+              id: cotton.map((obj: any) => obj.dataValues.transaction_id),
+            },
+            include: [
+              {
+                model: Village,
+                as: "village",
+                attributes: ["id", "village_name"],
+              },
+            ],
+            group: ["village_id", "village.id"],
+          });
+        }
+        let bale = await GinBale.findOne({
+          attributes: [
+            [
+              Sequelize.fn(
+                "SUM",
+                Sequelize.literal(`
+                  CASE
+                    WHEN old_weight IS NOT NULL THEN CAST(old_weight AS DOUBLE PRECISION)
+                    ELSE CAST(weight AS DOUBLE PRECISION)
+                  END
+                `)
+              ),
+              "lint_quantity",
+            ],
+            
+            [sequelize.fn("min", sequelize.col("bale_no")), "pressno_from"],
+            [sequelize.fn("max", Sequelize.literal("LPAD(bale_no, 10, ' ')")), "pressno_to"],
+          ],
+          where: { process_id: item.dataValues.id },
+        });
+
         const rowValues = Object.values({
           index: index + 1,
           season: item.dataValues.season_name ? item.dataValues.season_name : "",
@@ -1886,7 +1993,7 @@ const exportGinnerProcessGreyOutReport = async (req: Request, res: Response) => 
           reel_lot_no: item.dataValues.reel_lot_no ? item.dataValues.reel_lot_no : "",
           press: item.dataValues.press_no ? item.dataValues.press_no : "",
           lot_no: item.dataValues.lot_no ? item.dataValues.lot_no : "",
-          total_qty: item.dataValues.total_qty ? item.dataValues.total_qty : "",
+          total_qty: bale.dataValues.lint_quantity ? bale.dataValues.lint_quantity : "",
         });
         worksheet.addRow(rowValues);
       }
