@@ -1102,7 +1102,7 @@ const fetchGinnerProcessGreyOutReport = async (req: Request, res: Response) => {
             ),
             "lint_quantity",
           ],
-          
+
           [sequelize.fn("min", sequelize.col("bale_no")), "pressno_from"],
           [sequelize.fn("max", Sequelize.literal("LPAD(bale_no, 10, ' ')")), "pressno_to"],
         ],
@@ -1504,12 +1504,12 @@ const fetchGinSalesPagination = async (req: Request, res: Response) => {
 
     for await (let item of rows) {
       let processIds = item?.dataValues?.process_ids && Array.isArray(item?.dataValues?.process_ids)
-      ? item.dataValues.process_ids.filter((id: any) => id !== null && id !== undefined)
-      : [];
+        ? item.dataValues.process_ids.filter((id: any) => id !== null && id !== undefined)
+        : [];
 
       let seedSeason = [];
       if (processIds.length > 0) {
-        [seedSeason]  = await sequelize.query(`
+        [seedSeason] = await sequelize.query(`
                             SELECT 
                                 STRING_AGG(DISTINCT s.name, ', ') AS seasons
                             FROM
@@ -1523,7 +1523,7 @@ const fetchGinSalesPagination = async (req: Request, res: Response) => {
                             WHERE 
                                 cs.process_id IN  (${processIds.join(',')})
                             `)
-        }
+      }
 
       const lotNo: string[] = item?.dataValues?.lot_no
         .split(", ")
@@ -1922,14 +1922,12 @@ const exportGinnerProcessGreyOutReport = async (req: Request, res: Response) => 
         "Total Lint Greyout Quantity (Kgs)",
       ]);
       headerRow.font = { bold: true };
-
-      // //fetch data with pagination
-
-      const { count, rows }: any = await GinProcess.findAndCountAll({
+      
+      const gin = await GinProcess.findAll({
         where: whereCondition,
         include: include,
         attributes: [
-          [Sequelize.col('id'), "id"],
+          "id",
           [Sequelize.col('"season"."name"'), 'season_name'],
           [Sequelize.literal('"ginner"."name"'), "ginner_name"],
           [Sequelize.literal('press_no'), 'press_no'],
@@ -1937,67 +1935,51 @@ const exportGinnerProcessGreyOutReport = async (req: Request, res: Response) => 
           [Sequelize.literal('reel_lot_no'), 'reel_lot_no'],
           [Sequelize.literal('total_qty'), 'total_qty'],
         ],
-        // group: ['season.id', 'ginner.id'],
+        order: [["id", "asc"]],
         offset: offset,
         limit: limit,
+
       });
 
-      // // Append data to worksheet
-      for await (const [index, item] of rows.entries()) {
-        let cotton = await CottonSelection.findAll({
-          attributes: ["transaction_id"],
-          where: { process_id: item.dataValues.id },
-        });
-        let village = [];
-        if (cotton.length > 0) {
-          village = await Transaction.findAll({
-            attributes: ["village_id"],
-            where: {
-              id: cotton.map((obj: any) => obj.dataValues.transaction_id),
-            },
-            include: [
-              {
-                model: Village,
-                as: "village",
-                attributes: ["id", "village_name"],
-              },
-            ],
-            group: ["village_id", "village.id"],
-          });
-        }
-        let bale = await GinBale.findOne({
-          attributes: [
-            [
-              Sequelize.fn(
-                "SUM",
-                Sequelize.literal(`
-                  CASE
-                    WHEN old_weight IS NOT NULL THEN CAST(old_weight AS DOUBLE PRECISION)
-                    ELSE CAST(weight AS DOUBLE PRECISION)
-                  END
-                `)
-              ),
-              "lint_quantity",
-            ],
-            
-            [sequelize.fn("min", sequelize.col("bale_no")), "pressno_from"],
-            [sequelize.fn("max", Sequelize.literal("LPAD(bale_no, 10, ' ')")), "pressno_to"],
+      const processIds = gin.map((process: any) => process.id);
+
+      const ginBales = await GinBale.findAll({
+        attributes: [
+          [
+            Sequelize.fn(
+              "SUM",
+              Sequelize.literal(`
+                CASE
+                  WHEN old_weight IS NOT NULL THEN CAST(old_weight AS DOUBLE PRECISION)
+                  ELSE CAST(weight AS DOUBLE PRECISION)
+                END
+              `)
+            ),
+            "lint_quantity",
           ],
-          where: { process_id: item.dataValues.id },
-        });
+          "process_id",
+        ],
+        raw: true,
+        where: { process_id: { [Op.in]: processIds } },
+        group: ["process_id"],
+      });
+
+      // Append data to worksheet
+      for await (const [index, item] of gin.entries()) {
+        let bale = ginBales.find((obj: any) => obj.process_id == item.id);
+        let lint_quantity = bale?.lint_quantity ?? 0;
 
         const rowValues = Object.values({
           index: index + 1,
           season: item.dataValues.season_name ? item.dataValues.season_name : "",
           ginner: item.dataValues.ginner_name ? item.dataValues.ginner_name : "",
-          reel_lot_no: item.dataValues.reel_lot_no ? item.dataValues.reel_lot_no : "",
+          reel_lot_no: item.reel_lot_no ? item.reel_lot_no : "",
           press: item.dataValues.press_no ? item.dataValues.press_no : "",
           lot_no: item.dataValues.lot_no ? item.dataValues.lot_no : "",
-          total_qty: bale.dataValues.lint_quantity ? bale.dataValues.lint_quantity : "",
+          lint_quantity: lint_quantity ? lint_quantity : "",
         });
         worksheet.addRow(rowValues);
       }
-
       // Auto-adjust column widths based on content
       worksheet.columns.forEach((column: any) => {
         let maxCellLength = 0;
@@ -2584,13 +2566,13 @@ const exportGinnerSales = async (req: Request, res: Response) => {
           });
         } else {
           let processIds = item?.dataValues?.process_ids && Array.isArray(item?.dataValues?.process_ids)
-          ? item.dataValues.process_ids?.filter((id: any) => id !== null && id !== undefined)
-          : [];
+            ? item.dataValues.process_ids?.filter((id: any) => id !== null && id !== undefined)
+            : [];
 
-        let seedSeason = [];
+          let seedSeason = [];
 
-        if (processIds.length > 0) {
-          [seedSeason] = await sequelize.query(`
+          if (processIds.length > 0) {
+            [seedSeason] = await sequelize.query(`
             SELECT 
                 STRING_AGG(DISTINCT s.name, ', ') AS seasons
             FROM
@@ -4059,8 +4041,8 @@ const exportSpinnerYarnProcess = async (req: Request, res: Response) => {
             ? Number(item?.comber_consumed)
             : 0,
           total_lint_blend_consumed: item?.total_qty
-          ? Number(item?.total_qty)
-          : 0,
+            ? Number(item?.total_qty)
+            : 0,
           program: item.program ? item.program : "",
           total: item.net_yarn_qty ? Number(item.net_yarn_qty) : 0,
           yarn_sold: item?.yarn_sold
@@ -12800,34 +12782,34 @@ const exportPscpProcurementLiveTracker = async (
       });
 
     } else {
-  
+
       if (search) {
         brandCondition.push(`(name ILIKE :searchTerm OR "s.state_name" ILIKE :searchTerm)`);
       }
-  
+
       if (countryId) {
         const idArray = countryId.split(",").map((id: string) => parseInt(id, 10));
         whereCondition.push(`country_id IN (:countryIds)`);
         brandCondition.push(`g.country_id IN (:countryIds)`);
       }
-  
+
       if (brandId) {
         const idArray = brandId.split(",").map((id: string) => parseInt(id, 10));
         whereCondition.push(`brand_id IN (:brandIds)`);
         brandCondition.push(`brand && ARRAY[:brandIds]`);
       }
-  
+
       if (seasonId) {
         const idArray = seasonId.split(",").map((id: string) => parseInt(id, 10));
         seasonCondition.push(`season_id IN (:seasonIds)`);
         baleCondition.push(`gp.season_id IN (:seasonIds)`);
       }
-  
+
       if (ginnerId) {
         const idArray = ginnerId.split(",").map((id: string) => parseInt(id, 10));
         brandCondition.push(`g.id IN (:ginnerIds)`);
       }
-  
+
       const whereConditionSql = whereCondition.length ? `${whereCondition.join(' AND ')}` : '1=1';
       const seasonConditionSql = seasonCondition.length ? `${seasonCondition.join(' AND ')}` : '1=1';
       const brandConditionSql = brandCondition.length ? `${brandCondition.join(' AND ')}` : '1=1';
