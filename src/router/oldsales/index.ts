@@ -2,6 +2,7 @@ import { Router } from "express";
 import { fetchOldKnitterSales } from "../../controllers/oldsales/knitter";
 import { fetchOldWeaverSales } from "../../controllers/oldsales/weaver";
 import { fetchOldGarmentSales } from "../../controllers/oldsales/garment";
+import { fetchConsolidateOldReport } from "../../controllers/oldsales/consolidate";
 import { fetchOldCompactingSales, fetchOldDyeingSales, fetchOldPrintingSales, fetchOldWashingSales } from "../../controllers/oldsales/fabric";
 
 const router = Router();
@@ -14,6 +15,9 @@ router.get("/weaver-oldsales", fetchOldWeaverSales);
 
 // garment
 router.get("/garment-oldsales", fetchOldGarmentSales);
+
+// consolidate
+router.get("/consolidate", fetchConsolidateOldReport);
 
 // fabric
 router.get("/dyeing-oldsales", fetchOldDyeingSales);
