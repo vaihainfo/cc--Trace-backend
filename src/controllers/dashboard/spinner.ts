@@ -1281,7 +1281,9 @@ const getTopYarnProcessed = async (
 ) => {
   try {
     const reqData = await getQueryParams(req, res);
-    const spinnersData = await getTopYarnProcessedData(reqData);
+    const where = getSpinnerProcessWhereQuery(reqData);
+    delete where.status
+    const spinnersData = await getTopYarnProcessedData(where);
     const data = await getTopYarnProcessedRes(spinnersData);
     return res.sendSuccess(res, data);
 
@@ -1312,14 +1314,8 @@ const getTopYarnProcessedRes = (
 };
 
 const getTopYarnProcessedData = async (
-  reqData: any
+  where: any
 ) => {
-  const where: any = {
-
-  };
-
-  if (reqData?.country)
-    where['$spinner.country_id$'] = reqData.country;
 
   where['$spinner.name$'] = {
     [Op.not]: null
@@ -1350,7 +1346,9 @@ const getTopYarnSold = async (
 ) => {
   try {
     const reqData = await getQueryParams(req, res);
-    const spinnersData = await getTopYarnSoldData(reqData);
+    const where = getSpinnerProcessWhereQuery(reqData);
+    delete where.status
+    const spinnersData = await getTopYarnSoldData(where);
     const data = getTopYarnSoldRes(spinnersData);
     return res.sendSuccess(res, data);
 
@@ -1381,14 +1379,8 @@ const getTopYarnSoldRes = (
 };
 
 const getTopYarnSoldData = async (
-  reqData: any
+  where: any
 ) => {
-  const where: any = {
-
-  };
-
-  if (reqData?.country)
-    where['$spinner.country_id$'] = reqData.country;
 
   where['$spinner.name$'] = {
     [Op.not]: null
@@ -1458,7 +1450,7 @@ const getTopYarnStockData = async (
        ((select sum(sp.net_yarn_qty) from public.spin_processes sp where sp.spinner_id = sn.id) -
         (select sum(sp.total_qty) from public.spin_sales sp where sp.spinner_id = sn.id)) as stock
 from public.spinners sn
-where sn.name is not null ${reqData?.country ? " and g.country_id = reqData?.country" : ""}
+where sn.name is not null ${reqData?.country ? "and sn.country_id = reqData?.country" : ""} ${reqData?.spinner ? "and sn.id = " + reqData?.spinner : ""} ${reqData?.brand ? "and sn.brand @> ARRAY[" + reqData.brand + "]" : ""}
 group by sn.id
 order by stock desc nulls last
 limit 10
