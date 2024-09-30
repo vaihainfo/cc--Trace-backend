@@ -254,7 +254,7 @@ const exportGinnerProcessGreyOutReport = async () => {
     "REEL Lot No",
     "Press Number",
     "Bale Lot No",
-    "Total Quantity",
+    "Total Lint Greyout Quantity (Kgs)",
    ]);
    headerRow.font = { bold: true };
 
@@ -264,6 +264,7 @@ const exportGinnerProcessGreyOutReport = async () => {
      where: {greyout_status : true},
      include: include,
      attributes: [
+      "id",
       [Sequelize.col('"season"."name"'), 'season_name'],
       [Sequelize.literal('"ginner"."name"'), "ginner_name"],
       [Sequelize.col('press_no'), 'press_no'],
@@ -276,6 +277,26 @@ const exportGinnerProcessGreyOutReport = async () => {
 
    // // Append data to worksheet
    for await (const [index, item] of rows.entries()) {
+    let bale = await GinBale.findOne({
+      attributes: [
+        [
+          Sequelize.fn(
+            "SUM",
+            Sequelize.literal(`
+              CASE
+                WHEN old_weight IS NOT NULL THEN CAST(old_weight AS DOUBLE PRECISION)
+                ELSE CAST(weight AS DOUBLE PRECISION)
+              END
+            `)
+          ),
+          "lint_quantity",
+        ],
+        
+        [sequelize.fn("min", sequelize.col("bale_no")), "pressno_from"],
+        [sequelize.fn("max", Sequelize.literal("LPAD(bale_no, 10, ' ')")), "pressno_to"],
+      ],
+      where: { process_id: item.dataValues.id },
+    });
      const rowValues = Object.values({
        index: index + 1,
        season: item.dataValues.season_name ? item.dataValues.season_name : "",
@@ -283,7 +304,7 @@ const exportGinnerProcessGreyOutReport = async () => {
        reel_lot_no: item.dataValues.reel_lot_no ? item.dataValues.reel_lot_no : "",
        press: item.dataValues.press_no ? item.dataValues.press_no : "",
        lot_no: item.dataValues.lot_no ? item.dataValues.lot_no : "",
-       total_qty: item.dataValues.total_qty ? item.dataValues.total_qty : "",
+       lint_quantity: bale.dataValues.lint_quantity ? bale.dataValues.lint_quantity : 0,
      });
      worksheet.addRow(rowValues);
    }
