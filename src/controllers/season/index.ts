@@ -79,8 +79,7 @@ const fetchSeasonPagination = async (req: Request, res: Response) => {
     const limit = Number(req.query.limit) || 10;
     const brandId = Number(req.query.brandId);
     const offset = (page - 1) * limit;
-    const currentDate = new Date();
-
+    
     try {
         const allSeasons = await Season.findAll({
             where: {
@@ -90,10 +89,14 @@ const fetchSeasonPagination = async (req: Request, res: Response) => {
                 [sortName, sortOrder] 
             ],
         });
-
+        const normalizeDate = (date: Date) => {
+            return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+        };
+        const currentDate = normalizeDate(new Date());
+          
         let currentSeasonIndex = allSeasons.findIndex((season: any) => {
-            const fromDate = new Date(season.from);
-            const toDate = new Date(season.to);
+            const fromDate = normalizeDate(new Date(season.from));
+            const toDate = normalizeDate(new Date(season.to));
             return currentDate >= fromDate && currentDate <= toDate;
         });
 
