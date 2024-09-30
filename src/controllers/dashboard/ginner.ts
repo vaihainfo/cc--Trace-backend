@@ -1569,46 +1569,142 @@ const getLintStockTopGinnersData = async (
   reqData: any
 ) => {
 
+  const where: any = {};
+  const soldWhere: any = {};
 
-  const [processedList] = await sequelize.query(`
-    select g.name                                    as "ginnerName",
-         g.id                                      as "id",
-         COALESCE(
-                  SUM(
-                    CASE
-                      WHEN gbp.old_weight IS NOT NULL THEN CAST(gbp.old_weight AS DOUBLE PRECISION)
-                      ELSE CAST(gbp.weight AS DOUBLE PRECISION)
-                    END
-                  ), 0
-              ) AS "processed"
-    from public.ginners g
-         left join public.gin_processes gp on gp.ginner_id = g.id
-         left join public."gin-bales" gbp on gbp.process_id = gp.id
-    where g.name is not null ${reqData?.country ? " and g.country_id = reqData?.country" : ""} ${reqData?.ginner ? " and g.id = " + reqData?.ginner : ""} ${reqData?.brand ? " and g.brand @> ARRAY[" + reqData.brand + "]" : ""}
-    group by g.id; 
-    `);
+  if (reqData?.country){
+    where['$ginprocess.ginner.country_id$'] = reqData.country;
+    soldWhere['$ginner.country_id$'] = reqData.country;
+  }
 
-  const [soldList] = await sequelize.query(`
-      select g.name                                   as "ginnerName",
-         g.id                                      as "id",
-        COALESCE(
-                  SUM(
-                    CASE
-                      WHEN gb.old_weight IS NOT NULL THEN CAST(gb.old_weight AS DOUBLE PRECISION)
-                      ELSE CAST(gb.weight AS DOUBLE PRECISION)
-                    END
-                  ), 0
-              ) AS "sold"
-      from public.ginners g
-         left join public.gin_sales gs on g.id = gs.ginner_id
-         left join public.bale_selections bs on bs.sales_id = gs.id
-         left join public."gin-bales" gb on gb.id = bs.bale_id
-    where g.name is not null ${reqData?.country ? " and g.country_id = reqData?.country" : ""}  ${reqData?.ginner ? " and g.id = " + reqData?.ginner : ""} ${reqData?.brand ? " and g.brand @> ARRAY[" + reqData.brand + "]" : ""}
-    group by g.id;
-      `);
+  if (reqData?.brand){
+    where['$ginprocess.ginner.brand$'] = {
+      [Op.contains]: Sequelize.literal(`ARRAY [${reqData.brand}]`)
+    };
+    soldWhere['$ginner.brand$'] = {
+      [Op.contains]: Sequelize.literal(`ARRAY [${reqData.brand}]`)
+    };
+  }
+
+
+  if (reqData?.season){
+    where['$ginprocess.season_id$'] = reqData.season;
+    soldWhere.season_id = reqData.season;
+  }
+
+  if (reqData?.state){
+    where['$ginprocess.ginner.state_id$'] = reqData.state;
+    soldWhere['$ginner.state_id$'] = reqData.state;
+  }
+
+  if (reqData?.district){
+    where['$ginprocess.ginner.district_id$'] = reqData.district;
+    soldWhere['$ginner.district_id$'] = reqData.district;
+  }
+
+  if (reqData?.ginner){
+    where['$ginprocess.ginner.id$'] = reqData.ginner;
+    soldWhere['$ginner.id$'] = reqData.spinner;
+  }
+
+  if (reqData?.fromDate){
+    where['$ginprocess.date$'] = { [Op.gte]: reqData.fromDate };
+    soldWhere.date = { [Op.gte]: reqData.fromDate };
+  }
+
+  if (reqData?.toDate){
+    where['$ginprocess.date$'] = { [Op.lt]: reqData.toDate };
+    soldWhere.date = { [Op.lt]: reqData.toDate };
+  }
+
+  if (reqData?.fromDate && reqData?.toDate){
+    where['$ginprocess.date$'] = { [Op.between]: [reqData.fromDate, reqData.toDate] };
+    soldWhere.date = { [Op.between]: [reqData.fromDate, reqData.toDate] };
+  }
+
+
+
+  where['$ginprocess.ginner.name$'] = {
+    [Op.not]: null
+  };
+  soldWhere['$ginner.name$'] = {
+    [Op.not]: null
+  };
+  soldWhere.status = 'Sold';
+
+  const processedList = await GinBale.findAll({
+    attributes: [
+      [
+        sequelize.fn(
+              "COALESCE",
+        Sequelize.fn(
+          "SUM",
+          Sequelize.literal(`
+            CASE
+              WHEN "gin-bales"."old_weight" IS NOT NULL THEN CAST("gin-bales"."old_weight" AS DOUBLE PRECISION)
+              ELSE CAST("gin-bales"."weight" AS DOUBLE PRECISION)
+            END
+          `)
+        ),
+        0
+        ),
+        "processed",
+      ],
+      [Sequelize.col('ginprocess.ginner.name'), 'ginnerName'],
+      [Sequelize.col('ginprocess.ginner.id'), 'id']
+    ],
+    include: [
+      {
+        model: GinProcess,
+        as: "ginprocess",
+        attributes: [],
+        include: [{
+          model: Ginner,
+          as: 'ginner',
+          attributes: []
+        }],
+      },
+    ],
+    where,
+    group: ["ginprocess.ginner.id"],
+    raw: true
+  });
+
+  const soldList = await GinSales.findAll({
+    attributes: [
+      [Sequelize.col('ginner.name'), 'ginnerName'], 
+      [Sequelize.col('ginner.id'), 'id'], 
+      [Sequelize.fn('SUM', Sequelize.col('total_qty')), 'sold'],
+    ],
+    include: [
+      {
+        model: Season,
+        as: 'season',
+        attributes: [] 
+      },
+      {
+        model: Ginner,
+        as: "ginner",
+        attributes: []
+      }
+    ],
+    where: {
+      id: {
+        [Op.in]: Sequelize.literal(`(
+          SELECT DISTINCT sales_id
+          FROM bale_selections
+        )`)
+      },
+      ...soldWhere
+    },
+
+    // limit: 3,
+    group: ['ginner.id'],
+    raw: true
+  });
 
   let ginnerIds = soldList.map((row: any) => row.id)
-  ginnerIds.push([...processedList.map((row: any) => row.id)]);
+  ginnerIds = [...ginnerIds, ...processedList.map((row: any) => row.id)];
 
   ginnerIds = [...new Set(ginnerIds)];
   const data = []

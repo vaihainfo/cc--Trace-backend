@@ -1449,11 +1449,11 @@ const getTopYarnStockData = async (
     select sn.name                                                                            as "spinnerName",
        ((select sum(sp.net_yarn_qty) from public.spin_processes sp where sp.spinner_id = sn.id) -
         (select sum(sp.total_qty) from public.spin_sales sp where sp.spinner_id = sn.id)) as stock
-from public.spinners sn
-where sn.name is not null ${reqData?.country ? "and sn.country_id = reqData?.country" : ""} ${reqData?.spinner ? "and sn.id = " + reqData?.spinner : ""} ${reqData?.brand ? "and sn.brand @> ARRAY[" + reqData.brand + "]" : ""}
-group by sn.id
-order by stock desc nulls last
-limit 10
+    from public.spinners sn
+    where sn.name is not null ${reqData?.country ? "and sn.country_id = reqData?.country" : ""} ${reqData?.spinner ? "and sn.id = " + reqData?.spinner : ""} ${reqData?.brand ? "and sn.brand @> ARRAY[" + reqData.brand + "]" : ""}
+    group by sn.id
+    order by stock desc nulls last
+    limit 10
   `);
 
   return result;

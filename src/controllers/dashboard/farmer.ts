@@ -135,6 +135,41 @@ const getFarmerQuery = (
   return where;
 };
 
+const getFarmWhereQuery = (
+  reqData: any
+) => {
+  const where: any = {
+
+  };
+
+  if (reqData?.program)
+    where.program_id = reqData.program;
+
+  if (reqData?.brand)
+    where['$farmer.brand_id$'] = reqData.brand;
+
+  if (reqData?.season)
+    where.season_id = reqData.season;
+
+  if (reqData?.country)
+    where['$farmer.country_id$'] = reqData.country;
+
+  if (reqData?.state)
+    where['$farmer.state_id$'] = reqData.state;
+
+  if (reqData?.district)
+    where['$farmer.district_id$'] = reqData.district;
+
+  if (reqData?.block)
+    where['$farmer.block_id$'] = reqData.block;
+
+  if (reqData?.village)
+    where['$farmer.village_id$'] = reqData.village;
+
+
+  return where;
+};
+
 
 const getQueryParams = async (
   req: Request, res: Response
@@ -489,8 +524,9 @@ const getEstimateAndProduction = async (
     if (req.query.type == "2")
       reqData.season = undefined;
     const where = getOverAllDataQuery(reqData);
+    const farmWhere = getFarmWhereQuery(reqData)
     const transactionWhere = getTransactionWhereQuery(reqData);
-    const estimateProductionList = await getEstimateProductionBySeason(where);
+    const estimateProductionList = await getEstimateProductionBySeason(farmWhere);
     const procuredList = await getProcuredData(transactionWhere);
     const data = await getEstimateProductionList(estimateProductionList, procuredList);
     return res.sendSuccess(res, data);
