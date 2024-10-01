@@ -486,7 +486,7 @@ const getEstimateAndProcuredRes = async (
       let currentDate = moment(); // Current date using moment
       let checkDate = moment('2024-10-01'); // October 1st, 2024
       
-      if (currentDate.isSameOrAfter(checkDate) && season.name === '2024-25') {
+      if (currentDate.isSameOrAfter(checkDate) && season.name === '2024-25' && !seasonIds.includes(season.id)) {
         seasonIds.push(season.id);
       } else if(currentDate.isBefore(checkDate) && season.name === '2024-25' && seasonIds.includes(season.id)){
         seasonIds = seasonIds.filter((id: number) => id != season.id)
@@ -522,6 +522,15 @@ const getEstimateAndProcuredRes = async (
     if (fProcured) {
       data.seasonName = fProcured.dataValues.season.name;
       data.procured += mtConversion(fProcured.dataValues.procured);
+    }
+
+    if (!data.seasonName) {
+      const fSeason = seasons.find((season: any) =>
+        season.id == sessionId
+      );
+      if (fSeason) {
+        data.seasonName = fSeason.name;
+      }
     }
 
 
@@ -654,7 +663,7 @@ const getProcuredProcessedRes = async (
       let currentDate = moment(); // Current date using moment
       let checkDate = moment('2024-10-01'); // October 1st, 2024
       
-      if (currentDate.isSameOrAfter(checkDate) && season.name === '2024-25') {
+      if (currentDate.isSameOrAfter(checkDate) && season.name === '2024-25' && !seasonIds.includes(season.id)) {
         seasonIds.push(season.id);
       } else if(currentDate.isBefore(checkDate) && season.name === '2024-25' && seasonIds.includes(season.id)){
         seasonIds = seasonIds.filter((id: number) => id != season.id)
@@ -690,6 +699,15 @@ const getProcuredProcessedRes = async (
     if (fProcured) {
       data.seasonName = fProcured.dataValues.season.name;
       data.procured += mtConversion(fProcured.dataValues.procured);
+    }
+
+    if (!data.seasonName) {
+      const fSeason = seasons.find((season: any) =>
+        season.id == sessionId
+      );
+      if (fSeason) {
+        data.seasonName = fSeason.name;
+      }
     }
 
 
@@ -942,7 +960,7 @@ const getEstimateProcuredAndProductionRes = async (
       let currentDate = moment(); // Current date using moment
       let checkDate = moment('2024-10-01'); // October 1st, 2024
       
-      if (currentDate.isSameOrAfter(checkDate) && season.name === '2024-25') {
+      if (currentDate.isSameOrAfter(checkDate) && season.name === '2024-25' && !seasonIds.includes(season.id)) {
         seasonIds.push(season.id);
       } else if(currentDate.isBefore(checkDate) && season.name === '2024-25' && seasonIds.includes(season.id)){
         seasonIds = seasonIds.filter((id: number) => id != season.id)
@@ -989,6 +1007,15 @@ const getEstimateProcuredAndProductionRes = async (
     if (fEstimate) {
       data.seasonName = fEstimate.dataValues.season.name;
       data.estimate += mtConversion(fEstimate.dataValues.estimate);
+    }
+
+    if (!data.seasonName) {
+      const fSeason = seasons.find((season: any) =>
+        season.id == sessionId
+      );
+      if (fSeason) {
+        data.seasonName = fSeason.name;
+      }
     }
 
     season.push(data.seasonName);
@@ -1053,7 +1080,7 @@ const getEstimateCottonRes = async (
       let currentDate = moment(); // Current date using moment
       let checkDate = moment('2024-10-01'); // October 1st, 2024
       
-      if (currentDate.isSameOrAfter(checkDate) && season.name === '2024-25') {
+      if (currentDate.isSameOrAfter(checkDate) && season.name === '2024-25' && !seasonIds.includes(season.id)) {
         seasonIds.push(season.id);
       } else if(currentDate.isBefore(checkDate) && season.name === '2024-25' && seasonIds.includes(season.id)){
         seasonIds = seasonIds.filter((id: number) => id != season.id)
@@ -1181,7 +1208,7 @@ const getProcessedCottonRes = async (
       let currentDate = moment(); // Current date using moment
       let checkDate = moment('2024-10-01'); // October 1st, 2024
       
-      if (currentDate.isSameOrAfter(checkDate) && season.name === '2024-25') {
+      if (currentDate.isSameOrAfter(checkDate) && season.name === '2024-25' && !seasonIds.includes(season.id)) {
         seasonIds.push(season.id);
       } else if(currentDate.isBefore(checkDate) && season.name === '2024-25' && seasonIds.includes(season.id)){
         seasonIds = seasonIds.filter((id: number) => id != season.id)
@@ -1344,7 +1371,7 @@ const getProcessedEstimatedProcessedCottonRes = async (
       let currentDate = moment(); // Current date using moment
       let checkDate = moment('2024-10-01'); // October 1st, 2024
       
-      if (currentDate.isSameOrAfter(checkDate) && season.name === '2024-25') {
+      if (currentDate.isSameOrAfter(checkDate) && season.name === '2024-25' && !seasonIds.includes(season.id)) {
         seasonIds.push(season.id);
       } else if(currentDate.isBefore(checkDate) && season.name === '2024-25' && seasonIds.includes(season.id)){
         seasonIds = seasonIds.filter((id: number) => id != season.id)
