@@ -105,7 +105,7 @@ const User = db.define('users', {
 },
 is_otp_required: {
   type: DataTypes.BOOLEAN,
-  defaultValue: true,
+  defaultValue: false,
 },
 });
 
