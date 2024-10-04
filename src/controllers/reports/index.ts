@@ -12506,6 +12506,7 @@ const exportPscpGinnerCottonProcurement = async (
 
 const fetchPscpProcurementLiveTracker = async (req: Request, res: Response) => {
   try {
+    
     const { seasonId, countryId, brandId, ginnerId, search, page = 1, limit = 10 }: any = req.query;
     const offset = (Number(page) - 1) * Number(limit);
 
@@ -12545,6 +12546,24 @@ const fetchPscpProcurementLiveTracker = async (req: Request, res: Response) => {
     const seasonConditionSql = seasonCondition.length ? `${seasonCondition.join(' AND ')}` : '1=1';
     const brandConditionSql = brandCondition.length ? `${brandCondition.join(' AND ')}` : '1=1';
     const baleConditionSql = baleCondition.length ? `${baleCondition.join(' AND ')}` : '1=1';
+
+    const currentDate = new Date();
+    const previousYearDate = new Date(currentDate);
+    previousYearDate.setFullYear(currentDate.getFullYear() - 1);
+    const allSeasons = await Season.findAll({});
+
+    let previousSeasonIndex = allSeasons.findIndex((season: any) => {
+        const fromDate = new Date(season.from);
+        const toDate = new Date(season.to);
+        return previousYearDate >= fromDate && previousYearDate <= toDate;
+    });
+    if (previousSeasonIndex === -1) {
+      previousSeasonIndex = allSeasons.length - 1; // Fallback to the last season
+  }
+  
+  // Retrieve the current season
+  const prevSeason = allSeasons[previousSeasonIndex];
+  const prevSeasonId = prevSeason?.id;
 
     let countQuery = `
             SELECT 
@@ -12666,6 +12685,40 @@ const fetchPscpProcurementLiveTracker = async (req: Request, res: Response) => {
           GROUP BY
             gs.ginner_id
         ),
+        gin_sales_pre_data AS (
+          SELECT
+            gs.ginner_id,
+            SUM(gs.no_of_bales) AS no_of_pre_bales,
+            SUM(gs.total_qty) AS pre_total_qty
+          FROM
+            gin_sales gs
+          JOIN filtered_ginners ON gs.ginner_id = filtered_ginners.id
+          WHERE
+            gs.program_id = ANY (filtered_ginners.program_id)
+            AND gs.season_id = ${prevSeasonId}
+            AND gs.status = 'Sold'
+          GROUP BY
+            gs.ginner_id
+        ),
+        gin_sales_pending_data AS (
+          SELECT
+            gsp.ginner_id,
+            SUM(gsp.no_of_bales) AS no_of_pending_bales,
+            SUM(gsp.total_qty) AS pending_total_qty
+          FROM
+            gin_sales gsp
+          JOIN filtered_ginners ON gsp.ginner_id = filtered_ginners.id
+          WHERE
+            gsp.program_id = ANY (filtered_ginners.program_id)
+            AND ${seasonConditionSql}
+            AND (
+                gsp.status = 'Sold'
+                OR gsp.status = 'Partially Rejected'
+                OR gsp.status = 'Rejected'
+            )
+          GROUP BY
+            gsp.ginner_id
+        ),
         expected_cotton_data AS (
           SELECT
             gec.ginner_id,
@@ -12714,6 +12767,10 @@ const fetchPscpProcurementLiveTracker = async (req: Request, res: Response) => {
           ELSE 0
         END AS procurement,
         COALESCE(gp.no_of_bales, 0) AS no_of_bales,
+        COALESCE(gsp.no_of_pending_bales, 0) AS no_of_pending_bales,
+        COALESCE(gsp.pending_total_qty, 0) AS pending_total_qty,
+        COALESCE(gspp.no_of_pre_bales, 0) AS no_of_pre_bales,
+        COALESCE(gspp.pre_total_qty, 0) AS pre_total_qty,
         COALESCE(gb.total_qty, 0) / 1000 AS total_qty_lint_produced,
         COALESCE(gs.no_of_bales, 0) AS sold_bales,
         CASE
@@ -12745,6 +12802,8 @@ const fetchPscpProcurementLiveTracker = async (req: Request, res: Response) => {
         LEFT JOIN gin_bale_data gb ON fg.id = gb.ginner_id
         LEFT JOIN pending_seed_cotton_data psc ON fg.id = psc.mapped_ginner
         LEFT JOIN gin_sales_data gs ON fg.id = gs.ginner_id
+        LEFT JOIN gin_sales_pending_data gsp ON fg.id = gsp.ginner_id
+        LEFT JOIN gin_sales_pre_data gspp ON fg.id = gspp.ginner_id
         LEFT JOIN expected_cotton_data ec ON fg.id = ec.ginner_id
         LEFT JOIN ginner_order_data go ON fg.id = go.ginner_id
       ORDER BY
@@ -12764,6 +12823,7 @@ const fetchPscpProcurementLiveTracker = async (req: Request, res: Response) => {
         type: sequelize.QueryTypes.SELECT
       }
     );
+    
     return res.sendPaginationSuccess(
       res,
       data,
@@ -13031,7 +13091,7 @@ const exportPscpProcurementLiveTracker = async (
     let brandCondition: string[] = [];
     let baleCondition: string[] = [];
 
-    if (exportType === "all") {
+    if (exportType === "all") {File not found or not accessibl
 
       return res.status(200).send({
         success: true,
@@ -13072,6 +13132,24 @@ const exportPscpProcurementLiveTracker = async (
       const seasonConditionSql = seasonCondition.length ? `${seasonCondition.join(' AND ')}` : '1=1';
       const brandConditionSql = brandCondition.length ? `${brandCondition.join(' AND ')}` : '1=1';
       const baleConditionSql = baleCondition.length ? `${baleCondition.join(' AND ')}` : '1=1';
+
+      const currentDate = new Date();
+      const previousYearDate = new Date(currentDate);
+      previousYearDate.setFullYear(currentDate.getFullYear() - 1);
+      const allSeasons = await Season.findAll({});
+
+      let previousSeasonIndex = allSeasons.findIndex((season: any) => {
+          const fromDate = new Date(season.from);
+          const toDate = new Date(season.to);
+          return previousYearDate >= fromDate && previousYearDate <= toDate;
+      });
+      if (previousSeasonIndex === -1) {
+        previousSeasonIndex = allSeasons.length - 1; // Fallback to the last season
+    }
+    
+    // Retrieve the current season
+    const prevSeason = allSeasons[previousSeasonIndex];
+    const prevSeasonId = prevSeason?.id;
       // Create the excel workbook file
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet("Sheet1");
@@ -13107,6 +13185,10 @@ const exportPscpProcurementLiveTracker = async (
           "Balance stock in  bales with Ginner",
           "Balance stock with Ginner (MT)",
           "Ginner Sale %",
+          "Ginner Pending Sales (Bales)",
+          "Ginner Pending Sales (Weight)",
+          "No. of Bales Sold(Previous season)",
+          "Lint Sold (Previous season)",
         ]);
       } else {
         headerRow = worksheet.addRow([
@@ -13129,6 +13211,10 @@ const exportPscpProcurementLiveTracker = async (
           "Balance stock in  bales with Ginner",
           "Balance stock with Ginner (MT)",
           "Ginner Sale %",
+          "Ginner Pending Sales (Bales)",
+          "Ginner Pending Sales (Weight)",
+          "No. of Bales Sold(Previous season)",
+          "Lint Sold (Previous season)",
         ]);
       }
       headerRow.font = { bold: true };
@@ -13225,6 +13311,40 @@ const exportPscpProcurementLiveTracker = async (
             GROUP BY
               gs.ginner_id
           ),
+          gin_sales_pre_data AS (
+            SELECT
+              gs.ginner_id,
+              SUM(gs.no_of_bales) AS no_of_pre_bales,
+              SUM(gs.total_qty) AS pre_total_qty
+            FROM
+              gin_sales gs
+            JOIN filtered_ginners ON gs.ginner_id = filtered_ginners.id
+            WHERE
+              gs.program_id = ANY (filtered_ginners.program_id)
+              AND gs.season_id = ${prevSeasonId}
+              AND gs.status = 'Sold'
+            GROUP BY
+              gs.ginner_id
+          ),
+          gin_sales_pending_data AS (
+            SELECT
+              gsp.ginner_id,
+              SUM(gsp.no_of_bales) AS no_of_pending_bales,
+              SUM(gsp.total_qty) AS pending_total_qty
+            FROM
+              gin_sales gsp
+            JOIN filtered_ginners ON gsp.ginner_id = filtered_ginners.id
+            WHERE
+              gsp.program_id = ANY (filtered_ginners.program_id)
+              AND ${seasonConditionSql}
+              AND (
+                  gsp.status = 'Sold'
+                  OR gsp.status = 'Partially Rejected'
+                  OR gsp.status = 'Rejected'
+              )
+            GROUP BY
+              gsp.ginner_id
+          ),
           expected_cotton_data AS (
             SELECT
               gec.ginner_id,
@@ -13273,6 +13393,10 @@ const exportPscpProcurementLiveTracker = async (
             ELSE 0
           END AS procurement,
           COALESCE(gp.no_of_bales, 0) AS no_of_bales,
+          COALESCE(gsp.no_of_pending_bales, 0) AS no_of_pending_bales,
+          COALESCE(gsp.pending_total_qty, 0) AS pending_total_qty,
+          COALESCE(gspp.no_of_pre_bales, 0) AS no_of_pre_bales,
+          COALESCE(gspp.pre_total_qty, 0) AS pre_total_qty,
           COALESCE(gb.total_qty, 0) / 1000 AS total_qty_lint_produced,
           COALESCE(gs.no_of_bales, 0) AS sold_bales,
           CASE
@@ -13304,6 +13428,8 @@ const exportPscpProcurementLiveTracker = async (
           LEFT JOIN gin_bale_data gb ON fg.id = gb.ginner_id
           LEFT JOIN pending_seed_cotton_data psc ON fg.id = psc.mapped_ginner
           LEFT JOIN gin_sales_data gs ON fg.id = gs.ginner_id
+          LEFT JOIN gin_sales_pending_data gsp ON fg.id = gsp.ginner_id
+          LEFT JOIN gin_sales_pre_data gspp ON fg.id = gspp.ginner_id
           LEFT JOIN expected_cotton_data ec ON fg.id = ec.ginner_id
           LEFT JOIN ginner_order_data go ON fg.id = go.ginner_id
         ORDER BY
@@ -13351,6 +13477,10 @@ const exportPscpProcurementLiveTracker = async (
             balace_stock: obj.balace_stock ? Number(obj.balace_stock) : 0,
             balance_lint_quantity: obj.balance_lint_quantity ? Number(formatDecimal(obj.balance_lint_quantity)) : 0,
             ginner_sale_percentage: Number(obj.ginner_sale_percentage),
+            no_of_pending_bales: obj.no_of_pending_bales ? Number(obj.no_of_pending_bales) : 0,
+            pending_total_qty: obj.pending_total_qty ? Number(obj.pending_total_qty) : 0,
+            no_of_pre_bales: obj.no_of_pre_bales ? Number(obj.no_of_pre_bales) : 0,
+            pre_total_qty: obj.pre_total_qty ? Number(obj.pre_total_qty) : 0,
           });
         } else {
           rowValues = Object.values({
@@ -13377,6 +13507,10 @@ const exportPscpProcurementLiveTracker = async (
             balace_stock: obj.balace_stock ? Number(obj.balace_stock) : 0,
             balance_lint_quantity: obj.balance_lint_quantity ? Number(formatDecimal(obj.balance_lint_quantity)) : 0,
             ginner_sale_percentage: Number(obj.ginner_sale_percentage),
+            no_of_pending_bales: obj.no_of_pending_bales ? Number(obj.no_of_pending_bales) : 0,
+            pending_total_qty: obj.pending_total_qty ? Number(obj.pending_total_qty) : 0,
+            no_of_pre_bales: obj.no_of_pre_bales ? Number(obj.no_of_pre_bales) : 0,
+            pre_total_qty: obj.pre_total_qty ? Number(obj.pre_total_qty) : 0,
           });
         }
         index++;
