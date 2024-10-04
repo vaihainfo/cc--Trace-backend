@@ -1562,11 +1562,14 @@ const updateStatusSales = async (req: Request, res: Response) => {
                 accept_date: obj.status === 'Sold' ? new Date().toISOString() : null
             };
 
+            let rejectedBalesId = [];
+
             for await (const bale of obj.bales) {
                 const isNotUpdated = await BaleSelection.findOne({ where: { bale_id: bale.id, sales_id: obj.id, spinner_status: null } });
                 if(isNotUpdated){
                     if (obj.status !== 'Sold') {
-                        await GinBale.update({ sold_status: false }, { where: { id: bale.id } });
+                        rejectedBalesId.push(bale.id);
+                        // await GinBale.update({ sold_status: false }, { where: { id: bale.id } });
                     }
     
                     if (obj.status === 'Sold') {
@@ -1596,6 +1599,17 @@ const updateStatusSales = async (req: Request, res: Response) => {
                 status = 'Partially Accepted';
             } else {
                 status = 'Partially Rejected';
+            }
+
+            if(obj.status !== 'Sold' && rejectedBalesId && rejectedBalesId.length > 0){
+                console.log("Rejected Bales", rejectedBalesId)
+                if(status === 'Rejected'){
+                    console.log("==== Completely Rejected ====")
+                    await GinBale.update({ sold_status: false, is_all_rejected: true }, { where: { id: rejectedBalesId } });
+                }else if(status === 'Partially Accepted' || status === 'Partially Rejected'){
+                    console.log("===== Not Completely Rejected =====")
+                    await GinBale.update({ sold_status: false, is_all_rejected: false }, { where: { id: rejectedBalesId } });
+                }
             }
 
             data = { ...data, status: status }

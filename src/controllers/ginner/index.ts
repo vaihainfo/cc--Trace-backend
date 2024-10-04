@@ -642,6 +642,7 @@ const chooseBale = async (req: Request, res: Response) => {
                   'id', gb.id,
                   'bale_no', gb.bale_no,
                   'weight', gb.weight,
+                  'is_all_rejected', gb.is_all_rejected,
                   'greyout_status', gp.greyout_status
               ) ORDER BY gb.id ASC)
           ) AS result
