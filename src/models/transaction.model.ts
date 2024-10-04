@@ -150,7 +150,11 @@ const Transaction = db.define('transactions', {
   },
   agent_id: {
     type: DataTypes.INTEGER
-  }
+  },
+  greyout_status: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+  },
 });
 
 

@@ -130,9 +130,7 @@ const getTransactionDataQuery = (
     where.program_id = reqData.program;
 
   if (reqData?.brand)
-    where['$ginner.brand$'] = {
-      [Op.contains]: Sequelize.literal(`ARRAY [${reqData.brand}]`)
-    };
+    where.brand_id = reqData.brand;
 
   // if (reqData?.brand)
   //   where.brand_id = reqData.brand;
@@ -263,6 +261,53 @@ const getBaleProducedQuery = (
 
   if (reqData?.fromDate && reqData?.toDate)
     where.date = { [Op.between]: [reqData.fromDate, reqData.toDate] };
+
+  return where;
+};
+
+const getGinnerSalesWhereQuery = (
+  reqData: any
+) => {
+  const where: any = {
+    
+  };
+
+  if (reqData?.program)
+    where.program_id = reqData.program;
+
+  if (reqData?.brand)
+    where['$ginner.brand$'] = {
+      [Op.contains]: Sequelize.literal(`ARRAY [${reqData.brand}]`)
+    };
+
+  if (reqData?.season)
+    where.season_id = reqData.season;
+  else
+    where.season_id = {
+      [Op.not]: null,
+    };
+
+  if (reqData?.country)
+    where['$ginner.country_id$'] = reqData.country;
+
+  if (reqData?.state)
+    where['$ginner.state_id$'] = reqData.state;
+
+  if (reqData?.district)
+    where['$ginner.district_id$'] = reqData.district;
+
+  if (reqData?.spinner)
+    where['$ginner.id$'] = reqData.spinner;
+
+  if (reqData?.fromDate)
+    where.date = { [Op.gte]: reqData.fromDate };
+
+  if (reqData?.toDate)
+    where.date = { [Op.lt]: reqData.toDate };
+
+  if (reqData?.fromDate && reqData?.toDate)
+    where.date = { [Op.between]: [reqData.fromDate, reqData.toDate] };
+
 
   return where;
 };
@@ -506,8 +551,7 @@ const getProcuredProcessed = async (
     const processedData = await getLintProcessedData(ginnerWhere);
     const data = await getProcuredProcessedRes(
       procuredData,
-      processedData,
-      reqData.season
+      processedData
     );
     return res.sendSuccess(res, data);
 
@@ -523,7 +567,6 @@ const getProcuredProcessed = async (
 const getProcuredProcessedRes = async (
   procuredData: any[],
   processedData: any[],
-  reqSeason: any
 ) => {
   let seasonIds: number[] = [];
 
@@ -543,12 +586,12 @@ const getProcuredProcessedRes = async (
       ["id", "DESC"],
     ],
   });
-  if (seasonIds.length != 3 && !reqSeason) {
+  if (seasonIds.length != 3) {
     for (const season of seasons) {
       let currentDate = moment(); // Current date using moment
       let checkDate = moment('2024-10-01'); // October 1st, 2024
       
-      if (currentDate.isSameOrAfter(checkDate) && season.name === '2024-25') {
+      if (currentDate.isSameOrAfter(checkDate) && season.name === '2024-25' && !seasonIds.includes(season.id)) {
         seasonIds.push(season.id);
       } else if(currentDate.isBefore(checkDate) && season.name === '2024-25' && seasonIds.includes(season.id)){
         seasonIds = seasonIds.filter((id: number) => id != season.id)
@@ -675,9 +718,9 @@ const getLintProcuredSold = async (
   try {
     const reqData = await getQueryParams(req, res);
     const procuredWhere = await getGinBaleQuery(reqData);
-    const baleSel = getBaleSelectionQuery(reqData);
+    const baleSel = getGinnerSalesWhereQuery(reqData);
     const procuredData = await getBaleProcuredData(procuredWhere);
-    const soldData = await getBaleSoldData(procuredWhere);
+    const soldData = await getBaleSoldData(baleSel);
     const data = await getLintProcuredSoldRes(
       procuredData,
       soldData,
@@ -721,7 +764,7 @@ const getLintProcuredSoldRes = async (
       let currentDate = moment(); // Current date using moment
       let checkDate = moment('2024-10-01'); // October 1st, 2024
       
-      if (currentDate.isSameOrAfter(checkDate) && season.name === '2024-25') {
+      if (currentDate.isSameOrAfter(checkDate) && season.name === '2024-25' && !seasonIds.includes(season.id)) {
         seasonIds.push(season.id);
       } else if(currentDate.isBefore(checkDate) && season.name === '2024-25' && seasonIds.includes(season.id)){
         seasonIds = seasonIds.filter((id: number) => id != season.id)
@@ -1066,9 +1109,9 @@ const getBaleComparison = async (
     const reqData = await getQueryParams(req, res);
     const ginBale = getGinBaleQuery(reqData);
     const ginBaleProduce = getBaleProducedQuery(reqData);
-    const baleSel = getBaleSelectionQuery(reqData);
+    const baleSel = getGinnerSalesWhereQuery(reqData);
     const procuredData = await getBaleNewProducedData(ginBaleProduce);
-    const soldData = await getBaleSoldData(ginBale);
+    const soldData = await getBaleSoldData(baleSel);
     const data = await getBaleComparisonRes(
       procuredData,
       soldData,
@@ -1181,55 +1224,41 @@ const getBaleProcuredData = async (
 const getBaleSoldData = async (
   where: any
 ) => {
-  where.sold_status = true
-  const result = await GinBale.findAll({
+  // where.sold_status = true
+  where.status = 'Sold';
+
+    const result = await GinSales.findAll({
     attributes: [
-      [
-        sequelize.fn(
-          "COUNT",
-          Sequelize.literal('DISTINCT "gin-bales"."id"')
-        ),
-        "sold",
-      ],
-      [
-        sequelize.fn(
-              "COALESCE",
-        Sequelize.fn(
-          "SUM",
-          Sequelize.literal(`
-            CASE
-              WHEN "gin-bales"."old_weight" IS NOT NULL THEN CAST("gin-bales"."old_weight" AS DOUBLE PRECISION)
-              ELSE CAST("gin-bales"."weight" AS DOUBLE PRECISION)
-            END
-          `)
-        ),
-        0
-        ),
-        "lintSold",
-      ],
-      [Sequelize.col('ginprocess.season.name'), 'seasonName'],
-      [Sequelize.col('ginprocess.season.id'), 'seasonId']
+      [Sequelize.col('season.id'), 'seasonId'],   // season_id from Season
+      [Sequelize.col('season.name'), 'seasonName'], 
+      [Sequelize.fn('SUM', Sequelize.col('no_of_bales')), 'sold'],
+      [Sequelize.fn('SUM', Sequelize.col('total_qty')), 'lintSold'],
     ],
     include: [
       {
-        model: GinProcess,
-        as: "ginprocess",
-        attributes: [],
-        include: [{
-          model: Season,
-          as: 'season',
-          attributes: []
-        }, {
-          model: Ginner,
-          as: 'ginner',
-          attributes: []
-        }],
+        model: Season,
+        as: 'season',
+        attributes: [] 
       },
+      {
+        model: Ginner,
+        as: "ginner",
+        attributes: []
+      }
     ],
-    where,
-    // limit: 3,
+    where: {
+      id: {
+        [Op.in]: Sequelize.literal(`(
+          SELECT DISTINCT sales_id
+          FROM bale_selections
+        )`)
+      },
+      ...where
+    },
     order: [['seasonId', 'desc']],
-    group: ["ginprocess.season.id"],
+    // limit: 3,
+    group: ['season.id'],
+    // raw: true
   });
 
   return result;
@@ -1265,7 +1294,7 @@ const getBaleComparisonRes = async (
       let currentDate = moment(); // Current date using moment
       let checkDate = moment('2024-10-01'); // October 1st, 2024
       
-      if (currentDate.isSameOrAfter(checkDate) && season.name === '2024-25') {
+      if (currentDate.isSameOrAfter(checkDate) && season.name === '2024-25' && !seasonIds.includes(season.id)) {
         seasonIds.push(season.id);
       } else if(currentDate.isBefore(checkDate) && season.name === '2024-25' && seasonIds.includes(season.id)){
         seasonIds = seasonIds.filter((id: number) => id != season.id)
@@ -1459,7 +1488,7 @@ const getLintSoldTopGinners = async (
 ) => {
   try {
     const reqData = await getQueryParams(req, res);
-    const baleSel = getBaleSelectionQuery(reqData);
+    const baleSel = getGinnerSalesWhereQuery(reqData);
     const ginnersData = await getLintSoldTopGinnersData(baleSel);
     const data = await getTopGinnersRes(ginnersData);
     return res.sendSuccess(res, data);
@@ -1476,52 +1505,43 @@ const getLintSoldTopGinnersData = async (
   where: any
 ) => {
 
-  where['$sales.ginner.name$'] = {
+  where['$ginner.name$'] = {
     [Op.not]: null
   };
 
-  const result = await BaleSelection.findAll({
+  where.status = 'Sold';
+
+    const result = await GinSales.findAll({
     attributes: [
-      [
-        sequelize.fn(
-          "COALESCE",
-          sequelize.fn(
-            "SUM",
-            Sequelize.literal(`
-              CASE
-                WHEN "bale"."old_weight" IS NOT NULL THEN CAST("bale"."old_weight" AS DOUBLE PRECISION)
-                ELSE CAST("bale"."weight" AS DOUBLE PRECISION)
-              END
-            `)
-          ),
-          0
-        ),
-        "total",
-      ],
-      [Sequelize.col('sales.ginner.name'), 'ginnerName']
+      [Sequelize.col('ginner.name'), 'ginnerName'], 
+      [Sequelize.fn('SUM', Sequelize.col('total_qty')), 'total'],
     ],
     include: [
       {
-        model: GinSales,
-        as: "sales",
-        attributes: [],
-        include: [{
-          model: Ginner,
-          as: 'ginner',
-          attributes: [],
-        }
-        ],
+        model: Season,
+        as: 'season',
+        attributes: [] 
       },
       {
-        model: GinBale,
-        as: "bale",
-        attributes: [],
-      },
+        model: Ginner,
+        as: "ginner",
+        attributes: []
+      }
     ],
-    where,
+    where: {
+      id: {
+        [Op.in]: Sequelize.literal(`(
+          SELECT DISTINCT sales_id
+          FROM bale_selections
+        )`)
+      },
+      ...where
+    },
     order: [['total', 'desc']],
     limit: 10,
-    group: ["sales.ginner.id"],
+    // limit: 3,
+    group: ['ginner.id'],
+    // raw: true
   });
 
   return result;
@@ -1549,46 +1569,142 @@ const getLintStockTopGinnersData = async (
   reqData: any
 ) => {
 
+  const where: any = {};
+  const soldWhere: any = {};
 
-  const [processedList] = await sequelize.query(`
-    select g.name                                    as "ginnerName",
-         g.id                                      as "id",
-         COALESCE(
-                  SUM(
-                    CASE
-                      WHEN gbp.old_weight IS NOT NULL THEN CAST(gbp.old_weight AS DOUBLE PRECISION)
-                      ELSE CAST(gbp.weight AS DOUBLE PRECISION)
-                    END
-                  ), 0
-              ) AS "processed"
-    from public.ginners g
-         left join public.gin_processes gp on gp.ginner_id = g.id
-         left join public."gin-bales" gbp on gbp.process_id = gp.id
-    where g.name is not null ${reqData?.country ? " and g.country_id = reqData?.country" : ""} ${reqData?.ginner ? " and g.id = " + reqData?.ginner : ""} ${reqData?.brand ? " and g.brand @> ARRAY[" + reqData.brand + "]" : ""}
-    group by g.id; 
-    `);
+  if (reqData?.country){
+    where['$ginprocess.ginner.country_id$'] = reqData.country;
+    soldWhere['$ginner.country_id$'] = reqData.country;
+  }
 
-  const [soldList] = await sequelize.query(`
-      select g.name                                   as "ginnerName",
-         g.id                                      as "id",
-        COALESCE(
-                  SUM(
-                    CASE
-                      WHEN gb.old_weight IS NOT NULL THEN CAST(gb.old_weight AS DOUBLE PRECISION)
-                      ELSE CAST(gb.weight AS DOUBLE PRECISION)
-                    END
-                  ), 0
-              ) AS "sold"
-      from public.ginners g
-         left join public.gin_sales gs on g.id = gs.ginner_id
-         left join public.bale_selections bs on bs.sales_id = gs.id
-         left join public."gin-bales" gb on gb.id = bs.bale_id
-    where g.name is not null ${reqData?.country ? " and g.country_id = reqData?.country" : ""}  ${reqData?.ginner ? " and g.id = " + reqData?.ginner : ""} ${reqData?.brand ? " and g.brand @> ARRAY[" + reqData.brand + "]" : ""}
-    group by g.id;
-      `);
+  if (reqData?.brand){
+    where['$ginprocess.ginner.brand$'] = {
+      [Op.contains]: Sequelize.literal(`ARRAY [${reqData.brand}]`)
+    };
+    soldWhere['$ginner.brand$'] = {
+      [Op.contains]: Sequelize.literal(`ARRAY [${reqData.brand}]`)
+    };
+  }
+
+
+  if (reqData?.season){
+    where['$ginprocess.season_id$'] = reqData.season;
+    soldWhere.season_id = reqData.season;
+  }
+
+  if (reqData?.state){
+    where['$ginprocess.ginner.state_id$'] = reqData.state;
+    soldWhere['$ginner.state_id$'] = reqData.state;
+  }
+
+  if (reqData?.district){
+    where['$ginprocess.ginner.district_id$'] = reqData.district;
+    soldWhere['$ginner.district_id$'] = reqData.district;
+  }
+
+  if (reqData?.ginner){
+    where['$ginprocess.ginner.id$'] = reqData.ginner;
+    soldWhere['$ginner.id$'] = reqData.spinner;
+  }
+
+  if (reqData?.fromDate){
+    where['$ginprocess.date$'] = { [Op.gte]: reqData.fromDate };
+    soldWhere.date = { [Op.gte]: reqData.fromDate };
+  }
+
+  if (reqData?.toDate){
+    where['$ginprocess.date$'] = { [Op.lt]: reqData.toDate };
+    soldWhere.date = { [Op.lt]: reqData.toDate };
+  }
+
+  if (reqData?.fromDate && reqData?.toDate){
+    where['$ginprocess.date$'] = { [Op.between]: [reqData.fromDate, reqData.toDate] };
+    soldWhere.date = { [Op.between]: [reqData.fromDate, reqData.toDate] };
+  }
+
+
+
+  where['$ginprocess.ginner.name$'] = {
+    [Op.not]: null
+  };
+  soldWhere['$ginner.name$'] = {
+    [Op.not]: null
+  };
+  soldWhere.status = 'Sold';
+
+  const processedList = await GinBale.findAll({
+    attributes: [
+      [
+        sequelize.fn(
+              "COALESCE",
+        Sequelize.fn(
+          "SUM",
+          Sequelize.literal(`
+            CASE
+              WHEN "gin-bales"."old_weight" IS NOT NULL THEN CAST("gin-bales"."old_weight" AS DOUBLE PRECISION)
+              ELSE CAST("gin-bales"."weight" AS DOUBLE PRECISION)
+            END
+          `)
+        ),
+        0
+        ),
+        "processed",
+      ],
+      [Sequelize.col('ginprocess.ginner.name'), 'ginnerName'],
+      [Sequelize.col('ginprocess.ginner.id'), 'id']
+    ],
+    include: [
+      {
+        model: GinProcess,
+        as: "ginprocess",
+        attributes: [],
+        include: [{
+          model: Ginner,
+          as: 'ginner',
+          attributes: []
+        }],
+      },
+    ],
+    where,
+    group: ["ginprocess.ginner.id"],
+    raw: true
+  });
+
+  const soldList = await GinSales.findAll({
+    attributes: [
+      [Sequelize.col('ginner.name'), 'ginnerName'], 
+      [Sequelize.col('ginner.id'), 'id'], 
+      [Sequelize.fn('SUM', Sequelize.col('total_qty')), 'sold'],
+    ],
+    include: [
+      {
+        model: Season,
+        as: 'season',
+        attributes: [] 
+      },
+      {
+        model: Ginner,
+        as: "ginner",
+        attributes: []
+      }
+    ],
+    where: {
+      id: {
+        [Op.in]: Sequelize.literal(`(
+          SELECT DISTINCT sales_id
+          FROM bale_selections
+        )`)
+      },
+      ...soldWhere
+    },
+
+    // limit: 3,
+    group: ['ginner.id'],
+    raw: true
+  });
 
   let ginnerIds = soldList.map((row: any) => row.id)
-  ginnerIds.push([...processedList.map((row: any) => row.id)]);
+  ginnerIds = [...ginnerIds, ...processedList.map((row: any) => row.id)];
 
   ginnerIds = [...new Set(ginnerIds)];
   const data = []
@@ -1668,7 +1784,7 @@ const getLintProcessedRes = async (
       let currentDate = moment(); // Current date using moment
       let checkDate = moment('2024-10-01'); // October 1st, 2024
       
-      if (currentDate.isSameOrAfter(checkDate) && season.name === '2024-25') {
+      if (currentDate.isSameOrAfter(checkDate) && season.name === '2024-25' && !seasonIds.includes(season.id)) {
         seasonIds.push(season.id);
       } else if(currentDate.isBefore(checkDate) && season.name === '2024-25' && seasonIds.includes(season.id)){
         seasonIds = seasonIds.filter((id: number) => id != season.id)
@@ -1727,7 +1843,7 @@ const getLintSoldByCountry = async (
   try {
 
     const reqData = await getQueryParams(req, res);
-    const ginBale = getGinBaleQuery(reqData);
+    const ginBale = getGinnerSalesWhereQuery(reqData);
     const soldList = await getBaleSoldByCountryData(ginBale);
     const data = await getLintSoldRes(soldList, reqData.season);
     return res.sendSuccess(res, data);
@@ -1766,7 +1882,7 @@ const getLintSoldRes = async (
       let currentDate = moment(); // Current date using moment
       let checkDate = moment('2024-10-01'); // October 1st, 2024
       
-      if (currentDate.isSameOrAfter(checkDate) && season.name === '2024-25') {
+      if (currentDate.isSameOrAfter(checkDate) && season.name === '2024-25' && !seasonIds.includes(season.id)) {
         seasonIds.push(season.id);
       } else if(currentDate.isBefore(checkDate) && season.name === '2024-25' && seasonIds.includes(season.id)){
         seasonIds = seasonIds.filter((id: number) => id != season.id)
@@ -1901,7 +2017,7 @@ const getProcuredAllocatedRes = async (
       let currentDate = moment(); // Current date using moment
       let checkDate = moment('2024-10-01'); // October 1st, 2024
       
-      if (currentDate.isSameOrAfter(checkDate) && season.name === '2024-25') {
+      if (currentDate.isSameOrAfter(checkDate) && season.name === '2024-25' && !seasonIds.includes(season.id)) {
         seasonIds.push(season.id);
       } else if(currentDate.isBefore(checkDate) && season.name === '2024-25' && seasonIds.includes(season.id)){
         seasonIds = seasonIds.filter((id: number) => id != season.id)
@@ -2040,7 +2156,7 @@ const getOutturnCountryRes = async (
       let currentDate = moment(); // Current date using moment
       let checkDate = moment('2024-10-01'); // October 1st, 2024
       
-      if (currentDate.isSameOrAfter(checkDate) && season.name === '2024-25') {
+      if (currentDate.isSameOrAfter(checkDate) && season.name === '2024-25' && !seasonIds.includes(season.id)) {
         seasonIds.push(season.id);
       } else if(currentDate.isBefore(checkDate) && season.name === '2024-25' && seasonIds.includes(season.id)){
         seasonIds = seasonIds.filter((id: number) => id != season.id)
@@ -2174,7 +2290,7 @@ const getProcuredDataRes = async (
       let currentDate = moment(); // Current date using moment
       let checkDate = moment('2024-10-01'); // October 1st, 2024
       
-      if (currentDate.isSameOrAfter(checkDate) && season.name === '2024-25') {
+      if (currentDate.isSameOrAfter(checkDate) && season.name === '2024-25' && !seasonIds.includes(season.id)) {
         seasonIds.push(season.id);
       } else if(currentDate.isBefore(checkDate) && season.name === '2024-25' && seasonIds.includes(season.id)){
         seasonIds = seasonIds.filter((id: number) => id != season.id)
@@ -2306,7 +2422,7 @@ const getProcessedDataRes = async (
       let currentDate = moment(); // Current date using moment
       let checkDate = moment('2024-10-01'); // October 1st, 2024
       
-      if (currentDate.isSameOrAfter(checkDate) && season.name === '2024-25') {
+      if (currentDate.isSameOrAfter(checkDate) && season.name === '2024-25' && !seasonIds.includes(season.id)) {
         seasonIds.push(season.id);
       } else if(currentDate.isBefore(checkDate) && season.name === '2024-25' && seasonIds.includes(season.id)){
         seasonIds = seasonIds.filter((id: number) => id != season.id)
@@ -2410,7 +2526,7 @@ const getBalesProcuredByCountryDataRes = async (
       let currentDate = moment(); // Current date using moment
       let checkDate = moment('2024-10-01'); // October 1st, 2024
       
-      if (currentDate.isSameOrAfter(checkDate) && season.name === '2024-25') {
+      if (currentDate.isSameOrAfter(checkDate) && season.name === '2024-25' && !seasonIds.includes(season.id)) {
         seasonIds.push(season.id);
       } else if(currentDate.isBefore(checkDate) && season.name === '2024-25' && seasonIds.includes(season.id)){
         seasonIds = seasonIds.filter((id: number) => id != season.id)
@@ -2564,7 +2680,7 @@ const getBalesSoldByCountry = async (
 
     const reqData = await getQueryParams(req, res);
     // const where = getBaleSelectionQuery(reqData);
-    const where = getGinBaleQuery(reqData);
+    const where = getGinnerSalesWhereQuery(reqData);
     const processedData = await getBaleSoldByCountryData(where);
     const data = await getBaleSoldByCountryRes(processedData, reqData.season);
     return res.sendSuccess(res, data);
@@ -2604,7 +2720,7 @@ const getBaleSoldByCountryRes = async (
       let currentDate = moment(); // Current date using moment
       let checkDate = moment('2024-10-01'); // October 1st, 2024
       
-      if (currentDate.isSameOrAfter(checkDate) && season.name === '2024-25') {
+      if (currentDate.isSameOrAfter(checkDate) && season.name === '2024-25' && !seasonIds.includes(season.id)) {
         seasonIds.push(season.id);
       } else if(currentDate.isBefore(checkDate) && season.name === '2024-25' && seasonIds.includes(season.id)){
         seasonIds = seasonIds.filter((id: number) => id != season.id)
@@ -2659,62 +2775,49 @@ const getBaleSoldByCountryRes = async (
 const getBaleSoldByCountryData = async (
   where: any
 ) => {
-  where.sold_status = true
-  const result = await GinBale.findAll({
+  // where.sold_status = true
+
+  where.status = 'Sold';
+
+    const result = await GinSales.findAll({
     attributes: [
-      [
-        sequelize.fn(
-          "COUNT",
-          Sequelize.literal('DISTINCT "gin-bales"."id"')
-        ),
-        "sold",
-      ],
-      [
-        sequelize.fn(
-              "COALESCE",
-        Sequelize.fn(
-          "SUM",
-          Sequelize.literal(`
-            CASE
-              WHEN "gin-bales"."old_weight" IS NOT NULL THEN CAST("gin-bales"."old_weight" AS DOUBLE PRECISION)
-              ELSE CAST("gin-bales"."weight" AS DOUBLE PRECISION)
-            END
-          `)
-        ),
-        0
-        ),
-        "lintSold",
-      ],
-      [Sequelize.col('ginprocess.season.name'), 'seasonName'],
-      [Sequelize.col('ginprocess.season.id'), 'seasonId'],
-      [Sequelize.col('ginprocess.ginner.country.id'), 'countryId'],
-      [Sequelize.col('ginprocess.ginner.country.county_name'), 'countryName']
+      [Sequelize.col('season.id'), 'seasonId'],   // season_id from Season
+      [Sequelize.col('season.name'), 'seasonName'], 
+      [Sequelize.col('ginner.country.id'), 'countryId'],
+      [Sequelize.col('ginner.country.county_name'), 'countryName'],
+      [Sequelize.fn('SUM', Sequelize.col('no_of_bales')), 'sold'],
+      [Sequelize.fn('SUM', Sequelize.col('total_qty')), 'lintSold'],
     ],
     include: [
       {
-        model: GinProcess,
-        as: "ginprocess",
+        model: Season,
+        as: 'season',
+        attributes: [] 
+      },
+      {
+        model: Ginner,
+        as: "ginner",
         attributes: [],
         include: [{
-          model: Season,
-          as: 'season',
+          model: Country,
+          as: 'country',
           attributes: []
-        }, {
-          model: Ginner,
-          as: 'ginner',
-          attributes: [],
-          include: [{
-            model: Country,
-            as: 'country',
-            attributes: []
-          }]
-        }],
-      },
+        }]
+      }
     ],
-    where,
-    // limit: 3,
+    where: {
+      id: {
+        [Op.in]: Sequelize.literal(`(
+          SELECT DISTINCT sales_id
+          FROM bale_selections
+        )`)
+      },
+      ...where
+    },
     order: [['seasonId', 'desc']],
-    group: ["ginprocess.season.id", "ginprocess.ginner.country.id"],
+    // limit: 3,
+    group: ['season.id', "ginner.country.id"],
+    // raw: true
   });
 
   return result;
@@ -2791,7 +2894,7 @@ const getBalesStockByCountry = async (
     // const processedData = await getBaleProcuredByCountryData(processWhere);
     const where = getBaleProducedQuery(reqData);
     const processedData = await getBaleNewProducedByCountryData(where);
-    const soldWhere = getGinBaleQuery(reqData);
+    const soldWhere = getGinnerSalesWhereQuery(reqData);
     const soldData = await getBaleSoldByCountryData(soldWhere);
     const data = await getBaleStockDataRes(
       processedData,
@@ -2843,7 +2946,7 @@ const getBaleStockDataRes = async (
       let currentDate = moment(); // Current date using moment
       let checkDate = moment('2024-10-01'); // October 1st, 2024
       
-      if (currentDate.isSameOrAfter(checkDate) && season.name === '2024-25') {
+      if (currentDate.isSameOrAfter(checkDate) && season.name === '2024-25' && !seasonIds.includes(season.id)) {
         seasonIds.push(season.id);
       } else if(currentDate.isBefore(checkDate) && season.name === '2024-25' && seasonIds.includes(season.id)){
         seasonIds = seasonIds.filter((id: number) => id != season.id)

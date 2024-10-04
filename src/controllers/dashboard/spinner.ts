@@ -452,7 +452,7 @@ const getLintProcuredProcessedRes = async (
       let currentDate = moment(); // Current date using moment
       let checkDate = moment('2024-10-01'); // October 1st, 2024
       
-      if (currentDate.isSameOrAfter(checkDate) && season.name === '2024-25') {
+      if (currentDate.isSameOrAfter(checkDate) && season.name === '2024-25' && !seasonIds.includes(season.id)) {
         seasonIds.push(season.id);
       } else if(currentDate.isBefore(checkDate) && season.name === '2024-25' && seasonIds.includes(season.id)){
         seasonIds = seasonIds.filter((id: number) => id != season.id)
@@ -655,7 +655,7 @@ const getYarnProcuredSoldRes = async (
       let currentDate = moment(); // Current date using moment
       let checkDate = moment('2024-10-01'); // October 1st, 2024
       
-      if (currentDate.isSameOrAfter(checkDate) && season.name === '2024-25') {
+      if (currentDate.isSameOrAfter(checkDate) && season.name === '2024-25' && !seasonIds.includes(season.id)) {
         seasonIds.push(season.id);
       } else if(currentDate.isBefore(checkDate) && season.name === '2024-25' && seasonIds.includes(season.id)){
         seasonIds = seasonIds.filter((id: number) => id != season.id)
@@ -1215,7 +1215,7 @@ const getYarnProcuredStockRes = async (
       let currentDate = moment(); // Current date using moment
       let checkDate = moment('2024-10-01'); // October 1st, 2024
       
-      if (currentDate.isSameOrAfter(checkDate) && season.name === '2024-25') {
+      if (currentDate.isSameOrAfter(checkDate) && season.name === '2024-25' && !seasonIds.includes(season.id)) {
         seasonIds.push(season.id);
       } else if(currentDate.isBefore(checkDate) && season.name === '2024-25' && seasonIds.includes(season.id)){
         seasonIds = seasonIds.filter((id: number) => id != season.id)
@@ -1281,7 +1281,9 @@ const getTopYarnProcessed = async (
 ) => {
   try {
     const reqData = await getQueryParams(req, res);
-    const spinnersData = await getTopYarnProcessedData(reqData);
+    const where = getSpinnerProcessWhereQuery(reqData);
+    delete where.status
+    const spinnersData = await getTopYarnProcessedData(where);
     const data = await getTopYarnProcessedRes(spinnersData);
     return res.sendSuccess(res, data);
 
@@ -1312,14 +1314,8 @@ const getTopYarnProcessedRes = (
 };
 
 const getTopYarnProcessedData = async (
-  reqData: any
+  where: any
 ) => {
-  const where: any = {
-
-  };
-
-  if (reqData?.country)
-    where['$spinner.country_id$'] = reqData.country;
 
   where['$spinner.name$'] = {
     [Op.not]: null
@@ -1350,7 +1346,9 @@ const getTopYarnSold = async (
 ) => {
   try {
     const reqData = await getQueryParams(req, res);
-    const spinnersData = await getTopYarnSoldData(reqData);
+    const where = getSpinnerProcessWhereQuery(reqData);
+    delete where.status
+    const spinnersData = await getTopYarnSoldData(where);
     const data = getTopYarnSoldRes(spinnersData);
     return res.sendSuccess(res, data);
 
@@ -1381,14 +1379,8 @@ const getTopYarnSoldRes = (
 };
 
 const getTopYarnSoldData = async (
-  reqData: any
+  where: any
 ) => {
-  const where: any = {
-
-  };
-
-  if (reqData?.country)
-    where['$spinner.country_id$'] = reqData.country;
 
   where['$spinner.name$'] = {
     [Op.not]: null
@@ -1457,11 +1449,11 @@ const getTopYarnStockData = async (
     select sn.name                                                                            as "spinnerName",
        ((select sum(sp.net_yarn_qty) from public.spin_processes sp where sp.spinner_id = sn.id) -
         (select sum(sp.total_qty) from public.spin_sales sp where sp.spinner_id = sn.id)) as stock
-from public.spinners sn
-where sn.name is not null ${reqData?.country ? " and g.country_id = reqData?.country" : ""}
-group by sn.id
-order by stock desc nulls last
-limit 10
+    from public.spinners sn
+    where sn.name is not null ${reqData?.country ? "and sn.country_id = reqData?.country" : ""} ${reqData?.spinner ? "and sn.id = " + reqData?.spinner : ""} ${reqData?.brand ? "and sn.brand @> ARRAY[" + reqData.brand + "]" : ""}
+    group by sn.id
+    order by stock desc nulls last
+    limit 10
   `);
 
   return result;
@@ -1565,7 +1557,7 @@ const getLintProcessedByCountryDataRes = async (
       let currentDate = moment(); // Current date using moment
       let checkDate = moment('2024-10-01'); // October 1st, 2024
       
-      if (currentDate.isSameOrAfter(checkDate) && season.name === '2024-25') {
+      if (currentDate.isSameOrAfter(checkDate) && season.name === '2024-25' && !seasonIds.includes(season.id)) {
         seasonIds.push(season.id);
       } else if(currentDate.isBefore(checkDate) && season.name === '2024-25' && seasonIds.includes(season.id)){
         seasonIds = seasonIds.filter((id: number) => id != season.id)
@@ -1714,7 +1706,7 @@ const getLintSoldByCountryRes = async (
       let currentDate = moment(); // Current date using moment
       let checkDate = moment('2024-10-01'); // October 1st, 2024
       
-      if (currentDate.isSameOrAfter(checkDate) && season.name === '2024-25') {
+      if (currentDate.isSameOrAfter(checkDate) && season.name === '2024-25' && !seasonIds.includes(season.id)) {
         seasonIds.push(season.id);
       } else if(currentDate.isBefore(checkDate) && season.name === '2024-25' && seasonIds.includes(season.id)){
         seasonIds = seasonIds.filter((id: number) => id != season.id)
@@ -1848,7 +1840,7 @@ const getYarnProcessedByCountryRes = async (
       let currentDate = moment(); // Current date using moment
       let checkDate = moment('2024-10-01'); // October 1st, 2024
       
-      if (currentDate.isSameOrAfter(checkDate) && season.name === '2024-25') {
+      if (currentDate.isSameOrAfter(checkDate) && season.name === '2024-25' && !seasonIds.includes(season.id)) {
         seasonIds.push(season.id);
       } else if(currentDate.isBefore(checkDate) && season.name === '2024-25' && seasonIds.includes(season.id)){
         seasonIds = seasonIds.filter((id: number) => id != season.id)
@@ -1982,7 +1974,7 @@ const getYarnSoldByCountryRes = async (
       let currentDate = moment(); // Current date using moment
       let checkDate = moment('2024-10-01'); // October 1st, 2024
       
-      if (currentDate.isSameOrAfter(checkDate) && season.name === '2024-25') {
+      if (currentDate.isSameOrAfter(checkDate) && season.name === '2024-25' && !seasonIds.includes(season.id)) {
         seasonIds.push(season.id);
       } else if(currentDate.isBefore(checkDate) && season.name === '2024-25' && seasonIds.includes(season.id)){
         seasonIds = seasonIds.filter((id: number) => id != season.id)
@@ -2054,9 +2046,14 @@ const getYarnProducedByCountry = async (
 
 
 const getYarnProducedByCountryData = async (where: any) => {
+
+  where['$spinner.country_id$'] = {
+    [Op.notIn]: [34]
+  };
+
   const result = await SpinProcess.findAll({
     attributes: [
-      [Sequelize.col('net_yarn_qty'), 'produced'],
+      [Sequelize.fn('SUM', Sequelize.col('net_yarn_qty')), 'processed'],
       [Sequelize.col('spinner.country.id'), 'countryId'],
       [Sequelize.col('spinner.country.county_name'), 'countryName'],
       [Sequelize.col('season.id'), 'seasonId'],
@@ -2077,7 +2074,7 @@ const getYarnProducedByCountryData = async (where: any) => {
       attributes: []
     }],
     where,
-    group: ['spinner.country.id', 'season.id', 'spin_processes.id']
+    group: ['spinner.country.id', 'season.id']
   });
 
   return result;
@@ -2110,13 +2107,14 @@ const getYarnProducedByCountryRes = async (
       let currentDate = moment(); // Current date using moment
       let checkDate = moment('2024-10-01'); // October 1st, 2024
       
-      if (currentDate.isSameOrAfter(checkDate) && season.name === '2024-25') {
+      if (currentDate.isSameOrAfter(checkDate) && season.name === '2024-25' && !seasonIds.includes(season.id)) {
         seasonIds.push(season.id);
       } else if(currentDate.isBefore(checkDate) && season.name === '2024-25' && seasonIds.includes(season.id)){
         seasonIds = seasonIds.filter((id: number) => id != season.id)
       }
     }
   }
+
   seasonIds = seasonIds.sort((a, b) => a - b).slice(-3);
 
   let seasonList: any[] = [];
@@ -2128,28 +2126,28 @@ const getYarnProducedByCountryRes = async (
       name: countryName,
       data: [],
     };
-    const fProducedList = producedCountList.filter((list: any) =>
+    const fProcessedList = producedCountList.filter((list: any) =>
       list.dataValues.countryName == countryName
     );
 
     for (const seasonId of seasonIds) {
 
-      let totalProduced = 0;
-      const gProducedValue = fProducedList.find((list: any) =>
+      let totalProcessed = 0;
+      const gSoldValue = fProcessedList.find((list: any) =>
         list.dataValues.seasonId == seasonId
       );
 
-      if (gProducedValue) {
-        totalProduced = mtConversion(gProducedValue.dataValues.produced);
-        if (!seasonList.includes(gProducedValue.dataValues.seasonName))
-          seasonList.push(gProducedValue.dataValues.seasonName);
+      if (gSoldValue) {
+        totalProcessed = mtConversion(gSoldValue.dataValues.processed);
+        if (!seasonList.includes(gSoldValue.dataValues.seasonName))
+          seasonList.push(gSoldValue.dataValues.seasonName);
       }
       else {
         const season = seasons.find((season: any) => season.dataValues.id == seasonId);
         if (!seasonList.includes(season.dataValues.name))
           seasonList.push(season.dataValues.name);
       }
-      data.data.push(totalProduced);
+      data.data.push(totalProcessed);
     }
 
     producedList.push(data);
@@ -2221,7 +2219,7 @@ const getYarnStockByCountryRes = async (
       let currentDate = moment(); // Current date using moment
       let checkDate = moment('2024-10-01'); // October 1st, 2024
       
-      if (currentDate.isSameOrAfter(checkDate) && season.name === '2024-25') {
+      if (currentDate.isSameOrAfter(checkDate) && season.name === '2024-25' && !seasonIds.includes(season.id)) {
         seasonIds.push(season.id);
       } else if(currentDate.isBefore(checkDate) && season.name === '2024-25' && seasonIds.includes(season.id)){
         seasonIds = seasonIds.filter((id: number) => id != season.id)
@@ -2378,7 +2376,7 @@ const getSpinnerYarnRealisationByCountryRes = async (
       let currentDate = moment(); // Current date using moment
       let checkDate = moment('2024-10-01'); // October 1st, 2024
       
-      if (currentDate.isSameOrAfter(checkDate) && season.name === '2024-25') {
+      if (currentDate.isSameOrAfter(checkDate) && season.name === '2024-25' && !seasonIds.includes(season.id)) {
         seasonIds.push(season.id);
       } else if(currentDate.isBefore(checkDate) && season.name === '2024-25' && seasonIds.includes(season.id)){
         seasonIds = seasonIds.filter((id: number) => id != season.id)

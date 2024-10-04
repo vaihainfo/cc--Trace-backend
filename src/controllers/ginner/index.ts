@@ -877,41 +877,41 @@ const chooseBale = async (req: Request, res: Response) => {
 
     const [results, metadata] = await sequelize.query(
       `SELECT 
-    jsonb_build_object(
-        'ginprocess', jsonb_build_object(
-            'id', gp.id,
-            'lot_no', gp.lot_no,
-            'date', gp.date,
-            'press_no', gp.press_no,
-            'reel_lot_no', gp.reel_lot_no,
-            'greyout_status', gp.greyout_status
-        ),
-        'weight', SUM(CAST(gb.weight AS DOUBLE PRECISION)),
-        'bales', jsonb_agg(jsonb_build_object(
-            'id', gb.id,
-            'bale_no', gb.bale_no,
-            'weight', gb.weight,
-            'greyout_status', gp.greyout_status
-        ) ORDER BY gb.id ASC)
-    ) AS result
-FROM 
-    gin_processes gp
-JOIN 
-    "gin-bales" gb ON gp.id = gb.process_id
-JOIN 
-    ginners g ON gp.ginner_id = g.id
-JOIN 
-    seasons s ON gp.season_id = s.id
-JOIN 
-    programs p ON gp.program_id = p.id
-WHERE 
-    gp.ginner_id = ${ginnerId}
-    AND gp.program_id IN (${programId})
-    AND gb.sold_status = false
-GROUP BY 
-    gp.id, gp.lot_no, gp.date, gp.press_no, gp.reel_lot_no
-ORDER BY 
-    gp.id DESC;
+          jsonb_build_object(
+              'ginprocess', jsonb_build_object(
+                  'id', gp.id,
+                  'lot_no', gp.lot_no,
+                  'date', gp.date,
+                  'press_no', gp.press_no,
+                  'reel_lot_no', gp.reel_lot_no,
+                  'greyout_status', gp.greyout_status
+              ),
+              'weight', SUM(CAST(gb.weight AS DOUBLE PRECISION)),
+              'bales', jsonb_agg(jsonb_build_object(
+                  'id', gb.id,
+                  'bale_no', gb.bale_no,
+                  'weight', gb.weight,
+                  'greyout_status', gp.greyout_status
+              ) ORDER BY gb.id ASC)
+          ) AS result
+      FROM 
+          gin_processes gp
+      JOIN 
+          "gin-bales" gb ON gp.id = gb.process_id
+      JOIN 
+          ginners g ON gp.ginner_id = g.id
+      JOIN 
+          seasons s ON gp.season_id = s.id
+      JOIN 
+          programs p ON gp.program_id = p.id
+      WHERE 
+          gp.ginner_id = ${ginnerId}
+          AND gp.program_id IN (${programId})
+          AND gb.sold_status = false
+      GROUP BY 
+          gp.id, gp.lot_no, gp.date, gp.press_no, gp.reel_lot_no
+      ORDER BY 
+          gp.id DESC;
 `
     )
 
@@ -1073,6 +1073,7 @@ const chooseCotton = async (req: Request, res: Response) => {
       },
       mapped_ginner: ginnerid,
       program_id: programId,
+      greyout_status: false
     };
 
     if (villageId) {
@@ -1087,6 +1088,10 @@ const chooseCotton = async (req: Request, res: Response) => {
         .split(",")
         .map((id: any) => parseInt(id, 10));
       whereCondition.season_id = { [Op.in]: idArray };
+    }
+    else {
+      // If no seasonId is provided, filter by season name "2024-25" or greater
+      whereCondition["$season.name$"] = { [Op.gte]: "2024-25" };
     }
 
     const results = await Transaction.findAll({
@@ -1525,8 +1530,7 @@ const updateGinnerSales = async (req: Request, res: Response) => {
       delivery_notes: req.body.deliveryNotes,
       transporter_name: req.body.transporterName,
       vehicle_no: req.body.vehicleNo,
-      lrbl_no: req.body.lrblNo,
-      choosen_bale: req.body.choosen_bale
+      lrbl_no: req.body.lrblNo
     };
 
     if (req.body.weightLoss) {
@@ -1745,7 +1749,19 @@ const fetchGinSale = async (req: Request, res: Response) => {
       where: {
         sales_id: gin.id,
       },
-      include: [{ model: GinBale, as: "bale" }],
+      include: [
+        { 
+          model: GinBale, 
+          as: "bale" ,
+          include: [
+            {
+              model: GinProcess,
+              as: "ginprocess",
+              attributes: ['reel_lot_no'],
+            },
+          ],
+        }
+      ],
     });
 
     const response = {
@@ -2064,7 +2080,7 @@ const getReelHeapId = async (req: Request, res: Response) => {
         [
           Sequelize.fn(
             "concat",
-            "BL-REE",
+            "HP-REE",
             Sequelize.fn(
               "upper",
               Sequelize.fn("left", Sequelize.col("country.county_name"), 2)

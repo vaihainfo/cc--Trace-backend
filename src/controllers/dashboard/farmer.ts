@@ -135,6 +135,41 @@ const getFarmerQuery = (
   return where;
 };
 
+const getFarmWhereQuery = (
+  reqData: any
+) => {
+  const where: any = {
+
+  };
+
+  if (reqData?.program)
+    where.program_id = reqData.program;
+
+  if (reqData?.brand)
+    where['$farmer.brand_id$'] = reqData.brand;
+
+  if (reqData?.season)
+    where.season_id = reqData.season;
+
+  if (reqData?.country)
+    where['$farmer.country_id$'] = reqData.country;
+
+  if (reqData?.state)
+    where['$farmer.state_id$'] = reqData.state;
+
+  if (reqData?.district)
+    where['$farmer.district_id$'] = reqData.district;
+
+  if (reqData?.block)
+    where['$farmer.block_id$'] = reqData.block;
+
+  if (reqData?.village)
+    where['$farmer.village_id$'] = reqData.village;
+
+
+  return where;
+};
+
 
 const getQueryParams = async (
   req: Request, res: Response
@@ -489,8 +524,9 @@ const getEstimateAndProduction = async (
     if (req.query.type == "2")
       reqData.season = undefined;
     const where = getOverAllDataQuery(reqData);
+    const farmWhere = getFarmWhereQuery(reqData)
     const transactionWhere = getTransactionWhereQuery(reqData);
-    const estimateProductionList = await getEstimateProductionBySeason(where);
+    const estimateProductionList = await getEstimateProductionBySeason(farmWhere);
     const procuredList = await getProcuredData(transactionWhere);
     const data = await getEstimateProductionList(estimateProductionList, procuredList);
     return res.sendSuccess(res, data);
@@ -572,7 +608,7 @@ const getEstimateProductionList = async (estimateProductionList: any, procuredLi
       let currentDate = moment(); // Current date using moment
       let checkDate = moment('2024-10-01'); // October 1st, 2024
       
-      if (currentDate.isSameOrAfter(checkDate) && season.name === '2024-25') {
+      if (currentDate.isSameOrAfter(checkDate) && season.name === '2024-25' && !seasonIds.includes(season.id)) {
         seasonIds.push(season.id);
       } else if(currentDate.isBefore(checkDate) && season.name === '2024-25' && seasonIds.includes(season.id)){
         seasonIds = seasonIds.filter((id: number) => id != season.id)
@@ -609,6 +645,16 @@ const getEstimateProductionList = async (estimateProductionList: any, procuredLi
       data.seasonName = fProcured.dataValues.season.name;
       data.procured += mtConversion(fProcured.dataValues.procured);
     }
+
+    if (!data.seasonName) {
+      const fSeason = seasons.find((season: any) =>
+        season.id == sessionId
+      );
+      if (fSeason) {
+        data.seasonName = fSeason.name;
+      }
+    }
+
 
 
     season.push(data.seasonName);
@@ -686,7 +732,7 @@ const getFarmerCountAndAreaRes = async (
       let currentDate = moment(); // Current date using moment
       let checkDate = moment('2024-10-01'); // October 1st, 2024
       
-      if (currentDate.isSameOrAfter(checkDate) && season.name === '2024-25') {
+      if (currentDate.isSameOrAfter(checkDate) && season.name === '2024-25' && !seasonIds.includes(season.id)) {
         seasonIds.push(season.id);
       } else if(currentDate.isBefore(checkDate) && season.name === '2024-25' && seasonIds.includes(season.id)){
         seasonIds = seasonIds.filter((id: number) => id != season.id)
@@ -811,7 +857,7 @@ const getFarmerAllDataRes = async (
       let currentDate = moment(); // Current date using moment
       let checkDate = moment('2024-10-01'); // October 1st, 2024
       
-      if (currentDate.isSameOrAfter(checkDate) && season.name === '2024-25') {
+      if (currentDate.isSameOrAfter(checkDate) && season.name === '2024-25' && !seasonIds.includes(season.id)) {
         seasonIds.push(season.id);
       } else if(currentDate.isBefore(checkDate) && season.name === '2024-25' && seasonIds.includes(season.id)){
         seasonIds = seasonIds.filter((id: number) => id != season.id)
@@ -985,7 +1031,7 @@ const getCountryCountRes = async (
       let currentDate = moment(); // Current date using moment
       let checkDate = moment('2024-10-01'); // October 1st, 2024
       
-      if (currentDate.isSameOrAfter(checkDate) && season.name === '2024-25') {
+      if (currentDate.isSameOrAfter(checkDate) && season.name === '2024-25' && !seasonIds.includes(season.id)) {
         seasonIds.push(season.id);
       } else if(currentDate.isBefore(checkDate) && season.name === '2024-25' && seasonIds.includes(season.id)){
         seasonIds = seasonIds.filter((id: number) => id != season.id)
@@ -1123,7 +1169,7 @@ const getCountryAreaRes = async (
       let currentDate = moment(); // Current date using moment
       let checkDate = moment('2024-10-01'); // October 1st, 2024
       
-      if (currentDate.isSameOrAfter(checkDate) && season.name === '2024-25') {
+      if (currentDate.isSameOrAfter(checkDate) && season.name === '2024-25' && !seasonIds.includes(season.id)) {
         seasonIds.push(season.id);
       } else if(currentDate.isBefore(checkDate) && season.name === '2024-25' && seasonIds.includes(season.id)){
         seasonIds = seasonIds.filter((id: number) => id != season.id)
@@ -1261,7 +1307,7 @@ const getEstimateCottonRes = async (
       let currentDate = moment(); // Current date using moment
       let checkDate = moment('2024-10-01'); // October 1st, 2024
       
-      if (currentDate.isSameOrAfter(checkDate) && season.name === '2024-25') {
+      if (currentDate.isSameOrAfter(checkDate) && season.name === '2024-25' && !seasonIds.includes(season.id)) {
         seasonIds.push(season.id);
       } else if(currentDate.isBefore(checkDate) && season.name === '2024-25' && seasonIds.includes(season.id)){
         seasonIds = seasonIds.filter((id: number) => id != season.id)
@@ -1399,7 +1445,7 @@ const getProductionCottonRes = async (
       let currentDate = moment(); // Current date using moment
       let checkDate = moment('2024-10-01'); // October 1st, 2024
       
-      if (currentDate.isSameOrAfter(checkDate) && season.name === '2024-25') {
+      if (currentDate.isSameOrAfter(checkDate) && season.name === '2024-25' && !seasonIds.includes(season.id)) {
         seasonIds.push(season.id);
       } else if(currentDate.isBefore(checkDate) && season.name === '2024-25' && seasonIds.includes(season.id)){
         seasonIds = seasonIds.filter((id: number) => id != season.id)

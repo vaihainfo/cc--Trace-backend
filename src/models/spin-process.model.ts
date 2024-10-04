@@ -40,7 +40,7 @@ const SpinProcess = db.define('spin_processes', {
     type: DataTypes.ARRAY(DataTypes.INTEGER)
   },
   cottonmix_qty: {
-    type: DataTypes.ARRAY(DataTypes.INTEGER)
+    type: DataTypes.ARRAY(DataTypes.DOUBLE)
   },
   yarn_type: {
     allowNull: false,
