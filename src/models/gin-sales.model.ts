@@ -147,6 +147,10 @@ const GinSales = db.define('gin_sales', {
     type: DataTypes.BOOLEAN,
     defaultValue: false,
   },
+  visible_flag: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: true,
+  },
   accepted_bales_weight: {
     type: DataTypes.DOUBLE
   },

@@ -1452,6 +1452,8 @@ const fetchTransactionAlert = async (req: Request, res: Response) => {
             whereCondition.season_id = { [Op.in]: idArray };
         }
 
+        whereCondition.visible_flag = true;
+
         let include = [
             {
                 model: Ginner,
@@ -1549,6 +1551,7 @@ const fetchTransactionAlert = async (req: Request, res: Response) => {
 const updateStatusSales = async (req: Request, res: Response) => {
     try {
         let update = []
+        await GinSales.update({visible_flag: false}, { where: { id: req.body.items?.map((obj: any) => obj.id) } });
         for (const obj of req.body.items) {
             let result;
             let soldCount = 0;
@@ -1559,7 +1562,7 @@ const updateStatusSales = async (req: Request, res: Response) => {
                 accept_date: obj.status === 'Sold' ? new Date().toISOString() : null
             };
 
-            for (const bale of obj.bales) {
+            for await (const bale of obj.bales) {
                 const isNotUpdated = await BaleSelection.findOne({ where: { bale_id: bale.id, sales_id: obj.id, spinner_status: null } });
                 if(isNotUpdated){
                     if (obj.status !== 'Sold') {
@@ -1618,6 +1621,8 @@ const updateStatusSales = async (req: Request, res: Response) => {
                             type: sequelize.QueryTypes.SELECT,
                         })
 
+                        console.log("max qty stock to be in gin sales=============",total)
+
             if (ginSale) {
                 // Increment qty_stock by obj.qtyStock
                 if (obj.status === 'Sold' && (ginSale.qty_stock + Number(obj.qtyStock) <= total.total_qty)) {
@@ -1630,13 +1635,14 @@ const updateStatusSales = async (req: Request, res: Response) => {
                         data.accepted_bales_weight = Number(ginSale.qty_stock) + Number(obj.qtyStock);
                     }
                 }
-                result = await GinSales.update(data, { where: { id: obj.id } });
+                result = await GinSales.update({...data, visible_flag: true}, { where: { id: obj.id } });
             }
 
             update.push(result);
         }
         res.sendSuccess(res, { update });
     } catch (error: any) {
+        await GinSales.update({visible_flag: true}, { where: { id: req.body.items?.map((obj: any) => obj.id) } });
         console.log(error)
         return res.sendError(res, error.meessage);
     }
