@@ -101,7 +101,12 @@ const createGinnerProcess = async (req: Request, res: Response) => {
           village_id: cotton.vlg_id,
           program_id: req.body.programId,
           qty_stock: { [Op.gt]: 0 },
+          "$season.name$": { [Op.gte]: "2024-25" }
         },
+        include: [{
+          model: Season,
+          as: "season",
+        }]
       });
 
       for await (const tran of trans) {
@@ -811,6 +816,10 @@ const chooseCotton = async (req: Request, res: Response) => {
         .split(",")
         .map((id: any) => parseInt(id, 10));
       whereCondition.season_id = { [Op.in]: idArray };
+    }
+    else {
+      // If no seasonId is provided, filter by season name "2024-25" or greater
+      whereCondition["$season.name$"] = { [Op.gte]: "2024-25" };
     }
 
     const results = await Transaction.findAll({
