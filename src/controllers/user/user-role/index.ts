@@ -89,6 +89,7 @@ const getUserRoles = async (req: Request, res: Response) => {
             whereCondition[Op.or] = [
                 { user_role: { [Op.iLike]: `%${searchTerm}%` } }, // Search by crop Type 
                 { '$userCategory.category_name$': { [Op.iLike]: `%${searchTerm}%` } }, // Search by crop name
+                { '$brand.brand_name$': { [Op.iLike]: `%${searchTerm}%` } }, // Search by crop name
             ];
         }
 
