@@ -101,6 +101,7 @@ const createGinnerProcess = async (req: Request, res: Response) => {
           village_id: cotton.vlg_id,
           program_id: req.body.programId,
           qty_stock: { [Op.gt]: 0 },
+          greyout_status: false,
           "$season.name$": { [Op.gte]: "2024-25" }
         },
         include: [{
@@ -802,6 +803,7 @@ const chooseCotton = async (req: Request, res: Response) => {
       },
       mapped_ginner: ginnerid,
       program_id: programId,
+      greyout_status: false
     };
 
     if (villageId) {
