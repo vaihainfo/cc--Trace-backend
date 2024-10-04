@@ -13221,7 +13221,7 @@ const exportPscpProcurementLiveTracker = async (
     let brandCondition: string[] = [];
     let baleCondition: string[] = [];
 
-    if (exportType === "all") {File not found or not accessibl
+    if (exportType === "all") {
 
       return res.status(200).send({
         success: true,
