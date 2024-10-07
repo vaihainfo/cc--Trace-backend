@@ -9832,7 +9832,7 @@ const fetchGinnerSummaryPagination = async (req: Request, res: Response) => {
     for await (let ginner of rows) {
       let obj: any = {};
 
-      let [cottonProcured, cottonProcessed, lintProcured, lintSold]: any =
+      let [cottonProcured, cottonProcessed, lintProcured, greyoutLint, lintSold]: any =
         await Promise.all([
           // Transaction.findOne({
           //   attributes: [
@@ -9926,6 +9926,44 @@ const fetchGinnerSummaryPagination = async (req: Request, res: Response) => {
             },
             group: ["ginprocess.ginner_id"],
           }),
+          GinBale.findOne({
+            attributes: [
+              [
+                sequelize.fn(
+                  "COALESCE",
+                  sequelize.fn(
+                    "SUM",
+                    sequelize.literal(
+                      'CAST("gin-bales"."weight" AS DOUBLE PRECISION)'
+                    )
+                  ),
+                  0
+                ),
+                "qty",
+              ],
+              [
+                sequelize.fn(
+                  "COUNT",
+                  Sequelize.literal('DISTINCT "gin-bales"."id"')
+                ),
+                "bales_procured",
+              ],
+            ],
+            include: [
+              {
+                model: GinProcess,
+                as: "ginprocess",
+                attributes: [],
+              },
+            ],
+            where: {
+              ...ginBaleWhere,
+              "$ginprocess.ginner_id$": ginner.id,
+              "$ginprocess.greyout_status$": true,
+
+            },
+            group: ["ginprocess.ginner_id"],
+          }),
           BaleSelection.findOne({
             attributes: [
               [
@@ -9987,6 +10025,14 @@ const fetchGinnerSummaryPagination = async (req: Request, res: Response) => {
       obj.lintProcuredMt = convert_kg_to_mt(lintProcured?.dataValues.qty ?? 0);
       obj.lintSoldKg = lintSold?.dataValues.qty ?? 0;
       obj.lintSoldMt = convert_kg_to_mt(lintSold?.dataValues.qty ?? 0);
+      obj.lintGreyoutKg =  greyoutLint?.dataValues.qty ?? 0;
+      obj.lintGreyoutMT = convert_kg_to_mt(greyoutLint?.dataValues.qty ?? 0);
+      obj.lintActualStockMT = Number(obj.lintProcuredKg) >  (Number(obj.lintSoldKg) + Number(obj.lintGreyoutKg))
+      ? Number(obj.lintProcuredKg) - (Number(obj.lintSoldKg) + Number(obj.lintGreyoutKg))
+      : 0;
+      obj.lintActualStockMT = Number(obj.lintProcuredKg) >  (Number(obj.lintSoldKg) + Number(obj.lintGreyoutKg))
+      ? Number(obj.lintProcuredMt) - (Number(obj.lintSoldMt) + Number(obj.lintGreyoutMT))
+      : 0;
       obj.lintStockKg =
         Number(obj.lintProcuredKg) > Number(obj.lintSoldKg)
           ? Number(obj.lintProcuredKg) - Number(obj.lintSoldKg)
@@ -10220,7 +10266,7 @@ const exportGinnerSummary = async (req: Request, res: Response) => {
       // Create the excel workbook file
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet("Sheet1");
-      worksheet.mergeCells('A1:K1');
+      worksheet.mergeCells('A1:M1');
       const mergedCell = worksheet.getCell('A1');
       mergedCell.value = 'CottonConnect | Ginner Summary Report';
       mergedCell.font = { bold: true };
@@ -10228,7 +10274,7 @@ const exportGinnerSummary = async (req: Request, res: Response) => {
       // Set bold font for header row
       const headerRow = worksheet.addRow([
         "S. No.", "Ginner Name", "Total seed cotton procured (MT)", "Total seed cotton processed (MT)",
-        "Total seed cotton in stock (MT)", "Total lint produce (MT)", "Total lint sold (MT)", "Total lint in stock (MT)",
+        "Total seed cotton in stock (MT)", "Total lint produce (MT)", "Total lint sold (MT)","Grey-Out Quantity (MT)","Actual lint in stock (MT)", "Total lint in stock (MT)",
         "Total bales produce", "Total bales sold", "Total bales in stock"
       ]);
       headerRow.font = { bold: true };
@@ -10243,7 +10289,7 @@ const exportGinnerSummary = async (req: Request, res: Response) => {
         let obj: any = {};
 
 
-        let [cottonProcured, cottonProcessed, lintProcured, lintSold]: any = await Promise.all([
+        let [cottonProcured, cottonProcessed, lintProcured, greyoutLint, lintSold]: any = await Promise.all([
           // Transaction.findOne({
           //   attributes: [
           //     [sequelize.fn('COALESCE', sequelize.fn('SUM', Sequelize.literal("CAST(qty_purchased AS DOUBLE PRECISION)")), 0), 'qty']
@@ -10297,6 +10343,25 @@ const exportGinnerSummary = async (req: Request, res: Response) => {
             },
             group: ["ginprocess.ginner_id"]
           }),
+          GinBale.findOne({
+            attributes: [
+              [sequelize.fn('COALESCE', sequelize.fn('SUM', sequelize.literal('CAST("gin-bales"."weight" AS DOUBLE PRECISION)')), 0), 'qty'],
+              [sequelize.fn('COUNT', Sequelize.literal('DISTINCT "gin-bales"."id"')), 'bales_procured'],
+            ],
+            include: [
+              {
+                model: GinProcess,
+                as: 'ginprocess',
+                attributes: []
+              }
+            ],
+            where: {
+              ...ginBaleWhere,
+              '$ginprocess.ginner_id$': item.id,
+              '$ginprocess.greyout_status$': true,
+            },
+            group: ["ginprocess.ginner_id"]
+          }),
           BaleSelection.findOne({
             attributes: [
               [sequelize.fn('COALESCE', sequelize.fn('SUM', sequelize.literal('CAST("bale"."weight" AS DOUBLE PRECISION)')), 0), 'qty'],
@@ -10336,6 +10401,14 @@ const exportGinnerSummary = async (req: Request, res: Response) => {
         obj.lintProcuredMt = convert_kg_to_mt(lintProcured?.dataValues.qty ?? 0);
         obj.lintSoldKg = lintSold?.dataValues.qty ?? 0;
         obj.lintSoldMt = convert_kg_to_mt(lintSold?.dataValues.qty ?? 0);
+        obj.lintGreyoutKg =  greyoutLint?.dataValues.qty ?? 0;
+        obj.lintGreyoutMT = convert_kg_to_mt(greyoutLint?.dataValues.qty ?? 0);
+        obj.lintActualStockMT = Number(obj.lintProcuredKg) >  (Number(obj.lintSoldKg) + Number(obj.lintGreyoutKg))
+        ? Number(obj.lintProcuredKg) - (Number(obj.lintSoldKg) + Number(obj.lintGreyoutKg))
+        : 0;
+        obj.lintActualStockMT = Number(obj.lintProcuredKg) >  (Number(obj.lintSoldKg) + Number(obj.lintGreyoutKg))
+        ? Number(obj.lintProcuredMt) - (Number(obj.lintSoldMt) + Number(obj.lintGreyoutMT))
+        : 0;
         obj.lintStockKg = Number(obj.lintProcuredKg) > Number(obj.lintSoldKg) ? Number(obj.lintProcuredKg) - Number(obj.lintSoldKg) : 0;
         obj.lintStockMt = Number(obj.lintProcuredKg) > Number(obj.lintSoldKg) ? Number(obj.lintProcuredMt) - Number(obj.lintSoldMt) : 0;
         obj.balesProduced = lintProcured?.dataValues?.bales_procured ? Number(lintProcured?.dataValues?.bales_procured) : 0;
@@ -10350,6 +10423,8 @@ const exportGinnerSummary = async (req: Request, res: Response) => {
           cottonStockMt: obj.cottonStockMt ? Number(obj.cottonStockMt) : 0,
           lintProcuredMt: obj.lintProcuredMt ? Number(obj.lintProcuredMt) : 0,
           lintSoldMt: obj.lintSoldMt ? Number(obj.lintSoldMt) : 0,
+          lintGreyoutMT: obj.lintGreyoutMT ? Number(obj.lintGreyoutMT) : 0,
+          lintActualStockMT: obj.lintActualStockMT ? Number(obj.lintActualStockMT) : 0,
           lintStockMt: obj.lintStockMt,
           balesProduced: obj.balesProduced,
           balesSold: obj.balesSold,
