@@ -994,7 +994,6 @@ const fetchGinnerProcessGreyOutReport = async (req: Request, res: Response) => {
       whereCondition[Op.or] = [
         { "$season.name$": { [Op.iLike]: `%${searchTerm}%` } },
         { "$ginner.name$": { [Op.iLike]: `%${searchTerm}%` } },
-        { "$program.program_name$": { [Op.iLike]: `%${searchTerm}%` } },
         { lot_no: { [Op.iLike]: `%${searchTerm}%` } },
         { reel_lot_no: { [Op.iLike]: `%${searchTerm}%` } },
         { press_no: { [Op.iLike]: `%${searchTerm}%` } },
@@ -1148,7 +1147,6 @@ const fetchSpinnerProcessGreyOutReport = async (req: Request, res: Response) => 
       whereCondition[Op.or] = [
         { "$season.name$": { [Op.iLike]: `%${searchTerm}%` } },
         { "$spinner.name$": { [Op.iLike]: `%${searchTerm}%` } },
-        { "$program.program_name$": { [Op.iLike]: `%${searchTerm}%` } },
         { batch_lot_no: { [Op.iLike]: `%${searchTerm}%` } },
         { reel_lot_no: { [Op.iLike]: `%${searchTerm}%` } },
       ];
@@ -1244,12 +1242,9 @@ const fetchSpinnerGreyOutReport = async (req: Request, res: Response) => {
         { "$season.name$": { [Op.iLike]: `%${searchTerm}%` } },
         { "$buyerdata.name$": { [Op.iLike]: `%${searchTerm}%` } },
         { "$ginner.name$": { [Op.iLike]: `%${searchTerm}%` } },
-        { "$program.program_name$": { [Op.iLike]: `%${searchTerm}%` } },
         { lot_no: { [Op.iLike]: `%${searchTerm}%` } },
-        { invoice_no: { [Op.iLike]: `%${searchTerm}%` } },
         { reel_lot_no: { [Op.iLike]: `%${searchTerm}%` } },
         { press_no: { [Op.iLike]: `%${searchTerm}%` } },
-        { vehicle_no: { [Op.iLike]: `%${searchTerm}%` } },
       ];
     }
     if (spinnerId) {
@@ -1839,12 +1834,9 @@ const exportGinnerProcessGreyOutReport = async (req: Request, res: Response) => 
         whereCondition[Op.or] = [
           { "$season.name$": { [Op.iLike]: `%${searchTerm}%` } },
           { "$ginner.name$": { [Op.iLike]: `%${searchTerm}%` } },
-          { "$program.program_name$": { [Op.iLike]: `%${searchTerm}%` } },
           { lot_no: { [Op.iLike]: `%${searchTerm}%` } },
-          { invoice_no: { [Op.iLike]: `%${searchTerm}%` } },
           { reel_lot_no: { [Op.iLike]: `%${searchTerm}%` } },
           { press_no: { [Op.iLike]: `%${searchTerm}%` } },
-          { vehicle_no: { [Op.iLike]: `%${searchTerm}%` } },
         ];
       }
 
@@ -2196,12 +2188,9 @@ const exportSpinnerGreyOutReport = async (req: Request, res: Response) => {
           { "$season.name$": { [Op.iLike]: `%${searchTerm}%` } },
           { "$buyerdata.name$": { [Op.iLike]: `%${searchTerm}%` } },
           { "$ginner.name$": { [Op.iLike]: `%${searchTerm}%` } },
-          { "$program.program_name$": { [Op.iLike]: `%${searchTerm}%` } },
           { lot_no: { [Op.iLike]: `%${searchTerm}%` } },
-          { invoice_no: { [Op.iLike]: `%${searchTerm}%` } },
           { reel_lot_no: { [Op.iLike]: `%${searchTerm}%` } },
           { press_no: { [Op.iLike]: `%${searchTerm}%` } },
-          { vehicle_no: { [Op.iLike]: `%${searchTerm}%` } },
         ];
       }
       if (spinnerId) {
