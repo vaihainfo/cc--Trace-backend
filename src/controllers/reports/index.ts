@@ -10451,6 +10451,8 @@ const fetchGinnerSummaryPagination = async (req: Request, res: Response) => {
               ...ginBaleWhere,
               "$ginprocess.ginner_id$": ginner.id,
               "$ginprocess.greyout_status$": true,
+              sold_status: false, 
+              is_all_rejected: null, 
 
             },
             group: ["ginprocess.ginner_id"],
@@ -10784,7 +10786,7 @@ const exportGinnerSummary = async (req: Request, res: Response) => {
       // Set bold font for header row
       const headerRow = worksheet.addRow([
         "S. No.", "Ginner Name", "Total seed cotton procured (MT)", "Total seed cotton processed (MT)",
-        "Total seed cotton in stock (MT)", "Total lint produce (MT)", "Total lint sold (MT)","Grey-Out Quantity (MT)","Actual lint in stock (MT)", "Total lint in stock (MT)",
+        "Total seed cotton in stock (MT)", "Total lint produce (MT)", "Total lint sold (MT)","Grey-Out Lint Quantity (MT)","Actual lint in stock (MT)", "Total lint in stock (MT)",
         "Total bales produce", "Total bales sold", "Total bales in stock"
       ]);
       headerRow.font = { bold: true };
@@ -10869,6 +10871,8 @@ const exportGinnerSummary = async (req: Request, res: Response) => {
               ...ginBaleWhere,
               '$ginprocess.ginner_id$': item.id,
               '$ginprocess.greyout_status$': true,
+              sold_status: false, 
+              is_all_rejected: null, 
             },
             group: ["ginprocess.ginner_id"]
           }),
