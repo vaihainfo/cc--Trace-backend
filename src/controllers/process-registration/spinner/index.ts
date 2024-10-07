@@ -247,7 +247,7 @@ const fetchSpinner = async (req: Request, res: Response) => {
                 where: { id: result.brand },
             });
             if (result.yarn_count_range) {
-                const idArray: number[] = typeof result.yarn_count_range === "number" && result.yarn_count_range
+                const idArray: number[] = result.yarn_count_range
                     .split(",")
                     .map((id: any) => parseInt(id, 10));
                 yarnCount = await YarnCount.findAll({
