@@ -1106,7 +1106,7 @@ const fetchGinnerProcessGreyOutReport = async (req: Request, res: Response) => {
           [sequelize.fn("min", sequelize.col("bale_no")), "pressno_from"],
           [sequelize.fn("max", Sequelize.literal("LPAD(bale_no, 10, ' ')")), "pressno_to"],
         ],
-        where: { process_id: row.dataValues.id },
+        where: { process_id: row.dataValues.id, sold_status: false, is_all_rejected: null },
       });
       sendData.push({
         ...row.dataValues,
@@ -1906,7 +1906,7 @@ const exportGinnerProcessGreyOutReport = async (req: Request, res: Response) => 
       // Create the excel workbook file
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet("Sheet1");
-      worksheet.mergeCells("A1:M1");
+      worksheet.mergeCells("A1:G1");
       const mergedCell = worksheet.getCell("A1");
       mergedCell.value = "CottonConnect | Ginner Process Grey Out Report";
       mergedCell.font = { bold: true };
@@ -1960,7 +1960,7 @@ const exportGinnerProcessGreyOutReport = async (req: Request, res: Response) => 
           "process_id",
         ],
         raw: true,
-        where: { process_id: { [Op.in]: processIds } },
+        where: { process_id: { [Op.in]: processIds }, sold_status: false, is_all_rejected: null },
         group: ["process_id"],
       });
 
@@ -1976,7 +1976,7 @@ const exportGinnerProcessGreyOutReport = async (req: Request, res: Response) => 
           reel_lot_no: item.reel_lot_no ? item.reel_lot_no : "",
           press: item.dataValues.press_no ? item.dataValues.press_no : "",
           lot_no: item.dataValues.lot_no ? item.dataValues.lot_no : "",
-          lint_quantity: lint_quantity ? lint_quantity : "",
+          lint_quantity: lint_quantity ? lint_quantity : 0,
         });
         worksheet.addRow(rowValues);
       }
@@ -2095,7 +2095,7 @@ const exportSpinnerProcessGreyOutReport = async (req: Request, res: Response) =>
       // Create the excel workbook file
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet("Sheet1");
-      worksheet.mergeCells("A1:M1");
+      worksheet.mergeCells("A1:G1");
       const mergedCell = worksheet.getCell("A1");
       mergedCell.value = "CottonConnect | Spinner Yarn Greyout Report";
       mergedCell.font = { bold: true };
@@ -2137,7 +2137,7 @@ const exportSpinnerProcessGreyOutReport = async (req: Request, res: Response) =>
           spinner: item.dataValues.spinner_name ? item.dataValues.spinner_name : "",
           reel_lot_no: item.dataValues.reel_lot_no ? item.dataValues.reel_lot_no : "",
           batch_lot_no: item.dataValues.batch_lot_no ? item.dataValues.batch_lot_no : "",
-          lint_quantity: item.dataValues.qty_stock ? item.dataValues.qty_stock : "",
+          lint_quantity: item.dataValues.qty_stock ? item.dataValues.qty_stock : 0,
         });
         worksheet.addRow(rowValues);
       }
@@ -2274,7 +2274,7 @@ const exportSpinnerGreyOutReport = async (req: Request, res: Response) => {
       // Create the excel workbook file
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet("Sheet1");
-      worksheet.mergeCells("A1:M1");
+      worksheet.mergeCells("A1:G1");
       const mergedCell = worksheet.getCell("A1");
       mergedCell.value = "CottonConnect | Spinner Lint Process Greyout Report";
       mergedCell.font = { bold: true };
@@ -2321,7 +2321,7 @@ const exportSpinnerGreyOutReport = async (req: Request, res: Response) => {
           reel_lot_no: item.dataValues.reel_lot_no ? item.dataValues.reel_lot_no : "",
           invoice: item.dataValues.invoice_no ? item.dataValues.invoice_no : "",
           lot_no: item.dataValues.lot_no ? item.dataValues.lot_no : "",
-          lint_quantity: item.dataValues.qty_stock ? item.dataValues.qty_stock : "",
+          lint_quantity: item.dataValues.qty_stock ? item.dataValues.qty_stock : 0,
         });
         worksheet.addRow(rowValues);
       }
@@ -11373,7 +11373,7 @@ const exportGarmentFabric = async (req: Request, res: Response) => {
         bale_ids: item.bale_ids ? item.bale_ids : "",
         fabric_length: item.fabric_length ? item.fabric_length : "",
         fabric_weight: item.fabric_weight ? item.fabric_weight : "",
-        color: process.env.BASE_URL + item.qr ?? "",
+        color: process.env.BASE_URL + item.qr,
       });
       worksheet.addRow(rowValues);
     }

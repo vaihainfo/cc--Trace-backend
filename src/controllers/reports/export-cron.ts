@@ -149,7 +149,7 @@ const exportSpinnerGreyOutReport = async () => {
    // Create the excel workbook file
    const workbook = new ExcelJS.Workbook();
    const worksheet = workbook.addWorksheet("Sheet1");
-   worksheet.mergeCells("A1:M1");
+   worksheet.mergeCells("A1:G1");
    const mergedCell = worksheet.getCell("A1");
    mergedCell.value = "CottonConnect | Spinner Lint Process Greyout Report";
    mergedCell.font = { bold: true };
@@ -241,7 +241,7 @@ const exportGinnerProcessGreyOutReport = async () => {
    // Create the excel workbook file
    const workbook = new ExcelJS.Workbook();
    const worksheet = workbook.addWorksheet("Sheet1");
-   worksheet.mergeCells("A1:M1");
+   worksheet.mergeCells("A1:G1");
    const mergedCell = worksheet.getCell("A1");
    mergedCell.value = "CottonConnect | Ginner Process Grey Out Report";
    mergedCell.font = { bold: true };
@@ -295,7 +295,7 @@ const exportGinnerProcessGreyOutReport = async () => {
         [sequelize.fn("min", sequelize.col("bale_no")), "pressno_from"],
         [sequelize.fn("max", Sequelize.literal("LPAD(bale_no, 10, ' ')")), "pressno_to"],
       ],
-      where: { process_id: item.dataValues.id },
+      where: { process_id: item.dataValues.id, sold_status: false, is_all_rejected: null },
     });
      const rowValues = Object.values({
        index: index + 1,
@@ -351,7 +351,7 @@ const exportSpinnerProcessGreyOutReport = async () => {
    // Create the excel workbook file
    const workbook = new ExcelJS.Workbook();
    const worksheet = workbook.addWorksheet("Sheet1");
-   worksheet.mergeCells("A1:M1");
+   worksheet.mergeCells("A1:G1");
    const mergedCell = worksheet.getCell("A1");
    mergedCell.value = "CottonConnect | Spinner Yarn Greyout Report";
    mergedCell.font = { bold: true };
@@ -390,7 +390,7 @@ const exportSpinnerProcessGreyOutReport = async () => {
        spinner: item.dataValues.spinner_name ? item.dataValues.spinner_name : "",
        reel_lot_no: item.dataValues.reel_lot_no ? item.dataValues.reel_lot_no : "",
        batch_lot_no: item.dataValues.batch_lot_no ? item.dataValues.batch_lot_no : "",
-       lint_quantity: item.dataValues.qty_stock ? item.dataValues.qty_stock : "",
+       lint_quantity: item.dataValues.qty_stock ? item.dataValues.qty_stock : 0,
       });
      worksheet.addRow(rowValues);
    }
