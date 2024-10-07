@@ -3089,7 +3089,9 @@ const generateSpinnerSummary = async () => {
           lint_cotton_procured,
           lint_cotton_procured_pending,
           lint_consumed,
+          lint_greyout,
           yarnProcured,
+          yarnGreyout,
           yarnSold,
         ] = await Promise.all([
           GinSales.findOne({
@@ -3157,6 +3159,23 @@ const generateSpinnerSummary = async () => {
             },
             group: ["spinprocess.spinner_id"],
           }),
+          GinSales.findOne({
+            attributes: [
+              [
+                sequelize.fn(
+                  "COALESCE",
+                  sequelize.fn("SUM", sequelize.col("qty_stock")),
+                  0
+                ),
+                "lint_greyout",
+              ],
+            ],
+            where: {
+              ...wheree,
+              buyer: item.id,
+              greyout_status: true, 
+            },
+          }),
           SpinProcess.findOne({
             attributes: [
               [
@@ -3179,6 +3198,23 @@ const generateSpinnerSummary = async () => {
             where: {
               ...wheree,
               spinner_id: item.id,
+            },
+          }),
+          SpinProcess.findOne({
+            attributes: [
+             [
+                sequelize.fn(
+                  "COALESCE",
+                  sequelize.fn("SUM", sequelize.col("qty_stock")),
+                  0
+                ),
+                "yarn_greyout",
+              ],
+            ],
+            where: {
+              ...wheree,
+              spinner_id: item.id,
+              greyout_status: true,
             },
           }),
           SpinSales.findOne({
@@ -3211,6 +3247,13 @@ const generateSpinnerSummary = async () => {
         obj.lintStockKG = lint_cotton_procured
           ? Number(lint_cotton_procured?.dataValues.lint_cotton_stock?? 0)
           : 0;
+
+        obj.lintGreyoutKg =  lint_greyout?.dataValues.lint_greyout ?? 0;
+
+        obj.lintActualStockKg = Number(obj.lintStockKG) >  Number(obj.lintGreyoutKg)
+        ? Number(obj.lintStockKG) - (Number(obj.lintGreyoutKg))
+        : 0;
+
         obj.yarnProcuredKG = yarnProcured
           ? Number(yarnProcured?.dataValues.yarn_procured?? 0)
           : 0;
@@ -3218,12 +3261,22 @@ const generateSpinnerSummary = async () => {
         obj.yarnStockKG = yarnProcured
           ? Number(yarnProcured?.dataValues.yarn_stock ?? 0)
           : 0;
+
+        obj.yarnGreyoutKg =  yarnGreyout?.dataValues.yarn_greyout ?? 0;
+
+        obj.yarnActualStockKg = Number(obj.yarnStockKG) >  Number(obj.yarnGreyoutKg)
+        ? Number(obj.yarnStockKG) - (Number(obj.yarnGreyoutKg))
+        : 0;
         obj.lintCottonProcuredMT = Number(convert_kg_to_mt(obj.lintCottonProcuredKG)) ?? 0;
         obj.lintCottonProcuredPendingMT = Number(convert_kg_to_mt(obj.lintCottonProcuredPendingKG)) ?? 0;
         obj.lintConsumedMT = Number(convert_kg_to_mt(obj.lintConsumedKG));
         obj.lintStockMT = Number(convert_kg_to_mt(obj.lintStockKG));
+        obj.lintGreyoutMT  = convert_kg_to_mt(obj.lintGreyoutKg);
+        obj.lintActualStockMT = convert_kg_to_mt(obj.lintActualStockKg);
         obj.yarnSoldMT = Number(convert_kg_to_mt(obj.yarnSoldKG));
         obj.yarnProcuredMT = Number(convert_kg_to_mt(obj.yarnProcuredKG));
+        obj.yarnGreyoutMT  = convert_kg_to_mt(obj.yarnGreyoutKg);
+        obj.yarnActualStockMT = convert_kg_to_mt(obj.yarnActualStockKg);
         obj.yarnStockMT = Number(convert_kg_to_mt(obj.yarnStockKG));
 
         const rowValues = Object.values({
@@ -3232,9 +3285,13 @@ const generateSpinnerSummary = async () => {
           lint_cotton_procured: obj.lintCottonProcuredMT,
           lint_cotton_procured_pending: obj.lintCottonProcuredPendingMT,
           lint_consumed: obj.lintConsumedMT,
+          lintGreyoutMT: obj.lintGreyoutMT ? Number(obj.lintGreyoutMT) : 0,
+          lintActualStockMT: obj.lintActualStockMT ? Number(obj.lintActualStockMT) : 0,
           balance_lint_cotton: obj.lintStockMT,
           yarn_procured: obj.yarnProcuredMT,
           yarn_sold: obj.yarnSoldMT,
+          yarnGreyoutMT: obj.yarnGreyoutMT ? Number(obj.yarnGreyoutMT) : 0,
+          yarnActualStockMT: obj.yarnActualStockMT ? Number(obj.yarnActualStockMT) : 0,
           yarn_stock: obj.yarnStockMT,
         });
 
@@ -3242,7 +3299,7 @@ const generateSpinnerSummary = async () => {
         if (!currentWorksheet) {
           currentWorksheet = workbook.addWorksheet(`Spinner Summary ${worksheetIndex}`);
           if (worksheetIndex == 1) {
-            currentWorksheet.mergeCells("A1:I1");
+            currentWorksheet.mergeCells("A1:M1");
             const mergedCell = currentWorksheet.getCell("A1");
             mergedCell.value = "CottonConnect | Spinner Summary Report";
             mergedCell.font = { bold: true };
@@ -3255,9 +3312,13 @@ const generateSpinnerSummary = async () => {
             "Total Lint Cotton Procured MT (Accepted)",
             "Total Lint Cotton Procured MT (Pending)",
             "Lint cotton processed in MT",
+            "Grey-Out Lint Quantity MT",
+            "Actual lint in stock MT",
             "Balance Lint cotton stock in MT",
             "Total Yarn Produced MT",
             "Yarn sold in MT",
+            "Grey-Out Yarn Quantity MT",
+            "Actual Yarn stock in MT",
             "Yarn stock in MT",
           ]);
           headerRow.font = { bold: true };

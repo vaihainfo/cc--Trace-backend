@@ -9663,7 +9663,9 @@ const fetchSpinnerSummaryPagination = async (req: Request, res: Response) => {
         lint_cotton_procured,
         lint_cotton_procured_pending,
         lint_consumed,
+        lint_greyout,
         yarnProcured,
+        yarnGreyout,
         yarnSold,
       ] = await Promise.all([
         GinSales.findOne({
@@ -9737,6 +9739,25 @@ const fetchSpinnerSummaryPagination = async (req: Request, res: Response) => {
           },
           group: ["spinprocess.spinner_id"],
         }),
+        GinSales.findOne({
+          attributes: [
+            [
+              sequelize.fn(
+                "COALESCE",
+                sequelize.fn("SUM", sequelize.col("qty_stock")),
+                0
+              ),
+              "lint_greyout",
+            ],
+          ],
+          where: {
+            ...wheree,
+            ...ginSalesCondition,
+            buyer: spinner.id,
+            // status: "Pending for QR scanning",
+            greyout_status: true, 
+          },
+        }),
         SpinProcess.findOne({
           attributes: [
             [
@@ -9760,6 +9781,24 @@ const fetchSpinnerSummaryPagination = async (req: Request, res: Response) => {
             ...wheree,
             ...spinProcessCondition,
             spinner_id: spinner.id,
+          },
+        }),
+        SpinProcess.findOne({
+          attributes: [
+           [
+              sequelize.fn(
+                "COALESCE",
+                sequelize.fn("SUM", sequelize.col("qty_stock")),
+                0
+              ),
+              "yarn_greyout",
+            ],
+          ],
+          where: {
+            ...wheree,
+            ...spinProcessCondition,
+            spinner_id: spinner.id,
+            greyout_status: true,
           },
         }),
         SpinSales.findOne({
@@ -9790,9 +9829,19 @@ const fetchSpinnerSummaryPagination = async (req: Request, res: Response) => {
       obj.lintConsumedKG = lint_consumed
         ? lint_consumed?.dataValues.lint_cotton_consumed ?? 0
         : 0;
+     
+      
       obj.lintStockKG = lint_cotton_procured
         ? lint_cotton_procured?.dataValues.lint_cotton_stock ?? 0
         : 0;
+
+      obj.lintGreyoutKg =  lint_greyout?.dataValues.lint_greyout ?? 0;
+
+      obj.lintActualStockKg = Number(obj.lintStockKG) >  Number(obj.lintGreyoutKg)
+      ? Number(obj.lintStockKG) - (Number(obj.lintGreyoutKg))
+      : 0;
+      
+
       obj.yarnProcuredKG = yarnProcured
         ? yarnProcured?.dataValues.yarn_procured ?? 0
         : 0;
@@ -9800,15 +9849,25 @@ const fetchSpinnerSummaryPagination = async (req: Request, res: Response) => {
       obj.yarnStockKG = yarnProcured
         ? yarnProcured?.dataValues.yarn_stock ?? 0
         : 0;
+
+      obj.yarnGreyoutKg =  yarnGreyout?.dataValues.yarn_greyout ?? 0;
+
+      obj.yarnActualStockKg = Number(obj.yarnStockKG) >  Number(obj.yarnGreyoutKg)
+      ? Number(obj.yarnStockKG) - (Number(obj.yarnGreyoutKg))
+      : 0;
       obj.lintCottonProcuredMT = convert_kg_to_mt(obj.lintCottonProcuredKG);
       obj.lintCottonProcuredPendingMT = convert_kg_to_mt(
         obj.lintCottonProcuredPendingKG
       );
       obj.lintConsumedMT = convert_kg_to_mt(obj.lintConsumedKG);
       obj.lintStockMT = convert_kg_to_mt(obj.lintStockKG);
+      obj.lintGreyoutMT  = convert_kg_to_mt(obj.lintGreyoutKg);
+      obj.lintActualStockMT = convert_kg_to_mt(obj.lintActualStockKg);
       obj.yarnSoldMT = convert_kg_to_mt(obj.yarnSoldKG);
       obj.yarnProcuredMT = convert_kg_to_mt(obj.yarnProcuredKG);
       obj.yarnStockMT = convert_kg_to_mt(obj.yarnStockKG);
+      obj.yarnGreyoutMT  = convert_kg_to_mt(obj.yarnGreyoutKg);
+      obj.yarnActualStockMT = convert_kg_to_mt(obj.yarnActualStockKg);
       result.push({ ...obj, spinner });
     }
     //fetch data with pagination
@@ -9883,7 +9942,7 @@ const exportSpinnerSummary = async (req: Request, res: Response) => {
       // Create the excel workbook file
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet("Sheet1");
-      worksheet.mergeCells("A1:I1");
+      worksheet.mergeCells("A1:M1");
       const mergedCell = worksheet.getCell("A1");
       mergedCell.value = "CottonConnect | Spinner Summary Report";
       mergedCell.font = { bold: true };
@@ -9895,9 +9954,13 @@ const exportSpinnerSummary = async (req: Request, res: Response) => {
         "Total Lint Cotton Procured MT (Accepted)",
         "Total Lint Cotton Procured MT (Pending)",
         "Lint cotton processed in MT",
+        "Grey-Out Lint Quantity MT",
+        "Actual lint in stock MT",
         "Balance Lint cotton stock in MT",
         "Total Yarn Produced MT",
         "Yarn sold in MT",
+        "Grey-Out Yarn Quantity MT",
+        "Actual Yarn stock in MT",
         "Yarn stock in MT",
       ]);
       headerRow.font = { bold: true };
@@ -9926,7 +9989,9 @@ const exportSpinnerSummary = async (req: Request, res: Response) => {
           lint_cotton_procured,
           lint_cotton_procured_pending,
           lint_consumed,
+          lint_greyout,
           yarnProcured,
+          yarnGreyout,
           yarnSold,
         ] = await Promise.all([
           GinSales.findOne({
@@ -9999,6 +10064,25 @@ const exportSpinnerSummary = async (req: Request, res: Response) => {
             },
             group: ["spinprocess.spinner_id"],
           }),
+          GinSales.findOne({
+            attributes: [
+              [
+                sequelize.fn(
+                  "COALESCE",
+                  sequelize.fn("SUM", sequelize.col("qty_stock")),
+                  0
+                ),
+                "lint_greyout",
+              ],
+            ],
+            where: {
+              ...wheree,
+              ...ginSalesCondition,
+              buyer: item.id,
+              // status: "Pending for QR scanning",
+              greyout_status: true, 
+            },
+          }),
           SpinProcess.findOne({
             attributes: [
               [
@@ -10022,6 +10106,24 @@ const exportSpinnerSummary = async (req: Request, res: Response) => {
               ...wheree,
               ...spinProcessCondition,
               spinner_id: item.id,
+            },
+          }),
+          SpinProcess.findOne({
+            attributes: [
+             [
+                sequelize.fn(
+                  "COALESCE",
+                  sequelize.fn("SUM", sequelize.col("qty_stock")),
+                  0
+                ),
+                "yarn_greyout",
+              ],
+            ],
+            where: {
+              ...wheree,
+              ...spinProcessCondition,
+              spinner_id: item.id,
+              greyout_status: true,
             },
           }),
           SpinSales.findOne({
@@ -10057,6 +10159,12 @@ const exportSpinnerSummary = async (req: Request, res: Response) => {
         obj.lintStockKG = lint_cotton_procured
           ? lint_cotton_procured?.dataValues.lint_cotton_stock ?? 0
           : 0;
+        obj.lintGreyoutKg =  lint_greyout?.dataValues.lint_greyout ?? 0;
+
+        obj.lintActualStockKg = Number(obj.lintStockKG) >  Number(obj.lintGreyoutKg)
+        ? Number(obj.lintStockKG) - (Number(obj.lintGreyoutKg))
+        : 0;
+
         obj.yarnProcuredKG = yarnProcured
           ? yarnProcured?.dataValues.yarn_procured ?? 0
           : 0;
@@ -10064,15 +10172,25 @@ const exportSpinnerSummary = async (req: Request, res: Response) => {
         obj.yarnStockKG = yarnProcured
           ? yarnProcured?.dataValues.yarn_stock ?? 0
           : 0;
+
+        obj.yarnGreyoutKg =  yarnGreyout?.dataValues.yarn_greyout ?? 0;
+
+        obj.yarnActualStockKg = Number(obj.yarnStockKG) >  Number(obj.yarnGreyoutKg)
+        ? Number(obj.yarnStockKG) - (Number(obj.yarnGreyoutKg))
+        : 0;
         obj.lintCottonProcuredMT = convert_kg_to_mt(obj.lintCottonProcuredKG);
         obj.lintCottonProcuredPendingMT = convert_kg_to_mt(
           obj.lintCottonProcuredPendingKG
         );
         obj.lintConsumedMT = convert_kg_to_mt(obj.lintConsumedKG);
         obj.lintStockMT = convert_kg_to_mt(obj.lintStockKG);
+        obj.lintGreyoutMT  = convert_kg_to_mt(obj.lintGreyoutKg);
+        obj.lintActualStockMT = convert_kg_to_mt(obj.lintActualStockKg);
         obj.yarnSoldMT = convert_kg_to_mt(obj.yarnSoldKG);
         obj.yarnProcuredMT = convert_kg_to_mt(obj.yarnProcuredKG);
         obj.yarnStockMT = convert_kg_to_mt(obj.yarnStockKG);
+        obj.yarnGreyoutMT  = convert_kg_to_mt(obj.yarnGreyoutKg);
+        obj.yarnActualStockMT = convert_kg_to_mt(obj.yarnActualStockKg);
 
 
         const rowValues = Object.values({
@@ -10081,9 +10199,13 @@ const exportSpinnerSummary = async (req: Request, res: Response) => {
           lint_cotton_procured: obj.lintCottonProcuredMT ? Number(obj.lintCottonProcuredMT) : 0,
           lint_cotton_procured_pending: obj.lintCottonProcuredPendingMT ? Number(obj.lintCottonProcuredPendingMT) : 0,
           lint_consumed: obj.lintConsumedMT ? Number(obj.lintConsumedMT) : 0,
+          lintGreyoutMT: obj.lintGreyoutMT ? Number(obj.lintGreyoutMT) : 0,
+          lintActualStockMT: obj.lintActualStockMT ? Number(obj.lintActualStockMT) : 0,
           balance_lint_cotton: obj.lintStockMT ? Number(obj.lintStockMT) : 0,
           yarn_procured: obj.yarnProcuredMT ? Number(obj.yarnProcuredMT) : 0,
           yarn_sold: obj.yarnSoldMT ? Number(obj.yarnSoldMT) : 0,
+          yarnGreyoutMT: obj.yarnGreyoutMT ? Number(obj.yarnGreyoutMT) : 0,
+          yarnActualStockMT: obj.yarnActualStockMT ? Number(obj.yarnActualStockMT) : 0,
           yarn_stock: obj.yarnStockMT ? Number(obj.yarnStockMT) : 0,
         });
         worksheet.addRow(rowValues);
