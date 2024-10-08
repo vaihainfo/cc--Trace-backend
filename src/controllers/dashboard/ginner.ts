@@ -472,7 +472,7 @@ const getTopSpinners = async (
     const reqData = await getQueryParams(req, res);
     const where = getOverAllDataQuery(reqData);
     const spinnersData = await getTopSpinnersData(where);
-    const data = getTopSpinnersRes(spinnersData);
+    const data = await getTopSpinnersRes(spinnersData);
     return res.sendSuccess(res, data);
 
   } catch (error: any) {
@@ -489,6 +489,8 @@ const getTopSpinnersData = async (
   where['$buyerdata.name$'] = {
     [Op.not]: null
   };
+  where.status = 'Sold';
+  
   const result = await GinSales.findAll({
     attributes: [
       [Sequelize.fn('SUM', Sequelize.col('gin_sales.total_qty')), 'total'],
