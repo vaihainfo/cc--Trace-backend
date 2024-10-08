@@ -472,7 +472,7 @@ const getTopSpinners = async (
     const reqData = await getQueryParams(req, res);
     const where = getOverAllDataQuery(reqData);
     const spinnersData = await getTopSpinnersData(where);
-    const data = getTopSpinnersRes(spinnersData);
+    const data = await getTopSpinnersRes(spinnersData);
     return res.sendSuccess(res, data);
 
   } catch (error: any) {
@@ -489,6 +489,8 @@ const getTopSpinnersData = async (
   where['$buyerdata.name$'] = {
     [Op.not]: null
   };
+  where.status = 'Sold';
+  
   const result = await GinSales.findAll({
     attributes: [
       [Sequelize.fn('SUM', Sequelize.col('gin_sales.total_qty')), 'total'],
@@ -1108,8 +1110,8 @@ const getBaleComparison = async (
   try {
     const reqData = await getQueryParams(req, res);
     const ginBale = getGinBaleQuery(reqData);
-    const ginBaleProduce = getBaleProducedQuery(reqData);
-    const baleSel = getGinnerSalesWhereQuery(reqData);
+    const ginBaleProduce = await getBaleProducedQuery(reqData);
+    const baleSel = await getGinnerSalesWhereQuery(reqData);
     const procuredData = await getBaleNewProducedData(ginBaleProduce);
     const soldData = await getBaleSoldData(baleSel);
     const data = await getBaleComparisonRes(
@@ -3048,6 +3050,438 @@ const getMonthName = (
   return monthNames[month];
 };
 
+const getGinGreyoutQtyStock = async ( req: Request, res: Response) =>{
+  try {
+    const reqData = await getQueryParams(req, res);
+    // const ginnerWhere = await getOverAllDataQuery(reqData);
+    const baleWhere = await getGinBaleQuery(reqData);
+    // const processedData = await getLintProcessedData(ginnerWhere);
+    // const soldData = await getLintBaleSoldData(baleWhere);
+
+    const baleSel = await getGinnerSalesWhereQuery(reqData);
+    const processedData = await getBaleProcuredData(baleWhere);
+    const soldData = await getBaleSoldData(baleSel);
+    
+    const greyoutData = await getLintBaleGreyoutData(baleWhere);
+
+
+    const data = await getLntQtyComparisonRes(
+      processedData,
+      soldData,
+      greyoutData,
+      reqData.season
+    );
+    return res.sendSuccess(res, data);
+
+  } catch (error: any) {
+    const code = error.message
+      ? error.message
+      : "ERR_INTERNAL_SERVER_ERROR";
+    return res.sendError(res, code);
+  }
+}
+
+const getLntQtyComparisonRes = async (
+  processedData: any[],
+  soldData: any[],
+  greyoutData: any[],
+  reqSeason: any
+) => {
+  let seasonIds: number[] = [];
+
+  processedData.forEach((procured: any) => {
+    if (procured.dataValues.seasonId)
+      seasonIds.push(procured.dataValues.seasonId);
+  });
+
+  soldData.forEach((processed: any) => {
+    if (!seasonIds.includes(processed.dataValues.seasonId))
+      seasonIds.push(processed.dataValues.seasonId);
+  });
+
+  greyoutData.forEach((processed: any) => {
+    if (!seasonIds.includes(processed.dataValues.seasonId))
+      seasonIds.push(processed.dataValues.seasonId);
+  });
+
+  const seasons = await Season.findAll({
+    // limit: 3,
+    order: [
+      ["id", "DESC"],
+    ],
+  });
+  if (seasonIds.length != 3 && !reqSeason) {
+    for (const season of seasons) {
+      let currentDate = moment(); // Current date using moment
+      let checkDate = moment('2024-10-01'); // October 1st, 2024
+      
+      if (currentDate.isSameOrAfter(checkDate) && season.name === '2024-25' && !seasonIds.includes(season.id)) {
+        seasonIds.push(season.id);
+      } else if(currentDate.isBefore(checkDate) && season.name === '2024-25' && seasonIds.includes(season.id)){
+        seasonIds = seasonIds.filter((id: number) => id != season.id)
+      }
+    }
+  }
+
+  seasonIds = seasonIds.sort((a, b) => a - b).slice(-3);
+
+  let season: any = [];
+  let processed: any = [];
+  let sold: any = [];
+  let total_stock: any = [];
+  let greyout_qty: any = [];
+  let actual_stock: any = [];
+
+  for (const sessionId of seasonIds) {
+    const fProcured = processedData.find((production: any) =>
+      production.dataValues.seasonId == sessionId
+    );
+    const fSold = soldData.find((processed: any) =>
+      processed.dataValues.seasonId == sessionId
+    );
+
+    const fGreyout = greyoutData.find((processed: any) =>
+      processed.dataValues.seasonId == sessionId
+    );
+
+    let data = {
+      seasonName: '',
+      processed: 0,
+      sold: 0,
+      total_stock: 0,
+      greyout_qty: 0,
+      actual_stock: 0,
+    };
+    if (fProcured) {
+      data.seasonName = fProcured.dataValues.seasonName;
+      data.processed = formatNumber(fProcured.dataValues.lintProcured);
+    }
+
+    if (fSold) {
+      data.seasonName = fSold.dataValues.seasonName;
+      data.sold = formatNumber(fSold.dataValues.lintSold);
+    }
+
+    if (fGreyout) {
+      data.seasonName = fGreyout.dataValues.seasonName;
+      data.greyout_qty = formatNumber(fGreyout.dataValues.lint_qty);
+    }
+
+    data.total_stock =
+      data.processed > data.sold
+        ? Number((data.processed - data.sold).toFixed(2))
+        : 0;
+
+    data.actual_stock =
+      data.total_stock > data.greyout_qty
+        ? Number((data.total_stock - data.greyout_qty).toFixed(2))
+        : 0;
+
+    if (!data.seasonName) {
+      const fSeason = seasons.find((season: any) =>
+        season.id == sessionId
+      );
+      if (fSeason) {
+        data.seasonName = fSeason.name;
+      }
+    }
+
+    season.push(data.seasonName);
+    processed.push(data.processed);
+    greyout_qty.push(data.greyout_qty);
+    total_stock.push(data.total_stock);
+    actual_stock.push(data.actual_stock);
+    sold.push(data.sold);
+
+  }
+
+  return {
+    season,
+    processed,
+    sold,
+    total_stock,
+    greyout_qty,
+    actual_stock
+  };
+};
+
+
+
+const getLintBaleSoldData = async (
+  where: any
+) => {
+  where.sold_status = true
+  // where.status = 'Sold';
+
+  const result = await GinBale.findAll({
+    attributes: [
+      [
+        sequelize.fn(
+          "COUNT",
+          Sequelize.literal('DISTINCT "gin-bales"."id"')
+        ),
+        "baleSold",
+      ],
+      [
+        sequelize.fn(
+              "COALESCE",
+        Sequelize.fn(
+          "SUM",
+          Sequelize.literal(`
+            CASE
+              WHEN "gin-bales"."old_weight" IS NOT NULL THEN CAST("gin-bales"."old_weight" AS DOUBLE PRECISION)
+              ELSE CAST("gin-bales"."weight" AS DOUBLE PRECISION)
+            END
+          `)
+        ),
+        0
+        ),
+        "lintSold",
+      ],
+      [Sequelize.col('ginprocess.season.name'), 'seasonName'],
+      [Sequelize.col('ginprocess.season.id'), 'seasonId']
+    ],
+    include: [
+      {
+        model: GinProcess,
+        as: "ginprocess",
+        attributes: [],
+        include: [{
+          model: Season,
+          as: 'season',
+          attributes: []
+        }, {
+          model: Ginner,
+          as: 'ginner',
+          attributes: []
+        }],
+      },
+    ],
+    where,
+    // limit: 3,
+    order: [['seasonId', 'desc']],
+    group: ["ginprocess.season.id"],
+  });
+
+  return result;
+};
+
+const getLintBaleGreyoutData = async (
+  where: any
+) => {
+  where["$ginprocess.greyout_status$"] = true;
+  where.sold_status = false
+  where.is_all_rejected = null
+  // where.status = 'Sold';
+
+  const result = await GinBale.findAll({
+    attributes: [
+      [
+        sequelize.fn(
+          "COUNT",
+          Sequelize.literal('DISTINCT "gin-bales"."id"')
+        ),
+        "no_of_bales",
+      ],
+      [
+        sequelize.fn(
+              "COALESCE",
+        Sequelize.fn(
+          "SUM",
+          Sequelize.literal(`
+            CASE
+              WHEN "gin-bales"."old_weight" IS NOT NULL THEN CAST("gin-bales"."old_weight" AS DOUBLE PRECISION)
+              ELSE CAST("gin-bales"."weight" AS DOUBLE PRECISION)
+            END
+          `)
+        ),
+        0
+        ),
+        "lint_qty",
+      ],
+      [Sequelize.col('ginprocess.season.name'), 'seasonName'],
+      [Sequelize.col('ginprocess.season.id'), 'seasonId']
+    ],
+    include: [
+      {
+        model: GinProcess,
+        as: "ginprocess",
+        attributes: [],
+        include: [{
+          model: Season,
+          as: 'season',
+          attributes: []
+        }, {
+          model: Ginner,
+          as: 'ginner',
+          attributes: []
+        }],
+      },
+    ],
+    where,
+    // limit: 3,
+    order: [['seasonId', 'desc']],
+    group: ["ginprocess.season.id"],
+  });
+
+  return result;
+};
+
+const getGinGreyoutBaleStock = async ( req: Request, res: Response) =>{
+  try {
+    const reqData = await getQueryParams(req, res);
+    // const ginnerWhere = await getOverAllDataQuery(reqData);
+    const baleWhere = await getGinBaleQuery(reqData);
+    const ginBaleProduce = await getBaleProducedQuery(reqData);
+    
+    const baleSel = await getGinnerSalesWhereQuery(reqData);
+    const processedData = await getBaleNewProducedData(ginBaleProduce);
+    // const processedData = await getBaleProcuredData(baleWhere);
+    const soldData = await getBaleSoldData(baleSel);
+    
+    const greyoutData = await getLintBaleGreyoutData(baleWhere);
+
+
+    const data = await getLintBaleComparisonRes(
+      processedData,
+      soldData,
+      greyoutData,
+      reqData.season
+    );
+    return res.sendSuccess(res, data);
+
+  } catch (error: any) {
+    const code = error.message
+      ? error.message
+      : "ERR_INTERNAL_SERVER_ERROR";
+    return res.sendError(res, code);
+  }
+}
+
+const getLintBaleComparisonRes = async (
+  processedData: any[],
+  soldData: any[],
+  greyoutData: any[],
+  reqSeason: any
+) => {
+  let seasonIds: number[] = [];
+
+  processedData.forEach((procured: any) => {
+    if (procured.dataValues.seasonId)
+      seasonIds.push(procured.dataValues.seasonId);
+  });
+
+  soldData.forEach((processed: any) => {
+    if (!seasonIds.includes(processed.dataValues.seasonId))
+      seasonIds.push(processed.dataValues.seasonId);
+  });
+
+  greyoutData.forEach((processed: any) => {
+    if (!seasonIds.includes(processed.dataValues.seasonId))
+      seasonIds.push(processed.dataValues.seasonId);
+  });
+
+  const seasons = await Season.findAll({
+    // limit: 3,
+    order: [
+      ["id", "DESC"],
+    ],
+  });
+  if (seasonIds.length != 3 && !reqSeason) {
+    for (const season of seasons) {
+      let currentDate = moment(); // Current date using moment
+      let checkDate = moment('2024-10-01'); // October 1st, 2024
+      
+      if (currentDate.isSameOrAfter(checkDate) && season.name === '2024-25' && !seasonIds.includes(season.id)) {
+        seasonIds.push(season.id);
+      } else if(currentDate.isBefore(checkDate) && season.name === '2024-25' && seasonIds.includes(season.id)){
+        seasonIds = seasonIds.filter((id: number) => id != season.id)
+      }
+    }
+  }
+
+  seasonIds = seasonIds.sort((a, b) => a - b).slice(-3);
+
+  let season: any = [];
+  let processed: any = [];
+  let sold: any = [];
+  let total_stock: any = [];
+  let greyout_qty: any = [];
+  let actual_stock: any = [];
+
+  for (const sessionId of seasonIds) {
+    const fProcured = processedData.find((production: any) =>
+      production.dataValues.seasonId == sessionId
+    );
+    const fSold = soldData.find((processed: any) =>
+      processed.dataValues.seasonId == sessionId
+    );
+
+    const fGreyout = greyoutData.find((processed: any) =>
+      processed.dataValues.seasonId == sessionId
+    );
+
+    let data = {
+      seasonName: '',
+      processed: 0,
+      sold: 0,
+      total_stock: 0,
+      greyout_qty: 0,
+      actual_stock: 0,
+    };
+    if (fProcured) {
+      data.seasonName = fProcured.dataValues.seasonName;
+      data.processed = formatNumber(fProcured.dataValues.procured);
+    }
+
+    if (fSold) {
+      data.seasonName = fSold.dataValues.seasonName;
+      data.sold = formatNumber(fSold.dataValues.sold);
+    }
+
+    if (fGreyout) {
+      data.seasonName = fGreyout.dataValues.seasonName;
+      data.greyout_qty = formatNumber(fGreyout.dataValues.no_of_bales);
+    }
+
+    data.total_stock =
+      data.processed > data.sold
+        ? Number((data.processed - data.sold).toFixed(2))
+        : 0;
+
+    data.actual_stock =
+      data.total_stock > data.greyout_qty
+        ? Number((data.total_stock - data.greyout_qty).toFixed(2))
+        : 0;
+
+    if (!data.seasonName) {
+      const fSeason = seasons.find((season: any) =>
+        season.id == sessionId
+      );
+      if (fSeason) {
+        data.seasonName = fSeason.name;
+      }
+    }
+
+    season.push(data.seasonName);
+    processed.push(data.processed);
+    greyout_qty.push(data.greyout_qty);
+    total_stock.push(data.total_stock);
+    actual_stock.push(data.actual_stock);
+    sold.push(data.sold);
+
+  }
+
+  return {
+    season,
+    processed,
+    sold,
+    total_stock,
+    greyout_qty,
+    actual_stock
+  };
+};
+
 export {
   getTopVillages,
   getTopSpinners,
@@ -3066,5 +3500,7 @@ export {
   getProcessedByCountry,
   getBalesProcuredByCountry,
   getBalesSoldByCountry,
-  getBalesStockByCountry
+  getBalesStockByCountry,
+  getGinGreyoutQtyStock,
+  getGinGreyoutBaleStock
 };

@@ -24,4 +24,7 @@ router.get('/bales/procured/by/country', Dashboard.getBalesProcuredByCountry);
 router.get('/bales/sold/by/country', Dashboard.getBalesSoldByCountry);
 router.get('/bales/stock/by/country', Dashboard.getBalesStockByCountry);
 
+router.get('/greyout/lint/stock', Dashboard.getGinGreyoutQtyStock);
+router.get('/greyout/bale/stock', Dashboard.getGinGreyoutBaleStock);
+
 export default router;
