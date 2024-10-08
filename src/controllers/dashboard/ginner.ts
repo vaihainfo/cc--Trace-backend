@@ -3072,8 +3072,8 @@ const getGinGreyoutQtyStock = async ( req: Request, res: Response) =>{
     return res.sendSuccess(res, data);
 
   } catch (error: any) {
-    const code = error.errCode
-      ? error.errCode
+    const code = error.message
+      ? error.message
       : "ERR_INTERNAL_SERVER_ERROR";
     return res.sendError(res, code);
   }

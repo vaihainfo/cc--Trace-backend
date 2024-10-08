@@ -2466,7 +2466,7 @@ const getSpinLintGreyoutStock = async ( req: Request, res: Response) =>{
     const spinProcessWhere = getSpinnerLintQuery(reqData);
     const lintProcuredData = await getSpinLintProcuredData(ginSaleWhere);
     const lintProcessedData = await getLintProcessedData(spinProcessWhere);
-    const greyoutData = await getSpinLintGreyoutData(spinProcessWhere);
+    const greyoutData = await getSpinLintGreyoutData(ginSaleWhere);
 
 
     const data = await getLintGreyoutQtyComparisonRes(
@@ -2478,8 +2478,8 @@ const getSpinLintGreyoutStock = async ( req: Request, res: Response) =>{
     return res.sendSuccess(res, data);
 
   } catch (error: any) {
-    const code = error.errCode
-      ? error.errCode
+    const code = error.message
+      ? error.message
       : "ERR_INTERNAL_SERVER_ERROR";
     return res.sendError(res, code);
   }
@@ -2697,6 +2697,188 @@ const getSpinLintGreyoutData = async (
   return result;
 };
 
+
+const getSpinYarnGreyoutStock = async ( req: Request, res: Response) =>{
+  try {
+    const reqData = await getQueryParams(req, res);
+    const where = getSpinnerProcessWhereQuery(reqData);
+    const processedData = await getYarnProcuredData(where);
+    const soldData = await getYarnSoldData(where);
+    const greyoutData = await getYarnGreyoutData(where);
+
+    const data = await getYarnGreyoutComparisonRes(
+      processedData,
+      soldData,
+      greyoutData,
+      reqData.season
+    );
+    return res.sendSuccess(res, data);
+
+  } catch (error: any) {
+    const code = error.message
+      ? error.message
+      : "ERR_INTERNAL_SERVER_ERROR";
+    return res.sendError(res, code);
+  }
+}
+
+const getYarnGreyoutComparisonRes = async (
+  processedData: any[],
+  soldData: any[],
+  greyoutData: any[],
+  reqSeason: any
+) => {
+  let seasonIds: number[] = [];
+
+  processedData.forEach((procured: any) => {
+    if (procured.dataValues.seasonId)
+      seasonIds.push(procured.dataValues.seasonId);
+  });
+
+  soldData.forEach((processed: any) => {
+    if (!seasonIds.includes(processed.dataValues.seasonId))
+      seasonIds.push(processed.dataValues.seasonId);
+  });
+
+  greyoutData.forEach((processed: any) => {
+    if (!seasonIds.includes(processed.dataValues.seasonId))
+      seasonIds.push(processed.dataValues.seasonId);
+  });
+
+  const seasons = await Season.findAll({
+    // limit: 3,
+    order: [
+      ["id", "DESC"],
+    ],
+  });
+  if (seasonIds.length != 3 && !reqSeason) {
+    for (const season of seasons) {
+      let currentDate = moment(); // Current date using moment
+      let checkDate = moment('2024-10-01'); // October 1st, 2024
+      
+      if (currentDate.isSameOrAfter(checkDate) && season.name === '2024-25' && !seasonIds.includes(season.id)) {
+        seasonIds.push(season.id);
+      } else if(currentDate.isBefore(checkDate) && season.name === '2024-25' && seasonIds.includes(season.id)){
+        seasonIds = seasonIds.filter((id: number) => id != season.id)
+      }
+    }
+  }
+
+  seasonIds = seasonIds.sort((a, b) => a - b).slice(-3);
+
+  let season: any = [];
+  let processed: any = [];
+  let sold: any = [];
+  let total_stock: any = [];
+  let greyout_qty: any = [];
+  let actual_stock: any = [];
+
+  for (const sessionId of seasonIds) {
+    const fProcured = processedData.find((production: any) =>
+      production.dataValues.seasonId == sessionId
+    );
+    const fSold = soldData.find((processed: any) =>
+      processed.dataValues.seasonId == sessionId
+    );
+
+    const fGreyout = greyoutData.find((processed: any) =>
+      processed.dataValues.seasonId == sessionId
+    );
+
+    let data = {
+      seasonName: '',
+      processed: 0,
+      sold: 0,
+      total_stock: 0,
+      greyout_qty: 0,
+      actual_stock: 0,
+    };
+    if (fProcured) {
+      data.seasonName = fProcured.dataValues.seasonName;
+      data.processed = formatNumber(fProcured.dataValues.yarnProcured);
+    }
+
+    if (fSold) {
+      data.seasonName = fSold.dataValues.seasonName;
+      data.sold = formatNumber(fSold.dataValues.yarnSold);
+    }
+
+    if (fGreyout) {
+      data.seasonName = fGreyout.dataValues.seasonName;
+      data.greyout_qty = formatNumber(fGreyout.dataValues.yarnGreyout);
+    }
+
+    data.total_stock =
+      data.processed > data.sold
+        ? Number((data.processed - data.sold).toFixed(2))
+        : 0;
+
+    data.actual_stock =
+      data.total_stock > data.greyout_qty
+        ? Number((data.total_stock - data.greyout_qty).toFixed(2))
+        : 0;
+
+    if (!data.seasonName) {
+      const fSeason = seasons.find((season: any) =>
+        season.id == sessionId
+      );
+      if (fSeason) {
+        data.seasonName = fSeason.name;
+      }
+    }
+
+    season.push(data.seasonName);
+    processed.push(data.processed);
+    greyout_qty.push(data.greyout_qty);
+    total_stock.push(data.total_stock);
+    actual_stock.push(data.actual_stock);
+    sold.push(data.sold);
+
+  }
+
+  return {
+    season,
+    processed,
+    sold,
+    total_stock,
+    greyout_qty,
+    actual_stock
+  };
+};
+
+const getYarnGreyoutData = async (
+  where: any
+) => {
+  where.greyout_status = true;
+
+  const result = await SpinProcess.findAll({
+    attributes: [
+      [Sequelize.fn('SUM', Sequelize.col('qty_stock')), 'yarnGreyout'],
+      [Sequelize.col('season.name'), 'seasonName'],
+      [Sequelize.col('season.id'), 'seasonId']
+    ],
+    include: [{
+      model: Season,
+      as: 'season',
+      attributes: []
+    }, {
+      model: Spinner,
+      as: 'spinner',
+      attributes: []
+    }],
+    order: [['seasonId', 'desc']],
+    // limit: 3,
+    where,
+    group: ['season.id']
+  });
+
+  return result;
+
+};
+
+
+
+
 export {
   getTopGinners,
   getLintProcuredProcessed,
@@ -2716,5 +2898,6 @@ export {
   getYarnProducedByCountry,
   getYarnStockByCountry,
   getYarnAverageRealisationByCountry,
-  getSpinLintGreyoutStock
+  getSpinLintGreyoutStock,
+  getSpinYarnGreyoutStock
 };
