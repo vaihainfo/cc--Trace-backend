@@ -24,4 +24,6 @@ router.get('/yarn/produced/by/country', Dashboard.getYarnProducedByCountry);
 router.get('/yarn/stock/by/country', Dashboard.getYarnStockByCountry);
 router.get('/yarn/average/realisation/by/country', Dashboard.getYarnAverageRealisationByCountry);
 
+router.get('/greyout/lint/stock', Dashboard.getSpinLintGreyoutStock);
+
 export default router;
