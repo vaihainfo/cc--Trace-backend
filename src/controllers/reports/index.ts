@@ -10008,9 +10008,12 @@ const fetchGinnerSummaryPagination = async (req: Request, res: Response) => {
                   "COALESCE",
                   sequelize.fn(
                     "SUM",
-                    sequelize.literal(
-                      'CAST("gin-bales"."weight" AS DOUBLE PRECISION)'
-                    )
+                    sequelize.literal(`
+                      CASE
+                        WHEN "gin-bales"."old_weight" IS NOT NULL THEN CAST("gin-bales"."old_weight" AS DOUBLE PRECISION)
+                        ELSE CAST("gin-bales"."weight" AS DOUBLE PRECISION)
+                      END
+                    `)
                   ),
                   0
                 ),
@@ -11073,7 +11076,6 @@ const fetchSpinnerLintCottonStock = async (req: Request, res: Response) => {
       });
 
       let reelLotNo = salesData && salesData.length > 0 ? [...new Set(salesData.map((item: any) => item?.dataValues?.reel_lot_no))].join(',') : "";
-
       let procuredCotton = await GinSales.findOne({
         attributes: [
           [
@@ -11088,7 +11090,7 @@ const fetchSpinnerLintCottonStock = async (req: Request, res: Response) => {
         ],
         where: {
           buyer: spinner?.dataValues?.spinner_id,
-          season_id: spinner?.dataValues?.season_id,
+          // season_id: spinner?.dataValues?.season_id,
           status: "Sold",
         },
         include: [
@@ -13026,18 +13028,16 @@ const exportPscpProcurementLiveTracker = async (
           "Country",
           "State",
           "Programme",
-          "Expected Seed Cotton (KG)",
-          "Expected Lint (MT)",
-          "Procurement-Seed Cotton (KG)",
-          "Procurement %",
-          "Procurement-Seed Cotton Pending at Ginner (KG)",
-          "Procurement Lint in (KG)",
-          "Procurement Lint (MT)",
-          "No. of Bales of produced",
-          "Bales Sold for this season",
-          "LINT Sold for this season (MT)",
-          "Balance stock in  bales with Ginner",
-          "Balance stock with Ginner (MT)",
+          "Allocated Seed Cotton (MT)",
+          "Allocated Lint Cotton (MT)",
+          "Procured Seed Cotton (MT)",
+          "Seed cotton Procurement %",
+          "Seed Cotton Pending to accept at Ginner (MT)",
+          "Produced Lint Cotton (MT)",
+          "No. of Bales Sold",
+          "Lint Sold (MT)",
+          "Balance stock at Ginner (Bales )",
+          "Balance lint cotton stock at Ginner (MT)",
           "Ginner Sale %",
         ]);
       } else {
@@ -13047,19 +13047,18 @@ const exportPscpProcurementLiveTracker = async (
           "Country",
           "State",
           "Programme",
-          "Expected Seed Cotton (KG)",
-          "Expected Lint (MT)",
-          "Procurement-Seed Cotton (KG)",
-          "Procurement %",
-          "Procurement-Seed Cotton Pending at Ginner (KG)",
-          "Procurement Lint in (KG)",
-          "Procurement Lint (MT)",
-          "No. of Bales of produced",
-          "Bales Sold for this season",
-          "LINT Sold for this season (MT)",
+          "Allocated Seed Cotton (MT)",
+          "Allocated Lint Cotton (MT)",
+          "Procured Seed Cotton (MT)",
+          "Seed cotton Procurement %",
+          "Seed Cotton Pending to accept at Ginner (MT)",
+          "Produced Lint Cotton (MT)",
+          "No. of Bales produced",
+          "No. of Bales Sold",
+          "Lint Sold (MT)",
           "Ginner Order in Hand (MT)",
-          "Balance stock in  bales with Ginner",
-          "Balance stock with Ginner (MT)",
+          "Balance stock at Ginner (Bales )",
+          "Balance lint cotton stock at Ginner (MT)",
           "Ginner Sale %",
         ]);
       }
@@ -13273,7 +13272,6 @@ const exportPscpProcurementLiveTracker = async (
             pending_seed_cotton: obj.pending_seed_cotton
               ? Number(formatDecimal(obj.pending_seed_cotton))
               : 0,
-            procured_lint_cotton_kgs: Number(formatDecimal(obj.procured_lint_cotton_kgs)),
             procured_lint_cotton_mt: Number(formatDecimal(obj.procured_lint_cotton_mt)),
             no_of_bales: obj.no_of_bales ? Number(obj.no_of_bales) : 0,
             sold_bales: obj.sold_bales ? Number(obj.sold_bales) : 0,
@@ -13298,7 +13296,6 @@ const exportPscpProcurementLiveTracker = async (
             pending_seed_cotton: obj.pending_seed_cotton
               ? Number(formatDecimal(obj.pending_seed_cotton))
               : 0,
-            procured_lint_cotton_kgs: Number(formatDecimal(obj.procured_lint_cotton_kgs)),
             procured_lint_cotton_mt: Number(formatDecimal(obj.procured_lint_cotton_mt)),
             no_of_bales: obj.no_of_bales ? Number(obj.no_of_bales) : 0,
             sold_bales: obj.sold_bales ? Number(obj.sold_bales) : 0,
