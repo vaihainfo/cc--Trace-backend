@@ -957,6 +957,7 @@ const exportQrCode = async (req: Request, res: Response) => {
     if (farmers.length === 0) {
       return res.sendError(res, "NO_FAMRER_FOUND");
     }
+    
     let destinationFolder = path.join('./qrCode');
     let sourceFolder = path.join('./upload');
     if (!fs.existsSync(destinationFolder)) {
