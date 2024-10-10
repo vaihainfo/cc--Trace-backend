@@ -439,6 +439,8 @@ const generateSpinnerLintCottonStock = async () => {
     },
   ];
 
+  whereCondition["$spinprocess.spinner_id$"] = { [Op.not]: null };
+
   let hasNextBatch = true;
   while (hasNextBatch) {
     const rows = await LintSelections.findAll({

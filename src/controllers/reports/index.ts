@@ -10945,6 +10945,8 @@ const fetchSpinnerLintCottonStock = async (req: Request, res: Response) => {
         .split(",")
         .map((id: any) => parseInt(id, 10));
       whereCondition["$spinprocess.spinner_id$"] = { [Op.in]: idArray };
+    }else{
+      whereCondition["$spinprocess.spinner_id$"] = { [Op.not]: null };
     }
 
     if (brandId) {
@@ -10972,7 +10974,7 @@ const fetchSpinnerLintCottonStock = async (req: Request, res: Response) => {
       const idArray: number[] = seasonId
         .split(",")
         .map((id: any) => parseInt(id, 10));
-      whereCondition["$spinprocess.season_id$"] = { [Op.in]: idArray };
+      whereCondition["$ginsales.season_id$"] = { [Op.in]: idArray };
     }
 
     let include = [
@@ -11172,6 +11174,8 @@ const exportSpinnerCottonStock = async (req: Request, res: Response) => {
           .split(",")
           .map((id: any) => parseInt(id, 10));
         whereCondition["$spinprocess.spinner_id$"] = { [Op.in]: idArray };
+      }else{
+        whereCondition["$spinprocess.spinner_id$"] = { [Op.not]: null };
       }
 
       if (brandId) {
@@ -11203,7 +11207,7 @@ const exportSpinnerCottonStock = async (req: Request, res: Response) => {
         const idArray: number[] = seasonId
           .split(",")
           .map((id: any) => parseInt(id, 10));
-        whereCondition["$spinprocess.season_id$"] = { [Op.in]: idArray };
+        whereCondition["$ginsales.season_id$"] = { [Op.in]: idArray };
       }
 
       // Create the excel workbook file
@@ -11295,7 +11299,7 @@ const exportSpinnerCottonStock = async (req: Request, res: Response) => {
         offset: offset,
         limit: limit,
       });
-      
+
       for await (const [index, spinner] of rows.entries()) {
         let salesData = await BaleSelection.findAll({
           attributes: [
