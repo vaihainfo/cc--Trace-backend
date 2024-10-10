@@ -11014,8 +11014,8 @@ const fetchSpinnerLintCottonStock = async (req: Request, res: Response) => {
       attributes: [
         [Sequelize.col('"spinprocess"."spinner"."id"'), "spinner_id"],
         [Sequelize.col('"spinprocess"."spinner"."name"'), "spinner_name"],
-        [Sequelize.col('"spinprocess"."season"."id"'), "season_id"],
-        [Sequelize.col('"spinprocess"."season"."name"'), "season_name"],
+        [Sequelize.col('"ginsales"."season"."id"'), "season_id"],
+        [Sequelize.col('"ginsales"."season"."name"'), "season_name"],
         [Sequelize.fn('STRING_AGG', Sequelize.literal('DISTINCT "spinprocess"."batch_lot_no"'), ', '), "batch_lot_no"],
         [Sequelize.fn('ARRAY_AGG', Sequelize.literal('DISTINCT "spinprocess"."date"')), "date"],
         [Sequelize.fn('STRING_AGG', Sequelize.literal('DISTINCT "ginsales"."lot_no"'), ', '), "bale_lot_no"],
@@ -11042,9 +11042,16 @@ const fetchSpinnerLintCottonStock = async (req: Request, res: Response) => {
           model: GinSales,
           as: "ginsales",
           attributes: [],
+          include:[
+            {
+              model: Season,
+              as: "season",
+              attributes: [],
+            },
+          ]
         },
       ],
-      group: ["spinprocess.spinner.id", "spinprocess.season.id"],
+      group: ["spinprocess.spinner.id", "ginsales.season.id"],
       order: [["spinner_id", "desc"]],
       offset: offset,
       limit: limit,
@@ -11076,6 +11083,7 @@ const fetchSpinnerLintCottonStock = async (req: Request, res: Response) => {
       });
 
       let reelLotNo = salesData && salesData.length > 0 ? [...new Set(salesData.map((item: any) => item?.dataValues?.reel_lot_no))].join(',') : "";
+
       let procuredCotton = await GinSales.findOne({
         attributes: [
           [
@@ -11090,7 +11098,7 @@ const fetchSpinnerLintCottonStock = async (req: Request, res: Response) => {
         ],
         where: {
           buyer: spinner?.dataValues?.spinner_id,
-          // season_id: spinner?.dataValues?.season_id,
+          season_id: spinner?.dataValues?.season_id,
           status: "Sold",
         },
         include: [
@@ -11245,8 +11253,8 @@ const exportSpinnerCottonStock = async (req: Request, res: Response) => {
         attributes: [
           [Sequelize.col('"spinprocess"."spinner"."id"'), "spinner_id"],
           [Sequelize.col('"spinprocess"."spinner"."name"'), "spinner_name"],
-          [Sequelize.col('"spinprocess"."season"."id"'), "season_id"],
-          [Sequelize.col('"spinprocess"."season"."name"'), "season_name"],
+          [Sequelize.col('"ginsales"."season"."id"'), "season_id"],
+          [Sequelize.col('"ginsales"."season"."name"'), "season_name"],
           [Sequelize.fn('STRING_AGG', Sequelize.literal('DISTINCT "spinprocess"."batch_lot_no"'), ', '), "batch_lot_no"],
           [Sequelize.fn('ARRAY_AGG', Sequelize.literal('DISTINCT "spinprocess"."date"')), "date"],
           [Sequelize.fn('STRING_AGG', Sequelize.literal('DISTINCT "ginsales"."lot_no"'), ', '), "bale_lot_no"],
@@ -11273,14 +11281,21 @@ const exportSpinnerCottonStock = async (req: Request, res: Response) => {
             model: GinSales,
             as: "ginsales",
             attributes: [],
+            include:[
+              {
+                model: Season,
+                as: "season",
+                attributes: [],
+              },
+            ]
           },
         ],
-        group: ["spinprocess.spinner.id", "spinprocess.season.id"],
+        group: ["spinprocess.spinner.id", "ginsales.season.id"],
         order: [["spinner_id", "desc"]],
         offset: offset,
         limit: limit,
       });
-
+      
       for await (const [index, spinner] of rows.entries()) {
         let salesData = await BaleSelection.findAll({
           attributes: [

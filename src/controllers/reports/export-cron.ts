@@ -445,8 +445,8 @@ const generateSpinnerLintCottonStock = async () => {
       attributes: [
         [Sequelize.col('"spinprocess"."spinner"."id"'), "spinner_id"],
         [Sequelize.col('"spinprocess"."spinner"."name"'), "spinner_name"],
-        [Sequelize.col('"spinprocess"."season"."id"'), "season_id"],
-        [Sequelize.col('"spinprocess"."season"."name"'), "season_name"],
+        [Sequelize.col('"ginsales"."season"."id"'), "season_id"],
+        [Sequelize.col('"ginsales"."season"."name"'), "season_name"],
         [Sequelize.fn('STRING_AGG', Sequelize.literal('DISTINCT "spinprocess"."batch_lot_no"'), ', '), "batch_lot_no"],
         [Sequelize.fn('ARRAY_AGG', Sequelize.literal('DISTINCT "spinprocess"."date"')), "date"],
         [Sequelize.fn('STRING_AGG', Sequelize.literal('DISTINCT "ginsales"."lot_no"'), ', '), "bale_lot_no"],
@@ -473,9 +473,16 @@ const generateSpinnerLintCottonStock = async () => {
           model: GinSales,
           as: "ginsales",
           attributes: [],
+          include:[
+            {
+              model: Season,
+              as: "season",
+              attributes: [],
+            },
+          ]
         },
       ],
-      group: ["spinprocess.spinner.id", "spinprocess.season.id"],
+      group: ["spinprocess.spinner.id", "ginsales.season.id"],
       order: [["spinner_id", "desc"]],
       offset: offset,
       limit: batchSize
