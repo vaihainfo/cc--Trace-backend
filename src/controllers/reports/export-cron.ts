@@ -489,6 +489,7 @@ const generateSpinnerLintCottonStock = async () => {
       offset: offset,
       limit: batchSize
     });
+    
 
     if (rows.length === 0) {
       hasNextBatch = false;
