@@ -814,20 +814,55 @@ const getLintProcessedDataByMonth = async (
   where: any
 ) => {
 
-  const result = await SpinProcess.findAll({
+  const result = await LintSelections.findAll({
     attributes: [
-      [Sequelize.fn('SUM', Sequelize.col('net_yarn_qty')), 'lintProcessed'],
-      [Sequelize.literal("date_part('Month', date)"), 'month'],
-      [Sequelize.literal("date_part('Year', date)"), 'year'],
+      [
+        sequelize.fn(
+          "COALESCE",
+          sequelize.fn("SUM", sequelize.col("qty_used")),
+          0
+        ),
+        "lintProcessed",
+      ],
+      [Sequelize.literal("date_part('Month', spinprocess.date)"), 'month'],
+      [Sequelize.literal("date_part('Year', spinprocess.date)"), 'year'],
     ],
-    include: [{
-      model: Spinner,
-      as: 'spinner',
-      attributes: []
-    }],
-    where,
+    include: [
+      {
+        model: SpinProcess,
+        as: "spinprocess",
+        attributes: [],
+        include: [{
+          model: Season,
+          as: 'season',
+          attributes: []
+        }, {
+          model: Spinner,
+          as: 'spinner',
+          attributes: []
+        }],
+      },
+    ],
+    where:{
+     ...where
+    },
     group: ['month', 'year']
   });
+
+  // const result = await SpinProcess.findAll({
+  //   attributes: [
+  //     [Sequelize.fn('SUM', Sequelize.col('net_yarn_qty')), 'lintProcessed'],
+  //     [Sequelize.literal("date_part('Month', date)"), 'month'],
+  //     [Sequelize.literal("date_part('Year', date)"), 'year'],
+  //   ],
+  //   include: [{
+  //     model: Spinner,
+  //     as: 'spinner',
+  //     attributes: []
+  //   }],
+  //   where,
+  //   group: ['month', 'year']
+  // });
 
   return result;
 
@@ -894,9 +929,10 @@ const getDataAll = async (
     });
     reqData.season = seasonOne.id;
     const ginSaleWhere = getGinnerSalesWhereQuery(reqData);
+    const lintWhere = getSpinnerLintQuery(reqData);
     const spinProcessWhere = getSpinnerProcessWhereQuery(reqData);
     const lintProcuredData = await getLintProcuredDataByMonth(ginSaleWhere);
-    const lintSoldData = await getLintProcessedDataByMonth(spinProcessWhere);
+    const lintSoldData = await getLintProcessedDataByMonth(lintWhere);
     const yarnProcuredSoldData = await getYarnProcuredDataByMonth(spinProcessWhere);
     const yarnSoldData = await getYarnSoldDataByMonth(spinProcessWhere);
     const data = await getDataAllRes(
