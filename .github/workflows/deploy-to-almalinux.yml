@@ -42,8 +42,13 @@ jobs:
               git reset --hard origin/development &&
               git pull origin development &&
 
-              # Install dependencies and build the project
-              npm install --legacy-peer-deps &&  # Install dependencies
+              # Install dependencies
+              npm install --legacy-peer-deps && 
+
+              # Set execute permission for tsc
+              chmod +x ./node_modules/.bin/tsc &&
+
+              # Build the project
               npm run build &&
 
               # Kill any process using port 5000 and delete the backend PM2 process
