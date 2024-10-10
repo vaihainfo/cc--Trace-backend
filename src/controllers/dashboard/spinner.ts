@@ -2594,17 +2594,17 @@ const getLintGreyoutQtyComparisonRes = async (
     };
     if (fProcured) {
       data.seasonName = fProcured.dataValues.seasonName;
-      data.procured = formatNumber(fProcured.dataValues.lintProcured);
+      data.procured = mtConversion(fProcured.dataValues.lintProcured);
     }
 
     if (fProcessed) {
       data.seasonName = fProcessed.dataValues.seasonName;
-      data.processed = formatNumber(fProcessed.dataValues.lintProcessed);
+      data.processed = mtConversion(fProcessed.dataValues.lintProcessed);
     }
 
     if (fGreyout) {
       data.seasonName = fGreyout.dataValues.seasonName;
-      data.greyout_qty = formatNumber(fGreyout.dataValues.lintGreyout);
+      data.greyout_qty = mtConversion(fGreyout.dataValues.lintGreyout);
     }
 
     data.total_stock =
@@ -2831,17 +2831,17 @@ const getYarnGreyoutComparisonRes = async (
     };
     if (fProcured) {
       data.seasonName = fProcured.dataValues.seasonName;
-      data.processed = formatNumber(fProcured.dataValues.yarnProcured);
+      data.processed = mtConversion(fProcured.dataValues.yarnProcured);
     }
 
     if (fSold) {
       data.seasonName = fSold.dataValues.seasonName;
-      data.sold = formatNumber(fSold.dataValues.yarnSold);
+      data.sold = mtConversion(fSold.dataValues.yarnSold);
     }
 
     if (fGreyout) {
       data.seasonName = fGreyout.dataValues.seasonName;
-      data.greyout_qty = formatNumber(fGreyout.dataValues.yarnGreyout);
+      data.greyout_qty = mtConversion(fGreyout.dataValues.yarnGreyout);
     }
 
     data.total_stock =
