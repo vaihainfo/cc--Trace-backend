@@ -525,14 +525,16 @@ const generateSpinnerLintCottonStock = async () => {
     },
   ];
 
+  whereCondition["$spinprocess.spinner_id$"] = { [Op.not]: null };
+
   let hasNextBatch = true;
   while (hasNextBatch) {
     const rows = await LintSelections.findAll({
       attributes: [
         [Sequelize.col('"spinprocess"."spinner"."id"'), "spinner_id"],
         [Sequelize.col('"spinprocess"."spinner"."name"'), "spinner_name"],
-        [Sequelize.col('"spinprocess"."season"."id"'), "season_id"],
-        [Sequelize.col('"spinprocess"."season"."name"'), "season_name"],
+        [Sequelize.col('"ginsales"."season"."id"'), "season_id"],
+        [Sequelize.col('"ginsales"."season"."name"'), "season_name"],
         [Sequelize.fn('STRING_AGG', Sequelize.literal('DISTINCT "spinprocess"."batch_lot_no"'), ', '), "batch_lot_no"],
         [Sequelize.fn('ARRAY_AGG', Sequelize.literal('DISTINCT "spinprocess"."date"')), "date"],
         [Sequelize.fn('STRING_AGG', Sequelize.literal('DISTINCT "ginsales"."lot_no"'), ', '), "bale_lot_no"],
@@ -559,13 +561,21 @@ const generateSpinnerLintCottonStock = async () => {
           model: GinSales,
           as: "ginsales",
           attributes: [],
+          include:[
+            {
+              model: Season,
+              as: "season",
+              attributes: [],
+            },
+          ]
         },
       ],
-      group: ["spinprocess.spinner.id", "spinprocess.season.id"],
+      group: ["spinprocess.spinner.id", "ginsales.season.id"],
       order: [["spinner_id", "desc"]],
       offset: offset,
       limit: batchSize
     });
+    
 
     if (rows.length === 0) {
       hasNextBatch = false;
@@ -1898,7 +1908,6 @@ const generatePscpProcurementLiveTracker = async () => {
           pending_seed_cotton: obj.pending_seed_cotton
             ? Number(formatDecimal(obj.pending_seed_cotton))
             : 0,
-          procured_lint_cotton_kgs: Number(formatDecimal(obj.procured_lint_cotton_kgs)),
           procured_lint_cotton_mt: Number(formatDecimal(obj.procured_lint_cotton_mt)),
           no_of_bales: Number(obj.no_of_bales),
           sold_bales: obj.sold_bales ? Number(obj.sold_bales) : 0,
@@ -1929,24 +1938,23 @@ const generatePscpProcurementLiveTracker = async () => {
           // Set bold font for header row
           const headerRow = currentWorksheet.addRow([
             "Sr No.",
-            "Ginning Mill",
-            "Country",
-            "State",
-            "Programme",
-            "Expected Seed Cotton (KG)",
-            "Expected Lint (MT)",
-            "Procurement-Seed Cotton (KG)",
-            "Procurement %",
-            "Procurement-Seed Cotton Pending at Ginner (KG)",
-            "Procurement Lint in (KG)",
-            "Procurement Lint (MT)",
-            "No. of Bales of produced",
-            "Bales Sold for this season",
-            "LINT Sold for this season (MT)",
-            "Ginner Order in Hand (MT)",
-            "Balance stock in  bales with Ginner",
-            "Balance stock with Ginner (MT)",
-            "Ginner Sale %",
+           "Ginning Mill",
+           "Country",
+           "State",
+           "Programme",
+          "Allocated Seed Cotton (MT)",
+          "Allocated Lint Cotton (MT)",
+          "Procured Seed Cotton (MT)",
+          "Seed cotton Procurement %",
+          "Seed Cotton Pending to accept at Ginner (MT)",
+          "Produced Lint Cotton (MT)",
+          "No. of Bales produced",
+          "No. of Bales Sold",
+          "Lint Sold (MT)",
+          "Ginner Order in Hand (MT)",
+          "Balance stock at Ginner (Bales )",
+          "Balance lint cotton stock at Ginner (MT)",
+          "Ginner Sale %",
             "Ginner Pending Sales (Bales)",
             "Ginner Pending Sales (Weight)",
             "No. of Bales Sold(Previous season)",

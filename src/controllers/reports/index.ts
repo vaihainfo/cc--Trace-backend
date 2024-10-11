@@ -10377,9 +10377,12 @@ const fetchGinnerSummaryPagination = async (req: Request, res: Response) => {
                   "COALESCE",
                   sequelize.fn(
                     "SUM",
-                    sequelize.literal(
-                      'CAST("gin-bales"."weight" AS DOUBLE PRECISION)'
-                    )
+                    sequelize.literal(`
+                      CASE
+                        WHEN "gin-bales"."old_weight" IS NOT NULL THEN CAST("gin-bales"."old_weight" AS DOUBLE PRECISION)
+                        ELSE CAST("gin-bales"."weight" AS DOUBLE PRECISION)
+                      END
+                    `)
                   ),
                   0
                 ),
@@ -11330,6 +11333,8 @@ const fetchSpinnerLintCottonStock = async (req: Request, res: Response) => {
         .split(",")
         .map((id: any) => parseInt(id, 10));
       whereCondition["$spinprocess.spinner_id$"] = { [Op.in]: idArray };
+    }else{
+      whereCondition["$spinprocess.spinner_id$"] = { [Op.not]: null };
     }
 
     if (brandId) {
@@ -11357,7 +11362,7 @@ const fetchSpinnerLintCottonStock = async (req: Request, res: Response) => {
       const idArray: number[] = seasonId
         .split(",")
         .map((id: any) => parseInt(id, 10));
-      whereCondition["$spinprocess.season_id$"] = { [Op.in]: idArray };
+      whereCondition["$ginsales.season_id$"] = { [Op.in]: idArray };
     }
 
     let include = [
@@ -11399,8 +11404,8 @@ const fetchSpinnerLintCottonStock = async (req: Request, res: Response) => {
       attributes: [
         [Sequelize.col('"spinprocess"."spinner"."id"'), "spinner_id"],
         [Sequelize.col('"spinprocess"."spinner"."name"'), "spinner_name"],
-        [Sequelize.col('"spinprocess"."season"."id"'), "season_id"],
-        [Sequelize.col('"spinprocess"."season"."name"'), "season_name"],
+        [Sequelize.col('"ginsales"."season"."id"'), "season_id"],
+        [Sequelize.col('"ginsales"."season"."name"'), "season_name"],
         [Sequelize.fn('STRING_AGG', Sequelize.literal('DISTINCT "spinprocess"."batch_lot_no"'), ', '), "batch_lot_no"],
         [Sequelize.fn('ARRAY_AGG', Sequelize.literal('DISTINCT "spinprocess"."date"')), "date"],
         [Sequelize.fn('STRING_AGG', Sequelize.literal('DISTINCT "ginsales"."lot_no"'), ', '), "bale_lot_no"],
@@ -11427,9 +11432,16 @@ const fetchSpinnerLintCottonStock = async (req: Request, res: Response) => {
           model: GinSales,
           as: "ginsales",
           attributes: [],
+          include:[
+            {
+              model: Season,
+              as: "season",
+              attributes: [],
+            },
+          ]
         },
       ],
-      group: ["spinprocess.spinner.id", "spinprocess.season.id"],
+      group: ["spinprocess.spinner.id", "ginsales.season.id"],
       order: [["spinner_id", "desc"]],
       offset: offset,
       limit: limit,
@@ -11550,6 +11562,8 @@ const exportSpinnerCottonStock = async (req: Request, res: Response) => {
           .split(",")
           .map((id: any) => parseInt(id, 10));
         whereCondition["$spinprocess.spinner_id$"] = { [Op.in]: idArray };
+      }else{
+        whereCondition["$spinprocess.spinner_id$"] = { [Op.not]: null };
       }
 
       if (brandId) {
@@ -11581,7 +11595,7 @@ const exportSpinnerCottonStock = async (req: Request, res: Response) => {
         const idArray: number[] = seasonId
           .split(",")
           .map((id: any) => parseInt(id, 10));
-        whereCondition["$spinprocess.season_id$"] = { [Op.in]: idArray };
+        whereCondition["$ginsales.season_id$"] = { [Op.in]: idArray };
       }
 
       // Create the excel workbook file
@@ -11631,8 +11645,8 @@ const exportSpinnerCottonStock = async (req: Request, res: Response) => {
         attributes: [
           [Sequelize.col('"spinprocess"."spinner"."id"'), "spinner_id"],
           [Sequelize.col('"spinprocess"."spinner"."name"'), "spinner_name"],
-          [Sequelize.col('"spinprocess"."season"."id"'), "season_id"],
-          [Sequelize.col('"spinprocess"."season"."name"'), "season_name"],
+          [Sequelize.col('"ginsales"."season"."id"'), "season_id"],
+          [Sequelize.col('"ginsales"."season"."name"'), "season_name"],
           [Sequelize.fn('STRING_AGG', Sequelize.literal('DISTINCT "spinprocess"."batch_lot_no"'), ', '), "batch_lot_no"],
           [Sequelize.fn('ARRAY_AGG', Sequelize.literal('DISTINCT "spinprocess"."date"')), "date"],
           [Sequelize.fn('STRING_AGG', Sequelize.literal('DISTINCT "ginsales"."lot_no"'), ', '), "bale_lot_no"],
@@ -11659,9 +11673,16 @@ const exportSpinnerCottonStock = async (req: Request, res: Response) => {
             model: GinSales,
             as: "ginsales",
             attributes: [],
+            include:[
+              {
+                model: Season,
+                as: "season",
+                attributes: [],
+              },
+            ]
           },
         ],
-        group: ["spinprocess.spinner.id", "spinprocess.season.id"],
+        group: ["spinprocess.spinner.id", "ginsales.season.id"],
         order: [["spinner_id", "desc"]],
         offset: offset,
         limit: limit,
@@ -13492,18 +13513,16 @@ const exportPscpProcurementLiveTracker = async (
           "Country",
           "State",
           "Programme",
-          "Expected Seed Cotton (KG)",
-          "Expected Lint (MT)",
-          "Procurement-Seed Cotton (KG)",
-          "Procurement %",
-          "Procurement-Seed Cotton Pending at Ginner (KG)",
-          "Procurement Lint in (KG)",
-          "Procurement Lint (MT)",
-          "No. of Bales of produced",
-          "Bales Sold for this season",
-          "LINT Sold for this season (MT)",
-          "Balance stock in  bales with Ginner",
-          "Balance stock with Ginner (MT)",
+          "Allocated Seed Cotton (MT)",
+          "Allocated Lint Cotton (MT)",
+          "Procured Seed Cotton (MT)",
+          "Seed cotton Procurement %",
+          "Seed Cotton Pending to accept at Ginner (MT)",
+          "Produced Lint Cotton (MT)",
+          "No. of Bales Sold",
+          "Lint Sold (MT)",
+          "Balance stock at Ginner (Bales )",
+          "Balance lint cotton stock at Ginner (MT)",
           "Ginner Sale %",
           "Ginner Pending Sales (Bales)",
           "Ginner Pending Sales (Weight)",
@@ -13517,19 +13536,18 @@ const exportPscpProcurementLiveTracker = async (
           "Country",
           "State",
           "Programme",
-          "Expected Seed Cotton (KG)",
-          "Expected Lint (MT)",
-          "Procurement-Seed Cotton (KG)",
-          "Procurement %",
-          "Procurement-Seed Cotton Pending at Ginner (KG)",
-          "Procurement Lint in (KG)",
-          "Procurement Lint (MT)",
-          "No. of Bales of produced",
-          "Bales Sold for this season",
-          "LINT Sold for this season (MT)",
+          "Allocated Seed Cotton (MT)",
+          "Allocated Lint Cotton (MT)",
+          "Procured Seed Cotton (MT)",
+          "Seed cotton Procurement %",
+          "Seed Cotton Pending to accept at Ginner (MT)",
+          "Produced Lint Cotton (MT)",
+          "No. of Bales produced",
+          "No. of Bales Sold",
+          "Lint Sold (MT)",
           "Ginner Order in Hand (MT)",
-          "Balance stock in  bales with Ginner",
-          "Balance stock with Ginner (MT)",
+          "Balance stock at Ginner (Bales )",
+          "Balance lint cotton stock at Ginner (MT)",
           "Ginner Sale %",
           "Ginner Pending Sales (Bales)",
           "Ginner Pending Sales (Weight)",
@@ -13787,7 +13805,6 @@ const exportPscpProcurementLiveTracker = async (
             pending_seed_cotton: obj.pending_seed_cotton
               ? Number(formatDecimal(obj.pending_seed_cotton))
               : 0,
-            procured_lint_cotton_kgs: Number(formatDecimal(obj.procured_lint_cotton_kgs)),
             procured_lint_cotton_mt: Number(formatDecimal(obj.procured_lint_cotton_mt)),
             no_of_bales: obj.no_of_bales ? Number(obj.no_of_bales) : 0,
             sold_bales: obj.sold_bales ? Number(obj.sold_bales) : 0,
@@ -13816,7 +13833,6 @@ const exportPscpProcurementLiveTracker = async (
             pending_seed_cotton: obj.pending_seed_cotton
               ? Number(formatDecimal(obj.pending_seed_cotton))
               : 0,
-            procured_lint_cotton_kgs: Number(formatDecimal(obj.procured_lint_cotton_kgs)),
             procured_lint_cotton_mt: Number(formatDecimal(obj.procured_lint_cotton_mt)),
             no_of_bales: obj.no_of_bales ? Number(obj.no_of_bales) : 0,
             sold_bales: obj.sold_bales ? Number(obj.sold_bales) : 0,

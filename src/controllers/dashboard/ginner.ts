@@ -3154,17 +3154,17 @@ const getLntQtyComparisonRes = async (
     };
     if (fProcured) {
       data.seasonName = fProcured.dataValues.seasonName;
-      data.processed = formatNumber(fProcured.dataValues.lintProcured);
+      data.processed = mtConversion(fProcured.dataValues.lintProcured);
     }
 
     if (fSold) {
       data.seasonName = fSold.dataValues.seasonName;
-      data.sold = formatNumber(fSold.dataValues.lintSold);
+      data.sold = mtConversion(fSold.dataValues.lintSold);
     }
 
     if (fGreyout) {
       data.seasonName = fGreyout.dataValues.seasonName;
-      data.greyout_qty = formatNumber(fGreyout.dataValues.lint_qty);
+      data.greyout_qty = mtConversion(fGreyout.dataValues.lint_qty);
     }
 
     data.total_stock =
