@@ -962,7 +962,6 @@ const exportQrCode = async (req: Request, res: Response) => {
     if (!fs.existsSync(destinationFolder)) {
       fs.mkdirSync(destinationFolder);
     }
-    console.log("data", farmers);
     for await (const farmer of farmers) {
       if (farmer.qrUrl) {
         const sourcePath = `${sourceFolder}/${farmer.qrUrl}`;
