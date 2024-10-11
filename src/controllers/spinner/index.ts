@@ -1635,8 +1635,8 @@ const updateStatusSales = async (req: Request, res: Response) => {
                             type: sequelize.QueryTypes.SELECT,
                         })
 
-            console.log("max qty stock to be in gin sales=============",total)
-            
+                        console.log("max qty stock to be in gin sales=============",total, Number(total.total_qty).toFixed(2), ginSale.qty_stock + Number(obj.qtyStock))
+
             if (ginSale) {
                 // Increment qty_stock by obj.qtyStock
                 if (obj.status === 'Sold' && (ginSale.qty_stock + Number(obj.qtyStock) <= Number(total.total_qty).toFixed(2))) {
