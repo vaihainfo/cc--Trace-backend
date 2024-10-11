@@ -377,6 +377,7 @@ const updateFarmer = async (req: Request, res: Response) => {
         id: req.body.id,
       },
     });
+    console.log(farmer)
     if (farmer && (farmer[0] === 1)) {
       let village = await Village.findOne({ where: { id: Number(req.body.villageId) } })
       let uniqueFilename = `qrcode_${Date.now()}.png`;
@@ -388,6 +389,7 @@ const updateFarmer = async (req: Request, res: Response) => {
           id: req.body.id
         }
       });
+      console.log("object")
     }
     if (req.body.farmId) {
       let farmer = await Farm.update({
@@ -968,21 +970,22 @@ const exportQrCode = async (req: Request, res: Response) => {
         const sourcePath = `${sourceFolder}/${farmer.qrUrl}`;
         const destinationPath = `${destinationFolder}/${farmer.qrUrl}`;
         fs.copyFileSync(sourcePath, destinationPath);
-      } else {
-        let uniqueFilename = `qrcode_${Date.now()}.png`;        
-        let name = farmer.lastName ? farmer.firstName + " " + farmer.lastName : farmer.firstName
-        let data = await generateQrCode(`${farmer.id}`,
-          name, uniqueFilename, farmer.code, farmer.village.village_name);
-        console.log(data);
-        const farmerPLace = await Farmer.update({ qrUrl: uniqueFilename }, {
-          where: {
-            id: farmer.id
-          },
-        });
-        const sourcePath = `${sourceFolder}/${uniqueFilename}`;
-        const destinationPath = `${destinationFolder}/${uniqueFilename}`;
-        fs.copyFileSync(sourcePath, destinationPath);
-      }
+      } 
+      // else {
+      //   let uniqueFilename = `qrcode_${Date.now()}.png`;        
+      //   let name = farmer.lastName ? farmer.firstName + " " + farmer.lastName : farmer.firstName
+      //   let data = await generateQrCode(`${farmer.id}`,
+      //     name, uniqueFilename, farmer.code, farmer.village.village_name);
+      //   console.log(data);
+      //   const farmerPLace = await Farmer.update({ qrUrl: uniqueFilename }, {
+      //     where: {
+      //       id: farmer.id
+      //     },
+      //   });
+      //   const sourcePath = `${sourceFolder}/${uniqueFilename}`;
+      //   const destinationPath = `${destinationFolder}/${uniqueFilename}`;
+      //   fs.copyFileSync(sourcePath, destinationPath);
+      // }
     }
     const zipFileName = path.join('./upload', 'qrCode.zip');
     const output = fs.createWriteStream(zipFileName);
