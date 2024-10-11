@@ -377,7 +377,6 @@ const updateFarmer = async (req: Request, res: Response) => {
         id: req.body.id,
       },
     });
-    console.log(farmer)
     if (farmer && (farmer[0] === 1)) {
       let village = await Village.findOne({ where: { id: Number(req.body.villageId) } })
       let uniqueFilename = `qrcode_${Date.now()}.png`;
@@ -389,7 +388,6 @@ const updateFarmer = async (req: Request, res: Response) => {
           id: req.body.id
         }
       });
-      console.log("object")
     }
     if (req.body.farmId) {
       let farmer = await Farm.update({
