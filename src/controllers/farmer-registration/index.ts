@@ -962,21 +962,17 @@ const exportQrCode = async (req: Request, res: Response) => {
     if (!fs.existsSync(destinationFolder)) {
       fs.mkdirSync(destinationFolder);
     }
-    console.log("farmers", farmers);
     for await (const farmer of farmers) {
       if (farmer.qrUrl) {
         const sourcePath = `${sourceFolder}/${farmer.qrUrl}`;
         const destinationPath = `${destinationFolder}/${farmer.qrUrl}`;
         fs.copyFileSync(sourcePath, destinationPath);
-        console.log("already generated qr");
       }  else {
         let uniqueFilename = `qrcode_${Date.now()}.png`;        
         let name = farmer.lastName ? farmer.firstName + " " + farmer.lastName : farmer.firstName
         let data = await generateQrCode(`${farmer.id}`,
           name, uniqueFilename, farmer.code, farmer.village.village_name);
         console.log(data);
-        console.log("generated qr");
-        
         const farmerPLace = await Farmer.update({ qrUrl: uniqueFilename }, {
           where: {
             id: farmer.id
