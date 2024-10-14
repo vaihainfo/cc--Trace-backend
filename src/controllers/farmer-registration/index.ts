@@ -976,6 +976,7 @@ const exportQrCode = async (req: Request, res: Response) => {
           name, uniqueFilename, farmer.code, farmer.village.village_name);
         console.log(data);
         console.log("generated qr");
+        
         const farmerPLace = await Farmer.update({ qrUrl: uniqueFilename }, {
           where: {
             id: farmer.id
