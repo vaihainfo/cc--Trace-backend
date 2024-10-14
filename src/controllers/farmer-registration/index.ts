@@ -1023,6 +1023,7 @@ const exportQrCode = async (req: Request, res: Response) => {
   }
 }
 
+
 const dashboardGraph = async (req: Request, res: Response) => {
   try {
     let whereCondition: any = {};
