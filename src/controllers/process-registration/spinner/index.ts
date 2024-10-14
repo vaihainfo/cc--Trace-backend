@@ -404,7 +404,7 @@ const exportSpinnerRegistrationList = async (req: Request, res: Response) => {
         mergedCell.alignment = { horizontal: 'center', vertical: 'middle' };
         // Set bold font for header row
         const headerRow = worksheet.addRow([
-            "Sr No.", 'Registration Date', 'Ginner Name', 'Address', 'Website',
+            "Sr No.", 'Registration Date', 'Spinner Name', 'Address', 'Website',
             'Contact Person Name', 'Mobile No', 'Land Line No', 'Email', 'Status'
         ]);
         headerRow.font = { bold: true };

@@ -192,7 +192,7 @@ cron.schedule(`0 ${checkTimeDiff(16,differenceInHours)} * * *`, async () => {
 cron.schedule(`0 ${checkTimeDiff(0,differenceInHours)} * * *`, async () => {
   console.log('Running a task at 12 am IST');
   // Add your task for 12 am IST here
-  exportReportsOnebyOne();
+  // exportReportsOnebyOne();
   //  cronWorker.stdin.write('exportReportsOnebyOne\n');
 });
 
