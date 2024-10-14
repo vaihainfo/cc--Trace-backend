@@ -10928,210 +10928,162 @@ const fetchSpinnerLintCottonStock = async (req: Request, res: Response) => {
   const page = Number(req.query.page) || 1;
   const limit = Number(req.query.limit) || 10;
   const offset = (page - 1) * limit;
-  const { spinnerId, seasonId, programId, brandId, countryId }: any = req.query;
+  const { spinnerId, seasonId, programId, brandId, countryId, stateId }: any = req.query;
   const whereCondition: any = {};
   const transactionWhere: any = {};
+  const sqlCondition: any = [];
   try {
     if (searchTerm) {
-      whereCondition[Op.or] = [
-        { "$spinprocess.spinner.name$": { [Op.iLike]: `%${searchTerm}%` } },
-        { "$spinprocess.season.name$": { [Op.iLike]: `%${searchTerm}%` } },
-        // { "$spinprocess.batch_lot_no$": { [Op.iLike]: `%${searchTerm}%` } },
-      ];
-    }
-
-    if (spinnerId) {
-      const idArray: number[] = spinnerId
-        .split(",")
-        .map((id: any) => parseInt(id, 10));
-      whereCondition["$spinprocess.spinner_id$"] = { [Op.in]: idArray };
-    }else{
-      whereCondition["$spinprocess.spinner_id$"] = { [Op.not]: null };
+      sqlCondition.push(`
+        (
+          sp.name ILIKE '%${searchTerm}%' OR
+          g.name ILIKE '%${searchTerm}%' OR
+          s.name ILIKE '%${searchTerm}%' OR
+          gs.invoice_no ILIKE '%${searchTerm}%' OR
+          gs.lot_no ILIKE '%${searchTerm}%' OR
+          gs.reel_lot_no ILIKE '%${searchTerm}%'
+        )
+      `);
     }
 
     if (brandId) {
-      const idArray: number[] = brandId
-        .split(",")
-        .map((id: any) => parseInt(id, 10));
-      whereCondition["$spinprocess.spinner.brand$"] = { [Op.overlap]: idArray };
+      const idArray = brandId.split(",").map((id: any) => parseInt(id, 10));
+      sqlCondition.push(`g.brand && ARRAY[${idArray.join(',')}]`);
     }
 
     if (countryId) {
       const idArray: number[] = countryId
         .split(",")
         .map((id: any) => parseInt(id, 10));
-      whereCondition["$spinprocess.spinner.country_id$"] = { [Op.in]: idArray };
+      sqlCondition.push(`gs.country_id IN (${idArray.join(',')})`);
     }
 
-    if (programId) {
-      const idArray: number[] = programId
+    if (stateId) {
+      const idArray: number[] = stateId
         .split(",")
         .map((id: any) => parseInt(id, 10));
-      whereCondition["$spinprocess.program_id$"] = { [Op.in]: idArray };
+      sqlCondition.push(`gs.state_id IN (${idArray.join(',')})`);
+    }
+
+    if (spinnerId) {
+      const idArray: number[] = spinnerId
+          .split(",")
+          .map((id: any) => parseInt(id, 10));
+        sqlCondition.push(`gs.buyer IN (${idArray.join(',')})`)
     }
 
     if (seasonId) {
-      const idArray: number[] = seasonId
-        .split(",")
-        .map((id: any) => parseInt(id, 10));
-      whereCondition["$ginsales.season_id$"] = { [Op.in]: idArray };
+        const idArray: number[] = seasonId
+            .split(",")
+            .map((id: any) => parseInt(id, 10));
+        sqlCondition.push(`gs.season_id IN (${idArray.join(',')})`);
     }
 
-    let include = [
-      {
-        model: Spinner,
-        as: "spinner",
-        attributes: [],
-      },
-      {
-        model: Season,
-        as: "season",
-        attributes: [],
-      },
-      {
-        model: Program,
-        as: "program",
-        attributes: [],
-      },
-    ];
-
-    // let rows = await SpinProcess.findAll({
-    //     attributes:[
-    //         'id',
-    //         'batch_lot_no',
-    //         [Sequelize.literal('"spinner"."id"'), 'spinner_id'],
-    //         [Sequelize.literal('"spinner"."name"'), 'spinner_name'],
-    //         [Sequelize.literal('"season"."id"'), 'season_id'],
-    //         [Sequelize.col('"season"."name"'), 'season_name'],
-    //         [Sequelize.fn('group_concat', Sequelize.literal('distinct(gls.invoice_no)')), 'invoice_no'],
-    //         [sequelize.fn('COALESCE', sequelize.fn('SUM', sequelize.col('total_qty')), 0), 'cotton_processed']
-    // ],
-    //     where: whereCondition,
-    //     include: include,
-    //     group: ['spinner.id','season.id'],
-    //     order: [["spinner_id","desc"]]
-    // });
-
-    let { count, rows } = await LintSelections.findAndCountAll({
-      attributes: [
-        [Sequelize.col('"spinprocess"."spinner"."id"'), "spinner_id"],
-        [Sequelize.col('"spinprocess"."spinner"."name"'), "spinner_name"],
-        [Sequelize.col('"ginsales"."season"."id"'), "season_id"],
-        [Sequelize.col('"ginsales"."season"."name"'), "season_name"],
-        [Sequelize.fn('STRING_AGG', Sequelize.literal('DISTINCT "spinprocess"."batch_lot_no"'), ', '), "batch_lot_no"],
-        [Sequelize.fn('ARRAY_AGG', Sequelize.literal('DISTINCT "spinprocess"."date"')), "date"],
-        [Sequelize.fn('STRING_AGG', Sequelize.literal('DISTINCT "ginsales"."lot_no"'), ', '), "bale_lot_no"],
-        [Sequelize.fn('STRING_AGG', Sequelize.literal('DISTINCT "ginsales"."invoice_no"'), ', '), "invoice_no"],
-        [Sequelize.fn('ARRAY_AGG', Sequelize.literal('DISTINCT "ginsales"."id"')), "sales_ids"],
-        [
-          sequelize.fn(
-            "COALESCE",
-            sequelize.fn("SUM", sequelize.col("qty_used")),
-            0
-          ),
-          "cotton_consumed",
-        ],
-      ],
-      where: whereCondition,
-      include: [
-        {
-          model: SpinProcess,
-          as: "spinprocess",
-          include: include,
-          attributes: [],
-        },
-        {
-          model: GinSales,
-          as: "ginsales",
-          attributes: [],
-          include:[
-            {
-              model: Season,
-              as: "season",
-              attributes: [],
-            },
-          ]
-        },
-      ],
-      group: ["spinprocess.spinner.id", "ginsales.season.id"],
-      order: [["spinner_id", "desc"]],
-      offset: offset,
-      limit: limit,
-    });
-
-    let ndata = [];
-    for await (let spinner of rows) {
-      let salesData = await BaleSelection.findAll({
-        attributes: [
-          [Sequelize.col('"bale->ginprocess"."reel_lot_no"'), "reel_lot_no"],
-        ],
-        where: {
-          sales_id: { [Op.in]: spinner?.dataValues?.sales_ids }
-        },
-        include: [
-          {
-            model: GinBale,
-            as: "bale",
-            include: [
-              {
-                model: GinProcess,
-                as: "ginprocess",
-                attributes: [],
-              },
-            ],
-            attributes: [],
-          },
-        ],
-      });
-
-      let reelLotNo = salesData && salesData.length > 0 ? [...new Set(salesData.map((item: any) => item?.dataValues?.reel_lot_no))].join(',') : "";
-
-      let procuredCotton = await GinSales.findOne({
-        attributes: [
-          [
-            sequelize.fn(
-              "COALESCE",
-              sequelize.fn("SUM", sequelize.col("total_qty")),
-              0
-            ),
-            "cotton_procured",
-          ],
-          [Sequelize.fn('STRING_AGG', Sequelize.literal('DISTINCT "ginner"."name"'), ', '), "ginner_name"],
-        ],
-        where: {
-          buyer: spinner?.dataValues?.spinner_id,
-          season_id: spinner?.dataValues?.season_id,
-          status: "Sold",
-        },
-        include: [
-          {
-            model: Ginner,
-            as: "ginner",
-            attributes: [],
-          }
-        ],
-        group: ["buyer", "season_id"],
-      });
-
-      ndata.push({
-        ...spinner?.dataValues,
-        reel_lot_no: reelLotNo,
-        cotton_procured: procuredCotton
-          ? procuredCotton?.dataValues?.cotton_procured
-          : 0,
-        cotton_stock:
-          Number(procuredCotton?.dataValues?.cotton_procured) >
-            Number(spinner?.dataValues?.cotton_consumed)
-            ? Number(procuredCotton?.dataValues?.cotton_procured) -
-            Number(spinner?.dataValues?.cotton_consumed)
-            : 0,
-        ginner_names: procuredCotton ? procuredCotton?.dataValues?.ginner_name
-          : "",
-      })
-
+    if (programId) {
+        const idArray: number[] = programId
+            .split(",")
+            .map((id: any) => parseInt(id, 10));
+        sqlCondition.push(`gs.program_id IN (${idArray.join(',')})`);
     }
 
-    return res.sendPaginationSuccess(res, ndata, count.length);
+  // if (ginnerId) {
+  //     const idArray: number[] = ginnerId
+  //         .split(",")
+  //         .map((id: any) => parseInt(id, 10));
+  //     sqlCondition.push(`gs.ginner_id IN (${idArray.join(',')})`);
+  // }
+
+
+  sqlCondition.push(`gs.status IN ('Sold', 'Partially Accepted', 'Partially Rejected')`)
+  // sqlCondition.push(`gs.greyout_status IS NOT TRUE`)
+  sqlCondition.push(`gs.qty_stock > 0`)
+
+
+  const whereClause = sqlCondition.length > 0 ? `WHERE ${sqlCondition.join(' AND ')}` : '';
+
+      const countQuery = `
+        SELECT COUNT(*) AS total_count
+        FROM 
+                gin_sales gs
+            LEFT JOIN 
+                ginners g ON gs.ginner_id = g.id
+            LEFT JOIN 
+                seasons s ON gs.season_id = s.id
+            LEFT JOIN 
+                programs p ON gs.program_id = p.id
+            LEFT JOIN 
+                spinners sp ON gs.buyer = sp.id
+        ${whereClause}`;
+
+      let dataQuery = `
+        WITH bale_details AS (
+            SELECT 
+                bs.sales_id,
+                COUNT(DISTINCT gb.id) AS no_of_bales,
+                COALESCE(
+                    SUM(
+                        CASE
+                        WHEN gb.accepted_weight IS NOT NULL THEN gb.accepted_weight
+                        ELSE CAST(gb.weight AS DOUBLE PRECISION)
+                        END
+                    ), 0
+                ) AS total_qty
+            FROM 
+                bale_selections bs
+            JOIN 
+                gin_sales gs ON bs.sales_id = gs.id
+            LEFT JOIN 
+                "gin-bales" gb ON bs.bale_id = gb.id
+            WHERE 
+                gs.status IN ('Sold', 'Partially Accepted', 'Partially Rejected')
+                AND (bs.spinner_status = true OR gs.status = 'Sold')
+            GROUP BY 
+                bs.sales_id
+        )
+        SELECT 
+            gs.*, 
+            g.id AS ginner_id, 
+            g.name AS ginner_name, 
+            s.id AS season_id, 
+            s.name AS season_name, 
+            p.id AS program_id, 
+            p.program_name, 
+            sp.id AS spinner_id, 
+            sp.name AS spinner_name, 
+            sp.address AS spinner_address, 
+            bd.no_of_bales AS accepted_no_of_bales, 
+            bd.total_qty AS accepted_total_qty
+        FROM 
+            gin_sales gs
+        LEFT JOIN 
+            ginners g ON gs.ginner_id = g.id
+        LEFT JOIN 
+            seasons s ON gs.season_id = s.id
+        LEFT JOIN 
+            programs p ON gs.program_id = p.id
+        LEFT JOIN 
+            spinners sp ON gs.buyer = sp.id
+        LEFT JOIN 
+            bale_details bd ON gs.id = bd.sales_id
+        ${whereClause}
+        ORDER BY 
+            gs."updatedAt" DESC
+        LIMIT :limit OFFSET :offset
+      `;
+
+      const [countResult, rows] = await Promise.all([
+        sequelize.query(countQuery, {
+            type: sequelize.QueryTypes.SELECT,
+        }),
+        sequelize.query(dataQuery, {
+            replacements: { limit, offset },
+            type: sequelize.QueryTypes.SELECT,
+        })
+    ]);
+
+    const totalCount = countResult && countResult.length > 0 ? Number(countResult[0].total_count) : 0;
+
+    return res.sendPaginationSuccess(res, rows, totalCount);
   } catch (error: any) {
     console.log(error);
     return res.sendError(res, error.message);
@@ -11148,8 +11100,8 @@ const exportSpinnerCottonStock = async (req: Request, res: Response) => {
   const page = Number(req.query.page) || 1;
   const limit = Number(req.query.limit) || 10;
   const offset = (page - 1) * limit;
-  const { exportType, spinnerId, seasonId, programId, brandId, countryId }: any = req.query;
-  const whereCondition: any = {};
+  const { exportType, spinnerId, seasonId, programId, brandId, countryId, stateId }: any = req.query;
+  const sqlCondition: any = [];
 
   try {
     if (exportType === "all") {
@@ -11162,53 +11114,71 @@ const exportSpinnerCottonStock = async (req: Request, res: Response) => {
 
     } else {
       if (searchTerm) {
-        whereCondition[Op.or] = [
-          { "$spinprocess.spinner.name$": { [Op.iLike]: `%${searchTerm}%` } },
-          { "$spinprocess.season.name$": { [Op.iLike]: `%${searchTerm}%` } },
-          // { "$spinprocess.batch_lot_no$": { [Op.iLike]: `%${searchTerm}%` } },
-        ];
+        sqlCondition.push(`
+          (
+            sp.name ILIKE '%${searchTerm}%' OR
+            g.name ILIKE '%${searchTerm}%' OR
+            s.name ILIKE '%${searchTerm}%' OR
+            gs.invoice_no ILIKE '%${searchTerm}%' OR
+            gs.lot_no ILIKE '%${searchTerm}%' OR
+            gs.reel_lot_no ILIKE '%${searchTerm}%'
+          )
+        `);
       }
-
-      if (spinnerId) {
-        const idArray: number[] = spinnerId
-          .split(",")
-          .map((id: any) => parseInt(id, 10));
-        whereCondition["$spinprocess.spinner_id$"] = { [Op.in]: idArray };
-      }else{
-        whereCondition["$spinprocess.spinner_id$"] = { [Op.not]: null };
-      }
-
+  
       if (brandId) {
-        const idArray: number[] = brandId
-          .split(",")
-          .map((id: any) => parseInt(id, 10));
-        whereCondition["$spinprocess.spinner.brand$"] = {
-          [Op.overlap]: idArray,
-        };
+        const idArray = brandId.split(",").map((id: any) => parseInt(id, 10));
+        sqlCondition.push(`g.brand && ARRAY[${idArray.join(',')}]`);
       }
-
+  
       if (countryId) {
         const idArray: number[] = countryId
           .split(",")
           .map((id: any) => parseInt(id, 10));
-        whereCondition["$spinprocess.spinner.country_id$"] = {
-          [Op.in]: idArray,
-        };
+        sqlCondition.push(`gs.country_id IN (${idArray.join(',')})`);
       }
 
-      if (programId) {
-        const idArray: number[] = programId
+      if (stateId) {
+        const idArray: number[] = stateId
           .split(",")
           .map((id: any) => parseInt(id, 10));
-        whereCondition["$spinprocess.program_id$"] = { [Op.in]: idArray };
+        sqlCondition.push(`gs.state_id IN (${idArray.join(',')})`);
       }
-
+  
+      if (spinnerId) {
+        const idArray: number[] = spinnerId
+            .split(",")
+            .map((id: any) => parseInt(id, 10));
+          sqlCondition.push(`gs.buyer IN (${idArray.join(',')})`)
+      }
+  
       if (seasonId) {
-        const idArray: number[] = seasonId
-          .split(",")
-          .map((id: any) => parseInt(id, 10));
-        whereCondition["$ginsales.season_id$"] = { [Op.in]: idArray };
+          const idArray: number[] = seasonId
+              .split(",")
+              .map((id: any) => parseInt(id, 10));
+          sqlCondition.push(`gs.season_id IN (${idArray.join(',')})`);
       }
+  
+      if (programId) {
+          const idArray: number[] = programId
+              .split(",")
+              .map((id: any) => parseInt(id, 10));
+          sqlCondition.push(`gs.program_id IN (${idArray.join(',')})`);
+      }
+  
+    // if (ginnerId) {
+    //     const idArray: number[] = ginnerId
+    //         .split(",")
+    //         .map((id: any) => parseInt(id, 10));
+    //     sqlCondition.push(`gs.ginner_id IN (${idArray.join(',')})`);
+    // }
+  
+  
+    sqlCondition.push(`gs.status IN ('Sold', 'Partially Accepted', 'Partially Rejected')`)
+    // sqlCondition.push(`gs.greyout_status IS NOT TRUE`)
+    sqlCondition.push(`gs.qty_stock > 0`);
+
+    const whereClause = sqlCondition.length > 0 ? `WHERE ${sqlCondition.join(' AND ')}` : '';
 
       // Create the excel workbook file
       const workbook = new ExcelJS.Workbook();
@@ -11221,158 +11191,114 @@ const exportSpinnerCottonStock = async (req: Request, res: Response) => {
       // Set bold font for header row
       const headerRow = worksheet.addRow([
         "Sr No.",
-        "Spinner Name",
-        "Ginner Name",
         "Created Date",
         "Season",
-        "Bale Lot No",
+        "Ginner Name",
+        "Spinner Name",
         "Reel Lot No",
         "Invoice No",
+        "Bale Lot No",
         "Total Lint Cotton Received (Kgs)",
-        "Total Lint Cotton Consumed (Kgs)",
         "Total Lint Cotton in Stock (Kgs)",
+        "Total Lint Cotton Consumed (Kgs)",
       ]);
       headerRow.font = { bold: true };
 
-      let include = [
-        {
-          model: Spinner,
-          as: "spinner",
-          attributes: [],
-        },
-        {
-          model: Season,
-          as: "season",
-          attributes: [],
-        },
-        {
-          model: Program,
-          as: "program",
-          attributes: [],
-        },
-      ];
 
+      const countQuery = `
+        SELECT COUNT(*) AS total_count
+        FROM 
+                gin_sales gs
+            LEFT JOIN 
+                ginners g ON gs.ginner_id = g.id
+            LEFT JOIN 
+                seasons s ON gs.season_id = s.id
+            LEFT JOIN 
+                programs p ON gs.program_id = p.id
+            LEFT JOIN 
+                spinners sp ON gs.buyer = sp.id
+        ${whereClause}`;
 
-      let { count, rows } = await LintSelections.findAndCountAll({
-        attributes: [
-          [Sequelize.col('"spinprocess"."spinner"."id"'), "spinner_id"],
-          [Sequelize.col('"spinprocess"."spinner"."name"'), "spinner_name"],
-          [Sequelize.col('"ginsales"."season"."id"'), "season_id"],
-          [Sequelize.col('"ginsales"."season"."name"'), "season_name"],
-          [Sequelize.fn('STRING_AGG', Sequelize.literal('DISTINCT "spinprocess"."batch_lot_no"'), ', '), "batch_lot_no"],
-          [Sequelize.fn('ARRAY_AGG', Sequelize.literal('DISTINCT "spinprocess"."date"')), "date"],
-          [Sequelize.fn('STRING_AGG', Sequelize.literal('DISTINCT "ginsales"."lot_no"'), ', '), "bale_lot_no"],
-          [Sequelize.fn('STRING_AGG', Sequelize.literal('DISTINCT "ginsales"."invoice_no"'), ', '), "invoice_no"],
-          [Sequelize.fn('ARRAY_AGG', Sequelize.literal('DISTINCT "ginsales"."id"')), "sales_ids"],
-          [
-            sequelize.fn(
-              "COALESCE",
-              sequelize.fn("SUM", sequelize.col("qty_used")),
-              0
-            ),
-            "cotton_consumed",
-          ],
-        ],
-        where: whereCondition,
-        include: [
-          {
-            model: SpinProcess,
-            as: "spinprocess",
-            include: include,
-            attributes: [],
-          },
-          {
-            model: GinSales,
-            as: "ginsales",
-            attributes: [],
-            include:[
-              {
-                model: Season,
-                as: "season",
-                attributes: [],
-              },
-            ]
-          },
-        ],
-        group: ["spinprocess.spinner.id", "ginsales.season.id"],
-        order: [["spinner_id", "desc"]],
-        offset: offset,
-        limit: limit,
-      });
+      let dataQuery = `
+        WITH bale_details AS (
+            SELECT 
+                bs.sales_id,
+                COUNT(DISTINCT gb.id) AS no_of_bales,
+                COALESCE(
+                    SUM(
+                        CASE
+                        WHEN gb.accepted_weight IS NOT NULL THEN gb.accepted_weight
+                        ELSE CAST(gb.weight AS DOUBLE PRECISION)
+                        END
+                    ), 0
+                ) AS total_qty
+            FROM 
+                bale_selections bs
+            JOIN 
+                gin_sales gs ON bs.sales_id = gs.id
+            LEFT JOIN 
+                "gin-bales" gb ON bs.bale_id = gb.id
+            WHERE 
+                gs.status IN ('Sold', 'Partially Accepted', 'Partially Rejected')
+                AND (bs.spinner_status = true OR gs.status = 'Sold')
+            GROUP BY 
+                bs.sales_id
+        )
+        SELECT 
+            gs.*, 
+            g.id AS ginner_id, 
+            g.name AS ginner_name, 
+            s.id AS season_id, 
+            s.name AS season_name, 
+            p.id AS program_id, 
+            p.program_name, 
+            sp.id AS spinner_id, 
+            sp.name AS spinner_name, 
+            sp.address AS spinner_address, 
+            bd.no_of_bales AS accepted_no_of_bales, 
+            bd.total_qty AS accepted_total_qty
+        FROM 
+            gin_sales gs
+        LEFT JOIN 
+            ginners g ON gs.ginner_id = g.id
+        LEFT JOIN 
+            seasons s ON gs.season_id = s.id
+        LEFT JOIN 
+            programs p ON gs.program_id = p.id
+        LEFT JOIN 
+            spinners sp ON gs.buyer = sp.id
+        LEFT JOIN 
+            bale_details bd ON gs.id = bd.sales_id
+        ${whereClause}
+        ORDER BY 
+            gs."updatedAt" DESC
+        LIMIT :limit OFFSET :offset
+      `;
+
+      const [countResult, rows] = await Promise.all([
+        sequelize.query(countQuery, {
+            type: sequelize.QueryTypes.SELECT,
+        }),
+        sequelize.query(dataQuery, {
+            replacements: { limit, offset },
+            type: sequelize.QueryTypes.SELECT,
+        })
+    ]);
 
       for await (const [index, spinner] of rows.entries()) {
-        let salesData = await BaleSelection.findAll({
-          attributes: [
-            [Sequelize.col('"bale->ginprocess"."reel_lot_no"'), "reel_lot_no"],
-          ],
-          where: {
-            sales_id: { [Op.in]: spinner?.dataValues?.sales_ids }
-          },
-          include: [
-            {
-              model: GinBale,
-              as: "bale",
-              include: [
-                {
-                  model: GinProcess,
-                  as: "ginprocess",
-                  attributes: [],
-                },
-              ],
-              attributes: [],
-            },
-          ],
-        });
-
-        let reelLotNo = salesData && salesData.length > 0 ? [...new Set(salesData.map((item: any) => item?.dataValues?.reel_lot_no))].join(',') : "";
-
-        let procuredCotton = await GinSales.findOne({
-          attributes: [
-            [
-              sequelize.fn(
-                "COALESCE",
-                sequelize.fn("SUM", sequelize.col("total_qty")),
-                0
-              ),
-              "cotton_procured",
-            ],
-            [Sequelize.fn('STRING_AGG', Sequelize.literal('DISTINCT "ginner"."name"'), ', '), "ginner_name"],
-          ],
-          where: {
-            buyer: spinner?.dataValues?.spinner_id,
-            season_id: spinner?.dataValues?.season_id,
-            status: "Sold",
-          },
-          include: [
-            {
-              model: Ginner,
-              as: "ginner",
-              attributes: [],
-            }
-          ],
-          group: ["buyer", "season_id"],
-        });
-
-        let cotton_stock =
-          Number(procuredCotton?.dataValues?.cotton_procured) >
-            Number(spinner?.dataValues?.cotton_consumed)
-            ? Number(procuredCotton?.dataValues?.cotton_procured) -
-            Number(spinner?.dataValues?.cotton_consumed)
-            : 0;
-
         const rowValues = Object.values({
           index: index + 1,
-          spinner: spinner?.dataValues.spinner_name ? spinner?.dataValues.spinner_name : "",
-          ginner_names: procuredCotton ? procuredCotton?.dataValues?.ginner_name
+          date: spinner?.date ? moment(spinner.date).format('DD-MM-YYYY') : "",
+          season: spinner?.season_name ? spinner?.season_name : "",
+          ginner_names: spinner?.ginner_name ? spinner?.ginner_name
             : "",
-          date: spinner?.dataValues.date && spinner?.dataValues.date.length > 0 ? spinner.dataValues.date.map((date: any) => moment(date).format('DD-MM-YYYY')).join(", ") : "",
-          season: spinner?.dataValues.season_name ? spinner?.dataValues.season_name : "",
-          batch_lot_no: spinner?.dataValues.bale_lot_no ? spinner?.dataValues.bale_lot_no : "",
-          reel_lot_no: reelLotNo,
-          invoice_no: spinner?.dataValues.invoice_no ? spinner?.dataValues.invoice_no : "",
-          cotton_procured: procuredCotton ? Number(procuredCotton?.dataValues?.cotton_procured) : 0,
-          cotton_consumed: spinner ? Number(spinner?.dataValues?.cotton_consumed) : 0,
-          cotton_stock: cotton_stock,
+          spinner: spinner?.spinner_name ? spinner?.spinner_name : "",
+          reel_lot_no: spinner?.reel_lot_no ? spinner?.reel_lot_no : "",
+          invoice_no: spinner?.invoice_no ? spinner?.invoice_no : "",
+          batch_lot_no: spinner?.lot_no ? spinner?.lot_no : "",
+          cotton_procured: spinner?.accepted_total_qty ? Number(formatDecimal(spinner?.accepted_total_qty)) : 0,
+          cotton_stock: spinner?.qty_stock ? Number(formatDecimal(spinner?.qty_stock)) : 0,
+          cotton_consumed: Number(spinner?.accepted_total_qty) > Number(spinner?.qty_stock) ? Number(formatDecimal(spinner?.accepted_total_qty)) - Number(formatDecimal(spinner?.qty_stock))  : 0,
         });
         worksheet.addRow(rowValues);
       }
