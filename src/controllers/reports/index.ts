@@ -1523,14 +1523,18 @@ const fetchGinSalesPagination = async (req: Request, res: Response) => {
       const lotNo: string[] = item?.dataValues?.lot_no
         .split(", ")
         .map((id: any) => id);
-      let qualityReport = await QualityParameter.findAll({
-        where: {
-          process_id: { [Op.in]: item?.dataValues?.process_ids },
-          ginner_id: item?.dataValues?.ginner_id,
-          lot_no: { [Op.in]: lotNo },
-        },
-        raw: true
-      });
+        let qualityReport = null;
+
+        if(item.process_ids && item.ginner_id && lotNo){
+          qualityReport = await QualityParameter.findAll({
+            where: {
+              process_id: { [Op.in]: item?.dataValues?.process_ids },
+              ginner_id: item?.dataValues?.ginner_id,
+              lot_no: { [Op.in]: lotNo },
+            },
+            raw: true
+          });
+          }
 
       nData.push({
         ...item.dataValues,
