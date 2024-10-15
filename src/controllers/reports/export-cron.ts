@@ -3370,12 +3370,15 @@ const generateSpinnerSummary = async () => {
 const generateSpinnerBale = async () => {
   // spinner_bale_receipt_load
 
-  const whereCondition: any = {};
+  const whereCondition: any = [];
   const maxRowsPerWorksheet = 500000;
 
   try {
 
-    whereCondition["$sales.status$"] = "Sold";
+    whereCondition.push(`gs.status IN ('Sold', 'Partially Accepted', 'Partially Rejected')`);
+  
+    const whereClause = whereCondition.length > 0 ? `WHERE ${whereCondition.join(' AND ')}` : '';
+
     const workbook = new ExcelJS.stream.xlsx.WorkbookWriter({
       stream: fs.createWriteStream("./upload/Spinner-bale-receipt-report-test.xlsx")
     });
@@ -3386,89 +3389,77 @@ const generateSpinnerBale = async () => {
     let offset = 0;
     let hasNextBatch = true;
 
-
-    let include = [
-      {
-        model: Ginner,
-        as: "ginner",
-        attributes: [],
-      },
-      {
-        model: Season,
-        as: "season",
-        attributes: [],
-      },
-      {
-        model: Program,
-        as: "program",
-        attributes: [],
-      },
-      {
-        model: Spinner,
-        as: "buyerdata",
-        attributes: [],
-      },
-    ];
     // //fetch data with pagination
     while (hasNextBatch) {
-      const rows: any = await BaleSelection.findAll({
-        attributes: [
-          [Sequelize.literal('"sales"."id"'), "sales_id"],
-          [Sequelize.literal('"sales"."date"'), "date"],
-          [Sequelize.literal('"sales"."createdAt"'), "createdAt"],
-          [Sequelize.literal('"sales"."accept_date"'), "accept_date"],
-          [Sequelize.col('"sales"."season"."name"'), "season_name"],
-          [Sequelize.col('"sales"."ginner"."id"'), "ginner_id"],
-          [Sequelize.col('"sales"."ginner"."name"'), "ginner"],
-          [Sequelize.col('"sales"."program"."program_name"'), "program"],
-          [Sequelize.col('"sales"."buyerdata"."id"'), "spinner_id"],
-          [Sequelize.col('"sales"."buyerdata"."name"'), "spinner"],
-          [Sequelize.literal('"sales"."total_qty"'), "total_qty"],
-          [Sequelize.literal('"sales"."invoice_no"'), "invoice_no"],
-          [Sequelize.col('"sales"."lot_no"'), "lot_no"],
-          [Sequelize.fn('STRING_AGG', Sequelize.literal('DISTINCT "bale->ginprocess"."reel_lot_no"'), ',' ) , "reel_lot_no"],
-          [Sequelize.literal('"sales"."rate"'), "rate"],
-          [Sequelize.literal('"sales"."candy_rate"'), "candy_rate"],
-          [Sequelize.literal('"sales"."total_qty"'), "lint_quantity"],
-          [Sequelize.literal('"sales"."no_of_bales"'), "no_of_bales"],
-          [Sequelize.literal('"sales"."sale_value"'), "sale_value"],
-          [Sequelize.literal('"sales"."press_no"'), "press_no"],
-          [Sequelize.literal('"sales"."qty_stock"'), "qty_stock"],
-          [Sequelize.literal('"sales"."weight_loss"'), "weight_loss"],
-          [Sequelize.literal('"sales"."status"'), "status"],
-          [Sequelize.literal('"sales"."greyout_status"'), "greyout_status"],
-        ],
-        where: whereCondition,
-        include: [
-          {
-            model: GinSales,
-            as: "sales",
-            include: include,
-            attributes: [],
-          },
-          {
-            model: GinBale,
-            attributes: [],
-            as: "bale",
-            include: [
-              {
-                model: GinProcess,
-                as: "ginprocess",
-                attributes: [],
-              },
-            ],
-          },
-        ],
-        group: [
-          "sales.id",
-          "sales.season.id",
-          "sales.ginner.id",
-          "sales.buyerdata.id",
-          "sales.program.id",
-        ],
-        offset: offset,
-        limit: batchSize,
-      });
+      let dataQuery = `
+                WITH bale_details AS (
+                    SELECT 
+                        bs.sales_id,
+                        COUNT(DISTINCT gb.id) AS no_of_bales,
+                        ARRAY_AGG(DISTINCT gp.id) AS "process_ids",
+                        COALESCE(SUM(CAST(gb.weight AS DOUBLE PRECISION)), 0) AS received_qty,
+                        COALESCE(
+                            SUM(
+                                CASE
+                                WHEN gb.accepted_weight IS NOT NULL THEN gb.accepted_weight
+                                ELSE CAST(gb.weight AS DOUBLE PRECISION)
+                                END
+                            ), 0
+                        ) AS total_qty
+                    FROM 
+                        bale_selections bs
+                    JOIN 
+                        gin_sales gs ON bs.sales_id = gs.id
+                    LEFT JOIN 
+                        "gin-bales" gb ON bs.bale_id = gb.id
+                    LEFT JOIN 
+                        gin_processes gp ON gb.process_id = gp.id
+                    WHERE 
+                        gs.status IN ('Sold', 'Partially Accepted', 'Partially Rejected')
+                        AND (bs.spinner_status = true OR gs.status = 'Sold')
+                    GROUP BY 
+                        bs.sales_id
+                )
+                SELECT 
+                    gs.*, 
+                    g.id AS ginner_id, 
+                    g.name AS ginner, 
+                    s.id AS season_id, 
+                    s.name AS season_name, 
+                    p.id AS program_id, 
+                    p.program_name AS program, 
+                    sp.id AS spinner_id, 
+                    sp.name AS spinner, 
+                    sp.address AS spinner_address, 
+                    bd.no_of_bales AS accepted_no_of_bales, 
+                    bd.process_ids AS process_ids, 
+                    bd.total_qty AS accepted_total_qty,
+                    bd.received_qty AS received_total_qty
+                FROM 
+                    gin_sales gs
+                LEFT JOIN 
+                    ginners g ON gs.ginner_id = g.id
+                LEFT JOIN 
+                    seasons s ON gs.season_id = s.id
+                LEFT JOIN 
+                    programs p ON gs.program_id = p.id
+                LEFT JOIN 
+                    spinners sp ON gs.buyer = sp.id
+                LEFT JOIN 
+                    bale_details bd ON gs.id = bd.sales_id
+                ${whereClause}
+                ORDER BY 
+                    gs."id" ASC
+                LIMIT 
+                    :limit OFFSET :offset;`
+                    
+
+        const [rows] = await Promise.all([
+            sequelize.query(dataQuery, {
+                replacements: { limit: batchSize, offset },
+                type: sequelize.QueryTypes.SELECT,
+            })
+        ]);
       // // Append data to worksheet
 
       if (rows.length === 0) {
@@ -3483,27 +3474,27 @@ const generateSpinnerBale = async () => {
       for await (const [index, item] of rows.entries()) {
         const rowValues = Object.values({
           index: index + offset + 1,
-          accept_date: item.dataValues.accept_date
-            ? item.dataValues.accept_date
+          accept_date: item.accept_date
+            ? item.accept_date
             : "",
-          date: item.dataValues.date ? item.dataValues.date : "",
-          season: item.dataValues.season_name ? item.dataValues.season_name : "",
-          spinner: item.dataValues.spinner ? item.dataValues.spinner : "",
-          ginner: item.dataValues.ginner ? item.dataValues.ginner : "",
-          invoice: item.dataValues.invoice_no ? item.dataValues.invoice_no : "",
-          lot_no: item.dataValues.lot_no ? item.dataValues.lot_no : "",
-          reel_lot_no: item.dataValues.reel_lot_no
-            ? item.dataValues.reel_lot_no
+          date: item.date ? item.date : "",
+          season: item.season_name ? item.season_name : "",
+          spinner: item.spinner ? item.spinner : "",
+          ginner: item.ginner ? item.ginner : "",
+          invoice: item.invoice_no ? item.invoice_no : "",
+          lot_no: item.lot_no ? item.lot_no : "",
+          reel_lot_no: item.reel_lot_no
+            ? item.reel_lot_no
             : "",
-          press_no: item.dataValues.press_no ? item.dataValues.press_no : "",
-          no_of_bales: item.dataValues.no_of_bales
-            ? Number(item.dataValues.no_of_bales)
+          press_no: item.press_no ? item.press_no : "",
+          no_of_bales: item.accepted_no_of_bales
+            ? Number(item.accepted_no_of_bales)
             : 0,
-          lint_quantity: Number(item.dataValues.lint_quantity) ?? 0
-            ? Number(item.dataValues.lint_quantity)
+          lint_quantity: Number(item.accepted_total_qty) ?? 0
+            ? Number(item.accepted_total_qty)
             : 0,
-          program: item.dataValues.program ? item.dataValues.program : "",
-          greyout_status: item.dataValues.greyout_status ? "Yes" : "No",
+          program: item.program ? item.program : "",
+          greyout_status: item.greyout_status ? "Yes" : "No",
         });
 
         let currentWorksheet = workbook.getWorksheet(`Spinner Bale Receipt ${worksheetIndex}`);
@@ -3528,8 +3519,8 @@ const generateSpinnerBale = async () => {
             "Ginner Lot No",
             "REEL Lot No",
             "Press/Bale No",
-            "No of Bales",
-            "Total Lint Quantity(Kgs)",
+            "No of Bales(Accepted)",
+            "Total Lint Accepted Quantity(Kgs)",
             "Programme",
             "Grey Out Status",
           ]);
