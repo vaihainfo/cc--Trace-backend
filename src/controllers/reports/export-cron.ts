@@ -2910,52 +2910,77 @@ const generateSpinnerSummary = async () => {
           lint_cotton_procured_pending,
           lint_consumed,
           lint_greyout,
+          lint_cotton_stock,
           yarnProcured,
           yarnGreyout,
           yarnSold,
         ] = await Promise.all([
-          GinSales.findOne({
+          BaleSelection.findOne({
             attributes: [
-              [
-                sequelize.fn(
-                  "COALESCE",
-                  sequelize.fn("SUM", sequelize.col("total_qty")),
-                  0
-                ),
-                "lint_cotton_procured",
-              ],
-              [
-                sequelize.fn(
-                  "COALESCE",
-                  sequelize.fn("SUM", sequelize.col("qty_stock")),
-                  0
-                ),
-                "lint_cotton_stock",
-              ],
+                [
+                  sequelize.fn(
+                    "COALESCE",
+                    sequelize.fn(
+                      "SUM",
+                      Sequelize.literal(`
+                        CASE
+                          WHEN "bale"."accepted_weight" IS NOT NULL THEN "bale"."accepted_weight"
+                          ELSE CAST("bale"."weight" AS DOUBLE PRECISION)
+                        END
+                      `)
+                    ),
+                    0
+                  ),
+                  "lint_cotton_procured",
+                ]
             ],
             where: {
-              ...wheree,
-              buyer: item.id,
-              status: "Sold",
+              "$sales.buyer$": item.id,
+              "$sales.status$": { [Op.in]: ['Sold', 'Partially Accepted', 'Partially Rejected'] },
+              [Op.or]: [
+                { spinner_status: true },
+                {"$sales.status$": 'Sold'}
+              ]
             },
-          }),
-          GinSales.findOne({
+            include: [
+                {
+                    model: GinBale,
+                    as: "bale",
+                    attributes: []
+                },
+                {
+                  model: GinSales,
+                  as: "sales",
+                  attributes: []
+              },
+            ],
+            group: ["sales.buyer"],
+           }),
+          BaleSelection.findOne({
             attributes: [
-              [
-                sequelize.fn(
-                  "COALESCE",
-                  sequelize.fn("SUM", sequelize.col("total_qty")),
-                  0
-                ),
-                "lint_cotton_procured_pending",
-              ],
+                [Sequelize.fn('COALESCE', Sequelize.fn('SUM', Sequelize.literal(
+                    'CAST("bale"."weight" AS DOUBLE PRECISION)'
+                )), 0), 'lint_cotton_procured_pending']
             ],
             where: {
-              ...wheree,
-              buyer: item.id,
-              status: "Pending for QR scanning",
+              "$sales.buyer$": item.id,
+              "$sales.status$": { [Op.in]: ['Pending', 'Pending for QR scanning', 'Partially Accepted', 'Partially Rejected'] },
+              spinner_status: null,
             },
-          }),
+            include: [
+                {
+                    model: GinBale,
+                    as: "bale",
+                    attributes: []
+                },
+                {
+                  model: GinSales,
+                  as: "sales",
+                  attributes: []
+              },
+            ],
+            group: ["sales.buyer"],
+        }),
           LintSelections.findOne({
             attributes: [
               [
@@ -2973,11 +2998,16 @@ const generateSpinnerSummary = async () => {
                 as: "spinprocess",
                 attributes: [],
               },
+              {
+                model: GinSales,
+                as: "ginsales",
+                attributes: [],
+              },
             ],
             where: {
-              "$spinprocess.spinner_id$": item.id,
+              "$ginsales.buyer$": item.id,
             },
-            group: ["spinprocess.spinner_id"],
+            group: ["ginsales.buyer"],
           }),
           GinSales.findOne({
             attributes: [
@@ -2993,7 +3023,25 @@ const generateSpinnerSummary = async () => {
             where: {
               ...wheree,
               buyer: item.id,
+              status: { [Op.in]: ['Sold', 'Partially Accepted', 'Partially Rejected'] },
               greyout_status: true, 
+            },
+          }),
+          GinSales.findOne({
+            attributes: [
+              [
+                sequelize.fn(
+                  "COALESCE",
+                  sequelize.fn("SUM", sequelize.col("qty_stock")),
+                  0
+                ),
+                "lint_cotton_stock",
+              ],
+            ],
+            where: {
+              ...wheree,
+              buyer: item.id,
+              status: { [Op.in]: ['Sold', 'Partially Accepted', 'Partially Rejected'] }
             },
           }),
           SpinProcess.findOne({
@@ -3064,8 +3112,8 @@ const generateSpinnerSummary = async () => {
         obj.lintConsumedKG = lint_consumed
           ? Number(lint_consumed?.dataValues.lint_cotton_consumed?? 0)
           : 0;
-        obj.lintStockKG = lint_cotton_procured
-          ? Number(lint_cotton_procured?.dataValues.lint_cotton_stock?? 0)
+        obj.lintStockKG = lint_cotton_stock
+          ? Number(lint_cotton_stock?.dataValues.lint_cotton_stock?? 0)
           : 0;
 
         obj.lintGreyoutKg =  lint_greyout?.dataValues.lint_greyout ?? 0;
