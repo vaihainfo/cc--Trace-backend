@@ -2431,8 +2431,12 @@ const generateGinnerProcess = async () => {
               ) AS lint_quantity_sold
                 FROM
                     "gin-bales" gb
+                LEFT JOIN 
+                  bale_selections bs ON gb.id = bs.bale_id
+                LEFT JOIN 
+                    gin_sales gs ON gs.id = bs.sales_id
                 WHERE
-                    gb.sold_status = true
+                    gs.status in ('Pending', 'Pending for QR scanning', 'Partially Accepted', 'Partially Rejected','Sold')
                 GROUP BY
                     gb.process_id
             )

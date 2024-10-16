@@ -255,8 +255,12 @@ const fetchBaleProcess = async (req: Request, res: Response) => {
               ) AS lint_quantity_sold
               FROM
                   "gin-bales" gb
+              LEFT JOIN 
+                  bale_selections bs ON gb.id = bs.bale_id
+              LEFT JOIN 
+                  gin_sales gs ON gs.id = bs.sales_id
               WHERE
-                  gb.sold_status = true
+                  gs.status in ('Pending', 'Pending for QR scanning', 'Partially Accepted', 'Partially Rejected','Sold')
               GROUP BY
                   gb.process_id
           )
@@ -791,8 +795,12 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
               ) AS lint_quantity_sold
                 FROM
                     "gin-bales" gb
+                LEFT JOIN 
+                  bale_selections bs ON gb.id = bs.bale_id
+                LEFT JOIN 
+                    gin_sales gs ON gs.id = bs.sales_id
                 WHERE
-                    gb.sold_status = true
+                    gs.status in ('Pending', 'Pending for QR scanning', 'Partially Accepted', 'Partially Rejected','Sold')
                 GROUP BY
                     gb.process_id
             )
@@ -11431,21 +11439,21 @@ const fetchSpinnerLintCottonStock = async (req: Request, res: Response) => {
 
     if (brandId) {
       const idArray = brandId.split(",").map((id: any) => parseInt(id, 10));
-      sqlCondition.push(`g.brand && ARRAY[${idArray.join(',')}]`);
+      sqlCondition.push(`sp.brand && ARRAY[${idArray.join(',')}]`);
     }
 
     if (countryId) {
       const idArray: number[] = countryId
         .split(",")
         .map((id: any) => parseInt(id, 10));
-      sqlCondition.push(`gs.country_id IN (${idArray.join(',')})`);
+      sqlCondition.push(`sp.country_id IN (${idArray.join(',')})`);
     }
 
     if (stateId) {
       const idArray: number[] = stateId
         .split(",")
         .map((id: any) => parseInt(id, 10));
-      sqlCondition.push(`gs.state_id IN (${idArray.join(',')})`);
+      sqlCondition.push(`sp.state_id IN (${idArray.join(',')})`);
     }
 
     if (spinnerId) {
@@ -11479,7 +11487,7 @@ const fetchSpinnerLintCottonStock = async (req: Request, res: Response) => {
 
   sqlCondition.push(`gs.status IN ('Sold', 'Partially Accepted', 'Partially Rejected')`)
   // sqlCondition.push(`gs.greyout_status IS NOT TRUE`)
-  sqlCondition.push(`gs.qty_stock > 0`)
+  sqlCondition.push(`gs.qty_stock >= 1`)
 
 
   const whereClause = sqlCondition.length > 0 ? `WHERE ${sqlCondition.join(' AND ')}` : '';
@@ -11611,21 +11619,21 @@ const exportSpinnerCottonStock = async (req: Request, res: Response) => {
   
       if (brandId) {
         const idArray = brandId.split(",").map((id: any) => parseInt(id, 10));
-        sqlCondition.push(`g.brand && ARRAY[${idArray.join(',')}]`);
+        sqlCondition.push(`sp.brand && ARRAY[${idArray.join(',')}]`);
       }
   
       if (countryId) {
         const idArray: number[] = countryId
           .split(",")
           .map((id: any) => parseInt(id, 10));
-        sqlCondition.push(`gs.country_id IN (${idArray.join(',')})`);
+        sqlCondition.push(`sp.country_id IN (${idArray.join(',')})`);
       }
 
       if (stateId) {
         const idArray: number[] = stateId
           .split(",")
           .map((id: any) => parseInt(id, 10));
-        sqlCondition.push(`gs.state_id IN (${idArray.join(',')})`);
+        sqlCondition.push(`sp.state_id IN (${idArray.join(',')})`);
       }
   
       if (spinnerId) {
@@ -11659,7 +11667,7 @@ const exportSpinnerCottonStock = async (req: Request, res: Response) => {
   
     sqlCondition.push(`gs.status IN ('Sold', 'Partially Accepted', 'Partially Rejected')`)
     // sqlCondition.push(`gs.greyout_status IS NOT TRUE`)
-    sqlCondition.push(`gs.qty_stock > 0`);
+    sqlCondition.push(`gs.qty_stock >= 1`);
 
     const whereClause = sqlCondition.length > 0 ? `WHERE ${sqlCondition.join(' AND ')}` : '';
 
