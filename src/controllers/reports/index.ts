@@ -11091,7 +11091,7 @@ const fetchSpinnerLintCottonStock = async (req: Request, res: Response) => {
 
   sqlCondition.push(`gs.status IN ('Sold', 'Partially Accepted', 'Partially Rejected')`)
   // sqlCondition.push(`gs.greyout_status IS NOT TRUE`)
-  sqlCondition.push(`gs.qty_stock > 0`)
+  sqlCondition.push(`gs.qty_stock >= 1`)
 
 
   const whereClause = sqlCondition.length > 0 ? `WHERE ${sqlCondition.join(' AND ')}` : '';
@@ -11271,7 +11271,7 @@ const exportSpinnerCottonStock = async (req: Request, res: Response) => {
   
     sqlCondition.push(`gs.status IN ('Sold', 'Partially Accepted', 'Partially Rejected')`)
     // sqlCondition.push(`gs.greyout_status IS NOT TRUE`)
-    sqlCondition.push(`gs.qty_stock > 0`);
+    sqlCondition.push(`gs.qty_stock >= 1`);
 
     const whereClause = sqlCondition.length > 0 ? `WHERE ${sqlCondition.join(' AND ')}` : '';
 
