@@ -391,7 +391,16 @@ const uploadVillage = async (req: Request, res: Response) => {
                     village_latitude: 0,
                     village_longitude: 0
                 };
-                let village = await Village.findOne({ where: { block_id: req.body.blockId, village_name: data.village } })
+                let village = await Village.findOne({
+                    where:
+                    {
+                        block_id: req.body.blockId,
+                        village_name: {
+                            [Op.iLike]:
+                                data.village
+                        }
+                    }
+                })
                 if (village) {
                     fail.push({
                         success: false,
@@ -501,14 +510,14 @@ const uploadFarmer = async (req: Request, res: Response) => {
                 saveFailedRecord(failedRecord)
                 return res.sendSuccess(res, { pass, fail });
             }
-            
+
             else {
                 let brandCheck;
                 if (req.body.brand) {
                     brandCheck = await Brand.findOne({
                         where: {
                             programs_id: {
-                                [Op.contains]: [program.id] 
+                                [Op.contains]: [program.id]
                             },
                             id: brand.id
                         }
@@ -528,7 +537,7 @@ const uploadFarmer = async (req: Request, res: Response) => {
                         }
                         saveFailedRecord(failedRecord)
                         return res.sendSuccess(res, { pass, fail });
-                    } 
+                    }
                 }
             }
         }
@@ -594,7 +603,7 @@ const uploadFarmer = async (req: Request, res: Response) => {
                         }
                         saveFailedRecord(failedRecord)
                         return res.sendSuccess(res, { pass, fail });
-                    } 
+                    }
                 }
             }
         }
@@ -893,7 +902,10 @@ const uploadFarmer = async (req: Request, res: Response) => {
                                                     village = await Village.findOne({
                                                         where: {
                                                             block_id: block.id,
-                                                            village_name: data.village
+                                                            village_name: {
+                                                                [Op.iLike]:
+                                                                    data.village
+                                                            }
                                                         }
                                                     });
 
@@ -2497,7 +2509,10 @@ const uploadOrganicFarmer = async (req: Request, res: Response) => {
                                                     village = await Village.findOne({
                                                         where: {
                                                             block_id: block.id,
-                                                            village_name: data.village
+                                                            village_name: {
+                                                                [Op.iLike]:
+                                                                    data.village
+                                                            }
                                                         }
                                                     });
 
