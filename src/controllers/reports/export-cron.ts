@@ -2010,7 +2010,22 @@ const generateGinnerSummary = async () => {
           }),
           GinBale.findOne({
             attributes: [
-              [sequelize.fn('COALESCE', sequelize.fn('SUM', sequelize.literal('CAST("gin-bales"."weight" AS DOUBLE PRECISION)')), 0), 'qty'],
+              [
+                sequelize.fn(
+                  "COALESCE",
+                  sequelize.fn(
+                    "SUM",
+                    sequelize.literal(`
+                      CASE
+                        WHEN "gin-bales"."old_weight" IS NOT NULL THEN CAST("gin-bales"."old_weight" AS DOUBLE PRECISION)
+                        ELSE CAST("gin-bales"."weight" AS DOUBLE PRECISION)
+                      END
+                    `)
+                  ),
+                  0
+                ),
+                "qty",
+              ],
               [sequelize.fn('COUNT', Sequelize.literal('DISTINCT "gin-bales"."id"')), 'bales_procured'],
             ],
             include: [
@@ -2028,7 +2043,22 @@ const generateGinnerSummary = async () => {
           }),
           GinBale.findOne({
             attributes: [
-              [sequelize.fn('COALESCE', sequelize.fn('SUM', sequelize.literal('CAST("gin-bales"."weight" AS DOUBLE PRECISION)')), 0), 'qty'],
+              [
+                sequelize.fn(
+                  "COALESCE",
+                  sequelize.fn(
+                    "SUM",
+                    sequelize.literal(`
+                      CASE
+                        WHEN "gin-bales"."old_weight" IS NOT NULL THEN CAST("gin-bales"."old_weight" AS DOUBLE PRECISION)
+                        ELSE CAST("gin-bales"."weight" AS DOUBLE PRECISION)
+                      END
+                    `)
+                  ),
+                  0
+                ),
+                "qty",
+              ],
               [sequelize.fn('COUNT', Sequelize.literal('DISTINCT "gin-bales"."id"')), 'bales_procured'],
             ],
             include: [
@@ -2049,7 +2079,22 @@ const generateGinnerSummary = async () => {
           }),
           BaleSelection.findOne({
             attributes: [
-              [sequelize.fn('COALESCE', sequelize.fn('SUM', sequelize.literal('CAST("bale"."weight" AS DOUBLE PRECISION)')), 0), 'qty'],
+              [
+                sequelize.fn(
+                  "COALESCE",
+                  sequelize.fn(
+                    "SUM",
+                    sequelize.literal(`
+                      CASE
+                        WHEN "bale"."old_weight" IS NOT NULL THEN CAST("bale"."old_weight" AS DOUBLE PRECISION)
+                        ELSE CAST("bale"."weight" AS DOUBLE PRECISION)
+                      END
+                    `)
+                  ),
+                  0
+                ),
+                "qty",
+              ],
               [sequelize.fn('COUNT', Sequelize.literal('DISTINCT bale_id')), 'bales_sold'],
 
             ],
@@ -2067,7 +2112,8 @@ const generateGinnerSummary = async () => {
             ],
             where: {
               ...baleSelectionWhere,
-              '$sales.ginner_id$': item.id
+              '$sales.ginner_id$': item.id,
+              "$sales.status$" : { [Op.in]: ['Pending', 'Pending for QR scanning', 'Partially Accepted', 'Partially Rejected','Sold'] }
             },
             group: ["sales.ginner_id"]
           }),
