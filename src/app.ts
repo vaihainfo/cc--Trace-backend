@@ -189,7 +189,7 @@ cron.schedule(`0 ${checkTimeDiff(16,differenceInHours)} * * *`, async () => {
 });
 
 // Schedule cron job for 12 am (midnight) in India time (UTC+5:30)
-cron.schedule(`0 ${checkTimeDiff(2,differenceInHours)} * * *`, async () => {
+cron.schedule(`0 ${checkTimeDiff(0,differenceInHours)} * * *`, async () => {
   console.log('Running a task at 12 am IST');
   // Add your task for 12 am IST here
   exportReportsOnebyOne();
@@ -197,7 +197,7 @@ cron.schedule(`0 ${checkTimeDiff(2,differenceInHours)} * * *`, async () => {
 });
 
 // Schedule cron job for 2 am in India time (UTC+5:30)
-cron.schedule(`0 ${checkTimeDiff(4,differenceInHours)} * * *`, async () => {
+cron.schedule(`0 ${checkTimeDiff(2,differenceInHours)} * * *`, async () => {
   console.log('Running a task at 2 am IST');
   // Add your task for 2 am IST here
   exportReportsTameTaking();
