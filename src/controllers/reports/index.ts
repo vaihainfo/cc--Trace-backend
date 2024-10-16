@@ -12943,6 +12943,7 @@ const fetchPscpProcurementLiveTracker = async (req: Request, res: Response) => {
     let seasonCondition: string[] = [];
     let brandCondition: string[] = [];
     let baleCondition: string[] = [];
+    let baleSaleCondition: string[] = [];
 
     if (search) {
       brandCondition.push(`(name ILIKE :searchTerm OR "s.state_name" ILIKE :searchTerm)`);
@@ -12964,6 +12965,7 @@ const fetchPscpProcurementLiveTracker = async (req: Request, res: Response) => {
       const idArray = seasonId.split(",").map((id: string) => parseInt(id, 10));
       seasonCondition.push(`season_id IN (:seasonIds)`);
       baleCondition.push(`gp.season_id IN (:seasonIds)`);
+      baleSaleCondition.push(`gs.season_id IN (:seasonIds)`);
     }
 
     if (ginnerId) {
@@ -12975,6 +12977,8 @@ const fetchPscpProcurementLiveTracker = async (req: Request, res: Response) => {
     const seasonConditionSql = seasonCondition.length ? `${seasonCondition.join(' AND ')}` : '1=1';
     const brandConditionSql = brandCondition.length ? `${brandCondition.join(' AND ')}` : '1=1';
     const baleConditionSql = baleCondition.length ? `${baleCondition.join(' AND ')}` : '1=1';
+    const baleSaleConditionSql = baleSaleCondition.length ? `${baleSaleCondition.join(' AND ')}` : '1=1';
+
 
     const currentDate = new Date();
     const previousYearDate = new Date(currentDate);
@@ -13073,7 +13077,14 @@ const fetchPscpProcurementLiveTracker = async (req: Request, res: Response) => {
         gin_bale_data AS (
           SELECT
             gp.ginner_id,
-            SUM(CAST(gb.weight AS DOUBLE PRECISION)) AS total_qty
+            COALESCE(
+                  SUM(
+                    CASE
+                      WHEN gb.old_weight IS NOT NULL THEN CAST(gb.old_weight AS DOUBLE PRECISION)
+                      ELSE CAST(gb.weight AS DOUBLE PRECISION)
+                    END
+                  ), 0
+              ) AS total_qty
           FROM
             "gin-bales" gb
           JOIN gin_processes gp ON gb.process_id = gp.id
@@ -13100,20 +13111,31 @@ const fetchPscpProcurementLiveTracker = async (req: Request, res: Response) => {
             t.mapped_ginner
         ),
         gin_sales_data AS (
-          SELECT
-            gs.ginner_id,
-            SUM(gs.no_of_bales) AS no_of_bales,
-            SUM(gs.total_qty) AS total_qty
-          FROM
-            gin_sales gs
-          JOIN filtered_ginners ON gs.ginner_id = filtered_ginners.id
-          WHERE
-            gs.program_id = ANY (filtered_ginners.program_id)
-            AND ${seasonConditionSql}
-            AND gs.status = 'Sold'
-          GROUP BY
-            gs.ginner_id
-        ),
+                SELECT
+                    gs.ginner_id,
+                    COUNT(gb.id) AS no_of_bales,
+                    COALESCE(
+                      SUM(
+                        CASE
+                          WHEN gb.old_weight IS NOT NULL THEN CAST(gb.old_weight AS DOUBLE PRECISION)
+                          ELSE CAST(gb.weight AS DOUBLE PRECISION)
+                        END
+                      ), 0
+                    ) AS total_qty
+                FROM
+                    "gin-bales" gb
+                LEFT JOIN 
+                  bale_selections bs ON gb.id = bs.bale_id
+                LEFT JOIN 
+                    gin_sales gs ON gs.id = bs.sales_id
+                JOIN filtered_ginners ON gs.ginner_id = filtered_ginners.id
+                WHERE
+                    gs.program_id = ANY (filtered_ginners.program_id)
+                    AND ${baleSaleConditionSql}
+                    AND gs.status in ('Pending', 'Pending for QR scanning', 'Partially Accepted', 'Partially Rejected','Sold')
+                GROUP BY
+                    gs.ginner_id
+            ),
         gin_sales_pre_data AS (
           SELECT
             gs.ginner_id,
@@ -13176,6 +13198,7 @@ const fetchPscpProcurementLiveTracker = async (req: Request, res: Response) => {
             go.ginner_id
         )
       SELECT
+        fg.id AS ginner_id,
         fg.name AS ginner_name,
         fg.state_name,
         fg.county_name,
@@ -13217,7 +13240,7 @@ const fetchPscpProcurementLiveTracker = async (req: Request, res: Response) => {
               ELSE ROUND(
                 (
                   (
-                    COALESCE(gb.total_qty, 0) - COALESCE(gs.total_qty, 0)
+                    COALESCE(gs.total_qty, 0)
                   ) / COALESCE(gb.total_qty, 0)
                 ) * 100
               )
@@ -13519,6 +13542,7 @@ const exportPscpProcurementLiveTracker = async (
     let seasonCondition: string[] = [];
     let brandCondition: string[] = [];
     let baleCondition: string[] = [];
+    let baleSaleCondition: string[] = [];
 
     if (exportType === "all") {
 
@@ -13550,6 +13574,7 @@ const exportPscpProcurementLiveTracker = async (
         const idArray = seasonId.split(",").map((id: string) => parseInt(id, 10));
         seasonCondition.push(`season_id IN (:seasonIds)`);
         baleCondition.push(`gp.season_id IN (:seasonIds)`);
+        baleSaleCondition.push(`gs.season_id IN (:seasonIds)`);
       }
 
       if (ginnerId) {
@@ -13561,6 +13586,8 @@ const exportPscpProcurementLiveTracker = async (
       const seasonConditionSql = seasonCondition.length ? `${seasonCondition.join(' AND ')}` : '1=1';
       const brandConditionSql = brandCondition.length ? `${brandCondition.join(' AND ')}` : '1=1';
       const baleConditionSql = baleCondition.length ? `${baleCondition.join(' AND ')}` : '1=1';
+      const baleSaleConditionSql = baleSaleCondition.length ? `${baleSaleCondition.join(' AND ')}` : '1=1';
+
 
       const currentDate = new Date();
       const previousYearDate = new Date(currentDate);
@@ -13696,7 +13723,14 @@ const exportPscpProcurementLiveTracker = async (
           gin_bale_data AS (
             SELECT
               gp.ginner_id,
-              SUM(CAST(gb.weight AS DOUBLE PRECISION)) AS total_qty
+              COALESCE(
+                  SUM(
+                    CASE
+                      WHEN gb.old_weight IS NOT NULL THEN CAST(gb.old_weight AS DOUBLE PRECISION)
+                      ELSE CAST(gb.weight AS DOUBLE PRECISION)
+                    END
+                  ), 0
+              ) AS total_qty
             FROM
               "gin-bales" gb
             JOIN gin_processes gp ON gb.process_id = gp.id
@@ -13722,21 +13756,32 @@ const exportPscpProcurementLiveTracker = async (
             GROUP BY
               t.mapped_ginner
           ),
-          gin_sales_data AS (
-            SELECT
-              gs.ginner_id,
-              SUM(gs.no_of_bales) AS no_of_bales,
-              SUM(gs.total_qty) AS total_qty
-            FROM
-              gin_sales gs
-            JOIN filtered_ginners ON gs.ginner_id = filtered_ginners.id
-            WHERE
-              gs.program_id = ANY (filtered_ginners.program_id)
-              AND ${seasonConditionSql}
-              AND gs.status = 'Sold'
-            GROUP BY
-              gs.ginner_id
-          ),
+        gin_sales_data AS (
+                SELECT
+                    gs.ginner_id,
+                    COUNT(gb.id) AS no_of_bales,
+                    COALESCE(
+                      SUM(
+                        CASE
+                          WHEN gb.old_weight IS NOT NULL THEN CAST(gb.old_weight AS DOUBLE PRECISION)
+                          ELSE CAST(gb.weight AS DOUBLE PRECISION)
+                        END
+                      ), 0
+                    ) AS total_qty
+                FROM
+                    "gin-bales" gb
+                LEFT JOIN 
+                  bale_selections bs ON gb.id = bs.bale_id
+                LEFT JOIN 
+                    gin_sales gs ON gs.id = bs.sales_id
+                JOIN filtered_ginners ON gs.ginner_id = filtered_ginners.id
+                WHERE
+                    gs.program_id = ANY (filtered_ginners.program_id)
+                    AND ${baleSaleConditionSql}
+                    AND gs.status in ('Pending', 'Pending for QR scanning', 'Partially Accepted', 'Partially Rejected','Sold')
+                GROUP BY
+                    gs.ginner_id
+            ),
           gin_sales_pre_data AS (
             SELECT
               gs.ginner_id,
@@ -13840,7 +13885,7 @@ const exportPscpProcurementLiveTracker = async (
                 ELSE ROUND(
                   (
                     (
-                      COALESCE(gb.total_qty, 0) - COALESCE(gs.total_qty, 0)
+                      COALESCE(gs.total_qty, 0)
                     ) / COALESCE(gb.total_qty, 0)
                   ) * 100
                 )

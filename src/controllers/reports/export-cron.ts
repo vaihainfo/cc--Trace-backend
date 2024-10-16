@@ -1661,7 +1661,14 @@ const generatePscpProcurementLiveTracker = async () => {
           gin_bale_data AS (
             SELECT
               gp.ginner_id,
-              SUM(CAST(gb.weight AS DOUBLE PRECISION)) AS total_qty
+              COALESCE(
+                  SUM(
+                    CASE
+                      WHEN gb.old_weight IS NOT NULL THEN CAST(gb.old_weight AS DOUBLE PRECISION)
+                      ELSE CAST(gb.weight AS DOUBLE PRECISION)
+                    END
+                  ), 0
+              ) AS total_qty
             FROM
               "gin-bales" gb
             JOIN gin_processes gp ON gb.process_id = gp.id
@@ -1684,20 +1691,31 @@ const generatePscpProcurementLiveTracker = async () => {
             GROUP BY
               t.mapped_ginner
           ),
-          gin_sales_data AS (
-            SELECT
-              gs.ginner_id,
-              SUM(gs.no_of_bales) AS no_of_bales,
-              SUM(gs.total_qty) AS total_qty
-            FROM
-              gin_sales gs
-            JOIN filtered_ginners ON gs.ginner_id = filtered_ginners.id
-            WHERE
-              gs.program_id = ANY (filtered_ginners.program_id)
-              AND gs.status = 'Sold'
-            GROUP BY
-              gs.ginner_id
-          ),
+        gin_sales_data AS (
+                SELECT
+                    gs.ginner_id,
+                    COUNT(gb.id) AS no_of_bales,
+                    COALESCE(
+                      SUM(
+                        CASE
+                          WHEN gb.old_weight IS NOT NULL THEN CAST(gb.old_weight AS DOUBLE PRECISION)
+                          ELSE CAST(gb.weight AS DOUBLE PRECISION)
+                        END
+                      ), 0
+                    ) AS total_qty
+                FROM
+                    "gin-bales" gb
+                LEFT JOIN 
+                  bale_selections bs ON gb.id = bs.bale_id
+                LEFT JOIN 
+                    gin_sales gs ON gs.id = bs.sales_id
+                JOIN filtered_ginners ON gs.ginner_id = filtered_ginners.id
+                WHERE
+                    gs.program_id = ANY (filtered_ginners.program_id)
+                    AND gs.status in ('Pending', 'Pending for QR scanning', 'Partially Accepted', 'Partially Rejected','Sold')
+                GROUP BY
+                    gs.ginner_id
+            ),
           gin_sales_pre_data AS (
             SELECT
               gs.ginner_id,
@@ -1798,7 +1816,7 @@ const generatePscpProcurementLiveTracker = async () => {
                 ELSE ROUND(
                   (
                     (
-                      COALESCE(gb.total_qty, 0) - COALESCE(gs.total_qty, 0)
+                      COALESCE(gs.total_qty, 0)
                     ) / COALESCE(gb.total_qty, 0)
                   ) * 100
                 )
