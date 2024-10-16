@@ -18558,9 +18558,12 @@ const brandWiseDataReport = async (req: Request, res: Response) => {
                   "COALESCE",
                   sequelize.fn(
                     "SUM",
-                    sequelize.literal(
-                      'CAST("gin-bales"."weight" AS DOUBLE PRECISION)'
-                    )
+                    sequelize.literal(`
+                      CASE
+                        WHEN "gin-bales"."old_weight" IS NOT NULL THEN CAST("gin-bales"."old_weight" AS DOUBLE PRECISION)
+                        ELSE CAST("gin-bales"."weight" AS DOUBLE PRECISION)
+                      END
+                    `)
                   ),
                   0
                 ),
@@ -18601,9 +18604,12 @@ const brandWiseDataReport = async (req: Request, res: Response) => {
                   "COALESCE",
                   sequelize.fn(
                     "SUM",
-                    sequelize.literal(
-                      'CAST("bale"."weight" AS DOUBLE PRECISION)'
-                    )
+                    sequelize.literal(`
+                      CASE
+                        WHEN "bale"."old_weight" IS NOT NULL THEN CAST("bale"."old_weight" AS DOUBLE PRECISION)
+                        ELSE CAST("bale"."weight" AS DOUBLE PRECISION)
+                      END
+                    `)
                   ),
                   0
                 ),
@@ -18636,6 +18642,7 @@ const brandWiseDataReport = async (req: Request, res: Response) => {
             where: {
               ...baleSelectionWhere,
               "$sales.ginner.brand$": { [Op.overlap]: [item?.dataValues?.id] },
+              "$sales.status$" : { [Op.in]: ['Pending', 'Pending for QR scanning', 'Partially Accepted', 'Partially Rejected','Sold'] }
             },
             group: ["sales.ginner.brand"],
           }),
@@ -18849,9 +18856,12 @@ const exportBrandWiseDataReport = async (req: Request, res: Response) => {
                     "COALESCE",
                     sequelize.fn(
                       "SUM",
-                      sequelize.literal(
-                        'CAST("gin-bales"."weight" AS DOUBLE PRECISION)'
-                      )
+                      sequelize.literal(`
+                        CASE
+                          WHEN "gin-bales"."old_weight" IS NOT NULL THEN CAST("gin-bales"."old_weight" AS DOUBLE PRECISION)
+                          ELSE CAST("gin-bales"."weight" AS DOUBLE PRECISION)
+                        END
+                      `)
                     ),
                     0
                   ),
@@ -18892,9 +18902,12 @@ const exportBrandWiseDataReport = async (req: Request, res: Response) => {
                     "COALESCE",
                     sequelize.fn(
                       "SUM",
-                      sequelize.literal(
-                        'CAST("bale"."weight" AS DOUBLE PRECISION)'
-                      )
+                      sequelize.literal(`
+                        CASE
+                          WHEN "bale"."old_weight" IS NOT NULL THEN CAST("bale"."old_weight" AS DOUBLE PRECISION)
+                          ELSE CAST("bale"."weight" AS DOUBLE PRECISION)
+                        END
+                      `)
                     ),
                     0
                   ),
@@ -18927,6 +18940,7 @@ const exportBrandWiseDataReport = async (req: Request, res: Response) => {
               where: {
                 ...baleSelectionWhere,
                 "$sales.ginner.brand$": { [Op.overlap]: [item?.dataValues?.id] },
+                "$sales.status$" : { [Op.in]: ['Pending', 'Pending for QR scanning', 'Partially Accepted', 'Partially Rejected','Sold'] }
               },
               group: ["sales.ginner.brand"],
             }),
