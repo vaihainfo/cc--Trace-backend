@@ -216,8 +216,12 @@ const fetchBaleProcess = async (req: Request, res: Response) => {
               ) AS lint_quantity_sold
               FROM
                   "gin-bales" gb
+              LEFT JOIN 
+                  bale_selections bs ON gb.id = bs.bale_id
+              LEFT JOIN 
+                  gin_sales gs ON gs.id = bs.sales_id
               WHERE
-                  gb.sold_status = true
+                  gs.status in ('Pending', 'Pending for QR scanning', 'Partially Accepted', 'Partially Rejected','Sold')
               GROUP BY
                   gb.process_id
           )
@@ -466,8 +470,12 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
               ) AS lint_quantity_sold
                 FROM
                     "gin-bales" gb
+                LEFT JOIN 
+                  bale_selections bs ON gb.id = bs.bale_id
+                LEFT JOIN 
+                    gin_sales gs ON gs.id = bs.sales_id
                 WHERE
-                    gb.sold_status = true
+                    gs.status in ('Pending', 'Pending for QR scanning', 'Partially Accepted', 'Partially Rejected','Sold')
                 GROUP BY
                     gb.process_id
             )
@@ -10142,9 +10150,12 @@ const fetchGinnerSummaryPagination = async (req: Request, res: Response) => {
                   "COALESCE",
                   sequelize.fn(
                     "SUM",
-                    sequelize.literal(
-                      'CAST("gin-bales"."weight" AS DOUBLE PRECISION)'
-                    )
+                    sequelize.literal(`
+                      CASE
+                        WHEN "gin-bales"."old_weight" IS NOT NULL THEN CAST("gin-bales"."old_weight" AS DOUBLE PRECISION)
+                        ELSE CAST("gin-bales"."weight" AS DOUBLE PRECISION)
+                      END
+                    `)
                   ),
                   0
                 ),
@@ -10182,9 +10193,12 @@ const fetchGinnerSummaryPagination = async (req: Request, res: Response) => {
                   "COALESCE",
                   sequelize.fn(
                     "SUM",
-                    sequelize.literal(
-                      'CAST("bale"."weight" AS DOUBLE PRECISION)'
-                    )
+                    sequelize.literal(`
+                      CASE
+                        WHEN "bale"."old_weight" IS NOT NULL THEN CAST("bale"."old_weight" AS DOUBLE PRECISION)
+                        ELSE CAST("bale"."weight" AS DOUBLE PRECISION)
+                      END
+                    `)
                   ),
                   0
                 ),
@@ -10210,6 +10224,7 @@ const fetchGinnerSummaryPagination = async (req: Request, res: Response) => {
             where: {
               ...baleSelectionWhere,
               "$sales.ginner_id$": ginner.id,
+              "$sales.status$" : { [Op.in]: ['Pending', 'Pending for QR scanning', 'Partially Accepted', 'Partially Rejected','Sold'] }
             },
             group: ["sales.ginner_id"],
           }),
@@ -10420,6 +10435,7 @@ const exportGinnerSummary = async (req: Request, res: Response) => {
   const transactionWhere: any = {};
   const ginBaleWhere: any = {};
   const baleSelectionWhere: any = {};
+  const cottenSectionWhere: any = {};
 
   try {
     if (exportType === "all") {
@@ -10459,18 +10475,20 @@ const exportGinnerSummary = async (req: Request, res: Response) => {
         const idArray: number[] = programId
           .split(",")
           .map((id: any) => parseInt(id, 10));
-        transactionWhere.program_id = { [Op.in]: idArray };
-        ginBaleWhere["$ginprocess.program_id$"] = { [Op.in]: idArray };
-        baleSelectionWhere["$sales.program_id$"] = { [Op.in]: idArray };
+          transactionWhere.program_id = { [Op.in]: idArray };
+          ginBaleWhere["$ginprocess.program_id$"] = { [Op.in]: idArray };
+          baleSelectionWhere["$sales.program_id$"] = { [Op.in]: idArray };
+          cottenSectionWhere["$ginprocess.program_id$"] = { [Op.in]: idArray };
       }
 
       if (seasonId) {
         const idArray: number[] = seasonId
           .split(",")
           .map((id: any) => parseInt(id, 10));
-        transactionWhere.season_id = { [Op.in]: idArray };
-        ginBaleWhere["$ginprocess.season_id$"] = { [Op.in]: idArray };
-        baleSelectionWhere["$sales.season_id$"] = { [Op.in]: idArray };
+          transactionWhere.season_id = { [Op.in]: idArray };
+          ginBaleWhere["$ginprocess.season_id$"] = { [Op.in]: idArray };
+          baleSelectionWhere["$sales.season_id$"] = { [Op.in]: idArray };
+          cottenSectionWhere["$ginprocess.season_id$"] = { [Op.in]: idArray };
       }
 
 
@@ -10532,13 +10550,29 @@ const exportGinnerSummary = async (req: Request, res: Response) => {
               }
             ],
             where: {
+              ...cottenSectionWhere,
               '$ginprocess.ginner_id$': item.id
             },
             group: ["ginprocess.ginner_id"]
           }),
           GinBale.findOne({
             attributes: [
-              [sequelize.fn('COALESCE', sequelize.fn('SUM', sequelize.literal('CAST("gin-bales"."weight" AS DOUBLE PRECISION)')), 0), 'qty'],
+              [
+                sequelize.fn(
+                  "COALESCE",
+                  sequelize.fn(
+                    "SUM",
+                    sequelize.literal(`
+                      CASE
+                        WHEN "gin-bales"."old_weight" IS NOT NULL THEN CAST("gin-bales"."old_weight" AS DOUBLE PRECISION)
+                        ELSE CAST("gin-bales"."weight" AS DOUBLE PRECISION)
+                      END
+                    `)
+                  ),
+                  0
+                ),
+                "qty",
+              ],
               [sequelize.fn('COUNT', Sequelize.literal('DISTINCT "gin-bales"."id"')), 'bales_procured'],
             ],
             include: [
@@ -10556,7 +10590,22 @@ const exportGinnerSummary = async (req: Request, res: Response) => {
           }),
           GinBale.findOne({
             attributes: [
-              [sequelize.fn('COALESCE', sequelize.fn('SUM', sequelize.literal('CAST("gin-bales"."weight" AS DOUBLE PRECISION)')), 0), 'qty'],
+              [
+                sequelize.fn(
+                  "COALESCE",
+                  sequelize.fn(
+                    "SUM",
+                    sequelize.literal(`
+                      CASE
+                        WHEN "gin-bales"."old_weight" IS NOT NULL THEN CAST("gin-bales"."old_weight" AS DOUBLE PRECISION)
+                        ELSE CAST("gin-bales"."weight" AS DOUBLE PRECISION)
+                      END
+                    `)
+                  ),
+                  0
+                ),
+                "qty",
+              ],
               [sequelize.fn('COUNT', Sequelize.literal('DISTINCT "gin-bales"."id"')), 'bales_procured'],
             ],
             include: [
@@ -10577,25 +10626,43 @@ const exportGinnerSummary = async (req: Request, res: Response) => {
           }),
           BaleSelection.findOne({
             attributes: [
-              [sequelize.fn('COALESCE', sequelize.fn('SUM', sequelize.literal('CAST("bale"."weight" AS DOUBLE PRECISION)')), 0), 'qty'],
-              [sequelize.fn('COUNT', Sequelize.literal('DISTINCT bale_id')), 'bales_sold'],
-
+              [
+                sequelize.fn(
+                  "COALESCE",
+                  sequelize.fn(
+                    "SUM",
+                    sequelize.literal(`
+                      CASE
+                        WHEN "bale"."old_weight" IS NOT NULL THEN CAST("bale"."old_weight" AS DOUBLE PRECISION)
+                        ELSE CAST("bale"."weight" AS DOUBLE PRECISION)
+                      END
+                    `)
+                  ),
+                  0
+                ),
+                "qty",
+              ],
+              [
+                sequelize.fn("COUNT", Sequelize.literal("DISTINCT bale_id")),
+                "bales_sold",
+              ],
             ],
             include: [
               {
                 model: GinSales,
-                as: 'sales',
-                attributes: []
+                as: "sales",
+                attributes: [],
               },
               {
                 model: GinBale,
-                as: 'bale',
-                attributes: []
-              }
+                as: "bale",
+                attributes: [],
+              },
             ],
             where: {
               ...baleSelectionWhere,
-              '$sales.ginner_id$': item.id
+              "$sales.ginner_id$": item.id,
+              "$sales.status$" : { [Op.in]: ['Pending', 'Pending for QR scanning', 'Partially Accepted', 'Partially Rejected','Sold'] }
             },
             group: ["sales.ginner_id"]
           }),
@@ -11091,7 +11158,7 @@ const fetchSpinnerLintCottonStock = async (req: Request, res: Response) => {
 
   sqlCondition.push(`gs.status IN ('Sold', 'Partially Accepted', 'Partially Rejected')`)
   // sqlCondition.push(`gs.greyout_status IS NOT TRUE`)
-  sqlCondition.push(`gs.qty_stock > 0`)
+  sqlCondition.push(`gs.qty_stock >= 1`)
 
 
   const whereClause = sqlCondition.length > 0 ? `WHERE ${sqlCondition.join(' AND ')}` : '';
@@ -11271,7 +11338,7 @@ const exportSpinnerCottonStock = async (req: Request, res: Response) => {
   
     sqlCondition.push(`gs.status IN ('Sold', 'Partially Accepted', 'Partially Rejected')`)
     // sqlCondition.push(`gs.greyout_status IS NOT TRUE`)
-    sqlCondition.push(`gs.qty_stock > 0`);
+    sqlCondition.push(`gs.qty_stock >= 1`);
 
     const whereClause = sqlCondition.length > 0 ? `WHERE ${sqlCondition.join(' AND ')}` : '';
 
@@ -12487,6 +12554,7 @@ const fetchPscpProcurementLiveTracker = async (req: Request, res: Response) => {
     let seasonCondition: string[] = [];
     let brandCondition: string[] = [];
     let baleCondition: string[] = [];
+    let baleSaleCondition: string[] = [];
 
     if (search) {
       brandCondition.push(`(name ILIKE :searchTerm OR "s.state_name" ILIKE :searchTerm)`);
@@ -12508,6 +12576,7 @@ const fetchPscpProcurementLiveTracker = async (req: Request, res: Response) => {
       const idArray = seasonId.split(",").map((id: string) => parseInt(id, 10));
       seasonCondition.push(`season_id IN (:seasonIds)`);
       baleCondition.push(`gp.season_id IN (:seasonIds)`);
+      baleSaleCondition.push(`gs.season_id IN (:seasonIds)`);
     }
 
     if (ginnerId) {
@@ -12519,6 +12588,8 @@ const fetchPscpProcurementLiveTracker = async (req: Request, res: Response) => {
     const seasonConditionSql = seasonCondition.length ? `${seasonCondition.join(' AND ')}` : '1=1';
     const brandConditionSql = brandCondition.length ? `${brandCondition.join(' AND ')}` : '1=1';
     const baleConditionSql = baleCondition.length ? `${baleCondition.join(' AND ')}` : '1=1';
+    const baleSaleConditionSql = baleSaleCondition.length ? `${baleSaleCondition.join(' AND ')}` : '1=1';
+
 
     let countQuery = `
             SELECT 
@@ -12599,7 +12670,14 @@ const fetchPscpProcurementLiveTracker = async (req: Request, res: Response) => {
         gin_bale_data AS (
           SELECT
             gp.ginner_id,
-            SUM(CAST(gb.weight AS DOUBLE PRECISION)) AS total_qty
+            COALESCE(
+                  SUM(
+                    CASE
+                      WHEN gb.old_weight IS NOT NULL THEN CAST(gb.old_weight AS DOUBLE PRECISION)
+                      ELSE CAST(gb.weight AS DOUBLE PRECISION)
+                    END
+                  ), 0
+              ) AS total_qty
           FROM
             "gin-bales" gb
           JOIN gin_processes gp ON gb.process_id = gp.id
@@ -12626,20 +12704,31 @@ const fetchPscpProcurementLiveTracker = async (req: Request, res: Response) => {
             t.mapped_ginner
         ),
         gin_sales_data AS (
-          SELECT
-            gs.ginner_id,
-            SUM(gs.no_of_bales) AS no_of_bales,
-            SUM(gs.total_qty) AS total_qty
-          FROM
-            gin_sales gs
-          JOIN filtered_ginners ON gs.ginner_id = filtered_ginners.id
-          WHERE
-            gs.program_id = ANY (filtered_ginners.program_id)
-            AND ${seasonConditionSql}
-            AND gs.status = 'Sold'
-          GROUP BY
-            gs.ginner_id
-        ),
+                SELECT
+                    gs.ginner_id,
+                    COUNT(gb.id) AS no_of_bales,
+                    COALESCE(
+                      SUM(
+                        CASE
+                          WHEN gb.old_weight IS NOT NULL THEN CAST(gb.old_weight AS DOUBLE PRECISION)
+                          ELSE CAST(gb.weight AS DOUBLE PRECISION)
+                        END
+                      ), 0
+                    ) AS total_qty
+                FROM
+                    "gin-bales" gb
+                LEFT JOIN 
+                  bale_selections bs ON gb.id = bs.bale_id
+                LEFT JOIN 
+                    gin_sales gs ON gs.id = bs.sales_id
+                JOIN filtered_ginners ON gs.ginner_id = filtered_ginners.id
+                WHERE
+                    gs.program_id = ANY (filtered_ginners.program_id)
+                    AND ${baleSaleConditionSql}
+                    AND gs.status in ('Pending', 'Pending for QR scanning', 'Partially Accepted', 'Partially Rejected','Sold')
+                GROUP BY
+                    gs.ginner_id
+            ),
         expected_cotton_data AS (
           SELECT
             gec.ginner_id,
@@ -12668,6 +12757,7 @@ const fetchPscpProcurementLiveTracker = async (req: Request, res: Response) => {
             go.ginner_id
         )
       SELECT
+        fg.id AS ginner_id,
         fg.name AS ginner_name,
         fg.state_name,
         fg.county_name,
@@ -12705,7 +12795,7 @@ const fetchPscpProcurementLiveTracker = async (req: Request, res: Response) => {
               ELSE ROUND(
                 (
                   (
-                    COALESCE(gb.total_qty, 0) - COALESCE(gs.total_qty, 0)
+                    COALESCE(gs.total_qty, 0)
                   ) / COALESCE(gb.total_qty, 0)
                 ) * 100
               )
@@ -13004,6 +13094,7 @@ const exportPscpProcurementLiveTracker = async (
     let seasonCondition: string[] = [];
     let brandCondition: string[] = [];
     let baleCondition: string[] = [];
+    let baleSaleCondition: string[] = [];
 
     if (exportType === "all") {
 
@@ -13035,6 +13126,7 @@ const exportPscpProcurementLiveTracker = async (
         const idArray = seasonId.split(",").map((id: string) => parseInt(id, 10));
         seasonCondition.push(`season_id IN (:seasonIds)`);
         baleCondition.push(`gp.season_id IN (:seasonIds)`);
+        baleSaleCondition.push(`gs.season_id IN (:seasonIds)`);
       }
 
       if (ginnerId) {
@@ -13046,6 +13138,8 @@ const exportPscpProcurementLiveTracker = async (
       const seasonConditionSql = seasonCondition.length ? `${seasonCondition.join(' AND ')}` : '1=1';
       const brandConditionSql = brandCondition.length ? `${brandCondition.join(' AND ')}` : '1=1';
       const baleConditionSql = baleCondition.length ? `${baleCondition.join(' AND ')}` : '1=1';
+      const baleSaleConditionSql = baleSaleCondition.length ? `${baleSaleCondition.join(' AND ')}` : '1=1';
+
       // Create the excel workbook file
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet("Sheet1");
@@ -13155,7 +13249,14 @@ const exportPscpProcurementLiveTracker = async (
           gin_bale_data AS (
             SELECT
               gp.ginner_id,
-              SUM(CAST(gb.weight AS DOUBLE PRECISION)) AS total_qty
+              COALESCE(
+                  SUM(
+                    CASE
+                      WHEN gb.old_weight IS NOT NULL THEN CAST(gb.old_weight AS DOUBLE PRECISION)
+                      ELSE CAST(gb.weight AS DOUBLE PRECISION)
+                    END
+                  ), 0
+              ) AS total_qty
             FROM
               "gin-bales" gb
             JOIN gin_processes gp ON gb.process_id = gp.id
@@ -13181,21 +13282,32 @@ const exportPscpProcurementLiveTracker = async (
             GROUP BY
               t.mapped_ginner
           ),
-          gin_sales_data AS (
-            SELECT
-              gs.ginner_id,
-              SUM(gs.no_of_bales) AS no_of_bales,
-              SUM(gs.total_qty) AS total_qty
-            FROM
-              gin_sales gs
-            JOIN filtered_ginners ON gs.ginner_id = filtered_ginners.id
-            WHERE
-              gs.program_id = ANY (filtered_ginners.program_id)
-              AND ${seasonConditionSql}
-              AND gs.status = 'Sold'
-            GROUP BY
-              gs.ginner_id
-          ),
+        gin_sales_data AS (
+                SELECT
+                    gs.ginner_id,
+                    COUNT(gb.id) AS no_of_bales,
+                    COALESCE(
+                      SUM(
+                        CASE
+                          WHEN gb.old_weight IS NOT NULL THEN CAST(gb.old_weight AS DOUBLE PRECISION)
+                          ELSE CAST(gb.weight AS DOUBLE PRECISION)
+                        END
+                      ), 0
+                    ) AS total_qty
+                FROM
+                    "gin-bales" gb
+                LEFT JOIN 
+                  bale_selections bs ON gb.id = bs.bale_id
+                LEFT JOIN 
+                    gin_sales gs ON gs.id = bs.sales_id
+                JOIN filtered_ginners ON gs.ginner_id = filtered_ginners.id
+                WHERE
+                    gs.program_id = ANY (filtered_ginners.program_id)
+                    AND ${baleSaleConditionSql}
+                    AND gs.status in ('Pending', 'Pending for QR scanning', 'Partially Accepted', 'Partially Rejected','Sold')
+                GROUP BY
+                    gs.ginner_id
+            ),
           expected_cotton_data AS (
             SELECT
               gec.ginner_id,
@@ -13261,7 +13373,7 @@ const exportPscpProcurementLiveTracker = async (
                 ELSE ROUND(
                   (
                     (
-                      COALESCE(gb.total_qty, 0) - COALESCE(gs.total_qty, 0)
+                      COALESCE(gs.total_qty, 0)
                     ) / COALESCE(gb.total_qty, 0)
                   ) * 100
                 )
@@ -17831,9 +17943,12 @@ const brandWiseDataReport = async (req: Request, res: Response) => {
                   "COALESCE",
                   sequelize.fn(
                     "SUM",
-                    sequelize.literal(
-                      'CAST("gin-bales"."weight" AS DOUBLE PRECISION)'
-                    )
+                    sequelize.literal(`
+                      CASE
+                        WHEN "gin-bales"."old_weight" IS NOT NULL THEN CAST("gin-bales"."old_weight" AS DOUBLE PRECISION)
+                        ELSE CAST("gin-bales"."weight" AS DOUBLE PRECISION)
+                      END
+                    `)
                   ),
                   0
                 ),
@@ -17874,9 +17989,12 @@ const brandWiseDataReport = async (req: Request, res: Response) => {
                   "COALESCE",
                   sequelize.fn(
                     "SUM",
-                    sequelize.literal(
-                      'CAST("bale"."weight" AS DOUBLE PRECISION)'
-                    )
+                    sequelize.literal(`
+                      CASE
+                        WHEN "bale"."old_weight" IS NOT NULL THEN CAST("bale"."old_weight" AS DOUBLE PRECISION)
+                        ELSE CAST("bale"."weight" AS DOUBLE PRECISION)
+                      END
+                    `)
                   ),
                   0
                 ),
@@ -17909,6 +18027,7 @@ const brandWiseDataReport = async (req: Request, res: Response) => {
             where: {
               ...baleSelectionWhere,
               "$sales.ginner.brand$": { [Op.overlap]: [item?.dataValues?.id] },
+              "$sales.status$" : { [Op.in]: ['Pending', 'Pending for QR scanning', 'Partially Accepted', 'Partially Rejected','Sold'] }
             },
             group: ["sales.ginner.brand"],
           }),
@@ -18122,9 +18241,12 @@ const exportBrandWiseDataReport = async (req: Request, res: Response) => {
                     "COALESCE",
                     sequelize.fn(
                       "SUM",
-                      sequelize.literal(
-                        'CAST("gin-bales"."weight" AS DOUBLE PRECISION)'
-                      )
+                      sequelize.literal(`
+                        CASE
+                          WHEN "gin-bales"."old_weight" IS NOT NULL THEN CAST("gin-bales"."old_weight" AS DOUBLE PRECISION)
+                          ELSE CAST("gin-bales"."weight" AS DOUBLE PRECISION)
+                        END
+                      `)
                     ),
                     0
                   ),
@@ -18165,9 +18287,12 @@ const exportBrandWiseDataReport = async (req: Request, res: Response) => {
                     "COALESCE",
                     sequelize.fn(
                       "SUM",
-                      sequelize.literal(
-                        'CAST("bale"."weight" AS DOUBLE PRECISION)'
-                      )
+                      sequelize.literal(`
+                        CASE
+                          WHEN "bale"."old_weight" IS NOT NULL THEN CAST("bale"."old_weight" AS DOUBLE PRECISION)
+                          ELSE CAST("bale"."weight" AS DOUBLE PRECISION)
+                        END
+                      `)
                     ),
                     0
                   ),
@@ -18200,6 +18325,7 @@ const exportBrandWiseDataReport = async (req: Request, res: Response) => {
               where: {
                 ...baleSelectionWhere,
                 "$sales.ginner.brand$": { [Op.overlap]: [item?.dataValues?.id] },
+                "$sales.status$" : { [Op.in]: ['Pending', 'Pending for QR scanning', 'Partially Accepted', 'Partially Rejected','Sold'] }
               },
               group: ["sales.ginner.brand"],
             }),
