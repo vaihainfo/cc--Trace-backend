@@ -1557,7 +1557,14 @@ const generatePscpProcurementLiveTracker = async () => {
           gin_bale_data AS (
             SELECT
               gp.ginner_id,
-              SUM(CAST(gb.weight AS DOUBLE PRECISION)) AS total_qty
+              COALESCE(
+                  SUM(
+                    CASE
+                      WHEN gb.old_weight IS NOT NULL THEN CAST(gb.old_weight AS DOUBLE PRECISION)
+                      ELSE CAST(gb.weight AS DOUBLE PRECISION)
+                    END
+                  ), 0
+              ) AS total_qty
             FROM
               "gin-bales" gb
             JOIN gin_processes gp ON gb.process_id = gp.id
@@ -1580,20 +1587,31 @@ const generatePscpProcurementLiveTracker = async () => {
             GROUP BY
               t.mapped_ginner
           ),
-          gin_sales_data AS (
-            SELECT
-              gs.ginner_id,
-              SUM(gs.no_of_bales) AS no_of_bales,
-              SUM(gs.total_qty) AS total_qty
-            FROM
-              gin_sales gs
-            JOIN filtered_ginners ON gs.ginner_id = filtered_ginners.id
-            WHERE
-              gs.program_id = ANY (filtered_ginners.program_id)
-              AND gs.status = 'Sold'
-            GROUP BY
-              gs.ginner_id
-          ),
+        gin_sales_data AS (
+                SELECT
+                    gs.ginner_id,
+                    COUNT(gb.id) AS no_of_bales,
+                    COALESCE(
+                      SUM(
+                        CASE
+                          WHEN gb.old_weight IS NOT NULL THEN CAST(gb.old_weight AS DOUBLE PRECISION)
+                          ELSE CAST(gb.weight AS DOUBLE PRECISION)
+                        END
+                      ), 0
+                    ) AS total_qty
+                FROM
+                    "gin-bales" gb
+                LEFT JOIN 
+                  bale_selections bs ON gb.id = bs.bale_id
+                LEFT JOIN 
+                    gin_sales gs ON gs.id = bs.sales_id
+                JOIN filtered_ginners ON gs.ginner_id = filtered_ginners.id
+                WHERE
+                    gs.program_id = ANY (filtered_ginners.program_id)
+                    AND gs.status in ('Pending', 'Pending for QR scanning', 'Partially Accepted', 'Partially Rejected','Sold')
+                GROUP BY
+                    gs.ginner_id
+            ),
           expected_cotton_data AS (
             SELECT
               gec.ginner_id,
@@ -1657,7 +1675,7 @@ const generatePscpProcurementLiveTracker = async () => {
                 ELSE ROUND(
                   (
                     (
-                      COALESCE(gb.total_qty, 0) - COALESCE(gs.total_qty, 0)
+                      COALESCE(gs.total_qty, 0)
                     ) / COALESCE(gb.total_qty, 0)
                   ) * 100
                 )
@@ -2010,7 +2028,22 @@ const generateGinnerSummary = async () => {
           }),
           GinBale.findOne({
             attributes: [
-              [sequelize.fn('COALESCE', sequelize.fn('SUM', sequelize.literal('CAST("gin-bales"."weight" AS DOUBLE PRECISION)')), 0), 'qty'],
+              [
+                sequelize.fn(
+                  "COALESCE",
+                  sequelize.fn(
+                    "SUM",
+                    sequelize.literal(`
+                      CASE
+                        WHEN "gin-bales"."old_weight" IS NOT NULL THEN CAST("gin-bales"."old_weight" AS DOUBLE PRECISION)
+                        ELSE CAST("gin-bales"."weight" AS DOUBLE PRECISION)
+                      END
+                    `)
+                  ),
+                  0
+                ),
+                "qty",
+              ],
               [sequelize.fn('COUNT', Sequelize.literal('DISTINCT "gin-bales"."id"')), 'bales_procured'],
             ],
             include: [
@@ -2028,7 +2061,22 @@ const generateGinnerSummary = async () => {
           }),
           GinBale.findOne({
             attributes: [
-              [sequelize.fn('COALESCE', sequelize.fn('SUM', sequelize.literal('CAST("gin-bales"."weight" AS DOUBLE PRECISION)')), 0), 'qty'],
+              [
+                sequelize.fn(
+                  "COALESCE",
+                  sequelize.fn(
+                    "SUM",
+                    sequelize.literal(`
+                      CASE
+                        WHEN "gin-bales"."old_weight" IS NOT NULL THEN CAST("gin-bales"."old_weight" AS DOUBLE PRECISION)
+                        ELSE CAST("gin-bales"."weight" AS DOUBLE PRECISION)
+                      END
+                    `)
+                  ),
+                  0
+                ),
+                "qty",
+              ],
               [sequelize.fn('COUNT', Sequelize.literal('DISTINCT "gin-bales"."id"')), 'bales_procured'],
             ],
             include: [
@@ -2049,7 +2097,22 @@ const generateGinnerSummary = async () => {
           }),
           BaleSelection.findOne({
             attributes: [
-              [sequelize.fn('COALESCE', sequelize.fn('SUM', sequelize.literal('CAST("bale"."weight" AS DOUBLE PRECISION)')), 0), 'qty'],
+              [
+                sequelize.fn(
+                  "COALESCE",
+                  sequelize.fn(
+                    "SUM",
+                    sequelize.literal(`
+                      CASE
+                        WHEN "bale"."old_weight" IS NOT NULL THEN CAST("bale"."old_weight" AS DOUBLE PRECISION)
+                        ELSE CAST("bale"."weight" AS DOUBLE PRECISION)
+                      END
+                    `)
+                  ),
+                  0
+                ),
+                "qty",
+              ],
               [sequelize.fn('COUNT', Sequelize.literal('DISTINCT bale_id')), 'bales_sold'],
 
             ],
@@ -2067,7 +2130,8 @@ const generateGinnerSummary = async () => {
             ],
             where: {
               ...baleSelectionWhere,
-              '$sales.ginner_id$': item.id
+              '$sales.ginner_id$': item.id,
+              "$sales.status$" : { [Op.in]: ['Pending', 'Pending for QR scanning', 'Partially Accepted', 'Partially Rejected','Sold'] }
             },
             group: ["sales.ginner_id"]
           }),
@@ -2230,8 +2294,12 @@ const generateGinnerProcess = async () => {
               ) AS lint_quantity_sold
                 FROM
                     "gin-bales" gb
+                LEFT JOIN 
+                  bale_selections bs ON gb.id = bs.bale_id
+                LEFT JOIN 
+                    gin_sales gs ON gs.id = bs.sales_id
                 WHERE
-                    gb.sold_status = true
+                    gs.status in ('Pending', 'Pending for QR scanning', 'Partially Accepted', 'Partially Rejected','Sold')
                 GROUP BY
                     gb.process_id
             )
@@ -4417,9 +4485,12 @@ const generateBrandWiseData = async () =>{
                     "COALESCE",
                     sequelize.fn(
                       "SUM",
-                      sequelize.literal(
-                        'CAST("gin-bales"."weight" AS DOUBLE PRECISION)'
-                      )
+                      sequelize.literal(`
+                        CASE
+                          WHEN "gin-bales"."old_weight" IS NOT NULL THEN CAST("gin-bales"."old_weight" AS DOUBLE PRECISION)
+                          ELSE CAST("gin-bales"."weight" AS DOUBLE PRECISION)
+                        END
+                      `)
                     ),
                     0
                   ),
@@ -4459,9 +4530,12 @@ const generateBrandWiseData = async () =>{
                     "COALESCE",
                     sequelize.fn(
                       "SUM",
-                      sequelize.literal(
-                        'CAST("bale"."weight" AS DOUBLE PRECISION)'
-                      )
+                      sequelize.literal(`
+                        CASE
+                          WHEN "bale"."old_weight" IS NOT NULL THEN CAST("bale"."old_weight" AS DOUBLE PRECISION)
+                          ELSE CAST("bale"."weight" AS DOUBLE PRECISION)
+                        END
+                      `)
                     ),
                     0
                   ),
@@ -4493,6 +4567,7 @@ const generateBrandWiseData = async () =>{
               ],
               where: {
                 "$sales.ginner.brand$": { [Op.overlap]: [item?.dataValues?.id] },
+                "$sales.status$" : { [Op.in]: ['Pending', 'Pending for QR scanning', 'Partially Accepted', 'Partially Rejected','Sold'] }
               },
               group: ["sales.ginner.brand"],
             }),
