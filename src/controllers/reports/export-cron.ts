@@ -2758,7 +2758,7 @@ const generateGinnerSales = async () => {
       if (!currentWorksheet) {
         currentWorksheet = workbook.addWorksheet(`Sheet${worksheetIndex}`);
         if (worksheetIndex == 1) {
-          currentWorksheet.mergeCells('A1:V1');
+          currentWorksheet.mergeCells('A1:U1');
           const mergedCell = currentWorksheet.getCell('A1');
           mergedCell.value = 'CottonConnect | Ginner Sales Report';
           mergedCell.font = { bold: true };

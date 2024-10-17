@@ -2782,9 +2782,9 @@ const exportGinnerSales = async (req: Request, res: Response) => {
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet("Sheet1");
       if (isBrand === 'true') {
-        worksheet.mergeCells('A1:R1');
+        worksheet.mergeCells('A1:Q1');
       } else {
-        worksheet.mergeCells('A1:V1');
+        worksheet.mergeCells('A1:U1');
       }
       const mergedCell = worksheet.getCell('A1');
       mergedCell.value = 'CottonConnect | Ginner Sales Report';
