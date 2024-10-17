@@ -129,6 +129,10 @@ const Transaction = db.define('transactions', {
     allowNull: false,
     type: DataTypes.STRING
   },
+  heap_status: {
+    type: DataTypes.STRING,
+    defaultValue:null
+  },
   accept_date: {
     type: DataTypes.DATE
   },

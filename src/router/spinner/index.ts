@@ -35,6 +35,7 @@ const router = Router();
 
 router.use(accessControl);
 
+
 // Spinner Routes
 router.get('/', fetchSpinnerProcessPagination);
 router.post('/', createSpinnerProcess);

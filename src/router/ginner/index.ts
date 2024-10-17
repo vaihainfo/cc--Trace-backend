@@ -26,23 +26,34 @@ import {
     updateGinnerSalesField,
     fetchGinProcess,
     checkReport,
-    fetchGinSaleAllBales,
+    createHeap,
+    chooseHeap,
+    exportGinHeapReport,
+    fetchGinHeapPagination,
+    getReelHeapId,
+    fetchGinSaleAllBales
+    
 } from "../../controllers/ginner";
 import accessControl from "../../middleware/access-control";
 import { Router } from "express";
 
 const router = Router();
 
-// router.use(accessControl);
+router.use(accessControl);
 
 // Ginner Routes
 router.get('/', fetchGinProcessPagination);
 router.post('/', createGinnerProcess);
 router.put('/', updateGinnerProcess);
+router.get('/choose-cotton', chooseCotton);
+router.post('/heap', createHeap);
+// router.put('/heap', updateHeap);
+router.get('/heap', fetchGinHeapPagination);
+router.get('/heap/export', exportGinHeapReport);
 router.get('/get-gin-process', fetchGinProcess);
 router.get('/export', exportGinnerProcess);
 router.delete('/', deleteGinnerProcess);
-router.get('/choose-cotton', chooseCotton);
+router.get('/choose-heap', chooseHeap);
 router.get('/fetch-bale', fetchGinBale);
 router.get('/', fetchGinProcessPagination);
 router.post('/sales', createGinnerSales);
@@ -59,6 +70,7 @@ router.get('/sales/all-bales', fetchGinSaleAllBales);
 router.put('/update-status-transaction', updateTransactionStatus);
 router.get('/dashboard', dashboardGraphWithProgram);
 router.get('/reel', getReelBaleId);
+router.get('/heap-reel', getReelHeapId);
 router.get('/get-program', getProgram);
 router.put('/sales/update-bale', updateGinSaleBale);
 router.get('/sales/choose-bale', chooseBale);

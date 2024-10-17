@@ -2371,6 +2371,7 @@ const chooseYarn = async (req: Request, res: Response) => {
                 [Sequelize.col('"spinprocess"."season"."name"'), 'season_name'],
                 // [Sequelize.fn('SUM', Sequelize.col('yarn_produced')), 'available_yarn']
                 [Sequelize.fn('SUM', Sequelize.col('yarn_qty_stock')), 'available_yarn']
+                // spinprocess.qty_stock
             ],
             include: [{
                 model: SpinProcess,

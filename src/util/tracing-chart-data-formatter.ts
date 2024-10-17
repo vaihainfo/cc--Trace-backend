@@ -173,12 +173,16 @@ export const formatDataFromKnitter = (title: any, data: any, width: number = 300
  
  
  export const formatDataFromWeaver = (title: any, data: any, width: number = 300, height: number =100,type?: any) : any => {
+
     let flattenedArray;
-    if(type=='fabric'){
-      flattenedArray = data?.spin?.flat();
-    }else{
-      flattenedArray = data[0]?.spin?.flat();
+    if (data?.spin) {
+        flattenedArray = data.spin.flat();
+    } else if (data[0]?.spin) {
+        flattenedArray = data[0].spin.flat();
+    } else {
+        flattenedArray = [];
     }
+
     let treeData = {
          name: title,
          type: 'weaver_image',
@@ -186,6 +190,7 @@ export const formatDataFromKnitter = (title: any, data: any, width: number = 300
          height: height,
          isRoot: true,
          children: flattenedArray? flattenedArray.filter((el: any) =>{
+            
             if(el && el.children){
                 return el.children
             }

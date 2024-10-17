@@ -12,9 +12,7 @@ const fetchConsolidateOldReport = async (req: Request, res: Response) => {
     const limit = Number(req.query.limit) || 10;
     const offset = (page - 1) * limit;
     const brandId = Number(req.query.brandId) || null;
-    console.log('====>');
-    console.log(brandId);
-   
+       
     try {
         let queryOptions: any = {
             // where: { brand_name: { [Op.iLike]: `%${searchTerm}%` } },
@@ -36,8 +34,7 @@ const fetchConsolidateOldReport = async (req: Request, res: Response) => {
                 brand_id : brandId
             }
          
-            console.log('====>');
-            console.log(queryOptions.where);    
+          
         if (req.query.pagination === "true") {
             queryOptions.offset = offset;
             queryOptions.limit = limit;
