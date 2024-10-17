@@ -1858,7 +1858,6 @@ const fetchGinSalesPagination = async (req: Request, res: Response) => {
         const ltval : string[] = item?.dataValues?.lot_no
         .split(", ")
         .map((id: any) => id);
-        console.log("LOT VAL======>"+ltval);
         if (processIds.length > 0) {
           const [result] = await sequelize.query(`
             SELECT 
@@ -1901,8 +1900,6 @@ const fetchGinSalesPagination = async (req: Request, res: Response) => {
         quality_report: qualityReport ? qualityReport : null,
       });
     }
-    console.log("=======nData=====");
-    console.log(nData);
     // Apply pagination to the combined result
 
     return res.sendPaginationSuccess(res, nData, count.length);
@@ -2486,7 +2483,6 @@ const exportSpinnerProcessGreyOutReport = async (req: Request, res: Response) =>
 
       // // Append data to worksheet
       for await (const [index, item] of rows.entries()) {
-        console.log(item)
         const rowValues = Object.values({
           index: index + 1,
           season: item.dataValues.season_name ? item.dataValues.season_name : "",
@@ -12622,7 +12618,6 @@ const fetchPscpGinnerPrecurement = async (req: Request, res: Response) => {
     let data: any = [];
     for await (const [index, item] of result.entries()) {
       let obj: any = {};
-      console.log(item);
       let processgin = await GinProcess.findOne({
         attributes: [
           [
@@ -14644,9 +14639,6 @@ const consolidatedTraceability = async (req: Request, res: Response) => {
         ).flat();
 
         transactions_ids=[...a,...b]
-
-
-        console.log("transactions heapIds---------->>>>>>>>>>", heapIds)
       }
 
       let transactions: any = [];
