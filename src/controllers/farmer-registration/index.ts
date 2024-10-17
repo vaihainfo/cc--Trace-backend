@@ -19,6 +19,7 @@ import archiver from 'archiver';
 import ICS from "../../models/ics.model";
 import Transaction from "../../models/transaction.model";
 import sequelize from "../../util/dbConn";
+import moment from "moment";
 
 //create farmer
 const createFarmer = async (req: Request, res: Response) => {
@@ -51,8 +52,8 @@ const createFarmer = async (req: Request, res: Response) => {
     };
     const farmer = await Farmer.create(data);
     let village = await Village.findOne({ where: { id: Number(req.body.villageId) } })
-    let uniqueFilename = `qrcode_${Date.now()}.png`;
     let name = farmer.lastName ? farmer.firstName + " " + farmer.lastName : farmer.firstName
+    let uniqueFilename = `qrcode_${name}_${farmer.code.replace(/\//g, '-')}.png`;
     let aa = await generateQrCode(`${farmer.id}`,
       name, uniqueFilename, farmer.code, village ? village.village_name : '');
     const farmerPLace = await Farmer.update({ qrUrl: uniqueFilename }, {
@@ -379,8 +380,8 @@ const updateFarmer = async (req: Request, res: Response) => {
     });
     if (farmer && (farmer[0] === 1)) {
       let village = await Village.findOne({ where: { id: Number(req.body.villageId) } })
-      let uniqueFilename = `qrcode_${Date.now()}.png`;
       let name = req.body.lastName ? req.body.firstName  + " " + req.body.lastName : req.body.firstName 
+      let uniqueFilename = `qrcode_${name}_${req.body.code.replace(/\//g, '-')}.png`;
       let aa = await generateQrCode(`${farmer.id}`,
         name, uniqueFilename, req.body.code, village ? village.village_name : '');
       const farmerPLace = await Farmer.update({ qrUrl: uniqueFilename }, {
@@ -947,15 +948,47 @@ const exportQrCode = async (req: Request, res: Response) => {
     if (!req.query.villageId) {
       return res.sendError(res, "Need Village id");
     }
-    const farmers = await Farmer.findAll({
-      where: { village_id: Number(req.query.villageId) },
-      include: [{
-        model: Village,
-        as: "village",
-      }]
+
+    const currentDate = moment().format('YYYY-MM-DD'); // get current date in YYYY-MM-DD format
+
+    const season = await Season.findOne({
+      where: {
+        from: {
+          [Op.lte]: currentDate // from_date should be less than or equal to current date
+        },
+        to: {
+          [Op.gte]: currentDate // to_date should be greater than or equal to current date
+        }
+      }
     });
+
+    const villageId = Number(req.query.villageId);
+    const currentSeason = season ? season?.dataValues?.id : 10;
+
+    const farmers = await sequelize.query(
+      `SELECT f.id,
+              f.code,
+              "f"."firstName",
+              "f"."lastName",
+              fr.season_id,
+              "f"."qrUrl",
+              v.id as village_id,
+              v.village_name as village_name
+        FROM farmers f
+        JOIN farms fr ON f.id = fr.farmer_id
+        JOIN villages v ON f.village_id = v.id
+        WHERE 
+          fr.season_id = ${currentSeason}
+          AND f.village_id = :villageId
+      `,
+      {
+        replacements: { villageId }, // using parameter binding
+        type: sequelize.QueryTypes.SELECT // ensure you're fetching data (not just metadata)
+      }
+    )
+
     if (farmers.length === 0) {
-      return res.sendError(res, "NO_FAMRER_FOUND");
+      return res.sendError(res, "NO_FARMER_FOUND");
     }
     
     let destinationFolder = path.join('./qrCode');
@@ -968,11 +1001,11 @@ const exportQrCode = async (req: Request, res: Response) => {
         const sourcePath = `${sourceFolder}/${farmer.qrUrl}`;
         const destinationPath = `${destinationFolder}/${farmer.qrUrl}`;
         fs.copyFileSync(sourcePath, destinationPath);
-      }  else {
-        let uniqueFilename = `qrcode_${Date.now()}.png`;        
+      }  else {       
         let name = farmer.lastName ? farmer.firstName + " " + farmer.lastName : farmer.firstName
+        let uniqueFilename = `qrcode_${name}_${farmer.code.replace(/\//g, '-')}.png`; 
         let data = await generateQrCode(`${farmer.id}`,
-          name, uniqueFilename, farmer.code, farmer.village.village_name);
+          name, uniqueFilename, farmer.code, farmer.village_name);
         console.log(data);
         const farmerPLace = await Farmer.update({ qrUrl: uniqueFilename }, {
           where: {
