@@ -4125,6 +4125,7 @@ const exportSpinnerYarnProcess = async (req: Request, res: Response) => {
   const searchTerm = req.query.search || "";
   const page = Number(req.query.page) || 1;
   const limit = Number(req.query.limit) || 10;
+  const isBrand = req.query.isBrand || false;
   const { exportType, spinnerId, seasonId, programId, brandId, countryId, startDate, endDate }: any = req.query;
   const offset = (page - 1) * limit;
   const whereConditions: any = [];
@@ -4189,13 +4190,42 @@ const exportSpinnerYarnProcess = async (req: Request, res: Response) => {
       // Create the excel workbook file
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet("Sheet1");
-      worksheet.mergeCells("A1:V1");
+      if (isBrand === 'true') {
+        worksheet.mergeCells('A1:T1');
+      } else {
+        worksheet.mergeCells('A1:V1');
+      }
       const mergedCell = worksheet.getCell("A1");
       mergedCell.value = "CottonConnect | Spinner Yarn Process Report";
       mergedCell.font = { bold: true };
       mergedCell.alignment = { horizontal: "center", vertical: "middle" };
       // Set bold font for header row
-      const headerRow = worksheet.addRow([
+      let headerRow;
+      if (isBrand === 'true') {
+       headerRow = worksheet.addRow([
+        "Sr No.",
+        "Date and Time",
+        "Yarn Process Season",
+        "Spinner Name",
+        "Spin Lot No",
+        "Yarn Reel Lot No",
+        "Yarn Type",
+        "Yarn Count",
+        "Yarn Realisation %",
+        "Comber Noil (Kgs)",
+        "Blend Material",
+        "Blend Quantity (Kgs)",
+        "Total Lint cotton consumed (Kgs)",
+        "Total Comber Noil Consumed(kgs)",
+        "Total lint+Blend material + Comber Noil consumed",
+        "Programme",
+        "Total Yarn weight (Kgs)",
+        "Total yarn sold (Kgs)",
+        "Total Yarn in stock (Kgs)",
+        "Grey Out Status",
+      ]);
+    }else{
+      headerRow = worksheet.addRow([
         "Sr No.",
         "Date and Time",
         "Process Date",
@@ -4219,6 +4249,7 @@ const exportSpinnerYarnProcess = async (req: Request, res: Response) => {
         "Total Yarn in stock (Kgs)",
         "Grey Out Status",
       ]);
+    }
       headerRow.font = { bold: true };
 
       let include = [
@@ -4374,7 +4405,41 @@ const exportSpinnerYarnProcess = async (req: Request, res: Response) => {
           }
         }
 
-        const rowValues = Object.values({
+        let rowValues;
+        if (isBrand === 'true') {
+        rowValues = Object.values({
+          index: index + 1,
+          createdAt: item.createdAt ? item.createdAt : "",
+          season: item.season_name ? item.season_name : "",
+          spinner: item.spinner_name ? item.spinner_name : "",
+          lotNo: item.batch_lot_no ? item.batch_lot_no : "",
+          reel_lot_no: item.reel_lot_no ? item.reel_lot_no : "",
+          yarnType: item.yarn_type ? item.yarn_type : "",
+          count: item.yarncount ? item.yarncount : "",
+          resa: item.yarn_realisation ? Number(item.yarn_realisation) : 0,
+          comber: item.comber_noil ? Number(item.comber_noil) : 0,
+          blend: blendValue,
+          blendqty: blendqty,
+          cotton_consumed: item?.cotton_consumed
+            ? Number(item?.cotton_consumed)
+            : 0,
+          comber_consumed: item?.comber_consumed
+            ? Number(item?.comber_consumed)
+            : 0,
+          total_lint_blend_consumed: item?.total_qty
+            ? Number(item?.total_qty)
+            : 0,
+          program: item.program ? item.program : "",
+          total: item.net_yarn_qty ? Number(item.net_yarn_qty) : 0,
+          yarn_sold: item?.yarn_sold
+            ? Number(item?.yarn_sold)
+            : 0,
+          yarn_stock: item.qty_stock ? Number(item.qty_stock) : 0,
+          greyout_status: item.greyout_status ? "Yes" : "No",
+        });
+      }
+      else{
+        rowValues = Object.values({
           index: index + 1,
           createdAt: item.createdAt ? item.createdAt : "",
           date: item.date ? item.date : "",
@@ -4406,6 +4471,7 @@ const exportSpinnerYarnProcess = async (req: Request, res: Response) => {
           yarn_stock: item.qty_stock ? Number(item.qty_stock) : 0,
           greyout_status: item.greyout_status ? "Yes" : "No",
         });
+      }
         worksheet.addRow(rowValues);
       }
 
@@ -16706,6 +16772,8 @@ const spinnerBackwardTraceabiltyReport = async (
     seasonId,
     brandId,
     programId,
+    countryId,
+    stateId,
     type,
   }: any = req.query;
   try {
@@ -16733,6 +16801,20 @@ const spinnerBackwardTraceabiltyReport = async (
         .split(",")
         .map((id: any) => parseInt(id, 10));
       whereCondition["$spinner.brand$"] = { [Op.overlap]: idArray };
+    }
+
+    if (countryId) {
+      const idArray: number[] = countryId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition["$spinner.country_id$"] = { [Op.in]: idArray };
+    }
+
+    if (stateId) {
+      const idArray: number[] = stateId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition["$spinner.state_id$"] = { [Op.in]: idArray };
     }
 
     if (seasonId) {
@@ -17112,6 +17194,8 @@ const exportSpinnerBackwardTraceability = async (
     weaverId,
     seasonId,
     brandId,
+    countryId,
+    stateId,
     programId,
     type,
   }: any = req.query;
@@ -17140,6 +17224,20 @@ const exportSpinnerBackwardTraceability = async (
         .split(",")
         .map((id: any) => parseInt(id, 10));
       whereCondition["$spinner.brand$"] = { [Op.overlap]: idArray };
+    }
+
+    if (countryId) {
+      const idArray: number[] = countryId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition["$spinner.country_id$"] = { [Op.in]: idArray };
+    }
+
+    if (stateId) {
+      const idArray: number[] = stateId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition["$spinner.state_id$"] = { [Op.in]: idArray };
     }
 
     if (seasonId) {
@@ -17949,6 +18047,8 @@ const spinnerProcessBackwardTraceabiltyReport = async (
     seasonId,
     brandId,
     programId,
+    countryId,
+    stateId,
     type,
   }: any = req.query;
   try {
@@ -17966,7 +18066,12 @@ const spinnerProcessBackwardTraceabiltyReport = async (
     if (brandId) {
       whereConditions.push(`"spinner"."brand" && ARRAY[${brandId}]`);
     }
-
+    if (countryId) {
+      whereConditions.push(`"spinner"."country_id" IN (${countryId})`);
+    }
+    if (stateId) {
+      whereConditions.push(`"spinner"."state_id" IN (${stateId})`);
+    }
     if (seasonId) {
       whereConditions.push(`"spinprocess"."season_id" IN (${seasonId})`);
     }
@@ -18178,7 +18283,7 @@ const exportSpinProcessBackwardfTraceabilty = async (req: Request, res: Response
   const searchTerm = req.query.search || "";
   const page = Number(req.query.page) || 1;
   const limit = Number(req.query.limit) || 10;
-  const { exportType, spinnerId, seasonId, programId, brandId }: any = req.query;
+  const { exportType, spinnerId, seasonId, programId, brandId, countryId, stateId }: any = req.query;
   const offset = (page - 1) * limit;
   const whereConditions: any = [];
   try {
@@ -18206,6 +18311,12 @@ const exportSpinProcessBackwardfTraceabilty = async (req: Request, res: Response
         whereConditions.push(`"spinner"."brand" && ARRAY[${brandId}]`);
       }
 
+      if (countryId) {
+      whereConditions.push(`"spinner"."country_id" IN (${countryId})`);
+    }
+     if (stateId) {
+      whereConditions.push(`"spinner"."state_id" IN (${stateId})`);
+    }
       if (seasonId) {
         whereConditions.push(`"spinprocess"."season_id" IN (${seasonId})`);
       }
