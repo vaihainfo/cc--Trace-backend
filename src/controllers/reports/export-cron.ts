@@ -1444,14 +1444,17 @@ const generatePscpCottonProcurement = async () => {
                 "COALESCE",
                 sequelize.fn(
                   "SUM",
-                  Sequelize.literal(
-                    'CAST("gin-bales"."weight" AS DOUBLE PRECISION)'
-                  )
+                  sequelize.literal(`
+                    CASE
+                      WHEN "gin-bales"."old_weight" IS NOT NULL THEN CAST("gin-bales"."old_weight" AS DOUBLE PRECISION)
+                      ELSE CAST("gin-bales"."weight" AS DOUBLE PRECISION)
+                    END
+                  `)
                 ),
                 0
               ),
               "total_qty",
-            ],
+            ]
           ],
           include: [
             {
@@ -1466,27 +1469,52 @@ const generatePscpCottonProcurement = async () => {
           group: ["ginprocess.season_id"],
         });
 
-        const processSale = await GinSales.findOne({
+        const processSale = await BaleSelection.findOne({
           attributes: [
             [
               sequelize.fn(
                 "COALESCE",
-                sequelize.fn("SUM", sequelize.col("no_of_bales")),
-                0
-              ),
-              "no_of_bales",
-            ],
-            [
-              sequelize.fn(
-                "COALESCE",
-                sequelize.fn("SUM", sequelize.col("total_qty")),
+                sequelize.fn(
+                  "SUM",
+                  sequelize.literal(`
+                    CASE
+                      WHEN "bale"."old_weight" IS NOT NULL THEN CAST("bale"."old_weight" AS DOUBLE PRECISION)
+                      ELSE CAST("bale"."weight" AS DOUBLE PRECISION)
+                    END
+                  `)
+                ),
                 0
               ),
               "total_qty",
             ],
+            [
+              sequelize.fn("COUNT", Sequelize.literal("DISTINCT bale_id")),
+              "no_of_bales",
+            ],
           ],
-          where: { season_id: farm.season_id },
-        });
+          include: [
+            {
+              model: GinSales,
+              as: "sales",
+              attributes: [],
+              include:[{
+                model: Ginner,
+                as: "ginner",
+                attributes: [],
+              }]
+            },
+            {
+              model: GinBale,
+              as: "bale",
+              attributes: [],
+            },
+          ],
+          where: {
+            "$sales.season_id$": farm.season_id,
+            "$sales.status$" : { [Op.in]: ['Pending', 'Pending for QR scanning', 'Partially Accepted', 'Partially Rejected','Sold'] }
+          },
+          group: ["sales.season_id"]
+        })
 
         // Populate obj with calculated values based on retrieved data
         obj.estimated_seed_cotton = (farm.dataValues.estimated_seed_cotton ?? 0) / 1000;
@@ -1494,12 +1522,12 @@ const generatePscpCottonProcurement = async () => {
         obj.procurement_seed_cotton = (procurementRow?.dataValues?.procurement_seed_cotton ?? 0) / 1000;
         obj.procurement = (farm.dataValues.estimated_seed_cotton > 0) ? Math.round((procurementRow?.dataValues?.procurement_seed_cotton / farm.dataValues.estimated_seed_cotton) * 100) : 0;
         obj.procured_lint_cotton = ((procurementRow?.dataValues?.procurement_seed_cotton ?? 0) * 35) / 100 / 1000;
-        obj.no_of_bales = processGin?.dataValues?.no_of_bales ?? 0;
+        obj.no_of_bales = processGin?.dataValues?.no_of_bales ? Number(processGin?.dataValues?.no_of_bales) : 0;
         obj.total_qty_lint_produced = (ginBales ? ginBales?.dataValues?.total_qty / 1000 : 0);
-        obj.sold_bales = processSale?.dataValues?.no_of_bales ?? 0;
+        obj.sold_bales = processSale?.dataValues?.no_of_bales ? Number(processSale?.dataValues?.no_of_bales): 0;
         obj.average_weight = (ginBales?.dataValues?.total_qty ?? 0) / (obj.no_of_bales ?? 0);
         obj.total_qty_sold_lint = (processSale?.dataValues?.total_qty ?? 0) / 1000;
-        obj.balace_stock = (obj.no_of_bales > obj.sold_bales ? obj.no_of_bales - obj.sold_bales : 0);
+        obj.balace_stock = (obj.no_of_bales > obj.sold_bales ? Number(obj.no_of_bales - obj.sold_bales) : 0);
         obj.balance_lint_quantity = (obj.total_qty_lint_produced > obj.total_qty_sold_lint ? obj.total_qty_lint_produced - obj.total_qty_sold_lint : 0);
 
         // Add the row to the worksheet

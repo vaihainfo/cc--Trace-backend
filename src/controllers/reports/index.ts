@@ -12027,6 +12027,7 @@ const fetchPscpPrecurement = async (req: Request, res: Response) => {
     let whereCondition: any = {};
     let transtionCondition: any = {};
     let ginnerCondition: any = {};
+    let baleSelectionWhere: any = {};
     let ginnernewCondition: any = {};
     const page = Number(req.query.page) || 1;
     const limit = Number(req.query.limit) || 10;
@@ -12046,6 +12047,7 @@ const fetchPscpPrecurement = async (req: Request, res: Response) => {
       transtionCondition["$country_id$"] = { [Op.in]: idArray };
       ginnerCondition["$ginner.country_id$"] = { [Op.in]: idArray };
       ginnernewCondition["$ginprocess.ginner.country_id$"] = { [Op.in]: idArray };
+      baleSelectionWhere["$sales.ginner.country_id$"] = { [Op.in]: idArray };
     }
 
     if (brandId) {
@@ -12053,6 +12055,10 @@ const fetchPscpPrecurement = async (req: Request, res: Response) => {
         .split(",")
         .map((id: any) => parseInt(id, 10));
       whereCondition["$farmer.brand_id$"] = { [Op.in]: idArray };
+      transtionCondition["$brand_id$"] = { [Op.in]: idArray };
+      ginnerCondition["$ginner.brand$"] = { [Op.overlap]: idArray };
+      ginnernewCondition["$ginprocess.ginner.brand$"] = { [Op.overlap]: idArray };
+      baleSelectionWhere["$sales.ginner.brand$"] = { [Op.overlap]: idArray };
     }
 
     if (searchTerm) {
@@ -12144,14 +12150,17 @@ const fetchPscpPrecurement = async (req: Request, res: Response) => {
               "COALESCE",
               sequelize.fn(
                 "SUM",
-                Sequelize.literal(
-                  'CAST("gin-bales"."weight" AS DOUBLE PRECISION)'
-                )
+                sequelize.literal(`
+                  CASE
+                    WHEN "gin-bales"."old_weight" IS NOT NULL THEN CAST("gin-bales"."old_weight" AS DOUBLE PRECISION)
+                    ELSE CAST("gin-bales"."weight" AS DOUBLE PRECISION)
+                  END
+                `)
               ),
               0
             ),
             "total_qty",
-          ],
+          ]
         ],
         include: [
           {
@@ -12172,35 +12181,53 @@ const fetchPscpPrecurement = async (req: Request, res: Response) => {
         },
         group: ["ginprocess.season_id"],
       });
-      let processSale = await GinSales.findOne({
+      let processSale = await BaleSelection.findOne({
         attributes: [
           [
             sequelize.fn(
               "COALESCE",
-              sequelize.fn("SUM", sequelize.col("no_of_bales")),
-              0
-            ),
-            "no_of_bales",
-          ],
-          [
-            sequelize.fn(
-              "COALESCE",
-              sequelize.fn("SUM", sequelize.col("total_qty")),
+              sequelize.fn(
+                "SUM",
+                sequelize.literal(`
+                  CASE
+                    WHEN "bale"."old_weight" IS NOT NULL THEN CAST("bale"."old_weight" AS DOUBLE PRECISION)
+                    ELSE CAST("bale"."weight" AS DOUBLE PRECISION)
+                  END
+                `)
+              ),
               0
             ),
             "total_qty",
           ],
+          [
+            sequelize.fn("COUNT", Sequelize.literal("DISTINCT bale_id")),
+            "no_of_bales",
+          ],
         ],
         include: [
           {
-            model: Ginner,
-            as: "ginner",
+            model: GinSales,
+            as: "sales",
+            attributes: [],
+            include:[{
+              model: Ginner,
+              as: "ginner",
+              attributes: [],
+            }]
+          },
+          {
+            model: GinBale,
+            as: "bale",
             attributes: [],
           },
         ],
-        where: { season_id: item.season_id, ...ginnerCondition },
-        group: ["season_id"],
-      });
+        where: {
+          ...baleSelectionWhere,
+          "$sales.season_id$": item.season_id,
+          "$sales.status$" : { [Op.in]: ['Pending', 'Pending for QR scanning', 'Partially Accepted', 'Partially Rejected','Sold'] }
+        },
+        group: ["sales.season_id"]
+      })
 
       obj.estimated_seed_cotton =
         (item?.dataValues.estimated_seed_cotton ?? 0) / 1000;
@@ -12219,17 +12246,17 @@ const fetchPscpPrecurement = async (req: Request, res: Response) => {
         ((procurementrow?.dataValues["procurement_seed_cotton"] ?? 0) * 35) /
         100 /
         1000;
-      obj.no_of_bales = processgin?.dataValues.no_of_bales ?? 0;
+      obj.no_of_bales = processgin?.dataValues.no_of_bales ? Number(processgin?.dataValues.no_of_bales) : 0;
       obj.total_qty_lint_produced = ginbales
         ? (ginbales.dataValues.total_qty ?? 0) / 1000
         : 0;
-      obj.sold_bales = processSale?.dataValues["no_of_bales"] ?? 0;
+      obj.sold_bales = processSale?.dataValues["no_of_bales"] ? Number(processSale?.dataValues["no_of_bales"]) : 0;
       obj.average_weight =
         (ginbales?.dataValues.total_qty ?? 0) / (obj.no_of_bales ?? 0);
       obj.total_qty_sold_lint =
         (processSale?.dataValues["total_qty"] ?? 0) / 1000;
       obj.balace_stock =
-        obj.no_of_bales > obj.sold_bales ? obj.no_of_bales - obj.sold_bales : 0;
+        obj.no_of_bales > obj.sold_bales ? Number(obj.no_of_bales - obj.sold_bales) : 0;
       obj.balance_lint_quantity =
         obj.total_qty_lint_produced > obj.total_qty_sold_lint
           ? obj.total_qty_lint_produced - obj.total_qty_sold_lint
@@ -12277,6 +12304,7 @@ const exportPscpCottonProcurement = async (req: Request, res: Response) => {
   let transtionCondition: any = {};
   let ginnerCondition: any = {};
   let ginnernewCondition: any = {};
+  let baleSelectionWhere: any = {};
   try {
     if (exportType === "all") {
 
@@ -12302,6 +12330,7 @@ const exportPscpCottonProcurement = async (req: Request, res: Response) => {
         transtionCondition["$country_id$"] = { [Op.in]: idArray };
         ginnerCondition["$ginner.country_id$"] = { [Op.in]: idArray };
         ginnernewCondition["$ginprocess.ginner.country_id$"] = { [Op.in]: idArray };
+        baleSelectionWhere["$sales.ginner.country_id$"] = { [Op.in]: idArray };
       }
 
       if (brandId) {
@@ -12309,6 +12338,10 @@ const exportPscpCottonProcurement = async (req: Request, res: Response) => {
           .split(",")
           .map((id: any) => parseInt(id, 10));
         whereCondition["$farmer.brand_id$"] = { [Op.in]: idArray };
+        transtionCondition["$brand_id$"] = { [Op.in]: idArray };
+      ginnerCondition["$ginner.brand$"] = { [Op.overlap]: idArray };
+      ginnernewCondition["$ginprocess.ginner.brand$"] = { [Op.overlap]: idArray };
+      baleSelectionWhere["$sales.ginner.brand$"] = { [Op.overlap]: idArray };
       }
 
       if (searchTerm) {
@@ -12426,14 +12459,17 @@ const exportPscpCottonProcurement = async (req: Request, res: Response) => {
                 "COALESCE",
                 sequelize.fn(
                   "SUM",
-                  Sequelize.literal(
-                    'CAST("gin-bales"."weight" AS DOUBLE PRECISION)'
-                  )
+                  sequelize.literal(`
+                    CASE
+                      WHEN "gin-bales"."old_weight" IS NOT NULL THEN CAST("gin-bales"."old_weight" AS DOUBLE PRECISION)
+                      ELSE CAST("gin-bales"."weight" AS DOUBLE PRECISION)
+                    END
+                  `)
                 ),
                 0
               ),
               "total_qty",
-            ],
+            ]
           ],
           include: [
             {
@@ -12454,35 +12490,53 @@ const exportPscpCottonProcurement = async (req: Request, res: Response) => {
           },
           group: ["ginprocess.season_id"],
         });
-        let processSale = await GinSales.findOne({
+        let processSale = await BaleSelection.findOne({
           attributes: [
             [
               sequelize.fn(
                 "COALESCE",
-                sequelize.fn("SUM", sequelize.col("no_of_bales")),
-                0
-              ),
-              "no_of_bales",
-            ],
-            [
-              sequelize.fn(
-                "COALESCE",
-                sequelize.fn("SUM", sequelize.col("total_qty")),
+                sequelize.fn(
+                  "SUM",
+                  sequelize.literal(`
+                    CASE
+                      WHEN "bale"."old_weight" IS NOT NULL THEN CAST("bale"."old_weight" AS DOUBLE PRECISION)
+                      ELSE CAST("bale"."weight" AS DOUBLE PRECISION)
+                    END
+                  `)
+                ),
                 0
               ),
               "total_qty",
             ],
+            [
+              sequelize.fn("COUNT", Sequelize.literal("DISTINCT bale_id")),
+              "no_of_bales",
+            ],
           ],
           include: [
             {
-              model: Ginner,
-              as: "ginner",
+              model: GinSales,
+              as: "sales",
+              attributes: [],
+              include:[{
+                model: Ginner,
+                as: "ginner",
+                attributes: [],
+              }]
+            },
+            {
+              model: GinBale,
+              as: "bale",
               attributes: [],
             },
           ],
-          where: { season_id: item.season_id, ...ginnerCondition },
-          group: ["season_id"],
-        });
+          where: {
+            ...baleSelectionWhere,
+            "$sales.season_id$": item.season_id,
+            "$sales.status$" : { [Op.in]: ['Pending', 'Pending for QR scanning', 'Partially Accepted', 'Partially Rejected','Sold'] }
+          },
+          group: ["sales.season_id"]
+        })  
 
 
         obj.estimated_seed_cotton =
@@ -12503,17 +12557,17 @@ const exportPscpCottonProcurement = async (req: Request, res: Response) => {
           ((procurementrow?.dataValues["procurement_seed_cotton"] ?? 0) * 35) /
           100 /
           1000;
-        obj.no_of_bales = processgin?.dataValues.no_of_bales ?? 0;
+        obj.no_of_bales = processgin?.dataValues.no_of_bales ? Number(processgin?.dataValues.no_of_bales) : 0;
         obj.total_qty_lint_produced = ginbales
           ? (ginbales.dataValues.total_qty ?? 0) / 1000
           : 0;
-        obj.sold_bales = processSale?.dataValues["no_of_bales"] ?? 0;
+        obj.sold_bales = processSale?.dataValues["no_of_bales"] ? Number(processSale?.dataValues["no_of_bales"]) : 0;
         obj.average_weight =
           (ginbales?.dataValues.total_qty ?? 0) / (obj.no_of_bales ?? 0);
         obj.total_qty_sold_lint =
           (processSale?.dataValues["total_qty"] ?? 0) / 1000;
         obj.balace_stock =
-          obj.no_of_bales > obj.sold_bales ? obj.no_of_bales - obj.sold_bales : 0;
+          obj.no_of_bales > obj.sold_bales ? Number(obj.no_of_bales - obj.sold_bales) : 0;
         obj.balance_lint_quantity =
           obj.total_qty_lint_produced > obj.total_qty_sold_lint
             ? obj.total_qty_lint_produced - obj.total_qty_sold_lint
@@ -12650,14 +12704,17 @@ const fetchPscpGinnerPrecurement = async (req: Request, res: Response) => {
               "COALESCE",
               sequelize.fn(
                 "SUM",
-                Sequelize.literal(
-                  'CAST("gin-bales"."weight" AS DOUBLE PRECISION)'
-                )
+                sequelize.literal(`
+                  CASE
+                    WHEN "gin-bales"."old_weight" IS NOT NULL THEN CAST("gin-bales"."old_weight" AS DOUBLE PRECISION)
+                    ELSE CAST("gin-bales"."weight" AS DOUBLE PRECISION)
+                  END
+                `)
               ),
               0
             ),
             "total_qty",
-          ],
+          ]
         ],
         include: [
           {
@@ -12672,37 +12729,63 @@ const fetchPscpGinnerPrecurement = async (req: Request, res: Response) => {
         },
         group: ["ginprocess.season_id"],
       });
-      let processSale = await GinSales.findOne({
+      let processSale = await BaleSelection.findOne({
         attributes: [
           [
             sequelize.fn(
               "COALESCE",
-              sequelize.fn("SUM", sequelize.col("no_of_bales")),
-              0
-            ),
-            "no_of_bales",
-          ],
-          [
-            sequelize.fn(
-              "COALESCE",
-              sequelize.fn("SUM", sequelize.col("total_qty")),
+              sequelize.fn(
+                "SUM",
+                sequelize.literal(`
+                  CASE
+                    WHEN "bale"."old_weight" IS NOT NULL THEN CAST("bale"."old_weight" AS DOUBLE PRECISION)
+                    ELSE CAST("bale"."weight" AS DOUBLE PRECISION)
+                  END
+                `)
+              ),
               0
             ),
             "total_qty",
           ],
+          [
+            sequelize.fn("COUNT", Sequelize.literal("DISTINCT bale_id")),
+            "no_of_bales",
+          ],
         ],
-        where: { season_id: seasonId, ginner_id: item.dataValues.ginner.id },
-      });
+        include: [
+          {
+            model: GinSales,
+            as: "sales",
+            attributes: [],
+            include:[{
+              model: Ginner,
+              as: "ginner",
+              attributes: [],
+            }]
+          },
+          {
+            model: GinBale,
+            as: "bale",
+            attributes: [],
+          },
+        ],
+        where: {
+          "$sales.season_id$": seasonId,
+          "$sales.ginner_id$": item.dataValues.ginner.id,
+          "$sales.status$" : { [Op.in]: ['Pending', 'Pending for QR scanning', 'Partially Accepted', 'Partially Rejected','Sold'] }
+        },
+        group: ["sales.ginner_id"]
+      })
 
       obj.procurement_seed_cotton =
         (item?.dataValues?.procurement_seed_cotton ?? 0) / 1000;
       obj.procured_lint_cotton =
         ((item?.dataValues["procurement_seed_cotton"] ?? 0) * 35) / 100 / 1000;
-      obj.no_of_bales = processgin?.dataValues.no_of_bales ?? 0;
+      obj.no_of_bales = processgin?.dataValues.no_of_bales ? Number(processgin?.dataValues.no_of_bales) : 0;
       obj.total_qty_lint_produced = ginbales
         ? (ginbales.dataValues.total_qty ?? 0) / 1000
         : 0;
-      obj.sold_bales = processSale?.dataValues["no_of_bales"] ?? 0;
+      obj.sold_bales = processSale?.dataValues["no_of_bales"] ? Number(processSale?.dataValues["no_of_bales"]) : 0;
       obj.average_weight =
         (ginbales?.dataValues.total_qty ?? 0) / (obj.no_of_bales ?? 0);
       obj.total_qty_sold_lint =
@@ -12832,14 +12915,17 @@ const exportPscpGinnerCottonProcurement = async (
               "COALESCE",
               sequelize.fn(
                 "SUM",
-                Sequelize.literal(
-                  'CAST("gin-bales"."weight" AS DOUBLE PRECISION)'
-                )
+                sequelize.literal(`
+                  CASE
+                    WHEN "gin-bales"."old_weight" IS NOT NULL THEN CAST("gin-bales"."old_weight" AS DOUBLE PRECISION)
+                    ELSE CAST("gin-bales"."weight" AS DOUBLE PRECISION)
+                  END
+                `)
               ),
               0
             ),
             "total_qty",
-          ],
+          ]
         ],
         include: [
           {
@@ -12854,37 +12940,63 @@ const exportPscpGinnerCottonProcurement = async (
         },
         group: ["ginprocess.season_id"],
       });
-      let processSale = await GinSales.findOne({
+      let processSale = await BaleSelection.findOne({
         attributes: [
           [
             sequelize.fn(
               "COALESCE",
-              sequelize.fn("SUM", sequelize.col("no_of_bales")),
-              0
-            ),
-            "no_of_bales",
-          ],
-          [
-            sequelize.fn(
-              "COALESCE",
-              sequelize.fn("SUM", sequelize.col("total_qty")),
+              sequelize.fn(
+                "SUM",
+                sequelize.literal(`
+                  CASE
+                    WHEN "bale"."old_weight" IS NOT NULL THEN CAST("bale"."old_weight" AS DOUBLE PRECISION)
+                    ELSE CAST("bale"."weight" AS DOUBLE PRECISION)
+                  END
+                `)
+              ),
               0
             ),
             "total_qty",
           ],
+          [
+            sequelize.fn("COUNT", Sequelize.literal("DISTINCT bale_id")),
+            "no_of_bales",
+          ],
         ],
-        where: { season_id: seasonId, ginner_id: item.dataValues.ginner.id },
+        include: [
+          {
+            model: GinSales,
+            as: "sales",
+            attributes: [],
+            include:[{
+              model: Ginner,
+              as: "ginner",
+              attributes: [],
+            }]
+          },
+          {
+            model: GinBale,
+            as: "bale",
+            attributes: [],
+          },
+        ],
+        where: {
+          "$sales.season_id$": seasonId,
+          "$sales.ginner_id$": item.dataValues.ginner.id,
+          "$sales.status$" : { [Op.in]: ['Pending', 'Pending for QR scanning', 'Partially Accepted', 'Partially Rejected','Sold'] }
+        },
+        group: ["sales.ginner_id"]
       });
 
       obj.procurement_seed_cotton =
         (item?.dataValues?.procurement_seed_cotton ?? 0) / 1000;
       obj.procured_lint_cotton =
         ((item?.dataValues["procurement_seed_cotton"] ?? 0) * 35) / 100 / 1000;
-      obj.no_of_bales = processgin?.dataValues.no_of_bales ?? 0;
+        obj.no_of_bales = processgin?.dataValues.no_of_bales ? Number(processgin?.dataValues.no_of_bales) : 0;
       obj.total_qty_lint_produced = ginbales
         ? (ginbales.dataValues.total_qty ?? 0) / 1000
         : 0;
-      obj.sold_bales = processSale?.dataValues["no_of_bales"] ?? 0;
+        obj.sold_bales = processSale?.dataValues["no_of_bales"] ? Number(processSale?.dataValues["no_of_bales"]) : 0;
       obj.average_weight =
         (ginbales?.dataValues.total_qty ?? 0) / (obj.no_of_bales ?? 0);
       obj.total_qty_sold_lint =
