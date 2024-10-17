@@ -1839,18 +1839,24 @@ const fetchGinSalesPagination = async (req: Request, res: Response) => {
       let seedSeason = [];
       if (processIds.length > 0) {
         [seedSeason] = await sequelize.query(`
-                            SELECT 
-                                STRING_AGG(DISTINCT s.name, ', ') AS seasons
-                            FROM
-                                cotton_selections cs
-                            LEFT JOIN
-                                transactions t ON cs.transaction_id = t.id
-                            LEFT JOIN
-                                villages v ON t.village_id = v.id
-                            LEFT JOIN
-                                seasons s ON t.season_id = s.id
-                            WHERE 
-                                cs.process_id IN  (${processIds.join(',')})
+                                SELECT STRING_AGG(DISTINCT s.name, ', ') AS seasons
+                                FROM (
+                                    -- Retrieve village names from the cotton table
+                                    SELECT DISTINCT ss.name
+                                    FROM cotton_selections cs
+                                    JOIN transactions t ON cs.transaction_id = t.id
+                                    LEFT JOIN seasons ss ON t.season_id = ss.id
+                                    WHERE cs.process_id IN  (${processIds.join(',')})
+                                    
+                                    UNION
+                                    
+                                    -- Retrieve village names from the heap table
+                                    SELECT DISTINCT ss.name
+                                    FROM heap_selections hs
+                                    JOIN transactions t ON t.id = ANY(hs.transaction_id)
+                                    LEFT JOIN seasons ss ON t.season_id = ss.id
+                                    WHERE hs.process_id IN  (${processIds.join(',')})
+                                ) s
                             `)
       }
 
@@ -2922,19 +2928,25 @@ const exportGinnerSales = async (req: Request, res: Response) => {
 
           if (processIds.length > 0) {
             [seedSeason] = await sequelize.query(`
-            SELECT 
-                STRING_AGG(DISTINCT s.name, ', ') AS seasons
-            FROM
-                cotton_selections cs
-            LEFT JOIN
-                transactions t ON cs.transaction_id = t.id
-            LEFT JOIN
-                villages v ON t.village_id = v.id
-            LEFT JOIN
-                seasons s ON t.season_id = s.id
-            WHERE 
-                cs.process_id IN (${processIds.join(',')})
-            `);
+              SELECT STRING_AGG(DISTINCT s.name, ', ') AS seasons
+              FROM (
+                  -- Retrieve village names from the cotton table
+                  SELECT DISTINCT ss.name
+                  FROM cotton_selections cs
+                  JOIN transactions t ON cs.transaction_id = t.id
+                  LEFT JOIN seasons ss ON t.season_id = ss.id
+                  WHERE cs.process_id IN  (${processIds.join(',')})
+                  
+                  UNION
+                  
+                  -- Retrieve village names from the heap table
+                  SELECT DISTINCT ss.name
+                  FROM heap_selections hs
+                  JOIN transactions t ON t.id = ANY(hs.transaction_id)
+                  LEFT JOIN seasons ss ON t.season_id = ss.id
+                  WHERE hs.process_id IN  (${processIds.join(',')})
+              ) s
+          `)
           }
 
           rowValues = Object.values({
