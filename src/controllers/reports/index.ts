@@ -3473,8 +3473,8 @@ const exportSpinnerBale = async (req: Request, res: Response) => {
       // Set bold font for header row
       const headerRow = worksheet.addRow([
         "Sr No.",
-        "Date of Transaction Receipt",
-        "Date of transaction",
+        "Date of transaction accepted",
+        "Date of transaction received",
         "Season",
         "Spinner Name",
         "Ginner Name",
@@ -4836,7 +4836,7 @@ const exportSpinnerSale = async (req: Request, res: Response) => {
         headerRow = worksheet.addRow([
           "Sr No.",
           "Created Date and Time",
-          "Date",
+          "Date of transaction",
           "Season",
           "Spinner Name",
           "Knitter/Weaver Name",
@@ -4857,7 +4857,7 @@ const exportSpinnerSale = async (req: Request, res: Response) => {
         headerRow = worksheet.addRow([
           "Sr No.",
           "Created Date and Time",
-          "Date",
+          "Date of transaction",
           "Lint Cotton Consumed Season",
           "Yarn sale season chosen",
           "Spinner Name",

@@ -3667,8 +3667,8 @@ const generateSpinnerBale = async () => {
 
           const headerRow = currentWorksheet.addRow([
             "Sr No.",
-            "Date of Transaction Receipt",
-            "Date of transaction",
+            "Date of transaction accepted",
+            "Date of transaction received",
             "Season",
             "Spinner Name",
             "Ginner Name",
@@ -4170,7 +4170,7 @@ const generateSpinnerSale = async () => {
           const headerRow = currentWorksheet.addRow([
             "Sr No.",
             "Created Date and Time",
-            "Date",
+            "Date of transaction",
             "Lint Cotton Consumed Season",
             "Yarn sale season chosen",
             "Spinner Name",
