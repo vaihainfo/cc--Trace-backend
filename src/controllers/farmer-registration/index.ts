@@ -943,27 +943,135 @@ const generateQrCodeVillage = async (req: Request, res: Response) => {
 }
 
 //Export Qr code for villages  extracting the zip file
+// const exportQrCode = async (req: Request, res: Response) => {
+//   try {
+//     if (!req.query.villageId) {
+//       return res.sendError(res, "Need Village id");
+//     }
+
+//     const currentDate = moment().format('YYYY-MM-DD'); // get current date in YYYY-MM-DD format
+
+//     const season = await Season.findOne({
+//       where: {
+//         from: {
+//           [Op.lte]: currentDate // from_date should be less than or equal to current date
+//         },
+//         to: {
+//           [Op.gte]: currentDate // to_date should be greater than or equal to current date
+//         }
+//       }
+//     });
+
+//     const villageId = Number(req.query.villageId);
+//     const currentSeason = season ? season?.dataValues?.id : 10;
+
+//     const farmers = await sequelize.query(
+//       `SELECT f.id,
+//               f.code,
+//               "f"."firstName",
+//               "f"."lastName",
+//               fr.season_id,
+//               "f"."qrUrl",
+//               v.id as village_id,
+//               v.village_name as village_name
+//         FROM farmers f
+//         JOIN farms fr ON f.id = fr.farmer_id
+//         JOIN villages v ON f.village_id = v.id
+//         WHERE 
+//           fr.season_id = ${currentSeason}
+//           AND f.village_id = :villageId
+//       `,
+//       {
+//         replacements: { villageId }, // using parameter binding
+//         type: sequelize.QueryTypes.SELECT // ensure you're fetching data (not just metadata)
+//       }
+//     )
+
+//     if (farmers.length === 0) {
+//       return res.sendError(res, "NO_FARMER_FOUND");
+//     }
+    
+//     let destinationFolder = path.join('./qrCode');
+//     let sourceFolder = path.join('./upload');
+//     if (!fs.existsSync(destinationFolder)) {
+//       fs.mkdirSync(destinationFolder);
+//     }
+//     for await (const farmer of farmers) {
+//       if (farmer.qrUrl) {
+//         const sourcePath = `${sourceFolder}/${farmer.qrUrl}`;
+//         const destinationPath = `${destinationFolder}/${farmer.qrUrl}`;
+//         fs.copyFileSync(sourcePath, destinationPath);
+//       }  else {       
+//         let name = farmer.lastName ? farmer.firstName + " " + farmer.lastName : farmer.firstName
+//         let uniqueFilename = `qrcode_${name}_${farmer.code.replace(/\//g, '-')}.png`; 
+//         let data = await generateQrCode(`${farmer.id}`,
+//           name, uniqueFilename, farmer.code, farmer.village_name);
+//         console.log(data);
+//         const farmerPLace = await Farmer.update({ qrUrl: uniqueFilename }, {
+//           where: {
+//             id: farmer.id
+//           },
+//         });
+//         const sourcePath = `${sourceFolder}/${uniqueFilename}`;
+//         const destinationPath = `${destinationFolder}/${uniqueFilename}`;
+//         fs.copyFileSync(sourcePath, destinationPath);
+//       }
+//     }
+//     const zipFileName = path.join('./upload', 'qrCode.zip');
+//     const output = fs.createWriteStream(zipFileName);
+//     const archive = archiver('zip', {
+//       zlib: { level: 9 } // Compression level (0 to 9)
+//     });
+
+//     output.on('close', () => {
+//       console.log(`${zipFileName} created: ${archive.pointer()} total bytes`);
+//     });
+
+//     archive.on('warning', (err: any) => {
+//       if (err.code === 'ENOENT') {
+//         console.warn(err);
+//       } else {
+//         throw err;
+//       }
+//     });
+
+//     archive.on('error', (err: any) => {
+//       throw err;
+//     });
+
+//     archive.pipe(output);
+//     archive.directory(destinationFolder, false);
+//     archive.finalize();
+//     res.sendSuccess(res, {
+//       link: process.env.BASE_URL + 'qrCode.zip'
+//     });
+//     setTimeout(() => {
+//       fs.rmdir(destinationFolder, { recursive: true }, (err) => {
+//         console.log(err);
+//       })
+//     }, 2000);
+//   } catch (error: any) {
+//     console.log(error)
+//     return res.sendError(res, error.message);
+//   }
+// }
+
 const exportQrCode = async (req: Request, res: Response) => {
   try {
     if (!req.query.villageId) {
       return res.sendError(res, "Need Village id");
     }
 
-    const currentDate = moment().format('YYYY-MM-DD'); // get current date in YYYY-MM-DD format
-
+    const currentDate = moment().format('YYYY-MM-DD');
     const season = await Season.findOne({
       where: {
-        from: {
-          [Op.lte]: currentDate // from_date should be less than or equal to current date
-        },
-        to: {
-          [Op.gte]: currentDate // to_date should be greater than or equal to current date
-        }
+        from: { [Op.lte]: currentDate },
+        to: { [Op.gte]: currentDate }
       }
     });
 
     const villageId = Number(req.query.villageId);
-    const currentSeason = season ? season?.dataValues?.id : 10;
+    const currentSeason = season ? season.dataValues.id : 10;
 
     const farmers = await sequelize.query(
       `SELECT f.id,
@@ -982,46 +1090,46 @@ const exportQrCode = async (req: Request, res: Response) => {
           AND f.village_id = :villageId
       `,
       {
-        replacements: { villageId }, // using parameter binding
-        type: sequelize.QueryTypes.SELECT // ensure you're fetching data (not just metadata)
+        replacements: { villageId },
+        type: sequelize.QueryTypes.SELECT
       }
-    )
+    );
 
     if (farmers.length === 0) {
       return res.sendError(res, "NO_FARMER_FOUND");
     }
-    
-    let destinationFolder = path.join('./qrCode');
+
+    // Create a unique folder for this request based on villageId and timestamp
+    const uniqueFolderName = `qrCode_${villageId}_${Date.now()}`;
+    let destinationFolder = path.join('./qrCode', uniqueFolderName);
     let sourceFolder = path.join('./upload');
+
     if (!fs.existsSync(destinationFolder)) {
-      fs.mkdirSync(destinationFolder);
+      fs.mkdirSync(destinationFolder, { recursive: true });
     }
+
     for await (const farmer of farmers) {
       if (farmer.qrUrl) {
         const sourcePath = `${sourceFolder}/${farmer.qrUrl}`;
         const destinationPath = `${destinationFolder}/${farmer.qrUrl}`;
         fs.copyFileSync(sourcePath, destinationPath);
-      }  else {       
-        let name = farmer.lastName ? farmer.firstName + " " + farmer.lastName : farmer.firstName
-        let uniqueFilename = `qrcode_${name}_${farmer.code.replace(/\//g, '-')}.png`; 
-        let data = await generateQrCode(`${farmer.id}`,
-          name, uniqueFilename, farmer.code, farmer.village_name);
+      } else {
+        let name = farmer.lastName ? farmer.firstName + " " + farmer.lastName : farmer.firstName;
+        let uniqueFilename = `qrcode_${name}_${farmer.code.replace(/\//g, '-')}.png`;
+        let data = await generateQrCode(`${farmer.id}`, name, uniqueFilename, farmer.code, farmer.village_name);
         console.log(data);
-        const farmerPLace = await Farmer.update({ qrUrl: uniqueFilename }, {
-          where: {
-            id: farmer.id
-          },
-        });
+
+        await Farmer.update({ qrUrl: uniqueFilename }, { where: { id: farmer.id } });
         const sourcePath = `${sourceFolder}/${uniqueFilename}`;
         const destinationPath = `${destinationFolder}/${uniqueFilename}`;
         fs.copyFileSync(sourcePath, destinationPath);
       }
     }
-    const zipFileName = path.join('./upload', 'qrCode.zip');
+
+    // Zip the contents of the unique folder
+    const zipFileName = path.join('./upload', `${uniqueFolderName}.zip`);
     const output = fs.createWriteStream(zipFileName);
-    const archive = archiver('zip', {
-      zlib: { level: 9 } // Compression level (0 to 9)
-    });
+    const archive = archiver('zip', { zlib: { level: 9 } });
 
     output.on('close', () => {
       console.log(`${zipFileName} created: ${archive.pointer()} total bytes`);
@@ -1042,19 +1150,21 @@ const exportQrCode = async (req: Request, res: Response) => {
     archive.pipe(output);
     archive.directory(destinationFolder, false);
     archive.finalize();
+
     res.sendSuccess(res, {
-      link: process.env.BASE_URL + 'qrCode.zip'
+      link: `${process.env.BASE_URL}${uniqueFolderName}.zip`
     });
+
     setTimeout(() => {
       fs.rmdir(destinationFolder, { recursive: true }, (err) => {
-        console.log(err);
-      })
+        if (err) console.error(err);
+      });
     }, 2000);
   } catch (error: any) {
-    console.log(error)
+    console.error(error);
     return res.sendError(res, error.message);
   }
-}
+};
 
 
 const dashboardGraph = async (req: Request, res: Response) => {
