@@ -5021,6 +5021,16 @@ const exportSpinnerSale = async (req: Request, res: Response) => {
         let processIds = item?.dataValues?.process_ids && Array.isArray(item?.dataValues?.process_ids)
           ? item.dataValues.process_ids?.filter((id: any) => id !== null && id !== undefined)
           : [];
+          const formatDate = (dateString:any) => {
+            if (!dateString) return "";
+            const date = new Date(dateString);
+            
+            const day = String(date.getDate()).padStart(2, '0'); 
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const year = date.getFullYear();
+          
+            return `${day}-${month}-${year}`;
+        };
 
         let seedSeason = [];
 
@@ -5045,7 +5055,7 @@ const exportSpinnerSale = async (req: Request, res: Response) => {
           rowValues = Object.values({
             index: index + 1,
             createdAt: item.dataValues.createdAt ? item.dataValues.createdAt : "",
-            date: item.dataValues.date ? item.dataValues.date : "",
+            date: item.dataValues.date ? formatDate(item.dataValues.date) : "",
             season: item.dataValues.season_name ? item.dataValues.season_name : "",
             spinner: item.dataValues.spinner ? item.dataValues.spinner : "",
             buyer_id: item.dataValues.weaver
@@ -5074,7 +5084,7 @@ const exportSpinnerSale = async (req: Request, res: Response) => {
           rowValues = Object.values({
             index: index + 1,
             createdAt: item.dataValues.createdAt ? item.dataValues.createdAt : "",
-            date: item.dataValues.date ? item.dataValues.date : "",
+            date: item.dataValues.date ? formatDate(item.dataValues.date) : "",
             lint_consumed_seasons: seedSeason ? seedSeason[0]?.seasons : "",
             season: item.dataValues.season_name ? item.dataValues.season_name : "",
             spinner: item.dataValues.spinner ? item.dataValues.spinner : "",
