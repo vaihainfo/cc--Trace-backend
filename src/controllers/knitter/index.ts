@@ -1733,7 +1733,6 @@ const _getKnitterProcessTracingChartData = async (query:any) => {
   );
 
   let key = Object.keys(whereCondition)[0];
-  console.log(whereCondition[key])
  return formatDataFromKnitter(whereCondition[key], knitters);
 };
 

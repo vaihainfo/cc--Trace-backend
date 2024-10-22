@@ -115,7 +115,6 @@ const createGinnerProcess = async (req: Request, res: Response) => {
         }
       })
 
-      console.log(transaction?.map((obj: any) => obj.transaction_id))
       let village = await Transaction.findAll({
         where: {
           id: { [Op.in]: transaction?.map((obj: any) => obj.transaction_id) }
@@ -303,7 +302,6 @@ const fetchGinProcessPagination = async (req: Request, res: Response) => {
           });
         }
         
-        console.log("village data:", village);
         let bale = await GinBale.findOne({
           attributes: [
             [

@@ -1444,14 +1444,17 @@ const generatePscpCottonProcurement = async () => {
                 "COALESCE",
                 sequelize.fn(
                   "SUM",
-                  Sequelize.literal(
-                    'CAST("gin-bales"."weight" AS DOUBLE PRECISION)'
-                  )
+                  sequelize.literal(`
+                    CASE
+                      WHEN "gin-bales"."old_weight" IS NOT NULL THEN CAST("gin-bales"."old_weight" AS DOUBLE PRECISION)
+                      ELSE CAST("gin-bales"."weight" AS DOUBLE PRECISION)
+                    END
+                  `)
                 ),
                 0
               ),
               "total_qty",
-            ],
+            ]
           ],
           include: [
             {
@@ -1466,27 +1469,52 @@ const generatePscpCottonProcurement = async () => {
           group: ["ginprocess.season_id"],
         });
 
-        const processSale = await GinSales.findOne({
+        const processSale = await BaleSelection.findOne({
           attributes: [
             [
               sequelize.fn(
                 "COALESCE",
-                sequelize.fn("SUM", sequelize.col("no_of_bales")),
-                0
-              ),
-              "no_of_bales",
-            ],
-            [
-              sequelize.fn(
-                "COALESCE",
-                sequelize.fn("SUM", sequelize.col("total_qty")),
+                sequelize.fn(
+                  "SUM",
+                  sequelize.literal(`
+                    CASE
+                      WHEN "bale"."old_weight" IS NOT NULL THEN CAST("bale"."old_weight" AS DOUBLE PRECISION)
+                      ELSE CAST("bale"."weight" AS DOUBLE PRECISION)
+                    END
+                  `)
+                ),
                 0
               ),
               "total_qty",
             ],
+            [
+              sequelize.fn("COUNT", Sequelize.literal("DISTINCT bale_id")),
+              "no_of_bales",
+            ],
           ],
-          where: { season_id: farm.season_id },
-        });
+          include: [
+            {
+              model: GinSales,
+              as: "sales",
+              attributes: [],
+              include:[{
+                model: Ginner,
+                as: "ginner",
+                attributes: [],
+              }]
+            },
+            {
+              model: GinBale,
+              as: "bale",
+              attributes: [],
+            },
+          ],
+          where: {
+            "$sales.season_id$": farm.season_id,
+            "$sales.status$" : { [Op.in]: ['Pending', 'Pending for QR scanning', 'Partially Accepted', 'Partially Rejected','Sold'] }
+          },
+          group: ["sales.season_id"]
+        })
 
         // Populate obj with calculated values based on retrieved data
         obj.estimated_seed_cotton = (farm.dataValues.estimated_seed_cotton ?? 0) / 1000;
@@ -1494,12 +1522,12 @@ const generatePscpCottonProcurement = async () => {
         obj.procurement_seed_cotton = (procurementRow?.dataValues?.procurement_seed_cotton ?? 0) / 1000;
         obj.procurement = (farm.dataValues.estimated_seed_cotton > 0) ? Math.round((procurementRow?.dataValues?.procurement_seed_cotton / farm.dataValues.estimated_seed_cotton) * 100) : 0;
         obj.procured_lint_cotton = ((procurementRow?.dataValues?.procurement_seed_cotton ?? 0) * 35) / 100 / 1000;
-        obj.no_of_bales = processGin?.dataValues?.no_of_bales ?? 0;
+        obj.no_of_bales = processGin?.dataValues?.no_of_bales ? Number(processGin?.dataValues?.no_of_bales) : 0;
         obj.total_qty_lint_produced = (ginBales ? ginBales?.dataValues?.total_qty / 1000 : 0);
-        obj.sold_bales = processSale?.dataValues?.no_of_bales ?? 0;
+        obj.sold_bales = processSale?.dataValues?.no_of_bales ? Number(processSale?.dataValues?.no_of_bales): 0;
         obj.average_weight = (ginBales?.dataValues?.total_qty ?? 0) / (obj.no_of_bales ?? 0);
         obj.total_qty_sold_lint = (processSale?.dataValues?.total_qty ?? 0) / 1000;
-        obj.balace_stock = (obj.no_of_bales > obj.sold_bales ? obj.no_of_bales - obj.sold_bales : 0);
+        obj.balace_stock = (obj.no_of_bales > obj.sold_bales ? Number(obj.no_of_bales - obj.sold_bales) : 0);
         obj.balance_lint_quantity = (obj.total_qty_lint_produced > obj.total_qty_sold_lint ? obj.total_qty_lint_produced - obj.total_qty_sold_lint : 0);
 
         // Add the row to the worksheet
@@ -1661,7 +1689,14 @@ const generatePscpProcurementLiveTracker = async () => {
           gin_bale_data AS (
             SELECT
               gp.ginner_id,
-              SUM(CAST(gb.weight AS DOUBLE PRECISION)) AS total_qty
+              COALESCE(
+                  SUM(
+                    CASE
+                      WHEN gb.old_weight IS NOT NULL THEN CAST(gb.old_weight AS DOUBLE PRECISION)
+                      ELSE CAST(gb.weight AS DOUBLE PRECISION)
+                    END
+                  ), 0
+              ) AS total_qty
             FROM
               "gin-bales" gb
             JOIN gin_processes gp ON gb.process_id = gp.id
@@ -1684,20 +1719,31 @@ const generatePscpProcurementLiveTracker = async () => {
             GROUP BY
               t.mapped_ginner
           ),
-          gin_sales_data AS (
-            SELECT
-              gs.ginner_id,
-              SUM(gs.no_of_bales) AS no_of_bales,
-              SUM(gs.total_qty) AS total_qty
-            FROM
-              gin_sales gs
-            JOIN filtered_ginners ON gs.ginner_id = filtered_ginners.id
-            WHERE
-              gs.program_id = ANY (filtered_ginners.program_id)
-              AND gs.status = 'Sold'
-            GROUP BY
-              gs.ginner_id
-          ),
+        gin_sales_data AS (
+                SELECT
+                    gs.ginner_id,
+                    COUNT(gb.id) AS no_of_bales,
+                    COALESCE(
+                      SUM(
+                        CASE
+                          WHEN gb.old_weight IS NOT NULL THEN CAST(gb.old_weight AS DOUBLE PRECISION)
+                          ELSE CAST(gb.weight AS DOUBLE PRECISION)
+                        END
+                      ), 0
+                    ) AS total_qty
+                FROM
+                    "gin-bales" gb
+                LEFT JOIN 
+                  bale_selections bs ON gb.id = bs.bale_id
+                LEFT JOIN 
+                    gin_sales gs ON gs.id = bs.sales_id
+                JOIN filtered_ginners ON gs.ginner_id = filtered_ginners.id
+                WHERE
+                    gs.program_id = ANY (filtered_ginners.program_id)
+                    AND gs.status in ('Pending', 'Pending for QR scanning', 'Partially Accepted', 'Partially Rejected','Sold')
+                GROUP BY
+                    gs.ginner_id
+            ),
           gin_sales_pre_data AS (
             SELECT
               gs.ginner_id,
@@ -1798,7 +1844,7 @@ const generatePscpProcurementLiveTracker = async () => {
                 ELSE ROUND(
                   (
                     (
-                      COALESCE(gb.total_qty, 0) - COALESCE(gs.total_qty, 0)
+                      COALESCE(gs.total_qty, 0)
                     ) / COALESCE(gb.total_qty, 0)
                   ) * 100
                 )
@@ -2378,6 +2424,10 @@ const generateGinnerProcess = async () => {
               s.name AS season_name,
               g.name AS ginner_name,
               gp.heap_number,
+              gp.heap_register,
+              gp.weigh_bridge,
+              gp.delivery_challan,
+              gp.qr,
               gp.lot_no,
               gp.press_no,
               gp.reel_lot_no,
@@ -2492,6 +2542,8 @@ const generateGinnerProcess = async () => {
                 gd.season_name AS season,
                 gd.ginner_name AS ginner_name,
                 gd.heap_number AS heap_number,
+                gd.heap_register AS heap_register,
+                gd.bale_process AS bale_process,
                 gd.lot_no AS lot_no,
                 gd.press_no AS press_no,
                 CONCAT(gb.pressno_from, '-', gb.pressno_to) AS gin_press_no,
@@ -2506,9 +2558,12 @@ const generateGinnerProcess = async () => {
                 (COALESCE(gb.lint_quantity, 0) - COALESCE(sd.lint_quantity_sold, 0)) AS lint_stock,
                 (COALESCE(gd.no_of_bales, 0) - COALESCE(sd.sold_bales, 0)) AS bale_stock,
                 gd.program AS program,
-                gd.greyout_status,
-               vnd.village_names AS village_names
-                gd.season_name AS seed_consumed_seasons
+                vnd.village_names AS village_names,
+                gd.season_name AS seed_consumed_seasons,
+                gd.weigh_bridge,
+                gd.delivery_challan,
+                gd.qr,
+                gd.greyout_status
             FROM
                 gin_process_data gd
             LEFT JOIN
@@ -2516,7 +2571,7 @@ const generateGinnerProcess = async () => {
             LEFT JOIN
               village_names_data vnd ON gd.process_id = vnd.process_id 
             LEFT JOIN
-              sold_data sd ON gd.process_id = sd.process_id
+                sold_data sd ON gd.process_id = sd.process_id
             LIMIT :limit OFFSET :offset
             `, {
             replacements: { limit: batchSize, offset },
@@ -2546,7 +2601,7 @@ const generateGinnerProcess = async () => {
         // Set bold font for header row
         // Set bold font for header row
         const headerRow = currentWorksheet.addRow([
-          "Sr No.", "Process Date", "Data Entry Date", "Seed Cotton Consumed Season" ,"Lint process Season choosen", "Ginner Name", "Heap Number", "Gin Lot No", "Gin Press No", "REEL Lot No", "REEL Process Nos", "No of Bales", "Lint Quantity(Kgs)", "Total Seed Cotton Consumed(Kgs)", "GOT", "Total lint cotton sold(Kgs)", "Total Bales Sold", "Total lint cotton in stock(Kgs)", "Total Bales in stock", "Programme", "Village", "Grey Out Status"
+          "Sr No.", "Process Date", "Data Entry Date", "Seed Cotton Consumed Season" ,"Lint process Season choosen", "Ginner Name", "Heap Number", "Gin Lot No", "Gin Press No", "REEL Lot No", "REEL Press No", "No of Bales", "Lint Quantity(Kgs)", "Total Seed Cotton Consumed(Kgs)", "GOT", "Total lint cotton sold(Kgs)", "Total Bales Sold", "Total lint cotton in stock(Kgs)", "Total Bales in stock", "Programme", "Village", "Grey Out Status"
         ]);
         headerRow.font = { bold: true };
       }
@@ -2712,7 +2767,7 @@ const generateGinnerSales = async () => {
       if (!currentWorksheet) {
         currentWorksheet = workbook.addWorksheet(`Sheet${worksheetIndex}`);
         if (worksheetIndex == 1) {
-          currentWorksheet.mergeCells('A1:V1');
+          currentWorksheet.mergeCells('A1:U1');
           const mergedCell = currentWorksheet.getCell('A1');
           mergedCell.value = 'CottonConnect | Ginner Sales Report';
           mergedCell.font = { bold: true };
@@ -2722,7 +2777,7 @@ const generateGinnerSales = async () => {
         // Set bold font for header row
         const headerRow = currentWorksheet.addRow([
           "Sr No.", "Process Date", "Data Entry Date", "Seed Cotton Consumed Season", "Lint Process Season", "Lint sale chosen season", "Ginner Name",
-          "Invoice No", "Sold To", "Heap Number", "Bale Lot No", "REEL Lot No", "No of Bales", "Press/Bale No", "Rate/Kg",
+          "Invoice No", "Sold To", "Bale Lot No", "REEL Lot No", "No of Bales", "Press/Bale No", "Rate/Kg",
           "Total Quantity", "Sales Value", "Vehicle No", "Transporter Name", "Programme", "Agent Detials", "Status"
         ]);
         headerRow.font = { bold: true };
@@ -2730,20 +2785,34 @@ const generateGinnerSales = async () => {
 
       // Append data to worksheet
       for await (const [index, item] of rows.entries()) {
-        const [seedSeason] =  await sequelize.query(`
-          SELECT 
-              STRING_AGG(DISTINCT s.name, ', ') AS seasons
-          FROM
-              cotton_selections cs
-          LEFT JOIN
-              transactions t ON cs.transaction_id = t.id
-          LEFT JOIN
-              villages v ON t.village_id = v.id
-          LEFT JOIN
-              seasons s ON t.season_id = s.id
-          WHERE 
-              cs.process_id IN (${item?.dataValues?.process_ids.join(',')}) 
+        let processIds = item?.dataValues?.process_ids && Array.isArray(item?.dataValues?.process_ids)
+            ? item.dataValues.process_ids?.filter((id: any) => id !== null && id !== undefined)
+            : [];
+
+          let seedSeason = [];
+
+          if (processIds.length > 0) {
+            [seedSeason] = await sequelize.query(`
+              SELECT STRING_AGG(DISTINCT s.name, ', ') AS seasons
+              FROM (
+                  -- Retrieve village names from the cotton table
+                  SELECT DISTINCT ss.name
+                  FROM cotton_selections cs
+                  JOIN transactions t ON cs.transaction_id = t.id
+                  LEFT JOIN seasons ss ON t.season_id = ss.id
+                  WHERE cs.process_id IN  (${processIds.join(',')})
+                  
+                  UNION
+                  
+                  -- Retrieve village names from the heap table
+                  SELECT DISTINCT ss.name
+                  FROM heap_selections hs
+                  JOIN transactions t ON t.id = ANY(hs.transaction_id)
+                  LEFT JOIN seasons ss ON t.season_id = ss.id
+                  WHERE hs.process_id IN  (${processIds.join(',')})
+              ) s
           `)
+          }
 
         const rowValues = Object.values({
           index: index + offset + 1,
@@ -2755,7 +2824,6 @@ const generateGinnerSales = async () => {
           ginner: item.dataValues.ginner ? item.dataValues.ginner : '',
           invoice: item.dataValues.invoice_no ? item.dataValues.invoice_no : '',
           buyer: item.dataValues.buyerdata ? item.dataValues.buyerdata : '',
-          heap: '',
           lot_no: item.dataValues.lot_no ? item.dataValues.lot_no : '',
           reel_lot_no: item.dataValues.reel_lot_no ? item.dataValues.reel_lot_no : '',
           no_of_bales: item.dataValues.no_of_bales ? Number(item.dataValues.no_of_bales) : 0,
@@ -3608,8 +3676,8 @@ const generateSpinnerBale = async () => {
 
           const headerRow = currentWorksheet.addRow([
             "Sr No.",
-            "Date of Transaction Receipt",
-            "Date of transaction",
+            "Date of transaction accepted",
+            "Date of transaction received",
             "Season",
             "Spinner Name",
             "Ginner Name",
@@ -4111,7 +4179,7 @@ const generateSpinnerSale = async () => {
           const headerRow = currentWorksheet.addRow([
             "Sr No.",
             "Created Date and Time",
-            "Date",
+            "Date of transaction",
             "Lint Cotton Consumed Season",
             "Yarn sale season chosen",
             "Spinner Name",
@@ -4695,9 +4763,12 @@ const generateBrandWiseData = async () =>{
                     "COALESCE",
                     sequelize.fn(
                       "SUM",
-                      sequelize.literal(
-                        'CAST("gin-bales"."weight" AS DOUBLE PRECISION)'
-                      )
+                      sequelize.literal(`
+                        CASE
+                          WHEN "gin-bales"."old_weight" IS NOT NULL THEN CAST("gin-bales"."old_weight" AS DOUBLE PRECISION)
+                          ELSE CAST("gin-bales"."weight" AS DOUBLE PRECISION)
+                        END
+                      `)
                     ),
                     0
                   ),
@@ -4737,9 +4808,12 @@ const generateBrandWiseData = async () =>{
                     "COALESCE",
                     sequelize.fn(
                       "SUM",
-                      sequelize.literal(
-                        'CAST("bale"."weight" AS DOUBLE PRECISION)'
-                      )
+                      sequelize.literal(`
+                        CASE
+                          WHEN "bale"."old_weight" IS NOT NULL THEN CAST("bale"."old_weight" AS DOUBLE PRECISION)
+                          ELSE CAST("bale"."weight" AS DOUBLE PRECISION)
+                        END
+                      `)
                     ),
                     0
                   ),
@@ -4771,6 +4845,7 @@ const generateBrandWiseData = async () =>{
               ],
               where: {
                 "$sales.ginner.brand$": { [Op.overlap]: [item?.dataValues?.id] },
+                "$sales.status$" : { [Op.in]: ['Pending', 'Pending for QR scanning', 'Partially Accepted', 'Partially Rejected','Sold'] }
               },
               group: ["sales.ginner.brand"],
             }),
