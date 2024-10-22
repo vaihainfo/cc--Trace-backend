@@ -4562,7 +4562,7 @@ const fetchSpinSalesPagination = async (req: Request, res: Response) => {
       startOfDay.setUTCHours(0, 0, 0, 0);
       const endOfDay = new Date(endDate);
       endOfDay.setUTCHours(23, 59, 59, 999);
-      whereCondition.createdAt = { [Op.between]: [startOfDay, endOfDay] }
+      whereCondition["$sales.date$"] = { [Op.between]: [startOfDay, endOfDay] }
     }
 
     let include = [
@@ -4815,7 +4815,7 @@ const exportSpinnerSale = async (req: Request, res: Response) => {
         startOfDay.setUTCHours(0, 0, 0, 0);
         const endOfDay = new Date(endDate);
         endOfDay.setUTCHours(23, 59, 59, 999);
-        whereCondition.createdAt = { [Op.between]: [startOfDay, endOfDay] }
+        whereCondition["$sales.date$"] = { [Op.between]: [startOfDay, endOfDay] }
       }
 
       // Create the excel workbook file

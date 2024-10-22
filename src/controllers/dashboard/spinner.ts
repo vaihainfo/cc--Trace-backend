@@ -17,6 +17,7 @@ import sequelize from "../../util/dbConn";
 import LintSelections from "../../models/lint-seletions.model";
 import GinBale from "../../models/gin-bale.model";
 import BaleSelection from "../../models/bale-selection.model";
+import SpinProcessYarnSelection from "../../models/spin-process-yarn-seletions.model";
 
 const getQueryParams = async (
   req: Request, res: Response
@@ -196,6 +197,88 @@ const getSpinnerProcessWhereQuery = (
   return where;
 };
 
+
+const getSpinnerWhereQuery = (
+  reqData: any
+) => {
+  const where: any = {
+  };
+
+  if (reqData?.program)
+    where['$sales.program_id$'] = reqData.program;
+
+  if (reqData?.brand)
+    where['$sales.spinner.brand$'] = {
+      [Op.contains]: Sequelize.literal(`ARRAY [${reqData.brand}]`)
+    };
+
+  if (reqData?.season) 
+    where['$sales.season_id$'] = reqData.season;
+
+  if (reqData?.country)
+    where['$sales.spinner.country_id$'] = reqData.country;
+
+  if (reqData?.state)
+    where['$sales.spinner.state_id$'] = reqData.state;
+
+  if (reqData?.district)
+    where['$sales.spinner.district_id$'] = reqData.district;
+
+  if (reqData?.spinner)
+    where['$sales.spinner.id$'] = reqData.spinner;
+
+  if (reqData?.fromDate)
+    where['$sales.date$'] = { [Op.gte]: reqData.fromDate };
+
+  if (reqData?.toDate)
+    where['$sales.date$'] = { [Op.lt]: reqData.toDate };
+
+  if (reqData?.fromDate && reqData?.toDate)
+    where['$sales.date$'] = { [Op.between]: [reqData.fromDate, reqData.toDate] };
+
+  return where;
+};
+
+const getSpinSalesWhereQuery = (
+  reqData: any
+) => {
+  const where: any = {
+  };
+
+  if (reqData?.program)
+    where['$sales.program_id$'] = reqData.program;
+
+  if (reqData?.brand)
+    where['$sales.spinner.brand$'] = {
+      [Op.contains]: Sequelize.literal(`ARRAY [${reqData.brand}]`)
+    };
+
+  if (reqData?.season)
+    where['$sales.season_id$'] = reqData.season;
+
+  if (reqData?.country)
+    where['$sales.spinner.country_id$'] = reqData.country;
+
+  if (reqData?.state)
+    where['$sales.spinner.state_id$'] = reqData.state;
+
+  if (reqData?.district)
+    where['$sales.spinner.district_id$'] = reqData.district;
+
+  if (reqData?.spinner)
+    where['$sales.spinner.id$'] = reqData.spinner;
+
+  if (reqData?.fromDate)
+    where['$sales.date$'] = { [Op.gte]: reqData.fromDate };
+
+  if (reqData?.toDate)
+    where['$sales.date$'] = { [Op.lt]: reqData.toDate };
+
+  if (reqData?.fromDate && reqData?.toDate)
+    where['$sales.date$'] = { [Op.between]: [reqData.fromDate, reqData.toDate] };
+
+  return where;
+};
 
 
 const getSpinnerLintQuery = (
@@ -711,9 +794,10 @@ const getYarnProcuredSold = async (
   try {
     const reqData = await getQueryParams(req, res);
     const where = getSpinnerProcessWhereQuery(reqData);
+    const spinSalesWhere = getSpinSalesWhereQuery(reqData);
     delete where.status
     const procuredData = await getYarnProcuredData(where);
-    const soldData = await getYarnSoldData(where);
+    const soldData = await getYarnSoldData(spinSalesWhere);
     const data = await getYarnProcuredSoldRes(
       procuredData,
       soldData,
@@ -822,28 +906,66 @@ const getYarnProcuredSoldRes = async (
 const getYarnSoldData = async (
   where: any
 ) => {
+  const result = await SpinProcessYarnSelection.findAll(
+    {
+      attributes: [
+        [Sequelize.col('"sales"."season"."name"'), "seasonName"],
+        [Sequelize.col('"sales"."season"."id"'), "seasonId"],
+        [
+          Sequelize.fn(
+            "COALESCE",
+            sequelize.fn("SUM", Sequelize.col("qty_used")),
+            0
+          ),
+          "yarnSold",
+        ],
+      ],
+      include: [
+        {
+          model: SpinSales,
+          as: "sales",
+          include: [{
+            model: Season,
+            as: 'season',
+            attributes: []
+          }, {
+            model: Spinner,
+            as: 'spinner',
+            attributes: []
+          }],
+          attributes: [],
+        }
+      ],
+      order: [['seasonId', 'desc']],
+      where:{
+        '$sales.season_id$': { [Op.ne]: null },
+        ...where
+       },
+      group: [
+        "sales.season.id"
+      ],
 
-  const result = await SpinSales.findAll({
-    attributes: [
-      [Sequelize.fn('SUM', Sequelize.col('total_qty')), 'yarnSold'],
-      [Sequelize.col('season.name'), 'seasonName'],
-      [Sequelize.col('season.id'), 'seasonId']
-    ],
-    include: [{
-      model: Season,
-      as: 'season',
-      attributes: []
-    }, {
-      model: Spinner,
-      as: 'spinner',
-      attributes: []
-    }],
-    order: [['seasonId', 'desc']],
-    // limit: 3,
-    where,
-    group: ['season.id']
+
+  // const result = await SpinSales.findAll({
+  //   attributes: [
+  //     [Sequelize.fn('SUM', Sequelize.col('total_qty')), 'yarnSold'],
+  //     [Sequelize.col('season.name'), 'seasonName'],
+  //     [Sequelize.col('season.id'), 'seasonId']
+  //   ],
+  //   include: [{
+  //     model: Season,
+  //     as: 'season',
+  //     attributes: []
+  //   }, {
+  //     model: Spinner,
+  //     as: 'spinner',
+  //     attributes: []
+  //   }],
+  //   order: [['seasonId', 'desc']],
+  //   // limit: 3,
+  //   where,
+  //   group: ['season.id']
   });
-
   return result;
 
 };
@@ -1007,20 +1129,57 @@ const getYarnSoldDataByMonth = async (
   where: any
 ) => {
 
-  const result = await SpinSales.findAll({
-    attributes: [
-      [Sequelize.fn('SUM', Sequelize.col('total_qty')), 'yarnSold'],
-      [Sequelize.literal("date_part('Month', date)"), 'month'],
-      [Sequelize.literal("date_part('Year', date)"), 'year'],
-    ],
-    include: [{
-      model: Spinner,
-      as: 'spinner',
-      attributes: []
-    }],
-    where,
-    group: ['month', 'year']
-  });
+  // const result = await SpinSales.findAll({
+  //   attributes: [
+  //     [Sequelize.fn('SUM', Sequelize.col('total_qty')), 'yarnSold'],
+  //     [Sequelize.literal("date_part('Month', date)"), 'month'],
+  //     [Sequelize.literal("date_part('Year', date)"), 'year'],
+  //   ],
+  //   include: [{
+  //     model: Spinner,
+  //     as: 'spinner',
+  //     attributes: []
+  //   }],
+  //   where,
+  //   group: ['month', 'year']
+  // });
+
+  const result = await SpinProcessYarnSelection.findAll(
+    {
+      attributes: [
+
+        [
+          Sequelize.fn(
+            "COALESCE",
+            sequelize.fn("SUM", Sequelize.col("qty_used")),
+            0
+          ),
+          "yarnSold",
+        ],
+        [Sequelize.literal("date_part('Month', sales.date)"), 'month'],
+       [Sequelize.literal("date_part('Year', sales.date)"), 'year'],
+      ],
+      include: [
+        {
+          model: SpinSales,
+          as: "sales",
+          include: [{
+            model: Season,
+            as: 'season',
+            attributes: []
+          }, {
+            model: Spinner,
+            as: 'spinner',
+            attributes: []
+          }],
+          attributes: [],
+        }
+      ],
+      where:{
+        ...where
+       },
+       group: ['month', 'year']
+    });
 
   return result;
 
@@ -1065,10 +1224,11 @@ const getDataAll = async (
     const ginSaleWhere = getBaleSelWhereQuery(reqData);
     const lintWhere = getSpinnerLintQuery(reqData);
     const spinProcessWhere = getSpinnerProcessWhereQuery(reqData);
+    const spinSalesWhere = getSpinnerWhereQuery(reqData);
     const lintProcuredData = await getLintProcuredDataByMonth(ginSaleWhere);
     const lintSoldData = await getLintProcessedDataByMonth(lintWhere);
     const yarnProcuredSoldData = await getYarnProcuredDataByMonth(spinProcessWhere);
-    const yarnSoldData = await getYarnSoldDataByMonth(spinProcessWhere);
+    const yarnSoldData = await getYarnSoldDataByMonth(spinSalesWhere);
     const data = await getDataAllRes(
       lintProcuredData,
       lintSoldData,
@@ -1340,8 +1500,9 @@ const getYarnProcessedStock = async (
   try {
     const reqData = await getQueryParams(req, res);
     const where = getSpinnerProcessWhereQuery(reqData);
+    const spinSalesWhere = getSpinSalesWhereQuery(reqData);
     const processedData = await getYarnProcuredData(where);
-    const soldData = await getYarnSoldData(where);
+    const soldData = await getYarnSoldData(spinSalesWhere);
     const data = await getYarnProcuredStockRes(
       processedData,
       soldData,
@@ -2872,8 +3033,9 @@ const getSpinYarnGreyoutStock = async ( req: Request, res: Response) =>{
   try {
     const reqData = await getQueryParams(req, res);
     const where = getSpinnerProcessWhereQuery(reqData);
+    const spinSalesWhere = getSpinSalesWhereQuery(reqData);
     const processedData = await getYarnProcuredData(where);
-    const soldData = await getYarnSoldData(where);
+    const soldData = await getYarnSoldData(spinSalesWhere);
     const greyoutData = await getYarnGreyoutData(where);
 
     const data = await getYarnGreyoutComparisonRes(
