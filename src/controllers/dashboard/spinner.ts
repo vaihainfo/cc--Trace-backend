@@ -15,6 +15,8 @@ import YarnCount from "../../models/yarn-count.model";
 import Country from "../../models/country.model";
 import sequelize from "../../util/dbConn";
 import LintSelections from "../../models/lint-seletions.model";
+import GinBale from "../../models/gin-bale.model";
+import BaleSelection from "../../models/bale-selection.model";
 
 const getQueryParams = async (
   req: Request, res: Response
@@ -103,6 +105,49 @@ const getGinnerSalesWhereQuery = (
 
   if (reqData?.fromDate && reqData?.toDate)
     where.date = { [Op.between]: [reqData.fromDate, reqData.toDate] };
+
+
+  return where;
+};
+
+const getBaleSelWhereQuery = (
+  reqData: any
+) => {
+  const where: any = {
+    
+  };
+
+  if (reqData?.program)
+    where['$sales.program_id$'] = reqData.program;
+
+  if (reqData?.brand)
+    where['$sales.buyerdata.brand$'] = {
+      [Op.contains]: Sequelize.literal(`ARRAY [${reqData.brand}]`)
+    };
+
+  if (reqData?.season)
+    where['$sales.season_id$'] = reqData.season;
+
+  if (reqData?.country)
+    where['$sales.buyerdata.country_id$'] = reqData.country;
+
+  if (reqData?.state)
+    where['$sales.buyerdata.state_id$'] = reqData.state;
+
+  if (reqData?.district)
+    where['$sales.buyerdata.district_id$'] = reqData.district;
+
+  if (reqData?.spinner)
+    where['$sales.buyerdata.id$'] = reqData.spinner;
+
+  if (reqData?.fromDate)
+    where['$sales.date$'] = { [Op.gte]: reqData.fromDate };
+
+  if (reqData?.toDate)
+    where['$sales.date$'] = { [Op.lt]: reqData.toDate };
+
+  if (reqData?.fromDate && reqData?.toDate)
+    where['$sales.date$'] = { [Op.between]: [reqData.fromDate, reqData.toDate] };
 
 
   return where;
@@ -246,7 +291,7 @@ const getTopGinners = async (
 ) => {
   try {
     const reqData = await getQueryParams(req, res);
-    const where = getGinnerSalesWhereQuery(reqData);
+    const where = getBaleSelWhereQuery(reqData);
     const ginnersData = await getTopGinnersData(where);
     const data = await getTopGinnersRes(ginnersData);
     return res.sendSuccess(res, data);
@@ -342,35 +387,69 @@ const getTopGinnersData = async (
   where: any
 ) => {
 
-  where['$gin_sales.status$'] = { [Op.ne]: 'To be Submitted' };
-
-  const result = await GinSales.findAll({
+  const result = await BaleSelection.findAll({
     attributes: [
-      [Sequelize.fn('SUM', Sequelize.col('gin_sales.total_qty')), 'total'],
-      [Sequelize.col('ginner.name'), 'ginnerName']
+      [Sequelize.col('sales.ginner.id'), 'ginnerId'],   // season_id from Season
+      [Sequelize.col('sales.ginner.name'), 'ginnerName'], 
+        [
+          sequelize.fn(
+            "COALESCE",
+            sequelize.fn(
+              "SUM",
+              Sequelize.literal(`
+                CASE
+                  WHEN "bale"."accepted_weight" IS NOT NULL THEN "bale"."accepted_weight"
+                  ELSE CAST("bale"."weight" AS DOUBLE PRECISION)
+                END
+              `)
+            ),
+            0
+          ),
+          "total",
+        ]
     ],
-    include: [{
-      model: Ginner,
-      as: 'ginner',
-      attributes: []
-    }, {
-      model: Spinner,
-      as: 'buyerdata',
-      attributes: []
-    }],
     where: {
-      id: {
-        [Op.in]: Sequelize.literal(`(
-          SELECT DISTINCT sales_id
-          FROM bale_selections
-        )`)
-      },
-      ...where
+        ...where,
+      "$sales.status$": { [Op.in]: ['Sold', 'Partially Accepted', 'Partially Rejected'] },
+      [Op.or]: [
+        { spinner_status: true },
+        {"$sales.status$": 'Sold'}
+      ]
     },
+    include: [
+        {
+            model: GinBale,
+            as: "bale",
+            attributes: []
+        },
+        {
+          model: GinSales,
+          as: "sales",
+          attributes: [],
+          include: [
+            {
+              model: Ginner,
+              as: 'ginner',
+              attributes: []
+            },
+            {
+                model: Season,
+                as: "season",
+                attributes: []
+            },
+            {
+                model: Spinner,
+                as: 'buyerdata',
+                attributes: []
+            }
+        ],
+          
+      },
+    ],
+    group: ["sales.ginner_id", 'sales.ginner.id'],
     order: [['total', 'desc']],
     limit: 10,
-    group: ['ginner.id']
-  });
+   })
 
   return result;
 
@@ -404,7 +483,7 @@ const getLintProcuredProcessed = async (
 ) => {
   try {
     const reqData = await getQueryParams(req, res);
-    const ginSaleWhere = getGinnerSalesWhereQuery(reqData);
+    const ginSaleWhere = getBaleSelWhereQuery(reqData);
     const spinProcessWhere = getSpinnerLintQuery(reqData);
     const lintProcuredData = await getLintProcuredData(ginSaleWhere);
     const lintProcessedData = await getLintProcessedData(spinProcessWhere);
@@ -515,41 +594,66 @@ const getLintProcuredProcessedRes = async (
 const getLintProcuredData = async (
   where: any
 ) => {
-
-  where['$gin_sales.status$'] = { [Op.ne]: 'To be Submitted' };
-
-  const result = await GinSales.findAll({
+  
+  const result = await BaleSelection.findAll({
     attributes: [
-      [Sequelize.col('season.id'), 'seasonId'],   // season_id from Season
-      [Sequelize.col('season.name'), 'seasonName'], 
-      [Sequelize.fn('SUM', Sequelize.col('total_qty')), 'lintProcured']
-    ],
-    include: [
-      {
-        model: Season,
-        as: 'season',
-        attributes: [] 
-      },
-      {
-        model: Spinner,
-        as: 'buyerdata',
-        attributes: []
-      }
+      [Sequelize.col('sales.season.id'), 'seasonId'],   // season_id from Season
+      [Sequelize.col('sales.season.name'), 'seasonName'], 
+        [
+          sequelize.fn(
+            "COALESCE",
+            sequelize.fn(
+              "SUM",
+              Sequelize.literal(`
+                CASE
+                  WHEN "bale"."accepted_weight" IS NOT NULL THEN "bale"."accepted_weight"
+                  ELSE CAST("bale"."weight" AS DOUBLE PRECISION)
+                END
+              `)
+            ),
+            0
+          ),
+          "lintProcured",
+        ]
     ],
     where: {
-      id: {
-        [Op.in]: Sequelize.literal(`(
-          SELECT DISTINCT sales_id
-          FROM bale_selections
-        )`)
-      },
-      ...where
+        ...where,
+      "$sales.status$": { [Op.in]: ['Sold', 'Partially Accepted', 'Partially Rejected'] },
+      [Op.or]: [
+        { spinner_status: true },
+        {"$sales.status$": 'Sold'}
+      ]
     },
+    include: [
+        {
+            model: GinBale,
+            as: "bale",
+            attributes: []
+        },
+        {
+          model: GinSales,
+          as: "sales",
+          attributes: [],
+          include: [
+            {
+                model: Season,
+                as: "season",
+                attributes: []
+            },
+            {
+                model: Spinner,
+                as: 'buyerdata',
+                attributes: []
+            }
+        ],
+          
+      },
+    ],
+    group: ["sales.season_id", 'sales.season.id'],
     order: [['seasonId', 'desc']],
     limit: 3,
-    group: ['season_id', 'season.id'],
     raw: true
-  });
+   })
 
 
   return result;
@@ -778,32 +882,62 @@ const getLintProcuredDataByMonth = async (
   where: any
 ) => {
 
-  where['$gin_sales.status$'] = { [Op.ne]: 'To be Submitted' };
-
-
-  const result = await GinSales.findAll({
+  const result = await BaleSelection.findAll({
     attributes: [
-      [Sequelize.fn('SUM', Sequelize.col('total_qty')), 'lintProcured'],
-      [Sequelize.literal("date_part('Month', date)"), 'month'],
-      [Sequelize.literal("date_part('Year', date)"), 'year'],
+      [Sequelize.literal("date_part('Month', sales.date)"), 'month'],
+      [Sequelize.literal("date_part('Year', sales.date)"), 'year'],
+        [
+          sequelize.fn(
+            "COALESCE",
+            sequelize.fn(
+              "SUM",
+              Sequelize.literal(`
+                CASE
+                  WHEN "bale"."accepted_weight" IS NOT NULL THEN "bale"."accepted_weight"
+                  ELSE CAST("bale"."weight" AS DOUBLE PRECISION)
+                END
+              `)
+            ),
+            0
+          ),
+          "lintProcured",
+        ]
     ],
-    include: [{
-      model: Spinner,
-      as: 'buyerdata',
-      attributes: []
-    }],
     where: {
-      id: {
-        [Op.in]: Sequelize.literal(`(
-          SELECT DISTINCT sales_id
-          FROM bale_selections
-        )`)
-      },
-      ...where
+        ...where,
+      "$sales.status$": { [Op.in]: ['Sold', 'Partially Accepted', 'Partially Rejected'] },
+      [Op.or]: [
+        { spinner_status: true },
+        {"$sales.status$": 'Sold'}
+      ]
     },
+    include: [
+        {
+            model: GinBale,
+            as: "bale",
+            attributes: []
+        },
+        {
+          model: GinSales,
+          as: "sales",
+          attributes: [],
+          include: [
+            {
+                model: Season,
+                as: "season",
+                attributes: []
+            },
+            {
+                model: Spinner,
+                as: 'buyerdata',
+                attributes: []
+            }
+        ],
+          
+      },
+    ],
     group: ['month', 'year'],
-    // raw: true
-  });
+   })
 
   return result;
 
@@ -927,8 +1061,8 @@ const getDataAll = async (
         id: reqData.season ? reqData.season : '9'
       }
     });
-    reqData.season = seasonOne.id;
-    const ginSaleWhere = getGinnerSalesWhereQuery(reqData);
+    // reqData.season = seasonOne.id;
+    const ginSaleWhere = getBaleSelWhereQuery(reqData);
     const lintWhere = getSpinnerLintQuery(reqData);
     const spinProcessWhere = getSpinnerProcessWhereQuery(reqData);
     const lintProcuredData = await getLintProcuredDataByMonth(ginSaleWhere);
