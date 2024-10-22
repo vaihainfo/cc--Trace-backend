@@ -2424,6 +2424,10 @@ const generateGinnerProcess = async () => {
               s.name AS season_name,
               g.name AS ginner_name,
               gp.heap_number,
+              gp.heap_register,
+              gp.weigh_bridge,
+              gp.delivery_challan,
+              gp.qr,
               gp.lot_no,
               gp.press_no,
               gp.reel_lot_no,
@@ -2538,6 +2542,8 @@ const generateGinnerProcess = async () => {
                 gd.season_name AS season,
                 gd.ginner_name AS ginner_name,
                 gd.heap_number AS heap_number,
+                gd.heap_register AS heap_register,
+                gd.bale_process AS bale_process,
                 gd.lot_no AS lot_no,
                 gd.press_no AS press_no,
                 CONCAT(gb.pressno_from, '-', gb.pressno_to) AS gin_press_no,
@@ -2552,9 +2558,12 @@ const generateGinnerProcess = async () => {
                 (COALESCE(gb.lint_quantity, 0) - COALESCE(sd.lint_quantity_sold, 0)) AS lint_stock,
                 (COALESCE(gd.no_of_bales, 0) - COALESCE(sd.sold_bales, 0)) AS bale_stock,
                 gd.program AS program,
-                gd.greyout_status,
-               vnd.village_names AS village_names
-                gd.season_name AS seed_consumed_seasons
+                vnd.village_names AS village_names,
+                gd.season_name AS seed_consumed_seasons,
+                gd.weigh_bridge,
+                gd.delivery_challan,
+                gd.qr,
+                gd.greyout_status
             FROM
                 gin_process_data gd
             LEFT JOIN
@@ -2562,7 +2571,7 @@ const generateGinnerProcess = async () => {
             LEFT JOIN
               village_names_data vnd ON gd.process_id = vnd.process_id 
             LEFT JOIN
-              sold_data sd ON gd.process_id = sd.process_id
+                sold_data sd ON gd.process_id = sd.process_id
             LIMIT :limit OFFSET :offset
             `, {
             replacements: { limit: batchSize, offset },

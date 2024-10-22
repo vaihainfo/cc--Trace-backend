@@ -319,7 +319,7 @@ const getBaleSelectionQuery = (
   const where: any = {
 
   };
-  where['$sales.status$'] = "Sold";
+  where['$sales.status$'] = { [Op.in]: ['Pending', 'Pending for QR scanning', 'Partially Accepted', 'Partially Rejected','Sold'] };
   if (reqData?.program)
     where['$sales.program_id$'] = reqData.program;
 
@@ -358,6 +358,46 @@ const getBaleSelectionQuery = (
   return where;
 };
 
+const getBaleSelLintSoldQuery = (
+  reqData: any
+) => {
+  const where = [];
+
+  if (reqData?.program)
+    where.push(`gp.program_id IN (${reqData.program})`)
+
+  if (reqData?.brand)
+      where.push(`g.brand && ARRAY[${reqData.brand}]`)
+
+  if (reqData?.season){
+    where.push(`gp.season_id IN (${reqData.season})`)
+  }
+  else
+    where.push(`gp.season_id IS NOT NULL`)
+  
+  if (reqData?.country)
+    where.push(`g.country_id IN (${reqData.country})`)
+
+  if (reqData?.state)
+    where.push(`g.state_id IN (${reqData.state})`);
+
+  if (reqData?.district)
+    where.push(`g.district_id IN (${reqData.district})`);
+
+  if (reqData?.ginner)
+    where.push(`gp.ginner_id IN (${reqData?.ginner})`);
+
+  if (reqData?.fromDate)
+    where.push(`"gp"."date" >= ${reqData.fromDate}`);
+
+  if (reqData?.toDate)
+    where.push(`"gp"."date" < ${reqData.toDate}`);
+
+  if (reqData?.fromDate && reqData?.toDate)
+    where.push(`"gp"."date" BETWEEN '${reqData.fromDate}' AND '${reqData.toDate}'`);
+
+  return where;
+};
 
 const getTopVillagesData = async (
   where: any
@@ -489,7 +529,8 @@ const getTopSpinnersData = async (
   where['$buyerdata.name$'] = {
     [Op.not]: null
   };
-  where.status = 'Sold';
+  where.status = { [Op.in]: ['Pending', 'Pending for QR scanning', 'Partially Accepted', 'Partially Rejected','Sold'] }
+  // where.status = 'Sold';
   
   const result = await GinSales.findAll({
     attributes: [
@@ -720,7 +761,7 @@ const getLintProcuredSold = async (
   try {
     const reqData = await getQueryParams(req, res);
     const procuredWhere = await getGinBaleQuery(reqData);
-    const baleSel = getGinnerSalesWhereQuery(reqData);
+    const baleSel = getBaleSelLintSoldQuery(reqData);
     const procuredData = await getBaleProcuredData(procuredWhere);
     const soldData = await getBaleSoldData(baleSel);
     const data = await getLintProcuredSoldRes(
@@ -750,8 +791,8 @@ const getLintProcuredSoldRes = async (
   });
 
   soldList.forEach((sold: any) => {
-    if (!seasonIds.includes(sold.dataValues.seasonId))
-      seasonIds.push(sold.dataValues.seasonId);
+    if (!seasonIds.includes(sold.seasonId))
+      seasonIds.push(sold.seasonId);
   });
 
 
@@ -785,7 +826,7 @@ const getLintProcuredSoldRes = async (
       production.dataValues.seasonId == sessionId
     );
     const fSold = soldList.find((estimate: any) =>
-      estimate.dataValues.seasonId == sessionId
+      estimate.seasonId == sessionId
     );
     let data = {
       seasonName: '',
@@ -799,8 +840,8 @@ const getLintProcuredSoldRes = async (
     }
 
     if (fSold) {
-      data.seasonName = fSold.dataValues.seasonName;
-      data.sold = mtConversion(fSold.dataValues.lintSold);
+      data.seasonName = fSold.seasonName;
+      data.sold = mtConversion(fSold.lintSold);
     }
 
     data.stock = data.procured > data.sold ? Number((data.procured - data.sold).toFixed(2)) : 0;
@@ -1006,7 +1047,7 @@ const getDataAll = async (
         id: reqData.season ? reqData.season : '9'
       }
     });
-    reqData.season = seasonOne.id;
+    // reqData.season = seasonOne.id;
     const procuredWhere = await getGinBaleQuery(reqData); //yes
     const baleSel = getBaleSelectionQuery(reqData);
     const transactionWhere = getTransactionDataQuery(reqData);
@@ -1111,7 +1152,7 @@ const getBaleComparison = async (
     const reqData = await getQueryParams(req, res);
     const ginBale = getGinBaleQuery(reqData);
     const ginBaleProduce = await getBaleProducedQuery(reqData);
-    const baleSel = await getGinnerSalesWhereQuery(reqData);
+    const baleSel = getBaleSelLintSoldQuery(reqData);
     const procuredData = await getBaleNewProducedData(ginBaleProduce);
     const soldData = await getBaleSoldData(baleSel);
     const data = await getBaleComparisonRes(
@@ -1223,50 +1264,93 @@ const getBaleProcuredData = async (
 
 
 
+// const getBaleSoldData = async (
+//   where: any
+// ) => {
+//   // where.sold_status = true
+//   where.status = 'Sold';
+
+//     const result = await GinSales.findAll({
+//     attributes: [
+//       [Sequelize.col('season.id'), 'seasonId'],   // season_id from Season
+//       [Sequelize.col('season.name'), 'seasonName'], 
+//       [Sequelize.fn('SUM', Sequelize.col('no_of_bales')), 'sold'],
+//       [Sequelize.fn('SUM', Sequelize.col('total_qty')), 'lintSold'],
+//     ],
+//     include: [
+//       {
+//         model: Season,
+//         as: 'season',
+//         attributes: [] 
+//       },
+//       {
+//         model: Ginner,
+//         as: "ginner",
+//         attributes: []
+//       }
+//     ],
+//     where: {
+//       id: {
+//         [Op.in]: Sequelize.literal(`(
+//           SELECT DISTINCT sales_id
+//           FROM bale_selections
+//         )`)
+//       },
+//       ...where
+//     },
+//     order: [['seasonId', 'desc']],
+//     // limit: 3,
+//     group: ['season.id'],
+//     // raw: true
+//   });
+
+//   return result;
+
+// };
+
 const getBaleSoldData = async (
   where: any
 ) => {
   // where.sold_status = true
-  where.status = 'Sold';
+  // where.status = 'Sold';
+  where.push(`gs.status in ('Pending', 'Pending for QR scanning', 'Partially Accepted', 'Partially Rejected','Sold')`)
 
-    const result = await GinSales.findAll({
-    attributes: [
-      [Sequelize.col('season.id'), 'seasonId'],   // season_id from Season
-      [Sequelize.col('season.name'), 'seasonName'], 
-      [Sequelize.fn('SUM', Sequelize.col('no_of_bales')), 'sold'],
-      [Sequelize.fn('SUM', Sequelize.col('total_qty')), 'lintSold'],
-    ],
-    include: [
-      {
-        model: Season,
-        as: 'season',
-        attributes: [] 
-      },
-      {
-        model: Ginner,
-        as: "ginner",
-        attributes: []
-      }
-    ],
-    where: {
-      id: {
-        [Op.in]: Sequelize.literal(`(
-          SELECT DISTINCT sales_id
-          FROM bale_selections
-        )`)
-      },
-      ...where
-    },
-    order: [['seasonId', 'desc']],
-    // limit: 3,
-    group: ['season.id'],
-    // raw: true
-  });
+  const whereClause = where.length > 0 ? `WHERE ${where.join(' AND ')}` : '';
 
-  return result;
+    const [result] = await sequelize.query(`
+      SELECT
+          s.name AS "seasonName",
+          s.id AS "seasonId",
+          COUNT(gb.id) AS sold,
+          COALESCE(
+            SUM(
+              CASE
+                WHEN gb.old_weight IS NOT NULL THEN CAST(gb.old_weight AS DOUBLE PRECISION)
+                ELSE CAST(gb.weight AS DOUBLE PRECISION)
+              END
+            ), 0
+        ) AS "lintSold"
+      FROM
+          "gin-bales" gb
+      LEFT JOIN 
+          bale_selections bs ON gb.id = bs.bale_id
+      LEFT JOIN 
+          gin_sales gs ON gs.id = bs.sales_id
+      LEFT JOIN 
+          gin_processes gp ON gb.process_id = gp.id
+      LEFT JOIN
+          ginners g ON gp.ginner_id = g.id
+      LEFT JOIN
+          seasons s ON gp.season_id = s.id
+      LEFT JOIN
+          programs pr ON gp.program_id = pr.id
+      ${whereClause}
+      GROUP BY
+          s.id
+      ORDER BY "seasonId" DESC`)
 
+  return result
 };
-
 
 const getBaleComparisonRes = async (
   procuredData: any[],
@@ -1281,8 +1365,8 @@ const getBaleComparisonRes = async (
   });
 
   soldData.forEach((processed: any) => {
-    if (!seasonIds.includes(processed.dataValues.seasonId))
-      seasonIds.push(processed.dataValues.seasonId);
+    if (!seasonIds.includes(processed.seasonId))
+      seasonIds.push(processed.seasonId);
   });
 
   const seasons = await Season.findAll({
@@ -1316,7 +1400,7 @@ const getBaleComparisonRes = async (
       production.dataValues.seasonId == sessionId
     );
     const fSold = soldData.find((processed: any) =>
-      processed.dataValues.seasonId == sessionId
+      processed.seasonId == sessionId
     );
     let data = {
       seasonName: '',
@@ -1330,8 +1414,8 @@ const getBaleComparisonRes = async (
     }
 
     if (fSold) {
-      data.seasonName = fSold.dataValues.seasonName;
-      data.sold = formatNumber(fSold.dataValues.sold);
+      data.seasonName = fSold.seasonName;
+      data.sold = formatNumber(fSold.sold);
     }
 
     data.stock =
@@ -1485,14 +1569,32 @@ const getTopGinnersRes = (
   };
 };
 
+const getTopGinnersSoldRes = (
+  list: any[]
+) => {
+  const ginners: string[] = [];
+  const count: number[] = [];
+  for (const row of list) {
+    if (row) {
+      ginners.push(row.ginnerName);
+      count.push(mtConversion(row.total));
+    }
+  }
+
+  return {
+    ginners,
+    count
+  };
+};
+
 const getLintSoldTopGinners = async (
   req: Request, res: Response
 ) => {
   try {
     const reqData = await getQueryParams(req, res);
-    const baleSel = getGinnerSalesWhereQuery(reqData);
+    const baleSel = getBaleSelLintSoldQuery(reqData);
     const ginnersData = await getLintSoldTopGinnersData(baleSel);
-    const data = await getTopGinnersRes(ginnersData);
+    const data = await getTopGinnersSoldRes(ginnersData);
     return res.sendSuccess(res, data);
 
   } catch (error: any) {
@@ -1507,47 +1609,48 @@ const getLintSoldTopGinnersData = async (
   where: any
 ) => {
 
-  where['$ginner.name$'] = {
-    [Op.not]: null
-  };
+  where.push(`gs.status in ('Pending', 'Pending for QR scanning', 'Partially Accepted', 'Partially Rejected','Sold')`)
 
-  where.status = 'Sold';
-
-    const result = await GinSales.findAll({
-    attributes: [
-      [Sequelize.col('ginner.name'), 'ginnerName'], 
-      [Sequelize.fn('SUM', Sequelize.col('total_qty')), 'total'],
-    ],
-    include: [
-      {
-        model: Season,
-        as: 'season',
-        attributes: [] 
-      },
-      {
-        model: Ginner,
-        as: "ginner",
-        attributes: []
-      }
-    ],
-    where: {
-      id: {
-        [Op.in]: Sequelize.literal(`(
-          SELECT DISTINCT sales_id
-          FROM bale_selections
-        )`)
-      },
-      ...where
-    },
-    order: [['total', 'desc']],
-    limit: 10,
-    // limit: 3,
-    group: ['ginner.id'],
-    // raw: true
-  });
+  const whereClause = where.length > 0 ? `WHERE ${where.join(' AND ')}` : '';
+  try {
+    const [result] = await sequelize.query(`
+      SELECT
+          g.name AS "ginnerName",
+          g.id AS "ginnerId",
+          COUNT(gb.id) AS sold,
+          COALESCE(
+            SUM(
+              CASE
+                WHEN gb.old_weight IS NOT NULL THEN CAST(gb.old_weight AS DOUBLE PRECISION)
+                ELSE CAST(gb.weight AS DOUBLE PRECISION)
+              END
+            ), 0
+        ) AS "total"
+      FROM
+          "gin-bales" gb
+      LEFT JOIN 
+          bale_selections bs ON gb.id = bs.bale_id
+      LEFT JOIN 
+          gin_sales gs ON gs.id = bs.sales_id
+      LEFT JOIN 
+          gin_processes gp ON gb.process_id = gp.id
+      LEFT JOIN
+          ginners g ON gp.ginner_id = g.id
+      LEFT JOIN
+          seasons s ON gp.season_id = s.id
+      LEFT JOIN
+          programs pr ON gp.program_id = pr.id
+      ${whereClause}
+      GROUP BY
+          g.id
+      ORDER BY "total" DESC
+      LIMIT 10
+      `)
 
   return result;
-
+  } catch (error) {
+    console.log(error)
+  }
 };
 
 const getLintStockTopGinners = async (
@@ -1572,56 +1675,59 @@ const getLintStockTopGinnersData = async (
 ) => {
 
   const where: any = {};
-  const soldWhere: any = {};
+  const soldWhere: any = [];
+
+  if (reqData?.program){
+    where['$ginprocess.program_id$'] = reqData.program;
+    soldWhere.push(`gp.program_id IN (${reqData.program})`);
+  }
 
   if (reqData?.country){
     where['$ginprocess.ginner.country_id$'] = reqData.country;
-    soldWhere['$ginner.country_id$'] = reqData.country;
+    soldWhere.push(`g.country_id IN (${reqData.country})`);
   }
 
   if (reqData?.brand){
     where['$ginprocess.ginner.brand$'] = {
       [Op.contains]: Sequelize.literal(`ARRAY [${reqData.brand}]`)
     };
-    soldWhere['$ginner.brand$'] = {
-      [Op.contains]: Sequelize.literal(`ARRAY [${reqData.brand}]`)
-    };
+    soldWhere.push(`g.brand && ARRAY[${reqData.brand}]`)
   }
 
 
   if (reqData?.season){
     where['$ginprocess.season_id$'] = reqData.season;
-    soldWhere.season_id = reqData.season;
+    soldWhere.push(`gp.season_id IN (${reqData.season})`);
   }
 
   if (reqData?.state){
     where['$ginprocess.ginner.state_id$'] = reqData.state;
-    soldWhere['$ginner.state_id$'] = reqData.state;
+    soldWhere.push(`g.state_id IN (${reqData.state})`);
   }
 
   if (reqData?.district){
     where['$ginprocess.ginner.district_id$'] = reqData.district;
-    soldWhere['$ginner.district_id$'] = reqData.district;
+    soldWhere.push(`g.district_id IN (${reqData.district})`);
   }
 
   if (reqData?.ginner){
     where['$ginprocess.ginner.id$'] = reqData.ginner;
-    soldWhere['$ginner.id$'] = reqData.spinner;
+    soldWhere.push(`gp.ginner_id IN (${reqData?.ginner})`);
   }
 
   if (reqData?.fromDate){
     where['$ginprocess.date$'] = { [Op.gte]: reqData.fromDate };
-    soldWhere.date = { [Op.gte]: reqData.fromDate };
+    soldWhere.push(`"gp"."date" >= ${reqData.fromDate}`);
   }
 
   if (reqData?.toDate){
     where['$ginprocess.date$'] = { [Op.lt]: reqData.toDate };
-    soldWhere.date = { [Op.lt]: reqData.toDate };
+    soldWhere.push(`"gp"."date" < ${reqData.toDate}`);
   }
 
   if (reqData?.fromDate && reqData?.toDate){
     where['$ginprocess.date$'] = { [Op.between]: [reqData.fromDate, reqData.toDate] };
-    soldWhere.date = { [Op.between]: [reqData.fromDate, reqData.toDate] };
+    soldWhere.push(`"gp"."date" BETWEEN '${reqData.fromDate}' AND '${reqData.toDate}'`);
   }
 
 
@@ -1629,10 +1735,11 @@ const getLintStockTopGinnersData = async (
   where['$ginprocess.ginner.name$'] = {
     [Op.not]: null
   };
-  soldWhere['$ginner.name$'] = {
-    [Op.not]: null
-  };
-  soldWhere.status = 'Sold';
+
+  soldWhere.push(`g.name IS NOT NULL`)
+  soldWhere.push(`gs.status in ('Pending', 'Pending for QR scanning', 'Partially Accepted', 'Partially Rejected','Sold')`)
+
+  const whereClause = soldWhere.length > 0 ? `WHERE ${soldWhere.join(' AND ')}` : '';
 
   const processedList = await GinBale.findAll({
     attributes: [
@@ -1672,38 +1779,34 @@ const getLintStockTopGinnersData = async (
     raw: true
   });
 
-  const soldList = await GinSales.findAll({
-    attributes: [
-      [Sequelize.col('ginner.name'), 'ginnerName'], 
-      [Sequelize.col('ginner.id'), 'id'], 
-      [Sequelize.fn('SUM', Sequelize.col('total_qty')), 'sold'],
-    ],
-    include: [
-      {
-        model: Season,
-        as: 'season',
-        attributes: [] 
-      },
-      {
-        model: Ginner,
-        as: "ginner",
-        attributes: []
-      }
-    ],
-    where: {
-      id: {
-        [Op.in]: Sequelize.literal(`(
-          SELECT DISTINCT sales_id
-          FROM bale_selections
-        )`)
-      },
-      ...soldWhere
-    },
-
-    // limit: 3,
-    group: ['ginner.id'],
-    raw: true
-  });
+  const [soldList] = await sequelize.query(`
+    SELECT
+        g.name AS "ginnerName",
+        g.id AS "id",
+        COALESCE(
+          SUM(
+            CASE
+              WHEN gb.old_weight IS NOT NULL THEN CAST(gb.old_weight AS DOUBLE PRECISION)
+              ELSE CAST(gb.weight AS DOUBLE PRECISION)
+            END
+          ), 0
+      ) AS "sold"
+    FROM
+        "gin-bales" gb
+    LEFT JOIN 
+        bale_selections bs ON gb.id = bs.bale_id
+    LEFT JOIN 
+        gin_sales gs ON gs.id = bs.sales_id
+    LEFT JOIN 
+        gin_processes gp ON gb.process_id = gp.id
+    LEFT JOIN
+        ginners g ON gp.ginner_id = g.id
+    LEFT JOIN
+        seasons s ON gp.season_id = s.id
+    ${whereClause}
+    GROUP BY
+        g.id
+    `)
 
   let ginnerIds = soldList.map((row: any) => row.id)
   ginnerIds = [...ginnerIds, ...processedList.map((row: any) => row.id)];
@@ -1845,7 +1948,7 @@ const getLintSoldByCountry = async (
   try {
 
     const reqData = await getQueryParams(req, res);
-    const ginBale = getGinnerSalesWhereQuery(reqData);
+    const ginBale = getBaleSelLintSoldQuery(reqData);
     const soldList = await getBaleSoldByCountryData(ginBale);
     const data = await getLintSoldRes(soldList, reqData.season);
     return res.sendSuccess(res, data);
@@ -1866,11 +1969,11 @@ const getLintSoldRes = async (
   let countries: number[] = [];
 
   soldList.forEach((list: any) => {
-    if (!countries.includes(list.dataValues.countryName))
-      countries.push(list.dataValues.countryName);
+    if (!countries.includes(list.countryName))
+      countries.push(list.countryName);
 
-    if (!seasonIds.includes(list.dataValues.seasonId))
-      seasonIds.push(list.dataValues.seasonId);
+    if (!seasonIds.includes(list.seasonId))
+      seasonIds.push(list.seasonId);
   });
 
   const seasons = await Season.findAll({
@@ -1903,20 +2006,20 @@ const getLintSoldRes = async (
       data: [],
     };
     const lSoldList = soldList.filter((list: any) =>
-      list.dataValues.countryName == countryName
+      list.countryName == countryName
     );
 
     for (const seasonId of seasonIds) {
 
       let totalArea = 0;
       const gSoldValue = lSoldList.find((list: any) =>
-        list.dataValues.seasonId == seasonId
+        list.seasonId == seasonId
       );
 
       if (gSoldValue) {
-        totalArea = mtConversion(gSoldValue.dataValues.lintSold);
-        if (!seasonList.includes(gSoldValue.dataValues.seasonName))
-          seasonList.push(gSoldValue.dataValues.seasonName);
+        totalArea = mtConversion(gSoldValue.lintSold);
+        if (!seasonList.includes(gSoldValue.seasonName))
+          seasonList.push(gSoldValue.seasonName);
       } else {
         seasons.forEach((season: any) => {
           if (season.id == seasonId && !seasonList.includes(season.seasonName)) {
@@ -2682,7 +2785,7 @@ const getBalesSoldByCountry = async (
 
     const reqData = await getQueryParams(req, res);
     // const where = getBaleSelectionQuery(reqData);
-    const where = getGinnerSalesWhereQuery(reqData);
+    const where = getBaleSelLintSoldQuery(reqData);
     const processedData = await getBaleSoldByCountryData(where);
     const data = await getBaleSoldByCountryRes(processedData, reqData.season);
     return res.sendSuccess(res, data);
@@ -2704,11 +2807,11 @@ const getBaleSoldByCountryRes = async (
   let countries: number[] = [];
 
   processedCountList.forEach((list: any) => {
-    if (!countries.includes(list.dataValues.countryName))
-      countries.push(list.dataValues.countryName);
+    if (!countries.includes(list.countryName))
+      countries.push(list.countryName);
 
-    if (!seasonIds.includes(list.dataValues.seasonId))
-      seasonIds.push(list.dataValues.seasonId);
+    if (!seasonIds.includes(list.seasonId))
+      seasonIds.push(list.seasonId);
   });
 
   const seasons = await Season.findAll({
@@ -2741,20 +2844,20 @@ const getBaleSoldByCountryRes = async (
       data: [],
     };
     const farmerList = processedCountList.filter((list: any) =>
-      list.dataValues.countryName == countryName
+      list.countryName == countryName
     );
 
     for (const seasonId of seasonIds) {
 
       let farmerCount = 0;
       const fFarmerValue = farmerList.find((list: any) =>
-        list.dataValues.seasonId == seasonId
+        list.seasonId == seasonId
       );
 
       if (fFarmerValue) {
-         farmerCount = Math.round(Number(fFarmerValue.dataValues.sold));
-        if (!seasonList.includes(fFarmerValue.dataValues.seasonName))
-          seasonList.push(fFarmerValue.dataValues.seasonName);
+         farmerCount = Math.round(Number(fFarmerValue.sold));
+        if (!seasonList.includes(fFarmerValue.seasonName))
+          seasonList.push(fFarmerValue.seasonName);
       } else {
         seasons.forEach((season: any) => {
           if (season.id == seasonId && !seasonList.includes(season.seasonName)) {
@@ -2779,48 +2882,43 @@ const getBaleSoldByCountryData = async (
 ) => {
   // where.sold_status = true
 
-  where.status = 'Sold';
+  where.push(`gs.status in ('Pending', 'Pending for QR scanning', 'Partially Accepted', 'Partially Rejected','Sold')`)
 
-    const result = await GinSales.findAll({
-    attributes: [
-      [Sequelize.col('season.id'), 'seasonId'],   // season_id from Season
-      [Sequelize.col('season.name'), 'seasonName'], 
-      [Sequelize.col('ginner.country.id'), 'countryId'],
-      [Sequelize.col('ginner.country.county_name'), 'countryName'],
-      [Sequelize.fn('SUM', Sequelize.col('no_of_bales')), 'sold'],
-      [Sequelize.fn('SUM', Sequelize.col('total_qty')), 'lintSold'],
-    ],
-    include: [
-      {
-        model: Season,
-        as: 'season',
-        attributes: [] 
-      },
-      {
-        model: Ginner,
-        as: "ginner",
-        attributes: [],
-        include: [{
-          model: Country,
-          as: 'country',
-          attributes: []
-        }]
-      }
-    ],
-    where: {
-      id: {
-        [Op.in]: Sequelize.literal(`(
-          SELECT DISTINCT sales_id
-          FROM bale_selections
-        )`)
-      },
-      ...where
-    },
-    order: [['seasonId', 'desc']],
-    // limit: 3,
-    group: ['season.id', "ginner.country.id"],
-    // raw: true
-  });
+  const whereClause = where.length > 0 ? `WHERE ${where.join(' AND ')}` : '';
+
+    const [result] = await sequelize.query(`
+      SELECT
+          s.name AS "seasonName",
+          s.id AS "seasonId",
+          c.county_name AS "countryName",
+          c.id AS "countryId",
+          COUNT(gb.id) AS sold,
+          COALESCE(
+            SUM(
+              CASE
+                WHEN gb.old_weight IS NOT NULL THEN CAST(gb.old_weight AS DOUBLE PRECISION)
+                ELSE CAST(gb.weight AS DOUBLE PRECISION)
+              END
+            ), 0
+        ) AS "lintSold"
+      FROM
+          "gin-bales" gb
+      LEFT JOIN 
+          bale_selections bs ON gb.id = bs.bale_id
+      LEFT JOIN 
+          gin_sales gs ON gs.id = bs.sales_id
+      LEFT JOIN 
+          gin_processes gp ON gb.process_id = gp.id
+      LEFT JOIN
+          ginners g ON gp.ginner_id = g.id
+      LEFT JOIN
+          seasons s ON gp.season_id = s.id
+      LEFT JOIN
+          countries c ON g.country_id = c.id
+      ${whereClause}
+      GROUP BY
+          s.id, c.id
+      ORDER BY "seasonId" DESC`)
 
   return result;
 
@@ -2896,7 +2994,7 @@ const getBalesStockByCountry = async (
     // const processedData = await getBaleProcuredByCountryData(processWhere);
     const where = getBaleProducedQuery(reqData);
     const processedData = await getBaleNewProducedByCountryData(where);
-    const soldWhere = getGinnerSalesWhereQuery(reqData);
+    const soldWhere = getBaleSelLintSoldQuery(reqData);
     const soldData = await getBaleSoldByCountryData(soldWhere);
     const data = await getBaleStockDataRes(
       processedData,
@@ -2930,11 +3028,11 @@ const getBaleStockDataRes = async (
   });
 
   soldCountList.forEach((list: any) => {
-    if (!countries.includes(list.dataValues.countryName))
-      countries.push(list.dataValues.countryName);
+    if (!countries.includes(list.countryName))
+      countries.push(list.countryName);
 
-    if (!seasonIds.includes(list.dataValues.seasonId))
-      seasonIds.push(list.dataValues.seasonId);
+    if (!seasonIds.includes(list.seasonId))
+      seasonIds.push(list.seasonId);
   });
 
   const seasons = await Season.findAll({
@@ -2973,7 +3071,7 @@ const getBaleStockDataRes = async (
       list.dataValues.countryName == countryName
     );
     const fSoldList = soldCountList.filter((list: any) =>
-      list.dataValues.countryName == countryName
+      list.countryName == countryName
     );
 
 
@@ -2987,7 +3085,7 @@ const getBaleStockDataRes = async (
         list.dataValues.seasonId == seasonId
       );
       const fSoldValue = fSoldList.find((list: any) =>
-        list.dataValues.seasonId == seasonId
+        list.seasonId == seasonId
       );
       if (fProcuredValue) {
         farmerCount.procured = Math.round(Number(fProcuredValue.dataValues.procured));
@@ -2996,9 +3094,9 @@ const getBaleStockDataRes = async (
       }
 
       if (fSoldValue) {
-        farmerCount.sold = Math.round(Number(fSoldValue.dataValues.sold));
-        if (!seasonList.includes(fSoldValue.dataValues.seasonName))
-          seasonList.push(fSoldValue.dataValues.seasonName);
+        farmerCount.sold = Math.round(Number(fSoldValue.sold));
+        if (!seasonList.includes(fSoldValue.seasonName))
+          seasonList.push(fSoldValue.seasonName);
       }
       if (!fSoldValue && !fProcuredValue) {
         seasons.forEach((season: any) => {
@@ -3058,7 +3156,8 @@ const getGinGreyoutQtyStock = async ( req: Request, res: Response) =>{
     // const processedData = await getLintProcessedData(ginnerWhere);
     // const soldData = await getLintBaleSoldData(baleWhere);
 
-    const baleSel = await getGinnerSalesWhereQuery(reqData);
+    // const baleSel = await getGinnerSalesWhereQuery(reqData);
+    const baleSel =  getBaleSelLintSoldQuery(reqData);
     const processedData = await getBaleProcuredData(baleWhere);
     const soldData = await getBaleSoldData(baleSel);
     
@@ -3334,7 +3433,7 @@ const getGinGreyoutBaleStock = async ( req: Request, res: Response) =>{
     const baleWhere = await getGinBaleQuery(reqData);
     const ginBaleProduce = await getBaleProducedQuery(reqData);
     
-    const baleSel = await getGinnerSalesWhereQuery(reqData);
+    const baleSel = getBaleSelLintSoldQuery(reqData);
     const processedData = await getBaleNewProducedData(ginBaleProduce);
     // const processedData = await getBaleProcuredData(baleWhere);
     const soldData = await getBaleSoldData(baleSel);
