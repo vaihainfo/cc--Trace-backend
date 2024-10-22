@@ -85,7 +85,6 @@ router.get('/get-transactions', fetchTransactionsReport);
 router.get('/export-procurement-report', exportProcurementReport);
 router.get('/get-procured-quantities', fetchSumOfQtyPurchasedByProgram);
 
-
 router.get('/get-organic-integrity-report', getOrganicIntegrityReport);
 
 router.get('/get-validation-project-report', fetchValidationProjectReport);
