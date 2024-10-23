@@ -509,7 +509,7 @@ const generateSpinnerLintCottonStock = async () => {
 
 
   whereCondition.push(`gs.status IN ('Sold', 'Partially Accepted', 'Partially Rejected')`)
-  // sqlCondition.push(`gs.greyout_status IS NOT TRUE`)
+  whereCondition.push(`gs.greyout_status IS NOT TRUE`)
   whereCondition.push(`gs.qty_stock > 0`);
 
   const whereClause = whereCondition.length > 0 ? `WHERE ${whereCondition.join(' AND ')}` : '';
