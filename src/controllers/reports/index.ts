@@ -4677,39 +4677,26 @@ const fetchSpinSalesPagination = async (req: Request, res: Response) => {
 
     for await (let row of rows) {
 
-      // const [seedSeason] =  await sequelize.query(`
-      //   SELECT 
-      //        STRING_AGG(DISTINCT s.name, ', ') AS seasons
-      //     FROM
-      //       lint_selections ls
-      //     LEFT JOIN
-      //       gin_sales gs ON ls.lint_id = gs.id
-      //     LEFT JOIN
-      //       seasons s ON gs.season_id = s.id
-      //   WHERE 
-      //       ls.process_id IN (${row?.dataValues?.process_ids.join(',')}) 
-      //   `)
-
       let processIds = row?.dataValues?.process_ids && Array.isArray(row?.dataValues?.process_ids)
         ? row.dataValues.process_ids?.filter((id: any) => id !== null && id !== undefined)
         : [];
 
       let seedSeason = [];
 
-      if (processIds?.length > 0) {
-        [seedSeason] = await sequelize.query(`
-          SELECT 
-              STRING_AGG(DISTINCT s.name, ', ') AS seasons
-          FROM
-              lint_selections ls
-          LEFT JOIN
-              gin_sales gs ON ls.lint_id = gs.id
-          LEFT JOIN
-              seasons s ON gs.season_id = s.id
-          WHERE 
-              ls.process_id IN (${processIds?.join(',')})
-      `);
-      }
+      // if (processIds?.length > 0) {
+      //   [seedSeason] = await sequelize.query(`
+      //     SELECT 
+      //         STRING_AGG(DISTINCT s.name, ', ') AS seasons
+      //     FROM
+      //         lint_selections ls
+      //     LEFT JOIN
+      //         gin_sales gs ON ls.lint_id = gs.id
+      //     LEFT JOIN
+      //         seasons s ON gs.season_id = s.id
+      //     WHERE 
+      //         ls.process_id IN (${processIds?.join(',')})
+      // `);
+      // }
 
 
       let yarnCount: string = "";
@@ -4726,7 +4713,8 @@ const fetchSpinSalesPagination = async (req: Request, res: Response) => {
       }
       data.push({
         ...row.dataValues,
-        lint_consumed_seasons: seedSeason ? seedSeason[0]?.seasons : "",
+        // lint_consumed_seasons: seedSeason ? seedSeason[0]?.seasons : "",
+        lint_consumed_seasons: "",
         yarnCount,
       });
     }
@@ -5034,20 +5022,20 @@ const exportSpinnerSale = async (req: Request, res: Response) => {
 
         let seedSeason = [];
 
-        if (processIds?.length > 0) {
-          [seedSeason] = await sequelize.query(`
-          SELECT 
-              STRING_AGG(DISTINCT s.name, ', ') AS seasons
-          FROM
-              lint_selections ls
-          LEFT JOIN
-              gin_sales gs ON ls.lint_id = gs.id
-          LEFT JOIN
-              seasons s ON gs.season_id = s.id
-          WHERE 
-              ls.process_id IN (${processIds?.join(',')})
-      `);
-        }
+      //   if (processIds?.length > 0) {
+      //     [seedSeason] = await sequelize.query(`
+      //     SELECT 
+      //         STRING_AGG(DISTINCT s.name, ', ') AS seasons
+      //     FROM
+      //         lint_selections ls
+      //     LEFT JOIN
+      //         gin_sales gs ON ls.lint_id = gs.id
+      //     LEFT JOIN
+      //         seasons s ON gs.season_id = s.id
+      //     WHERE 
+      //         ls.process_id IN (${processIds?.join(',')})
+      // `);
+      //   }
 
 
         let rowValues;
@@ -5085,7 +5073,8 @@ const exportSpinnerSale = async (req: Request, res: Response) => {
             index: index + 1,
             createdAt: item.dataValues.createdAt ? item.dataValues.createdAt : "",
             date: item.dataValues.date ? formatDate(item.dataValues.date) : "",
-            lint_consumed_seasons: seedSeason ? seedSeason[0]?.seasons : "",
+            // lint_consumed_seasons: seedSeason ? seedSeason[0]?.seasons : "",
+            lint_consumed_seasons: "",
             season: item.dataValues.season_name ? item.dataValues.season_name : "",
             spinner: item.dataValues.spinner ? item.dataValues.spinner : "",
             buyer_id: item.dataValues.weaver
