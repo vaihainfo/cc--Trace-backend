@@ -1239,7 +1239,15 @@ const getTopYarnCountData = async (
       as: 'spinner',
       attributes: []
     }],
-    where,
+    where: {
+      id: {
+        [Op.in]: Sequelize.literal(`(
+          SELECT DISTINCT sales_id
+          FROM spin_process_yarn_selections
+        )`)
+      },
+      ...where
+    },
     order: [['qty', 'desc']],
     limit: 10,
     group: ['buyerName']
@@ -1339,7 +1347,15 @@ const getYarnTypeData = async (
       as: 'spinner',
       attributes: []
     }],
-    where,
+    where: {
+      id: {
+        [Op.in]: Sequelize.literal(`(
+          SELECT DISTINCT sales_id
+          FROM spin_process_yarn_selections
+        )`)
+      },
+      ...where
+    },
     order: [['qty', 'desc']],
     limit: 10,
     group: [
@@ -1585,7 +1601,15 @@ const getTopYarnSoldData = async (
       as: 'spinner',
       attributes: []
     }],
-    where,
+    where: {
+      id: {
+        [Op.in]: Sequelize.literal(`(
+          SELECT DISTINCT sales_id
+          FROM spin_process_yarn_selections
+        )`)
+      },
+      ...where
+    },
     order: [['sold', 'desc']],
     limit: 10,
     group: ['spinner.id']
