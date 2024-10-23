@@ -197,7 +197,6 @@ const getSpinnerProcessWhereQuery = (
 };
 
 
-
 const getSpinnerLintQuery = (
   reqData: any
 ) => {
@@ -371,7 +370,15 @@ const getTopFabricData = async (
       as: 'weaver',
       attributes: []
     }],
-    where,
+    where: {
+      id: {
+        [Op.in]: Sequelize.literal(`(
+          SELECT DISTINCT sales_id
+          FROM spin_process_yarn_selections
+        )`)
+      },
+      ...where
+    },
     order: [['total', 'desc']],
     limit: 15,
     group: ['sale_name']
@@ -822,7 +829,6 @@ const getYarnProcuredSoldRes = async (
 const getYarnSoldData = async (
   where: any
 ) => {
-
   const result = await SpinSales.findAll({
     attributes: [
       [Sequelize.fn('SUM', Sequelize.col('total_qty')), 'yarnSold'],
@@ -840,10 +846,17 @@ const getYarnSoldData = async (
     }],
     order: [['seasonId', 'desc']],
     // limit: 3,
-    where,
+    where: {
+          id: {
+            [Op.in]: Sequelize.literal(`(
+              SELECT DISTINCT sales_id
+              FROM spin_process_yarn_selections
+            )`)
+          },
+          ...where
+        },
     group: ['season.id']
   });
-
   return result;
 
 };
@@ -1018,12 +1031,18 @@ const getYarnSoldDataByMonth = async (
       as: 'spinner',
       attributes: []
     }],
-    where,
+    where: {
+      id: {
+        [Op.in]: Sequelize.literal(`(
+          SELECT DISTINCT sales_id
+          FROM spin_process_yarn_selections
+        )`)
+      },
+      ...where
+    },
     group: ['month', 'year']
   });
-
   return result;
-
 };
 
 const getYarnProcuredDataByMonth = async (
@@ -1220,7 +1239,15 @@ const getTopYarnCountData = async (
       as: 'spinner',
       attributes: []
     }],
-    where,
+    where: {
+      id: {
+        [Op.in]: Sequelize.literal(`(
+          SELECT DISTINCT sales_id
+          FROM spin_process_yarn_selections
+        )`)
+      },
+      ...where
+    },
     order: [['qty', 'desc']],
     limit: 10,
     group: ['buyerName']
@@ -1320,7 +1347,15 @@ const getYarnTypeData = async (
       as: 'spinner',
       attributes: []
     }],
-    where,
+    where: {
+      id: {
+        [Op.in]: Sequelize.literal(`(
+          SELECT DISTINCT sales_id
+          FROM spin_process_yarn_selections
+        )`)
+      },
+      ...where
+    },
     order: [['qty', 'desc']],
     limit: 10,
     group: [
@@ -1566,7 +1601,15 @@ const getTopYarnSoldData = async (
       as: 'spinner',
       attributes: []
     }],
-    where,
+    where: {
+      id: {
+        [Op.in]: Sequelize.literal(`(
+          SELECT DISTINCT sales_id
+          FROM spin_process_yarn_selections
+        )`)
+      },
+      ...where
+    },
     order: [['sold', 'desc']],
     limit: 10,
     group: ['spinner.id']
@@ -1786,7 +1829,7 @@ const getLintSoldByCountry = async (
   try {
 
     const reqData = await getQueryParams(req, res);
-    const where = getGinnerSalesWhereQuery(reqData);
+    const where = getBaleSelWhereQuery(reqData);
     const soldList = await getLintSoldByCountryData(where);
     const data = await getLintSoldByCountryRes(soldList, reqData.season);
     return res.sendSuccess(res, data);
@@ -1801,51 +1844,79 @@ const getLintSoldByCountry = async (
 
 
 const getLintSoldByCountryData = async (where: any) => {
-
-  where['$gin_sales.status$'] = { [Op.ne]: 'To be Submitted' };
-
-  const result = await GinSales.findAll({
+try {
+  const result = await BaleSelection.findAll({
     attributes: [
-      [Sequelize.col('season.id'), 'seasonId'],   // season_id from Season
-      [Sequelize.col('season.name'), 'seasonName'], 
-      [Sequelize.fn('SUM', Sequelize.col('total_qty')), 'sold'],
-      [Sequelize.col('buyerdata.country.id'), 'countryId'],
-      [Sequelize.col('buyerdata.country.county_name'), 'countryName'],
+      [Sequelize.col('sales.season.id'), 'seasonId'],   // season_id from Season
+      [Sequelize.col('sales.season.name'), 'seasonName'], 
+      [Sequelize.col('sales.buyerdata.country.id'), 'countryId'],   // season_id from Season
+      [Sequelize.col('sales.buyerdata.country.county_name'), 'countryName'], 
+        [
+          sequelize.fn(
+            "COALESCE",
+            sequelize.fn(
+              "SUM",
+              Sequelize.literal(`
+                CASE
+                  WHEN "bale"."accepted_weight" IS NOT NULL THEN "bale"."accepted_weight"
+                  ELSE CAST("bale"."weight" AS DOUBLE PRECISION)
+                END
+              `)
+            ),
+            0
+          ),
+          "sold",
+        ]
     ],
+    where: {
+        ...where,
+      "$sales.status$": { [Op.in]: ['Sold', 'Partially Accepted', 'Partially Rejected'] },
+      [Op.or]: [
+        { spinner_status: true },
+        {"$sales.status$": 'Sold'}
+      ]
+    },
     include: [
-      {
-        model: Season,
-        as: 'season',
-        attributes: [] 
-      },
-      {
-        model: Spinner,
-        as: 'buyerdata',
-        attributes: [],
-        include: [{
+        {
+            model: GinBale,
+            as: "bale",
+            attributes: []
+        },
+        {
+          model: GinSales,
+          as: "sales",
+          attributes: [],
+          include: [
+            {
+              model: Ginner,
+              as: 'ginner',
+              attributes: []
+            },
+            {
+                model: Season,
+                as: "season",
+                attributes: []
+            },
+            {
+                model: Spinner,
+                as: 'buyerdata',
+                attributes: [],
+                include: [{
                   model: Country,
                   as: 'country',
                   attributes: []
                 }]
-      }
-    ],
-    where: {
-      id: {
-        [Op.in]: Sequelize.literal(`(
-          SELECT DISTINCT sales_id
-          FROM bale_selections
-        )`)
+            }
+        ],
+          
       },
-      ...where
-    },
-    // order: [['seasonId', 'desc']],
-    // limit: 3,
-    group: ['buyerdata.country.id','season.id'],
-    // raw: true
-  });
-
-  
-  return result;
+    ],
+    group: ["sales.buyerdata.country.id", 'sales.season.id'],
+   })
+   return result;
+} catch (error) {
+  console.log(error)
+} 
 };
 
 
@@ -2110,7 +2181,15 @@ const getYarnSoldByCountryData = async (where: any) => {
       as: 'season',
       attributes: []
     }],
-    where,
+    where: {
+      id: {
+        [Op.in]: Sequelize.literal(`(
+          SELECT DISTINCT sales_id
+          FROM spin_process_yarn_selections
+        )`)
+      },
+      ...where
+    },
     group: ['spinner.country.id', 'season.id']
   });
 
