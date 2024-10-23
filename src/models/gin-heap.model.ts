@@ -52,19 +52,19 @@ const GinHeap = db.define('gin_heaps', {
     type: DataTypes.STRING
   },
   upload_heap_register: {
-    type: DataTypes.STRING
+    type: DataTypes.TEXT
   },
    weighbridge_village: {
-    type: DataTypes.STRING
+    type: DataTypes.TEXT
   },
    weighbridge_vehicle_no: {
-    type: DataTypes.STRING
+    type: DataTypes.TEXT
   },
    weighbridge_upload_recipt: {
-    type: DataTypes.STRING
+    type: DataTypes.TEXT
   },
    weighbridge_vehicle_photo: {
-    type: DataTypes.STRING
+    type: DataTypes.TEXT
   },
   estimated_heap: {
     type: DataTypes.DOUBLE
