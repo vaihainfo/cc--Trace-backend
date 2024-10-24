@@ -67,7 +67,7 @@ const uploadGinnerOrder = async (req: Request, res: Response) => {
                 fail.push({
                     success: false,
                     id: data.uploadDate ? data.uploadDate : '',
-                    message: "Program cannot be empty"
+                    message: "Programme cannot be empty"
                 })
             } else if (!data.confirmedBales) {
                 fail.push({
@@ -110,7 +110,7 @@ const uploadGinnerOrder = async (req: Request, res: Response) => {
                         fail.push({
                             success: false,
                             id: data.uploadDate ? data.uploadDate : '',
-                            message: "Program not found"
+                            message: "Programme not found"
                         })
                     }
                 }
@@ -271,7 +271,7 @@ const uploadGinnerExpectedSeed = async (req: Request, res: Response) => {
             } else if (!data.program) {
                 fail.push({
                     success: false,
-                    message: "Program cannot be empty"
+                    message: "Programme cannot be empty"
                 })
             } else if (!data.expectedSeedCotton) {
                 fail.push({
@@ -311,7 +311,7 @@ const uploadGinnerExpectedSeed = async (req: Request, res: Response) => {
                     if (!program) {
                         fail.push({
                             success: false,
-                            message: "Program not found"
+                            message: "Programme not found"
                         })
                     }
                 }
@@ -391,7 +391,16 @@ const uploadVillage = async (req: Request, res: Response) => {
                     village_latitude: 0,
                     village_longitude: 0
                 };
-                let village = await Village.findOne({ where: { block_id: req.body.blockId, village_name: data.village } })
+                let village = await Village.findOne({
+                    where:
+                    {
+                        block_id: req.body.blockId,
+                        village_name: {
+                            [Op.iLike]:
+                                data.village
+                        }
+                    }
+                })
                 if (village) {
                     fail.push({
                         success: false,
@@ -427,7 +436,7 @@ const uploadFarmer = async (req: Request, res: Response) => {
         if (!req.body.program) {
             fail.push({
                 success: false,
-                message: "Program cannot be empty"
+                message: "Programme cannot be empty"
             });
             let failedRecord = {
                 type: 'Farmer',
@@ -435,7 +444,7 @@ const uploadFarmer = async (req: Request, res: Response) => {
                 farmerCode: '',
                 farmerName: '',
                 body: {},
-                reason: "Program cannot be empty"
+                reason: "Programme cannot be empty"
             }
             saveFailedRecord(failedRecord)
             return res.sendSuccess(res, { pass, fail });
@@ -445,10 +454,11 @@ const uploadFarmer = async (req: Request, res: Response) => {
                     program_name: req.body.program
                 }
             });
+
             if (!program) {
                 fail.push({
                     success: false,
-                    message: "Program not found"
+                    message: "Programme not found"
                 })
                 let failedRecord = {
                     type: 'Farmer',
@@ -456,7 +466,7 @@ const uploadFarmer = async (req: Request, res: Response) => {
                     farmerCode: '',
                     farmerName: '',
                     body: {},
-                    reason: "Program not found"
+                    reason: "Programme not found"
                 }
                 saveFailedRecord(failedRecord)
                 return res.sendSuccess(res, { pass, fail });
@@ -500,6 +510,36 @@ const uploadFarmer = async (req: Request, res: Response) => {
                 saveFailedRecord(failedRecord)
                 return res.sendSuccess(res, { pass, fail });
             }
+
+            else {
+                let brandCheck;
+                if (req.body.brand) {
+                    brandCheck = await Brand.findOne({
+                        where: {
+                            programs_id: {
+                                [Op.contains]: [program.id]
+                            },
+                            id: brand.id
+                        }
+                    });
+                    if (!brandCheck) {
+                        fail.push({
+                            success: false,
+                            message: "Brand is not associated with the entered Programme"
+                        });
+                        let failedRecord = {
+                            type: 'Farmer',
+                            season: '',
+                            farmerCode: '',
+                            farmerName: '',
+                            body: {},
+                            reason: "Brand is not associated with the entered Programme"
+                        }
+                        saveFailedRecord(failedRecord)
+                        return res.sendSuccess(res, { pass, fail });
+                    }
+                }
+            }
         }
         if (!req.body.farmGroup) {
             fail.push({
@@ -538,6 +578,33 @@ const uploadFarmer = async (req: Request, res: Response) => {
                 }
                 saveFailedRecord(failedRecord)
                 return res.sendSuccess(res, { pass, fail });
+            }
+            else {
+                let farmCheck;
+                if (req.body.brand) {
+                    farmCheck = await FarmGroup.findOne({
+                        where: {
+                            brand_id: brand.id,
+                            id: farmGroup.id
+                        }
+                    });
+                    if (!farmCheck) {
+                        fail.push({
+                            success: false,
+                            message: "Farm Group is not associated with the entered brand"
+                        });
+                        let failedRecord = {
+                            type: 'Farmer',
+                            season: '',
+                            farmerCode: '',
+                            farmerName: '',
+                            body: {},
+                            reason: "Farm Group is not associated with the entered brand"
+                        }
+                        saveFailedRecord(failedRecord)
+                        return res.sendSuccess(res, { pass, fail });
+                    }
+                }
             }
         }
         if (!req.body.season) {
@@ -689,7 +756,7 @@ const uploadFarmer = async (req: Request, res: Response) => {
                 fail.push({
                     success: false,
                     data: { farmerCode: data.farmerCode, farmerName: data.firstName },
-                    message: "Tracenet Id is only for Organic Program"
+                    message: "Tracenet Id is only for Organic Programme"
                 });
                 let failedRecord = {
                     type: 'Farmer',
@@ -697,14 +764,14 @@ const uploadFarmer = async (req: Request, res: Response) => {
                     farmerCode: data.farmerCode ? data.farmerCode : '',
                     farmerName: data.firstName ? data.firstName : '',
                     body: { ...data },
-                    reason: "Tracenet Id is only for Organic Program"
+                    reason: "Tracenet Id is only for Organic Programme"
                 }
                 saveFailedRecord(failedRecord)
             } else if (program.program_name !== "Organic" && data.icsName) {
                 fail.push({
                     success: false,
                     data: { farmerCode: data.farmerCode, farmerName: data.firstName },
-                    message: "ICS name is only for Organic Program"
+                    message: "ICS name is only for Organic Programme"
                 })
                 let failedRecord = {
                     type: 'Farmer',
@@ -712,14 +779,14 @@ const uploadFarmer = async (req: Request, res: Response) => {
                     farmerCode: data.farmerCode ? data.farmerCode : '',
                     farmerName: data.firstName ? data.firstName : '',
                     body: { ...data },
-                    reason: "ICS name is only for Organic Program"
+                    reason: "ICS name is only for Organic Programme"
                 }
                 saveFailedRecord(failedRecord)
             } else if (program.program_name !== "Organic" && data.certStatus) {
                 fail.push({
                     success: false,
                     data: { farmerCode: data.farmerCode, farmerName: data.firstName },
-                    message: "Cert Status is only for Organic Program"
+                    message: "Cert Status is only for Organic Programme"
                 })
                 let failedRecord = {
                     type: 'Farmer',
@@ -727,7 +794,7 @@ const uploadFarmer = async (req: Request, res: Response) => {
                     farmerCode: data.farmerCode ? data.farmerCode : '',
                     farmerName: data.firstName ? data.firstName : '',
                     body: { ...data },
-                    reason: "Cert Status is only for Organic Program"
+                    reason: "Cert Status is only for Organic Programme"
                 }
                 saveFailedRecord(failedRecord)
             } else {
@@ -835,7 +902,10 @@ const uploadFarmer = async (req: Request, res: Response) => {
                                                     village = await Village.findOne({
                                                         where: {
                                                             block_id: block.id,
-                                                            village_name: data.village
+                                                            village_name: {
+                                                                [Op.iLike]:
+                                                                    data.village
+                                                            }
                                                         }
                                                     });
 
@@ -1879,7 +1949,7 @@ const uploadFarmGroupEvaluationData = async (req: Request, res: Response) => {
             } else if (!data.program_wise_no_farmers_in_other_sustain_cotton_program) {
                 fail.push({
                     success: false,
-                    message: "Program wise number of farmers in other sustainable cotton programs cannot be empty"
+                    message: "Programme wise number of farmers in other sustainable cotton programs cannot be empty"
                 });
             } else if (!data.total_number_of_current_ics) {
                 fail.push({
@@ -2242,7 +2312,7 @@ const uploadOrganicFarmer = async (req: Request, res: Response) => {
         if (!req.body.program) {
             fail.push({
                 success: false,
-                message: "Program cannot be empty"
+                message: "Programme cannot be empty"
             });
             return res.sendSuccess(res, { pass, fail });
         } else {
@@ -2251,7 +2321,7 @@ const uploadOrganicFarmer = async (req: Request, res: Response) => {
             if (!program) {
                 fail.push({
                     success: false,
-                    message: "Program not found"
+                    message: "Programme not found"
                 });
                 return res.sendSuccess(res, { pass, fail });
             }
@@ -2358,19 +2428,19 @@ const uploadOrganicFarmer = async (req: Request, res: Response) => {
                 fail.push({
                     success: false,
                     data: { farmerCode: data.farmerCode, farmerName: data.firstName },
-                    message: "Tracenet Id is only for Organic Program"
+                    message: "Tracenet Id is only for Organic Programme"
                 });
             } else if (program.program_name !== "Organic" && data.icsName) {
                 fail.push({
                     success: false,
                     data: { farmerCode: data.farmerCode, farmerName: data.firstName },
-                    message: "ICS name is only for Organic Program"
+                    message: "ICS name is only for Organic Programme"
                 });
             } else if (program.program_name !== "Organic" && data.certStatus) {
                 fail.push({
                     success: false,
                     data: { farmerCode: data.farmerCode, farmerName: data.firstName },
-                    message: "Cert Status is only for Organic Program"
+                    message: "Cert Status is only for Organic Programme"
                 });
             } else {
                 let country;
@@ -2439,7 +2509,10 @@ const uploadOrganicFarmer = async (req: Request, res: Response) => {
                                                     village = await Village.findOne({
                                                         where: {
                                                             block_id: block.id,
-                                                            village_name: data.village
+                                                            village_name: {
+                                                                [Op.iLike]:
+                                                                    data.village
+                                                            }
                                                         }
                                                     });
 

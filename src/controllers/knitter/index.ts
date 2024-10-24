@@ -811,7 +811,7 @@ const exportKnitterSale = async (req: Request, res: Response) => {
       "Date",
       "Season",
       "Sold To",
-      "Program",
+      "Programme",
       "Garment Order Reference",
       "Brand Order Reference",
       "Invoice No",
@@ -957,7 +957,7 @@ const exportKnitterProcess = async (req: Request, res: Response) => {
       "Fabric Reel Lot No",
       "Garment Order Reference",
       "Brand Order Reference",
-      "Program",
+      "Programme",
       "Job Details from garment",
       "Knit Fabric Type",
       "Fabric Net Weight in Kgs",
@@ -1733,7 +1733,6 @@ const _getKnitterProcessTracingChartData = async (query:any) => {
   );
 
   let key = Object.keys(whereCondition)[0];
-  console.log(whereCondition[key])
  return formatDataFromKnitter(whereCondition[key], knitters);
 };
 
@@ -1783,7 +1782,7 @@ const exportKnitterTransactionList = async (req: Request, res: Response) => {
     const headerRow = worksheet.addRow([
       "Sr No.", 'Date', 'Season', 'Spinner Name', 'Order Reference', 'Invoice Number',
       'Spin Lot No', 'Yarn REEL Lot No', 'Yarn Type', 'Yarn Count', 'No of Boxes', 'Box Id',
-      'Total Weight (Kgs)', 'Program', 'Vehicle No', 'Transaction Via Trader', 'Agent Details'
+      'Total Weight (Kgs)', 'Programme', 'Vehicle No', 'Transaction Via Trader', 'Agent Details'
     ]);
     headerRow.font = { bold: true };
     const whereCondition: any = {}

@@ -132,6 +132,15 @@ const SpinSales = db.define('spin_sales', {
   price: {
     type: DataTypes.DOUBLE
   },
+  letter_of_credit: {
+    type: DataTypes.ARRAY(DataTypes.TEXT)
+  },
+  logistics_documents: {
+    type: DataTypes.ARRAY(DataTypes.TEXT)
+  },
+  yarn_quality_test_reports: {
+    type: DataTypes.ARRAY(DataTypes.TEXT)
+  }
 });
 
 SpinSales.belongsTo(Spinner, {

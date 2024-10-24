@@ -131,9 +131,11 @@ const getTransactionDataQuery = (
     where.program_id = reqData.program;
 
   if (reqData?.brand)
-    where['$ginner.brand$'] = {
-      [Op.contains]: Sequelize.literal(`ARRAY [${reqData.brand}]`)
-    };
+    where.brand_id = reqData.brand;
+
+  // if (reqData?.brand)
+  //   where.brand_id = reqData.brand;
+
 
   if (reqData?.season)
     where.season_id = reqData.season;
@@ -217,6 +219,100 @@ const getGinBaleQuery = (
   return where;
 };
 
+const getBaleProducedQuery = (
+  reqData: any
+) => {
+  const where: any = {
+
+  };
+
+  //where['$ginprocess.status$'] = "Sold";
+  if (reqData?.program)
+    where.program_id = reqData.program;
+
+  if (reqData?.brand)
+    where['$ginner.brand$'] = {
+      [Op.contains]: Sequelize.literal(`ARRAY [${reqData.brand}]`)
+    };
+
+  if (reqData?.season)
+    where['$season_id$'] = reqData.season;
+  else
+    where['$season_id$'] = {
+      [Op.not]: null,
+    };
+
+  if (reqData?.country)
+    where['$ginner.country_id$'] = reqData.country;
+
+  if (reqData?.state)
+    where['$ginner.state_id$'] = reqData.state;
+
+  if (reqData?.district)
+    where['$ginner.district_id$'] = reqData.district;
+
+  if (reqData?.ginner)
+    where['$ginner.id$'] = reqData.ginner;
+
+  if (reqData?.fromDate)
+    where.date = { [Op.gte]: reqData.fromDate };
+
+  if (reqData?.toDate)
+    where.date = { [Op.lt]: reqData.toDate };
+
+  if (reqData?.fromDate && reqData?.toDate)
+    where.date = { [Op.between]: [reqData.fromDate, reqData.toDate] };
+
+  return where;
+};
+
+const getGinnerSalesWhereQuery = (
+  reqData: any
+) => {
+  const where: any = {
+    
+  };
+
+  if (reqData?.program)
+    where.program_id = reqData.program;
+
+  if (reqData?.brand)
+    where['$ginner.brand$'] = {
+      [Op.contains]: Sequelize.literal(`ARRAY [${reqData.brand}]`)
+    };
+
+  if (reqData?.season)
+    where.season_id = reqData.season;
+  else
+    where.season_id = {
+      [Op.not]: null,
+    };
+
+  if (reqData?.country)
+    where['$ginner.country_id$'] = reqData.country;
+
+  if (reqData?.state)
+    where['$ginner.state_id$'] = reqData.state;
+
+  if (reqData?.district)
+    where['$ginner.district_id$'] = reqData.district;
+
+  if (reqData?.spinner)
+    where['$ginner.id$'] = reqData.spinner;
+
+  if (reqData?.fromDate)
+    where.date = { [Op.gte]: reqData.fromDate };
+
+  if (reqData?.toDate)
+    where.date = { [Op.lt]: reqData.toDate };
+
+  if (reqData?.fromDate && reqData?.toDate)
+    where.date = { [Op.between]: [reqData.fromDate, reqData.toDate] };
+
+
+  return where;
+};
+
 
 const getBaleSelectionQuery = (
   reqData: any
@@ -262,6 +358,46 @@ const getBaleSelectionQuery = (
   return where;
 };
 
+const getBaleSelLintSoldQuery = (
+  reqData: any
+) => {
+  const where = [];
+
+  if (reqData?.program)
+    where.push(`gp.program_id IN (${reqData.program})`)
+
+  if (reqData?.brand)
+      where.push(`g.brand && ARRAY[${reqData.brand}]`)
+
+  if (reqData?.season){
+    where.push(`gp.season_id IN (${reqData.season})`)
+  }
+  else
+    where.push(`gp.season_id IS NOT NULL`)
+  
+  if (reqData?.country)
+    where.push(`g.country_id IN (${reqData.country})`)
+
+  if (reqData?.state)
+    where.push(`g.state_id IN (${reqData.state})`);
+
+  if (reqData?.district)
+    where.push(`g.district_id IN (${reqData.district})`);
+
+  if (reqData?.ginner)
+    where.push(`gp.ginner_id IN (${reqData?.ginner})`);
+
+  if (reqData?.fromDate)
+    where.push(`"gp"."date" >= ${reqData.fromDate}`);
+
+  if (reqData?.toDate)
+    where.push(`"gp"."date" < ${reqData.toDate}`);
+
+  if (reqData?.fromDate && reqData?.toDate)
+    where.push(`"gp"."date" BETWEEN '${reqData.fromDate}' AND '${reqData.toDate}'`);
+
+  return where;
+};
 
 const getTopVillagesData = async (
   where: any
@@ -376,7 +512,7 @@ const getTopSpinners = async (
     const reqData = await getQueryParams(req, res);
     const where = getOverAllDataQuery(reqData);
     const spinnersData = await getTopSpinnersData(where);
-    const data = getTopSpinnersRes(spinnersData);
+    const data = await getTopSpinnersRes(spinnersData);
     return res.sendSuccess(res, data);
 
   } catch (error: any) {
@@ -393,6 +529,9 @@ const getTopSpinnersData = async (
   where['$buyerdata.name$'] = {
     [Op.not]: null
   };
+  where.status = { [Op.in]: ['Pending', 'Pending for QR scanning', 'Partially Accepted', 'Partially Rejected','Sold'] }
+  // where.status = 'Sold';
+  
   const result = await GinSales.findAll({
     attributes: [
       [Sequelize.fn('SUM', Sequelize.col('gin_sales.total_qty')), 'total'],
@@ -455,8 +594,7 @@ const getProcuredProcessed = async (
     const processedData = await getLintProcessedData(ginnerWhere);
     const data = await getProcuredProcessedRes(
       procuredData,
-      processedData,
-      reqData.season
+      processedData
     );
     return res.sendSuccess(res, data);
 
@@ -472,7 +610,6 @@ const getProcuredProcessed = async (
 const getProcuredProcessedRes = async (
   procuredData: any[],
   processedData: any[],
-  reqSeason: any
 ) => {
   let seasonIds: number[] = [];
 
@@ -487,17 +624,24 @@ const getProcuredProcessedRes = async (
   });
 
   const seasons = await Season.findAll({
-    limit: 3,
+    // limit: 3,
     order: [
       ["id", "DESC"],
     ],
   });
-  if (seasonIds.length != 3 && !reqSeason) {
+  if (seasonIds.length != 3) {
     for (const season of seasons) {
-      if (!seasonIds.includes(season.id))
+      let currentDate = moment(); // Current date using moment
+      let checkDate = moment('2024-10-01'); // October 1st, 2024
+      
+      if (currentDate.isSameOrAfter(checkDate) && season.name === '2024-25' && !seasonIds.includes(season.id)) {
         seasonIds.push(season.id);
+      } else if(currentDate.isBefore(checkDate) && season.name === '2024-25' && seasonIds.includes(season.id)){
+        seasonIds = seasonIds.filter((id: number) => id != season.id)
+      }
     }
   }
+
 
   seasonIds = seasonIds.sort((a, b) => a - b).slice(-3);
 
@@ -572,7 +716,7 @@ const getLintProcessedData = async (
     }],
     where,
     order: [['seasonId', 'desc']],
-    limit: 3,
+    // limit: 3,
     group: ['season.id']
   });
 
@@ -601,7 +745,7 @@ const getProcuredProcessedData = async (
     }],
     where,
     order: [['seasonId', 'desc']],
-    limit: 3,
+    // limit: 3,
     group: ['season.id']
   });
 
@@ -616,7 +760,7 @@ const getLintProcuredSold = async (
   try {
     const reqData = await getQueryParams(req, res);
     const procuredWhere = await getGinBaleQuery(reqData);
-    const baleSel = getBaleSelectionQuery(reqData);
+    const baleSel = getBaleSelLintSoldQuery(reqData);
     const procuredData = await getBaleProcuredData(procuredWhere);
     const soldData = await getBaleSoldData(baleSel);
     const data = await getLintProcuredSoldRes(
@@ -646,24 +790,29 @@ const getLintProcuredSoldRes = async (
   });
 
   soldList.forEach((sold: any) => {
-    if (!seasonIds.includes(sold.dataValues.seasonId))
-      seasonIds.push(sold.dataValues.seasonId);
+    if (!seasonIds.includes(sold.seasonId))
+      seasonIds.push(sold.seasonId);
   });
 
 
   const seasons = await Season.findAll({
-    limit: 3,
+    // limit: 3,
     order: [
       ["id", "DESC"],
     ],
   });
   if (seasonIds.length != 3 && !reqSeason) {
     for (const season of seasons) {
-      if (!seasonIds.includes(season.id))
+      let currentDate = moment(); // Current date using moment
+      let checkDate = moment('2024-10-01'); // October 1st, 2024
+      
+      if (currentDate.isSameOrAfter(checkDate) && season.name === '2024-25' && !seasonIds.includes(season.id)) {
         seasonIds.push(season.id);
+      } else if(currentDate.isBefore(checkDate) && season.name === '2024-25' && seasonIds.includes(season.id)){
+        seasonIds = seasonIds.filter((id: number) => id != season.id)
+      }
     }
   }
-
   seasonIds = seasonIds.sort((a, b) => a - b).slice(-3);
 
   let season: any = [];
@@ -676,7 +825,7 @@ const getLintProcuredSoldRes = async (
       production.dataValues.seasonId == sessionId
     );
     const fSold = soldList.find((estimate: any) =>
-      estimate.dataValues.seasonId == sessionId
+      estimate.seasonId == sessionId
     );
     let data = {
       seasonName: '',
@@ -690,8 +839,8 @@ const getLintProcuredSoldRes = async (
     }
 
     if (fSold) {
-      data.seasonName = fSold.dataValues.seasonName;
-      data.sold = mtConversion(fSold.dataValues.lintSold);
+      data.seasonName = fSold.seasonName;
+      data.sold = mtConversion(fSold.lintSold);
     }
 
     data.stock = data.procured > data.sold ? Number((data.procured - data.sold).toFixed(2)) : 0;
@@ -736,14 +885,17 @@ const getLintProcuredDataByMonth = async (
       ],
       [
         sequelize.fn(
-          "COALESCE",
-          sequelize.fn(
-            "SUM",
-            sequelize.literal(
-              'CAST("gin-bales"."weight" AS DOUBLE PRECISION)'
-            )
-          ),
-          0
+              "COALESCE",
+        Sequelize.fn(
+          "SUM",
+          Sequelize.literal(`
+            CASE
+              WHEN "gin-bales"."old_weight" IS NOT NULL THEN CAST("gin-bales"."old_weight" AS DOUBLE PRECISION)
+              ELSE CAST("gin-bales"."weight" AS DOUBLE PRECISION)
+            END
+          `)
+        ),
+        0
         ),
         "lintProcured",
       ],
@@ -784,9 +936,12 @@ const getLintSoldDataByMonth = async (
           "COALESCE",
           sequelize.fn(
             "SUM",
-            sequelize.literal(
-              'CAST("bale"."weight" AS DOUBLE PRECISION)'
-            )
+            Sequelize.literal(`
+              CASE
+                WHEN "bale"."old_weight" IS NOT NULL THEN CAST("bale"."old_weight" AS DOUBLE PRECISION)
+                ELSE CAST("bale"."weight" AS DOUBLE PRECISION)
+              END
+            `)
           ),
           0
         ),
@@ -891,7 +1046,7 @@ const getDataAll = async (
         id: reqData.season ? reqData.season : '9'
       }
     });
-    reqData.season = seasonOne.id;
+    // reqData.season = seasonOne.id;
     const procuredWhere = await getGinBaleQuery(reqData); //yes
     const baleSel = getBaleSelectionQuery(reqData);
     const transactionWhere = getTransactionDataQuery(reqData);
@@ -901,7 +1056,7 @@ const getDataAll = async (
     const soldData = await getLintSoldDataByMonth(baleSel);
     const procuredProcessedData = await getProcuredDataByMonth(transactionWhere); 
 
-    const data = getDataAllRes(
+    const data = await getDataAllRes(
       procuredData, //yes
       soldData,
       procuredProcessedData,
@@ -995,8 +1150,9 @@ const getBaleComparison = async (
   try {
     const reqData = await getQueryParams(req, res);
     const ginBale = getGinBaleQuery(reqData);
-    const baleSel = getBaleSelectionQuery(reqData);
-    const procuredData = await getBaleProcuredData(ginBale);
+    const ginBaleProduce = await getBaleProducedQuery(reqData);
+    const baleSel = getBaleSelLintSoldQuery(reqData);
+    const procuredData = await getBaleNewProducedData(ginBaleProduce);
     const soldData = await getBaleSoldData(baleSel);
     const data = await getBaleComparisonRes(
       procuredData,
@@ -1012,6 +1168,40 @@ const getBaleComparison = async (
     return res.sendError(res, code);
   }
 };
+
+const getBaleNewProducedData = async( where: any) =>{
+
+  const result = await GinProcess.findAll({
+    attributes: [
+      [
+        Sequelize.fn(
+          "SUM",
+          Sequelize.literal(`
+            no_of_bales
+          `)
+        ),
+        "procured",
+      ],
+      [Sequelize.col('season.name'), 'seasonName'],
+      [Sequelize.col('season.id'), 'seasonId']
+    ],
+    include: [{
+      model: Season,
+      as: 'season',
+      attributes: []
+    }, {
+      model: Ginner,
+      as: 'ginner',
+      attributes: []
+    }],
+    where,
+    // limit: 3,
+    order: [['seasonId', 'desc']],
+    group: ["season.id"],
+  });
+
+  return result;
+}
 
 
 const getBaleProcuredData = async (
@@ -1029,14 +1219,17 @@ const getBaleProcuredData = async (
       ],
       [
         sequelize.fn(
-          "COALESCE",
-          sequelize.fn(
-            "SUM",
-            sequelize.literal(
-              'CAST("gin-bales"."weight" AS DOUBLE PRECISION)'
-            )
-          ),
-          0
+              "COALESCE",
+        Sequelize.fn(
+          "SUM",
+          Sequelize.literal(`
+            CASE
+              WHEN "gin-bales"."old_weight" IS NOT NULL THEN CAST("gin-bales"."old_weight" AS DOUBLE PRECISION)
+              ELSE CAST("gin-bales"."weight" AS DOUBLE PRECISION)
+            END
+          `)
+        ),
+        0
         ),
         "lintProcured",
       ],
@@ -1060,7 +1253,7 @@ const getBaleProcuredData = async (
       },
     ],
     where,
-    limit: 3,
+    // limit: 3,
     order: [['seasonId', 'desc']],
     group: ["ginprocess.season.id"],
   });
@@ -1070,63 +1263,93 @@ const getBaleProcuredData = async (
 
 
 
+// const getBaleSoldData = async (
+//   where: any
+// ) => {
+//   // where.sold_status = true
+//   where.status = 'Sold';
+
+//     const result = await GinSales.findAll({
+//     attributes: [
+//       [Sequelize.col('season.id'), 'seasonId'],   // season_id from Season
+//       [Sequelize.col('season.name'), 'seasonName'], 
+//       [Sequelize.fn('SUM', Sequelize.col('no_of_bales')), 'sold'],
+//       [Sequelize.fn('SUM', Sequelize.col('total_qty')), 'lintSold'],
+//     ],
+//     include: [
+//       {
+//         model: Season,
+//         as: 'season',
+//         attributes: [] 
+//       },
+//       {
+//         model: Ginner,
+//         as: "ginner",
+//         attributes: []
+//       }
+//     ],
+//     where: {
+//       id: {
+//         [Op.in]: Sequelize.literal(`(
+//           SELECT DISTINCT sales_id
+//           FROM bale_selections
+//         )`)
+//       },
+//       ...where
+//     },
+//     order: [['seasonId', 'desc']],
+//     // limit: 3,
+//     group: ['season.id'],
+//     // raw: true
+//   });
+
+//   return result;
+
+// };
+
 const getBaleSoldData = async (
   where: any
 ) => {
-  const result = await BaleSelection.findAll({
-    attributes: [
-      [
-        sequelize.fn(
-          "COALESCE",
-          sequelize.fn(
-            "SUM",
-            sequelize.literal(
-              'CAST("bale"."weight" AS DOUBLE PRECISION)'
-            )
-          ),
-          0
-        ),
-        "lintSold",
-      ],
-      [
-        sequelize.fn("COUNT", Sequelize.literal("DISTINCT bale_id")),
-        "sold",
-      ],
-      [Sequelize.col('sales.season.name'), 'seasonName'],
-      [Sequelize.col('sales.season.id'), 'seasonId']
-    ],
-    include: [
-      {
-        model: GinSales,
-        as: "sales",
-        attributes: [],
-        include: [{
-          model: Season,
-          as: 'season',
-          attributes: []
-        }, {
-          model: Ginner,
-          as: 'ginner',
-          attributes: []
-        }
-        ],
-      },
-      {
-        model: GinBale,
-        as: "bale",
-        attributes: [],
-      },
-    ],
-    where,
-    limit: 3,
-    order: [['seasonId', 'desc']],
-    group: ["sales.season.id"],
-  });
+  // where.sold_status = true
+  // where.status = 'Sold';
+  where.push(`gs.status in ('Pending', 'Pending for QR scanning', 'Partially Accepted', 'Partially Rejected','Sold')`)
 
-  return result;
+  const whereClause = where.length > 0 ? `WHERE ${where.join(' AND ')}` : '';
 
+    const [result] = await sequelize.query(`
+      SELECT
+          s.name AS "seasonName",
+          s.id AS "seasonId",
+          COUNT(gb.id) AS sold,
+          COALESCE(
+            SUM(
+              CASE
+                WHEN gb.old_weight IS NOT NULL THEN CAST(gb.old_weight AS DOUBLE PRECISION)
+                ELSE CAST(gb.weight AS DOUBLE PRECISION)
+              END
+            ), 0
+        ) AS "lintSold"
+      FROM
+          "gin-bales" gb
+      LEFT JOIN 
+          bale_selections bs ON gb.id = bs.bale_id
+      LEFT JOIN 
+          gin_sales gs ON gs.id = bs.sales_id
+      LEFT JOIN 
+          gin_processes gp ON gb.process_id = gp.id
+      LEFT JOIN
+          ginners g ON gp.ginner_id = g.id
+      LEFT JOIN
+          seasons s ON gp.season_id = s.id
+      LEFT JOIN
+          programs pr ON gp.program_id = pr.id
+      ${whereClause}
+      GROUP BY
+          s.id
+      ORDER BY "seasonId" DESC`)
+
+  return result
 };
-
 
 const getBaleComparisonRes = async (
   procuredData: any[],
@@ -1141,20 +1364,26 @@ const getBaleComparisonRes = async (
   });
 
   soldData.forEach((processed: any) => {
-    if (!seasonIds.includes(processed.dataValues.seasonId))
-      seasonIds.push(processed.dataValues.seasonId);
+    if (!seasonIds.includes(processed.seasonId))
+      seasonIds.push(processed.seasonId);
   });
 
   const seasons = await Season.findAll({
-    limit: 3,
+    // limit: 3,
     order: [
       ["id", "DESC"],
     ],
   });
   if (seasonIds.length != 3 && !reqSeason) {
     for (const season of seasons) {
-      if (!seasonIds.includes(season.id))
+      let currentDate = moment(); // Current date using moment
+      let checkDate = moment('2024-10-01'); // October 1st, 2024
+      
+      if (currentDate.isSameOrAfter(checkDate) && season.name === '2024-25' && !seasonIds.includes(season.id)) {
         seasonIds.push(season.id);
+      } else if(currentDate.isBefore(checkDate) && season.name === '2024-25' && seasonIds.includes(season.id)){
+        seasonIds = seasonIds.filter((id: number) => id != season.id)
+      }
     }
   }
 
@@ -1170,7 +1399,7 @@ const getBaleComparisonRes = async (
       production.dataValues.seasonId == sessionId
     );
     const fSold = soldData.find((processed: any) =>
-      processed.dataValues.seasonId == sessionId
+      processed.seasonId == sessionId
     );
     let data = {
       seasonName: '',
@@ -1184,8 +1413,8 @@ const getBaleComparisonRes = async (
     }
 
     if (fSold) {
-      data.seasonName = fSold.dataValues.seasonName;
-      data.sold = formatNumber(fSold.dataValues.sold);
+      data.seasonName = fSold.seasonName;
+      data.sold = formatNumber(fSold.sold);
     }
 
     data.stock =
@@ -1223,7 +1452,7 @@ const getLintProcessedTopGinners = async (
   try {
     const reqData = await getQueryParams(req, res);
     const ginnersData = await getLintProcessedTopGinnersData(reqData);
-    const data = getTopGinnersRes(ginnersData);
+    const data = await getTopGinnersRes(ginnersData);
     return res.sendSuccess(res, data);
 
   } catch (error: any) {
@@ -1244,22 +1473,56 @@ const getLintProcessedTopGinnersData = async (
   if (reqData?.country)
     where['$ginprocess.ginner.country_id$'] = reqData.country;
 
+  if (reqData?.brand){
+    where['$ginprocess.ginner.brand$'] = {
+      [Op.contains]: Sequelize.literal(`ARRAY [${reqData.brand}]`)
+    };
+  }
+
+
+  if (reqData?.season)
+    where['$ginprocess.season_id$'] = reqData.season;
+
+  if (reqData?.state)
+    where['$ginprocess.ginner.state_id$'] = reqData.state;
+
+  if (reqData?.district)
+    where['$ginprocess.ginner.district_id$'] = reqData.district;
+
+  if (reqData?.ginner)
+    where['$ginprocess.ginner.id$'] = reqData.ginner;
+
+  if (reqData?.fromDate)
+     where['$ginprocess.date$'] = { [Op.gte]: reqData.fromDate };
+
+  if (reqData?.toDate)
+     where['$ginprocess.date$'] = { [Op.lt]: reqData.toDate };
+
+  if (reqData?.fromDate && reqData?.toDate)
+     where['$ginprocess.date$'] = { [Op.between]: [reqData.fromDate, reqData.toDate] };
+
+
   where['$ginprocess.ginner.name$'] = {
     [Op.not]: null
   };
+
+
 
   const result = await GinBale.findAll({
     attributes: [
       [
         sequelize.fn(
-          "COALESCE",
-          sequelize.fn(
-            "SUM",
-            sequelize.literal(
-              'CAST("gin-bales"."weight" AS DOUBLE PRECISION)'
-            )
-          ),
-          0
+              "COALESCE",
+        Sequelize.fn(
+          "SUM",
+          Sequelize.literal(`
+            CASE
+              WHEN "gin-bales"."old_weight" IS NOT NULL THEN CAST("gin-bales"."old_weight" AS DOUBLE PRECISION)
+              ELSE CAST("gin-bales"."weight" AS DOUBLE PRECISION)
+            END
+          `)
+        ),
+        0
         ),
         "total",
       ],
@@ -1305,13 +1568,32 @@ const getTopGinnersRes = (
   };
 };
 
+const getTopGinnersSoldRes = (
+  list: any[]
+) => {
+  const ginners: string[] = [];
+  const count: number[] = [];
+  for (const row of list) {
+    if (row) {
+      ginners.push(row.ginnerName);
+      count.push(mtConversion(row.total));
+    }
+  }
+
+  return {
+    ginners,
+    count
+  };
+};
+
 const getLintSoldTopGinners = async (
   req: Request, res: Response
 ) => {
   try {
     const reqData = await getQueryParams(req, res);
-    const ginnersData = await getLintSoldTopGinnersData(reqData);
-    const data = getTopGinnersRes(ginnersData);
+    const baleSel = getBaleSelLintSoldQuery(reqData);
+    const ginnersData = await getLintSoldTopGinnersData(baleSel);
+    const data = await getTopGinnersSoldRes(ginnersData);
     return res.sendSuccess(res, data);
 
   } catch (error: any) {
@@ -1323,61 +1605,51 @@ const getLintSoldTopGinners = async (
 };
 
 const getLintSoldTopGinnersData = async (
-  reqData: any
+  where: any
 ) => {
-  const where: any = {
-  };
 
-  if (reqData?.country)
-    where['$sales.ginner.country_id$'] = reqData.country;
+  where.push(`gs.status in ('Pending', 'Pending for QR scanning', 'Partially Accepted', 'Partially Rejected','Sold')`)
 
-  where['$sales.ginner.name$'] = {
-    [Op.not]: null
-  };
-
-  const result = await BaleSelection.findAll({
-    attributes: [
-      [
-        sequelize.fn(
-          "COALESCE",
-          sequelize.fn(
-            "SUM",
-            sequelize.literal(
-              'CAST("bale"."weight" AS DOUBLE PRECISION)'
-            )
-          ),
-          0
-        ),
-        "total",
-      ],
-      [Sequelize.col('sales.ginner.name'), 'ginnerName']
-    ],
-    include: [
-      {
-        model: GinSales,
-        as: "sales",
-        attributes: [],
-        include: [{
-          model: Ginner,
-          as: 'ginner',
-          attributes: [],
-        }
-        ],
-      },
-      {
-        model: GinBale,
-        as: "bale",
-        attributes: [],
-      },
-    ],
-    where,
-    order: [['total', 'desc']],
-    limit: 10,
-    group: ["sales.ginner.id"],
-  });
+  const whereClause = where.length > 0 ? `WHERE ${where.join(' AND ')}` : '';
+  try {
+    const [result] = await sequelize.query(`
+      SELECT
+          g.name AS "ginnerName",
+          g.id AS "ginnerId",
+          COUNT(gb.id) AS sold,
+          COALESCE(
+            SUM(
+              CASE
+                WHEN gb.old_weight IS NOT NULL THEN CAST(gb.old_weight AS DOUBLE PRECISION)
+                ELSE CAST(gb.weight AS DOUBLE PRECISION)
+              END
+            ), 0
+        ) AS "total"
+      FROM
+          "gin-bales" gb
+      LEFT JOIN 
+          bale_selections bs ON gb.id = bs.bale_id
+      LEFT JOIN 
+          gin_sales gs ON gs.id = bs.sales_id
+      LEFT JOIN 
+          gin_processes gp ON gb.process_id = gp.id
+      LEFT JOIN
+          ginners g ON gp.ginner_id = g.id
+      LEFT JOIN
+          seasons s ON gp.season_id = s.id
+      LEFT JOIN
+          programs pr ON gp.program_id = pr.id
+      ${whereClause}
+      GROUP BY
+          g.id
+      ORDER BY "total" DESC
+      LIMIT 10
+      `)
 
   return result;
-
+  } catch (error) {
+    console.log(error)
+  }
 };
 
 const getLintStockTopGinners = async (
@@ -1386,7 +1658,7 @@ const getLintStockTopGinners = async (
   try {
     const reqData = await getQueryParams(req, res);
     const ginnersData = await getLintStockTopGinnersData(reqData);
-    const data = getLintStockTopGinnersRes(ginnersData);
+    const data = await getLintStockTopGinnersRes(ginnersData);
     return res.sendSuccess(res, data);
 
   } catch (error: any) {
@@ -1401,32 +1673,142 @@ const getLintStockTopGinnersData = async (
   reqData: any
 ) => {
 
+  const where: any = {};
+  const soldWhere: any = [];
 
-  const [processedList] = await sequelize.query(`
-    select g.name                                    as "ginnerName",
-         g.id                                      as "id",
-         sum(CAST(gbp.weight AS DOUBLE PRECISION)) as "processed"
-    from public.ginners g
-         left join public.gin_processes gp on gp.ginner_id = g.id
-         left join public."gin-bales" gbp on gbp.process_id = gp.id
-    where g.name is not null ${reqData?.country ? " and g.country_id = reqData?.country" : ""}
-    group by g.id; 
-    `);
+  if (reqData?.program){
+    where['$ginprocess.program_id$'] = reqData.program;
+    soldWhere.push(`gp.program_id IN (${reqData.program})`);
+  }
+
+  if (reqData?.country){
+    where['$ginprocess.ginner.country_id$'] = reqData.country;
+    soldWhere.push(`g.country_id IN (${reqData.country})`);
+  }
+
+  if (reqData?.brand){
+    where['$ginprocess.ginner.brand$'] = {
+      [Op.contains]: Sequelize.literal(`ARRAY [${reqData.brand}]`)
+    };
+    soldWhere.push(`g.brand && ARRAY[${reqData.brand}]`)
+  }
+
+
+  if (reqData?.season){
+    where['$ginprocess.season_id$'] = reqData.season;
+    soldWhere.push(`gp.season_id IN (${reqData.season})`);
+  }
+
+  if (reqData?.state){
+    where['$ginprocess.ginner.state_id$'] = reqData.state;
+    soldWhere.push(`g.state_id IN (${reqData.state})`);
+  }
+
+  if (reqData?.district){
+    where['$ginprocess.ginner.district_id$'] = reqData.district;
+    soldWhere.push(`g.district_id IN (${reqData.district})`);
+  }
+
+  if (reqData?.ginner){
+    where['$ginprocess.ginner.id$'] = reqData.ginner;
+    soldWhere.push(`gp.ginner_id IN (${reqData?.ginner})`);
+  }
+
+  if (reqData?.fromDate){
+    where['$ginprocess.date$'] = { [Op.gte]: reqData.fromDate };
+    soldWhere.push(`"gp"."date" >= ${reqData.fromDate}`);
+  }
+
+  if (reqData?.toDate){
+    where['$ginprocess.date$'] = { [Op.lt]: reqData.toDate };
+    soldWhere.push(`"gp"."date" < ${reqData.toDate}`);
+  }
+
+  if (reqData?.fromDate && reqData?.toDate){
+    where['$ginprocess.date$'] = { [Op.between]: [reqData.fromDate, reqData.toDate] };
+    soldWhere.push(`"gp"."date" BETWEEN '${reqData.fromDate}' AND '${reqData.toDate}'`);
+  }
+
+
+
+  where['$ginprocess.ginner.name$'] = {
+    [Op.not]: null
+  };
+
+  soldWhere.push(`g.name IS NOT NULL`)
+  soldWhere.push(`gs.status in ('Pending', 'Pending for QR scanning', 'Partially Accepted', 'Partially Rejected','Sold')`)
+
+  const whereClause = soldWhere.length > 0 ? `WHERE ${soldWhere.join(' AND ')}` : '';
+
+  const processedList = await GinBale.findAll({
+    attributes: [
+      [
+        sequelize.fn(
+              "COALESCE",
+        Sequelize.fn(
+          "SUM",
+          Sequelize.literal(`
+            CASE
+              WHEN "gin-bales"."old_weight" IS NOT NULL THEN CAST("gin-bales"."old_weight" AS DOUBLE PRECISION)
+              ELSE CAST("gin-bales"."weight" AS DOUBLE PRECISION)
+            END
+          `)
+        ),
+        0
+        ),
+        "processed",
+      ],
+      [Sequelize.col('ginprocess.ginner.name'), 'ginnerName'],
+      [Sequelize.col('ginprocess.ginner.id'), 'id']
+    ],
+    include: [
+      {
+        model: GinProcess,
+        as: "ginprocess",
+        attributes: [],
+        include: [{
+          model: Ginner,
+          as: 'ginner',
+          attributes: []
+        }],
+      },
+    ],
+    where,
+    group: ["ginprocess.ginner.id"],
+    raw: true
+  });
 
   const [soldList] = await sequelize.query(`
-      select g.name                                   as "ginnerName",
-         g.id                                      as "id",
-        sum(CAST(gb.weight AS DOUBLE PRECISION)) as "sold"
-      from public.ginners g
-         left join public.gin_sales gs on g.id = gs.ginner_id
-         left join public.bale_selections bs on bs.sales_id = gs.id
-         left join public."gin-bales" gb on gb.id = bs.bale_id
-    where g.name is not null ${reqData?.country ? " and g.country_id = reqData?.country" : ""}
-    group by g.id;
-      `);
+    SELECT
+        g.name AS "ginnerName",
+        g.id AS "id",
+        COALESCE(
+          SUM(
+            CASE
+              WHEN gb.old_weight IS NOT NULL THEN CAST(gb.old_weight AS DOUBLE PRECISION)
+              ELSE CAST(gb.weight AS DOUBLE PRECISION)
+            END
+          ), 0
+      ) AS "sold"
+    FROM
+        "gin-bales" gb
+    LEFT JOIN 
+        bale_selections bs ON gb.id = bs.bale_id
+    LEFT JOIN 
+        gin_sales gs ON gs.id = bs.sales_id
+    LEFT JOIN 
+        gin_processes gp ON gb.process_id = gp.id
+    LEFT JOIN
+        ginners g ON gp.ginner_id = g.id
+    LEFT JOIN
+        seasons s ON gp.season_id = s.id
+    ${whereClause}
+    GROUP BY
+        g.id
+    `)
 
   let ginnerIds = soldList.map((row: any) => row.id)
-  ginnerIds.push([...processedList.map((row: any) => row.id)]);
+  ginnerIds = [...ginnerIds, ...processedList.map((row: any) => row.id)];
 
   ginnerIds = [...new Set(ginnerIds)];
   const data = []
@@ -1496,18 +1878,23 @@ const getLintProcessedRes = async (
   });
 
   const seasons = await Season.findAll({
-    limit: 3,
+    // limit: 3,
     order: [
       ["id", "DESC"],
     ],
   });
   if (seasonIds.length != 3 && !reqSeason) {
     for (const season of seasons) {
-      if (!seasonIds.includes(season.id))
+      let currentDate = moment(); // Current date using moment
+      let checkDate = moment('2024-10-01'); // October 1st, 2024
+      
+      if (currentDate.isSameOrAfter(checkDate) && season.name === '2024-25' && !seasonIds.includes(season.id)) {
         seasonIds.push(season.id);
+      } else if(currentDate.isBefore(checkDate) && season.name === '2024-25' && seasonIds.includes(season.id)){
+        seasonIds = seasonIds.filter((id: number) => id != season.id)
+      }
     }
   }
-
   seasonIds = seasonIds.sort((a, b) => a - b).slice(-3);
 
   let seasonList: any[] = [];
@@ -1560,8 +1947,8 @@ const getLintSoldByCountry = async (
   try {
 
     const reqData = await getQueryParams(req, res);
-    const where = getBaleSelectionQuery(reqData);
-    const soldList = await getBaleSoldByCountryData(where);
+    const ginBale = getBaleSelLintSoldQuery(reqData);
+    const soldList = await getBaleSoldByCountryData(ginBale);
     const data = await getLintSoldRes(soldList, reqData.season);
     return res.sendSuccess(res, data);
 
@@ -1581,26 +1968,31 @@ const getLintSoldRes = async (
   let countries: number[] = [];
 
   soldList.forEach((list: any) => {
-    if (!countries.includes(list.dataValues.countryName))
-      countries.push(list.dataValues.countryName);
+    if (!countries.includes(list.countryName))
+      countries.push(list.countryName);
 
-    if (!seasonIds.includes(list.dataValues.seasonId))
-      seasonIds.push(list.dataValues.seasonId);
+    if (!seasonIds.includes(list.seasonId))
+      seasonIds.push(list.seasonId);
   });
 
   const seasons = await Season.findAll({
-    limit: 3,
+    // limit: 3,
     order: [
       ["id", "DESC"],
     ],
   });
   if (seasonIds.length != 3 && !reqSeason) {
     for (const season of seasons) {
-      if (!seasonIds.includes(season.id))
+      let currentDate = moment(); // Current date using moment
+      let checkDate = moment('2024-10-01'); // October 1st, 2024
+      
+      if (currentDate.isSameOrAfter(checkDate) && season.name === '2024-25' && !seasonIds.includes(season.id)) {
         seasonIds.push(season.id);
+      } else if(currentDate.isBefore(checkDate) && season.name === '2024-25' && seasonIds.includes(season.id)){
+        seasonIds = seasonIds.filter((id: number) => id != season.id)
+      }
     }
   }
-
   seasonIds = seasonIds.sort((a, b) => a - b).slice(-3);
 
   let seasonList: any[] = [];
@@ -1613,20 +2005,20 @@ const getLintSoldRes = async (
       data: [],
     };
     const lSoldList = soldList.filter((list: any) =>
-      list.dataValues.countryName == countryName
+      list.countryName == countryName
     );
 
     for (const seasonId of seasonIds) {
 
       let totalArea = 0;
       const gSoldValue = lSoldList.find((list: any) =>
-        list.dataValues.seasonId == seasonId
+        list.seasonId == seasonId
       );
 
       if (gSoldValue) {
-        totalArea = mtConversion(gSoldValue.dataValues.lintSold);
-        if (!seasonList.includes(gSoldValue.dataValues.seasonName))
-          seasonList.push(gSoldValue.dataValues.seasonName);
+        totalArea = mtConversion(gSoldValue.lintSold);
+        if (!seasonList.includes(gSoldValue.seasonName))
+          seasonList.push(gSoldValue.seasonName);
       } else {
         seasons.forEach((season: any) => {
           if (season.id == seasonId && !seasonList.includes(season.seasonName)) {
@@ -1654,7 +2046,8 @@ const getProcuredAllocated = async (
     const reqData = await getQueryParams(req, res);
     const where = getTransactionDataQuery(reqData);
     const allocationWhere = getGinnerAllocationQuery(reqData);
-    const procuredData = await getProcuredProcessedData(where);
+    const transactionWhere = getTransactionDataQuery(reqData);
+    const procuredData = await getProcuredProcessedData(transactionWhere);
     const allocatedData = await getAllocatedData(allocationWhere);
     const data = await getProcuredAllocatedRes(
       procuredData,
@@ -1692,7 +2085,7 @@ const getAllocatedData = async (
     }],
     where,
     order: [['seasonId', 'desc']],
-    limit: 3,
+    // limit: 3,
     group: ['season.id']
   });
 
@@ -1718,15 +2111,21 @@ const getProcuredAllocatedRes = async (
   });
 
   const seasons = await Season.findAll({
-    limit: 3,
+    // limit: 3,
     order: [
       ["id", "DESC"],
     ],
   });
   if (seasonIds.length != 3 && !reqSeason) {
     for (const season of seasons) {
-      if (!seasonIds.includes(season.id))
+      let currentDate = moment(); // Current date using moment
+      let checkDate = moment('2024-10-01'); // October 1st, 2024
+      
+      if (currentDate.isSameOrAfter(checkDate) && season.name === '2024-25' && !seasonIds.includes(season.id)) {
         seasonIds.push(season.id);
+      } else if(currentDate.isBefore(checkDate) && season.name === '2024-25' && seasonIds.includes(season.id)){
+        seasonIds = seasonIds.filter((id: number) => id != season.id)
+      }
     }
   }
 
@@ -1851,15 +2250,21 @@ const getOutturnCountryRes = async (
   });
 
   const seasons = await Season.findAll({
-    limit: 3,
+    // limit: 3,
     order: [
       ["id", "DESC"],
     ],
   });
   if (seasonIds.length != 3 && !reqSeason) {
     for (const season of seasons) {
-      if (!seasonIds.includes(season.id))
+      let currentDate = moment(); // Current date using moment
+      let checkDate = moment('2024-10-01'); // October 1st, 2024
+      
+      if (currentDate.isSameOrAfter(checkDate) && season.name === '2024-25' && !seasonIds.includes(season.id)) {
         seasonIds.push(season.id);
+      } else if(currentDate.isBefore(checkDate) && season.name === '2024-25' && seasonIds.includes(season.id)){
+        seasonIds = seasonIds.filter((id: number) => id != season.id)
+      }
     }
   }
 
@@ -1978,15 +2383,21 @@ const getProcuredDataRes = async (
   });
 
   const seasons = await Season.findAll({
-    limit: 3,
+    // limit: 3,
     order: [
       ["id", "DESC"],
     ],
   });
   if (seasonIds.length != 3 && !reqSeason) {
     for (const season of seasons) {
-      if (!seasonIds.includes(season.id))
+      let currentDate = moment(); // Current date using moment
+      let checkDate = moment('2024-10-01'); // October 1st, 2024
+      
+      if (currentDate.isSameOrAfter(checkDate) && season.name === '2024-25' && !seasonIds.includes(season.id)) {
         seasonIds.push(season.id);
+      } else if(currentDate.isBefore(checkDate) && season.name === '2024-25' && seasonIds.includes(season.id)){
+        seasonIds = seasonIds.filter((id: number) => id != season.id)
+      }
     }
   }
 
@@ -2104,17 +2515,24 @@ const getProcessedDataRes = async (
   });
 
   const seasons = await Season.findAll({
-    limit: 3,
+    // limit: 3,
     order: [
       ["id", "DESC"],
     ],
   });
   if (seasonIds.length != 3 && !reqSeason) {
     for (const season of seasons) {
-      if (!seasonIds.includes(season.id))
+      let currentDate = moment(); // Current date using moment
+      let checkDate = moment('2024-10-01'); // October 1st, 2024
+      
+      if (currentDate.isSameOrAfter(checkDate) && season.name === '2024-25' && !seasonIds.includes(season.id)) {
         seasonIds.push(season.id);
+      } else if(currentDate.isBefore(checkDate) && season.name === '2024-25' && seasonIds.includes(season.id)){
+        seasonIds = seasonIds.filter((id: number) => id != season.id)
+      }
     }
   }
+
 
   seasonIds = seasonIds.sort((a, b) => a - b).slice(-3);
 
@@ -2171,8 +2589,8 @@ const getBalesProcuredByCountry = async (
   try {
 
     const reqData = await getQueryParams(req, res);
-    const where = getGinBaleQuery(reqData);
-    const processedData = await getBaleProcuredByCountryData(where);
+    const where = getBaleProducedQuery(reqData);
+    const processedData = await getBaleNewProducedByCountryData(where);
     const data = await getBalesProcuredByCountryDataRes(processedData, reqData.season);
     return res.sendSuccess(res, data);
 
@@ -2201,18 +2619,23 @@ const getBalesProcuredByCountryDataRes = async (
   });
 
   const seasons = await Season.findAll({
-    limit: 3,
+    // limit: 3,
     order: [
       ["id", "DESC"],
     ],
   });
   if (seasonIds.length != 3 && !reqSeason) {
     for (const season of seasons) {
-      if (!seasonIds.includes(season.id))
+      let currentDate = moment(); // Current date using moment
+      let checkDate = moment('2024-10-01'); // October 1st, 2024
+      
+      if (currentDate.isSameOrAfter(checkDate) && season.name === '2024-25' && !seasonIds.includes(season.id)) {
         seasonIds.push(season.id);
+      } else if(currentDate.isBefore(checkDate) && season.name === '2024-25' && seasonIds.includes(season.id)){
+        seasonIds = seasonIds.filter((id: number) => id != season.id)
+      }
     }
   }
-
   seasonIds = seasonIds.sort((a, b) => a - b).slice(-3);
 
   let seasonList: any[] = [];
@@ -2257,19 +2680,64 @@ const getBalesProcuredByCountryDataRes = async (
   };
 };
 
+const getBaleNewProducedByCountryData = async( where: any) =>{
+
+  const result = await GinProcess.findAll({
+    attributes: [
+      [
+        Sequelize.fn(
+          "SUM",
+          Sequelize.literal(`
+            no_of_bales
+          `)
+        ),
+        "procured",
+      ],
+      [Sequelize.col('season.name'), 'seasonName'],
+      [Sequelize.col('season.id'), 'seasonId'],
+      [Sequelize.col('ginner.country.id'), 'countryId'],
+      [Sequelize.col('ginner.country.county_name'), 'countryName']
+    ],
+    include: [{
+      model: Season,
+      as: 'season',
+      attributes: []
+    }, {
+      model: Ginner,
+      as: 'ginner',
+      attributes: [],
+      include: [{
+        model: Country,
+        as: 'country',
+        attributes: []
+      }]
+    }],
+    where,
+    // limit: 3,
+    order: [['seasonId', 'desc']],
+    group: ["season.id", "ginner.country.id"],
+  });
+
+  return result;
+}
+
+
 const getBaleProcuredByCountryData = async (where: any) => {
   const result = await GinBale.findAll({
     attributes: [
       [
         sequelize.fn(
-          "COALESCE",
-          sequelize.fn(
-            "SUM",
-            sequelize.literal(
-              'CAST("gin-bales"."weight" AS DOUBLE PRECISION)'
-            )
-          ),
-          0
+              "COALESCE",
+        Sequelize.fn(
+          "SUM",
+          Sequelize.literal(`
+            CASE
+              WHEN "gin-bales"."old_weight" IS NOT NULL THEN CAST("gin-bales"."old_weight" AS DOUBLE PRECISION)
+              ELSE CAST("gin-bales"."weight" AS DOUBLE PRECISION)
+            END
+          `)
+        ),
+        0
         ),
         "lintProcured",
       ],
@@ -2314,7 +2782,8 @@ const getBalesSoldByCountry = async (
   try {
 
     const reqData = await getQueryParams(req, res);
-    const where = getBaleSelectionQuery(reqData);
+    // const where = getBaleSelectionQuery(reqData);
+    const where = getBaleSelLintSoldQuery(reqData);
     const processedData = await getBaleSoldByCountryData(where);
     const data = await getBaleSoldByCountryRes(processedData, reqData.season);
     return res.sendSuccess(res, data);
@@ -2336,23 +2805,29 @@ const getBaleSoldByCountryRes = async (
   let countries: number[] = [];
 
   processedCountList.forEach((list: any) => {
-    if (!countries.includes(list.dataValues.countryName))
-      countries.push(list.dataValues.countryName);
+    if (!countries.includes(list.countryName))
+      countries.push(list.countryName);
 
-    if (!seasonIds.includes(list.dataValues.seasonId))
-      seasonIds.push(list.dataValues.seasonId);
+    if (!seasonIds.includes(list.seasonId))
+      seasonIds.push(list.seasonId);
   });
 
   const seasons = await Season.findAll({
-    limit: 3,
+    // limit: 3,
     order: [
       ["id", "DESC"],
     ],
   });
   if (seasonIds.length != 3 && !reqSeason) {
     for (const season of seasons) {
-      if (!seasonIds.includes(season.id))
+      let currentDate = moment(); // Current date using moment
+      let checkDate = moment('2024-10-01'); // October 1st, 2024
+      
+      if (currentDate.isSameOrAfter(checkDate) && season.name === '2024-25' && !seasonIds.includes(season.id)) {
         seasonIds.push(season.id);
+      } else if(currentDate.isBefore(checkDate) && season.name === '2024-25' && seasonIds.includes(season.id)){
+        seasonIds = seasonIds.filter((id: number) => id != season.id)
+      }
     }
   }
 
@@ -2367,20 +2842,20 @@ const getBaleSoldByCountryRes = async (
       data: [],
     };
     const farmerList = processedCountList.filter((list: any) =>
-      list.dataValues.countryName == countryName
+      list.countryName == countryName
     );
 
     for (const seasonId of seasonIds) {
 
       let farmerCount = 0;
       const fFarmerValue = farmerList.find((list: any) =>
-        list.dataValues.seasonId == seasonId
+        list.seasonId == seasonId
       );
 
       if (fFarmerValue) {
-         farmerCount = Math.round(Number(fFarmerValue.dataValues.sold));
-        if (!seasonList.includes(fFarmerValue.dataValues.seasonName))
-          seasonList.push(fFarmerValue.dataValues.seasonName);
+         farmerCount = Math.round(Number(fFarmerValue.sold));
+        if (!seasonList.includes(fFarmerValue.seasonName))
+          seasonList.push(fFarmerValue.seasonName);
       } else {
         seasons.forEach((season: any) => {
           if (season.id == seasonId && !seasonList.includes(season.seasonName)) {
@@ -2403,62 +2878,109 @@ const getBaleSoldByCountryRes = async (
 const getBaleSoldByCountryData = async (
   where: any
 ) => {
-  const result = await BaleSelection.findAll({
-    attributes: [
-      [
-        sequelize.fn(
-          "COALESCE",
-          sequelize.fn(
-            "SUM",
-            sequelize.literal(
-              'CAST("bale"."weight" AS DOUBLE PRECISION)'
-            )
-          ),
-          0
-        ),
-        "lintSold",
-      ],
-      [sequelize.fn("COUNT", Sequelize.literal("DISTINCT bale_id")), "sold"],
-      [Sequelize.col('sales.season.name'), 'seasonName'],
-      [Sequelize.col('sales.season.id'), 'seasonId'],
-      [Sequelize.col('sales.ginner.country.id'), 'countryId'],
-      [Sequelize.col('sales.ginner.country.county_name'), 'countryName']
-    ],
-    include: [
-      {
-        model: GinSales,
-        as: "sales",
-        attributes: [],
-        include: [{
-          model: Season,
-          as: 'season',
-          attributes: []
-        }, {
-          model: Ginner,
-          as: 'ginner',
-          attributes: [],
-          include: [{
-            model: Country,
-            as: 'country',
-            attributes: []
-          }]
-        }
-        ],
-      },
-      {
-        model: GinBale,
-        as: "bale",
-        attributes: [],
-      },
-    ],
-    where,
-    order: [['seasonId', 'desc']],
-    group: ["sales.season.id", "sales.ginner.country.id"],
-  });
+  // where.sold_status = true
+
+  where.push(`gs.status in ('Pending', 'Pending for QR scanning', 'Partially Accepted', 'Partially Rejected','Sold')`)
+
+  const whereClause = where.length > 0 ? `WHERE ${where.join(' AND ')}` : '';
+
+    const [result] = await sequelize.query(`
+      SELECT
+          s.name AS "seasonName",
+          s.id AS "seasonId",
+          c.county_name AS "countryName",
+          c.id AS "countryId",
+          COUNT(gb.id) AS sold,
+          COALESCE(
+            SUM(
+              CASE
+                WHEN gb.old_weight IS NOT NULL THEN CAST(gb.old_weight AS DOUBLE PRECISION)
+                ELSE CAST(gb.weight AS DOUBLE PRECISION)
+              END
+            ), 0
+        ) AS "lintSold"
+      FROM
+          "gin-bales" gb
+      LEFT JOIN 
+          bale_selections bs ON gb.id = bs.bale_id
+      LEFT JOIN 
+          gin_sales gs ON gs.id = bs.sales_id
+      LEFT JOIN 
+          gin_processes gp ON gb.process_id = gp.id
+      LEFT JOIN
+          ginners g ON gp.ginner_id = g.id
+      LEFT JOIN
+          seasons s ON gp.season_id = s.id
+      LEFT JOIN
+          countries c ON g.country_id = c.id
+      ${whereClause}
+      GROUP BY
+          s.id, c.id
+      ORDER BY "seasonId" DESC`)
 
   return result;
 
 };
+
+// const getBaleSoldByCountryData = async (
+//   where: any
+// ) => {
+//   const result = await BaleSelection.findAll({
+//     attributes: [
+//       [
+//         sequelize.fn(
+//           "COALESCE",
+//           sequelize.fn(
+//             "SUM",
+//             sequelize.literal(
+//               'CAST("bale"."weight" AS DOUBLE PRECISION)'
+//             )
+//           ),
+//           0
+//         ),
+//         "lintSold",
+//       ],
+//       [sequelize.fn("COUNT", Sequelize.literal("DISTINCT bale_id")), "sold"],
+//       [Sequelize.col('sales.season.name'), 'seasonName'],
+//       [Sequelize.col('sales.season.id'), 'seasonId'],
+//       [Sequelize.col('sales.ginner.country.id'), 'countryId'],
+//       [Sequelize.col('sales.ginner.country.county_name'), 'countryName']
+//     ],
+//     include: [
+//       {
+//         model: GinSales,
+//         as: "sales",
+//         attributes: [],
+//         include: [{
+//           model: Season,
+//           as: 'season',
+//           attributes: []
+//         }, {
+//           model: Ginner,
+//           as: 'ginner',
+//           attributes: [],
+//           include: [{
+//             model: Country,
+//             as: 'country',
+//             attributes: []
+//           }]
+//         }
+//         ],
+//       },
+//       {
+//         model: GinBale,
+//         as: "bale",
+//         attributes: [],
+//       },
+//     ],
+//     where,
+//     order: [['seasonId', 'desc']],
+//     group: ["sales.season.id", "sales.ginner.country.id"],
+//   });
+
+//   return result;
+
+// };
 
 const getBalesStockByCountry = async (
   req: Request, res: Response
@@ -2466,9 +2988,11 @@ const getBalesStockByCountry = async (
   try {
 
     const reqData = await getQueryParams(req, res);
-    const processWhere = getGinBaleQuery(reqData);
-    const processedData = await getBaleProcuredByCountryData(processWhere);
-    const soldWhere = getBaleSelectionQuery(reqData);
+    // const processWhere = getGinBaleQuery(reqData);
+    // const processedData = await getBaleProcuredByCountryData(processWhere);
+    const where = getBaleProducedQuery(reqData);
+    const processedData = await getBaleNewProducedByCountryData(where);
+    const soldWhere = getBaleSelLintSoldQuery(reqData);
     const soldData = await getBaleSoldByCountryData(soldWhere);
     const data = await getBaleStockDataRes(
       processedData,
@@ -2502,23 +3026,29 @@ const getBaleStockDataRes = async (
   });
 
   soldCountList.forEach((list: any) => {
-    if (!countries.includes(list.dataValues.countryName))
-      countries.push(list.dataValues.countryName);
+    if (!countries.includes(list.countryName))
+      countries.push(list.countryName);
 
-    if (!seasonIds.includes(list.dataValues.seasonId))
-      seasonIds.push(list.dataValues.seasonId);
+    if (!seasonIds.includes(list.seasonId))
+      seasonIds.push(list.seasonId);
   });
 
   const seasons = await Season.findAll({
-    limit: 3,
+    // limit: 3,
     order: [
       ["id", "DESC"],
     ],
   });
   if (seasonIds.length != 3 && !reqSeason) {
     for (const season of seasons) {
-      if (!seasonIds.includes(season.id))
+      let currentDate = moment(); // Current date using moment
+      let checkDate = moment('2024-10-01'); // October 1st, 2024
+      
+      if (currentDate.isSameOrAfter(checkDate) && season.name === '2024-25' && !seasonIds.includes(season.id)) {
         seasonIds.push(season.id);
+      } else if(currentDate.isBefore(checkDate) && season.name === '2024-25' && seasonIds.includes(season.id)){
+        seasonIds = seasonIds.filter((id: number) => id != season.id)
+      }
     }
   }
 
@@ -2539,7 +3069,7 @@ const getBaleStockDataRes = async (
       list.dataValues.countryName == countryName
     );
     const fSoldList = soldCountList.filter((list: any) =>
-      list.dataValues.countryName == countryName
+      list.countryName == countryName
     );
 
 
@@ -2553,7 +3083,7 @@ const getBaleStockDataRes = async (
         list.dataValues.seasonId == seasonId
       );
       const fSoldValue = fSoldList.find((list: any) =>
-        list.dataValues.seasonId == seasonId
+        list.seasonId == seasonId
       );
       if (fProcuredValue) {
         farmerCount.procured = Math.round(Number(fProcuredValue.dataValues.procured));
@@ -2562,9 +3092,9 @@ const getBaleStockDataRes = async (
       }
 
       if (fSoldValue) {
-        farmerCount.sold = Math.round(Number(fSoldValue.dataValues.sold));
-        if (!seasonList.includes(fSoldValue.dataValues.seasonName))
-          seasonList.push(fSoldValue.dataValues.seasonName);
+        farmerCount.sold = Math.round(Number(fSoldValue.sold));
+        if (!seasonList.includes(fSoldValue.seasonName))
+          seasonList.push(fSoldValue.seasonName);
       }
       if (!fSoldValue && !fProcuredValue) {
         seasons.forEach((season: any) => {
@@ -2616,6 +3146,439 @@ const getMonthName = (
   return monthNames[month];
 };
 
+const getGinGreyoutQtyStock = async ( req: Request, res: Response) =>{
+  try {
+    const reqData = await getQueryParams(req, res);
+    // const ginnerWhere = await getOverAllDataQuery(reqData);
+    const baleWhere = await getGinBaleQuery(reqData);
+    // const processedData = await getLintProcessedData(ginnerWhere);
+    // const soldData = await getLintBaleSoldData(baleWhere);
+
+    // const baleSel = await getGinnerSalesWhereQuery(reqData);
+    const baleSel =  getBaleSelLintSoldQuery(reqData);
+    const processedData = await getBaleProcuredData(baleWhere);
+    const soldData = await getBaleSoldData(baleSel);
+    
+    const greyoutData = await getLintBaleGreyoutData(baleWhere);
+
+
+    const data = await getLntQtyComparisonRes(
+      processedData,
+      soldData,
+      greyoutData,
+      reqData.season
+    );
+    return res.sendSuccess(res, data);
+
+  } catch (error: any) {
+    const code = error.message
+      ? error.message
+      : "ERR_INTERNAL_SERVER_ERROR";
+    return res.sendError(res, code);
+  }
+}
+
+const getLntQtyComparisonRes = async (
+  processedData: any[],
+  soldData: any[],
+  greyoutData: any[],
+  reqSeason: any
+) => {
+  let seasonIds: number[] = [];
+
+  processedData.forEach((procured: any) => {
+    if (procured.dataValues.seasonId)
+      seasonIds.push(procured.dataValues.seasonId);
+  });
+
+  soldData.forEach((processed: any) => {
+    if (!seasonIds.includes(processed.seasonId))
+      seasonIds.push(processed.seasonId);
+  });
+
+  greyoutData.forEach((processed: any) => {
+    if (!seasonIds.includes(processed.dataValues.seasonId))
+      seasonIds.push(processed.dataValues.seasonId);
+  });
+
+  const seasons = await Season.findAll({
+    // limit: 3,
+    order: [
+      ["id", "DESC"],
+    ],
+  });
+  if (seasonIds.length != 3 && !reqSeason) {
+    for (const season of seasons) {
+      let currentDate = moment(); // Current date using moment
+      let checkDate = moment('2024-10-01'); // October 1st, 2024
+      
+      if (currentDate.isSameOrAfter(checkDate) && season.name === '2024-25' && !seasonIds.includes(season.id)) {
+        seasonIds.push(season.id);
+      } else if(currentDate.isBefore(checkDate) && season.name === '2024-25' && seasonIds.includes(season.id)){
+        seasonIds = seasonIds.filter((id: number) => id != season.id)
+      }
+    }
+  }
+
+  seasonIds = seasonIds.sort((a, b) => a - b).slice(-3);
+
+  let season: any = [];
+  let processed: any = [];
+  let sold: any = [];
+  let total_stock: any = [];
+  let greyout_qty: any = [];
+  let actual_stock: any = [];
+
+  for (const sessionId of seasonIds) {
+    const fProcured = processedData.find((production: any) =>
+      production.dataValues.seasonId == sessionId
+    );
+    const fSold = soldData.find((processed: any) =>
+      processed.seasonId == sessionId
+    );
+
+    const fGreyout = greyoutData.find((processed: any) =>
+      processed.dataValues.seasonId == sessionId
+    );
+
+    let data = {
+      seasonName: '',
+      processed: 0,
+      sold: 0,
+      total_stock: 0,
+      greyout_qty: 0,
+      actual_stock: 0,
+    };
+    if (fProcured) {
+      data.seasonName = fProcured.dataValues.seasonName;
+      data.processed = mtConversion(fProcured.dataValues.lintProcured);
+    }
+
+    if (fSold) {
+      data.seasonName = fSold.seasonName;
+      data.sold = mtConversion(fSold.lintSold);
+    }
+
+    if (fGreyout) {
+      data.seasonName = fGreyout.dataValues.seasonName;
+      data.greyout_qty = mtConversion(fGreyout.dataValues.lint_qty);
+    }
+
+    data.total_stock =
+      data.processed > data.sold
+        ? Number((data.processed - data.sold).toFixed(2))
+        : 0;
+
+    data.actual_stock =
+      data.total_stock > data.greyout_qty
+        ? Number((data.total_stock - data.greyout_qty).toFixed(2))
+        : 0;
+
+    if (!data.seasonName) {
+      const fSeason = seasons.find((season: any) =>
+        season.id == sessionId
+      );
+      if (fSeason) {
+        data.seasonName = fSeason.name;
+      }
+    }
+
+    season.push(data.seasonName);
+    processed.push(data.processed);
+    greyout_qty.push(data.greyout_qty);
+    total_stock.push(data.total_stock);
+    actual_stock.push(data.actual_stock);
+    sold.push(data.sold);
+
+  }
+
+  return {
+    season,
+    processed,
+    sold,
+    total_stock,
+    greyout_qty,
+    actual_stock
+  };
+};
+
+
+
+const getLintBaleSoldData = async (
+  where: any
+) => {
+  where.sold_status = true
+  // where.status = 'Sold';
+
+  const result = await GinBale.findAll({
+    attributes: [
+      [
+        sequelize.fn(
+          "COUNT",
+          Sequelize.literal('DISTINCT "gin-bales"."id"')
+        ),
+        "baleSold",
+      ],
+      [
+        sequelize.fn(
+              "COALESCE",
+        Sequelize.fn(
+          "SUM",
+          Sequelize.literal(`
+            CASE
+              WHEN "gin-bales"."old_weight" IS NOT NULL THEN CAST("gin-bales"."old_weight" AS DOUBLE PRECISION)
+              ELSE CAST("gin-bales"."weight" AS DOUBLE PRECISION)
+            END
+          `)
+        ),
+        0
+        ),
+        "lintSold",
+      ],
+      [Sequelize.col('ginprocess.season.name'), 'seasonName'],
+      [Sequelize.col('ginprocess.season.id'), 'seasonId']
+    ],
+    include: [
+      {
+        model: GinProcess,
+        as: "ginprocess",
+        attributes: [],
+        include: [{
+          model: Season,
+          as: 'season',
+          attributes: []
+        }, {
+          model: Ginner,
+          as: 'ginner',
+          attributes: []
+        }],
+      },
+    ],
+    where,
+    // limit: 3,
+    order: [['seasonId', 'desc']],
+    group: ["ginprocess.season.id"],
+  });
+
+  return result;
+};
+
+const getLintBaleGreyoutData = async (
+  where: any
+) => {
+  where["$ginprocess.greyout_status$"] = true;
+  where.sold_status = false
+  where.is_all_rejected = null
+  // where.status = 'Sold';
+
+  const result = await GinBale.findAll({
+    attributes: [
+      [
+        sequelize.fn(
+          "COUNT",
+          Sequelize.literal('DISTINCT "gin-bales"."id"')
+        ),
+        "no_of_bales",
+      ],
+      [
+        sequelize.fn(
+              "COALESCE",
+        Sequelize.fn(
+          "SUM",
+          Sequelize.literal(`
+            CASE
+              WHEN "gin-bales"."old_weight" IS NOT NULL THEN CAST("gin-bales"."old_weight" AS DOUBLE PRECISION)
+              ELSE CAST("gin-bales"."weight" AS DOUBLE PRECISION)
+            END
+          `)
+        ),
+        0
+        ),
+        "lint_qty",
+      ],
+      [Sequelize.col('ginprocess.season.name'), 'seasonName'],
+      [Sequelize.col('ginprocess.season.id'), 'seasonId']
+    ],
+    include: [
+      {
+        model: GinProcess,
+        as: "ginprocess",
+        attributes: [],
+        include: [{
+          model: Season,
+          as: 'season',
+          attributes: []
+        }, {
+          model: Ginner,
+          as: 'ginner',
+          attributes: []
+        }],
+      },
+    ],
+    where,
+    // limit: 3,
+    order: [['seasonId', 'desc']],
+    group: ["ginprocess.season.id"],
+  });
+
+  return result;
+};
+
+const getGinGreyoutBaleStock = async ( req: Request, res: Response) =>{
+  try {
+    const reqData = await getQueryParams(req, res);
+    // const ginnerWhere = await getOverAllDataQuery(reqData);
+    const baleWhere = await getGinBaleQuery(reqData);
+    const ginBaleProduce = await getBaleProducedQuery(reqData);
+    
+    const baleSel = getBaleSelLintSoldQuery(reqData);
+    const processedData = await getBaleNewProducedData(ginBaleProduce);
+    // const processedData = await getBaleProcuredData(baleWhere);
+    const soldData = await getBaleSoldData(baleSel);
+    
+    const greyoutData = await getLintBaleGreyoutData(baleWhere);
+
+
+    const data = await getLintBaleComparisonRes(
+      processedData,
+      soldData,
+      greyoutData,
+      reqData.season
+    );
+    return res.sendSuccess(res, data);
+
+  } catch (error: any) {
+    const code = error.message
+      ? error.message
+      : "ERR_INTERNAL_SERVER_ERROR";
+    return res.sendError(res, code);
+  }
+}
+
+const getLintBaleComparisonRes = async (
+  processedData: any[],
+  soldData: any[],
+  greyoutData: any[],
+  reqSeason: any
+) => {
+  let seasonIds: number[] = [];
+
+  processedData.forEach((procured: any) => {
+    if (procured.dataValues.seasonId)
+      seasonIds.push(procured.dataValues.seasonId);
+  });
+
+  soldData.forEach((processed: any) => {
+    if (!seasonIds.includes(processed.seasonId))
+      seasonIds.push(processed.seasonId);
+  });
+
+  greyoutData.forEach((processed: any) => {
+    if (!seasonIds.includes(processed.dataValues.seasonId))
+      seasonIds.push(processed.dataValues.seasonId);
+  });
+
+  const seasons = await Season.findAll({
+    // limit: 3,
+    order: [
+      ["id", "DESC"],
+    ],
+  });
+  if (seasonIds.length != 3 && !reqSeason) {
+    for (const season of seasons) {
+      let currentDate = moment(); // Current date using moment
+      let checkDate = moment('2024-10-01'); // October 1st, 2024
+      
+      if (currentDate.isSameOrAfter(checkDate) && season.name === '2024-25' && !seasonIds.includes(season.id)) {
+        seasonIds.push(season.id);
+      } else if(currentDate.isBefore(checkDate) && season.name === '2024-25' && seasonIds.includes(season.id)){
+        seasonIds = seasonIds.filter((id: number) => id != season.id)
+      }
+    }
+  }
+
+  seasonIds = seasonIds.sort((a, b) => a - b).slice(-3);
+
+  let season: any = [];
+  let processed: any = [];
+  let sold: any = [];
+  let total_stock: any = [];
+  let greyout_qty: any = [];
+  let actual_stock: any = [];
+
+  for (const sessionId of seasonIds) {
+    const fProcured = processedData.find((production: any) =>
+      production.dataValues.seasonId == sessionId
+    );
+    const fSold = soldData.find((processed: any) =>
+      processed.seasonId == sessionId
+    );
+
+    const fGreyout = greyoutData.find((processed: any) =>
+      processed.dataValues.seasonId == sessionId
+    );
+
+    let data = {
+      seasonName: '',
+      processed: 0,
+      sold: 0,
+      total_stock: 0,
+      greyout_qty: 0,
+      actual_stock: 0,
+    };
+    if (fProcured) {
+      data.seasonName = fProcured.dataValues.seasonName;
+      data.processed = formatNumber(fProcured.dataValues.procured);
+    }
+
+    if (fSold) {
+      data.seasonName = fSold.seasonName;
+      data.sold = formatNumber(fSold.sold);
+    }
+
+    if (fGreyout) {
+      data.seasonName = fGreyout.dataValues.seasonName;
+      data.greyout_qty = formatNumber(fGreyout.dataValues.no_of_bales);
+    }
+
+    data.total_stock =
+      data.processed > data.sold
+        ? Number((data.processed - data.sold).toFixed(2))
+        : 0;
+
+    data.actual_stock =
+      data.total_stock > data.greyout_qty
+        ? Number((data.total_stock - data.greyout_qty).toFixed(2))
+        : 0;
+
+    if (!data.seasonName) {
+      const fSeason = seasons.find((season: any) =>
+        season.id == sessionId
+      );
+      if (fSeason) {
+        data.seasonName = fSeason.name;
+      }
+    }
+
+    season.push(data.seasonName);
+    processed.push(data.processed);
+    greyout_qty.push(data.greyout_qty);
+    total_stock.push(data.total_stock);
+    actual_stock.push(data.actual_stock);
+    sold.push(data.sold);
+
+  }
+
+  return {
+    season,
+    processed,
+    sold,
+    total_stock,
+    greyout_qty,
+    actual_stock
+  };
+};
+
 export {
   getTopVillages,
   getTopSpinners,
@@ -2634,5 +3597,7 @@ export {
   getProcessedByCountry,
   getBalesProcuredByCountry,
   getBalesSoldByCountry,
-  getBalesStockByCountry
+  getBalesStockByCountry,
+  getGinGreyoutQtyStock,
+  getGinGreyoutBaleStock
 };

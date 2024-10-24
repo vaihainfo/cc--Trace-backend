@@ -147,6 +147,19 @@ const GinSales = db.define('gin_sales', {
     type: DataTypes.BOOLEAN,
     defaultValue: false,
   },
+  visible_flag: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: true,
+  },
+  accepted_bales_weight: {
+    type: DataTypes.DOUBLE
+  },
+  letter_of_credit: {
+    type: DataTypes.ARRAY(DataTypes.TEXT)
+  },
+  logistics_documents: {
+    type: DataTypes.ARRAY(DataTypes.TEXT)
+  },
 });
 
 GinSales.belongsTo(Ginner, {

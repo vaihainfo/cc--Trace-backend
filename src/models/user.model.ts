@@ -103,6 +103,10 @@ const User = db.define('users', {
     type: DataTypes.DATE,
     allowNull: true,
 },
+is_otp_required: {
+  type: DataTypes.BOOLEAN,
+  defaultValue: false,
+},
 });
 
 User.associate = (models: any) => {

@@ -267,7 +267,7 @@ const getProgram = async (req: Request, res: Response) => {
 
     let result = await Fabric.findOne({ where: { id: fabricId } });
     if (!result) {
-      return res.sendError(res, "Program not found");
+      return res.sendError(res, "Programme not found");
     }
     let data = await Program.findAll({
       where: {
@@ -475,7 +475,7 @@ const exportDyingProcess = async (req: Request, res: Response) => {
       "Length in Mts",
       "GSM",
       "Fabric Net Weight (Kgs)",
-      "Program",
+      "Programme",
     ]);
     headerRow.font = { bold: true };
     let include: any = [
@@ -1281,7 +1281,7 @@ const exportWashingProcess = async (req: Request, res: Response) => {
       "Length in Mts",
       "GSM",
       "Fabric Net Weight (Kgs)",
-      "Program",
+      "Programme",
     ]);
     headerRow.font = { bold: true };
     let include: any = [
@@ -1694,7 +1694,7 @@ const choosePrintingFabric = async (req: Request, res: Response) => {
       return res.sendError(res, "Need Fabric Id");
     }
     if (!programId) {
-      return res.sendError(res, "Need Program Id");
+      return res.sendError(res, "Need Programme Id");
     }
 
     if (washingId) {
@@ -1783,7 +1783,7 @@ const exportPrintingProcess = async (req: Request, res: Response) => {
       "Length in Mts",
       "GSM",
       "Fabric Net Weight (Kgs)",
-      "Program",
+      "Programme",
     ]);
     headerRow.font = { bold: true };
     let include: any = [
@@ -2461,7 +2461,7 @@ const exportCompactingProcess = async (req: Request, res: Response) => {
       "Length in Mts",
       "GSM",
       "Fabric Net Weight (Kgs)",
-      "Program",
+      "Programme",
     ]);
     headerRow.font = { bold: true };
     let include: any = [
@@ -3406,7 +3406,7 @@ const exportTransactionList = async (req: Request, res: Response) => {
     // Set bold font for header row
     const headerRow = worksheet.addRow([
       "Sr No.", 'Date', 'Knitter/Weaver Name', 'Garment Order Reference No', 'Brand Order Reference No', 'Invoice No',
-      'Finished Batch/Lot No', 'Total Weight (Kgs)', 'Program', 'Vehicle No'
+      'Finished Batch/Lot No', 'Total Weight (Kgs)', 'Programme', 'Vehicle No'
     ]);
     headerRow.font = { bold: true };
 
@@ -3571,7 +3571,7 @@ const exportPrintingTransactionList = async (req: Request, res: Response) => {
     // Set bold font for header row
     const headerRow = worksheet.addRow([
       "Sr No.", 'Date', 'Washing Processor Name', 'Invoice No', 'Garment Order Reference No', 'Brand Order Reference No',
-      'Finished Batch/Lot No', 'Total Weight (Kgs)', 'Total length (Mts)', 'Program', 'Status'
+      'Finished Batch/Lot No', 'Total Weight (Kgs)', 'Total length (Mts)', 'Programme', 'Status'
     ]);
     headerRow.font = { bold: true };
 
@@ -3681,7 +3681,7 @@ const exportWashingTransactionList = async (req: Request, res: Response) => {
     // Set bold font for header row
     const headerRow = worksheet.addRow([
       "Sr No.", 'Date', 'Knitter/ Weaver/ Dying Processor Name', 'Garment Order Reference No',
-      'Brand Order Reference No', 'Invoice No', 'Batch/Lot No', 'Total Weight (Kgs)', 'Program'
+      'Brand Order Reference No', 'Invoice No', 'Batch/Lot No', 'Total Weight (Kgs)', 'Programme'
     ]);
     headerRow.font = { bold: true };
 
@@ -3825,7 +3825,7 @@ const exportCompactingTransactionList = async (req: Request, res: Response) => {
     // Set bold font for header row
     const headerRow = worksheet.addRow([
       "Sr No.", 'Date', 'Dying/ Washing/ Printing Processor Name', 'Garment Order Reference No',
-      'Brand Order Reference No', 'Invoice No', 'Batch/Lot No', 'Total Weight (Kgs)', 'Total Length (Mts)', 'Program'
+      'Brand Order Reference No', 'Invoice No', 'Batch/Lot No', 'Total Weight (Kgs)', 'Total Length (Mts)', 'Programme'
     ]);
     headerRow.font = { bold: true };
 

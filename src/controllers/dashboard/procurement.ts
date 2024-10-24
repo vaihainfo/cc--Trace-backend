@@ -271,7 +271,7 @@ const getCountryEstimateAndProduction = async (
       transactionWhere,
       reqData
     );
-    const data = getCountryEstimateProductionRes(
+    const data = await getCountryEstimateProductionRes(
       estimateList,
       procuredList
     );
@@ -423,7 +423,7 @@ const getEstimateProductionByCountry = async (
 
   const estimateAndProduction = await Farm.findAll({
     attributes: [
-      [Sequelize.fn('SUM', Sequelize.col('farmer.total_estimated_cotton')), 'estimate'],
+      [Sequelize.fn('SUM', Sequelize.col('farms.total_estimated_cotton')), 'estimate'],
       [Sequelize.fn('SUM', Sequelize.col('farmer.agri_estimated_prod')), 'production'],
       [Sequelize.col(`farmer.${tableName}.${colName}`), 'name'],
       [Sequelize.col(`farmer.${tableName}.id`), 'id']
@@ -513,10 +513,10 @@ const getEstimateAndProcuredRes = async (
 
   for (const sessionId of seasonIds) {
     const fEstimate = estimateList.find((estimate: any) =>
-      estimate.dataValues.season.id == sessionId
-    );
+          estimate.dataValues.season.id == sessionId
+        );
     const fProcured = procuredList.find((procured: any) =>
-      procured.dataValues.seasonId == sessionId
+      procured.dataValues.season.id == sessionId
     );
     let data = {
       seasonName: '',
@@ -550,7 +550,6 @@ const getEstimateAndProcuredRes = async (
 
   }
 
-
   return {
     season,
     estimate,
@@ -566,7 +565,7 @@ const getEstimateData = async (
 
   const estimateAndProduction = await Farm.findAll({
     attributes: [
-      [Sequelize.fn('SUM', Sequelize.col('farmer.total_estimated_cotton')), 'estimate'],
+      [Sequelize.fn('SUM', Sequelize.col('farms.total_estimated_cotton')), 'estimate'],
       [Sequelize.fn('SUM', Sequelize.col('farmer.agri_estimated_prod')), 'production'],
       [Sequelize.col('season.id'), 'seasonId']
     ],
@@ -583,7 +582,7 @@ const getEstimateData = async (
       }
     ],
     order: [['seasonId', 'desc']],
-    limit: 3,
+    // limit: 3,
     where,
     group: ['season.id']
   });
@@ -612,7 +611,7 @@ const getProcuredData = async (
     }],
     where,
     order: [['seasonId', 'desc']],
-    limit: 3,
+    // limit: 3,
     group: ['season.id']
   });
 
@@ -630,7 +629,7 @@ const getProcuredProcessed = async (
     const ginnerProcessQuery = getProcesssWhereQuery(reqData);
     const procuredList = await getProcuredData(transactionQuery);
     const processedList = await getProcessedData(ginnerProcessQuery);
-    const data = getProcuredProcessedRes(
+    const data = await getProcuredProcessedRes(
       processedList,
       procuredList,
     );
@@ -647,7 +646,7 @@ const getProcuredProcessed = async (
 
 
 
-const getProcuredProcessedRes = (
+const getProcuredProcessedRes = async (
   processedList: any,
   procuredList: any
 ) => {
@@ -663,7 +662,27 @@ const getProcuredProcessedRes = (
       seasonIds.push(procured.dataValues.season.id);
   });
 
-  seasonIds = seasonIds.sort((a, b) => a - b);
+  const seasons = await Season.findAll({
+    // limit: 3,
+    order: [
+      ["id", "DESC"],
+    ],
+  });
+  if (seasonIds.length != 3) {
+    for (const season of seasons) {
+      let currentDate = moment(); // Current date using moment
+      let checkDate = moment('2024-10-01'); // October 1st, 2024
+      
+      if (currentDate.isSameOrAfter(checkDate) && season.name === '2024-25' && !seasonIds.includes(season.id)) {
+        seasonIds.push(season.id);
+      } else if(currentDate.isBefore(checkDate) && season.name === '2024-25' && seasonIds.includes(season.id)){
+        seasonIds = seasonIds.filter((id: number) => id != season.id)
+      }
+    }
+  }
+
+
+  seasonIds = seasonIds.sort((a, b) => a - b).slice(-3);
 
   let season: string[] = [];
   let processed: number[] = [];
@@ -690,6 +709,15 @@ const getProcuredProcessedRes = (
     if (fProcured) {
       data.seasonName = fProcured.dataValues.season.name;
       data.procured += mtConversion(fProcured.dataValues.procured);
+    }
+
+    if (!data.seasonName) {
+      const fSeason = seasons.find((season: any) =>
+        season.id == sessionId
+      );
+      if (fSeason) {
+        data.seasonName = fSeason.name;
+      }
     }
 
 
@@ -752,7 +780,7 @@ const getProcuredProcessedMonthly = async (
     const ginnerProcessWhere = getGinnerProcessWhereQuery(reqData);
     const procuredList = await getProcuredDataByMonth(transactionWhere);
     const processedList = await getProcessedDataByMonth(ginnerProcessWhere);
-    const data = getProcuredProcessedMonthlyRes(
+    const data = await getProcuredProcessedMonthlyRes(
       processedList,
       procuredList,
       seasonOne
@@ -766,6 +794,7 @@ const getProcuredProcessedMonthly = async (
     return res.sendError(res, code);
   }
 };
+
 
 const getProcuredDataByMonth = async (
   where: any
@@ -899,7 +928,7 @@ const getEstimateProcuredAndProduction = async (
     const procuredList = await getProcuredData(transactionWhere);
     const processedList = await getProcessedData(ginnerProcessWhere);
     const estimateList = await getEstimateData(farmWhere);
-    const data = getEstimateProcuredAndProductionRes(
+    const data = await getEstimateProcuredAndProductionRes(
       processedList,
       procuredList,
       estimateList
@@ -916,7 +945,7 @@ const getEstimateProcuredAndProduction = async (
 };
 
 
-const getEstimateProcuredAndProductionRes = (
+const getEstimateProcuredAndProductionRes = async (
   processedList: any,
   procuredList: any,
   estimateList: any
@@ -938,7 +967,27 @@ const getEstimateProcuredAndProductionRes = (
       seasonIds.push(estimate.dataValues.season.id);
   });
 
-  seasonIds = seasonIds.sort((a, b) => a - b);
+  const seasons = await Season.findAll({
+    // limit: 3,
+    order: [
+      ["id", "DESC"],
+    ],
+  });
+  if (seasonIds.length != 3) {
+    for (const season of seasons) {
+      let currentDate = moment(); // Current date using moment
+      let checkDate = moment('2024-10-01'); // October 1st, 2024
+      
+      if (currentDate.isSameOrAfter(checkDate) && season.name === '2024-25' && !seasonIds.includes(season.id)) {
+        seasonIds.push(season.id);
+      } else if(currentDate.isBefore(checkDate) && season.name === '2024-25' && seasonIds.includes(season.id)){
+        seasonIds = seasonIds.filter((id: number) => id != season.id)
+      }
+    }
+  }
+
+
+  seasonIds = seasonIds.sort((a, b) => a - b).slice(-3);
 
   let season: string[] = [];
   let processed: number[] = [];
@@ -976,6 +1025,15 @@ const getEstimateProcuredAndProductionRes = (
     if (fEstimate) {
       data.seasonName = fEstimate.dataValues.season.name;
       data.estimate += mtConversion(fEstimate.dataValues.estimate);
+    }
+
+    if (!data.seasonName) {
+      const fSeason = seasons.find((season: any) =>
+        season.id == sessionId
+      );
+      if (fSeason) {
+        data.seasonName = fSeason.name;
+      }
     }
 
     season.push(data.seasonName);
@@ -1030,15 +1088,21 @@ const getEstimateCottonRes = async (
   });
 
   const seasons = await Season.findAll({
-    limit: 3,
+    // limit: 3,
     order: [
       ["id", "DESC"],
     ],
   });
   if (seasonIds.length != 3 && !reqSeason) {
     for (const season of seasons) {
-      if (!seasonIds.includes(season.id))
+      let currentDate = moment(); // Current date using moment
+      let checkDate = moment('2024-10-01'); // October 1st, 2024
+      
+      if (currentDate.isSameOrAfter(checkDate) && season.name === '2024-25' && !seasonIds.includes(season.id)) {
         seasonIds.push(season.id);
+      } else if(currentDate.isBefore(checkDate) && season.name === '2024-25' && seasonIds.includes(season.id)){
+        seasonIds = seasonIds.filter((id: number) => id != season.id)
+      }
     }
   }
 
@@ -1152,18 +1216,23 @@ const getProcessedCottonRes = async (
   });
 
   const seasons = await Season.findAll({
-    limit: 3,
+    // limit: 3,
     order: [
       ["id", "DESC"],
     ],
   });
   if (seasonIds.length != 3 && !reqSeason) {
     for (const season of seasons) {
-      if (!seasonIds.includes(season.id))
+      let currentDate = moment(); // Current date using moment
+      let checkDate = moment('2024-10-01'); // October 1st, 2024
+      
+      if (currentDate.isSameOrAfter(checkDate) && season.name === '2024-25' && !seasonIds.includes(season.id)) {
         seasonIds.push(season.id);
+      } else if(currentDate.isBefore(checkDate) && season.name === '2024-25' && seasonIds.includes(season.id)){
+        seasonIds = seasonIds.filter((id: number) => id != season.id)
+      }
     }
   }
-
   seasonIds = seasonIds.sort((a, b) => a - b).slice(-3);
 
   let seasonList: any[] = [];
@@ -1310,15 +1379,21 @@ const getProcessedEstimatedProcessedCottonRes = async (
 
 
   const seasons = await Season.findAll({
-    limit: 3,
+    // limit: 3,
     order: [
       ["id", "DESC"],
     ],
   });
   if (seasonIds.length != 3 && !reqSeason) {
     for (const season of seasons) {
-      if (!seasonIds.includes(season.id))
+      let currentDate = moment(); // Current date using moment
+      let checkDate = moment('2024-10-01'); // October 1st, 2024
+      
+      if (currentDate.isSameOrAfter(checkDate) && season.name === '2024-25' && !seasonIds.includes(season.id)) {
         seasonIds.push(season.id);
+      } else if(currentDate.isBefore(checkDate) && season.name === '2024-25' && seasonIds.includes(season.id)){
+        seasonIds = seasonIds.filter((id: number) => id != season.id)
+      }
     }
   }
 
@@ -1459,5 +1534,8 @@ export {
   getEstimateProcuredAndProduction,
   getProcuredCottonByCountry,
   getProcessedCottonByCountry,
-  getProcessedEstimatedProcessedCottonByCountry
+  getProcessedEstimatedProcessedCottonByCountry,
+  getTransactionWhereQuery,
+  getProcuredData,
+  getProcuredByCountryData
 };

@@ -6,7 +6,6 @@ import {
     exportSpinnerSale,
     fetchSpinSalesPagination,
     fetchSpinnerProcessPagination,
-    updateSpinnerProcess,
     updateStatusSales,
     exportSpinnerTransaction,
     getProgram,
@@ -35,6 +34,7 @@ import { Router } from "express";
 const router = Router();
 
 router.use(accessControl);
+
 
 // Spinner Routes
 router.get('/', fetchSpinnerProcessPagination);

@@ -11,6 +11,7 @@ import Weaver from "../../models/weaver.model";
 import Knitter from "../../models/knitter.model";
 import Garment from "../../models/garment.model";
 import { generateOnlyQrCode } from "../../provider/qrcode";
+import heapSelection from "../../models/heap-selection.model";
 import Embroidering from "../../models/embroidering.model";
 import Season from "../../models/season.model";
 import Department from "../../models/department.model";
@@ -136,7 +137,7 @@ const exportBrandQrGarmentSales = async (req: Request, res: Response) => {
       "Garment Type",
       "Style/Mark No",
       "Total No. of pieces",
-      "Program",
+      "Programme",
     ]);
     headerRow.font = { bold: true };
 
@@ -2984,8 +2985,7 @@ const garmentTraceabilityMap = async (req: Request, res: Response) => {
         },
         // raw: true, // Return raw data
       });
-
-      console.log(rows,weaver_fabric_ids,"rows,,,,,.....................................")     
+  
       for await (let row of rows) {
         let fabrictypes: any = [];
         if (
@@ -3197,9 +3197,24 @@ const garmentTraceabilityMap = async (req: Request, res: Response) => {
         },
         attributes: ["id", "transaction_id"],
       });
-      transactions_ids = cottornIds.map(
+
+      let heapIds = await heapSelection.findAll({
+        where: {
+          process_id: gin_process_ids,
+        },
+        attributes: ["id", "transaction_id"],
+      })
+
+      let a = cottornIds.map(
         (obj: any) => obj.dataValues.transaction_id
       );
+
+      let b = heapIds.map(
+        (obj: any) => obj.dataValues.transaction_id
+      ).flat();
+
+      transactions_ids=[...a,...b]
+
     }
 
     let transactions: any = [];
@@ -3700,7 +3715,7 @@ const exportGarmentTransactionList = async (req: Request, res: Response) => {
     // Set bold font for header row
     const headerRow = worksheet.addRow([
       "Sr No.", 'Date', 'Processor Name', 'Garment Order Reference No', 'Brand Order Reference No', 'Invoice Number',
-      'Finished Batch/Lot No', 'Total Weight', 'Program', 'Vehicle No', 'Transaction Via Trader', 'Agent Details'
+      'Finished Batch/Lot No', 'Total Weight', 'Programme', 'Vehicle No', 'Transaction Via Trader', 'Agent Details'
     ]);
     headerRow.font = { bold: true };
     if (fabricType) {

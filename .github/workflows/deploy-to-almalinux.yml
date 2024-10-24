@@ -1,0 +1,60 @@
+name: Deploy to AlmaLinux EC2
+
+on:
+  push:
+    branches:
+      - development  
+
+jobs:
+  Deploy:
+    name: Deploy to EC2 (AlmaLinux)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+
+      - name: Set up SSH for Deployment
+        run: |
+          # Ensure the .ssh directory exists
+          mkdir -p ~/.ssh
+
+          # Add EC2 server to known hosts (to prevent prompt)
+          ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Deploy to Backend Directory
+        env:
+          HOSTNAME: ${{ secrets.SSH_HOST }}         
+          USER_NAME: ${{ secrets.EC2_USER }}        
+          PASSWORD: ${{ secrets.SSH_PASSWORD }}     
+          
+        run: |
+          # Connect via SSH using username and password
+          sshpass -p "$PASSWORD" ssh -o StrictHostKeyChecking=no ${USER_NAME}@${HOSTNAME} '
+              # Navigate to the backend directory
+              cd /home/newtracebale/public_html/backend &&
+
+              # Configure Git to use SSH instead of HTTPS
+              git config --global url."git@github.com:".insteadOf "https://github.com/" &&
+
+              # Fetch the latest code from the development branch
+              git fetch --all &&
+              git reset --hard origin/development &&
+              git pull origin development &&
+
+              # Install dependencies
+              npm install --legacy-peer-deps && 
+
+              # Set execute permission for tsc
+              chmod +x ./node_modules/.bin/tsc &&
+
+              # Build the project
+              npm run build &&
+
+              # Kill any process using port 5000 and delete the backend PM2 process
+              sudo lsof -t -i:5000 | xargs kill -9 &&
+              pm2 delete backend &&
+
+              # Start the backend using PM2
+              pm2 start npm --name "backend" -- start
+          '

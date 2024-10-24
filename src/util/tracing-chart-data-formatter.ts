@@ -10,25 +10,25 @@ export const formatDataForGinnerProcess = (reelLotNo: any, data: any): any => {
                 name: el.farm_name,
                 type: 'farm',
                 width: 300,
-                height: 40,
-                children: [
-                    {
-                        name: el.farm_name,
-                        type: 'village_image',
-                        width: 50,
-                        height: 50,
-                        children: [
-                            {
-                                name: 'Village',
-                                type: 'village',
-                                list: el.villages,
-                                intro: `${el.villages.length > 1 ? 'Multiple' : 'Single'} Village${el.villages.length > 1 ? 's' : ''} Seed Cotton Consumption for REEL Bale Lot`,
-                                width: 300,
-                                height: el.villages.length * 40 + 60,
-                            }
-                        ]
-                    }
-                ]
+                height: 100,
+                // children: [
+                //     {
+                //         name: el.farm_name,
+                //         type: 'village_image',
+                //         width: 50,
+                //         height: 50,
+                //         children: [
+                //             {
+                //                 name: 'Village',
+                //                 type: 'village',
+                //                 list: el.villages,
+                //                 intro: `${el.villages.length > 1 ? 'Multiple' : 'Single'} Village${el.villages.length > 1 ? 's' : ''} Seed Cotton Consumption for REEL Bale Lot`,
+                //                 width: 300,
+                //                 height: el.villages.length * 40 + 60,
+                //             }
+                //         ]
+                //     }
+                // ]
 
             }
         })
@@ -173,12 +173,16 @@ export const formatDataFromKnitter = (title: any, data: any, width: number = 300
  
  
  export const formatDataFromWeaver = (title: any, data: any, width: number = 300, height: number =100,type?: any) : any => {
+
     let flattenedArray;
-    if(type=='fabric'){
-      flattenedArray = data?.spin?.flat();
-    }else{
-      flattenedArray = data[0]?.spin?.flat();
+    if (data?.spin) {
+        flattenedArray = data.spin.flat();
+    } else if (data[0]?.spin) {
+        flattenedArray = data[0].spin.flat();
+    } else {
+        flattenedArray = [];
     }
+
     let treeData = {
          name: title,
          type: 'weaver_image',
@@ -186,6 +190,7 @@ export const formatDataFromKnitter = (title: any, data: any, width: number = 300
          height: height,
          isRoot: true,
          children: flattenedArray? flattenedArray.filter((el: any) =>{
+            
             if(el && el.children){
                 return el.children
             }
