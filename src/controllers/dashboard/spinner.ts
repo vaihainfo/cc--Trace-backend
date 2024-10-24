@@ -69,7 +69,7 @@ const getGinnerSalesWhereQuery = (
   reqData: any
 ) => {
   const where: any = {
-    
+    status: "Sold"
   };
 
   if (reqData?.program)
@@ -367,8 +367,8 @@ const getTopGinnersData = async (
 };
 
 const mtConversion = (value: number) => {
-  return value > 0 ? Number((value / 1000).toFixed(2)) : 0
-}
+  return value > 0 ? Number((value / 1000).toFixed(2)) : 0;
+};
 
 const getTopGinnersRes = (
   list: any[]
@@ -575,7 +575,7 @@ const getYarnProcuredSold = async (
   try {
     const reqData = await getQueryParams(req, res);
     const where = getSpinnerProcessWhereQuery(reqData);
-    delete where.status
+    delete where.status;
     const procuredData = await getYarnProcuredData(where);
     const soldData = await getYarnSoldData(where);
     const data = await getYarnProcuredSoldRes(
@@ -1190,7 +1190,7 @@ const getYarnProcuredStockRes = async (
     }
 
     if (fSold) {
-      fSold.dataValues.yarnSold = mtConversion(fSold.dataValues.yarnSold)
+      fSold.dataValues.yarnSold = mtConversion(fSold.dataValues.yarnSold);
       data.seasonName = fSold.dataValues.seasonName;
       data.yarnStock = data.yarnProcessed > fSold.dataValues.yarnSold
         ? Number((data.yarnProcessed - fSold.dataValues.yarnSold).toFixed(2))
@@ -1470,7 +1470,6 @@ const getLintProcessedByCountryData = async (where: any) => {
       },
     ],
     order: [['seasonId', 'desc']],
-    limit: 3,
     where,
     group: ['spinprocess.spinner.country.id', 'spinprocess.season.id']
   });
@@ -1818,7 +1817,7 @@ const getYarnSoldByCountry = async (
 
     const reqData = await getQueryParams(req, res);
     const where = getSpinnerProcessWhereQuery(reqData);
-    delete where.status
+    delete where.status;
     const processedList = await getYarnSoldByCountryData(where);
     const data = await getYarnSoldByCountryRes(processedList, reqData.season);
     return res.sendSuccess(res, data);

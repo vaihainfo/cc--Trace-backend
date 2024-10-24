@@ -14,6 +14,7 @@ import GinProcess from "../../models/gin-process.model";
 import Ginner from "../../models/ginner.model";
 import { Op } from "sequelize";
 import moment from "moment";
+import CottonSelection from "../../models/cotton-selection.model";
 
 
 
@@ -163,10 +164,60 @@ const getGinnerProcessWhereQuery = (
   };
 
   if (reqData?.program)
+    where['$ginprocess.program_id$'] = reqData.program;
+
+  if (reqData?.brand)
+    where['$ginprocess.ginner.brand$'] = {
+      [Op.contains]: Sequelize.literal(`ARRAY [${reqData.brand}]`)
+    };
+
+  if (reqData?.season)
+    where['$ginprocess.season_id$'] = reqData.season;
+
+  if (reqData?.country)
+    where['$ginprocess.ginner.country_id$'] = reqData.country;
+
+  if (reqData?.state)
+    where['$ginprocess.ginner.state_id$'] = reqData.state;
+
+  if (reqData?.district)
+    where['$ginprocess.ginner.district_id$'] = reqData.district;
+
+  if (reqData?.ginner)
+    where['$ginprocess.ginner.id$'] = reqData.ginner;
+
+  // if (reqData?.block)
+  //   where.block_id = reqData.block;
+
+  // if (reqData?.village)
+  //   where.village_id = reqData.village;
+
+  if (reqData?.fromDate)
+    where['$ginprocess.date$'] = { [Op.gte]: reqData.fromDate };
+
+  if (reqData?.toDate)
+    where['$ginprocess.date$'] = { [Op.lt]: reqData.toDate };
+
+  if (reqData?.fromDate && reqData?.toDate)
+    where['$ginprocess.date$'] = { [Op.between]: [reqData.fromDate, reqData.toDate] };
+
+
+  return where;
+};
+
+
+const getProcesssWhereQuery = (
+  reqData: any
+) => {
+  const where: any = {
+
+  };
+
+  if (reqData?.program)
     where.program_id = reqData.program;
 
   if (reqData?.brand)
-    where['$ginner.brand$'] = {
+    where['$.ginner.brand$'] = {
       [Op.contains]: Sequelize.literal(`ARRAY [${reqData.brand}]`)
     };
 
@@ -402,9 +453,11 @@ const getEstimateAndProcured = async (
   try {
 
     const reqData = await getQueryParams(req, res);
+    const transactionQuery = getTransactionWhereQuery(reqData);
     const farmWhere = getFarmWhereQuery(reqData);
+    const procuredList = await getProcuredData(transactionQuery);
     const estimateList = await getEstimateData(farmWhere);
-    const data = getEstimateAndProcuredRes(estimateList);
+    const data = await getEstimateAndProcuredRes(estimateList, procuredList, reqData.season);
     return res.sendSuccess(res, data);
   }
 
@@ -422,18 +475,37 @@ const mtConversion = (value: number) => {
 };
 
 
-const getEstimateAndProcuredRes = (
-  estimateList: any
+const getEstimateAndProcuredRes = async (
+  estimateList: any,
+  procuredList: any,
+  reqSeason: any
 ) => {
   let seasonIds: number[] = [];
 
   estimateList.forEach((estimate: any) => {
-    if (estimate.dataValues.season.id)
+    if (!seasonIds.includes(estimate.dataValues.season.id))
       seasonIds.push(estimate.dataValues.season.id);
   });
+  procuredList.forEach((procured: any) => {
+    if (!seasonIds.includes(procured.dataValues.seasonId))
+      seasonIds.push(procured.dataValues.season.id);
+  });
+
+  const seasons = await Season.findAll({
+    limit: 3,
+    order: [
+      ["id", "DESC"],
+    ],
+  });
+  if (seasonIds.length != 3 && !reqSeason) {
+    for (const season of seasons) {
+      if (!seasonIds.includes(season.id))
+        seasonIds.push(season.id);
+    }
+  }
 
 
-  seasonIds = seasonIds.sort((a, b) => a - b);
+  seasonIds = seasonIds.sort((a, b) => a - b).slice(-3);
 
   let season: string[] = [];
   let estimate: number[] = [];
@@ -442,6 +514,9 @@ const getEstimateAndProcuredRes = (
   for (const sessionId of seasonIds) {
     const fEstimate = estimateList.find((estimate: any) =>
       estimate.dataValues.season.id == sessionId
+    );
+    const fProcured = procuredList.find((procured: any) =>
+      procured.dataValues.seasonId == sessionId
     );
     let data = {
       seasonName: '',
@@ -452,7 +527,20 @@ const getEstimateAndProcuredRes = (
     if (fEstimate) {
       data.seasonName = fEstimate.dataValues.season.name;
       data.estimate += mtConversion(fEstimate.dataValues.estimate);
-      data.procured += mtConversion(fEstimate.dataValues.production);
+
+    }
+    if (fProcured) {
+      data.seasonName = fProcured.dataValues.season.name;
+      data.procured += mtConversion(fProcured.dataValues.procured);
+    }
+
+    if (!data.seasonName) {
+      const fSeason = seasons.find((season: any) =>
+        season.id == sessionId
+      );
+      if (fSeason) {
+        data.seasonName = fSeason.name;
+      }
     }
 
 
@@ -539,7 +627,7 @@ const getProcuredProcessed = async (
   try {
     const reqData = await getQueryParams(req, res);
     const transactionQuery = getTransactionWhereQuery(reqData);
-    const ginnerProcessQuery = getGinnerProcessWhereQuery(reqData);
+    const ginnerProcessQuery = getProcesssWhereQuery(reqData);
     const procuredList = await getProcuredData(transactionQuery);
     const processedList = await getProcessedData(ginnerProcessQuery);
     const data = getProcuredProcessedRes(
@@ -566,8 +654,8 @@ const getProcuredProcessedRes = (
   let seasonIds: number[] = [];
 
   processedList.forEach((processed: any) => {
-    if (processed.dataValues.season.id)
-      seasonIds.push(processed.dataValues.season.id);
+    if (processed.dataValues.seasonId)
+      seasonIds.push(processed.dataValues.seasonId);
   });
 
   procuredList.forEach((procured: any) => {
@@ -583,7 +671,7 @@ const getProcuredProcessedRes = (
 
   for (const sessionId of seasonIds) {
     const fProcessed = processedList.find((processed: any) =>
-      processed.dataValues.season.id == sessionId
+      processed.dataValues.seasonId == sessionId
     );
     const fProcured = procuredList.find((procured: any) =>
       procured.dataValues.season.id == sessionId
@@ -595,7 +683,7 @@ const getProcuredProcessedRes = (
     };
 
     if (fProcessed) {
-      data.seasonName = fProcessed.dataValues.season.name;
+      data.seasonName = fProcessed.dataValues.seasonName;
       data.processed += mtConversion(fProcessed.dataValues.processed);
     }
 
@@ -623,16 +711,16 @@ const getProcuredProcessedRes = (
 const getProcessedData = async (
   where: any
 ) => {
-
   const result = await GinProcess.findAll({
     attributes: [
-      [Sequelize.fn('SUM', Sequelize.literal('total_qty')), 'processed'],
-      [Sequelize.col('season.id'), 'seasonId']
+      [Sequelize.fn('SUM', Sequelize.literal('(SELECT SUM(qty_used) FROM cotton_selections cs where cs.process_id = gin_process.id)')), 'processed'],
+      [Sequelize.col('season.id'), 'seasonId'],
+      [Sequelize.col('season.name'), 'seasonName'],
     ],
     include: [{
       model: Season,
       as: 'season',
-      attributes: ['id', 'name']
+      attributes: [],
     }, {
       model: Ginner,
       as: 'ginner',
@@ -640,8 +728,8 @@ const getProcessedData = async (
     }],
     where,
     order: [['seasonId', 'desc']],
-    limit: 3,
-    group: ['season.id']
+    group: ['season.id'],
+    limit: 3
   });
 
   return result;
@@ -702,17 +790,24 @@ const getProcessedDataByMonth = async (
   where: any
 ) => {
 
-  const result = await GinProcess.findAll({
+  const result = await CottonSelection.findAll({
     attributes: [
-      [Sequelize.fn('SUM', Sequelize.literal('total_qty')), 'processed'],
-      [Sequelize.literal("date_part('Month', date)"), 'month'],
-      [Sequelize.literal("date_part('Year', date)"), 'year']
+      [Sequelize.fn('SUM', Sequelize.literal('qty_used')), 'processed'],
+      [Sequelize.literal("date_part('Month', ginprocess.date)"), 'month'],
+      [Sequelize.literal("date_part('Year', ginprocess.date)"), 'year']
     ],
-    include: [{
-      model: Ginner,
-      as: 'ginner',
-      attributes: []
-    }],
+    include: [
+      {
+        model: GinProcess,
+        as: 'ginprocess',
+        attributes: [],
+        include: [{
+          model: Ginner,
+          as: 'ginner',
+          attributes: []
+        }],
+      }
+    ],
     where,
     group: ['month', 'year']
   });
@@ -799,7 +894,7 @@ const getEstimateProcuredAndProduction = async (
   try {
     const reqData = await getQueryParams(req, res);
     const transactionWhere = getTransactionWhereQuery(reqData);
-    const ginnerProcessWhere = getGinnerProcessWhereQuery(reqData);
+    const ginnerProcessWhere = getProcesssWhereQuery(reqData);
     const farmWhere = getFarmWhereQuery(reqData);
     const procuredList = await getProcuredData(transactionWhere);
     const processedList = await getProcessedData(ginnerProcessWhere);
@@ -829,8 +924,8 @@ const getEstimateProcuredAndProductionRes = (
   let seasonIds: number[] = [];
 
   processedList.forEach((processed: any) => {
-    if (processed.dataValues.season.id)
-      seasonIds.push(processed.dataValues.season.id);
+    if (processed.dataValues.seasonId)
+      seasonIds.push(processed.dataValues.seasonId);
   });
 
   procuredList.forEach((procured: any) => {
@@ -852,7 +947,7 @@ const getEstimateProcuredAndProductionRes = (
 
   for (const sessionId of seasonIds) {
     const fProcessed = processedList.find((processed: any) =>
-      processed.dataValues.season.id == sessionId
+      processed.dataValues.seasonId == sessionId
     );
     const fProcured = procuredList.find((procured: any) =>
       procured.dataValues.season.id == sessionId
@@ -869,7 +964,7 @@ const getEstimateProcuredAndProductionRes = (
     };
 
     if (fProcessed) {
-      data.seasonName = fProcessed.dataValues.season.name;
+      data.seasonName = fProcessed.dataValues.seasonName;
       data.processed += mtConversion(fProcessed.dataValues.processed);
     }
 
@@ -1304,32 +1399,38 @@ const getProcessedEstimatedProcessedCottonRes = async (
 
 
 const getProcessedByCountryData = async (where: any) => {
-
-  const result = await GinProcess.findAll({
+  const result = await CottonSelection.findAll({
     attributes: [
-      [Sequelize.fn('SUM', Sequelize.literal('total_qty')), 'processed'],
-      [Sequelize.col('ginner.country.id'), 'countryId'],
-      [Sequelize.col('ginner.country.county_name'), 'countryName'],
-      [Sequelize.col('season.id'), 'seasonId'],
-      [Sequelize.col('season.name'), 'seasonName']
+      [Sequelize.fn('SUM', Sequelize.col('qty_used')), 'processed'],
+      [Sequelize.col('ginprocess.season.id'), 'seasonId'],
+      [Sequelize.col('ginprocess.season.name'), 'seasonName'],
+      [Sequelize.col('ginprocess.ginner.country.id'), 'countryId'],
+      [Sequelize.col('ginprocess.ginner.country.county_name'), 'countryName'],
     ],
-    include: [{
-      model: Season,
-      as: 'season',
-      attributes: ['id', 'name']
-    }, {
-      model: Ginner,
-      as: 'ginner',
-      attributes: [],
-      include: [{
-        model: Country,
-        as: 'country',
-        attributes: []
-      }]
-    }],
+    include: [
+      {
+        model: GinProcess,
+        as: 'ginprocess',
+        attributes: [],
+        include: [{
+          model: Season,
+          as: 'season',
+          attributes: [],
+        }, {
+          model: Ginner,
+          as: 'ginner',
+          attributes: [],
+          include: [{
+            model: Country,
+            as: 'country',
+            attributes: []
+          }]
+        }],
+      }
+    ],
     where,
     order: [['seasonId', 'desc']],
-    group: ["ginner.country.id", 'season.id']
+    group: ['ginprocess.season.id', 'ginprocess.ginner.country.id']
   });
 
   return result;
