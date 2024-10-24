@@ -3194,8 +3194,8 @@ const getLntQtyComparisonRes = async (
   });
 
   soldData.forEach((processed: any) => {
-    if (!seasonIds.includes(processed.dataValues.seasonId))
-      seasonIds.push(processed.dataValues.seasonId);
+    if (!seasonIds.includes(processed.seasonId))
+      seasonIds.push(processed.seasonId);
   });
 
   greyoutData.forEach((processed: any) => {
@@ -3236,7 +3236,7 @@ const getLntQtyComparisonRes = async (
       production.dataValues.seasonId == sessionId
     );
     const fSold = soldData.find((processed: any) =>
-      processed.dataValues.seasonId == sessionId
+      processed.seasonId == sessionId
     );
 
     const fGreyout = greyoutData.find((processed: any) =>
@@ -3257,8 +3257,8 @@ const getLntQtyComparisonRes = async (
     }
 
     if (fSold) {
-      data.seasonName = fSold.dataValues.seasonName;
-      data.sold = mtConversion(fSold.dataValues.lintSold);
+      data.seasonName = fSold.seasonName;
+      data.sold = mtConversion(fSold.lintSold);
     }
 
     if (fGreyout) {
@@ -3471,8 +3471,8 @@ const getLintBaleComparisonRes = async (
   });
 
   soldData.forEach((processed: any) => {
-    if (!seasonIds.includes(processed.dataValues.seasonId))
-      seasonIds.push(processed.dataValues.seasonId);
+    if (!seasonIds.includes(processed.seasonId))
+      seasonIds.push(processed.seasonId);
   });
 
   greyoutData.forEach((processed: any) => {
@@ -3513,7 +3513,7 @@ const getLintBaleComparisonRes = async (
       production.dataValues.seasonId == sessionId
     );
     const fSold = soldData.find((processed: any) =>
-      processed.dataValues.seasonId == sessionId
+      processed.seasonId == sessionId
     );
 
     const fGreyout = greyoutData.find((processed: any) =>
@@ -3534,8 +3534,8 @@ const getLintBaleComparisonRes = async (
     }
 
     if (fSold) {
-      data.seasonName = fSold.dataValues.seasonName;
-      data.sold = formatNumber(fSold.dataValues.sold);
+      data.seasonName = fSold.seasonName;
+      data.sold = formatNumber(fSold.sold);
     }
 
     if (fGreyout) {
