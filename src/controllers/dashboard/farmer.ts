@@ -7,7 +7,7 @@ import District from "../../models/district.model";
 import Country from "../../models/country.model";
 import Farm from "../../models/farm.model";
 import Season from "../../models/season.model";
-import { getProcuredByCountryData, getProcuredData, getTransactionWhereQuery } from "./procurement";
+import Transaction from '../../models/transaction.model';
 import moment from "moment";
 
 const getOverallArea = async (
@@ -102,6 +102,53 @@ const getOverAllDataQuery = (
   return where;
 };
 
+
+
+const getTransactionWhereQuery = (
+  reqData: any
+) => {
+  const where: any = {
+    status: "Sold"
+  };
+
+  if (reqData?.program)
+    where.program_id = reqData.program;
+
+  if (reqData?.brand)
+    where.brand_id = reqData.brand;
+
+  if (reqData?.season)
+    where.season_id = reqData.season;
+
+  if (reqData?.country)
+    where.country_id = reqData.country;
+
+  if (reqData?.state)
+    where.state_id = reqData.state;
+
+  if (reqData?.district)
+    where.district_id = reqData.district;
+
+  if (reqData?.block)
+    where.block_id = reqData.block;
+
+  if (reqData?.village)
+    where.village_id = reqData.village;
+
+  if (reqData?.ginner)
+    where.mapped_ginner = reqData.ginner;
+
+  if (reqData?.fromDate)
+    where.date = { [Op.gte]: reqData.fromDate };
+
+  if (reqData?.toDate)
+    where.date = { [Op.lt]: reqData.toDate };
+
+  if (reqData?.fromDate && reqData?.toDate)
+    where.date = { [Op.between]: [reqData.fromDate, reqData.toDate] };
+
+  return where;
+};
 
 
 const getFarmerQuery = (
@@ -524,11 +571,10 @@ const getEstimateAndProduction = async (
     if (req.query.type == "2")
       reqData.season = undefined;
     const where = getOverAllDataQuery(reqData);
-    const farmWhere = getFarmWhereQuery(reqData)
     const transactionWhere = getTransactionWhereQuery(reqData);
-    const estimateProductionList = await getEstimateProductionBySeason(farmWhere);
     const procuredList = await getProcuredData(transactionWhere);
-    const data = await getEstimateProductionList(estimateProductionList, procuredList);
+    const estimateProductionList = await getEstimateProductionBySeason(where);
+    const data = await getEstimateProductionList(estimateProductionList, procuredList, reqData.season);
     return res.sendSuccess(res, data);
   }
 
@@ -538,6 +584,32 @@ const getEstimateAndProduction = async (
       : "ERR_INTERNAL_SERVER_ERROR";
     return res.sendError(res, code);
   }
+
+};
+
+
+const getProcuredData = async (
+  where: any
+) => {
+
+  const result = await Transaction.findAll({
+    attributes: [
+      [Sequelize.fn('SUM', Sequelize.literal('CAST(qty_purchased  as numeric)')), 'procured'],
+      [Sequelize.col('season.id'), 'seasonId']
+
+    ],
+    include: [{
+      model: Season,
+      as: 'season',
+      attributes: ['id', 'name']
+    }],
+    where,
+    order: [['seasonId', 'desc']],
+    limit: 3,
+    group: ['season.id']
+  });
+
+  return result;
 
 };
 
@@ -573,60 +645,46 @@ const getEstimateProductionBySeason = async (where: any) => {
 
 };
 
-const getEstimateProductionList = async (estimateProductionList: any, procuredList: any) => {
-  // let season: any = [];
-  // let estimate: any = [];
-  // let production: any = [];
-  // estimateProductionList = estimateProductionList.sort((a: any, b: any) =>
-  //   a.dataValues.seasonId - b.dataValues.seasonId).slice(-3);
-  // for (const estimateProduction of estimateProductionList) {
-  //   season.push(estimateProduction.dataValues.season.name);
-  //   estimate.push(mtConversion(estimateProduction.dataValues.estimate));
-  //   production.push(mtConversion(estimateProduction.dataValues.production));
-  // }
-
+const getEstimateProductionList = async (
+  estimateList: any,
+  procuredList: any,
+  reqSeason: any
+) => {
+  let season: string[] = [];
+  let estimate: any = [];
+  let production: any = [];
   let seasonIds: number[] = [];
 
-  estimateProductionList.forEach((estimate: any) => {
-    if (estimate.dataValues.season.id)
+  estimateList.forEach((estimate: any) => {
+    if (!seasonIds.includes(estimate.dataValues.season.id))
       seasonIds.push(estimate.dataValues.season.id);
   });
-
   procuredList.forEach((procured: any) => {
     if (!seasonIds.includes(procured.dataValues.season.id))
       seasonIds.push(procured.dataValues.season.id);
   });
 
   const seasons = await Season.findAll({
-    // limit: 3,
+    limit: 3,
     order: [
       ["id", "DESC"],
     ],
   });
-  if (seasonIds.length != 3) {
+  if (seasonIds.length != 3 && !reqSeason) {
     for (const season of seasons) {
-      let currentDate = moment(); // Current date using moment
-      let checkDate = moment('2024-10-01'); // October 1st, 2024
-      
-      if (currentDate.isSameOrAfter(checkDate) && season.name === '2024-25' && !seasonIds.includes(season.id)) {
+      if (!seasonIds.includes(season.id))
         seasonIds.push(season.id);
-      } else if(currentDate.isBefore(checkDate) && season.name === '2024-25' && seasonIds.includes(season.id)){
-        seasonIds = seasonIds.filter((id: number) => id != season.id)
-      }
     }
   }
 
 
   seasonIds = seasonIds.sort((a, b) => a - b).slice(-3);
 
-  let season: string[] = [];
-  let estimate: number[] = [];
-  let production: number[] = [];
 
   for (const sessionId of seasonIds) {
-    const fEstimate = estimateProductionList.find((estimate: any) =>
-          estimate.dataValues.season.id == sessionId
-        );
+    const fEstimate = estimateList.find((estimate: any) =>
+      estimate.dataValues.season.id == sessionId
+    );
     const fProcured = procuredList.find((procured: any) =>
       procured.dataValues.season.id == sessionId
     );
@@ -637,10 +695,10 @@ const getEstimateProductionList = async (estimateProductionList: any, procuredLi
     };
 
     if (fEstimate) {
-          data.seasonName = fEstimate.dataValues.season.name;
-          data.estimate += mtConversion(fEstimate.dataValues.estimate);
-        }
+      data.seasonName = fEstimate.dataValues.season.name;
+      data.estimate += mtConversion(fEstimate.dataValues.estimate);
 
+    }
     if (fProcured) {
       data.seasonName = fProcured.dataValues.season.name;
       data.procured += mtConversion(fProcured.dataValues.procured);
@@ -654,7 +712,6 @@ const getEstimateProductionList = async (estimateProductionList: any, procuredLi
         data.seasonName = fSeason.name;
       }
     }
-
 
 
     season.push(data.seasonName);
@@ -1367,7 +1424,37 @@ const getEstimateCottonRes = async (
 };
 
 
+const getProcuredByCountryData = async (where: any) => {
+
+  const result = await Transaction.findAll({
+    attributes: [
+      [Sequelize.fn('SUM', Sequelize.literal('CAST(qty_purchased  as numeric)')), 'procured'],
+      [Sequelize.col('country.id'), 'countryId'],
+      [Sequelize.col('country.county_name'), 'countryName'],
+      [Sequelize.col('season.id'), 'seasonId'],
+      [Sequelize.col('season.name'), 'seasonName']
+    ],
+    include: [{
+      model: Season,
+      as: 'season',
+      attributes: ['id', 'name']
+    }, {
+      model: Country,
+      as: 'country',
+      attributes: []
+    }],
+    where,
+    order: [['seasonId', 'desc']],
+    group: ["country.id", 'season.id']
+  });
+
+
+  return result;
+};
+
+
 const getEstimateAndProcuredByCountryData = async (where: any) => {
+
   const result = await Farm.findAll({
     attributes: [
       [Sequelize.fn('SUM', Sequelize.col('farms.total_estimated_cotton')), 'estimate'],
@@ -1405,9 +1492,9 @@ const getProductionCottonByCountry = async (
   try {
 
     const reqData = await getQueryParams(req, res);
-    const transactionWhere = getTransactionWhereQuery(reqData);
-    const procuredList = await getProcuredByCountryData(transactionWhere);
-    const data = await getProductionCottonRes(procuredList, reqData.season);
+    const where = getTransactionWhereQuery(reqData);
+    const productionList = await getProcuredByCountryData(where);
+    const data = await getProductionCottonRes(productionList, reqData.season);
     return res.sendSuccess(res, data);
 
   } catch (error: any) {
