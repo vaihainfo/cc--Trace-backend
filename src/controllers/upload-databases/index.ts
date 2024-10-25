@@ -998,6 +998,7 @@ const uploadFarmer = async (req: Request, res: Response) => {
                             farmers.lastName !== data.lastName ||
                             farmers.village_id !== village.id
                         );
+                        
                         if (farmers.qrUrl == "" ||  shouldUpdateQR){
                             let aa = await updateQrCode(`${farmers.id}`,
                                 name, uniqueFilename, data.farmerCode, village ? village.village_name : '');
