@@ -20,8 +20,13 @@ const decrypt = (text: any) => {
 }
 
 
-const generateQrCode = async (qrData: any, farmerName: string, fileName: any, farmerCode: any, village: any) => {
+const updateQrCode = async (qrData: any, farmerName: string, fileName: any, farmerCode: any, village: any) => {
     // Generate the QR code
+    const qrImagePath: string = path.join('./upload', fileName); // Path to save the QR code image
+    if (fs.existsSync(qrImagePath)) {
+        fs.unlinkSync(qrImagePath); // Delete the old QR code file
+    }
+    
     return new Promise((resolve, reject) => {
         try {
             let data = encrypt(qrData);
@@ -32,7 +37,31 @@ const generateQrCode = async (qrData: any, farmerName: string, fileName: any, fa
                 }
                 const qrBufferAsDataUrl = `data:image/png;base64,${buffer.toString('base64')}`;
 
-                const qrImagePath: string = path.join('./upload', fileName); // Path to save the QR code image
+                let html = getQrImageHtml(qrBufferAsDataUrl, farmerName, farmerCode, village);
+                // console.log(html);
+                let url = await generateCanvasFromHTML(html, qrImagePath);
+                resolve(url);
+            })
+        } catch (error) {
+            reject(error)
+        }
+    })
+}
+
+const generateQrCode = async (qrData: any, farmerName: string, fileName: any, farmerCode: any, village: any) => {
+    // Generate the QR code
+    const qrImagePath: string = path.join('./upload', fileName); // Path to save the QR code image
+
+    return new Promise((resolve, reject) => {
+        try {
+            let data = encrypt(qrData);
+            qr.toBuffer(data, { errorCorrectionLevel: 'H' }, async (err, buffer) => {
+                if (err) {
+                    console.error('Error generating QR code:', err);
+                    return;
+                }
+                const qrBufferAsDataUrl = `data:image/png;base64,${buffer.toString('base64')}`;
+
                 let html = getQrImageHtml(qrBufferAsDataUrl, farmerName, farmerCode, village);
                 // console.log(html);
                 let url = await generateCanvasFromHTML(html, qrImagePath);
@@ -612,6 +641,7 @@ const generateGinSalesHtml = async (sales: any) => {
 export {
     generateOnlyQrCode,
     generateQrCode,
+    updateQrCode,
     encrypt,
     decrypt,
     generateGinSalesHtml
