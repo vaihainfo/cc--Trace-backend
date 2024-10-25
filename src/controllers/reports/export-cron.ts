@@ -77,6 +77,7 @@ const exportReportsTameTaking = async () => {
   await generateNonOrganicFarmerReport();
   await generateProcurementReport(); // taking time
   await generateAgentTransactions(); // taking time
+  await generateGinnerSales();
   await generateSpinProcessBackwardfTraceabilty();
   
   console.log('TameTaking Cron Job Completed to execute all reports.');
@@ -97,7 +98,6 @@ const exportReportsOnebyOne = async () => {
 
   // // Ginner Reports 
   await generateGinnerSummary();
-  await generateGinnerSales();
   await generatePendingGinnerSales();
   await generateGinnerCottonStock();
   await generateGinnerProcess(); 
@@ -509,7 +509,7 @@ const generateSpinnerLintCottonStock = async () => {
 
 
   whereCondition.push(`gs.status IN ('Sold', 'Partially Accepted', 'Partially Rejected')`)
-  // sqlCondition.push(`gs.greyout_status IS NOT TRUE`)
+  whereCondition.push(`gs.greyout_status IS NOT TRUE`)
   whereCondition.push(`gs.qty_stock > 0`);
 
   const whereClause = whereCondition.length > 0 ? `WHERE ${whereCondition.join(' AND ')}` : '';
@@ -2664,10 +2664,13 @@ const generateGinnerProcess = async () => {
 const generateGinnerSales = async () => {
   const maxRowsPerWorksheet = 100000; // Maximum number of rows per worksheet in Excel
 
-  const whereCondition: any = {};
+  const whereCondition: any = [];
   try {
 
-    whereCondition['$sales.status$'] = { [Op.ne]: 'To be Submitted' };
+    whereCondition.push(`gs.status <> 'To be Submitted'`);
+  whereCondition.push(`gs.id IS NOT NULL`);
+
+  const whereClause = whereCondition.length > 0 ? `WHERE ${whereCondition.join(' AND ')}` : '';
     // Create the excel workbook file
     const workbook = new ExcelJS.stream.xlsx.WorkbookWriter({
       stream: fs.createWriteStream("./upload/Ginner-sales-report-test.xlsx")
@@ -2678,86 +2681,116 @@ const generateGinnerSales = async () => {
     let offset = 0;
     let hasNextBatch = true;
 
-    let include = [
-      {
-        model: Ginner,
-        as: "ginner",
-        attributes: []
-      },
-      {
-        model: Season,
-        as: "season",
-        attributes: []
-      },
-      {
-        model: Program,
-        as: "program",
-        attributes: []
-      },
-      {
-        model: Spinner,
-        as: "buyerdata",
-        attributes: []
-      }
-    ];
-
     while (hasNextBatch) {
-      const rows: any = await BaleSelection.findAll({
-        attributes: [
-          [Sequelize.literal('"sales"."id"'), "sales_id"],
-          [Sequelize.literal('"sales"."date"'), "date"],
-          [Sequelize.literal('"sales"."createdAt"'), "createdAt"],
-          [Sequelize.col('"sales"."season"."name"'), "season_name"],
-          [Sequelize.col('"sales"."ginner"."id"'), "ginner_id"],
-          [Sequelize.col('"sales"."ginner"."name"'), "ginner"],
-          [Sequelize.col('"sales"."program"."program_name"'), "program"],
-          [Sequelize.col('"sales"."buyerdata"."name"'), "buyerdata"],
-          [Sequelize.literal('"sales"."invoice_no"'), "invoice_no"],
-          [Sequelize.col('"sales"."lot_no"'), "lot_no"],
-          [Sequelize.fn('STRING_AGG', Sequelize.literal('DISTINCT "bale->ginprocess"."reel_lot_no"'), ',' ) , "reel_lot_no"],
-          [Sequelize.fn('STRING_AGG', Sequelize.literal('DISTINCT "bale->ginprocess->season"."name"'), ', '), "lint_process_seasons"],
-          [Sequelize.fn('ARRAY_AGG', Sequelize.literal('DISTINCT "bale->ginprocess"."id"')), "process_ids"],
-          [Sequelize.literal('"sales"."rate"'), "rate"],
-          [Sequelize.literal('"sales"."candy_rate"'), "candy_rate"],
-          [Sequelize.literal('"sales"."total_qty"'), "lint_quantity"],
-          [Sequelize.literal('"sales"."no_of_bales"'), "no_of_bales"],
-          [Sequelize.literal('"sales"."sale_value"'), "sale_value"],
-          [Sequelize.literal('"sales"."press_no"'), "press_no"],
-          [Sequelize.literal('"sales"."qty_stock"'), "qty_stock"],
-          [Sequelize.literal('"sales"."weight_loss"'), "weight_loss"],
-          [Sequelize.literal('"sales"."invoice_file"'), "invoice_file"],
-          [Sequelize.literal('"sales"."vehicle_no"'), "vehicle_no"],
-          [Sequelize.literal('"sales"."transporter_name"'), "transporter_name"],
-          [Sequelize.literal('"sales"."transaction_agent"'), "transaction_agent"],
-          [Sequelize.literal('"sales"."status"'), "status"],
-        ],
-        where: whereCondition,
-        include: [{
-          model: GinSales,
-          as: "sales",
-          include: include,
-          attributes: []
-        }, {
-          model: GinBale,
-          attributes: [],
-          as: "bale",
-          include: [{
-            model: GinProcess,
-            as: "ginprocess",
-            include: [{
-              model: Season,
-              as: "season",
-              attributes: [],
-            }],
-            attributes: []
-          }]
-        }],
-        group: ['sales.id', "sales.season.id", "sales.ginner.id", "sales.buyerdata.id", "sales.program.id"],
-        order: [
-          ['sales_id', "desc"]
-        ],
-        offset: offset,
-        limit: batchSize,
+      const dataQuery = `
+      WITH ginsale AS (
+          SELECT 
+              gs.id AS ginsale_id,
+              gs.date AS date,
+              gs."createdAt" AS "createdAt",
+              season.name AS season_name,
+              program.program_name AS program,
+              ginner.id AS ginner_id,
+              ginner.name AS ginner,
+              gs.total_qty AS total_qty,
+              spinner.id AS spinner_id,
+              spinner.name AS buyerdata,
+              gs.qr AS qr,
+              gs.invoice_no AS invoice_no,
+              gs.lot_no AS lot_no,
+              gs.rate AS rate,
+              gs.candy_rate AS candy_rate,
+              gs.total_qty AS lint_quantity,
+              gs.no_of_bales AS no_of_bales,
+              gs.sale_value AS sale_value,
+              gs.press_no AS press_no,
+              gs.qty_stock AS qty_stock,
+              gs.weight_loss AS weight_loss,
+              gs.invoice_file AS invoice_file,
+              gs.vehicle_no AS vehicle_no,
+              gs.transporter_name AS transporter_name,
+              gs.transaction_agent AS transaction_agent,
+              gs.status AS status,
+              ARRAY_AGG(DISTINCT gp.id) AS process_ids,
+              STRING_AGG(DISTINCT ss.name, ',') AS lint_process_seasons,
+              STRING_AGG(DISTINCT gp.reel_lot_no, ',') AS reel_lot_no,
+              COALESCE(
+                  SUM(
+                    CASE
+                      WHEN gb.old_weight IS NOT NULL THEN CAST(gb.old_weight AS DOUBLE PRECISION)
+                      ELSE CAST(gb.weight AS DOUBLE PRECISION)
+                    END
+                  ), 0
+              ) AS total_old_weight
+          FROM bale_selections bs
+          INNER JOIN gin_sales gs ON bs.sales_id = gs.id
+          LEFT JOIN seasons season ON gs.season_id = season.id
+          LEFT JOIN "gin-bales" gb ON bs.bale_id = gb.id
+          LEFT JOIN gin_processes gp ON gb.process_id = gp.id
+          LEFT JOIN seasons ss ON gp.season_id = ss.id
+          LEFT JOIN ginners ginner ON gs.ginner_id = ginner.id
+          LEFT JOIN spinners spinner ON gs.buyer = spinner.id
+          LEFT JOIN programs program ON gs.program_id = program.id
+          ${whereClause}
+          GROUP BY 
+              gs.id, spinner.id, season.id, ginner.id, program.id
+          ORDER BY gs.id DESC
+          LIMIT ${batchSize} OFFSET ${offset}
+        ),
+        seed_seasons AS (
+          SELECT cs.process_id, s.name
+          FROM cotton_selections cs
+          LEFT JOIN transactions t ON cs.transaction_id = t.id
+          LEFT JOIN seasons s ON t.season_id = s.id
+          WHERE cs.process_id IN (
+              SELECT 
+                  UNNEST(COALESCE(ARRAY_REMOVE(gs.process_ids, NULL), '{}'))  -- Handle NULL and empty arrays
+              FROM ginsale gs
+          )
+
+          UNION ALL
+
+          SELECT hs.process_id, s.name
+          FROM heap_selections hs
+          LEFT JOIN transactions t ON t.id = ANY(hs.transaction_id)
+          LEFT JOIN seasons s ON t.season_id = s.id
+          WHERE hs.process_id IN (
+              SELECT 
+                  UNNEST(COALESCE(ARRAY_REMOVE(gs.process_ids, NULL), '{}'))  -- Handle NULL and empty arrays
+              FROM ginsale gs
+          )
+        )
+        SELECT 
+          gs.*,
+          COALESCE(STRING_AGG(DISTINCT ss.name, ', '), '') AS seed_consumed_seasons
+        FROM ginsale gs
+        LEFT JOIN seed_seasons ss ON ss.process_id = ANY(COALESCE(ARRAY_REMOVE(gs.process_ids, NULL), '{}'))  -- Handle NULL and empty arrays
+        GROUP BY gs.ginsale_id,
+                gs.date,
+                gs."createdAt",
+                gs.season_name,
+                gs.program,
+                gs.ginner_id,
+                gs.ginner,
+                gs.total_qty,
+                gs.spinner_id,
+                gs.buyerdata,
+                gs.qr,
+                gs.process_ids,
+                gs.lint_process_seasons,
+                gs.reel_lot_no,
+                gs.total_old_weight,
+                gs.invoice_no,
+                gs.lot_no,
+                gs.lint_quantity,
+                gs.rate, gs.candy_rate, gs.no_of_bales, gs.sale_value,
+                gs.press_no, gs.qty_stock, gs.weight_loss, gs.invoice_file,
+                gs.vehicle_no, gs.transporter_name, gs.transaction_agent, gs.status;`
+
+      //fetch data with pagination
+
+      const rows: any = await sequelize.query(dataQuery, {
+        type: sequelize.QueryTypes.SELECT,
       })
 
       if (rows.length === 0) {
@@ -2791,57 +2824,30 @@ const generateGinnerSales = async () => {
 
       // Append data to worksheet
       for await (const [index, item] of rows.entries()) {
-        let processIds = item?.dataValues?.process_ids && Array.isArray(item?.dataValues?.process_ids)
-            ? item.dataValues.process_ids?.filter((id: any) => id !== null && id !== undefined)
-            : [];
-
-          let seedSeason = [];
-
-          if (processIds.length > 0) {
-            [seedSeason] = await sequelize.query(`
-              SELECT STRING_AGG(DISTINCT s.name, ', ') AS seasons
-              FROM (
-                  -- Retrieve village names from the cotton table
-                  SELECT DISTINCT ss.name
-                  FROM cotton_selections cs
-                  JOIN transactions t ON cs.transaction_id = t.id
-                  LEFT JOIN seasons ss ON t.season_id = ss.id
-                  WHERE cs.process_id IN  (${processIds.join(',')})
-                  
-                  UNION
-                  
-                  -- Retrieve village names from the heap table
-                  SELECT DISTINCT ss.name
-                  FROM heap_selections hs
-                  JOIN transactions t ON t.id = ANY(hs.transaction_id)
-                  LEFT JOIN seasons ss ON t.season_id = ss.id
-                  WHERE hs.process_id IN  (${processIds.join(',')})
-              ) s
-          `)
-          }
 
         const rowValues = Object.values({
           index: index + offset + 1,
-          date: item.dataValues.date ? item.dataValues.date : '',
-          created_at: item.dataValues.createdAt ? item.dataValues.createdAt : '',
-          seed_consumed_seasons: seedSeason ? seedSeason[0]?.seasons : "",
-          lint_process_seasons: item.dataValues.lint_process_seasons ? item.dataValues.lint_process_seasons : '',
-          season: item.dataValues.season_name ? item.dataValues.season_name : '',
-          ginner: item.dataValues.ginner ? item.dataValues.ginner : '',
-          invoice: item.dataValues.invoice_no ? item.dataValues.invoice_no : '',
-          buyer: item.dataValues.buyerdata ? item.dataValues.buyerdata : '',
-          lot_no: item.dataValues.lot_no ? item.dataValues.lot_no : '',
-          reel_lot_no: item.dataValues.reel_lot_no ? item.dataValues.reel_lot_no : '',
-          no_of_bales: item.dataValues.no_of_bales ? Number(item.dataValues.no_of_bales) : 0,
-          press_no: item.dataValues.press_no ? item.dataValues.press_no : '',
-          rate: item.dataValues.rate ? Number(item.dataValues.rate) : 0,
-          lint_quantity: item.dataValues.lint_quantity ? Number(item.dataValues.lint_quantity) : 0,
-          sales_value: item.dataValues.sale_value ? Number(item.dataValues.sale_value) : 0,
-          vehicle_no: item.dataValues.vehicle_no ? item.dataValues.vehicle_no : '',
-          transporter_name: item.dataValues.transporter_name ? item.dataValues.transporter_name : '',
-          program: item.dataValues.program ? item.dataValues.program : '',
-          agentDetails: item.dataValues.transaction_agent ? item.dataValues.transaction_agent : 'NA',
-          status: item.dataValues.status === 'Sold' ? 'Sold' : `Available [Stock : ${item.dataValues.qty_stock ? item.dataValues.qty_stock : 0}]`
+          date: item.date ? item.date : '',
+          created_at: item.createdAt ? item.createdAt : '',
+          seed_consumed_seasons: item.seed_consumed_seasons ? item.seed_consumed_seasons : "",
+          lint_process_seasons: item.lint_process_seasons ? item.lint_process_seasons : '',
+          season: item.season_name ? item.season_name : '',
+          ginner: item.ginner ? item.ginner : '',
+          invoice: item.invoice_no ? item.invoice_no : '',
+          buyer: item.buyerdata ? item.buyerdata : '',
+          // heap: '',
+          lot_no: item.lot_no ? item.lot_no : '',
+          reel_lot_no: item.reel_lot_no ? item.reel_lot_no : '',
+          no_of_bales: item.no_of_bales ? Number(item.no_of_bales) : 0,
+          press_no: item.press_no ? item.press_no : '',
+          rate: item.rate ? item.rate : 0,
+          lint_quantity: item.lint_quantity ? Number(item.lint_quantity) : '',
+          sales_value: item.sale_value ? Number(item.sale_value) : 0,
+          vehicle_no: item.vehicle_no ? item.vehicle_no : '',
+          transporter_name: item.transporter_name ? item.transporter_name : '',
+          program: item.program ? item.program : '',
+          agentDetails: item.transaction_agent ? item.transaction_agent : 'NA',
+          status: item.status === 'Sold' ? 'Sold' : `Available [Stock : ${item.qty_stock ? item.qty_stock : 0}]`
         });
         currentWorksheet.addRow(rowValues).commit();
       }
@@ -4100,26 +4106,26 @@ const generateSpinnerSale = async () => {
 
       for await (const [index, item] of rows.entries()) {
 
-        // let processIds = item?.dataValues?.process_ids && Array.isArray(item?.dataValues?.process_ids)
-        // ? item.dataValues.process_ids.filter((id: any) => id !== null && id !== undefined)
-        // : [];
+        let processIds = item?.dataValues?.process_ids && Array.isArray(item?.dataValues?.process_ids)
+        ? item.dataValues.process_ids.filter((id: any) => id !== null && id !== undefined)
+        : [];
 
       let seedSeason = [];
 
-      // if (processIds.length > 0) {
-      //   [seedSeason] = await sequelize.query(`
-      //     SELECT 
-      //         STRING_AGG(DISTINCT s.name, ', ') AS seasons
-      //     FROM
-      //         lint_selections ls
-      //     LEFT JOIN
-      //         gin_sales gs ON ls.lint_id = gs.id
-      //     LEFT JOIN
-      //         seasons s ON gs.season_id = s.id
-      //     WHERE 
-      //         ls.process_id IN (${processIds.join(',')})
-      // `);
-      // }
+      if (processIds.length > 0) {
+        [seedSeason] = await sequelize.query(`
+          SELECT 
+              STRING_AGG(DISTINCT s.name, ', ') AS seasons
+          FROM
+              lint_selections ls
+          LEFT JOIN
+              gin_sales gs ON ls.lint_id = gs.id
+          LEFT JOIN
+              seasons s ON gs.season_id = s.id
+          WHERE 
+              ls.process_id IN (${processIds.join(',')})
+      `);
+      }
 
         let yarnCount: string = "";
         let yarnTypeData: string = "";
@@ -4150,8 +4156,7 @@ const generateSpinnerSale = async () => {
           index: index + offset + 1,
           createdAt: item.dataValues.createdAt ? item.dataValues.createdAt : "",
           date: item.dataValues.date ? formatDate(item.dataValues.date) : "",
-          // lint_consumed_seasons: seedSeason ? seedSeason[0]?.seasons : "",
-          lint_consumed_seasons: "",
+          lint_consumed_seasons: seedSeason ? seedSeason[0]?.seasons : "",
           season: item.dataValues.season_name ? item.dataValues.season_name : "",
           spinner: item.dataValues.spinner ? item.dataValues.spinner : "",
           buyer_id: item.dataValues.weaver
