@@ -30,6 +30,7 @@ import CropCurrentSeason from "../../models/crop-current-season.model";
 import IcsQuantityEstimation from "../../models/ics-quantity-estimation.model";
 import FarmGroupEvaluation from "../../models/farm-group-evaluation.model";
 import OrganicIntegrity from "../../models/organic-integrity.model";
+import { generateQrCode, updateQrCode } from "../../provider/qrcode";
 import GinnerAllocatedVillage from "../../models/ginner-allocated-vilage.model";
 
 const uploadGinnerOrder = async (req: Request, res: Response) => {
@@ -37,8 +38,6 @@ const uploadGinnerOrder = async (req: Request, res: Response) => {
         let fail = [];
         let pass = []
         for await (const data of req.body.ginnerOrder) {
-            console.log(data);
-
             if (!data.season) {
                 fail.push({
                     success: false,
@@ -182,7 +181,6 @@ const uploadStyleMark = async (req: Request, res: Response) => {
         let fail = [];
         let pass = [];
         for await (const data of req.body.styleMark) {
-            console.log(data);
             if (!data.style_mark_no) {
                 fail.push({
                     success: false,
@@ -987,12 +985,33 @@ const uploadFarmer = async (req: Request, res: Response) => {
                             agri_estimated_yeld: data.agriEstimatedYield ? data.agriEstimatedYield : 0.0,
                             agri_estimated_prod: data.agriEstimatedProd ? data.agriEstimatedProd : 0.0
                         };
+
                         const farmer = await Farmer.update(farmerdata, {
                             where: {
                                 id: farmers.id,
                             },
                         });
 
+                        let name = data.lastName ? data.firstName + " " + data.lastName : data.firstName
+                        let uniqueFilename = `qrcode_${name.replace(/\//g, '-')}_${data.farmerCode.replace(/\//g, '-')}.png`;
+                    
+                        
+                        const shouldUpdateQR = (
+                            farmers.firstName !== data.firstName ||
+                            farmers.lastName !== data.lastName ||
+                            farmers.village_id !== village.id
+                        );
+                        
+                        if (farmers && farmers.qrUrl == "" ||  shouldUpdateQR){
+                            let aa = await updateQrCode(`${farmers.id}`,
+                                name, uniqueFilename, data.farmerCode, village ? village.village_name : '');
+                            const farmerPLace = await Farmer.update({ qrUrl: uniqueFilename }, {
+                                where: {
+                                    id: farmers.id
+                                }
+                            });
+                        }
+                       
 
                         //check if farm exists
                         const farm = await Farm.findOne({ where: { farmer_id: farmers.id, season_id: season.id } });
@@ -1065,7 +1084,18 @@ const uploadFarmer = async (req: Request, res: Response) => {
                             agri_estimated_yeld: data.agriEstimatedYield ? data.agriEstimatedYield : 0.0,
                             agri_estimated_prod: data.agriEstimatedProd ? data.agriEstimatedProd : 0.0
                         };
+
                         const farmer = await Farmer.create(farmerdata);
+
+                        let name = farmer.lastName ? farmer.firstName + " " + farmer.lastName : farmer.firstName
+                        let uniqueFilename = `qrcode_${name.replace(/\//g, '-')}_${farmer.code.replace(/\//g, '-')}.png`;
+                        let aa = await generateQrCode(`${farmer.id}`,
+                            name, uniqueFilename, farmer.code, village ? village.village_name : '');
+                        const farmerPLace = await Farmer.update({ qrUrl: uniqueFilename }, {
+                            where: {
+                                id: farmer.id
+                            }
+                        });
 
                         const farmData = {
                             farmer_id: farmer.id,
@@ -1078,15 +1108,6 @@ const uploadFarmer = async (req: Request, res: Response) => {
                             total_estimated_cotton: data.totalEstimatedCotton ? data.totalEstimatedCotton : 0.0
                         };
                         const farm = await Farm.create(farmData);
-                        // let uniqueFilename = `qrcode_${Date.now()}.png`;
-                        // let name = farmer.firstName + " " + farmer.lastName
-                        // let data12 = await generateQrCode(`Farmer Code : ${farmer.code}  Farmer Id: ${farmer.id}`,
-                        //     name, uniqueFilename, farmer.code, village.village_name);
-                        // const farmerP = await Farmer.update({ qrUrl: uniqueFilename }, {
-                        //     where: {
-                        //         id: farmer.id
-                        //     },
-                        // });
                         pass.push({
                             success: true,
                             data: farmer,
