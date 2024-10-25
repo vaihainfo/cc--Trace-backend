@@ -992,6 +992,7 @@ const uploadFarmer = async (req: Request, res: Response) => {
 
                         let name = data.lastName ? data.firstName + " " + data.lastName : data.firstName
                         let uniqueFilename = `qrcode_${name.replace(/\//g, '-')}_${data.farmerCode.replace(/\//g, '-')}.png`;
+                    
                         
                         const shouldUpdateQR = (
                             farmers.firstName !== data.firstName ||
