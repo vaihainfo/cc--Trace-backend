@@ -1109,7 +1109,7 @@ const chooseCotton = async (req: Request, res: Response) => {
       //   "estimated_qty",
       // ],
       // ],
-      attributes: ["id", "qty_stock", "qty_purchased", "village_id", "vehicle", "createdAt"],
+      attributes: ["id", "qty_stock", "qty_purchased", "village_id", "vehicle", "date"],
       include: [
         { model: Village, as: "village" },
         { model: Program, as: "program" },
@@ -1151,7 +1151,7 @@ const chooseCotton = async (req: Request, res: Response) => {
             qty_stock: result.dataValues.qty_stock,
             qty_used: result.dataValues.qty_stock,
             estimated_qty: result.dataValues.qty_purchased,
-            date_of_procurement: result.dataValues.createdAt,
+            date_of_procurement: result.dataValues.date,
             vehicle_no: result.dataValues.vehicle
           }
         ]
@@ -1166,7 +1166,7 @@ const chooseCotton = async (req: Request, res: Response) => {
             qty_stock: result.dataValues.qty_stock,
             qty_used: result.dataValues.qty_stock,
             estimated_qty: result.dataValues.qty_purchased,
-            date_of_procurement: result.dataValues.createdAt,
+            date_of_procurement: result.dataValues.date,
             vehicle_no: result.dataValues.vehicle
           }],
           vlg_id: villageId,
