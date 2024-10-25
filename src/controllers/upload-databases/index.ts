@@ -30,7 +30,7 @@ import CropCurrentSeason from "../../models/crop-current-season.model";
 import IcsQuantityEstimation from "../../models/ics-quantity-estimation.model";
 import FarmGroupEvaluation from "../../models/farm-group-evaluation.model";
 import OrganicIntegrity from "../../models/organic-integrity.model";
-import { generateQrCode } from "../../provider/qrcode";
+import { generateQrCode, updateQrCode } from "../../provider/qrcode";
 
 const uploadGinnerOrder = async (req: Request, res: Response) => {
     try {
@@ -992,13 +992,22 @@ const uploadFarmer = async (req: Request, res: Response) => {
 
                         let name = data.lastName ? data.firstName + " " + data.lastName : data.firstName
                         let uniqueFilename = `qrcode_${name.replace(/\//g, '-')}_${data.farmerCode.replace(/\//g, '-')}.png`;
-                        let aa = await generateQrCode(`${farmers.id}`,
-                            name, uniqueFilename, data.farmerCode, village ? village.village_name : '');
-                        const farmerPLace = await Farmer.update({ qrUrl: uniqueFilename }, {
-                            where: {
-                                id: farmers.id
-                            }
-                        });
+                        
+                        const shouldUpdateQR = (
+                            farmers.firstName !== data.firstName ||
+                            farmers.lastName !== data.lastName ||
+                            farmers.village_id !== village.id
+                        );
+                        if (farmers.qrUrl == "" ||  shouldUpdateQR){
+                            let aa = await updateQrCode(`${farmers.id}`,
+                                name, uniqueFilename, data.farmerCode, village ? village.village_name : '');
+                            const farmerPLace = await Farmer.update({ qrUrl: uniqueFilename }, {
+                                where: {
+                                    id: farmers.id
+                                }
+                            });
+                        }
+                       
 
                         //check if farm exists
                         const farm = await Farm.findOne({ where: { farmer_id: farmers.id, season_id: season.id } });
