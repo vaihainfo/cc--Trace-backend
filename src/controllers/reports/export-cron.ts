@@ -77,6 +77,8 @@ const exportReportsTameTaking = async () => {
   await generateNonOrganicFarmerReport();
   await generateProcurementReport(); // taking time
   await generateAgentTransactions(); // taking time
+  await generateGinnerSales();
+  await generateSpinProcessBackwardfTraceabilty();
   
   console.log('TameTaking Cron Job Completed to execute all reports.');
 }
@@ -96,7 +98,6 @@ const exportReportsOnebyOne = async () => {
 
   // // Ginner Reports 
   await generateGinnerSummary();
-  await generateGinnerSales();
   await generatePendingGinnerSales();
   await generateGinnerCottonStock();
   await generateGinnerProcess(); 
@@ -107,7 +108,6 @@ const exportReportsOnebyOne = async () => {
   await generateSpinnerSale();
   await generatePendingSpinnerBale();
   await generateSpinnerLintCottonStock();
-  await generateSpinProcessBackwardfTraceabilty();
   await exportSpinnerGreyOutReport();
   await exportGinHeapReport();
   await exportGinnerProcessGreyOutReport();
@@ -509,7 +509,7 @@ const generateSpinnerLintCottonStock = async () => {
 
 
   whereCondition.push(`gs.status IN ('Sold', 'Partially Accepted', 'Partially Rejected')`)
-  // sqlCondition.push(`gs.greyout_status IS NOT TRUE`)
+  whereCondition.push(`gs.greyout_status IS NOT TRUE`)
   whereCondition.push(`gs.qty_stock > 0`);
 
   const whereClause = whereCondition.length > 0 ? `WHERE ${whereCondition.join(' AND ')}` : '';
@@ -2424,6 +2424,10 @@ const generateGinnerProcess = async () => {
               s.name AS season_name,
               g.name AS ginner_name,
               gp.heap_number,
+              gp.heap_register,
+              gp.weigh_bridge,
+              gp.delivery_challan,
+              gp.qr,
               gp.lot_no,
               gp.press_no,
               gp.reel_lot_no,
@@ -2446,13 +2450,13 @@ const generateGinnerProcess = async () => {
                 SELECT
                     gb.process_id,
                     COALESCE(
-                  SUM(
-                    CASE
-                      WHEN gb.old_weight IS NOT NULL THEN CAST(gb.old_weight AS DOUBLE PRECISION)
-                      ELSE CAST(gb.weight AS DOUBLE PRECISION)
-                    END
-                  ), 0
-              ) AS lint_quantity,
+                    SUM(
+                      CASE
+                        WHEN gb.old_weight IS NOT NULL THEN CAST(gb.old_weight AS DOUBLE PRECISION)
+                        ELSE CAST(gb.weight AS DOUBLE PRECISION)
+                      END
+                      ), 0
+                    ) AS lint_quantity,
                     COALESCE(MIN(CASE WHEN gb.bale_no ~ '^[0-9]+$' THEN CAST(gb.bale_no AS BIGINT) ELSE 0 END), 0) AS pressno_from,
                     COALESCE(MAX(CASE WHEN gb.bale_no ~ '^[0-9]+$' THEN CAST(gb.bale_no AS BIGINT) ELSE 0 END), 0) AS pressno_to
                 FROM
@@ -2473,12 +2477,17 @@ const generateGinnerProcess = async () => {
           ),
           heap_selection_data AS (
             SELECT
+              unnest_data.process_id,
+              ARRAY_AGG(DISTINCT unnest_village_id) AS villages
+            FROM (
+              SELECT 
                 hs.process_id,
-                ARRAY_AGG(DISTINCT hs.village_id) AS villages
-            FROM
+                UNNEST(hs.village_id) AS unnest_village_id  -- Unnest the array of village_id
+              FROM
                 heap_selections hs
+            ) unnest_data
             GROUP BY
-                hs.process_id
+              unnest_data.process_id
           ),
           combined_village_data AS (
             SELECT
@@ -2533,11 +2542,14 @@ const generateGinnerProcess = async () => {
                     gb.process_id
             )
             SELECT
+                gd.process_id,
                 gd.date AS date,
                 gd.created_date AS "createdAt",
                 gd.season_name AS season,
                 gd.ginner_name AS ginner_name,
                 gd.heap_number AS heap_number,
+                gd.heap_register AS heap_register,
+                gd.bale_process AS bale_process,
                 gd.lot_no AS lot_no,
                 gd.press_no AS press_no,
                 CONCAT(gb.pressno_from, '-', gb.pressno_to) AS gin_press_no,
@@ -2552,9 +2564,12 @@ const generateGinnerProcess = async () => {
                 (COALESCE(gb.lint_quantity, 0) - COALESCE(sd.lint_quantity_sold, 0)) AS lint_stock,
                 (COALESCE(gd.no_of_bales, 0) - COALESCE(sd.sold_bales, 0)) AS bale_stock,
                 gd.program AS program,
-                gd.greyout_status,
-               vnd.village_names AS village_names
-                gd.season_name AS seed_consumed_seasons
+                vnd.village_names AS village_names,
+                gd.season_name AS seed_consumed_seasons,
+                gd.weigh_bridge,
+                gd.delivery_challan,
+                gd.qr,
+                gd.greyout_status
             FROM
                 gin_process_data gd
             LEFT JOIN
@@ -2562,7 +2577,7 @@ const generateGinnerProcess = async () => {
             LEFT JOIN
               village_names_data vnd ON gd.process_id = vnd.process_id 
             LEFT JOIN
-              sold_data sd ON gd.process_id = sd.process_id
+                sold_data sd ON gd.process_id = sd.process_id
             LIMIT :limit OFFSET :offset
             `, {
             replacements: { limit: batchSize, offset },
@@ -2620,7 +2635,7 @@ const generateGinnerProcess = async () => {
           lint_stock: item.lint_stock && Number(item.lint_stock) > 0 ? Number(item.lint_stock) : 0,
           bale_stock: item.bale_stock && Number(item.bale_stock) > 0 ? Number(item.bale_stock) : 0,
           program: item.program ? item.program : "",
-          village_names: item.village_names ? item.village_names : "",
+          village_names: item.village_names && item.village_names.length > 0 ? item.village_names.join(", ") : "",
           greyout_status: item.greyout_status ? "Yes" : "No",
         });
 
@@ -2649,10 +2664,13 @@ const generateGinnerProcess = async () => {
 const generateGinnerSales = async () => {
   const maxRowsPerWorksheet = 100000; // Maximum number of rows per worksheet in Excel
 
-  const whereCondition: any = {};
+  const whereCondition: any = [];
   try {
 
-    whereCondition['$sales.status$'] = { [Op.ne]: 'To be Submitted' };
+    whereCondition.push(`gs.status <> 'To be Submitted'`);
+  whereCondition.push(`gs.id IS NOT NULL`);
+
+  const whereClause = whereCondition.length > 0 ? `WHERE ${whereCondition.join(' AND ')}` : '';
     // Create the excel workbook file
     const workbook = new ExcelJS.stream.xlsx.WorkbookWriter({
       stream: fs.createWriteStream("./upload/Ginner-sales-report-test.xlsx")
@@ -2663,86 +2681,116 @@ const generateGinnerSales = async () => {
     let offset = 0;
     let hasNextBatch = true;
 
-    let include = [
-      {
-        model: Ginner,
-        as: "ginner",
-        attributes: []
-      },
-      {
-        model: Season,
-        as: "season",
-        attributes: []
-      },
-      {
-        model: Program,
-        as: "program",
-        attributes: []
-      },
-      {
-        model: Spinner,
-        as: "buyerdata",
-        attributes: []
-      }
-    ];
-
     while (hasNextBatch) {
-      const rows: any = await BaleSelection.findAll({
-        attributes: [
-          [Sequelize.literal('"sales"."id"'), "sales_id"],
-          [Sequelize.literal('"sales"."date"'), "date"],
-          [Sequelize.literal('"sales"."createdAt"'), "createdAt"],
-          [Sequelize.col('"sales"."season"."name"'), "season_name"],
-          [Sequelize.col('"sales"."ginner"."id"'), "ginner_id"],
-          [Sequelize.col('"sales"."ginner"."name"'), "ginner"],
-          [Sequelize.col('"sales"."program"."program_name"'), "program"],
-          [Sequelize.col('"sales"."buyerdata"."name"'), "buyerdata"],
-          [Sequelize.literal('"sales"."invoice_no"'), "invoice_no"],
-          [Sequelize.col('"sales"."lot_no"'), "lot_no"],
-          [Sequelize.fn('STRING_AGG', Sequelize.literal('DISTINCT "bale->ginprocess"."reel_lot_no"'), ',' ) , "reel_lot_no"],
-          [Sequelize.fn('STRING_AGG', Sequelize.literal('DISTINCT "bale->ginprocess->season"."name"'), ', '), "lint_process_seasons"],
-          [Sequelize.fn('ARRAY_AGG', Sequelize.literal('DISTINCT "bale->ginprocess"."id"')), "process_ids"],
-          [Sequelize.literal('"sales"."rate"'), "rate"],
-          [Sequelize.literal('"sales"."candy_rate"'), "candy_rate"],
-          [Sequelize.literal('"sales"."total_qty"'), "lint_quantity"],
-          [Sequelize.literal('"sales"."no_of_bales"'), "no_of_bales"],
-          [Sequelize.literal('"sales"."sale_value"'), "sale_value"],
-          [Sequelize.literal('"sales"."press_no"'), "press_no"],
-          [Sequelize.literal('"sales"."qty_stock"'), "qty_stock"],
-          [Sequelize.literal('"sales"."weight_loss"'), "weight_loss"],
-          [Sequelize.literal('"sales"."invoice_file"'), "invoice_file"],
-          [Sequelize.literal('"sales"."vehicle_no"'), "vehicle_no"],
-          [Sequelize.literal('"sales"."transporter_name"'), "transporter_name"],
-          [Sequelize.literal('"sales"."transaction_agent"'), "transaction_agent"],
-          [Sequelize.literal('"sales"."status"'), "status"],
-        ],
-        where: whereCondition,
-        include: [{
-          model: GinSales,
-          as: "sales",
-          include: include,
-          attributes: []
-        }, {
-          model: GinBale,
-          attributes: [],
-          as: "bale",
-          include: [{
-            model: GinProcess,
-            as: "ginprocess",
-            include: [{
-              model: Season,
-              as: "season",
-              attributes: [],
-            }],
-            attributes: []
-          }]
-        }],
-        group: ['sales.id', "sales.season.id", "sales.ginner.id", "sales.buyerdata.id", "sales.program.id"],
-        order: [
-          ['sales_id', "desc"]
-        ],
-        offset: offset,
-        limit: batchSize,
+      const dataQuery = `
+      WITH ginsale AS (
+          SELECT 
+              gs.id AS ginsale_id,
+              gs.date AS date,
+              gs."createdAt" AS "createdAt",
+              season.name AS season_name,
+              program.program_name AS program,
+              ginner.id AS ginner_id,
+              ginner.name AS ginner,
+              gs.total_qty AS total_qty,
+              spinner.id AS spinner_id,
+              spinner.name AS buyerdata,
+              gs.qr AS qr,
+              gs.invoice_no AS invoice_no,
+              gs.lot_no AS lot_no,
+              gs.rate AS rate,
+              gs.candy_rate AS candy_rate,
+              gs.total_qty AS lint_quantity,
+              gs.no_of_bales AS no_of_bales,
+              gs.sale_value AS sale_value,
+              gs.press_no AS press_no,
+              gs.qty_stock AS qty_stock,
+              gs.weight_loss AS weight_loss,
+              gs.invoice_file AS invoice_file,
+              gs.vehicle_no AS vehicle_no,
+              gs.transporter_name AS transporter_name,
+              gs.transaction_agent AS transaction_agent,
+              gs.status AS status,
+              ARRAY_AGG(DISTINCT gp.id) AS process_ids,
+              STRING_AGG(DISTINCT ss.name, ',') AS lint_process_seasons,
+              STRING_AGG(DISTINCT gp.reel_lot_no, ',') AS reel_lot_no,
+              COALESCE(
+                  SUM(
+                    CASE
+                      WHEN gb.old_weight IS NOT NULL THEN CAST(gb.old_weight AS DOUBLE PRECISION)
+                      ELSE CAST(gb.weight AS DOUBLE PRECISION)
+                    END
+                  ), 0
+              ) AS total_old_weight
+          FROM bale_selections bs
+          INNER JOIN gin_sales gs ON bs.sales_id = gs.id
+          LEFT JOIN seasons season ON gs.season_id = season.id
+          LEFT JOIN "gin-bales" gb ON bs.bale_id = gb.id
+          LEFT JOIN gin_processes gp ON gb.process_id = gp.id
+          LEFT JOIN seasons ss ON gp.season_id = ss.id
+          LEFT JOIN ginners ginner ON gs.ginner_id = ginner.id
+          LEFT JOIN spinners spinner ON gs.buyer = spinner.id
+          LEFT JOIN programs program ON gs.program_id = program.id
+          ${whereClause}
+          GROUP BY 
+              gs.id, spinner.id, season.id, ginner.id, program.id
+          ORDER BY gs.id DESC
+          LIMIT ${batchSize} OFFSET ${offset}
+        ),
+        seed_seasons AS (
+          SELECT cs.process_id, s.name
+          FROM cotton_selections cs
+          LEFT JOIN transactions t ON cs.transaction_id = t.id
+          LEFT JOIN seasons s ON t.season_id = s.id
+          WHERE cs.process_id IN (
+              SELECT 
+                  UNNEST(COALESCE(ARRAY_REMOVE(gs.process_ids, NULL), '{}'))  -- Handle NULL and empty arrays
+              FROM ginsale gs
+          )
+
+          UNION ALL
+
+          SELECT hs.process_id, s.name
+          FROM heap_selections hs
+          LEFT JOIN transactions t ON t.id = ANY(hs.transaction_id)
+          LEFT JOIN seasons s ON t.season_id = s.id
+          WHERE hs.process_id IN (
+              SELECT 
+                  UNNEST(COALESCE(ARRAY_REMOVE(gs.process_ids, NULL), '{}'))  -- Handle NULL and empty arrays
+              FROM ginsale gs
+          )
+        )
+        SELECT 
+          gs.*,
+          COALESCE(STRING_AGG(DISTINCT ss.name, ', '), '') AS seed_consumed_seasons
+        FROM ginsale gs
+        LEFT JOIN seed_seasons ss ON ss.process_id = ANY(COALESCE(ARRAY_REMOVE(gs.process_ids, NULL), '{}'))  -- Handle NULL and empty arrays
+        GROUP BY gs.ginsale_id,
+                gs.date,
+                gs."createdAt",
+                gs.season_name,
+                gs.program,
+                gs.ginner_id,
+                gs.ginner,
+                gs.total_qty,
+                gs.spinner_id,
+                gs.buyerdata,
+                gs.qr,
+                gs.process_ids,
+                gs.lint_process_seasons,
+                gs.reel_lot_no,
+                gs.total_old_weight,
+                gs.invoice_no,
+                gs.lot_no,
+                gs.lint_quantity,
+                gs.rate, gs.candy_rate, gs.no_of_bales, gs.sale_value,
+                gs.press_no, gs.qty_stock, gs.weight_loss, gs.invoice_file,
+                gs.vehicle_no, gs.transporter_name, gs.transaction_agent, gs.status;`
+
+      //fetch data with pagination
+
+      const rows: any = await sequelize.query(dataQuery, {
+        type: sequelize.QueryTypes.SELECT,
       })
 
       if (rows.length === 0) {
@@ -2776,57 +2824,30 @@ const generateGinnerSales = async () => {
 
       // Append data to worksheet
       for await (const [index, item] of rows.entries()) {
-        let processIds = item?.dataValues?.process_ids && Array.isArray(item?.dataValues?.process_ids)
-            ? item.dataValues.process_ids?.filter((id: any) => id !== null && id !== undefined)
-            : [];
-
-          let seedSeason = [];
-
-          if (processIds.length > 0) {
-            [seedSeason] = await sequelize.query(`
-              SELECT STRING_AGG(DISTINCT s.name, ', ') AS seasons
-              FROM (
-                  -- Retrieve village names from the cotton table
-                  SELECT DISTINCT ss.name
-                  FROM cotton_selections cs
-                  JOIN transactions t ON cs.transaction_id = t.id
-                  LEFT JOIN seasons ss ON t.season_id = ss.id
-                  WHERE cs.process_id IN  (${processIds.join(',')})
-                  
-                  UNION
-                  
-                  -- Retrieve village names from the heap table
-                  SELECT DISTINCT ss.name
-                  FROM heap_selections hs
-                  JOIN transactions t ON t.id = ANY(hs.transaction_id)
-                  LEFT JOIN seasons ss ON t.season_id = ss.id
-                  WHERE hs.process_id IN  (${processIds.join(',')})
-              ) s
-          `)
-          }
 
         const rowValues = Object.values({
           index: index + offset + 1,
-          date: item.dataValues.date ? item.dataValues.date : '',
-          created_at: item.dataValues.createdAt ? item.dataValues.createdAt : '',
-          seed_consumed_seasons: seedSeason ? seedSeason[0]?.seasons : "",
-          lint_process_seasons: item.dataValues.lint_process_seasons ? item.dataValues.lint_process_seasons : '',
-          season: item.dataValues.season_name ? item.dataValues.season_name : '',
-          ginner: item.dataValues.ginner ? item.dataValues.ginner : '',
-          invoice: item.dataValues.invoice_no ? item.dataValues.invoice_no : '',
-          buyer: item.dataValues.buyerdata ? item.dataValues.buyerdata : '',
-          lot_no: item.dataValues.lot_no ? item.dataValues.lot_no : '',
-          reel_lot_no: item.dataValues.reel_lot_no ? item.dataValues.reel_lot_no : '',
-          no_of_bales: item.dataValues.no_of_bales ? Number(item.dataValues.no_of_bales) : 0,
-          press_no: item.dataValues.press_no ? item.dataValues.press_no : '',
-          rate: item.dataValues.rate ? Number(item.dataValues.rate) : 0,
-          lint_quantity: item.dataValues.lint_quantity ? Number(item.dataValues.lint_quantity) : 0,
-          sales_value: item.dataValues.sale_value ? Number(item.dataValues.sale_value) : 0,
-          vehicle_no: item.dataValues.vehicle_no ? item.dataValues.vehicle_no : '',
-          transporter_name: item.dataValues.transporter_name ? item.dataValues.transporter_name : '',
-          program: item.dataValues.program ? item.dataValues.program : '',
-          agentDetails: item.dataValues.transaction_agent ? item.dataValues.transaction_agent : 'NA',
-          status: item.dataValues.status === 'Sold' ? 'Sold' : `Available [Stock : ${item.dataValues.qty_stock ? item.dataValues.qty_stock : 0}]`
+          date: item.date ? item.date : '',
+          created_at: item.createdAt ? item.createdAt : '',
+          seed_consumed_seasons: item.seed_consumed_seasons ? item.seed_consumed_seasons : "",
+          lint_process_seasons: item.lint_process_seasons ? item.lint_process_seasons : '',
+          season: item.season_name ? item.season_name : '',
+          ginner: item.ginner ? item.ginner : '',
+          invoice: item.invoice_no ? item.invoice_no : '',
+          buyer: item.buyerdata ? item.buyerdata : '',
+          // heap: '',
+          lot_no: item.lot_no ? item.lot_no : '',
+          reel_lot_no: item.reel_lot_no ? item.reel_lot_no : '',
+          no_of_bales: item.no_of_bales ? Number(item.no_of_bales) : 0,
+          press_no: item.press_no ? item.press_no : '',
+          rate: item.rate ? item.rate : 0,
+          lint_quantity: item.lint_quantity ? Number(item.lint_quantity) : '',
+          sales_value: item.sale_value ? Number(item.sale_value) : 0,
+          vehicle_no: item.vehicle_no ? item.vehicle_no : '',
+          transporter_name: item.transporter_name ? item.transporter_name : '',
+          program: item.program ? item.program : '',
+          agentDetails: item.transaction_agent ? item.transaction_agent : 'NA',
+          status: item.status === 'Sold' ? 'Sold' : `Available [Stock : ${item.qty_stock ? item.qty_stock : 0}]`
         });
         currentWorksheet.addRow(rowValues).commit();
       }
@@ -3667,8 +3688,8 @@ const generateSpinnerBale = async () => {
 
           const headerRow = currentWorksheet.addRow([
             "Sr No.",
-            "Date of Transaction Receipt",
-            "Date of transaction",
+            "Date of transaction accepted",
+            "Date of transaction received",
             "Season",
             "Spinner Name",
             "Ginner Name",
@@ -4109,6 +4130,17 @@ const generateSpinnerSale = async () => {
         let yarnCount: string = "";
         let yarnTypeData: string = "";
 
+        const formatDate = (dateString:any) => {
+          if (!dateString) return "";
+          const date = new Date(dateString);
+          
+          const day = String(date.getDate()).padStart(2, '0'); 
+          const month = String(date.getMonth() + 1).padStart(2, '0');
+          const year = date.getFullYear();
+        
+          return `${day}-${month}-${year}`;
+      };
+
         if (item.dataValues.yarn_count && item.dataValues.yarn_count?.length > 0) {
           let type = await YarnCount.findAll({
             where: { id: { [Op.in]: item.dataValues.yarn_count } },
@@ -4123,7 +4155,7 @@ const generateSpinnerSale = async () => {
         const rowValues = Object.values({
           index: index + offset + 1,
           createdAt: item.dataValues.createdAt ? item.dataValues.createdAt : "",
-          date: item.dataValues.date ? item.dataValues.date : "",
+          date: item.dataValues.date ? formatDate(item.dataValues.date) : "",
           lint_consumed_seasons: seedSeason ? seedSeason[0]?.seasons : "",
           season: item.dataValues.season_name ? item.dataValues.season_name : "",
           spinner: item.dataValues.spinner ? item.dataValues.spinner : "",
@@ -4170,7 +4202,7 @@ const generateSpinnerSale = async () => {
           const headerRow = currentWorksheet.addRow([
             "Sr No.",
             "Created Date and Time",
-            "Date",
+            "Date of transaction",
             "Lint Cotton Consumed Season",
             "Yarn sale season chosen",
             "Spinner Name",
@@ -4232,143 +4264,172 @@ const generateSpinProcessBackwardfTraceabilty = async () => {
     while (hasNextBatch) {
       const rows: any = await sequelize.query(
         `WITH lintcomsumption AS (
-    SELECT 
-        "spinprocess"."id" AS "spinprocess_id",
-        "spinprocess"."date" AS "date",
-        "spinprocess"."createdAt" AS "createdAt",
-        "spinprocess"."reel_lot_no" AS "reel_lot_no",
-        "spinprocess"."net_yarn_qty" AS "net_yarn_qty",
-        "spinner"."id" AS "spinner_id",
-        "spinner"."name" AS "spinner_name",
-        "spinprocess"."qr" AS "qr",
-        ARRAY_AGG(DISTINCT lint_id) AS "spnr_lint_ids",
-        STRING_AGG(DISTINCT "ginsales"."invoice_no", ',') AS "gnr_invoice_no",
-        STRING_AGG(DISTINCT "ginsales"."lot_no", ',') AS "gnr_lot_no",
-        STRING_AGG(DISTINCT "ginsales"."reel_lot_no", ',') AS "gnr_reel_lot_no",
-        STRING_AGG(DISTINCT "ginsales->ginner"."name", ',') AS "gnr_name",
-        COALESCE(SUM("qty_used"), 0) AS "lint_consumed"
-    FROM "lint_selections"
-    INNER JOIN "spin_processes" AS "spinprocess" ON "lint_selections"."process_id" = "spinprocess"."id"
-    LEFT JOIN "gin_sales" AS "ginsales" ON "lint_selections"."lint_id" = "ginsales"."id"
-    LEFT JOIN "ginners" AS "ginsales->ginner" ON "ginsales"."ginner_id" = "ginsales->ginner"."id"
-    LEFT JOIN "spinners" AS "spinner" ON "spinprocess"."spinner_id" = "spinner"."id"
-    WHERE "spinprocess"."id" IS NOT NULL
-    GROUP BY 
-        "spinprocess"."id",
-        "spinner"."id"
-    ORDER BY "spinprocess_id" ASC
-    OFFSET ${offset} LIMIT ${batchSize}
-    ),
-    yarn_consumption AS (
-        SELECT 
-            s.spin_process_id,
-            SUM(s.qty_used) AS spnr_yarn_sold, 
-            array_agg(ss.invoice_no) AS invoice_no, 
-            string_agg(ss.invoice_no, ', ') AS spnr_invoice_no,
-            array_agg(k.name) AS knitter, 
-            string_agg(k.name, ', ') AS knitters,
-            array_agg(w.name) AS weaver,
-            string_agg(w.name, ', ') AS weavers
-        FROM 
-            spin_process_yarn_selections s
-        JOIN 
-            spin_sales ss ON s.sales_id = ss.id
-        LEFT JOIN 
-            weavers w ON ss.buyer_id = w.id
-        LEFT JOIN 
-            knitters k ON ss.knitter_id = k.id
-        GROUP BY 
-            s.spin_process_id
-    ),
-    gin_bales AS (
-      SELECT 
-      bs.sales_id AS gin_sales_id,
-      array_agg(DISTINCT bs.bale_id) AS bales_ids,
-      array_agg(DISTINCT bale.process_id) AS gin_process_id
-      FROM 
-        bale_selections bs
-      JOIN 
-                "gin-bales" bale ON bs.bale_id = bale.id
-      WHERE bs.sales_id IN (
-                    SELECT 
-                        UNNEST(lc.spnr_lint_ids)
-                    FROM 
-                        lintcomsumption lc
-                )
-      GROUP BY 
-            bs.sales_id
-    ),
-    combined_village_data AS (
-        SELECT
-            process_id,
-            ARRAY_AGG(DISTINCT village_id) AS village_ids
-        FROM (
+          SELECT 
+              "spinprocess"."id" AS "spinprocess_id",
+              "spinprocess"."date" AS "date",
+              "spinprocess"."createdAt" AS "createdAt",
+              "spinprocess"."reel_lot_no" AS "reel_lot_no",
+              "spinprocess"."net_yarn_qty" AS "net_yarn_qty",
+              "spinner"."id" AS "spinner_id",
+              "spinner"."name" AS "spinner_name",
+              "spinprocess"."qr" AS "qr",
+              ARRAY_AGG(DISTINCT lint_id) AS "spnr_lint_ids",
+              STRING_AGG(DISTINCT "ginsales"."invoice_no", ',') AS "gnr_invoice_no",
+              STRING_AGG(DISTINCT "ginsales"."lot_no", ',') AS "gnr_lot_no",
+              STRING_AGG(DISTINCT "ginsales"."reel_lot_no", ',') AS "gnr_reel_lot_no",
+              STRING_AGG(DISTINCT "ginsales->ginner"."name", ',') AS "gnr_name",
+              COALESCE(SUM("qty_used"), 0) AS "lint_consumed"
+          FROM "lint_selections"
+          INNER JOIN "spin_processes" AS "spinprocess" ON "lint_selections"."process_id" = "spinprocess"."id"
+          LEFT JOIN "gin_sales" AS "ginsales" ON "lint_selections"."lint_id" = "ginsales"."id"
+          LEFT JOIN "ginners" AS "ginsales->ginner" ON "ginsales"."ginner_id" = "ginsales->ginner"."id"
+          LEFT JOIN "spinners" AS "spinner" ON "spinprocess"."spinner_id" = "spinner"."id"
+          WHERE "spinprocess"."id" IS NOT NULL
+          GROUP BY 
+              "spinprocess"."id",
+              "spinner"."id"
+          ORDER BY "spinprocess_id" ASC
+          OFFSET ${offset} LIMIT ${batchSize}
+          ),
+        yarn_consumption AS (
+            SELECT 
+                s.spin_process_id,
+                SUM(s.qty_used) AS spnr_yarn_sold, 
+                array_agg(DISTINCT ss.invoice_no) AS invoice_no, 
+                string_agg(DISTINCT ss.invoice_no, ', ') AS spnr_invoice_no,
+                array_agg(DISTINCT k.name) AS knitter, 
+                string_agg(DISTINCT k.name, ', ') AS knitters,
+                array_agg(DISTINCT w.name) AS weaver,
+                string_agg(DISTINCT w.name, ', ') AS weavers,
+                array_agg(DISTINCT ss.processor_name) AS processor_name,
+                string_agg(DISTINCT ss.processor_name, ', ') AS processor_names
+            FROM 
+                spin_process_yarn_selections s
+            JOIN 
+                spin_sales ss ON s.sales_id = ss.id
+            LEFT JOIN 
+                weavers w ON ss.buyer_id = w.id
+            LEFT JOIN 
+                knitters k ON ss.knitter_id = k.id
+            GROUP BY 
+                s.spin_process_id
+        ),
+        gin_bales AS (
+          SELECT 
+          bs.sales_id AS gin_sales_id,
+          array_agg(DISTINCT bs.bale_id) AS bales_ids,
+          array_agg(DISTINCT bale.process_id) AS gin_process_id
+          FROM 
+            bale_selections bs
+          JOIN 
+                    "gin-bales" bale ON bs.bale_id = bale.id
+          WHERE bs.sales_id IN (
+                        SELECT 
+                            UNNEST(lc.spnr_lint_ids)
+                        FROM 
+                            lintcomsumption lc
+                    )
+          GROUP BY 
+                bs.sales_id
+        ),
+        combined_village_data AS (
             SELECT
-                cs.process_id,
-                UNNEST(cs.villages) AS village_id
+                process_id,
+                ARRAY_AGG(DISTINCT village_id) AS village_ids
             FROM (
                 SELECT
                     cs.process_id,
-                    ARRAY_AGG(DISTINCT t.village_id) AS villages
-                FROM
-                    cotton_selections cs
-                LEFT JOIN
-                    transactions t ON cs.transaction_id = t.id
-                GROUP BY
-                    cs.process_id
-            ) cs
-            UNION ALL
-            SELECT
-                hs.process_id,
-                UNNEST(hs.villages) AS village_id
-            FROM (
+                    UNNEST(cs.villages) AS village_id
+                FROM (
+                    SELECT
+                        cs.process_id,
+                        ARRAY_AGG(DISTINCT t.village_id) AS villages
+                    FROM
+                        cotton_selections cs
+                    LEFT JOIN
+                        transactions t ON cs.transaction_id = t.id
+                    GROUP BY
+                        cs.process_id
+                ) cs
+                UNION ALL
                 SELECT
                     hs.process_id,
-                    ARRAY_AGG(DISTINCT hs.village_id) AS villages
+                    UNNEST(hs.villages) AS village_id
+                FROM (
+                    SELECT
+                      unnest_data.process_id,
+                      ARRAY_AGG(DISTINCT unnest_village_id) AS villages
+                    FROM (
+                      SELECT 
+                        hs.process_id,
+                        UNNEST(hs.village_id) AS unnest_village_id  -- Unnest the array of village_id
+                      FROM
+                        heap_selections hs
+                    ) unnest_data
+                    GROUP BY
+                      unnest_data.process_id
+                ) hs
+            ) combined
+            GROUP BY
+                process_id
+        ),
+        village_names_data AS (
+			      SELECT
+                v.process_id AS ginprocess_id,
+                UNNEST(v.village_names) AS village_names
+            FROM(
+                SELECT
+                  cv.process_id,
+                  ARRAY_AGG(DISTINCT v.village_name) AS village_names
                 FROM
-                    heap_selections hs
+                  combined_village_data cv
+                LEFT JOIN
+                  villages v ON v.id = ANY(cv.village_ids)
                 GROUP BY
-                    hs.process_id
-            ) hs
-        ) combined
-        GROUP BY
-            process_id
-    ),
-    village_names_data AS (
-        SELECT
-            cv.process_id AS ginprocess_id,
-            ARRAY_AGG(DISTINCT v.village_name) AS village_names
-        FROM
-            combined_village_data cv
-        LEFT JOIN
-            villages v ON v.id = ANY(cv.village_ids)
-        GROUP BY
-            cv.process_id
-    )
-    SELECT 
-      lc.spinprocess_id,
-      lc.spinner_name,
-      lc.reel_lot_no,
-      lc.gnr_lot_no,
-      lc.gnr_reel_lot_no,
-      lc.gnr_invoice_no,
-      lc.gnr_name,
-      lc.net_yarn_qty,
-      lc.lint_consumed,
-      yc.spnr_invoice_no,
-      yc.spnr_yarn_sold,
-      yc.knitter,
-      yc.weaver,
-      vnd.village_names,
-      lc.qr
-    FROM 
-        lintcomsumption lc
-    LEFT JOIN 
-        yarn_consumption yc ON lc.spinprocess_id = yc.spin_process_id
-    LEFT JOIN 
-        gin_bales gb ON gb.gin_sales_id = ANY(lc.spnr_lint_ids) -- Assuming spnr_lint_ids is an array of text
-    LEFT JOIN 
-        village_names_data vnd ON vnd.ginprocess_id = ANY(gb.gin_process_id);`
+                  cv.process_id
+            ) v
+        )
+        SELECT 
+          lc.spinprocess_id,
+          lc.spinner_name,
+          lc.reel_lot_no,
+          lc.gnr_lot_no,
+          lc.gnr_reel_lot_no,
+          lc.gnr_invoice_no,
+          lc.gnr_name,
+          lc.net_yarn_qty,
+          lc.lint_consumed,
+          yc.spnr_invoice_no,
+          yc.spnr_yarn_sold,
+          yc.knitter,
+          yc.weaver,
+          yc.processor_name,
+		      ARRAY_AGG(DISTINCT vnd.village_names) AS village_names,
+          lc.qr
+        FROM 
+          lintcomsumption lc
+        LEFT JOIN 
+          yarn_consumption yc ON lc.spinprocess_id = yc.spin_process_id
+        LEFT JOIN 
+              gin_bales gb ON gb.gin_sales_id = ANY(lc.spnr_lint_ids)
+        LEFT JOIN 
+          village_names_data vnd ON vnd.ginprocess_id = ANY(gb.gin_process_id)
+        GROUP BY 
+          lc.spinprocess_id,
+          lc.spinner_name,
+          lc.reel_lot_no,
+          lc.gnr_lot_no,
+          lc.gnr_reel_lot_no,
+          lc.gnr_invoice_no,
+          lc.gnr_name,
+          lc.net_yarn_qty,
+          lc.lint_consumed,
+          yc.spnr_invoice_no,
+          yc.spnr_yarn_sold,
+          yc.knitter,
+          yc.weaver,
+          yc.processor_name,
+          lc.qr;`
       );
   
   
@@ -4424,20 +4485,26 @@ const generateSpinProcessBackwardfTraceabilty = async () => {
       for await (let [index, item] of rows[0]?.entries()) {
         let knitterName =
         item.knitter && item.knitter.length > 0
-        ? item.knitter
-          .map((val: any) => val)
-          .filter((item: any) => item !== null && item !== undefined)
-        : [];
-      
+          ? item.knitter
+            .map((val: any) => val)
+            .filter((item: any) => item !== null && item !== undefined && item !== '')
+          : [];
+
       let weaverName =
         item.weaver && item.weaver.length > 0
           ? item.weaver
             .map((val: any) => val)
-            .filter((item: any) => item !== null && item !== undefined)
+            .filter((item: any) => item !== null && item !== undefined && item !== '')
           : [];
 
-      
-      let fbrc_name = [...new Set([...knitterName, ...weaverName])];
+      let processorName =
+        item.processor_name && item.processor_name.length > 0
+          ? item.processor_name
+            .map((val: any) => val)
+            .filter((item: any) => item !== null && item !== undefined && item !== '')
+          : [];
+
+      let fbrc_name = [...new Set([...knitterName, ...weaverName, ...processorName])];
 
         const rowValues = [
           index + offset + 1,
@@ -4451,7 +4518,7 @@ const generateSpinProcessBackwardfTraceabilty = async () => {
           item?.gnr_lot_no ? item?.gnr_lot_no : "",
           item?.gnr_invoice_no ? item?.gnr_invoice_no : "",
           item?.lint_consumed ? Number(item?.lint_consumed) : 0,
-          item.village_names ? item.village_names.join(", ") : "",
+          item.village_names && item.village_names.length > 0 ? item.village_names.join(", ") : "",
           item?.gnr_name ? item?.gnr_name: "",
         ];
         currentWorksheet.addRow(rowValues).commit();

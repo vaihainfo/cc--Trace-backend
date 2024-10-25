@@ -1573,7 +1573,7 @@ const updateStatusSales = async (req: Request, res: Response) => {
                     }
     
                     if (obj.status === 'Sold') {
-                        await GinBale.update({ accepted_weight: bale.qtyUsed ? Number(bale.qtyUsed) : 0 }, { where: { id: bale.id } });
+                        await GinBale.update({ accepted_weight: bale.qtyUsed ? Number(bale.qtyUsed).toFixed(2) : 0 }, { where: { id: bale.id } });
                     }
                     await BaleSelection.update({ spinner_status: obj.status === 'Sold' ? true : false }, { where: { bale_id: bale.id, sales_id: obj.id } });
                 }
@@ -1635,11 +1635,11 @@ const updateStatusSales = async (req: Request, res: Response) => {
                             type: sequelize.QueryTypes.SELECT,
                         })
 
-                        console.log("max qty stock to be in gin sales=============",total, Number(total.total_qty).toFixed(2), ginSale.qty_stock + Number(obj.qtyStock))
+                        console.log("max qty stock to be in gin sales=============",total, Math.ceil(Number(total.total_qty)), ginSale.qty_stock + Number(obj.qtyStock))
 
             if (ginSale) {
                 // Increment qty_stock by obj.qtyStock
-                if (obj.status === 'Sold' && (ginSale.qty_stock + Number(obj.qtyStock) <= Number(total.total_qty).toFixed(2))) {
+                if (obj.status === 'Sold' && (ginSale.qty_stock + Number(obj.qtyStock) <= Math.ceil(Number(total.total_qty)))) {
                     data.qty_stock = Number(ginSale.qty_stock) + Number(obj.qtyStock);
                     if(lintSale && lintSale?.length > 0){
                         let sum = lintSale?.reduce((acc: any, value:any) => Number(value?.qty_used) + acc,0);
