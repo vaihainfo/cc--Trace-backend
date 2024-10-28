@@ -1515,6 +1515,85 @@ const createGinnerSales = async (req: Request, res: Response) => {
   }
 };
 
+const updateGinnerSales = async (req: Request, res: Response) => {
+  const transaction = await sequelize.transaction();
+  try {
+    const data: any = {
+      status: "Pending for QR scanning",
+      weight_loss: req.body.weightLoss,
+      sale_value: req.body.saleValue,
+      invoice_no: req.body.invoiceNo,
+      tc_file: req.body.tcFile,
+      contract_file: req.body.contractFile,
+      invoice_file: req.body.invoiceFile,
+      delivery_notes: req.body.deliveryNotes,
+      transporter_name: req.body.transporterName,
+      vehicle_no: req.body.vehicleNo,
+      lrbl_no: req.body.lrblNo,
+    };
+
+    if (req.body.weightLoss && Array.isArray(req.body.lossData) && req.body.lossData.length) {
+      const baleUpdates = req.body.lossData.map(async (obj:any) => {
+        try {
+          return await GinBale.update(
+            {
+              old_weight: Sequelize.literal('weight'),
+              weight: obj.newWeight,
+            },
+            {
+              where: {
+                "$ginprocess.reel_lot_no$": String(obj.reelLotNo),
+                bale_no: String(obj.baleNo),
+              },
+              include: [{ model: GinProcess, as: "ginprocess" }],
+              transaction,
+            }
+          );
+        } catch (updateError) {
+          console.error(`Error updating bale with reel_lot_no ${obj.reelLotNo} and bale_no ${obj.baleNo}:`, updateError);
+          throw updateError;
+        }
+      });
+
+      await Promise.all(baleUpdates);
+
+      const [newSum] = await sequelize.query(
+        `
+        SELECT COALESCE(SUM(CAST(gb.weight AS DOUBLE PRECISION)), 0) AS lint_quantity 
+        FROM "gin-bales" gb
+        LEFT JOIN bale_selections bs ON gb.id = bs.bale_id
+        WHERE bs.sales_id = :salesId
+        `,
+        { 
+          replacements: { salesId: req.body.id },
+          transaction
+        }
+      );
+
+      if (newSum && newSum[0]) {
+        data.total_qty = newSum[0]?.lint_quantity || 0;
+      }
+    }
+
+    const [updateCount] = await GinSales.update(data, {
+      where: { id: req.body.id },
+      transaction
+    });
+
+    if (updateCount === 1) {
+      await send_gin_mail(req.body.id);
+    }
+
+    await transaction.commit();
+    res.sendSuccess(res, { updateCount });
+  } catch (error: any) {
+    await transaction.rollback();
+    console.error('Transaction failed:', error);
+    return res.sendError(res, error.message || 'An error occurred while updating ginner sales.');
+  }
+};
+
+
 //update Ginner Sale
 // const updateGinnerSales = async (req: Request, res: Response) => {
 //   try {
@@ -1529,9 +1608,7 @@ const createGinnerSales = async (req: Request, res: Response) => {
 //       delivery_notes: req.body.deliveryNotes,
 //       transporter_name: req.body.transporterName,
 //       vehicle_no: req.body.vehicleNo,
-//       lrbl_no: req.body.lrblNo,
-//       letter_of_credit: req.body.letterOfCredit,
-//       logistics_documents: req.body.logisticsDocuments,
+//       lrbl_no: req.body.lrblNo
 //     };
 
 //     if (req.body.weightLoss) {
