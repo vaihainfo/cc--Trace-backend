@@ -984,6 +984,7 @@ const uploadFarmer = async (req: Request, res: Response) => {
                             agri_estimated_yeld: data.agriEstimatedYield ? data.agriEstimatedYield : 0.0,
                             agri_estimated_prod: data.agriEstimatedProd ? data.agriEstimatedProd : 0.0
                         };
+
                         const farmer = await Farmer.update(farmerdata, {
                             where: {
                                 id: farmers.id,
@@ -1000,7 +1001,7 @@ const uploadFarmer = async (req: Request, res: Response) => {
                             farmers.village_id !== village.id
                         );
                         
-                        if (farmers.qrUrl == "" ||  shouldUpdateQR){
+                        if (farmers && farmers.qrUrl == "" ||  shouldUpdateQR){
                             let aa = await updateQrCode(`${farmers.id}`,
                                 name, uniqueFilename, data.farmerCode, village ? village.village_name : '');
                             const farmerPLace = await Farmer.update({ qrUrl: uniqueFilename }, {
@@ -1088,10 +1089,10 @@ const uploadFarmer = async (req: Request, res: Response) => {
                         let name = farmer.lastName ? farmer.firstName + " " + farmer.lastName : farmer.firstName
                         let uniqueFilename = `qrcode_${name.replace(/\//g, '-')}_${farmer.code.replace(/\//g, '-')}.png`;
                         let aa = await generateQrCode(`${farmer.id}`,
-                            name, uniqueFilename, req.body.code, village ? village.village_name : '');
+                            name, uniqueFilename, farmer.code, village ? village.village_name : '');
                         const farmerPLace = await Farmer.update({ qrUrl: uniqueFilename }, {
                             where: {
-                                id: req.body.id
+                                id: farmer.id
                             }
                         });
 
