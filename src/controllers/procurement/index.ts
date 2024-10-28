@@ -942,28 +942,7 @@ const uploadTransactionBulk = async (req: Request, res: Response) => {
               reason: "Season not found"
             }
             saveFailedRecord(failedRecord)
-          } else if (data.ginner) {
-            ginner = await Ginner.findOne({
-              where: {
-                name: data.ginner,
-              },
-            });
-            if (!ginner) {
-              fail.push({
-                success: false,
-                data: { farmerName: data.farmerName ? data.farmerName : '', farmerCode: data.farmerCode ? data.farmerCode : '' },
-                message: "Ginner not found",
-              });
-              let failedRecord = {
-                type: 'Procurement',
-                season: season,
-                farmerCode: data.farmerCode ? data.farmerCode : '',
-                farmerName: data.farmerName ? data.farmerName : '',
-                body: { ...data },
-                reason: "Ginner not found"
-              }
-              saveFailedRecord(failedRecord)
-            } else if (data.country) {
+          }  else if (data.country) {
               country = await Country.findOne({
                 where: {
                   county_name: { [Op.iLike]: data.country },
@@ -1080,7 +1059,37 @@ const uploadTransactionBulk = async (req: Request, res: Response) => {
                                   reason: "Village is not associated with entered Taluk/Block"
                                 }
                                 saveFailedRecord(failedRecord)
-                              } else if (data.farmerCode) {
+                              } else if (data.ginner) {                
+                                
+                                let gin = await await GinnerAllocatedVillage.findOne({
+                                  attributes: ['ginner_id'],
+                                  where:{
+                                    village_id: village.id,
+                                    season_id: season.id,
+                                    '$ginner.name$': data.ginner,
+                                    '$ginner.status$': true
+                                  },
+                                  include: [
+                                    { model: Ginner, as: "ginner", attributes: ['id','name'] },
+                                  ]
+                                })
+                                ginner = gin ? gin?.ginner : null;
+                                if (!ginner) {
+                                  fail.push({
+                                    success: false,
+                                    data: { farmerName: data.farmerName ? data.farmerName : '', farmerCode: data.farmerCode ? data.farmerCode : '' },
+                                    message: "No seed cotton village has been allocated to Entered Ginner for entered Season",
+                                  });
+                                  let failedRecord = {
+                                    type: 'Procurement',
+                                    season: season,
+                                    farmerCode: data.farmerCode ? data.farmerCode : '',
+                                    farmerName: data.farmerName ? data.farmerName : '',
+                                    body: { ...data },
+                                    reason: "No seed cotton village has been allocated to Entered Ginner for entered Season"
+                                  }
+                                  saveFailedRecord(failedRecord)
+                                } else if (data.farmerCode) {
                                 farmer = await Farmer.findOne({
                                   where: {
                                     village_id: village.id,
