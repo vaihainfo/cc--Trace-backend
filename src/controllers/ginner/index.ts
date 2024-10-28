@@ -1516,71 +1516,71 @@ const createGinnerSales = async (req: Request, res: Response) => {
 };
 
 //update Ginner Sale
-const updateGinnerSales = async (req: Request, res: Response) => {
-  try {
-    const data: any = {
-      status: "Pending for QR scanning",
-      weight_loss: req.body.weightLoss,
-      sale_value: req.body.saleValue,
-      invoice_no: req.body.invoiceNo,
-      tc_file: req.body.tcFile,
-      contract_file: req.body.contractFile,
-      invoice_file: req.body.invoiceFile,
-      delivery_notes: req.body.deliveryNotes,
-      transporter_name: req.body.transporterName,
-      vehicle_no: req.body.vehicleNo,
-      lrbl_no: req.body.lrblNo,
-      letter_of_credit: req.body.letterOfCredit,
-      logistics_documents: req.body.logisticsDocuments,
-    };
+// const updateGinnerSales = async (req: Request, res: Response) => {
+//   try {
+//     const data: any = {
+//       status: "Pending for QR scanning",
+//       weight_loss: req.body.weightLoss,
+//       sale_value: req.body.saleValue,
+//       invoice_no: req.body.invoiceNo,
+//       tc_file: req.body.tcFile,
+//       contract_file: req.body.contractFile,
+//       invoice_file: req.body.invoiceFile,
+//       delivery_notes: req.body.deliveryNotes,
+//       transporter_name: req.body.transporterName,
+//       vehicle_no: req.body.vehicleNo,
+//       lrbl_no: req.body.lrblNo,
+//       letter_of_credit: req.body.letterOfCredit,
+//       logistics_documents: req.body.logisticsDocuments,
+//     };
 
-    if (req.body.weightLoss) {
-      for await (let obj of req.body.lossData) {
-        let bale = await GinBale.findOne({
-          where: {
-            "$ginprocess.reel_lot_no$": String(obj.reelLotNo),
-            bale_no: String(obj.baleNo),
-          },
-          include: [{ model: GinProcess, as: "ginprocess" }],
-        });
-        if (bale) {
-          await GinBale.update(
-            {
-              old_weight: Sequelize.literal('weight'),
-              weight: obj.newWeight
-            },
-            { where: { id: bale.dataValues.id } }
-          );
-        }
-      }
+//     if (req.body.weightLoss) {
+//       for await (let obj of req.body.lossData) {
+//         let bale = await GinBale.findOne({
+//           where: {
+//             "$ginprocess.reel_lot_no$": String(obj.reelLotNo),
+//             bale_no: String(obj.baleNo),
+//           },
+//           include: [{ model: GinProcess, as: "ginprocess" }],
+//         });
+//         if (bale) {
+//           await GinBale.update(
+//             {
+//               old_weight: Sequelize.literal('weight'),
+//               weight: obj.newWeight
+//             },
+//             { where: { id: bale.dataValues.id } }
+//           );
+//         }
+//       }
 
-      let [newSum] = await sequelize.query(`
-        SELECT COALESCE(
-            SUM(CAST(gb.weight AS DOUBLE PRECISION)), 0) AS lint_quantity 
-			  FROM "gin-bales" gb
-        LEFT JOIN bale_selections bs ON gb.id = bs.bale_id
-        LEFT JOIN gin_sales gs ON bs.sales_id = gs.id
-        WHERE bs.sales_id = ${req.body.id}`);
+//       let [newSum] = await sequelize.query(`
+//         SELECT COALESCE(
+//             SUM(CAST(gb.weight AS DOUBLE PRECISION)), 0) AS lint_quantity 
+// 			  FROM "gin-bales" gb
+//         LEFT JOIN bale_selections bs ON gb.id = bs.bale_id
+//         LEFT JOIN gin_sales gs ON bs.sales_id = gs.id
+//         WHERE bs.sales_id = ${req.body.id}`);
 
-        if(newSum && newSum[0]){
-          let newQuantity = newSum[0]?.lint_quantity;
-          data.total_qty = newQuantity;
-        }
-    }
+//         if(newSum && newSum[0]){
+//           let newQuantity = newSum[0]?.lint_quantity;
+//           data.total_qty = newQuantity;
+//         }
+//     }
 
-        const ginSales = await GinSales.update(data, {
-      where: { id: req.body.id },
-    });
+//         const ginSales = await GinSales.update(data, {
+//       where: { id: req.body.id },
+//     });
 
-    if (ginSales && ginSales[0] === 1) {
-      await send_gin_mail(req.body.id);
-    }
-    res.sendSuccess(res, { ginSales });
-  } catch (error: any) {
-    console.error(error);
-    return res.sendError(res, error.meessage);
-  }
-};
+//     if (ginSales && ginSales[0] === 1) {
+//       await send_gin_mail(req.body.id);
+//     }
+//     res.sendSuccess(res, { ginSales });
+//   } catch (error: any) {
+//     console.error(error);
+//     return res.sendError(res, error.meessage);
+//   }
+// };
 
 const updateGinnerSalesField = async (req: Request, res: Response) => {
   try {
