@@ -21,6 +21,7 @@ import FarmerCottonArea from "../../models/farmer-cotton-area.model";
 import sequelize from "../../util/dbConn";
 import UserApp from "../../models/users-app.model";
 import { saveFailedRecord } from "../failed-records";
+import GinnerAllocatedVillage from "../../models/ginner-allocated-vilage.model";
 
 
 const createTransaction = async (req: Request, res: Response) => {
@@ -1636,6 +1637,43 @@ const exportGinnerProcurement = async (req: Request, res: Response) => {
   }
 };
 
+const fetchGinnerByVillage = async (req: Request, res: Response) => {
+  let villageId: any = req.query.villageId;
+  let seasonId: any = req.query.seasonId;
+  let brandId: any = req.query.brandId;
+  try {
+
+    if (!villageId) {
+      return res.sendError(res, "Need Village Id");
+    }
+    if (!seasonId) {
+      return res.sendError(res, "Need Season Id");
+    }
+
+    if (!brandId) {
+      return res.sendError(res, "Need Brand Id");
+    }
+
+    //fetch ginners
+    const allocatedGinner = await GinnerAllocatedVillage.findAll({
+      attributes: ['ginner_id'],
+      where:{
+        village_id: villageId,
+        season_id: seasonId,
+        brand_id: brandId,
+        '$ginner.status$': true
+      },
+      include: [
+        { model: Ginner, as: "ginner", attributes: ['id','name'] },
+      ]
+    })
+    return res.sendSuccess(res, allocatedGinner);
+  } catch (error: any) {
+    console.error(error);
+    return res.sendError(res, error.meessage);
+  }
+};
+
 export {
   createTransaction,
   fetchTransactions,
@@ -1648,5 +1686,6 @@ export {
   fetchTransactionsBySeasonAndFarmer,
   exportGinnerProcurement,
   allVillageCottonData,
-  cottonData
+  cottonData,
+  fetchGinnerByVillage
 };
