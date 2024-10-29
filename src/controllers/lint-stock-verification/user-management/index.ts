@@ -4,6 +4,9 @@ import { Op } from "sequelize";
 import User from "../../../models/user.model";
 import hash from "../../../util/hash";
 import UserRegistrations from "../../../models/user-registrations.model";
+import Country from "../../../models/country.model";
+import Program from "../../../models/program.model";
+import UserRole from "../../../models/user-role.model";
 
 const createUser = async (req: Request, res: Response) => {
     const userExist = await User.findOne({
@@ -124,6 +127,20 @@ const createUser = async (req: Request, res: Response) => {
     let queryOptions: any = {
       where: whereCondition,
     };
+
+    let include = [
+        {
+            model: Country, as: 'lsvcountry'
+        },
+        {
+            model: Program, as: 'lsvprogram'
+        },
+        {
+            model: UserRole, as: 'user_role'
+        },
+    ];
+
+    queryOptions.include = include;
   
     queryOptions.order = [["id", 'desc']];
   
@@ -160,6 +177,7 @@ const createUser = async (req: Request, res: Response) => {
   }
   
   const updateUser = async (req: Request, res: Response) => {
+    try {
     const userExist = await User.findByPk(req.body.id);
   
     if (!userExist) {
@@ -182,8 +200,8 @@ const createUser = async (req: Request, res: Response) => {
       lsv_mapped_ginners: req.body.lsvGinners && req.body.lsvGinners.length > 0 ? req.body.lsvGinners : null,
       lsv_mapped_spinners: req.body.lsvSpinners && req.body.lsvSpinners.length > 0 ? req.body.lsvSpinners  : null,
       lsv_mapped_to: req.body.lsvMappedTo ? req.body.lsvMappedTo : '',
-    };
-    try {
+    }
+
       const user = await User.update(USER_MODEL, {
         where: {
           id: req.body.id
