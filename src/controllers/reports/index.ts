@@ -12948,10 +12948,17 @@ const fetchPscpGinnerPrecurement = async (req: Request, res: Response) => {
             model: GinBale,
             as: "bale",
             attributes: [],
+            include: [
+              {
+                model: GinProcess,
+                as: "ginprocess",
+                attributes: [],
+              },
+            ],
           },
         ],
         where: {
-          "$sales.season_id$": seasonId,
+          "$bale.ginprocess.season_id$": seasonId,
           "$sales.ginner_id$": item.dataValues.ginner.id,
           "$sales.status$" : { [Op.in]: ['Pending', 'Pending for QR scanning', 'Partially Accepted', 'Partially Rejected','Sold'] }
         },
@@ -13159,10 +13166,17 @@ const exportPscpGinnerCottonProcurement = async (
             model: GinBale,
             as: "bale",
             attributes: [],
+            include: [
+              {
+                model: GinProcess,
+                as: "ginprocess",
+                attributes: [],
+              },
+            ],
           },
         ],
         where: {
-          "$sales.season_id$": seasonId,
+          "$bale.ginprocess.season_id$": seasonId,
           "$sales.ginner_id$": item.dataValues.ginner.id,
           "$sales.status$" : { [Op.in]: ['Pending', 'Pending for QR scanning', 'Partially Accepted', 'Partially Rejected','Sold'] }
         },
@@ -13265,7 +13279,7 @@ const fetchPscpProcurementLiveTracker = async (req: Request, res: Response) => {
       const idArray = seasonId.split(",").map((id: string) => parseInt(id, 10));
       seasonCondition.push(`season_id IN (:seasonIds)`);
       baleCondition.push(`gp.season_id IN (:seasonIds)`);
-      baleSaleCondition.push(`gs.season_id IN (:seasonIds)`);
+      baleSaleCondition.push(`gp.season_id IN (:seasonIds)`);
     }
 
     if (ginnerId) {
@@ -13429,6 +13443,7 @@ const fetchPscpProcurementLiveTracker = async (req: Request, res: Response) => {
                 LEFT JOIN 
                     gin_sales gs ON gs.id = bs.sales_id
                 JOIN filtered_ginners ON gs.ginner_id = filtered_ginners.id
+                LEFT JOIN gin_processes gp ON gb.process_id = gp.id
                 WHERE
                     gs.program_id = ANY (filtered_ginners.program_id)
                     AND ${baleSaleConditionSql}
@@ -13874,7 +13889,7 @@ const exportPscpProcurementLiveTracker = async (
         const idArray = seasonId.split(",").map((id: string) => parseInt(id, 10));
         seasonCondition.push(`season_id IN (:seasonIds)`);
         baleCondition.push(`gp.season_id IN (:seasonIds)`);
-        baleSaleCondition.push(`gs.season_id IN (:seasonIds)`);
+        baleSaleCondition.push(`gp.season_id IN (:seasonIds)`);
       }
 
       if (ginnerId) {
@@ -13934,6 +13949,7 @@ const exportPscpProcurementLiveTracker = async (
           "Seed cotton Procurement %",
           "Seed Cotton Pending to accept at Ginner (MT)",
           "Produced Lint Cotton (MT)",
+          "No. of Bales produced",
           "No. of Bales Sold",
           "Lint Sold (MT)",
           "Balance stock at Ginner (Bales )",
@@ -14075,6 +14091,7 @@ const exportPscpProcurementLiveTracker = async (
                 LEFT JOIN 
                     gin_sales gs ON gs.id = bs.sales_id
                 JOIN filtered_ginners ON gs.ginner_id = filtered_ginners.id
+                LEFT JOIN gin_processes gp ON gb.process_id = gp.id
                 WHERE
                     gs.program_id = ANY (filtered_ginners.program_id)
                     AND ${baleSaleConditionSql}
