@@ -558,7 +558,8 @@ const uploadFarmer = async (req: Request, res: Response) => {
         } else {
             farmGroup = await FarmGroup.findOne({
                 where: {
-                    name: req.body.farmGroup
+                    name: req.body.farmGroup,
+                      brand_id: brand.id,
                 }
             });
 
@@ -2374,7 +2375,7 @@ const uploadOrganicFarmer = async (req: Request, res: Response) => {
             });
             return res.sendSuccess(res, { pass, fail });
         } else {
-            farmGroup = await FarmGroup.findOne({ where: { name: req.body.farmGroup } });
+            farmGroup = await FarmGroup.findOne({ where: { name: req.body.farmGroup , brand_id: brand.id} });
 
             if (!farmGroup) {
                 fail.push({
