@@ -27,6 +27,7 @@ import QualityParameter from "../../models/quality-parameter.model";
 import Brand from "../../models/brand.model";
 import PhysicalTraceabilityDataGinner from "../../models/physical-traceability-data-ginner.model";
 import PhysicalTraceabilityDataGinnerSample from "../../models/physical-traceability-data-ginner-sample.model";
+import GinnerAllocatedVillage from "../../models/ginner-allocated-vilage.model";
 
 //create Ginner Process
 const createGinnerProcess = async (req: Request, res: Response) => {
@@ -1062,7 +1063,9 @@ const chooseCotton = async (req: Request, res: Response) => {
     }
     let villageId: any = req.query.villageId;
     let seasonId: any = req.query.seasonId;
-    let whereCondition: any = {
+    let whereCondition: any = {};
+
+    let transactionCondition: any = {
       status: "Sold",
       heap_status: {
         [Op.or]: [null, "Pending"],
@@ -1093,6 +1096,22 @@ const chooseCotton = async (req: Request, res: Response) => {
       whereCondition["$season.name$"] = { [Op.gte]: "2024-25" };
     }
 
+    const allocated = await GinnerAllocatedVillage.findAll({
+      where:{
+        ginner_id: ginnerid,
+        program_id: programId,
+        ...whereCondition
+      },
+      include: [
+        { model: Village, as: "village" },
+        { model: Program, as: "program" },
+        { model: Season, as: "season" },
+      ]
+    })
+    const summedData: any = {};
+
+    for await (let row of allocated){
+
     const results = await Transaction.findAll({
       // attributes: [
       // [Sequelize.fn("SUM", Sequelize.col("qty_stock")), "qty_stock"],
@@ -1115,32 +1134,21 @@ const chooseCotton = async (req: Request, res: Response) => {
         { model: Program, as: "program" },
         { model: Season, as: "season" },
       ],
-      where: whereCondition,
+      where: {
+        ...transactionCondition,
+        village_id: row?.dataValues?.village_id,
+        season_id: row?.dataValues?.season_id,
+      },
       // group: ["transactions.village_id, transactions.id"],
       order: [
         ["id", "DESC"],
         [Sequelize.col("accept_date"), "DESC"],
       ],
     });
-    const summedData: any = {};
+
 
     results.forEach((result: any) => {
       const villageId = result.dataValues.village_id;
-      // if (summedData[villageId]) {
-      //   summedData[villageId].qty_stock += result.dataValues.qty_stock;
-      //   summedData[villageId].qty_used += result.dataValues.qty_used;
-      //   summedData[villageId].estimated_qty += result.dataValues.estimated_qty;
-      // } else {
-      //   summedData[villageId] = {
-      //     qty_stock: result.dataValues.qty_stock,
-      //     qty_used: result.dataValues.qty_used,
-      //     estimated_qty: result.dataValues.estimated_qty,
-      //     vlg_id: villageId,
-      //     village: result.village,
-      //     program: result.program,
-      //     season: result.season,
-      //   };
-      // }
       if (summedData[villageId]) {
         summedData[villageId].qty_stock += result.dataValues.qty_stock;
         summedData[villageId].vehicle = [
@@ -1175,6 +1183,7 @@ const chooseCotton = async (req: Request, res: Response) => {
         };
       }
     });
+  }
 
     const finalResult = Object.values(summedData);
     res.sendSuccess(res, finalResult);
@@ -1516,6 +1525,70 @@ const createGinnerSales = async (req: Request, res: Response) => {
 };
 
 //update Ginner Sale
+// const updateGinnerSales = async (req: Request, res: Response) => {
+//   try {
+//     const data: any = {
+//       status: "Pending for QR scanning",
+//       weight_loss: req.body.weightLoss,
+//       sale_value: req.body.saleValue,
+//       invoice_no: req.body.invoiceNo,
+//       tc_file: req.body.tcFile,
+//       contract_file: req.body.contractFile,
+//       invoice_file: req.body.invoiceFile,
+//       delivery_notes: req.body.deliveryNotes,
+//       transporter_name: req.body.transporterName,
+//       vehicle_no: req.body.vehicleNo,
+//       lrbl_no: req.body.lrblNo
+//     };
+
+//     if (req.body.weightLoss) {
+//       for await (let obj of req.body.lossData) {
+//         let bale = await GinBale.findOne({
+//           where: {
+//             "$ginprocess.reel_lot_no$": String(obj.reelLotNo),
+//             bale_no: String(obj.baleNo),
+//           },
+//           include: [{ model: GinProcess, as: "ginprocess" }],
+//         });
+//         if (bale) {
+//           await GinBale.update(
+//             {
+//               old_weight: Sequelize.literal('weight'),
+//               weight: obj.newWeight
+//             },
+//             { where: { id: bale.dataValues.id } }
+//           );
+//         }
+//       }
+
+//       let [newSum] = await sequelize.query(`
+//         SELECT COALESCE(
+//             SUM(CAST(gb.weight AS DOUBLE PRECISION)), 0) AS lint_quantity 
+// 			  FROM "gin-bales" gb
+//         LEFT JOIN bale_selections bs ON gb.id = bs.bale_id
+//         LEFT JOIN gin_sales gs ON bs.sales_id = gs.id
+//         WHERE bs.sales_id = ${req.body.id}`);
+
+//         if(newSum && newSum[0]){
+//           let newQuantity = newSum[0]?.lint_quantity;
+//           data.total_qty = newQuantity;
+//         }
+//     }
+
+//         const ginSales = await GinSales.update(data, {
+//       where: { id: req.body.id },
+//     });
+
+//     if (ginSales && ginSales[0] === 1) {
+//       await send_gin_mail(req.body.id);
+//     }
+//     res.sendSuccess(res, { ginSales });
+//   } catch (error: any) {
+//     console.error(error);
+//     return res.sendError(res, error.meessage);
+//   }
+// };
+
 const updateGinnerSales = async (req: Request, res: Response) => {
   try {
     const data: any = {
@@ -1530,55 +1603,62 @@ const updateGinnerSales = async (req: Request, res: Response) => {
       transporter_name: req.body.transporterName,
       vehicle_no: req.body.vehicleNo,
       lrbl_no: req.body.lrblNo,
-      letter_of_credit: req.body.letterOfCredit,
-      logistics_documents: req.body.logisticsDocuments,
     };
 
-    if (req.body.weightLoss) {
-      for await (let obj of req.body.lossData) {
-        let bale = await GinBale.findOne({
-          where: {
-            "$ginprocess.reel_lot_no$": String(obj.reelLotNo),
-            bale_no: String(obj.baleNo),
-          },
-          include: [{ model: GinProcess, as: "ginprocess" }],
-        });
-        if (bale) {
-          await GinBale.update(
-            {
-              old_weight: Sequelize.literal('weight'),
-              weight: obj.newWeight
-            },
-            { where: { id: bale.dataValues.id } }
-          );
+    if (req.body.weightLoss && Array.isArray(req.body.lossData) && req.body.lossData.length) {
+      const baleUpdates = req.body.lossData.map(async (obj: any) => {
+        try {
+          return await sequelize.query(`
+                  UPDATE "gin-bales" 
+                  SET old_weight = "gin-bales".weight, weight = :newWeight
+                  FROM "gin_processes" 
+                  WHERE "gin-bales".bale_no = :baleNo
+                  AND "gin_processes".reel_lot_no = :reelLotNo
+                  AND "gin_processes".id = "gin-bales".process_id;
+            `, {
+            replacements: {
+              newWeight: obj.newWeight,
+              baleNo: obj.baleNo,
+              reelLotNo: obj.reelLotNo
+            }
+          });
+        } catch (updateError) {
+          console.error(`Error updating bale with reel_lot_no ${obj.reelLotNo} and bale_no ${obj.baleNo}:`, updateError);
+          throw updateError;
         }
-      }
+      });
 
-      let [newSum] = await sequelize.query(`
-        SELECT COALESCE(
-            SUM(CAST(gb.weight AS DOUBLE PRECISION)), 0) AS lint_quantity 
-			  FROM "gin-bales" gb
+      await Promise.all(baleUpdates);
+
+      const [newSum] = await sequelize.query(
+        `
+        SELECT COALESCE(SUM(CAST(gb.weight AS DOUBLE PRECISION)), 0) AS lint_quantity 
+        FROM "gin-bales" gb
         LEFT JOIN bale_selections bs ON gb.id = bs.bale_id
-        LEFT JOIN gin_sales gs ON bs.sales_id = gs.id
-        WHERE bs.sales_id = ${req.body.id}`);
-
-        if(newSum && newSum[0]){
-          let newQuantity = newSum[0]?.lint_quantity;
-          data.total_qty = newQuantity;
+        WHERE bs.sales_id = :salesId
+        `,
+        {
+          replacements: { salesId: req.body.id }
         }
+      );
+
+      if (newSum && newSum[0]) {
+        data.total_qty = newSum[0]?.lint_quantity || 0;
+      }
     }
 
-        const ginSales = await GinSales.update(data, {
+    const ginSales = await GinSales.update(data, {
       where: { id: req.body.id },
     });
 
     if (ginSales && ginSales[0] === 1) {
       await send_gin_mail(req.body.id);
     }
+
     res.sendSuccess(res, { ginSales });
   } catch (error: any) {
-    console.error(error);
-    return res.sendError(res, error.meessage);
+    console.error('Transaction failed:', error);
+    return res.sendError(res, error.message || 'An error occurred while updating ginner sales.');
   }
 };
 
