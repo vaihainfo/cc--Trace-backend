@@ -1744,39 +1744,6 @@ const generatePscpProcurementLiveTracker = async () => {
                 GROUP BY
                     gs.ginner_id
             ),
-          gin_sales_pre_data AS (
-            SELECT
-              gs.ginner_id,
-              SUM(gs.no_of_bales) AS no_of_pre_bales,
-              SUM(gs.total_qty) AS pre_total_qty
-            FROM
-              gin_sales gs
-            JOIN filtered_ginners ON gs.ginner_id = filtered_ginners.id
-            WHERE
-              gs.program_id = ANY (filtered_ginners.program_id)
-              AND gs.season_id = ${prevSeasonId}
-              AND gs.status = 'Sold'
-            GROUP BY
-              gs.ginner_id
-          ),
-          gin_sales_pending_data AS (
-            SELECT
-              gsp.ginner_id,
-              SUM(gsp.no_of_bales) AS no_of_pending_bales,
-              SUM(gsp.total_qty) AS pending_total_qty
-            FROM
-              gin_sales gsp
-            JOIN filtered_ginners ON gsp.ginner_id = filtered_ginners.id
-            WHERE
-              gsp.program_id = ANY (filtered_ginners.program_id)
-              AND (
-                  gsp.status = 'Sold'
-                  OR gsp.status = 'Partially Rejected'
-                  OR gsp.status = 'Rejected'
-              )
-            GROUP BY
-              gsp.ginner_id
-          ),
           expected_cotton_data AS (
             SELECT
               gec.ginner_id,
@@ -1823,10 +1790,6 @@ const generatePscpProcurementLiveTracker = async () => {
             ELSE 0
           END AS procurement,
           COALESCE(gp.no_of_bales, 0) AS no_of_bales,
-          COALESCE(gsp.no_of_pending_bales, 0) AS no_of_pending_bales,
-          COALESCE(gsp.pending_total_qty, 0) AS pending_total_qty,
-          COALESCE(gspp.no_of_pre_bales, 0) AS no_of_pre_bales,
-          COALESCE(gspp.pre_total_qty, 0) AS pre_total_qty,
           COALESCE(gb.total_qty, 0) / 1000 AS total_qty_lint_produced,
           COALESCE(gs.no_of_bales, 0) AS sold_bales,
           CASE
@@ -1858,8 +1821,6 @@ const generatePscpProcurementLiveTracker = async () => {
           LEFT JOIN gin_bale_data gb ON fg.id = gb.ginner_id
           LEFT JOIN pending_seed_cotton_data psc ON fg.id = psc.mapped_ginner
           LEFT JOIN gin_sales_data gs ON fg.id = gs.ginner_id
-          LEFT JOIN gin_sales_pending_data gsp ON fg.id = gsp.ginner_id
-          LEFT JOIN gin_sales_pre_data gspp ON fg.id = gspp.ginner_id
           LEFT JOIN expected_cotton_data ec ON fg.id = ec.ginner_id
           LEFT JOIN ginner_order_data go ON fg.id = go.ginner_id
         ORDER BY
@@ -1910,10 +1871,6 @@ const generatePscpProcurementLiveTracker = async () => {
           balace_stock: Number(obj.balace_stock) ?? 0,
           balance_lint_quantity: Number(formatDecimal(obj.balance_lint_quantity)) ?? 0,
           ginner_sale_percentage: Number(obj.ginner_sale_percentage) ?? 0,
-          no_of_pending_bales: obj.no_of_pending_bales ? Number(obj.no_of_pending_bales) : 0,
-          pending_total_qty: obj.pending_total_qty ? Number(obj.pending_total_qty) : 0,
-          no_of_pre_bales: obj.no_of_pre_bales ? Number(obj.no_of_pre_bales) : 0,
-          pre_total_qty: obj.pre_total_qty ? Number(obj.pre_total_qty) : 0,
         });
         index++;
 
@@ -1947,10 +1904,6 @@ const generatePscpProcurementLiveTracker = async () => {
           "Balance stock at Ginner (Bales )",
           "Balance lint cotton stock at Ginner (MT)",
           "Ginner Sale %",
-            "Ginner Pending Sales (Bales)",
-            "Ginner Pending Sales (Weight)",
-            "No. of Bales Sold(Previous season)",
-            "Lint Sold (Previous season)",
           ]);
           headerRow.font = { bold: true };
         }
@@ -2682,8 +2635,114 @@ const generateGinnerSales = async () => {
     let hasNextBatch = true;
 
     while (hasNextBatch) {
+      // const dataQuery = `
+      // WITH ginsale AS (
+      //     SELECT 
+      //         gs.id AS ginsale_id,
+      //         gs.date AS date,
+      //         gs."createdAt" AS "createdAt",
+      //         season.name AS season_name,
+      //         program.program_name AS program,
+      //         ginner.id AS ginner_id,
+      //         ginner.name AS ginner,
+      //         gs.total_qty AS total_qty,
+      //         spinner.id AS spinner_id,
+      //         spinner.name AS buyerdata,
+      //         gs.qr AS qr,
+      //         gs.invoice_no AS invoice_no,
+      //         gs.lot_no AS lot_no,
+      //         gs.rate AS rate,
+      //         gs.candy_rate AS candy_rate,
+      //         gs.total_qty AS lint_quantity,
+      //         gs.no_of_bales AS no_of_bales,
+      //         gs.sale_value AS sale_value,
+      //         gs.press_no AS press_no,
+      //         gs.qty_stock AS qty_stock,
+      //         gs.weight_loss AS weight_loss,
+      //         gs.invoice_file AS invoice_file,
+      //         gs.vehicle_no AS vehicle_no,
+      //         gs.transporter_name AS transporter_name,
+      //         gs.transaction_agent AS transaction_agent,
+      //         gs.status AS status,
+      //         ARRAY_AGG(DISTINCT gp.id) AS process_ids,
+      //         STRING_AGG(DISTINCT ss.name, ',') AS lint_process_seasons,
+      //         STRING_AGG(DISTINCT gp.reel_lot_no, ',') AS reel_lot_no,
+      //         COALESCE(
+      //             SUM(
+      //               CASE
+      //                 WHEN gb.old_weight IS NOT NULL THEN CAST(gb.old_weight AS DOUBLE PRECISION)
+      //                 ELSE CAST(gb.weight AS DOUBLE PRECISION)
+      //               END
+      //             ), 0
+      //         ) AS total_old_weight
+      //     FROM bale_selections bs
+      //     INNER JOIN gin_sales gs ON bs.sales_id = gs.id
+      //     LEFT JOIN seasons season ON gs.season_id = season.id
+      //     LEFT JOIN "gin-bales" gb ON bs.bale_id = gb.id
+      //     LEFT JOIN gin_processes gp ON gb.process_id = gp.id
+      //     LEFT JOIN seasons ss ON gp.season_id = ss.id
+      //     LEFT JOIN ginners ginner ON gs.ginner_id = ginner.id
+      //     LEFT JOIN spinners spinner ON gs.buyer = spinner.id
+      //     LEFT JOIN programs program ON gs.program_id = program.id
+      //     ${whereClause}
+      //     GROUP BY 
+      //         gs.id, spinner.id, season.id, ginner.id, program.id
+      //     ORDER BY gs.id DESC
+      //     LIMIT ${batchSize} OFFSET ${offset}
+      //   ),
+      //   seed_seasons AS (
+      //     SELECT cs.process_id, s.name
+      //     FROM cotton_selections cs
+      //     LEFT JOIN transactions t ON cs.transaction_id = t.id
+      //     LEFT JOIN seasons s ON t.season_id = s.id
+      //     WHERE cs.process_id IN (
+      //         SELECT 
+      //             UNNEST(COALESCE(ARRAY_REMOVE(gs.process_ids, NULL), '{}'))  -- Handle NULL and empty arrays
+      //         FROM ginsale gs
+      //     )
+
+      //     UNION ALL
+
+      //     SELECT hs.process_id, s.name
+      //     FROM heap_selections hs
+      //     LEFT JOIN transactions t ON t.id = ANY(hs.transaction_id)
+      //     LEFT JOIN seasons s ON t.season_id = s.id
+      //     WHERE hs.process_id IN (
+      //         SELECT 
+      //             UNNEST(COALESCE(ARRAY_REMOVE(gs.process_ids, NULL), '{}'))  -- Handle NULL and empty arrays
+      //         FROM ginsale gs
+      //     )
+      //   )
+      //   SELECT 
+      //     gs.*,
+      //     COALESCE(STRING_AGG(DISTINCT ss.name, ', '), '') AS seed_consumed_seasons
+      //   FROM ginsale gs
+      //   LEFT JOIN seed_seasons ss ON ss.process_id = ANY(COALESCE(ARRAY_REMOVE(gs.process_ids, NULL), '{}'))  -- Handle NULL and empty arrays
+      //   GROUP BY gs.ginsale_id,
+      //           gs.date,
+      //           gs."createdAt",
+      //           gs.season_name,
+      //           gs.program,
+      //           gs.ginner_id,
+      //           gs.ginner,
+      //           gs.total_qty,
+      //           gs.spinner_id,
+      //           gs.buyerdata,
+      //           gs.qr,
+      //           gs.process_ids,
+      //           gs.lint_process_seasons,
+      //           gs.reel_lot_no,
+      //           gs.total_old_weight,
+      //           gs.invoice_no,
+      //           gs.lot_no,
+      //           gs.lint_quantity,
+      //           gs.rate, gs.candy_rate, gs.no_of_bales, gs.sale_value,
+      //           gs.press_no, gs.qty_stock, gs.weight_loss, gs.invoice_file,
+      //           gs.vehicle_no, gs.transporter_name, gs.transaction_agent, gs.status;`
+
+      //fetch data with pagination
+
       const dataQuery = `
-      WITH ginsale AS (
           SELECT 
               gs.id AS ginsale_id,
               gs.date AS date,
@@ -2735,59 +2794,8 @@ const generateGinnerSales = async () => {
           GROUP BY 
               gs.id, spinner.id, season.id, ginner.id, program.id
           ORDER BY gs.id DESC
-          LIMIT ${batchSize} OFFSET ${offset}
-        ),
-        seed_seasons AS (
-          SELECT cs.process_id, s.name
-          FROM cotton_selections cs
-          LEFT JOIN transactions t ON cs.transaction_id = t.id
-          LEFT JOIN seasons s ON t.season_id = s.id
-          WHERE cs.process_id IN (
-              SELECT 
-                  UNNEST(COALESCE(ARRAY_REMOVE(gs.process_ids, NULL), '{}'))  -- Handle NULL and empty arrays
-              FROM ginsale gs
-          )
+          LIMIT ${batchSize} OFFSET ${offset};`
 
-          UNION ALL
-
-          SELECT hs.process_id, s.name
-          FROM heap_selections hs
-          LEFT JOIN transactions t ON t.id = ANY(hs.transaction_id)
-          LEFT JOIN seasons s ON t.season_id = s.id
-          WHERE hs.process_id IN (
-              SELECT 
-                  UNNEST(COALESCE(ARRAY_REMOVE(gs.process_ids, NULL), '{}'))  -- Handle NULL and empty arrays
-              FROM ginsale gs
-          )
-        )
-        SELECT 
-          gs.*,
-          COALESCE(STRING_AGG(DISTINCT ss.name, ', '), '') AS seed_consumed_seasons
-        FROM ginsale gs
-        LEFT JOIN seed_seasons ss ON ss.process_id = ANY(COALESCE(ARRAY_REMOVE(gs.process_ids, NULL), '{}'))  -- Handle NULL and empty arrays
-        GROUP BY gs.ginsale_id,
-                gs.date,
-                gs."createdAt",
-                gs.season_name,
-                gs.program,
-                gs.ginner_id,
-                gs.ginner,
-                gs.total_qty,
-                gs.spinner_id,
-                gs.buyerdata,
-                gs.qr,
-                gs.process_ids,
-                gs.lint_process_seasons,
-                gs.reel_lot_no,
-                gs.total_old_weight,
-                gs.invoice_no,
-                gs.lot_no,
-                gs.lint_quantity,
-                gs.rate, gs.candy_rate, gs.no_of_bales, gs.sale_value,
-                gs.press_no, gs.qty_stock, gs.weight_loss, gs.invoice_file,
-                gs.vehicle_no, gs.transporter_name, gs.transaction_agent, gs.status;`
-
-      //fetch data with pagination
 
       const rows: any = await sequelize.query(dataQuery, {
         type: sequelize.QueryTypes.SELECT,
@@ -2814,8 +2822,14 @@ const generateGinnerSales = async () => {
           // Set bold font for header row
         }
         // Set bold font for header row
+        // const headerRow = currentWorksheet.addRow([
+        //   "Sr No.", "Process Date", "Data Entry Date", "Seed Cotton Consumed Season", "Lint Process Season", "Lint sale chosen season", "Ginner Name",
+        //   "Invoice No", "Sold To", "Bale Lot No", "REEL Lot No", "No of Bales", "Press/Bale No", "Rate/Kg",
+        //   "Total Quantity", "Sales Value", "Vehicle No", "Transporter Name", "Programme", "Agent Detials", "Status"
+        // ]);
+
         const headerRow = currentWorksheet.addRow([
-          "Sr No.", "Process Date", "Data Entry Date", "Seed Cotton Consumed Season", "Lint Process Season", "Lint sale chosen season", "Ginner Name",
+          "Sr No.", "Process Date", "Data Entry Date", "Lint Process Season", "Lint sale chosen season", "Ginner Name",
           "Invoice No", "Sold To", "Bale Lot No", "REEL Lot No", "No of Bales", "Press/Bale No", "Rate/Kg",
           "Total Quantity", "Sales Value", "Vehicle No", "Transporter Name", "Programme", "Agent Detials", "Status"
         ]);
@@ -2829,7 +2843,7 @@ const generateGinnerSales = async () => {
           index: index + offset + 1,
           date: item.date ? item.date : '',
           created_at: item.createdAt ? item.createdAt : '',
-          seed_consumed_seasons: item.seed_consumed_seasons ? item.seed_consumed_seasons : "",
+          // seed_consumed_seasons: item.seed_consumed_seasons ? item.seed_consumed_seasons : "",
           lint_process_seasons: item.lint_process_seasons ? item.lint_process_seasons : '',
           season: item.season_name ? item.season_name : '',
           ginner: item.ginner ? item.ginner : '',
