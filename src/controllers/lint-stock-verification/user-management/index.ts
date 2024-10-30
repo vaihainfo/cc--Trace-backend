@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { Op } from "sequelize";
+import { Op, Sequelize } from "sequelize";
 
 import User from "../../../models/user.model";
 import hash from "../../../util/hash";
@@ -7,6 +7,10 @@ import UserRegistrations from "../../../models/user-registrations.model";
 import Country from "../../../models/country.model";
 import Program from "../../../models/program.model";
 import UserRole from "../../../models/user-role.model";
+import State from "../../../models/state.model";
+import Brand from "../../../models/brand.model";
+import Ginner from "../../../models/ginner.model";
+import Spinner from "../../../models/spinner.model";
 
 const createUser = async (req: Request, res: Response) => {
     const userExist = await User.findOne({
@@ -130,19 +134,20 @@ const createUser = async (req: Request, res: Response) => {
 
     let include = [
         {
-            model: Country, as: 'lsvcountry'
+            model: Country, as: 'lsvcountry', attributes: ['id', 'county_name']
         },
         {
-            model: Program, as: 'lsvprogram'
+            model: Program, as: 'lsvprogram', attributes: ['id', 'program_name']
         },
         {
             model: UserRole, as: 'user_role'
-        },
+        }
     ];
 
     queryOptions.include = include;
   
     queryOptions.order = [["id", 'desc']];
+    let data =[];
   
     try {
       if (req.query.pagination === "true") {
@@ -150,7 +155,37 @@ const createUser = async (req: Request, res: Response) => {
         queryOptions.limit = limit;
   
         const { count, rows } = await User.findAndCountAll(queryOptions);
-        return res.sendPaginationSuccess(res, rows, count);
+
+        for await(let item of rows){
+          let states = null;
+          let brands = null;
+          let ginners = null;
+          let spinners = null;
+          if(item?.dataValues?.lsv_mapped_states && item?.dataValues?.lsv_mapped_states.length > 0){
+            states = await State.findAll({attributes: ['id', 'state_name'],where:{id: item?.dataValues?.lsv_mapped_states}})
+          }
+
+          if(item?.dataValues?.lsv_brand && item?.dataValues?.lsv_brand.length > 0){
+            brands = await Brand.findAll({attributes: ['id', 'brand_name'],where:{id: item?.dataValues?.lsv_brand}})
+          }
+
+          if(item?.dataValues?.lsv_mapped_ginners && item?.dataValues?.lsv_mapped_ginners.length > 0){
+            ginners = await Ginner.findAll({attributes: ['id', 'name'],where:{id: item?.dataValues?.lsv_mapped_ginners}})
+          }
+
+          if(item?.dataValues?.lsv_mapped_spinners && item?.dataValues?.lsv_mapped_spinners.length > 0){
+            spinners = await Spinner.findAll({attributes: ['id', 'name'],where:{id: item?.dataValues?.lsv_mapped_spinners}})
+          }
+
+          data.push({
+            ...item?.dataValues,
+            states,
+            brands,
+            ginners,
+            spinners
+          })
+        }
+        return res.sendPaginationSuccess(res, data, count);
       } else {
         const user = await User.findAll(queryOptions);
         return res.sendSuccess(res, user, 200);

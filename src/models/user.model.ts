@@ -3,6 +3,7 @@ import db from '../util/dbConn';
 import UserRole from './user-role.model';
 import Country from './country.model';
 import Program from './program.model';
+import State from './state.model';
 
 const User = db.define('users', {
   id: {
@@ -157,6 +158,11 @@ User.belongsTo(Country, {
 User.belongsTo(Program, {
   foreignKey: "lsv_program",
   as: "lsvprogram",
+});
+
+User.belongsTo(State, {
+  foreignKey: "lsv_mapped_states",
+  as: "states",
 });
 
 User.sync()
