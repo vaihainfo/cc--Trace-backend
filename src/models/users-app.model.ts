@@ -105,6 +105,24 @@ const UserApp = db.define('users_apps', {
   remember_me_token: {
     type: DataTypes.STRING
   },
+  lsv_country: {
+    type: DataTypes.INTEGER,
+  },
+    lsv_brand: {
+      type: DataTypes.ARRAY(DataTypes.INTEGER),
+    },
+    lsv_mapped_states: {
+      type: DataTypes.ARRAY(DataTypes.INTEGER),
+    },
+    lsv_mapped_ginners: {
+      type: DataTypes.ARRAY(DataTypes.INTEGER),
+    },
+    lsv_mapped_spinners: {
+      type: DataTypes.ARRAY(DataTypes.INTEGER),
+    },
+    lsv_mapped_to: {
+      type: DataTypes.STRING,
+    },
 });
 
 UserApp.belongsTo(UserRegistrations, {
