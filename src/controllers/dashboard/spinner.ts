@@ -17,6 +17,7 @@ import sequelize from "../../util/dbConn";
 import LintSelections from "../../models/lint-seletions.model";
 import GinBale from "../../models/gin-bale.model";
 import BaleSelection from "../../models/bale-selection.model";
+import SpinYarn from "../../models/spin-yarn.model";
 
 const getQueryParams = async (
   req: Request, res: Response
@@ -1184,7 +1185,8 @@ const getTopYarnCount = async (
 ) => {
   try {
     const reqData = await getQueryParams(req, res);
-    const where = getSpinnerSalesWhereQuery(reqData);
+    // const where = getSpinnerSalesWhereQuery(reqData);
+    const where = getSpinnerLintQuery(reqData);
     const spinnersData = await getTopYarnCountData(where);
     const data = await getTopYarnCountRes(spinnersData);
     return res.sendSuccess(res, data);
@@ -1219,33 +1221,63 @@ const getTopYarnCountData = async (
   where: any
 ) => {
 
-  const result = await SpinSales.findAll({
+  // const result = await SpinSales.findAll({
+  //   attributes: [
+  //     [Sequelize.fn('SUM', Sequelize.col('total_qty')), 'qty'],
+  //     [Sequelize.col('yarncount.yarnCount_name'), 'buyerName']
+  //   ],
+  //   include: [{
+  //     model: YarnCount,
+  //     as: 'yarncount',
+  //     attributes: [],
+  //     on: Sequelize.where(
+  //       Sequelize.literal('Array[yarncount.id]'),
+  //       {
+  //         [Op.contained]: Sequelize.col('spin_sales.yarn_count'),
+  //       }
+  //     ),
+  //   }, {
+  //     model: Spinner,
+  //     as: 'spinner',
+  //     attributes: []
+  //   }],
+  //   where: {
+  //     id: {
+  //       [Op.in]: Sequelize.literal(`(
+  //         SELECT DISTINCT sales_id
+  //         FROM spin_process_yarn_selections
+  //       )`)
+  //     },
+  //     ...where
+  //   },
+  //   order: [['qty', 'desc']],
+  //   limit: 10,
+  //   group: ['buyerName']
+  // });
+
+  const result = await SpinYarn.findAll({
     attributes: [
-      [Sequelize.fn('SUM', Sequelize.col('total_qty')), 'qty'],
+      [Sequelize.fn('SUM', Sequelize.col('yarn_produced')), 'qty'],
       [Sequelize.col('yarncount.yarnCount_name'), 'buyerName']
     ],
     include: [{
       model: YarnCount,
       as: 'yarncount',
-      attributes: [],
-      on: Sequelize.where(
-        Sequelize.literal('Array[yarncount.id]'),
-        {
-          [Op.contained]: Sequelize.col('spin_sales.yarn_count'),
-        }
-      ),
-    }, {
-      model: Spinner,
-      as: 'spinner',
       attributes: []
+    },
+    {
+      model: SpinProcess,
+      as: 'spinprocess',
+      attributes: [],
+      include:[
+        {
+          model: Spinner,
+          as: 'spinner',
+          attributes: []
+        }
+      ]
     }],
     where: {
-      id: {
-        [Op.in]: Sequelize.literal(`(
-          SELECT DISTINCT sales_id
-          FROM spin_process_yarn_selections
-        )`)
-      },
       ...where
     },
     order: [['qty', 'desc']],
