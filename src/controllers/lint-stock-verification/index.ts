@@ -3,6 +3,7 @@ import GinProcess from "../../models/gin-process.model";
 import Ginner from "../../models/ginner.model";
 import { Sequelize, Op } from "sequelize";
 import sequelize from "../../util/dbConn";
+import LintStockVerified from "../../models/lint-stock-verified.model";
 
 
 const getGinProcessLotNo = async (req: Request, res: Response) => {
@@ -89,4 +90,33 @@ const getGinProcessLotDetials = async (req: Request, res: Response) => {
 }
 
 
-export { getGinProcessLotNo, getGinProcessLotDetials};
+const createVerifiedLintStock = async (req: Request, res: Response) => {
+    try {
+        const data = {
+            ginner_id: req.body.ginnerId,
+            spinner_id: req.body.spinnerId,
+            country_id: req.body.countryId,
+            state_id: req.body.stateId,
+            process_id: req.body.processId,
+            sales_id: req.body.salesId,
+            processor_type: req.body.processorType,
+            total_qty: req.body.totalQty,
+            no_of_bales: req.body.noOfBales,
+            lot_no: req.body.lotNo,
+            reel_lot_no: req.body.reelLotNo,
+            actual_total_qty: req.body.actualTotalQty,
+            actual_no_of_bales: req.body.actualNoOfBales,
+            consent_form_te: req.body.consentForm,
+            uploaded_photos_te: req.body.uploadedPhotos,
+            status: 'Pending'
+          };
+          const lintVerified = await LintStockVerified.create(data);
+      return res.sendSuccess(res, lintVerified);  
+    } catch (error: any) {
+        console.log(error)
+        return res.sendError(res, error?.message);
+      }
+}
+
+
+export { getGinProcessLotNo, getGinProcessLotDetials, createVerifiedLintStock};
