@@ -4092,7 +4092,7 @@ const fetchSpinnerYarnProcessPagination = async (
       startOfDay.setUTCHours(0, 0, 0, 0);
       const endOfDay = new Date(endDate);
       endOfDay.setUTCHours(23, 59, 59, 999);
-      whereConditions.push(`spin_process."createdAt" BETWEEN '${startOfDay.toISOString()}' AND '${endOfDay.toISOString()}'`);
+      whereConditions.push(`spin_process."date" BETWEEN '${startOfDay.toISOString()}' AND '${endOfDay.toISOString()}'`);
     }
 
     const whereClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : '';
@@ -4301,7 +4301,7 @@ const exportSpinnerYarnProcess = async (req: Request, res: Response) => {
         startOfDay.setUTCHours(0, 0, 0, 0);
         const endOfDay = new Date(endDate);
         endOfDay.setUTCHours(23, 59, 59, 999);
-        whereConditions.push(`spin_process."createdAt" BETWEEN '${startOfDay.toISOString()}' AND '${endOfDay.toISOString()}'`);
+        whereConditions.push(`spin_process."date" BETWEEN '${startOfDay.toISOString()}' AND '${endOfDay.toISOString()}'`);
       }
 
       const whereClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : '';
