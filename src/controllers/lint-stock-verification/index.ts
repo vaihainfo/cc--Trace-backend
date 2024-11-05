@@ -4,6 +4,7 @@ import Ginner from "../../models/ginner.model";
 import { Sequelize, Op } from "sequelize";
 import sequelize from "../../util/dbConn";
 import LintStockVerified from "../../models/lint-stock-verified.model";
+import GinBale from "../../models/gin-bale.model";
 
 
 const getGinProcessLotNo = async (req: Request, res: Response) => {
@@ -111,6 +112,39 @@ const createVerifiedLintStock = async (req: Request, res: Response) => {
             status: 'Pending'
           };
           const lintVerified = await LintStockVerified.create(data);
+
+          if(lintVerified){
+
+          for await (const bale of req.body.bales) {
+            let baleData = {
+              te_verified_weight: bale.actualWeight,
+              te_verified_status: bale.verifiedStatus,
+            };
+            const gin = await GinBale.update(
+                baleData,
+              {
+                where: {
+                  id: bale.id,
+                }
+              }
+            );
+          }
+
+          const gin = await GinProcess.update(
+            { 
+                te_verified_status: true,
+                te_verified_total_qty:req.body.actualTotalQty,
+                te_verified_bales: req.body.actualNoOfBales
+            },
+            {
+              where: {
+                id: req.body.processId,
+              },
+            }
+          );
+
+        }
+
       return res.sendSuccess(res, lintVerified);  
     } catch (error: any) {
         console.log(error)
