@@ -1300,7 +1300,7 @@ const getYarnType = async (
         id: reqData.season ? reqData.season : '9'
       }
     });
-    reqData.season = seasonOne.id;
+    // reqData.season = seasonOne.id;
     const saleWhere = getSpinnerSalesWhereQuery(reqData);
     const spinnersData = await getYarnTypeData(saleWhere);
     const data = await getYarnTypeRes(spinnersData, seasonOne);
