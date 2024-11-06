@@ -1078,7 +1078,7 @@ const uploadTransactionBulk = async (req: Request, res: Response) => {
                                   fail.push({
                                     success: false,
                                     data: { farmerName: data.farmerName ? data.farmerName : '', farmerCode: data.farmerCode ? data.farmerCode : '' },
-                                    message: "No seed cotton village has been allocated to Entered Ginner for entered Season",
+                                    message: "This village is not allocated to the mentioned ginner for the season",
                                   });
                                   let failedRecord = {
                                     type: 'Procurement',
@@ -1086,7 +1086,7 @@ const uploadTransactionBulk = async (req: Request, res: Response) => {
                                     farmerCode: data.farmerCode ? data.farmerCode : '',
                                     farmerName: data.farmerName ? data.farmerName : '',
                                     body: { ...data },
-                                    reason: "No seed cotton village has been allocated to Entered Ginner for entered Season"
+                                    reason: "This village is not allocated to the mentioned ginner for the season"
                                   }
                                   saveFailedRecord(failedRecord)
                                 } else if (data.farmerCode) {
