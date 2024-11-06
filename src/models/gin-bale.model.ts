@@ -50,6 +50,12 @@ const GinBale = db.define('gin-bales', {
   },
   accepted_weight: {
     type: DataTypes.DOUBLE
+  },
+  te_verified_status: {
+    type: DataTypes.BOOLEAN,
+  },
+  te_verified_weight: {
+    type: DataTypes.DOUBLE
   }
 });
 

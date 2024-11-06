@@ -1,6 +1,9 @@
 import { DataTypes } from 'sequelize';
 import db from '../util/dbConn';
 import UserRole from './user-role.model';
+import Country from './country.model';
+import Program from './program.model';
+import State from './state.model';
 
 const User = db.define('users', {
   id: {
@@ -145,6 +148,21 @@ User.associate = (models: any) => {
 User.belongsTo(UserRole, {
   foreignKey: "role",
   as: "user_role",
+});
+
+User.belongsTo(Country, {
+  foreignKey: "lsv_country",
+  as: "lsvcountry",
+});
+
+User.belongsTo(Program, {
+  foreignKey: "lsv_program",
+  as: "lsvprogram",
+});
+
+User.belongsTo(State, {
+  foreignKey: "lsv_mapped_states",
+  as: "states",
 });
 
 User.sync()

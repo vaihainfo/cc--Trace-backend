@@ -90,6 +90,15 @@ const GinProcess = db.define('gin_process', {
     type: DataTypes.BOOLEAN,
     defaultValue: false,
   },
+  te_verified_status: {
+    type: DataTypes.BOOLEAN,
+  },
+  te_verified_total_qty: {
+    type: DataTypes.DOUBLE,
+  },
+  te_verified_bales: {
+    type: DataTypes.DOUBLE,
+  }
 });
 
 GinProcess.belongsTo(Season, {

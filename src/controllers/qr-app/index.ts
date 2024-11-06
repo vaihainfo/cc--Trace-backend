@@ -969,6 +969,12 @@ const createUserApp = async (req: Request, res: Response) => {
             acs_brand: req.body.brandId ? req.body.brandId : null,
             platform: req.body.platform,
             status: req.body.status,
+            lsv_brand: req.body.lsvBrand && req.body.lsvBrand.length > 0 ? req.body.lsvBrand : null,
+            lsv_country: req.body.lsvCountry ? req.body.lsvCountry : null,
+            lsv_mapped_states: req.body.lsvState && req.body.lsvState.length > 0  ? req.body.lsvState : null,
+            lsv_mapped_ginners: req.body.lsvGinners && req.body.lsvGinners.length > 0 ? req.body.lsvGinners : null,
+            lsv_mapped_spinners: req.body.lsvSpinners && req.body.lsvSpinners.length > 0 ? req.body.lsvSpinners  : null,
+            lsv_mapped_to: req.body.lsvMappedTo ? req.body.lsvMappedTo : '',
         }
 
         const userApp = await UserApp.create(data);
@@ -1021,6 +1027,12 @@ const updateUserApp = async (req: Request, res: Response) => {
             acs_brand: req.body.brandId ? req.body.brandId : null,
             platform: req.body.platform,
             status: req.body.status,
+            lsv_brand: req.body.lsvBrand && req.body.lsvBrand.length > 0 ? req.body.lsvBrand : null,
+            lsv_country: req.body.lsvCountry ? req.body.lsvCountry : null,
+            lsv_mapped_states: req.body.lsvState && req.body.lsvState.length > 0  ? req.body.lsvState : null,
+            lsv_mapped_ginners: req.body.lsvGinners && req.body.lsvGinners.length > 0 ? req.body.lsvGinners : null,
+            lsv_mapped_spinners: req.body.lsvSpinners && req.body.lsvSpinners.length > 0 ? req.body.lsvSpinners  : null,
+            lsv_mapped_to: req.body.lsvMappedTo ? req.body.lsvMappedTo : '',
         }
 
         const userApp = await UserApp.update(data, { where: { id: req.body.id } });
