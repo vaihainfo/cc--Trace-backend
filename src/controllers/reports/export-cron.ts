@@ -2576,7 +2576,7 @@ const generateGinnerProcess = async () => {
           ginner: item.ginner_name ? item.ginner_name : "",
           heap: item.heap_number ?  item.heap_number : '',
           lot_no: item.lot_no ? item.lot_no : "",
-          press_no: item.press_no ? item.press_no : "",
+          press_no: item.press_no !== "NaN-NaN" ? item.press_no : item?.gin_press_no,
           reel_lot_no: item.reel_lot_no ? item.reel_lot_no : "",
           reel_press_no: item.reel_press_no ? item.reel_press_no : "",
           noOfBales: item.no_of_bales ? Number(item.no_of_bales) : 0,
