@@ -2,6 +2,7 @@
 
 const CONF = {
   secret: 'avcbdfhgryfbfdgh25wgy56',
+  mobilesecret: 'W78B3eKaTWnBnsD3ZKVBdv5Cj',
     // process.env.NODE_ENV == "development"
     //   ? 'avcbdfhgryfbfdgh25wgy56'
     //   : '',
