@@ -326,7 +326,7 @@ const deleteSpinner = async (req: Request, res: Response) => {
             },
         });
 
-        const user = await User.findOne({
+        const users = await User.findAll({
             where: {
                 id: sinn.spinnerUser_id
             },
@@ -339,17 +339,19 @@ const deleteSpinner = async (req: Request, res: Response) => {
             )
         });
 
+        for await (let user of users){
+            const updatedProcessRole = user.process_role.filter((roleId: any) => roleId !== userRole.id);
+      
+            if (updatedProcessRole && updatedProcessRole.length > 0) {
+                const updatedUser = await User.update({
+                    process_role: updatedProcessRole,
+                    role: updatedProcessRole[0]
+                }, { where: { id: user.id } });
+            } else {
+                await User.destroy({ where: { id: user.id }});
+            }
+          }
 
-        const updatedProcessRole = user.process_role.filter((roleId: any) => roleId !== userRole.id);
-
-        if (updatedProcessRole.length > 0) {
-            const updatedUser = await await user.update({
-                process_role: updatedProcessRole,
-                role: updatedProcessRole[0]
-            });
-        } else {
-            await user.destroy();
-        }
         const spinner = await Spinner.destroy({
             where: {
                 id: req.body.id

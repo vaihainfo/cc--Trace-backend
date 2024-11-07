@@ -251,11 +251,11 @@ const createLSVUser = async (req: Request, res: Response) => {
 
     queryOptions.include = include;
   
-    queryOptions.order = [["id", 'desc']];
     let data =[];
-  
+    
     try {
       if (req.query.pagination === "true") {
+        queryOptions.order = [["id", 'desc']];
         queryOptions.offset = offset;
         queryOptions.limit = limit;
 
@@ -322,6 +322,7 @@ const createLSVUser = async (req: Request, res: Response) => {
 
         return res.sendPaginationSuccess(res, data, counts);
       } else {
+        queryOptions.order = [["id", 'asc']];
         let results = [];
 
         if(processorType === 'Traceability_Executive'){
@@ -459,56 +460,224 @@ const createLSVUser = async (req: Request, res: Response) => {
       res.sendError(res, error?.message);
     }
   }
-  
-  const updateUser = async (req: Request, res: Response) => {
-    try {
-    const userExist = await User.findByPk(req.body.id);
-  
-    if (!userExist) {
-      return res.sendError(res, "ERR_USER_NOT_EXIST");
-    }
-  
-    const USER_MODEL = {
-      username: req.body.username,
-      email: req.body.email,
-      password: req.body.password !== "" ? await hash.generate(req.body.password) : userExist.password,
-      firstname: req.body.firstName || "",
-      lastname: req.body.lastName || "",
-      mobile: req.body.mobile || "",
-      role: req.body.role !== undefined ? Number(req.body.role) : null,
-      status: req.body.status || true,
-      lsv_program: req.body.lsvProgram || null,
-      lsv_brand: req.body.lsvBrand || null,
-      lsv_country: req.body.lsvCountry || null,
-      lsv_mapped_states: req.body.lsvState || null,
-      lsv_mapped_ginners: req.body.lsvGinners && req.body.lsvGinners.length > 0 ? req.body.lsvGinners : null,
-      lsv_mapped_spinners: req.body.lsvSpinners && req.body.lsvSpinners.length > 0 ? req.body.lsvSpinners  : null,
-      lsv_mapped_to: req.body.lsvMappedTo ? req.body.lsvMappedTo : '',
-    }
 
-      const user = await User.update(USER_MODEL, {
-        where: {
-          id: req.body.id
-        }
-      });
-      return res.sendSuccess(res, user, 200);
-    } catch (error: any) {
-      console.error("Error appending data:", error);
-      return res.sendError(res, error.message);
-    }
-  }
-  
-  const deleteUser = async (req: Request, res: Response) => {
-    try {
-      const deleted = await User.destroy({
-        where: {
-          id: req.body.id
-        }
-      });
-      res.sendSuccess(res, { deleted });
-    } catch (error: any) {
-      return res.sendError(res, error.message);
-    }
-  }
 
-  export { createLSVUser,fetchAllLSVProcessor, fetchUsers, fetchUser, updateUser, deleteUser };
+  const updateProcessor = async (req: Request, res: Response) => {
+    try {
+        let userIds = [];
+        let allUserInactive = false; 
+
+        for await (let user of req.body.userData) {
+            const userData = {
+                firstname: user.firstname,
+                lastname: user.lastname ? user.lastname : '',
+                position: user.position,
+                mobile: user.mobile,
+                password: user.password ? await hash.generate(user.password) : undefined,
+                status: user.status,
+                role: req.body.process_role[0],
+                process_role: req.body.process_role,
+                is_lsv_user: true,
+            };
+            if (user.id) {
+                const result = await User.update({...userData, username: user.username, email: user.email }, { where: { id: user.id } });
+                userIds.push(user.id);
+            } else {
+                const result = await User.create({ ...userData, username: user.username, email: user.email });
+                userIds.push(result.id);
+            }
+            if (user.status) {
+                allUserInactive = true;
+            }
+        }
+
+        let mainData: any = [];
+        let data = {
+          name: req.body.name,
+          country_id: req.body.countryId,
+          program_id: req.body.programIds,
+          brand: req.body.brand,
+          mobile: req.body.mobile,
+          email: req.body.email,
+          mapped_to: req.body.lsvMappedTo,
+          mapped_states: req.body.lsvState || null,
+          mapped_ginners: req.body.lsvGinners && req.body.lsvGinners.length > 0 ? req.body.lsvGinners : null,
+          mapped_spinners: req.body.lsvSpinners && req.body.lsvSpinners.length > 0 ? req.body.lsvSpinners  : null,
+        }
+
+        if (req.body.processType.includes('Traceability Executive')) {
+            let obj = {
+                ...data,
+                teUser_id: userIds,
+                status: allUserInactive
+              }
+            if (req.body.teId) {
+                const result = await TraceabilityExecutive.update(obj, { where: { id: req.body.teId } });
+                mainData.push(result);
+            } else {
+                const result = await TraceabilityExecutive.create(obj);
+                mainData.push(result);
+            }
+        }
+
+        if (req.body.processType.includes('Supply Chain Manager')) {
+            let obj = {
+                ...data,
+                scmUser_id: userIds,
+                status: allUserInactive
+            }
+            if (req.body.scmId) {
+                const result = await SupplyChainManager.update(obj, { where: { id: req.body.scmId } });
+                mainData.push(result);
+            } else {
+                const result = await SupplyChainManager.create(obj);
+                mainData.push(result);
+            }
+        }
+
+        if (req.body.processType.includes('Supply Chain Director')) {
+            let obj = {
+                ...data,
+                scdUser_id: userIds,
+                status: allUserInactive
+            }
+            if (req.body.scdId) {
+                const result = await SupplyChainDirector.update(obj, { where: { id: req.body.scdId } });
+                mainData.push(result);
+            } else {
+                const result = await SupplyChainDirector.create(obj);
+                mainData.push(result);
+            }
+        }
+
+        if (req.body.deletedTeId) {
+            const result = await TraceabilityExecutive.update({ teUser_id: [] }, { where: { id: req.body.deletedTeId } });
+        }
+        if (req.body.deletedScmId) {
+            const result = await SupplyChainManager.update({ scmUser_id: [] }, { where: { id: req.body.deletedScmId } });
+        }
+        if (req.body.deletedScdId) {
+            const result = await SupplyChainDirector.update({ scdUser_id: [] }, { where: { id: req.body.deletedScdId } });
+        }
+
+        res.sendSuccess(res, mainData);
+    } catch (error: any) {
+        console.log(error);
+        return res.sendError(res, error.message);
+    }
+}
+
+
+const deleteLSVUser = async (req: Request, res: Response) => {
+  try {
+      let users = [];
+      let userRole: any;
+
+      if(req.body.processorType === 'Traceability_Executive'){
+        const ginn = await TraceabilityExecutive.findOne({
+            where: {
+                id: req.body.id
+            },
+        });
+  
+        users = await User.findAll({
+            where: {
+                id: ginn.teUser_id
+            },
+        });
+
+         userRole = await UserRole.findOne({
+            where: Sequelize.where(
+                Sequelize.fn('LOWER', Sequelize.col('user_role')),
+                'traceability executive'
+            )
+        });
+      }
+
+      if(req.body.processorType === 'Supply_Chain_Manager'){
+        const ginn = await SupplyChainManager.findOne({
+            where: {
+                id: req.body.id
+            },
+        });
+  
+        users = await User.findAll({
+            where: {
+                id: ginn.scmUser_id
+            },
+        });
+
+         userRole = await UserRole.findOne({
+            where: Sequelize.where(
+                Sequelize.fn('LOWER', Sequelize.col('user_role')),
+                'supply chain manager'
+            )
+        });
+      }
+
+      if(req.body.processorType === 'Supply_Chain_Director'){
+        const ginn = await SupplyChainDirector.findOne({
+            where: {
+                id: req.body.id
+            },
+        });
+  
+        users = await User.findAll({
+            where: {
+                id: ginn.scdUser_id
+            },
+        });
+
+         userRole = await UserRole.findOne({
+            where: Sequelize.where(
+                Sequelize.fn('LOWER', Sequelize.col('user_role')),
+                'supply chain director'
+            )
+        });
+      }
+
+      for await (let user of users){
+        const updatedProcessRole = user.process_role.filter((roleId: any) => roleId !== userRole.id);
+  
+        if (updatedProcessRole && updatedProcessRole.length > 0) {
+            const updatedUser = await User.update({
+                process_role: updatedProcessRole,
+                role: updatedProcessRole[0]
+            }, { where: { id: user.id } });
+        } else {
+            await User.destroy({ where: { id: user.id }});
+        }
+      }
+
+      if(req.body.processorType === 'Traceability_Executive'){
+          const ginner = await TraceabilityExecutive.destroy({
+            where: {
+                id: req.body.id
+            }
+        });
+        return res.sendSuccess(res, { ginner });
+      }
+
+      if(req.body.processorType === 'Supply_Chain_Manager'){
+        const ginner = await SupplyChainManager.destroy({
+          where: {
+              id: req.body.id
+          }
+        });
+        return res.sendSuccess(res, { ginner });
+      }
+
+      if(req.body.processorType === 'Supply_Chain_Director'){
+        const ginner = await SupplyChainDirector.destroy({
+          where: {
+              id: req.body.id
+          }
+        });
+        return res.sendSuccess(res, { ginner });
+      }
+  } catch (error: any) {
+      return res.sendError(res, error.message);
+  }
+}
+
+  export { createLSVUser,fetchAllLSVProcessor, fetchUsers, fetchUser, updateProcessor, deleteLSVUser };
