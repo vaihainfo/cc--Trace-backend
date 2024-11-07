@@ -128,7 +128,7 @@ LintStockVerified.belongsTo(GinProcess, {
 
 LintStockVerified.belongsTo(GinSales, {
   foreignKey: "sales_id",
-  as: "sales",
+  as: "ginsales",
 });
 
 LintStockVerified.sync();

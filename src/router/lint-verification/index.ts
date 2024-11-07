@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { createUser, deleteUser, fetchUser, fetchUsers, updateUser } from "../../controllers/lint-stock-verification/user-management";
-import { getGinProcessLotDetials, getGinProcessLotNo } from "../../controllers/lint-stock-verification";
+import { createVerifiedLintStock, getGinProcessLotDetials, getGinProcessLotNo, getLintVerifiedStocks } from "../../controllers/lint-stock-verification";
 
 
 const router = Router();
@@ -13,5 +13,7 @@ router.delete("/delete-user", deleteUser);
 
 router.get("/get-ginner-lots", getGinProcessLotNo);
 router.get("/get-gin-process-details", getGinProcessLotDetials);
+router.get("/get-verified-stocks", getLintVerifiedStocks);
+router.post("/create-verified-stock", createVerifiedLintStock);
 
 export default router;
