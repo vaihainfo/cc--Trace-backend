@@ -10,6 +10,9 @@ import Knitter from './knitter.model';
 import Country from './country.model';
 import State from './state.model';
 import Brand from './brand.model';
+import TraceabilityExecutive from './traceability-executive.model';
+import SupplyChainManager from './supply-chain-manager.model';
+import SupplyChainDirector from './supply-chain-director.model';
 
 const UserApp = db.define('users_apps', {
   id: {
@@ -123,6 +126,15 @@ const UserApp = db.define('users_apps', {
     lsv_mapped_to: {
       type: DataTypes.STRING,
     },
+    te_id: {
+      type: DataTypes.INTEGER
+    },
+    scm_id: {
+      type: DataTypes.INTEGER
+    },
+    scd_id: {
+      type: DataTypes.INTEGER
+    },
 });
 
 UserApp.belongsTo(UserRegistrations, {
@@ -173,6 +185,21 @@ UserApp.belongsTo(State, {
 UserApp.belongsTo(Brand, {
   foreignKey: "acs_brand",
   as: "acsbrand",
+});
+
+UserApp.belongsTo(TraceabilityExecutive, {
+  foreignKey: "te_id",
+  as: "traceability_executive",
+})
+
+UserApp.belongsTo(SupplyChainManager, {
+  foreignKey: "scm_id",
+  as: "supply_chain_manager",
+});
+
+UserApp.belongsTo(SupplyChainDirector, {
+  foreignKey: "scd_id",
+  as: "supply_chain_director",
 });
 
 UserApp.sync();
