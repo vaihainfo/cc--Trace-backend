@@ -9,6 +9,7 @@ import Country from "../../models/country.model";
 import State from "../../models/state.model";
 import Spinner from "../../models/spinner.model";
 import GinSales from "../../models/gin-sales.model";
+import TraceabilityExecutive from "../../models/traceability-executive.model";
 
 
 const getGinProcessLotNo = async (req: Request, res: Response) => {
@@ -98,6 +99,7 @@ const getGinProcessLotDetials = async (req: Request, res: Response) => {
 const createVerifiedLintStock = async (req: Request, res: Response) => {
     try {
         const data = {
+            te_id: req.body.teId,
             ginner_id: req.body.ginnerId,
             spinner_id: req.body.spinnerId,
             country_id: req.body.countryId,
@@ -160,7 +162,7 @@ const getLintVerifiedStocks =  async (req: Request, res: Response) => {
   const searchTerm = req.query.search || "";
   const page = Number(req.query.page) || 1;
   const limit = Number(req.query.limit) || 10;
-  const { ginnerId, seasonId, programId, brandId, stateId,countryId, spinnerId }: any = req.query;
+  const { ginnerId, teId, programId, brandId, stateId,countryId, spinnerId }: any = req.query;
   const offset = (page - 1) * limit;
   const whereCondition: any = {};
 
@@ -174,6 +176,13 @@ const getLintVerifiedStocks =  async (req: Request, res: Response) => {
         { "$country.county_name$": { [Op.iLike]: `%${searchTerm}%` } },
         { "$state.state_name$": { [Op.iLike]: `%${searchTerm}%` } },
       ];
+    }
+
+    if (teId) {
+      const idArray: number[] = teId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.te_id = { [Op.in]: idArray };
     }
 
     if (ginnerId) {
@@ -194,7 +203,7 @@ const getLintVerifiedStocks =  async (req: Request, res: Response) => {
       const idArray: number[] = brandId
         .split(",")
         .map((id: any) => parseInt(id, 10));
-        whereCondition["$ginner.brand$"] = { [Op.overlap]: idArray };
+        whereCondition["$traceability_executive.brand$"] = { [Op.overlap]: idArray };
     }
 
     if (stateId) {
@@ -215,7 +224,7 @@ const getLintVerifiedStocks =  async (req: Request, res: Response) => {
       const idArray: number[] = programId
         .split(",")
         .map((id: any) => parseInt(id, 10));
-      whereCondition["$ginner.program$"] = { [Op.overlap]: idArray };
+      whereCondition["$traceability_executive.program_id$"] = { [Op.overlap]: idArray };
     }
 
     let include = [
@@ -228,6 +237,10 @@ const getLintVerifiedStocks =  async (req: Request, res: Response) => {
         model: Spinner,
         as: "spinner",
         attributes: ['id','name'],
+      },
+      {
+        model: TraceabilityExecutive,
+        as: "traceability_executive",
       },
       {
         model: Country,
@@ -273,4 +286,53 @@ const getLintVerifiedStocks =  async (req: Request, res: Response) => {
 }
 
 
-export { getGinProcessLotNo, getGinProcessLotDetials, createVerifiedLintStock, getLintVerifiedStocks};
+const getLintVerifiedStock = async (req: Request, res: Response) =>{
+  try {
+    const stock = await LintStockVerified.findOne({
+      where: {
+        id: req.body.id,
+      },
+      include:[
+        {
+          model: Ginner,
+          as: "ginner",
+          attributes: ['id','name'],
+        },
+        {
+          model: Spinner,
+          as: "spinner",
+          attributes: ['id','name'],
+        },
+        {
+          model: TraceabilityExecutive,
+          as: "traceability_executive",
+        },
+        {
+          model: Country,
+          as: "country",
+          attributes: ['id','county_name'],
+        },
+        {
+          model: State,
+          as: "state",
+          attributes: ['id','state_name'],
+        },
+        {
+          model: GinProcess,
+          as: "ginprocess",
+        },
+        {
+          model: GinSales,
+          as: "ginsales",
+        },
+      ]
+    })
+    return res.sendSuccess(res, stock);   
+  } catch (error: any) {
+    console.log(error)
+    return res.sendError(res, error?.message);
+  }
+}
+
+
+export { getGinProcessLotNo, getGinProcessLotDetials, createVerifiedLintStock, getLintVerifiedStocks, getLintVerifiedStock};

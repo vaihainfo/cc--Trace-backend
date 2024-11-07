@@ -9,6 +9,9 @@ import Country from './country.model';
 import State from './state.model';
 import GinProcess from './gin-process.model';
 import GinSales from './gin-sales.model';
+import TraceabilityExecutive from './traceability-executive.model';
+import SupplyChainManager from './supply-chain-manager.model';
+import SupplyChainDirector from './supply-chain-director.model';
 
 const LintStockVerified = db.define('lint_stock_verifieds', {
   id: {
@@ -98,6 +101,16 @@ const LintStockVerified = db.define('lint_stock_verifieds', {
   status_scd: {
     type: DataTypes.STRING
   },
+  te_id: {
+    allowNull: false,
+    type: DataTypes.INTEGER
+  },
+  scm_id: {
+    type: DataTypes.INTEGER
+  },
+  scd_id: {
+    type: DataTypes.INTEGER
+  },
 });
 
 LintStockVerified.belongsTo(Country, {
@@ -129,6 +142,21 @@ LintStockVerified.belongsTo(GinProcess, {
 LintStockVerified.belongsTo(GinSales, {
   foreignKey: "sales_id",
   as: "ginsales",
+});
+
+LintStockVerified.belongsTo(TraceabilityExecutive, {
+  foreignKey: "te_id",
+  as: "traceability_executive",
+})
+
+LintStockVerified.belongsTo(SupplyChainManager, {
+  foreignKey: "scm_id",
+  as: "supply_chain_manager",
+});
+
+LintStockVerified.belongsTo(SupplyChainDirector, {
+  foreignKey: "scd_id",
+  as: "supply_chain_director",
 });
 
 LintStockVerified.sync();
