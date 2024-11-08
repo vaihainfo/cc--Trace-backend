@@ -15,6 +15,9 @@ import Fabric from "../../../models/fabric.model";
 import { generateTokens } from "../../../util/auth";
 import Brand from "../../../models/brand.model";
 import PhysicalPartner from "../../../models/physical-partner.model";
+import TraceabilityExecutive from "../../../models/traceability-executive.model";
+import SupplyChainManager from "../../../models/supply-chain-manager.model";
+import SupplyChainDirector from "../../../models/supply-chain-director.model";
 
 const getUserInfo = async (req: Request, res: Response) => {
     try {
@@ -132,6 +135,48 @@ const getUserInfo = async (req: Request, res: Response) => {
             role = role.dataValues;
         }
 
+        if (req.query.TraceabilityExecutiveId) {
+            role = await UserRole.findOne({
+                where: { user_role: 'Traceability Executive' },
+                include: [
+                    {
+                        model: UserCategory,
+                        as: 'userCategory',
+                        attributes: ['id', 'category_name'], // Include only the name attribute of the category
+                    },
+                ],
+            });
+            role = role.dataValues;
+        }
+
+        if (req.query.SupplyChainManagerId) {
+            role = await UserRole.findOne({
+                where: { user_role: 'Supply Chain Manager' },
+                include: [
+                    {
+                        model: UserCategory,
+                        as: 'userCategory',
+                        attributes: ['id', 'category_name'], // Include only the name attribute of the category
+                    },
+                ],
+            });
+            role = role.dataValues;
+        }
+
+        if (req.query.SupplyChainDirectorId) {
+            role = await UserRole.findOne({
+                where: { user_role: 'Supply Chain Director' },
+                include: [
+                    {
+                        model: UserCategory,
+                        as: 'userCategory',
+                        attributes: ['id', 'category_name'], // Include only the name attribute of the category
+                    },
+                ],
+            });
+            role = role.dataValues;
+        }
+
         let menuList = await MenuList.findAll(
             {
                 where: {
@@ -159,7 +204,7 @@ const getUserInfo = async (req: Request, res: Response) => {
             ],
         });
 
-        let [spinner, ginner, weaver, knitter, garment, trader, fabric, brand, physicalPartner] = await Promise.all([
+        let [spinner, ginner, weaver, knitter, garment, trader, fabric, brand, physicalPartner, traceabilityExecutive, supplyChainManager, supplyChainDirector] = await Promise.all([
             Spinner.findOne({ where: { spinnerUser_id: { [Op.contains]: [user.dataValues.id] } } }),
             Ginner.findOne({ where: { ginnerUser_id: { [Op.contains]: [user.dataValues.id] } } }),
             Weaver.findOne({ where: { weaverUser_id: { [Op.contains]: [user.dataValues.id] } } }),
@@ -176,8 +221,12 @@ const getUserInfo = async (req: Request, res: Response) => {
                     ]
                 }
             }),
-            PhysicalPartner.findOne({ where: { physicalPartnerUser_id: { [Op.contains]: [user.dataValues.id] } } })
+            PhysicalPartner.findOne({ where: { physicalPartnerUser_id: { [Op.contains]: [user.dataValues.id] } } }),
+            TraceabilityExecutive.findOne({ where: { teUser_id: { [Op.contains]: [user.dataValues.id] } } }),
+            SupplyChainManager.findOne({ where: { scmUser_id: { [Op.contains]: [user.dataValues.id] } } }),
+            SupplyChainDirector.findOne({ where: { scdUser_id: { [Op.contains]: [user.dataValues.id] } } }),
         ]);
+
         let processor = [];
         spinner ? processor.push('Spinner') : "";
         ginner ? processor.push('Ginner') : "";
@@ -188,6 +237,9 @@ const getUserInfo = async (req: Request, res: Response) => {
         fabric ? processor.push('Fabric') : "";
         brand ? processor.push('Brand') : "";
         physicalPartner ? processor.push('Physical_Partner') : "";
+        traceabilityExecutive ? processor.push('Traceability_Executive') : "";
+        supplyChainManager ? processor.push('Supply_Chain_Manager') : "";
+        supplyChainDirector ? processor.push('Supply_Chain_Director') : "";
 
         if (req.query.ginnerId) {
             ginner = await Ginner.findOne({ where: { id: req.query.ginnerId } })
@@ -210,8 +262,16 @@ const getUserInfo = async (req: Request, res: Response) => {
         if (req.query.physicalPartnerId) {
             physicalPartner = await PhysicalPartner.findOne({ where: { id: req.query.physicalPartnerId } })
         }
-
-        return res.sendSuccess(res, { user, role, menuList, privileges, spinner, ginner, weaver, knitter, garment, trader, fabric, brand, physicalPartner, processor });
+        if (req.query.TraceabilityExecutiveId) {
+            traceabilityExecutive = await TraceabilityExecutive.findOne({ where: { id: req.query.TraceabilityExecutiveId } })
+        }
+        if (req.query.SupplyChainManagerId) {
+            supplyChainManager = await SupplyChainManager.findOne({ where: { id: req.query.SupplyChainManagerId } })
+        }
+        if (req.query.SupplyChainDirectorId) {
+            supplyChainDirector = await SupplyChainDirector.findOne({ where: { id: req.query.SupplyChainDirectorId } })
+        }
+        return res.sendSuccess(res, { user, role, menuList, privileges, spinner, ginner, weaver, knitter, garment, trader, fabric, brand, physicalPartner, traceabilityExecutive, supplyChainManager, supplyChainDirector, processor });
     } catch (error: any) {
         console.log(error)
         return res.sendError(res, error.message);
@@ -221,7 +281,7 @@ const getUserInfo = async (req: Request, res: Response) => {
 const processorLoginAdmin = async (req: Request, res: Response) => {
     try {
         let userId: any;
-        let name = "Ginner"
+        let name = "";
         if (req.query.type === 'ginner') {
             name = "Ginner"
             let ginner = await Ginner.findOne({ where: { id: req.query.ginnerId } });
@@ -257,6 +317,21 @@ const processorLoginAdmin = async (req: Request, res: Response) => {
             let physicalPartner = await PhysicalPartner.findOne({ where: { id: req.query.physicalPartnerId } });
             userId = physicalPartner.dataValues.physicalPartnerUser_id;
         }
+        if (req.query.type === 'TraceabilityExecutive') {
+            name = "Traceability Executive";
+            let traceabilityExecutive = await TraceabilityExecutive.findOne({ where: { id: req.query.TraceabilityExecutiveId } });
+            userId = traceabilityExecutive.dataValues.teUser_id;
+        }
+        if (req.query.type === 'SupplyChainManager') {
+            name = "Supply Chain Manager";
+            let supplyChainManager = await SupplyChainManager.findOne({ where: { id: req.query.SupplyChainManagerId } });
+            userId = supplyChainManager.dataValues.scmUser_id;
+        }
+        if (req.query.type === 'SupplyChainDirector') {
+            name = "Supply Chain Director";
+            let supplyChainDirector = await SupplyChainDirector.findOne({ where: { id: req.query.SupplyChainDirectorId } });
+            userId = supplyChainDirector.dataValues.scdUser_id;
+        }
         if (req.query.type === 'brand') {
             let brand = await Brand.findOne({ where: { id: req.query.brandId } });
             userId = brand.dataValues.brandUser_id;
@@ -267,13 +342,11 @@ const processorLoginAdmin = async (req: Request, res: Response) => {
                 const userupdate = await User.update({ role: role.dataValues.id }, { where: { id: userId } });
             }
         }
-
         const user = await User.findOne({ where: { id: userId } });
         if (!user) {
             return res.sendError(res, "user not found");
         }
         if (user) {
-            console.log(user.dataValues)
             var { accessToken } = await generateTokens(user.dataValues.id, user.dataValues.role);
 
             return res.sendSuccess(res, { accessToken: accessToken, user: user.dataValues });
