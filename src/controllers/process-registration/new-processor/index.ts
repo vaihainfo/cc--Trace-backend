@@ -335,7 +335,6 @@ const updateProcessor = async (req: Request, res: Response) => {
                 status: user.status,
                 role: req.body.process_role[0],
                 process_role: req.body.process_role,
-                id: user.id
             };
             if (user.id) {
                 const result = await User.update({...userData, username: user.username, email: user.email }, { where: { id: user.id } });

@@ -1,17 +1,20 @@
 import { Router } from "express";
-import { createUser, deleteUser, fetchUser, fetchUsers, updateUser } from "../../controllers/lint-stock-verification/user-management";
-import { getGinProcessLotDetials, getGinProcessLotNo } from "../../controllers/lint-stock-verification";
+import { createLSVUser, deleteLSVUser, fetchUser, fetchUsers, updateProcessor } from "../../controllers/lint-stock-verification/user-management";
+import { createVerifiedLintStock, getGinProcessLotDetials, getGinProcessLotNo, getLintVerifiedStock, getLintVerifiedStocks } from "../../controllers/lint-stock-verification";
 
 
 const router = Router();
 
-router.post("/create-user", createUser);
+router.post("/create-lsv-user", createLSVUser);
 router.get("/get-users", fetchUsers);
 router.get("/get-user", fetchUser);
-router.put("/update-user", updateUser);
-router.delete("/delete-user", deleteUser);
+router.put("/update-lsv-user", updateProcessor);
+router.delete("/delete-lsv-user", deleteLSVUser);
 
 router.get("/get-ginner-lots", getGinProcessLotNo);
 router.get("/get-gin-process-details", getGinProcessLotDetials);
+router.get("/get-verified-stocks", getLintVerifiedStocks);
+router.get("/get-verified-stock", getLintVerifiedStock);
+router.post("/create-verified-stock", createVerifiedLintStock);
 
 export default router;
