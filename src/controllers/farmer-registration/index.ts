@@ -651,8 +651,8 @@ const exportFarmer = async (req: Request, res: Response) => {
   const programId: string = req.query.programId as string;
   const brandId: string = req.query.brandId as string;
   const { icsId, farmGroupId, countryId, stateId, villageId, cert, seasonId }: any = req.query;
-  const maxRowsPerWorksheet = 200000;
-  const batchSize = 100000;
+  const maxRowsPerWorksheet = 100000;
+  const batchSize = 5000;
   let offset = 0;
   let currentRow = 0;
   let worksheetIndex = 0;
@@ -855,11 +855,11 @@ const exportFarmer = async (req: Request, res: Response) => {
           farmGroup: item.farmGroup,
           brand: item.brand,
           program:item.program,
-          agriTotalArea: item.agriTotalArea,
-          agriEstimatedYield: item.agriEstimatedYield,
-          agriEstimatedProd: item.agriEstimatedProd,
-          cottonTotalArea: item.cottonTotalArea,
-          totalEstimatedCotton: item.totalEstimatedCotton,
+          agriTotalArea: item.agriTotalArea ? Number(item.agriTotalArea)?.toFixed(2) : 0,
+          agriEstimatedYield: item.agriEstimatedYield ? Number(item.agriEstimatedYield)?.toFixed(2) : 0,
+          agriEstimatedProd: item.agriEstimatedProd ? Number(item.agriEstimatedProd)?.toFixed(2) : 0,
+          cottonTotalArea: item.cottonTotalArea ? Number(item.cottonTotalArea)?.toFixed(2) : 0,
+          totalEstimatedCotton: item.totalEstimatedCotton ? Number(item.totalEstimatedCotton)?.toFixed(2) : 0,
           tracenetId: item.tracenetId,
           iscName: item.icsName ? item.icsName : '',
           cert: item.cert ? item.cert : '',
