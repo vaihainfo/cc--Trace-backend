@@ -62,6 +62,24 @@ const LintStockVerified = db.define('lint_stock_verifieds', {
   actual_no_of_bales: {
     type: DataTypes.DOUBLE
   },
+  confirmed_gin_total_qty: {
+    type: DataTypes.DOUBLE
+  },
+  confirmed_gin_no_of_bales: {
+    type: DataTypes.DOUBLE
+  },
+  confirmed_scm_total_qty: {
+    type: DataTypes.DOUBLE
+  },
+  confirmed_scm_no_of_bales: {
+    type: DataTypes.DOUBLE
+  },
+  confirmed_scd_total_qty: {
+    type: DataTypes.DOUBLE
+  },
+  confirmed_scd_no_of_bales: {
+    type: DataTypes.DOUBLE
+  },
   consent_form_te: {
     type: DataTypes.ARRAY(DataTypes.STRING)
   },
