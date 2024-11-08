@@ -290,7 +290,7 @@ const getLintVerifiedStock = async (req: Request, res: Response) =>{
   try {
     const stock = await LintStockVerified.findOne({
       where: {
-        id: req.body.id,
+        id: req.query.id,
       },
       include:[
         {
