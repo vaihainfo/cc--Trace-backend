@@ -98,6 +98,33 @@ const GinProcess = db.define('gin_process', {
   },
   te_verified_bales: {
     type: DataTypes.DOUBLE,
+  },
+  gin_verified_status: {
+    type: DataTypes.BOOLEAN,
+  },
+  gin_verified_total_qty: {
+    type: DataTypes.DOUBLE,
+  },
+  gin_verified_bales: {
+    type: DataTypes.DOUBLE,
+  },
+  scm_verified_status: {
+    type: DataTypes.BOOLEAN,
+  },
+  scm_verified_total_qty: {
+    type: DataTypes.DOUBLE,
+  },
+  scm_verified_bales: {
+    type: DataTypes.DOUBLE,
+  },
+  scd_verified_status: {
+    type: DataTypes.BOOLEAN,
+  },
+  scd_verified_total_qty: {
+    type: DataTypes.DOUBLE,
+  },
+  scd_verified_bales: {
+    type: DataTypes.DOUBLE,
   }
 });
 
