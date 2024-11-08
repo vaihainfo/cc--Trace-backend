@@ -11271,7 +11271,7 @@ const exportGinnerSummary = async (req: Request, res: Response) => {
           cottonProcured?.dataValues?.qty - (cottonProcessed ? cottonProcessed?.dataValues?.qty : 0)
           : 0;
         obj.cottonProcuredMt = convert_kg_to_mt(cottonProcured?.dataValues.qty ?? 0);
-        obj.cottonProcessedeMt = convert_kg_to_mt(cottonProcessed?.dataValues.qty ?? 0);
+        obj.cottonProcessedeMt = convert_kg_to_mt(totalCottonProcessedQty ?? 0);
         obj.cottonStockMt = convert_kg_to_mt(cottonProcured ?
           cottonProcured?.dataValues?.qty - (cottonProcessed ? cottonProcessed?.dataValues?.qty : 0)
           : 0);
