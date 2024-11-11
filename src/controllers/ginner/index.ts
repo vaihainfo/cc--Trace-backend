@@ -107,7 +107,11 @@ const createGinnerProcess = async (req: Request, res: Response) => {
     for await (const heap of req.body.chooseHeap) {
       let val = await GinHeap.findOne({ where: { id: heap.id } });
       if (val) {
-        let update = await GinHeap.update({ qty_stock: isNaN(val.dataValues.qty_stock - heap.qtyUsed) ? 0 : val.dataValues.qty_stock - heap.qtyUsed }, { where: { id: heap.id } });
+        if(Number(val.dataValues.qty_stock) >= Number(heap.qtyUsed)){
+          let update = await GinHeap.update({ qty_stock: isNaN(val.dataValues.qty_stock - heap.qtyUsed) ? 0 : val.dataValues.qty_stock - heap.qtyUsed }, { where: { id: heap.id } });
+        }else{
+          let update = await GinHeap.update({ qty_stock: 0 }, { where: { id: heap.id } });
+        }
       }
 
       let transaction = await CottonSelection.findAll({

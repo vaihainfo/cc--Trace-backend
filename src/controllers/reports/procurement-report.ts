@@ -367,9 +367,9 @@ const exportProcurementReport = async (req: Request, res: Response) => {
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet("Sheet1");
     if(isBrand === 'true'){
-      worksheet.mergeCells('A1:R1');
+      worksheet.mergeCells('A1:T1');
     }else{
-      worksheet.mergeCells('A1:S1');
+      worksheet.mergeCells('A1:U1');
     }
     
     const mergedCell = worksheet.getCell('A1');
@@ -393,6 +393,7 @@ const exportProcurementReport = async (req: Request, res: Response) => {
           "Village",
           "Transaction Id",
           "Quantity Purchased (Kgs)",
+          "Quantity Stock (Kgs)",
           "Available Cotton(Kgs)",
           "Price/Kg (Local Currency)",
           "Programme",
@@ -416,6 +417,7 @@ const exportProcurementReport = async (req: Request, res: Response) => {
           "Village",
           "Transaction Id",
           "Quantity Purchased (Kgs)",
+          "Quantity Stock (Kgs)",
           "Available Cotton(Kgs)",
           "Price/Kg (Local Currency)",
           "Programme",
@@ -518,6 +520,7 @@ const exportProcurementReport = async (req: Request, res: Response) => {
             village: item.dataValues.village ? item.dataValues.village.village_name : '',
             id: item.dataValues.id ? item.dataValues.id : '',
             qty_purchased: item.dataValues.qty_purchased ? Number(item.dataValues.qty_purchased) : 0,
+            qty_stock: item.dataValues.qty_stock ? Number(item.dataValues.qty_stock) : 0,
             available_cotton: item.dataValues.farm ? (Number(item.dataValues.farm.total_estimated_cotton) > Number(item.dataValues.farm.cotton_transacted) ? Number(item.dataValues.farm.total_estimated_cotton) - Number(item.dataValues.farm.cotton_transacted) : 0) : 0,
             rate: item.dataValues.rate ? Number(item.dataValues.rate) : 0,
             program: item.dataValues.program ? item.dataValues.program.program_name : '',
@@ -541,6 +544,7 @@ const exportProcurementReport = async (req: Request, res: Response) => {
           village: item.dataValues.village ? item.dataValues.village.village_name : '',
           id: item.dataValues.id ? item.dataValues.id : '',
           qty_purchased: item.dataValues.qty_purchased ? Number(item.dataValues.qty_purchased) : 0,
+          qty_stock: item.dataValues.qty_stock ? Number(item.dataValues.qty_stock) : 0,
           available_cotton: item.dataValues.farm ? (Number(item.dataValues.farm.total_estimated_cotton) > Number(item.dataValues.farm.cotton_transacted) ? Number(item.dataValues.farm.total_estimated_cotton) - Number(item.dataValues.farm.cotton_transacted) : 0) : 0,
           rate: item.dataValues.rate ? Number(item.dataValues.rate) : 0,
           program: item.dataValues.program ? item.dataValues.program.program_name : '',
