@@ -1,4 +1,4 @@
-import { fetchValidationProjectReport, fetchValidationProjectReportTemplate } from "../../controllers/reports/validation-project-report";
+import { exportValidationProjectReport, fetchValidationProjectReport, fetchValidationProjectReportTemplate } from "../../controllers/reports/validation-project-report";
 import { getOrganicIntegrityReport } from "../../controllers/reports/integrity-report";
 import { fetchTransactionsReport, fetchSumOfQtyPurchasedByProgram, exportProcurementReport } from "../../controllers/reports/procurement-report";
 import { Router } from "express";
@@ -89,6 +89,7 @@ router.get('/get-procured-quantities', fetchSumOfQtyPurchasedByProgram);
 router.get('/get-organic-integrity-report', getOrganicIntegrityReport);
 
 router.get('/get-validation-project-report', fetchValidationProjectReport);
+router.get('/export-validation-project-report', exportValidationProjectReport);
 router.get('/get-validation-project-report-template', fetchValidationProjectReportTemplate);
 //farmer Report for Organic and Non Organic
 router.get('/get-farmer-report', fetchFarmerReportPagination);
