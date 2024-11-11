@@ -15,6 +15,9 @@ import Brand from "../../models/brand.model";
 import { sendOTP } from "../../provider/send-mail";
 import UserRole from "../../models/user-role.model";
 import UserCategory from "../../models/user-category.model";
+import TraceabilityExecutive from "../../models/traceability-executive.model";
+import SupplyChainManager from "../../models/supply-chain-manager.model";
+import SupplyChainDirector from "../../models/supply-chain-director.model";
 
 const login = async (req: Request, res: Response) => {
   try {
@@ -70,7 +73,7 @@ const login = async (req: Request, res: Response) => {
       return res.sendSuccess(res, { message: "OTP Sent Successfully" });
     }else {
       var { accessToken } = await generateTokens(user.dataValues.id, user.dataValues.role);
-      let [spinner, ginner, weaver, knitter, garment, trader, fabric, brand] = await Promise.all([
+      let [spinner, ginner, weaver, knitter, garment, trader, fabric, brand, traceabilityExecutive, supplyChainManager, supplyChainDirector] = await Promise.all([
         Spinner.findOne({ where: { spinnerUser_id: { [Op.contains]: [user.dataValues.id] } } }),
         Ginner.findOne({ where: { ginnerUser_id: { [Op.contains]: [user.dataValues.id] } } }),
         Weaver.findOne({ where: { weaverUser_id: { [Op.contains]: [user.dataValues.id] } } }),
@@ -78,7 +81,10 @@ const login = async (req: Request, res: Response) => {
         Garment.findOne({ where: { garmentUser_id: { [Op.contains]: [user.dataValues.id] } } }),
         Trader.findOne({ where: { traderUser_id: { [Op.contains]: [user.dataValues.id] } } }),
         Fabric.findOne({ where: { fabricUser_id: { [Op.contains]: [user.dataValues.id] } } }),
-        Brand.findOne({ where: { brandUser_id: { [Op.contains]: [user.dataValues.id] } } })
+        Brand.findOne({ where: { brandUser_id: { [Op.contains]: [user.dataValues.id] } } }),
+        TraceabilityExecutive.findOne({ where: { teUser_id: { [Op.contains]: [user.dataValues.id] } } }),
+        SupplyChainManager.findOne({ where: { scmUser_id: { [Op.contains]: [user.dataValues.id] } } }),
+        SupplyChainDirector.findOne({ where: { scdUser_id: { [Op.contains]: [user.dataValues.id] } } }),
       ])
       let processor = [];
       spinner ? processor.push('Spinner') : "";
@@ -89,9 +95,12 @@ const login = async (req: Request, res: Response) => {
       trader ? processor.push('Trader') : "";
       fabric ? processor.push('Fabric') : "";
       brand ? processor.push('Brand') : "";
+      traceabilityExecutive ? processor.push('Traceability_Executive') : "";
+      supplyChainManager ? processor.push('Supply_Chain_Manager') : "";
+      supplyChainDirector ? processor.push('Supply_Chain_Director') : "";
       res.sendSuccess(res, {
         accessToken, user, isAgreementAgreed: user.isAgreementAgreed,
-        spinner, ginner, weaver, knitter, garment, fabric, brand, trader, processor
+        spinner, ginner, weaver, knitter, garment, fabric, brand, trader, traceabilityExecutive,supplyChainManager, supplyChainDirector, processor
       });
     }
     }

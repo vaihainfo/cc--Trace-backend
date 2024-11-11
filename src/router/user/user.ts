@@ -3,7 +3,7 @@ import { createUserCategory, getUserCategories } from "../../controllers/user/us
 import { createMenuItem, deleteMenuItem, getMenuList, updateMenuItem } from "../../controllers/user/user-menu";
 import { checkRoleExists, createUserRole, deleteUserRole, getUserRole, getUserRoles, updateUserRole } from "../../controllers/user/user-role";
 import accessControl from "../../middleware/access-control";
-import { getUserInfo, processorLoginAdmin } from "../../controllers/user/user-details";
+import { getMobileUserInfo, getUserInfo, processorLoginAdmin } from "../../controllers/user/user-details";
 import { createUser, createUserRegistration, deleteUser, fetchUser, fetchUsers, updateUser } from "../../controllers/user/user-management";
 
 const router = Router();
@@ -35,5 +35,6 @@ router.use(accessControl)
 
 router.get("/my-details", getUserInfo)
 router.get("/processor-admin", processorLoginAdmin)
+router.get("/mobile-details", getMobileUserInfo)
 
 export default router;
