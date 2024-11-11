@@ -362,7 +362,7 @@ const getMobileUserInfo = async (req: Request, res: Response) => {
     try {
         const authenticatedReq = req as any;
 
-        const user = await UserApp.findOne(authenticatedReq.user._id,
+        const user = await UserApp.findOne(authenticatedReq.id,
             { 
                 attributes: { exclude: ['password', 'createdAt', 'updatedAt'] }, 
                 include: [{
