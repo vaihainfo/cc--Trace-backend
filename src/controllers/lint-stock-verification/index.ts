@@ -340,6 +340,8 @@ const getLintVerifiedStock = async (req: Request, res: Response) => {
           "sold_status",
           "te_verified_status",
           "te_verified_weight",
+          "gin_verified_status",
+          "gin_verified_weight"
         ],
         where: { process_id: stock?.dataValues?.process_id },
       });
@@ -522,8 +524,8 @@ const editGinVerifiedStockConfirm = async (
       const gin = await GinProcess.update(
         {
           gin_verified_status: req.body.status === "Accepted" ? true : false,
-          gin_verified_total_qty: req.body.actualTotalQty,
-          gin_verified_bales: req.body.actualNoOfBales,
+          gin_verified_total_qty: req.body.confirmedTotalQty,
+          gin_verified_bales: req.body.confirmedNoOfBales,
         },
         {
           where: {

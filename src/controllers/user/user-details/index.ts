@@ -18,6 +18,7 @@ import PhysicalPartner from "../../../models/physical-partner.model";
 import TraceabilityExecutive from "../../../models/traceability-executive.model";
 import SupplyChainManager from "../../../models/supply-chain-manager.model";
 import SupplyChainDirector from "../../../models/supply-chain-director.model";
+import UserApp from "../../../models/users-app.model";
 
 const getUserInfo = async (req: Request, res: Response) => {
     try {
@@ -357,4 +358,34 @@ const processorLoginAdmin = async (req: Request, res: Response) => {
     }
 }
 
-export { getUserInfo, processorLoginAdmin }
+const getMobileUserInfo = async (req: Request, res: Response) => {
+    try {
+        const authenticatedReq = req as any;
+
+        const user = await UserApp.findOne(authenticatedReq.user._id,
+            { 
+                attributes: { exclude: ['password', 'createdAt', 'updatedAt'] }, 
+                include: [{
+                    model: TraceabilityExecutive,
+                    as: 'traceability_executive',
+                },
+                {
+                    model: SupplyChainManager,
+                    as: 'supply_chain_manager',
+                },
+                {
+                    model: SupplyChainDirector,
+                    as: 'supply_chain_director',
+                },
+            ] }
+        );
+
+
+        return res.sendSuccess(res, { user });
+    } catch (error: any) {
+        console.log(error)
+        return res.sendError(res, error.message);
+    }
+}
+
+export { getUserInfo, processorLoginAdmin, getMobileUserInfo }
