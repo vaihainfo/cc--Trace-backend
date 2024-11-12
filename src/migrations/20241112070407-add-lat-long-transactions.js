@@ -3,10 +3,10 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up (queryInterface, Sequelize) {
-    await queryInterface.changeColumn('transactions', 'latitude', {
+    await queryInterface.addColumn('transactions', 'latitude', {
       type: Sequelize.DOUBLE
     });
-    await queryInterface.changeColumn('transactions', 'longitude', {
+    await queryInterface.addColumn('transactions', 'longitude', {
       type: Sequelize.DOUBLE
     });
   },
