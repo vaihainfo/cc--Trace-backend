@@ -14,6 +14,9 @@ import Spinner from "../../../models/spinner.model";
 import TraceabilityExecutive from "../../../models/traceability-executive.model";
 import SupplyChainManager from "../../../models/supply-chain-manager.model";
 import SupplyChainDirector from "../../../models/supply-chain-director.model";
+import BrandManager from "../../../models/brand-manager.model";
+import BrandExecutive from "../../../models/brand-executive.model";
+import PSTeam from "../../../models/ps-team.model";
 
 const createLSVUser = async (req: Request, res: Response) => {
   try {
@@ -51,13 +54,13 @@ const createLSVUser = async (req: Request, res: Response) => {
             email: req.body.email,
             mapped_to: req.body.lsvMappedTo,
             mapped_states: req.body.lsvState || null,
-            mapped_ginners: req.body.lsvGinners && req.body.lsvGinners.length > 0 ? req.body.lsvGinners : null,
-            mapped_spinners: req.body.lsvSpinners && req.body.lsvSpinners.length > 0 ? req.body.lsvSpinners  : null,
         }
 
         if (req.body.processType.includes('Traceability Executive')) {
           let obj = {
               ...data,
+              mapped_ginners: req.body.lsvGinners && req.body.lsvGinners.length > 0 ? req.body.lsvGinners : null,
+              mapped_spinners: req.body.lsvSpinners && req.body.lsvSpinners.length > 0 ? req.body.lsvSpinners  : null,
               teUser_id: userIds,
               status: allUserInactive
           }
@@ -69,6 +72,7 @@ const createLSVUser = async (req: Request, res: Response) => {
       if (req.body.processType.includes('Supply Chain Manager')) {
         let obj = {
             ...data,
+            mapped_ginners: req.body.lsvGinners && req.body.lsvGinners.length > 0 ? req.body.lsvGinners : null,
             scmUser_id: userIds,
             status: allUserInactive
         }
@@ -80,11 +84,48 @@ const createLSVUser = async (req: Request, res: Response) => {
       if (req.body.processType.includes('Supply Chain Director')) {
         let obj = {
             ...data,
+            mapped_ginners: req.body.lsvGinners && req.body.lsvGinners.length > 0 ? req.body.lsvGinners : null,
             scdUser_id: userIds,
             status: allUserInactive
         }
 
         const result = await SupplyChainDirector.create(obj);
+        mainData.push(result);
+      }
+
+      if (req.body.processType.includes('Brand Executive')) {
+        let obj = {
+            ...data,
+            mapped_spinners: req.body.lsvSpinners && req.body.lsvSpinners.length > 0 ? req.body.lsvSpinners  : null,
+            beUser_id: userIds,
+            status: allUserInactive
+        }
+
+        const result = await BrandExecutive.create(obj);
+        mainData.push(result);
+      }
+
+      if (req.body.processType.includes('Brand Manager')) {
+        let obj = {
+            ...data,
+            mapped_spinners: req.body.lsvSpinners && req.body.lsvSpinners.length > 0 ? req.body.lsvSpinners  : null,
+            bmUser_id: userIds,
+            status: allUserInactive
+        }
+
+        const result = await BrandManager.create(obj);
+        mainData.push(result);
+      }
+
+      if (req.body.processType.includes('PS Team')) {
+        let obj = {
+            ...data,
+            mapped_spinners: req.body.lsvSpinners && req.body.lsvSpinners.length > 0 ? req.body.lsvSpinners  : null,
+            psUser_id: userIds,
+            status: allUserInactive
+        }
+
+        const result = await PSTeam.create(obj);
         mainData.push(result);
       }
       return res.sendSuccess(res, mainData);
@@ -136,13 +177,49 @@ const createLSVUser = async (req: Request, res: Response) => {
                 userIds = result.scdUser_id;
             }
         }
+
+          if (req.query.type === 'Brand_Executive') {
+            result = await BrandExecutive.findOne({
+                where: {
+                    id: req.query.id
+                }
+            });
+            if (result) {
+                userIds = result.beUser_id;
+            }
+        }
+
+          if (req.query.type === 'Brand_Manager') {
+            result = await BrandManager.findOne({
+                where: {
+                    id: req.query.id
+                }
+            });
+            if (result) {
+                userIds = result.bmUser_id;
+            }
+        }
+
+        if (req.query.type === 'PS_Team') {
+          result = await PSTeam.findOne({
+              where: {
+                  id: req.query.id
+              }
+          });
+          if (result) {
+              userIds = result.psUser_id;
+          }
+         }
        
 
         let userData = [];
-        let [traceability_executive, supply_chain_manager, supply_chain_director] = await Promise.all([
+        let [traceability_executive, supply_chain_manager, supply_chain_director, brand_executive, brand_manager, ps_team] = await Promise.all([
             TraceabilityExecutive.findOne({ where: { teUser_id: { [Op.overlap]: userIds } } }),
             SupplyChainManager.findOne({ where: { scmUser_id: { [Op.overlap]: userIds } } }),
-            SupplyChainDirector.findOne({ where: { scdUser_id: { [Op.overlap]: userIds } } })
+            SupplyChainDirector.findOne({ where: { scdUser_id: { [Op.overlap]: userIds } } }),
+            BrandExecutive.findOne({ where: { beUser_id: { [Op.overlap]: userIds } } }),
+            BrandManager.findOne({ where: { bmUser_id: { [Op.overlap]: userIds } } }),
+            PSTeam.findOne({ where: { psUser_id: { [Op.overlap]: userIds } } }),
         ]);
 
         if (result) {
@@ -161,7 +238,7 @@ const createLSVUser = async (req: Request, res: Response) => {
                 userData.push(us);
             }
         }
-        return res.sendSuccess(res, result ? { traceability_executive, supply_chain_manager, supply_chain_director, userData } : {});
+        return res.sendSuccess(res, result ? { traceability_executive, supply_chain_manager, supply_chain_director,brand_executive,brand_manager,ps_team, userData } : {});
 
     } catch (error: any) {
         console.log(error);
@@ -280,6 +357,24 @@ const createLSVUser = async (req: Request, res: Response) => {
           counts = count;
         }
 
+        if(processorType === 'Brand_Executive'){
+          const { count, rows } = await BrandExecutive.findAndCountAll(queryOptions);
+          results = rows
+          counts = count;
+        }
+
+        if(processorType === 'Brand_Manager'){
+          const { count, rows } = await BrandManager.findAndCountAll(queryOptions);
+          results = rows
+          counts = count;
+        }
+
+        if(processorType === 'PS_Team'){
+          const { count, rows } = await PSTeam.findAndCountAll(queryOptions);
+          results = rows
+          counts = count;
+        }
+
         if(results && results.length > 0){
           for await(let item of results){
             let states = null;
@@ -337,6 +432,21 @@ const createLSVUser = async (req: Request, res: Response) => {
 
         if(processorType === 'Supply_Chain_Director'){
           const rows = await SupplyChainDirector.findAll(queryOptions);
+          results = rows
+        }
+
+        if(processorType === 'Brand_Executive'){
+          const rows = await BrandExecutive.findAll(queryOptions);
+          results = rows
+        }
+
+        if(processorType === 'Brand_Manager'){
+          const rows = await BrandManager.findAll(queryOptions);
+          results = rows
+        }
+
+        if(processorType === 'PS_Team'){
+          const rows = await PSTeam.findAll(queryOptions);
           results = rows
         }
 
