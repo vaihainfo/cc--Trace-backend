@@ -362,8 +362,9 @@ const getMobileUserInfo = async (req: Request, res: Response) => {
     try {
         const authenticatedReq = req as any;
 
-        const user = await UserApp.findOne(authenticatedReq.id,
+        const user = await UserApp.findOne(
             { 
+                where: {id: authenticatedReq.user.id},
                 attributes: { exclude: ['password', 'createdAt', 'updatedAt'] }, 
                 include: [{
                     model: TraceabilityExecutive,

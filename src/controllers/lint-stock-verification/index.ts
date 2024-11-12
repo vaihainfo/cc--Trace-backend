@@ -10,6 +10,8 @@ import State from "../../models/state.model";
 import Spinner from "../../models/spinner.model";
 import GinSales from "../../models/gin-sales.model";
 import TraceabilityExecutive from "../../models/traceability-executive.model";
+import SupplyChainManager from "../../models/supply-chain-manager.model";
+import SupplyChainDirector from "../../models/supply-chain-director.model";
 
 const getGinProcessLotNo = async (req: Request, res: Response) => {
   try {
@@ -341,7 +343,11 @@ const getLintVerifiedStock = async (req: Request, res: Response) => {
           "te_verified_status",
           "te_verified_weight",
           "gin_verified_status",
-          "gin_verified_weight"
+          "gin_verified_weight",
+          "scm_verified_status",
+          "scm_verified_weight",
+          "scd_verified_status",
+          "scd_verified_weight"
         ],
         where: { process_id: stock?.dataValues?.process_id },
       });
@@ -372,6 +378,7 @@ const getGinnerVerifiedStocks = async (req: Request, res: Response) => {
     stateId,
     countryId,
     spinnerId,
+    status
   }: any = req.query;
   const offset = (page - 1) * limit;
   const whereCondition: any = {};
@@ -438,6 +445,14 @@ const getGinnerVerifiedStocks = async (req: Request, res: Response) => {
         .split(",")
         .map((id: any) => parseInt(id, 10));
       whereCondition["$ginner.program_id$"] = { [Op.overlap]: idArray };
+    }
+
+    if(status == 'Pending'){
+      whereCondition.status = 'Pending'
+    }else if(status == 'Rejected'){
+      whereCondition.status = 'Rejected'
+    }else{
+      whereCondition.status = 'Accepted'
     }
 
     let include = [
@@ -542,6 +557,442 @@ const editGinVerifiedStockConfirm = async (
   }
 };
 
+const updateSCMVerifiedStockConfirm = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const data = {
+      scd_id: req.body.scdId,
+      confirmed_scm_total_qty: req.body.confirmedTotalQty,
+      confirmed_scm_no_of_bales: req.body.confirmedNoOfBales,
+      consent_form_scm: req.body.consentForm,
+      uploaded_photos_scm: req.body.uploadedPhotos,
+      status_scm: req.body.status === "Accepted" ? "Accepted" : "Rejected",
+      status_scd: "Pending",
+    };
+
+    const lintVerified = await LintStockVerified.update(data, {
+      where: { id: req.body.id },
+    });
+
+    if (lintVerified) {
+      for await (const bale of req.body.bales) {
+        let baleData = {
+          scm_verified_weight: bale.actualWeight,
+          scm_verified_status: bale.verifiedStatus,
+        };
+        const gin = await GinBale.update(baleData, {
+          where: {
+            id: bale.id,
+          },
+        });
+      }
+
+      const gin = await GinProcess.update(
+        {
+          scm_verified_status: req.body.status === "Accepted" ? true : false,
+          scm_verified_total_qty: req.body.confirmedTotalQty,
+          scm_verified_bales: req.body.confirmedNoOfBales,
+        },
+        {
+          where: {
+            id: req.body.processId,
+          },
+        }
+      );
+    }
+
+    return res.sendSuccess(res, lintVerified);
+  } catch (error: any) {
+    console.log(error);
+    return res.sendError(res, error?.message);
+  }
+};
+
+const updateSCDVerifiedStockConfirm = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const data = {
+      confirmed_scd_total_qty: req.body.confirmedTotalQty,
+      confirmed_scd_no_of_bales: req.body.confirmedNoOfBales,
+      consent_form_scd: req.body.consentForm,
+      uploaded_photos_scd: req.body.uploadedPhotos,
+      status_scd: req.body.status === "Accepted" ? "Accepted" : "Rejected"
+    };
+
+    const lintVerified = await LintStockVerified.update(data, {
+      where: { id: req.body.id },
+    });
+
+    if (lintVerified) {
+      for await (const bale of req.body.bales) {
+        let baleData = {
+          scd_verified_weight: bale.actualWeight,
+          scd_verified_status: bale.verifiedStatus,
+        };
+        const gin = await GinBale.update(baleData, {
+          where: {
+            id: bale.id,
+          },
+        });
+      }
+
+      const gin = await GinProcess.update(
+        {
+          scd_verified_status: req.body.status === "Accepted" ? true : false,
+          scd_verified_total_qty: req.body.confirmedTotalQty,
+          scd_verified_bales: req.body.confirmedNoOfBales,
+        },
+        {
+          where: {
+            id: req.body.processId,
+          },
+        }
+      );
+    }
+
+    return res.sendSuccess(res, lintVerified);
+  } catch (error: any) {
+    console.log(error);
+    return res.sendError(res, error?.message);
+  }
+};
+
+const getSCMVerifiedStocks = async (req: Request, res: Response) => {
+  const searchTerm = req.query.search || "";
+  const page = Number(req.query.page) || 1;
+  const limit = Number(req.query.limit) || 10;
+  const {
+    scmId,
+    ginnerId,
+    teId,
+    programId,
+    brandId,
+    stateId,
+    countryId,
+    spinnerId,
+    status
+  }: any = req.query;
+  const offset = (page - 1) * limit;
+  const whereCondition: any = {};
+
+  try {
+    if (searchTerm) {
+      whereCondition[Op.or] = [
+        { "$ginner.name$": { [Op.iLike]: `%${searchTerm}%` } },
+        { "$traceability_executive.name$": { [Op.iLike]: `%${searchTerm}%` } },
+        { "$supply_chain_director.name$": { [Op.iLike]: `%${searchTerm}%` } },
+        { lot_no: { [Op.iLike]: `%${searchTerm}%` } },
+        { reel_lot_no: { [Op.iLike]: `%${searchTerm}%` } },
+        { "$country.county_name$": { [Op.iLike]: `%${searchTerm}%` } },
+        { "$state.state_name$": { [Op.iLike]: `%${searchTerm}%` } },
+      ];
+    }
+
+    if (!scmId) {
+      return res.sendError(res, "SCM ID is required");
+    }
+    if (scmId) {
+      const idArray: number[] = scmId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.scm_id = { [Op.in]: idArray };
+    }
+
+    if (teId) {
+      const idArray: number[] = teId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.te_id = { [Op.in]: idArray };
+    }
+
+    if (ginnerId) {
+      const idArray: number[] = ginnerId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.ginner_id = { [Op.in]: idArray };
+    }
+
+
+    if (spinnerId) {
+      const idArray: number[] = spinnerId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.spinner_id = { [Op.in]: idArray };
+    }
+
+    if (brandId) {
+      const idArray: number[] = brandId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition["$supply_chain_manager.brand$"] = { [Op.overlap]: idArray };
+    }
+
+    if (stateId) {
+      const idArray: number[] = stateId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.state_id = { [Op.in]: idArray };
+    }
+
+    if (countryId) {
+      const idArray: number[] = countryId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.country_id = { [Op.in]: idArray };
+    }
+
+    if (programId) {
+      const idArray: number[] = programId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition["$supply_chain_manager.program_id$"] = { [Op.overlap]: idArray };
+    }
+
+    if(status == 'Pending'){
+      whereCondition.status_scm = 'Pending'
+    }else if(status == 'Rejected'){
+      whereCondition.status_scm = 'Rejected'
+    }else{
+      whereCondition.status_scm = 'Accepted'
+    }
+    
+    whereCondition.status = 'Accepted'
+
+    let include = [
+      {
+        model: Ginner,
+        as: "ginner",
+        attributes: ["id", "name"],
+      },
+      {
+        model: SupplyChainManager,
+        as: "supply_chain_manager",
+        attributes: ["id", "name"],
+      },
+      {
+        model: SupplyChainDirector,
+        as: "supply_chain_director",
+        attributes: ["id", "name"],
+      },
+      {
+        model: TraceabilityExecutive,
+        as: "traceability_executive",
+      },
+      {
+        model: Country,
+        as: "country",
+        attributes: ["id", "county_name"],
+      },
+      {
+        model: State,
+        as: "state",
+        attributes: ["id", "state_name"],
+      },
+      {
+        model: GinProcess,
+        as: "ginprocess",
+      },
+    ];
+
+    if (req.query.pagination === "true") {
+      const { count, rows } = await LintStockVerified.findAndCountAll({
+        where: whereCondition,
+        include: include,
+        offset: offset,
+        limit: limit,
+        order: [["id", "desc"]],
+      });
+      return res.sendPaginationSuccess(res, rows, count);
+    } else {
+      const stock = await LintStockVerified.findAll({
+        where: whereCondition,
+        include: include,
+        order: [["id", "desc"]],
+      });
+      return res.sendSuccess(res, stock);
+    }
+  } catch (error: any) {
+    console.log(error);
+    return res.sendError(res, error?.message);
+  }
+};
+
+const getSCDVerifiedStocks = async (req: Request, res: Response) => {
+  const searchTerm = req.query.search || "";
+  const page = Number(req.query.page) || 1;
+  const limit = Number(req.query.limit) || 10;
+  const {
+    scmId,
+    scdId,
+    ginnerId,
+    teId,
+    programId,
+    brandId,
+    stateId,
+    countryId,
+    spinnerId,
+    status
+  }: any = req.query;
+  const offset = (page - 1) * limit;
+  const whereCondition: any = {};
+
+  try {
+    if (searchTerm) {
+      whereCondition[Op.or] = [
+        { "$ginner.name$": { [Op.iLike]: `%${searchTerm}%` } },
+        { "$traceability_executive.name$": { [Op.iLike]: `%${searchTerm}%` } },
+        { "$supply_chain_manager.name$": { [Op.iLike]: `%${searchTerm}%` } },
+        { lot_no: { [Op.iLike]: `%${searchTerm}%` } },
+        { reel_lot_no: { [Op.iLike]: `%${searchTerm}%` } },
+        { "$country.county_name$": { [Op.iLike]: `%${searchTerm}%` } },
+        { "$state.state_name$": { [Op.iLike]: `%${searchTerm}%` } },
+      ];
+    }
+
+    if (!scdId) {
+      return res.sendError(res, "SCD ID is required");
+    }
+
+    if (scdId) {
+      const idArray: number[] = scdId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.scd_id = { [Op.in]: idArray };
+    }
+
+    if (scmId) {
+      const idArray: number[] = scmId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.scm_id = { [Op.in]: idArray };
+    }
+
+    if (teId) {
+      const idArray: number[] = teId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.te_id = { [Op.in]: idArray };
+    }
+
+    if (ginnerId) {
+      const idArray: number[] = ginnerId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.ginner_id = { [Op.in]: idArray };
+    }
+
+
+    if (spinnerId) {
+      const idArray: number[] = spinnerId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.spinner_id = { [Op.in]: idArray };
+    }
+
+    if (brandId) {
+      const idArray: number[] = brandId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition["$supply_chain_director.brand$"] = { [Op.overlap]: idArray };
+    }
+
+    if (stateId) {
+      const idArray: number[] = stateId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.state_id = { [Op.in]: idArray };
+    }
+
+    if (countryId) {
+      const idArray: number[] = countryId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.country_id = { [Op.in]: idArray };
+    }
+
+    if (programId) {
+      const idArray: number[] = programId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition["$supply_chain_director.program_id$"] = { [Op.overlap]: idArray };
+    }
+
+    if(status == 'Pending'){
+      whereCondition.status_scd = 'Pending'
+    }else if(status == 'Rejected'){
+      whereCondition.status_scd = 'Rejected'
+    }else{
+      whereCondition.status_scd = 'Accepted'
+    }
+
+    whereCondition.status_scm = 'Accepted'
+    whereCondition.status = 'Accepted'
+
+
+
+    let include = [
+      {
+        model: Ginner,
+        as: "ginner",
+        attributes: ["id", "name"],
+      },
+      {
+        model: SupplyChainManager,
+        as: "supply_chain_manager",
+        attributes: ["id", "name"],
+      },
+      {
+        model: SupplyChainDirector,
+        as: "supply_chain_director",
+        attributes: ["id", "name"],
+      },
+      {
+        model: TraceabilityExecutive,
+        as: "traceability_executive",
+      },
+      {
+        model: Country,
+        as: "country",
+        attributes: ["id", "county_name"],
+      },
+      {
+        model: State,
+        as: "state",
+        attributes: ["id", "state_name"],
+      },
+      {
+        model: GinProcess,
+        as: "ginprocess",
+      },
+    ];
+
+    if (req.query.pagination === "true") {
+      const { count, rows } = await LintStockVerified.findAndCountAll({
+        where: whereCondition,
+        include: include,
+        offset: offset,
+        limit: limit,
+        order: [["id", "desc"]],
+      });
+      return res.sendPaginationSuccess(res, rows, count);
+    } else {
+      const stock = await LintStockVerified.findAll({
+        where: whereCondition,
+        include: include,
+        order: [["id", "desc"]],
+      });
+      return res.sendSuccess(res, stock);
+    }
+  } catch (error: any) {
+    console.log(error);
+    return res.sendError(res, error?.message);
+  }
+};
+
 export {
   getGinProcessLotNo,
   getGinProcessLotDetials,
@@ -550,4 +1001,8 @@ export {
   getLintVerifiedStock,
   getGinnerVerifiedStocks,
   editGinVerifiedStockConfirm,
+  updateSCMVerifiedStockConfirm,
+  updateSCDVerifiedStockConfirm,
+  getSCMVerifiedStocks,
+  getSCDVerifiedStocks
 };
