@@ -10,6 +10,9 @@ import Transaction from "../../models/transaction.model";
 import Ginner from "../../models/ginner.model";
 import Farm from "../../models/farm.model";
 import sequelize from "../../util/dbConn";
+import * as ExcelJS from "exceljs";
+import * as fs from "fs";
+import * as path from "path";
 
 const createValidationFarmer = async (req: Request, res: Response) => {
     try {
@@ -180,6 +183,162 @@ const fetchValidationFarmerPagination = async (req: Request, res: Response) => {
     }
 }
 
+
+const exportValidationFarmerPagination = async (req: Request, res: Response) => {
+    const excelFilePath = path.join(
+        "./upload",
+        "validation-farmer-report.xlsx"
+      );
+    const searchTerm = req.query.search || '';
+    const page = Number(req.query.page) || 1;
+    const limit = Number(req.query.limit) || 10;
+    const { seasonId, brandId, icsId, farmGroupId }: any = req.query
+    const offset = (page - 1) * limit;
+    const whereCondition: any = {}
+    try {
+        if (searchTerm) {
+            whereCondition[Op.or] = [
+                { '$season.name$': { [Op.iLike]: `%${searchTerm}%` } }, // Search by Season name
+                { '$farmer.firstName$': { [Op.iLike]: `%${searchTerm}%` } }, // Search by farmer name
+                { '$farmGroup.name$': { [Op.iLike]: `%${searchTerm}%` } }, // Search by Ics name
+                { '$brand.brand_name$': { [Op.iLike]: `%${searchTerm}%` } }, // Search by Brand name
+            ];
+        }
+        if (seasonId) {
+            const idArray: number[] = seasonId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition.season_id = { [Op.in]: idArray };
+        }
+
+        if (brandId) {
+            const idArray: number[] = brandId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition.brand_id = { [Op.in]: idArray };
+        }
+
+        if (farmGroupId) {
+            const idArray: number[] = farmGroupId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition.farmGroup_id = { [Op.in]: idArray };
+        }
+        if (icsId) {
+            const idArray: number[] = icsId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition.ics_id = { [Op.in]: idArray };
+        }
+
+
+        let include = [
+            {
+                model: FarmGroup, as: 'farmGroup',
+                attributes: ['id', 'name', 'status']
+            },
+            {
+                model: ICS, as: 'ics',
+                attributes: ['id', 'ics_name', 'ics_status']
+            },
+            {
+                model: Brand, as: 'brand',
+                attributes: ['id', 'brand_name', 'address']
+            },
+            {
+                model: Farmer, as: 'farmer',
+                attributes: ['id', 'firstName', 'lastName', "code"],
+            },
+            {
+                model: Season, as: 'season'
+            }
+        ]
+
+          // Create the excel workbook file
+       const workbook = new ExcelJS.Workbook();
+       const worksheet = workbook.addWorksheet("Sheet1");
+       worksheet.mergeCells("A1:M1");
+       const mergedCell = worksheet.getCell("A1");
+       mergedCell.value = "CottonConnect | Premium Validation-Farmer Report";
+       mergedCell.font = { bold: true };
+       mergedCell.alignment = { horizontal: "center", vertical: "middle" };
+       // Set bold font for header row
+       const headerRow = worksheet.addRow([
+         "Sr No.",
+         "Date",
+         "Season",
+         "Farmer Name/Ginner",
+         "Farm Group",
+         "ICS Name",
+         "Procured Quantity",
+         "Price/Kg (Local Currency)",
+       ]);
+       headerRow.font = { bold: true };
+        //fetch data with pagination
+            const { count, rows } = await ValidationFarmer.findAndCountAll({
+                where: whereCondition,
+                order: [['id', 'desc']],
+                include: include,
+                offset: offset,
+                limit: limit
+            });
+            let data = [];
+            for await (const row of rows){
+                const transactions = await Transaction.findAll({
+                    attributes: [
+                        [sequelize.fn('COALESCE', sequelize.fn('SUM', Sequelize.literal("CAST(qty_purchased AS DOUBLE PRECISION)")), 0), 'qty_purchased'],
+                        [
+                            sequelize.fn('COALESCE', sequelize.fn('AVG', sequelize.literal("CAST(rate AS DOUBLE PRECISION)")), 0),
+                            'average_rate'
+                        ]
+                    ],
+                    where: {
+                        farmer_id: row?.dataValues?.farmer_id, season_id: row?.dataValues?.season_id
+                    },
+                    group: ['farmer_id', 'season_id']
+                })
+
+                data.push({
+                    ...row.dataValues,
+                    transactions
+                })
+            }
+            for await (const [index, item] of data.entries()){
+                const rowValues = Object.values({
+                  index: index + 1,
+                  date: item.date ? item.date : "",
+                  season: item.season.name ? item.season.name : "",
+                  farmer: item.farmer.firstName ? item.farmer.firstName : "",
+                  farm: item.farmGroup?.name ? item.farmGroup?.name : "",
+                  ics: item.ics.ics_name ? item.ics.ics_name : "",
+                  procured_quantity: item.transactions[0]?.qty_purchased ? item.transactions[0]?.qty_purchased : 0,
+                  price_per_kg: item.transactions[0]?.dataValues.average_rate ? item.transactions[0]?.dataValues.average_rate : 0 })
+                worksheet.addRow(rowValues);
+          
+              }
+          
+              worksheet.columns.forEach((column: any) => {
+                let maxCellLength = 0;
+                column.eachCell({ includeEmpty: true }, (cell: any) => {
+                  const cellLength = (cell.value ? cell.value.toString() : "").length;
+                  maxCellLength = Math.max(maxCellLength, cellLength);
+                });
+                column.width = Math.min(30, maxCellLength + 2); // Limit width to 30 characters
+              });
+          
+              // Save the workbook
+              await workbook.xlsx.writeFile(excelFilePath);
+              res.status(200).send({
+                success: true,
+                messgage: "File successfully Generated",
+                data: process.env.BASE_URL + "validation-farmer-report.xlsx",
+              });
+    } catch (error: any) {
+        console.log(error)
+        return res.sendError(res, error.message);
+    }
+}
+
 const fetchValidationFarmer = async (req: Request, res: Response) => {
 
     const { id } = req.query
@@ -297,6 +456,7 @@ const fetchPremiumFarmer = async (req: Request, res: Response) => {
 export {
     createValidationFarmer,
     fetchValidationFarmerPagination,
+    exportValidationFarmerPagination,
     fetchValidationFarmer,
     deleteValidationFarmer,
     fetchPremiumFarmer

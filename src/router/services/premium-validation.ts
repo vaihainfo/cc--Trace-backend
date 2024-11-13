@@ -3,7 +3,8 @@ import {
     fetchValidationFarmerPagination,
     fetchValidationFarmer,
     deleteValidationFarmer,
-    fetchPremiumFarmer
+    fetchPremiumFarmer,
+    exportValidationFarmerPagination
 } from "../../controllers/validations-farmer";
 
 import {
@@ -21,6 +22,7 @@ const router = Router();
 router.use(accessControl);
 // Farmer Premium Validation
 router.get('/farmer', fetchValidationFarmerPagination);
+router.get('/export-farmer', exportValidationFarmerPagination);
 router.post('/farmer', createValidationFarmer);
 router.delete('/farmer', deleteValidationFarmer);
 router.get('/fetch-by-id', fetchValidationFarmer);
