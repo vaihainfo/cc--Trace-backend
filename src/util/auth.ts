@@ -19,7 +19,8 @@ export async function checkAccessToken(accessToken: string) {
     if (error?.name === 'JsonWebTokenError') {
       // If the first secret fails, try the second one
       try {
-        const data = await jwt.verify(accessToken, conf.mobilesecret);
+        let data: any= {};
+         data.user = await jwt.verify(accessToken, conf.mobilesecret);
         return { data, error: null };
       } catch (error) {
         // Return an error if both secrets fail

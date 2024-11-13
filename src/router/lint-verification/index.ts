@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { createLSVUser, deleteLSVUser, fetchUser, fetchUsers, updateProcessor } from "../../controllers/lint-stock-verification/user-management";
-import { createVerifiedLintStock, editGinVerifiedStockConfirm, getGinnerVerifiedStocks, getGinProcessLotDetials, getGinProcessLotNo, getLintVerifiedStock, getLintVerifiedStocks, getSCDVerifiedStocks, getSCMVerifiedStocks, updateSCDVerifiedStockConfirm, updateSCMVerifiedStockConfirm } from "../../controllers/lint-stock-verification";
+import { createVerifiedLintStock, editGinVerifiedStockConfirm, getGinnerVerifiedStocks, getGinProcessLotDetials, getGinProcessLotNo, getLintVerifiedStock, getLintVerifiedStocks, getListVerifiedStocks, getSCDVerifiedStocks, getSCMVerifiedStocks, getTypeWiseListVerifiedStocks, updateSCDVerifiedStockConfirm, updateSCMVerifiedStockConfirm } from "../../controllers/lint-stock-verification";
 
 
 const router = Router();
@@ -19,6 +19,8 @@ router.get("/get-scm-verified-stocks", getSCMVerifiedStocks);
 router.get("/get-scd-verified-stocks", getSCDVerifiedStocks);
 
 router.get("/get-verified-stock", getLintVerifiedStock);
+router.get("/get-all-verified-stocks", getListVerifiedStocks);
+router.get("/get-all-type-verified-stocks", getTypeWiseListVerifiedStocks);
 
 router.post("/create-verified-stock", createVerifiedLintStock);
 router.post("/update-gin-verified-stock", editGinVerifiedStockConfirm);
