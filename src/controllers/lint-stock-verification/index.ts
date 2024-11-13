@@ -378,6 +378,7 @@ const getGinnerVerifiedStocks = async (req: Request, res: Response) => {
     stateId,
     countryId,
     spinnerId,
+    scmId,
     status
   }: any = req.query;
   const offset = (page - 1) * limit;
@@ -387,6 +388,7 @@ const getGinnerVerifiedStocks = async (req: Request, res: Response) => {
     if (searchTerm) {
       whereCondition[Op.or] = [
         { "$traceability_executive.name$": { [Op.iLike]: `%${searchTerm}%` } },
+        { "$supply_chain_manager.name$": { [Op.iLike]: `%${searchTerm}%` } },
         { lot_no: { [Op.iLike]: `%${searchTerm}%` } },
         { reel_lot_no: { [Op.iLike]: `%${searchTerm}%` } },
         { "$country.county_name$": { [Op.iLike]: `%${searchTerm}%` } },
@@ -403,6 +405,12 @@ const getGinnerVerifiedStocks = async (req: Request, res: Response) => {
         .split(",")
         .map((id: any) => parseInt(id, 10));
       whereCondition.te_id = { [Op.in]: idArray };
+    }
+    if (scmId) {
+      const idArray: number[] = scmId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.scm_id = { [Op.in]: idArray };
     }
 
     if (ginnerId) {
@@ -464,6 +472,10 @@ const getGinnerVerifiedStocks = async (req: Request, res: Response) => {
       {
         model: TraceabilityExecutive,
         as: "traceability_executive",
+      },
+      {
+        model: SupplyChainManager,
+        as: "supply_chain_manager",
       },
       {
         model: Country,
