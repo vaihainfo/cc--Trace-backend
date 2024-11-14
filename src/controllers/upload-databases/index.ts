@@ -31,6 +31,9 @@ import IcsQuantityEstimation from "../../models/ics-quantity-estimation.model";
 import FarmGroupEvaluation from "../../models/farm-group-evaluation.model";
 import OrganicIntegrity from "../../models/organic-integrity.model";
 import { generateQrCode, updateQrCode } from "../../provider/qrcode";
+import SeedCottonPricing from "../../models/seed-cotton-pricings.model";
+import LintPricing from "../../models/lint-pricings.model";
+import YarnPricing from "../../models/yarn-pricings.model";
 
 const uploadGinnerOrder = async (req: Request, res: Response) => {
     try {
@@ -558,7 +561,7 @@ const uploadFarmer = async (req: Request, res: Response) => {
             farmGroup = await FarmGroup.findOne({
                 where: {
                     name: req.body.farmGroup,
-                      brand_id: brand.id,
+                    brand_id: brand.id,
                 }
             });
 
@@ -994,15 +997,15 @@ const uploadFarmer = async (req: Request, res: Response) => {
 
                         let name = data.lastName ? data.firstName + " " + data.lastName : data.firstName
                         let uniqueFilename = `qrcode_${name.replace(/\//g, '-')}_${data.farmerCode.replace(/\//g, '-')}.png`;
-                    
-                        
+
+
                         const shouldUpdateQR = (
                             farmers.firstName !== data.firstName ||
                             farmers.lastName !== data.lastName ||
                             farmers.village_id !== village.id
                         );
-                        
-                        if (farmers && farmers.qrUrl == "" ||  shouldUpdateQR){
+
+                        if (farmers && farmers.qrUrl == "" || shouldUpdateQR) {
                             let aa = await updateQrCode(`${farmers.id}`,
                                 name, uniqueFilename, data.farmerCode, village ? village.village_name : '');
                             const farmerPLace = await Farmer.update({ qrUrl: uniqueFilename }, {
@@ -1011,7 +1014,7 @@ const uploadFarmer = async (req: Request, res: Response) => {
                                 }
                             });
                         }
-                       
+
 
                         //check if farm exists
                         const farm = await Farm.findOne({ where: { farmer_id: farmers.id, season_id: season.id } });
@@ -2374,7 +2377,7 @@ const uploadOrganicFarmer = async (req: Request, res: Response) => {
             });
             return res.sendSuccess(res, { pass, fail });
         } else {
-            farmGroup = await FarmGroup.findOne({ where: { name: req.body.farmGroup , brand_id: brand.id} });
+            farmGroup = await FarmGroup.findOne({ where: { name: req.body.farmGroup, brand_id: brand.id } });
 
             if (!farmGroup) {
                 fail.push({
@@ -2710,6 +2713,265 @@ const uploadOrganicFarmer = async (req: Request, res: Response) => {
     }
 }
 
+const uploadPriceMapping = async (req: Request, res: Response) => {
+    try {
+        let fail: any = [];
+        let pass: any = [];
+        let season;
+        let program;
+        let brand;
+        let type = req.body.type;
+
+        if (!req.body.program) {
+            fail.push({
+                success: false,
+                message: "Programme cannot be empty"
+            });
+            return res.sendSuccess(res, { pass, fail });
+        } else {
+            program = await Program.findOne({
+                where: {
+                    program_name: req.body.program
+                }
+            });
+
+            if (!program) {
+                fail.push({
+                    success: false,
+                    message: "Programme not found"
+                })
+                return res.sendSuccess(res, { pass, fail });
+            }
+        }
+
+        if (!req.body.brand) {
+            fail.push({
+                success: false,
+                message: "Brand cannot be empty"
+            });
+
+            return res.sendSuccess(res, { pass, fail });
+        } else {
+            brand = await Brand.findOne({
+                where: {
+                    brand_name: req.body.brand
+                }
+            });
+
+            if (!brand) {
+                fail.push({
+                    success: false,
+                    message: "Brand not found"
+                });
+                return res.sendSuccess(res, { pass, fail });
+            }
+
+            else {
+                let brandCheck;
+                if (req.body.brand) {
+                    brandCheck = await Brand.findOne({
+                        where: {
+                            programs_id: {
+                                [Op.contains]: [program.id]
+                            },
+                            id: brand.id
+                        }
+                    });
+                    if (!brandCheck) {
+                        fail.push({
+                            success: false,
+                            message: "Brand is not associated with the entered Programme"
+                        });
+                        return res.sendSuccess(res, { pass, fail });
+                    }
+                }
+            }
+        }
+
+        if (!req.body.season) {
+            fail.push({
+                success: false,
+                message: "Season cannot be empty"
+            });
+
+            return res.sendSuccess(res, { pass, fail });
+        } else {
+            season = await Season.findOne({
+                where: {
+                    name: req.body.season
+                }
+            });
+            if (!season) {
+                fail.push({
+                    success: false,
+                    message: "Season not found"
+                })
+
+                return res.sendSuccess(res, { pass, fail });
+            }
+        }
+
+        for await (const data of req.body.priceData) {
+            if (!data.country) {
+                fail.push({
+                    success: false,
+                    data: { district: data.district ? data.district : '', season: req.body.season ? req.body.season : '', country: data.country ? data.country : '', state: data.state ? data.state : '' },
+                    message: "Country cannot be empty"
+                });
+            } else if (!data.state) {
+                fail.push({
+                    success: false,
+                    data: { district: data.district ? data.district : '', season: req.body.season ? req.body.season : '', country: data.country ? data.country : '', state: data.state ? data.state : '' },
+                    message: "State cannot be empty"
+                })
+            } else if (!data.district) {
+                fail.push({
+                    success: false,
+                    data: { district: data.district ? data.district : '', season: req.body.season ? req.body.season : '', country: data.country ? data.country : '', state: data.state ? data.state : '' },
+                    message: "District cannot be empty"
+                })
+            } else if (!data.start_date_of_week) {
+                fail.push({
+                    success: false,
+                    data: { district: data.district ? data.district : '', season: req.body.season ? req.body.season : '', country: data.country ? data.country : '', state: data.state ? data.state : '' },
+                    message: "Start Date of week cannot be empty"
+                })
+            } else if (!data.end_date_of_week) {
+                fail.push({
+                    success: false,
+                    data: { district: data.district ? data.district : '', season: req.body.season ? req.body.season : '', country: data.country ? data.country : '', state: data.state ? data.state : '' },
+                    message: "End date of week cannot be empty"
+                })
+            } else if (type === "cotton" ? !data.convetional_market_seed_cotton_pricekg : type === "lint" ? !data.convetional_market_lint_pricekg : !data.convetional_market_yarn_pricekg) {
+                fail.push({
+                    success: false,
+                    data: { district: data.district ? data.district : '', season: req.body.season ? req.body.season : '', country: data.country ? data.country : '', state: data.state ? data.state : '' },
+                    message: `Conventional Market ${type === "cotton" ? "Seed Cotton" : type === "lint" ? "lint" : "yarn"} Price cannot be empty`
+                })
+            } else {
+                let country;
+                let state;
+                let district;
+                if (data.country) {
+                    country = await Country.findOne({
+                        where: {
+                            county_name: data.country
+                        }
+                    });
+                    if (!country) {
+                        fail.push({
+                            success: false,
+                            data: { district: data.district ? data.district : '', season: req.body.season ? req.body.season : '', country: data.country ? data.country : '', state: data.state ? data.state : '' },
+                            message: "Country not found"
+                        });
+                    } else {
+                        if (data.state) {
+                            state = await State.findOne({
+                                where: {
+                                    country_id: country.id,
+                                    state_name: data.state
+                                }
+                            });
+                            if (!state) {
+                                fail.push({
+                                    success: false,
+                                    data: { district: data.district ? data.district : '', season: req.body.season ? req.body.season : '', country: data.country ? data.country : '', state: data.state ? data.state : '' },
+                                    message: "State is not associated with the entered Country"
+                                });
+                            } else {
+                                if (data.district) {
+                                    district = await District.findOne({
+                                        where: {
+                                            state_id: state.id,
+                                            district_name: {
+                                                [Op.iLike]:
+                                                    data.district
+                                            }
+
+                                        }
+                                    });
+
+                                    if (!district) {
+                                        fail.push({
+                                            success: false,
+                                            data: { district: data.district ? data.district : '', season: req.body.season ? req.body.season : '', country: data.country ? data.country : '', state: data.state ? data.state : '' },
+                                            message: "District is not associated with entered State"
+                                        });
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (country && state && district) {
+
+                    const priceData = {
+                        brand_id: brand.id,
+                        program_id: program.id,
+                        season_id: season.id,
+                        country_id: country.id,
+                        state_id: state.id,
+                        district_id: district.id,
+                        startDate: data.start_date_of_week,
+                        endDate: data.end_date_of_week,
+                        market_price: type === "cotton" ? data.convetional_market_seed_cotton_pricekg : type === "lint" ? data.convetional_market_lint_pricekg : data.convetional_market_yarn_pricekg,
+                    };
+
+                    // Perform the duplicate check using individual fields (not the entire priceData object)
+                    let check = await (type === "cotton" ? SeedCottonPricing : type === "lint" ? LintPricing : YarnPricing).findOne({
+                        where: {
+                            brand_id: priceData.brand_id,
+                            program_id: priceData.program_id,
+                            season_id: priceData.season_id,
+                            country_id: priceData.country_id,
+                            state_id: priceData.state_id,
+                            district_id: priceData.district_id,
+                            startDate: priceData.startDate,
+                            endDate: priceData.endDate
+                        }
+                    });
+
+                    if (check) {
+                        if (Number(type === "cotton" ? data.convetional_market_seed_cotton_pricekg : type === "lint" ? data.convetional_market_lint_pricekg : data.convetional_market_yarn_pricekg) !== Number(check.market_price)) {
+                            let updatePrice = await (type === "cotton" ? SeedCottonPricing : type === "lint" ? LintPricing : YarnPricing).update({
+                                market_price: type === "cotton" ? data.convetional_market_seed_cotton_pricekg : type === "lint" ? data.convetional_market_lint_pricekg : data.convetional_market_yarn_pricekg
+                            }, {
+                                where: {
+                                    id: check.id
+                                }
+                            });
+                            pass.push({
+                                success: true,
+                                data: updatePrice,
+                                message: "Price updated succesfully"
+                            });
+                        } else {
+                            fail.push({
+                                success: false,
+                                data: { district: data.district ? data.district : '', season: req.body.season ? req.body.season : '', country: data.country ? data.country : '', state: data.state ? data.state : '' },
+                                message: `Conventional Market ${type === "cotton" ? "Seed Cotton" : type === "lint" ? "lint" : "yarn"} Price for this record is already exists`
+                            })
+                        }
+
+                    } else {
+                        const priceCreated = await (type === "cotton" ? SeedCottonPricing : type === "lint" ? LintPricing : YarnPricing).create(priceData);
+                        pass.push({
+                            success: true,
+                            data: priceCreated,
+                            message: "Price created successfully"
+                        });
+                    }
+                }
+            }
+        }
+        res.sendSuccess(res, { pass, fail });
+    } catch (error: any) {
+        console.log(error)
+        return res.sendError(res, error.message);
+    }
+}
+
 export {
     uploadGinnerOrder,
     uploadStyleMark,
@@ -2727,5 +2989,6 @@ export {
     uploadIcsName,
     uploadFarmGroupEvaluationData,
     uploadIntegrityTest,
-    uploadOrganicFarmer
+    uploadOrganicFarmer,
+    uploadPriceMapping
 }
