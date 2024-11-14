@@ -3364,8 +3364,8 @@ const garmentTraceabilityMap = async (req: Request, res: Response) => {
           .filter((item: any) => item !== null && item !== undefined)
         : [];
     let weaverbrandtRefNumber =
-      knitSales && knitSales.length > 0
-        ? knitSales
+    weaverSales && weaverSales.length > 0
+        ? weaverSales
           .map((val: any) => val?.brand_order_ref)
           .filter((item: any) => item !== null && item !== undefined)
         : [];
