@@ -170,10 +170,10 @@ const fetchTicketTracker = async (req: Request, res: Response) => {
             whereCondition.process_or_sales = processSale;
         }
 
-
         if (searchTerm) {
             const searchConditions = [
                 { ticket_type: { [Op.iLike]: `%${searchTerm}%` } },
+                { ticket_no: { [Op.eq]: `${searchTerm}` } },
                 { processor_name: { [Op.iLike]: `%${searchTerm}%` } },
                 { processor_type: { [Op.iLike]: `%${searchTerm}%` } },
                 { process_or_sales: { [Op.iLike]: `%${searchTerm}%` } },
