@@ -623,7 +623,10 @@ const generateGinSalesHtml = async (sales: any) => {
     </body>
     
     </html>`
-        const browser = await puppeteer.launch({ args: ['--no-sandbox']});
+    const browser = await puppeteer.launch({        // USE THIS ON THE SERVER 
+        executablePath: "/usr/bin/chromium-browser",
+        args: ['--disable-gpu', '--disable-setuid-sandbox', '--no-sandbox', '--no-zygote']
+      });
         const page = await browser.newPage();
 
         const htmlContent = html;
