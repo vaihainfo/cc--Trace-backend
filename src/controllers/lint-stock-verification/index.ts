@@ -1323,6 +1323,31 @@ const getTypeWiseListVerifiedStocks = async (req: Request, res: Response) => {
 };
 
 
+const fetchTeGinner = async (req: Request, res: Response) => {
+    try {
+        const result = await TraceabilityExecutive.findOne({
+            where: {
+                id: req.query.teId 
+            }
+        });
+        
+        let ginners = [];
+        if (result) {
+          const mappedGinners = result.mapped_ginners;
+           ginners = await Ginner.findAll({
+            where: {
+                id: mappedGinners,
+            },
+        });
+      }
+      return res.sendSuccess(res, ginners);
+
+    } catch (error: any) {
+        console.log(error);
+        return res.sendError(res, error.message);
+    }
+}
+
 export {
   getGinProcessLotNo,
   getGinProcessLotDetials,
@@ -1336,5 +1361,6 @@ export {
   getSCMVerifiedStocks,
   getSCDVerifiedStocks,
   getListVerifiedStocks,
-  getTypeWiseListVerifiedStocks
+  getTypeWiseListVerifiedStocks,
+  fetchTeGinner
 };
