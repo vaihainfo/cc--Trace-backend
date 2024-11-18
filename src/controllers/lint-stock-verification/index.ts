@@ -1348,6 +1348,56 @@ const fetchTeGinner = async (req: Request, res: Response) => {
     }
 }
 
+const fetchTeCountries = async (req: Request, res: Response) => {
+  try {
+      const result = await TraceabilityExecutive.findOne({
+          where: {
+              id: req.query.teId 
+          }
+      });
+      
+      let countries = [];
+      if (result) {
+        const mappedCountry = result.country_id;
+        countries = await Country.findOne({
+          where: {
+              id: mappedCountry,
+          },
+      });
+    }
+    return res.sendSuccess(res, countries);
+
+  } catch (error: any) {
+      console.log(error);
+      return res.sendError(res, error.message);
+  }
+}
+
+const fetchTeStates= async (req: Request, res: Response) => {
+  try {
+      const result = await TraceabilityExecutive.findOne({
+          where: {
+              id: req.query.teId 
+          }
+      });
+      
+      let states = [];
+      if (result) {
+        const mappedStates = result.mapped_states;
+        states = await State.findAll({
+          where: {
+              id: mappedStates,
+          },
+      });
+    }
+    return res.sendSuccess(res, states);
+
+  } catch (error: any) {
+      console.log(error);
+      return res.sendError(res, error.message);
+  }
+}
+
 export {
   getGinProcessLotNo,
   getGinProcessLotDetials,
@@ -1362,5 +1412,7 @@ export {
   getSCDVerifiedStocks,
   getListVerifiedStocks,
   getTypeWiseListVerifiedStocks,
-  fetchTeGinner
+  fetchTeGinner,
+  fetchTeCountries,
+  fetchTeStates
 };
