@@ -23,7 +23,7 @@ const getGinProcessLotNo = async (req: Request, res: Response) => {
 
     const lotNo = await GinProcess.findAll({
       attributes: ["id", "lot_no", "reel_lot_no"],
-      where: { ginner_id: ginnerId },
+      where: { ginner_id: ginnerId, te_verified_status: { [Op.not]: true }, },
     });
 
     if (lotNo && lotNo.length > 0) {
