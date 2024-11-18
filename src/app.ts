@@ -94,6 +94,7 @@ import dataMonitorRouter from './router/data-monitoring';
 import { sendScheduledEmails } from "./controllers/email-management/scheduled-email.controller";
 import ExportData from "./models/export-data-check.model";
 import { exportReportsTameTaking, exportReportsOnebyOne } from "./controllers/reports/export-cron";
+import  updateGreyoutData from "./router/update-greyout/";
 import moment from "moment";
 import 'moment-timezone';
 
@@ -293,6 +294,7 @@ app.use("/seed-company", seedCompanyRouter);
 app.use("/crop-current-season", cropCurrentSeasonRouter);
 app.use("/organic-program-data-digitization", organicProgramDataDigitizationRouter);
 app.use("/data-monitoring", dataMonitorRouter);
+app.use("/update-greyout", updateGreyoutData);
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument, { customCss }));
 
 app.use(errorMiddleware);
