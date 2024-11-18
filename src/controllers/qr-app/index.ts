@@ -717,8 +717,8 @@ const exportAgentTransactions = async (req: Request, res: Response) => {
                     payment_method: item.payment_method ? item.payment_method : "",
                     ginner: item.ginner ? item.ginner.name : "",
                     agent: item.agent ? item.agent.firstName : "",
-                    latitude: item.latitude ? item.latitude : 0,
-                    longitude: item.longitude ? item.longitude : 0
+                    latitude: item.latitude ? item.latitude : "",
+                    longitude: item.longitude ? item.longitude : ""
                 });
                 worksheet.addRow(rowValues);
             }
