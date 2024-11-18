@@ -80,14 +80,14 @@ const exportReportsTameTaking = async () => {
   await generateAgentTransactions(); // taking time
   await generateGinnerSales();
   await generateSpinProcessBackwardfTraceabilty();
-  
+
   console.log('TameTaking Cron Job Completed to execute all reports.');
 }
 
 const exportReportsOnebyOne = async () => {
   //call all export reports one by one on every cron
   await generatePremiumValidationData();
-  
+
   await generateFaildReport("Farmer");
   await generateFaildReport("Procurement");
   // await generateExportFarmer();
@@ -103,7 +103,7 @@ const exportReportsOnebyOne = async () => {
   await generateGinnerSummary();
   await generatePendingGinnerSales();
   await generateGinnerCottonStock();
-  await generateGinnerProcess(); 
+  await generateGinnerProcess();
   //spinner Reports
   await generateSpinnerSummary();
   await generateSpinnerBale();
@@ -125,98 +125,98 @@ const exportReportsOnebyOne = async () => {
 const exportSpinnerGreyOutReport = async () => {
   // spinner_bale_receipt_load
   const excelFilePath = path.join(
-   "./upload",
-   "spinner-grey-out-report.xlsx"
- );
+    "./upload",
+    "spinner-grey-out-report.xlsx"
+  );
 
-   let include = [
-     {
-       model: Ginner,
-       as: "ginner",
-       attributes: [],
-     },
-     {
-       model: Season,
-       as: "season",
-       attributes: [],
-     },
-     {
-       model: Program,
-       as: "program",
-       attributes: [],
-     },
-     {
-       model: Spinner,
-       as: "buyerdata",
-       attributes: [],
-     },
-   ];
+  let include = [
+    {
+      model: Ginner,
+      as: "ginner",
+      attributes: [],
+    },
+    {
+      model: Season,
+      as: "season",
+      attributes: [],
+    },
+    {
+      model: Program,
+      as: "program",
+      attributes: [],
+    },
+    {
+      model: Spinner,
+      as: "buyerdata",
+      attributes: [],
+    },
+  ];
 
-   // Create the excel workbook file
-   const workbook = new ExcelJS.Workbook();
-   const worksheet = workbook.addWorksheet("Sheet1");
-   worksheet.mergeCells("A1:G1");
-   const mergedCell = worksheet.getCell("A1");
-   mergedCell.value = "CottonConnect | Spinner Lint Process Greyout Report";
-   mergedCell.font = { bold: true };
-   mergedCell.alignment = { horizontal: "center", vertical: "middle" };
-   // Set bold font for header row
-   const headerRow = worksheet.addRow([
-     "Sr No.",
-     "Season",
-     "Ginner Name",
-     "Spinner Name",
-     "REEL Lot No",
-     "Invoice Number",
-     "Bale Lot No",
-     "Total Lint Greyout Quantity (KGs)",
-   ]);
-   headerRow.font = { bold: true };
+  // Create the excel workbook file
+  const workbook = new ExcelJS.Workbook();
+  const worksheet = workbook.addWorksheet("Sheet1");
+  worksheet.mergeCells("A1:G1");
+  const mergedCell = worksheet.getCell("A1");
+  mergedCell.value = "CottonConnect | Spinner Lint Process Greyout Report";
+  mergedCell.font = { bold: true };
+  mergedCell.alignment = { horizontal: "center", vertical: "middle" };
+  // Set bold font for header row
+  const headerRow = worksheet.addRow([
+    "Sr No.",
+    "Season",
+    "Ginner Name",
+    "Spinner Name",
+    "REEL Lot No",
+    "Invoice Number",
+    "Bale Lot No",
+    "Total Lint Greyout Quantity (KGs)",
+  ]);
+  headerRow.font = { bold: true };
 
-   // //fetch data with pagination
+  // //fetch data with pagination
 
-   const { count, rows }: any = await GinSales.findAndCountAll({
-     where: {greyout_status : true},
-     include: include,
-     attributes: [
-       [Sequelize.col('"season"."name"'), 'season_name'],
-       [Sequelize.literal('"ginner"."name"'), "ginner_name"],
-       [Sequelize.col('"buyerdata"."name"'), 'spinner'],
-       [Sequelize.col('invoice_no'), 'invoice_no'],
-       [Sequelize.col('lot_no'), 'lot_no'],
-       [Sequelize.col('reel_lot_no'), 'reel_lot_no'],
-       [Sequelize.col('qty_stock'), 'qty_stock'],
-     ],
+  const { count, rows }: any = await GinSales.findAndCountAll({
+    where: { greyout_status: true },
+    include: include,
+    attributes: [
+      [Sequelize.col('"season"."name"'), 'season_name'],
+      [Sequelize.literal('"ginner"."name"'), "ginner_name"],
+      [Sequelize.col('"buyerdata"."name"'), 'spinner'],
+      [Sequelize.col('invoice_no'), 'invoice_no'],
+      [Sequelize.col('lot_no'), 'lot_no'],
+      [Sequelize.col('reel_lot_no'), 'reel_lot_no'],
+      [Sequelize.col('qty_stock'), 'qty_stock'],
+    ],
     //  group: ['season.id', 'ginner.id', 'buyerdata.id'], 
-   });    
+  });
 
-   // // Append data to worksheet
-   for await (const [index, item] of rows.entries()) {
-     const rowValues = Object.values({
-       index: index + 1,
-       season: item.dataValues.season_name ? item.dataValues.season_name : "",
-       ginner: item.dataValues.ginner_name ? item.dataValues.ginner_name : "",
-       spinner: item.dataValues.spinner ? item.dataValues.spinner : "",
-       reel_lot_no: item.dataValues.reel_lot_no? item.dataValues.reel_lot_no: "",
-       invoice: item.dataValues.invoice_no ? item.dataValues.invoice_no : "",
-       lot_no: item.dataValues.lot_no ? item.dataValues.lot_no : "",
-       lint_quantity: item.dataValues.qty_stock? Number(item.dataValues.qty_stock): 0,
-     });
-     worksheet.addRow(rowValues);
-   }
+  // // Append data to worksheet
+  for await (const [index, item] of rows.entries()) {
+    const rowValues = Object.values({
+      index: index + 1,
+      season: item.dataValues.season_name ? item.dataValues.season_name : "",
+      ginner: item.dataValues.ginner_name ? item.dataValues.ginner_name : "",
+      spinner: item.dataValues.spinner ? item.dataValues.spinner : "",
+      reel_lot_no: item.dataValues.reel_lot_no ? item.dataValues.reel_lot_no : "",
+      invoice: item.dataValues.invoice_no ? item.dataValues.invoice_no : "",
+      lot_no: item.dataValues.lot_no ? item.dataValues.lot_no : "",
+      lint_quantity: item.dataValues.qty_stock ? Number(item.dataValues.qty_stock) : 0,
+    });
+    worksheet.addRow(rowValues);
+  }
 
-   // Auto-adjust column widths based on content
-   worksheet.columns.forEach((column: any) => {
-     let maxCellLength = 0;
-     column.eachCell({ includeEmpty: true }, (cell: any) => {
-       const cellLength = (cell.value ? cell.value.toString() : "").length;
-       maxCellLength = Math.max(maxCellLength, cellLength);
-     });
-     column.width = Math.min(14, maxCellLength + 2); // Limit width to 30 characters
-   });
+  // Auto-adjust column widths based on content
+  worksheet.columns.forEach((column: any) => {
+    let maxCellLength = 0;
+    column.eachCell({ includeEmpty: true }, (cell: any) => {
+      const cellLength = (cell.value ? cell.value.toString() : "").length;
+      maxCellLength = Math.max(maxCellLength, cellLength);
+    });
+    column.width = Math.min(14, maxCellLength + 2); // Limit width to 30 characters
+  });
 
-   // Save the workbook
-   await workbook.xlsx.writeFile(excelFilePath);
+  // Save the workbook
+  await workbook.xlsx.writeFile(excelFilePath);
 };
 
 
@@ -226,117 +226,117 @@ const exportGinHeapReport = async () => {
     "heap-report.xlsx"
   );
 
-      let include = [
-        {
-          model: Ginner,
-          as: "ginner",
-        },
-        {
-          model: Season,
-          as: "season",
-        },
-        {
-          model: Program,
-          as: "program",
-        },
-      ];
+  let include = [
+    {
+      model: Ginner,
+      as: "ginner",
+    },
+    {
+      model: Season,
+      as: "season",
+    },
+    {
+      model: Program,
+      as: "program",
+    },
+  ];
 
-      // Create the excel workbook file
-      const workbook = new ExcelJS.Workbook();
-      const worksheet = workbook.addWorksheet("Sheet1");
-      worksheet.mergeCells("A1:M1");
-      const mergedCell = worksheet.getCell("A1");
-      mergedCell.value = "CottonConnect | Heap Report";
-      mergedCell.font = { bold: true };
-      mergedCell.alignment = { horizontal: "center", vertical: "middle" };
-      // Set bold font for header row
-      const headerRow = worksheet.addRow([
-        "Sr No.",
-        "Created Date",
-        "Season",
-        "Gin heap no.",
-        "REEL heap no.",
-        "Heap Weight",
-        "Heap Stating Date",
-        "Heap Ending Date",
-        "Vehicle Registration Number",
-      ]);
-      headerRow.font = { bold: true };
+  // Create the excel workbook file
+  const workbook = new ExcelJS.Workbook();
+  const worksheet = workbook.addWorksheet("Sheet1");
+  worksheet.mergeCells("A1:M1");
+  const mergedCell = worksheet.getCell("A1");
+  mergedCell.value = "CottonConnect | Heap Report";
+  mergedCell.font = { bold: true };
+  mergedCell.alignment = { horizontal: "center", vertical: "middle" };
+  // Set bold font for header row
+  const headerRow = worksheet.addRow([
+    "Sr No.",
+    "Created Date",
+    "Season",
+    "Gin heap no.",
+    "REEL heap no.",
+    "Heap Weight",
+    "Heap Stating Date",
+    "Heap Ending Date",
+    "Vehicle Registration Number",
+  ]);
+  headerRow.font = { bold: true };
 
-      const { count, rows }: any = await GinHeap.findAndCountAll({
-        include: include,
-        order: [["id", "desc"]],
-      });
-      // // Append data to worksheet
-      for await (const [index, item] of rows.entries()) {
-        const rowValues = Object.values({
-          index: index + 1,
-          created_date: item.dataValues.createdAt
-            ? item.dataValues.createdAt
-            : "",
-          season: item.dataValues.season.name ? item.dataValues.season.name : "", 
-          ginner_heap_no: item.dataValues.ginner_heap_no ? item.dataValues.ginner_heap_no : "",
-          reel_heap_no: item.dataValues.reel_heap_no
-            ? item.dataValues.reel_heap_no
-            : "",
-          heap_weight: item.dataValues.estimated_heap
-            ? Number(item.dataValues.estimated_heap)
-            : 0,
-          heap_starting_date: item.dataValues.heap_starting_date ? item.dataValues.heap_starting_date : "",
-          heap_ending_date: item.dataValues.heap_ending_date ? item.dataValues.heap_ending_date : "",
-          weighbridge_vehicle_no: item.weighbridge_vehicle_no
-        });
-        worksheet.addRow(rowValues);
-      }
-      // Auto-adjust column widths based on content
-      worksheet.columns.forEach((column: any) => {
-        let maxCellLength = 0;
-        column.eachCell({ includeEmpty: true }, (cell: any) => {
-          const cellLength = (cell.value ? cell.value.toString() : "").length;
-          maxCellLength = Math.max(maxCellLength, cellLength);
-        });
-        column.width = Math.min(14, maxCellLength + 2); 
-      });
+  const { count, rows }: any = await GinHeap.findAndCountAll({
+    include: include,
+    order: [["id", "desc"]],
+  });
+  // // Append data to worksheet
+  for await (const [index, item] of rows.entries()) {
+    const rowValues = Object.values({
+      index: index + 1,
+      created_date: item.dataValues.createdAt
+        ? item.dataValues.createdAt
+        : "",
+      season: item.dataValues.season.name ? item.dataValues.season.name : "",
+      ginner_heap_no: item.dataValues.ginner_heap_no ? item.dataValues.ginner_heap_no : "",
+      reel_heap_no: item.dataValues.reel_heap_no
+        ? item.dataValues.reel_heap_no
+        : "",
+      heap_weight: item.dataValues.estimated_heap
+        ? Number(item.dataValues.estimated_heap)
+        : 0,
+      heap_starting_date: item.dataValues.heap_starting_date ? item.dataValues.heap_starting_date : "",
+      heap_ending_date: item.dataValues.heap_ending_date ? item.dataValues.heap_ending_date : "",
+      weighbridge_vehicle_no: item.weighbridge_vehicle_no
+    });
+    worksheet.addRow(rowValues);
+  }
+  // Auto-adjust column widths based on content
+  worksheet.columns.forEach((column: any) => {
+    let maxCellLength = 0;
+    column.eachCell({ includeEmpty: true }, (cell: any) => {
+      const cellLength = (cell.value ? cell.value.toString() : "").length;
+      maxCellLength = Math.max(maxCellLength, cellLength);
+    });
+    column.width = Math.min(14, maxCellLength + 2);
+  });
 
-        // Save the workbook
-      await workbook.xlsx.writeFile(excelFilePath);
-    }
+  // Save the workbook
+  await workbook.xlsx.writeFile(excelFilePath);
+}
 
 const exportGinnerProcessGreyOutReport = async () => {
   // spinner_bale_receipt_load
   const excelFilePath = path.join(
-   "./upload",
-   "ginner-process-grey-out-report.xlsx"
- );
+    "./upload",
+    "ginner-process-grey-out-report.xlsx"
+  );
 
-   let include = [
-     {
-       model: Ginner,
-       as: "ginner",
-       attributes: [],
-     },
-     {
-       model: Season,
-       as: "season",
-       attributes: [],
-     },
-     {
-       model: Program,
-       as: "program",
-       attributes: [],
-     }
-   ];
+  let include = [
+    {
+      model: Ginner,
+      as: "ginner",
+      attributes: [],
+    },
+    {
+      model: Season,
+      as: "season",
+      attributes: [],
+    },
+    {
+      model: Program,
+      as: "program",
+      attributes: [],
+    }
+  ];
 
-   // Create the excel workbook file
-   const workbook = new ExcelJS.Workbook();
-   const worksheet = workbook.addWorksheet("Sheet1");
-   worksheet.mergeCells("A1:G1");
-   const mergedCell = worksheet.getCell("A1");
-   mergedCell.value = "CottonConnect | Ginner Process Grey Out Report";
-   mergedCell.font = { bold: true };
-   mergedCell.alignment = { horizontal: "center", vertical: "middle" };
-   // Set bold font for header row
-   const headerRow = worksheet.addRow([
+  // Create the excel workbook file
+  const workbook = new ExcelJS.Workbook();
+  const worksheet = workbook.addWorksheet("Sheet1");
+  worksheet.mergeCells("A1:G1");
+  const mergedCell = worksheet.getCell("A1");
+  mergedCell.value = "CottonConnect | Ginner Process Grey Out Report";
+  mergedCell.font = { bold: true };
+  mergedCell.alignment = { horizontal: "center", vertical: "middle" };
+  // Set bold font for header row
+  const headerRow = worksheet.addRow([
     "Sr No.",
     "Season",
     "Ginner Name",
@@ -344,15 +344,15 @@ const exportGinnerProcessGreyOutReport = async () => {
     "Press Number",
     "Bale Lot No",
     "Total Lint Greyout Quantity (Kgs)",
-   ]);
-   headerRow.font = { bold: true };
+  ]);
+  headerRow.font = { bold: true };
 
-   // //fetch data with pagination
+  // //fetch data with pagination
 
-   const { count, rows }: any = await GinProcess.findAndCountAll({
-     where: {greyout_status : true},
-     include: include,
-     attributes: [
+  const { count, rows }: any = await GinProcess.findAndCountAll({
+    where: { greyout_status: true },
+    include: include,
+    attributes: [
       "id",
       [Sequelize.col('"season"."name"'), 'season_name'],
       [Sequelize.literal('"ginner"."name"'), "ginner_name"],
@@ -360,12 +360,12 @@ const exportGinnerProcessGreyOutReport = async () => {
       [Sequelize.col('lot_no'), 'lot_no'],
       [Sequelize.col('reel_lot_no'), 'reel_lot_no'],
       [Sequelize.col('total_qty'), 'total_qty'],
-     ],
+    ],
     //  group: ['season.id', 'ginner.id'], 
-   });    
+  });
 
-   // // Append data to worksheet
-   for await (const [index, item] of rows.entries()) {
+  // // Append data to worksheet
+  for await (const [index, item] of rows.entries()) {
     let bale = await GinBale.findOne({
       attributes: [
         [
@@ -380,122 +380,122 @@ const exportGinnerProcessGreyOutReport = async () => {
           ),
           "lint_quantity",
         ],
-        
+
         [sequelize.fn("min", sequelize.col("bale_no")), "pressno_from"],
         [sequelize.fn("max", Sequelize.literal("LPAD(bale_no, 10, ' ')")), "pressno_to"],
       ],
       where: { process_id: item.dataValues.id, sold_status: false, is_all_rejected: null },
     });
-     const rowValues = Object.values({
-       index: index + 1,
-       season: item.dataValues.season_name ? item.dataValues.season_name : "",
-       ginner: item.dataValues.ginner_name ? item.dataValues.ginner_name : "",
-       reel_lot_no: item.dataValues.reel_lot_no ? item.dataValues.reel_lot_no : "",
-       press: item.dataValues.press_no ? item.dataValues.press_no : "",
-       lot_no: item.dataValues.lot_no ? item.dataValues.lot_no : "",
-       lint_quantity: bale.dataValues.lint_quantity ? bale.dataValues.lint_quantity : 0,
-     });
-     worksheet.addRow(rowValues);
-   }
+    const rowValues = Object.values({
+      index: index + 1,
+      season: item.dataValues.season_name ? item.dataValues.season_name : "",
+      ginner: item.dataValues.ginner_name ? item.dataValues.ginner_name : "",
+      reel_lot_no: item.dataValues.reel_lot_no ? item.dataValues.reel_lot_no : "",
+      press: item.dataValues.press_no ? item.dataValues.press_no : "",
+      lot_no: item.dataValues.lot_no ? item.dataValues.lot_no : "",
+      lint_quantity: bale.dataValues.lint_quantity ? bale.dataValues.lint_quantity : 0,
+    });
+    worksheet.addRow(rowValues);
+  }
 
-   // Auto-adjust column widths based on content
-   worksheet.columns.forEach((column: any) => {
-     let maxCellLength = 0;
-     column.eachCell({ includeEmpty: true }, (cell: any) => {
-       const cellLength = (cell.value ? cell.value.toString() : "").length;
-       maxCellLength = Math.max(maxCellLength, cellLength);
-     });
-     column.width = Math.min(14, maxCellLength + 2); // Limit width to 30 characters
-   });
+  // Auto-adjust column widths based on content
+  worksheet.columns.forEach((column: any) => {
+    let maxCellLength = 0;
+    column.eachCell({ includeEmpty: true }, (cell: any) => {
+      const cellLength = (cell.value ? cell.value.toString() : "").length;
+      maxCellLength = Math.max(maxCellLength, cellLength);
+    });
+    column.width = Math.min(14, maxCellLength + 2); // Limit width to 30 characters
+  });
 
-   // Save the workbook
-   await workbook.xlsx.writeFile(excelFilePath);
+  // Save the workbook
+  await workbook.xlsx.writeFile(excelFilePath);
 };
 
 const exportSpinnerProcessGreyOutReport = async () => {
   // spinner_bale_receipt_load
   const excelFilePath = path.join(
-   "./upload",
-   "spinner-process-grey-out-report.xlsx"
- );
+    "./upload",
+    "spinner-process-grey-out-report.xlsx"
+  );
 
-   let include = [
-     {
-       model: Season,
-       as: "season",
-       attributes: [],
-     },
-     {
-       model: Program,
-       as: "program",
-       attributes: [],
-     },
-     {
-       model: Spinner,
-       as: "spinner",
-       attributes: [],
-     },
-   ];
+  let include = [
+    {
+      model: Season,
+      as: "season",
+      attributes: [],
+    },
+    {
+      model: Program,
+      as: "program",
+      attributes: [],
+    },
+    {
+      model: Spinner,
+      as: "spinner",
+      attributes: [],
+    },
+  ];
 
-   // Create the excel workbook file
-   const workbook = new ExcelJS.Workbook();
-   const worksheet = workbook.addWorksheet("Sheet1");
-   worksheet.mergeCells("A1:G1");
-   const mergedCell = worksheet.getCell("A1");
-   mergedCell.value = "CottonConnect | Spinner Yarn Greyout Report";
-   mergedCell.font = { bold: true };
-   mergedCell.alignment = { horizontal: "center", vertical: "middle" };
-   // Set bold font for header row
-   const headerRow = worksheet.addRow([
+  // Create the excel workbook file
+  const workbook = new ExcelJS.Workbook();
+  const worksheet = workbook.addWorksheet("Sheet1");
+  worksheet.mergeCells("A1:G1");
+  const mergedCell = worksheet.getCell("A1");
+  mergedCell.value = "CottonConnect | Spinner Yarn Greyout Report";
+  mergedCell.font = { bold: true };
+  mergedCell.alignment = { horizontal: "center", vertical: "middle" };
+  // Set bold font for header row
+  const headerRow = worksheet.addRow([
     "Sr No.",
     "Season",
     "Spinner Name",
     "REEL Lot No",
     "Spin Lot No",
     "Total Yarn Greyout Quantity (KGs)",
-   ]);
-   headerRow.font = { bold: true };
+  ]);
+  headerRow.font = { bold: true };
 
-   // //fetch data with pagination
+  // //fetch data with pagination
 
-   const { count, rows }: any = await SpinProcess.findAndCountAll({
-     where: {greyout_status : true},
-     include: include,
-     attributes: [
-       [Sequelize.col('"season"."name"'), 'season_name'],
-       [Sequelize.col('"season"."name"'), 'season_name'],
-       [Sequelize.col('"spinner"."name"'), 'spinner_name'],
-       [Sequelize.col('batch_lot_no'), 'batch_lot_no'],
-       [Sequelize.col('reel_lot_no'), 'reel_lot_no'],
-       [Sequelize.col('qty_stock'), 'qty_stock'],
-     ],
-   });    
+  const { count, rows }: any = await SpinProcess.findAndCountAll({
+    where: { greyout_status: true },
+    include: include,
+    attributes: [
+      [Sequelize.col('"season"."name"'), 'season_name'],
+      [Sequelize.col('"season"."name"'), 'season_name'],
+      [Sequelize.col('"spinner"."name"'), 'spinner_name'],
+      [Sequelize.col('batch_lot_no'), 'batch_lot_no'],
+      [Sequelize.col('reel_lot_no'), 'reel_lot_no'],
+      [Sequelize.col('qty_stock'), 'qty_stock'],
+    ],
+  });
 
-   // // Append data to worksheet
-   for await (const [index, item] of rows.entries()) {
-     const rowValues = Object.values({
-       index: index + 1,
-       season: item.dataValues.season_name ? item.dataValues.season_name : "",
-       spinner: item.dataValues.spinner_name ? item.dataValues.spinner_name : "",
-       reel_lot_no: item.dataValues.reel_lot_no ? item.dataValues.reel_lot_no : "",
-       batch_lot_no: item.dataValues.batch_lot_no ? item.dataValues.batch_lot_no : "",
-       lint_quantity: item.dataValues.qty_stock ? item.dataValues.qty_stock : 0,
-      });
-     worksheet.addRow(rowValues);
-   }
+  // // Append data to worksheet
+  for await (const [index, item] of rows.entries()) {
+    const rowValues = Object.values({
+      index: index + 1,
+      season: item.dataValues.season_name ? item.dataValues.season_name : "",
+      spinner: item.dataValues.spinner_name ? item.dataValues.spinner_name : "",
+      reel_lot_no: item.dataValues.reel_lot_no ? item.dataValues.reel_lot_no : "",
+      batch_lot_no: item.dataValues.batch_lot_no ? item.dataValues.batch_lot_no : "",
+      lint_quantity: item.dataValues.qty_stock ? item.dataValues.qty_stock : 0,
+    });
+    worksheet.addRow(rowValues);
+  }
 
-   // Auto-adjust column widths based on content
-   worksheet.columns.forEach((column: any) => {
-     let maxCellLength = 0;
-     column.eachCell({ includeEmpty: true }, (cell: any) => {
-       const cellLength = (cell.value ? cell.value.toString() : "").length;
-       maxCellLength = Math.max(maxCellLength, cellLength);
-     });
-     column.width = Math.min(14, maxCellLength + 2); // Limit width to 30 characters
-   });
+  // Auto-adjust column widths based on content
+  worksheet.columns.forEach((column: any) => {
+    let maxCellLength = 0;
+    column.eachCell({ includeEmpty: true }, (cell: any) => {
+      const cellLength = (cell.value ? cell.value.toString() : "").length;
+      maxCellLength = Math.max(maxCellLength, cellLength);
+    });
+    column.width = Math.min(14, maxCellLength + 2); // Limit width to 30 characters
+  });
 
-   // Save the workbook
-   await workbook.xlsx.writeFile(excelFilePath);
+  // Save the workbook
+  await workbook.xlsx.writeFile(excelFilePath);
 };
 
 const generateSpinnerLintCottonStock = async () => {
@@ -511,15 +511,15 @@ const generateSpinnerLintCottonStock = async () => {
     const whereCondition: any = [];
 
 
-  whereCondition.push(`gs.status IN ('Sold', 'Partially Accepted', 'Partially Rejected')`)
-  whereCondition.push(`gs.greyout_status IS NOT TRUE`)
-  whereCondition.push(`gs.qty_stock > 0`);
+    whereCondition.push(`gs.status IN ('Sold', 'Partially Accepted', 'Partially Rejected')`)
+    whereCondition.push(`gs.greyout_status IS NOT TRUE`)
+    whereCondition.push(`gs.qty_stock > 0`);
 
-  const whereClause = whereCondition.length > 0 ? `WHERE ${whereCondition.join(' AND ')}` : '';
+    const whereClause = whereCondition.length > 0 ? `WHERE ${whereCondition.join(' AND ')}` : '';
 
-  let hasNextBatch = true;
-  while (hasNextBatch) {
-    let dataQuery = `
+    let hasNextBatch = true;
+    while (hasNextBatch) {
+      let dataQuery = `
         WITH bale_details AS (
             SELECT 
                 bs.sales_id,
@@ -575,50 +575,50 @@ const generateSpinnerLintCottonStock = async () => {
         LIMIT :limit OFFSET :offset
       `;
 
-    const [rows] = await Promise.all([
-          sequelize.query(dataQuery, {
-              replacements: { limit: batchSize, offset },
-              type: sequelize.QueryTypes.SELECT,
-          })
+      const [rows] = await Promise.all([
+        sequelize.query(dataQuery, {
+          replacements: { limit: batchSize, offset },
+          type: sequelize.QueryTypes.SELECT,
+        })
       ]);
-    
-
-    if (rows.length === 0) {
-      hasNextBatch = false;
-      break;
-    }
-
-    if (offset % maxRowsPerWorksheet === 0) {
-      worksheetIndex++;
-    }
 
 
-    for await (const [index, spinner] of rows.entries()) {
-      let cotton_consumed = Number(spinner?.accepted_total_qty) > Number(spinner?.qty_stock) ? Number(formatDecimal(spinner?.accepted_total_qty)) - Number(formatDecimal(spinner?.qty_stock))  : 0;
+      if (rows.length === 0) {
+        hasNextBatch = false;
+        break;
+      }
 
-      const rowValues = [
-        offset + index + 1,
-        spinner?.date ? moment(spinner.date).format('DD-MM-YYYY') : "",
-        spinner?.season_name ? spinner?.season_name : "",
-        spinner?.ginner_name ? spinner?.ginner_name : "",
-        spinner?.spinner_name ? spinner?.spinner_name : "",
-        spinner?.reel_lot_no ? spinner?.reel_lot_no : "",
-        spinner?.invoice_no ? spinner?.invoice_no : "",
-        spinner?.lot_no ? spinner?.lot_no : "",
-        spinner?.accepted_total_qty ? Number(formatDecimal(spinner?.accepted_total_qty)) : 0,
-        spinner?.qty_stock ? Number(formatDecimal(spinner?.qty_stock)) : 0,
-        cotton_consumed,
-      ];
+      if (offset % maxRowsPerWorksheet === 0) {
+        worksheetIndex++;
+      }
 
-      let currentWorksheet = workbook.getWorksheet(`Lint Cotton Stock Report ${worksheetIndex}`);
-      if (!currentWorksheet) {
-        currentWorksheet = workbook.addWorksheet(`Lint Cotton Stock Report ${worksheetIndex}`);
-        if (worksheetIndex == 1) {
-          currentWorksheet.mergeCells("A1:K1");
-          const mergedCell = currentWorksheet.getCell("A1");
-          mergedCell.value = "CottonConnect | Spinner Lint Cotton Stock Report";
-          mergedCell.font = { bold: true };
-          mergedCell.alignment = { horizontal: "center", vertical: "middle" };
+
+      for await (const [index, spinner] of rows.entries()) {
+        let cotton_consumed = Number(spinner?.accepted_total_qty) > Number(spinner?.qty_stock) ? Number(formatDecimal(spinner?.accepted_total_qty)) - Number(formatDecimal(spinner?.qty_stock)) : 0;
+
+        const rowValues = [
+          offset + index + 1,
+          spinner?.date ? moment(spinner.date).format('DD-MM-YYYY') : "",
+          spinner?.season_name ? spinner?.season_name : "",
+          spinner?.ginner_name ? spinner?.ginner_name : "",
+          spinner?.spinner_name ? spinner?.spinner_name : "",
+          spinner?.reel_lot_no ? spinner?.reel_lot_no : "",
+          spinner?.invoice_no ? spinner?.invoice_no : "",
+          spinner?.lot_no ? spinner?.lot_no : "",
+          spinner?.accepted_total_qty ? Number(formatDecimal(spinner?.accepted_total_qty)) : 0,
+          spinner?.qty_stock ? Number(formatDecimal(spinner?.qty_stock)) : 0,
+          cotton_consumed,
+        ];
+
+        let currentWorksheet = workbook.getWorksheet(`Lint Cotton Stock Report ${worksheetIndex}`);
+        if (!currentWorksheet) {
+          currentWorksheet = workbook.addWorksheet(`Lint Cotton Stock Report ${worksheetIndex}`);
+          if (worksheetIndex == 1) {
+            currentWorksheet.mergeCells("A1:K1");
+            const mergedCell = currentWorksheet.getCell("A1");
+            mergedCell.value = "CottonConnect | Spinner Lint Cotton Stock Report";
+            mergedCell.font = { bold: true };
+            mergedCell.alignment = { horizontal: "center", vertical: "middle" };
           }
           // Set bold font for header row
           const headerRow = currentWorksheet.addRow([
@@ -642,19 +642,19 @@ const generateSpinnerLintCottonStock = async () => {
     }
 
 
-  await workbook.commit()
-  .then(() => {
-    // Rename the temporary file to the final filename
-    fs.renameSync("./upload/spinner-lint-cotton-stock-report-test.xlsx", './upload/spinner-lint-cotton-stock-report.xlsx');
-    console.log('spinner-lint-cotton-stock report generation completed.');
-  })
-  .catch(error => {
-    console.log('Failed generation?.');
-    throw error;
-  });
-} catch (error) {
-  console.error('Error appending data:', error);
-}
+    await workbook.commit()
+      .then(() => {
+        // Rename the temporary file to the final filename
+        fs.renameSync("./upload/spinner-lint-cotton-stock-report-test.xlsx", './upload/spinner-lint-cotton-stock-report.xlsx');
+        console.log('spinner-lint-cotton-stock report generation completed.');
+      })
+      .catch(error => {
+        console.log('Failed generation?.');
+        throw error;
+      });
+  } catch (error) {
+    console.error('Error appending data:', error);
+  }
 };
 //----------------------------------------- Farmer Reports ------------------------//
 
@@ -766,13 +766,13 @@ const generateExportFarmer = async () => {
       if (farmers.length === 0) {
         break;
       }
-      
+
       if (currentRow === maxRowsPerWorksheet) {
         worksheetIndex++;
         currentRow = 0;
       }
 
-      for (const [index,item] of farmers.entries()) {
+      for (const [index, item] of farmers.entries()) {
 
         let currentWorksheet = workbook.getWorksheet(`Farmer Report ${worksheetIndex}`);
         if (!currentWorksheet) {
@@ -784,12 +784,12 @@ const generateExportFarmer = async () => {
             mergedCell.font = { bold: true };
             mergedCell.alignment = { horizontal: 'center', vertical: 'middle' };
           }
-         
+
           // Set bold font for header row
           const headerRow = currentWorksheet.addRow([
-            'S.No', 'Farmer Name', 'Farmer Code','Country', 'State', 'District', 'Block', 'Village',
+            'S.No', 'Farmer Name', 'Farmer Code', 'Country', 'State', 'District', 'Block', 'Village',
             'Seasons', 'Farm Group', 'Brand Name', 'Programme Name', 'Total Agriculture Area', 'Estimated Yield (Kg/Ac)',
-            'Total estimated Production','Cotton Total Area', 'Total Estimated Cotton', 'Tracenet Id', 'ICS Name', 'Certification Status'
+            'Total estimated Production', 'Cotton Total Area', 'Total Estimated Cotton', 'Tracenet Id', 'ICS Name', 'Certification Status'
           ]);
           headerRow.font = { bold: true };
         }
@@ -805,7 +805,7 @@ const generateExportFarmer = async () => {
           seasons: item.seasons,
           farmGroup: item.farmGroup,
           brand: item.brand,
-          program:item.program,
+          program: item.program,
           agriTotalArea: item.agriTotalArea,
           agriEstimatedYield: item.agriEstimatedYield,
           agriEstimatedProd: item.agriEstimatedProd,
@@ -894,15 +894,15 @@ const generateOrganicFarmerReport = async () => {
           WHERE "pr"."program_name" ILIKE '%Organic%'
           ORDER BY "fr"."id" ASC
           LIMIT :limit OFFSET :offset`, {
-            replacements: { limit: batchSize, offset },
-            type: sequelize.QueryTypes.SELECT,
+        replacements: { limit: batchSize, offset },
+        type: sequelize.QueryTypes.SELECT,
       });
 
       if (farmer.length === 0) {
         break; // No more records to fetch, exit the loop
       }
 
-      for (const [index,item] of farmer.entries()) {
+      for (const [index, item] of farmer.entries()) {
         if (currentRow % maxRowsPerWorksheet === 0) {
           worksheetIndex++;
           currentRow = 0;
@@ -1020,8 +1020,8 @@ const generateNonOrganicFarmerReport = async () => {
               pr.program_name NOT LIKE '%Organic%'
           ORDER BY "fr"."id" ASC
           LIMIT :limit OFFSET :offset`, {
-            replacements: { limit: batchSize, offset },
-            type: sequelize.QueryTypes.SELECT,
+        replacements: { limit: batchSize, offset },
+        type: sequelize.QueryTypes.SELECT,
       });
 
       if (farmer.length === 0) {
@@ -1063,7 +1063,7 @@ const generateNonOrganicFarmerReport = async () => {
           state: item["State Name"],
           country: item["Country Name"],
           brand: item["Brand Name"],
-          program:item["Program Name"],
+          program: item["Program Name"],
           totalArea: item ? +item["Total Agricultural Area"] : 0,
           cottonArea: item ? +item["Total Cotton Area"] : 0,
           totalEstimatedProduction: item ? +item.agri_estimated_prod : 0,
@@ -1076,7 +1076,7 @@ const generateNonOrganicFarmerReport = async () => {
 
       offset += batchSize;
     }
-    
+
     await workbook.commit()
       .then(() => {
         // Rename the temporary file to the final filename
@@ -1275,9 +1275,9 @@ const generateProcurementReport = async () => {
           tr.status = 'Sold'
       ORDER BY tr.id ASC
       LIMIT :limit OFFSET :offset`, {
-      replacements: { limit: batchSize, offset },
-      type: sequelize.QueryTypes.SELECT,
-    });
+        replacements: { limit: batchSize, offset },
+        type: sequelize.QueryTypes.SELECT,
+      });
 
       if (transactions.length === 0) {
         // No more transactions to fetch, exit the loop
@@ -1500,7 +1500,7 @@ const generatePscpCottonProcurement = async () => {
               model: GinSales,
               as: "sales",
               attributes: [],
-              include:[{
+              include: [{
                 model: Ginner,
                 as: "ginner",
                 attributes: [],
@@ -1514,7 +1514,7 @@ const generatePscpCottonProcurement = async () => {
           ],
           where: {
             "$sales.season_id$": farm.season_id,
-            "$sales.status$" : { [Op.in]: ['Pending', 'Pending for QR scanning', 'Partially Accepted', 'Partially Rejected','Sold'] }
+            "$sales.status$": { [Op.in]: ['Pending', 'Pending for QR scanning', 'Partially Accepted', 'Partially Rejected', 'Sold'] }
           },
           group: ["sales.season_id"]
         })
@@ -1527,7 +1527,7 @@ const generatePscpCottonProcurement = async () => {
         obj.procured_lint_cotton = ((procurementRow?.dataValues?.procurement_seed_cotton ?? 0) * 35) / 100 / 1000;
         obj.no_of_bales = processGin?.dataValues?.no_of_bales ? Number(processGin?.dataValues?.no_of_bales) : 0;
         obj.total_qty_lint_produced = (ginBales ? ginBales?.dataValues?.total_qty / 1000 : 0);
-        obj.sold_bales = processSale?.dataValues?.no_of_bales ? Number(processSale?.dataValues?.no_of_bales): 0;
+        obj.sold_bales = processSale?.dataValues?.no_of_bales ? Number(processSale?.dataValues?.no_of_bales) : 0;
         obj.average_weight = (ginBales?.dataValues?.total_qty ?? 0) / (obj.no_of_bales ?? 0);
         obj.total_qty_sold_lint = (processSale?.dataValues?.total_qty ?? 0) / 1000;
         obj.balace_stock = (obj.no_of_bales > obj.sold_bales ? Number(obj.no_of_bales - obj.sold_bales) : 0);
@@ -1608,19 +1608,19 @@ const generatePscpProcurementLiveTracker = async () => {
   try {
 
     const currentDate = new Date();
-      const previousYearDate = new Date(currentDate);
-      previousYearDate.setFullYear(currentDate.getFullYear() - 1);
-      const allSeasons = await Season.findAll({});
+    const previousYearDate = new Date(currentDate);
+    previousYearDate.setFullYear(currentDate.getFullYear() - 1);
+    const allSeasons = await Season.findAll({});
 
-      let previousSeasonIndex = allSeasons.findIndex((season: any) => {
-          const fromDate = new Date(season.from);
-          const toDate = new Date(season.to);
-          return previousYearDate >= fromDate && previousYearDate <= toDate;
-      });
-      if (previousSeasonIndex === -1) {
-        previousSeasonIndex = allSeasons.length - 1; // Fallback to the last season
+    let previousSeasonIndex = allSeasons.findIndex((season: any) => {
+      const fromDate = new Date(season.from);
+      const toDate = new Date(season.to);
+      return previousYearDate >= fromDate && previousYearDate <= toDate;
+    });
+    if (previousSeasonIndex === -1) {
+      previousSeasonIndex = allSeasons.length - 1; // Fallback to the last season
     }
-    
+
     // Retrieve the current season
     const prevSeason = allSeasons[previousSeasonIndex];
     const prevSeasonId = prevSeason?.id;
@@ -1890,23 +1890,23 @@ const generatePscpProcurementLiveTracker = async () => {
           // Set bold font for header row
           const headerRow = currentWorksheet.addRow([
             "Sr No.",
-           "Ginning Mill",
-           "Country",
-           "State",
-           "Programme",
-          "Allocated Seed Cotton (MT)",
-          "Allocated Lint Cotton (MT)",
-          "Procured Seed Cotton (MT)",
-          "Seed cotton Procurement %",
-          "Seed Cotton Pending to accept at Ginner (MT)",
-          "Produced Lint Cotton (MT)",
-          "No. of Bales produced",
-          "No. of Bales Sold",
-          "Lint Sold (MT)",
-          "Ginner Order in Hand (MT)",
-          "Balance stock at Ginner (Bales )",
-          "Balance lint cotton stock at Ginner (MT)",
-          "Ginner Sale %",
+            "Ginning Mill",
+            "Country",
+            "State",
+            "Programme",
+            "Allocated Seed Cotton (MT)",
+            "Allocated Lint Cotton (MT)",
+            "Procured Seed Cotton (MT)",
+            "Seed cotton Procurement %",
+            "Seed Cotton Pending to accept at Ginner (MT)",
+            "Produced Lint Cotton (MT)",
+            "No. of Bales produced",
+            "No. of Bales Sold",
+            "Lint Sold (MT)",
+            "Ginner Order in Hand (MT)",
+            "Balance stock at Ginner (Bales )",
+            "Balance lint cotton stock at Ginner (MT)",
+            "Ginner Sale %",
           ]);
           headerRow.font = { bold: true };
         }
@@ -2019,7 +2019,7 @@ const generateAgentTransactions = async () => {
       }
 
       // Append data to worksheet
-      for await (const [index, item] of transactions.entries()){
+      for await (const [index, item] of transactions.entries()) {
         const rowValues = Object.values({
           index: index + offset + 1,
           date: moment(item.date).format('DD/MM/YYYY'),
@@ -2125,7 +2125,7 @@ const generateGinnerSummary = async () => {
         let obj: any = {};
 
 
-        let [cottonProcured, cottonProcessed,cottonProcessedByHeap,lintProcured, greyoutLint, lintSold]: any = await Promise.all([
+        let [cottonProcured, cottonProcessed, cottonProcessedByHeap, lintProcured, greyoutLint, lintSold]: any = await Promise.all([
           // Transaction.findOne({
           //   attributes: [
           //     [sequelize.fn('COALESCE', sequelize.fn('SUM', Sequelize.literal("CAST(qty_purchased AS DOUBLE PRECISION)")), 0), 'qty']
@@ -2241,8 +2241,8 @@ const generateGinnerSummary = async () => {
               ...ginBaleWhere,
               '$ginprocess.ginner_id$': item.id,
               '$ginprocess.greyout_status$': true,
-              sold_status: false, 
-              is_all_rejected: null, 
+              sold_status: false,
+              is_all_rejected: null,
             },
             group: ["ginprocess.ginner_id"]
           }),
@@ -2282,7 +2282,7 @@ const generateGinnerSummary = async () => {
             where: {
               ...baleSelectionWhere,
               '$sales.ginner_id$': item.id,
-              "$sales.status$" : { [Op.in]: ['Pending', 'Pending for QR scanning', 'Partially Accepted', 'Partially Rejected','Sold'] }
+              "$sales.status$": { [Op.in]: ['Pending', 'Pending for QR scanning', 'Partially Accepted', 'Partially Rejected', 'Sold'] }
             },
             group: ["sales.ginner_id"]
           }),
@@ -2297,19 +2297,19 @@ const generateGinnerSummary = async () => {
         obj.cottonStockKg = cottonProcured ? cottonProcured?.dataValues?.qty - (cottonProcessed ? totalCottonProcessedQty : 0) : 0;
         obj.cottonProcuredMt = convert_kg_to_mt(cottonProcured?.dataValues.qty ?? 0);
         obj.cottonProcessedeMt = convert_kg_to_mt(totalCottonProcessedQty);
-        obj.cottonStockMt = convert_kg_to_mt( cottonProcured ? cottonProcured?.dataValues?.qty - totalCottonProcessedQty : 0 );
+        obj.cottonStockMt = convert_kg_to_mt(cottonProcured ? cottonProcured?.dataValues?.qty - totalCottonProcessedQty : 0);
         obj.lintProcuredKg = lintProcured?.dataValues.qty ?? 0;
         obj.lintProcuredMt = convert_kg_to_mt(lintProcured?.dataValues.qty ?? 0);
         obj.lintSoldKg = lintSold?.dataValues.qty ?? 0;
         obj.lintSoldMt = convert_kg_to_mt(lintSold?.dataValues.qty ?? 0);
-        obj.lintGreyoutKg =  greyoutLint?.dataValues.qty ?? 0;
+        obj.lintGreyoutKg = greyoutLint?.dataValues.qty ?? 0;
         obj.lintGreyoutMT = convert_kg_to_mt(greyoutLint?.dataValues.qty ?? 0);
-        obj.lintActualStockMT = Number(obj.lintProcuredKg) >  (Number(obj.lintSoldKg) + Number(obj.lintGreyoutKg))
-        ? Number(obj.lintProcuredKg) - (Number(obj.lintSoldKg) + Number(obj.lintGreyoutKg))
-        : 0;
-        obj.lintActualStockMT = Number(obj.lintProcuredKg) >  (Number(obj.lintSoldKg) + Number(obj.lintGreyoutKg))
-        ? Number(obj.lintProcuredMt) - (Number(obj.lintSoldMt) + Number(obj.lintGreyoutMT))
-        : 0;
+        obj.lintActualStockMT = Number(obj.lintProcuredKg) > (Number(obj.lintSoldKg) + Number(obj.lintGreyoutKg))
+          ? Number(obj.lintProcuredKg) - (Number(obj.lintSoldKg) + Number(obj.lintGreyoutKg))
+          : 0;
+        obj.lintActualStockMT = Number(obj.lintProcuredKg) > (Number(obj.lintSoldKg) + Number(obj.lintGreyoutKg))
+          ? Number(obj.lintProcuredMt) - (Number(obj.lintSoldMt) + Number(obj.lintGreyoutMT))
+          : 0;
         obj.lintStockKg = Number(obj.lintProcuredKg) > Number(obj.lintSoldKg) ? Number(obj.lintProcuredKg) - Number(obj.lintSoldKg) : 0;
         obj.lintStockMt = Number(obj.lintProcuredKg) > Number(obj.lintSoldKg) ? Number(obj.lintProcuredMt) - Number(obj.lintSoldMt) : 0;
         obj.balesProduced = lintProcured?.dataValues?.bales_procured ? Number(lintProcured?.dataValues?.bales_procured) : 0;
@@ -2319,16 +2319,16 @@ const generateGinnerSummary = async () => {
         const rowValues = Object.values({
           index: index + offset + 1,
           name: item.name ? item.name : '',
-          cottonProcuredMt: Number(obj.cottonProcuredMt) ?? 0 ,
+          cottonProcuredMt: Number(obj.cottonProcuredMt) ?? 0,
           cottonProcessedeMt: Number(obj.cottonProcessedeMt) ?? 0,
           cottonStockMt: Number(obj.cottonStockMt) ?? 0,
           lintProcuredMt: Number(obj.lintProcuredMt) ?? 0,
           lintSoldMt: Number(obj.lintSoldMt) ?? 0,
           lintGreyoutMT: obj.lintGreyoutMT ? Number(obj.lintGreyoutMT) : 0,
           lintActualStockMT: obj.lintActualStockMT ? Number(obj.lintActualStockMT) : 0,
-          lintStockMt:  Number(obj.lintStockMt) ?? 0,
-          balesProduced:  Number(obj.balesProduced) ?? 0,
-          balesSold:  Number(obj.balesSold) ?? 0,
+          lintStockMt: Number(obj.lintStockMt) ?? 0,
+          balesProduced: Number(obj.balesProduced) ?? 0,
+          balesSold: Number(obj.balesSold) ?? 0,
           balesStock: Number(obj.balesStock) ?? 0
         });
         currentWorksheet.addRow(rowValues).commit();
@@ -2368,7 +2368,7 @@ const generateGinnerProcess = async () => {
     const batchSize = 5000;
     let worksheetIndex = 0;
     let offset = 0;
-    let hasNextBatch = true;  
+    let hasNextBatch = true;
 
     while (hasNextBatch) {
       const ginProcess = await sequelize.query(
@@ -2413,9 +2413,9 @@ const generateGinnerProcess = async () => {
                       END
                       ), 0
                     ) AS lint_quantity,
-                    COALESCE(MIN(CASE WHEN gb.bale_no ~ '^[0-9]+$' THEN CAST(gb.bale_no AS BIGINT) ELSE 0 END), 0) AS pressno_from,
-                    COALESCE(MAX(CASE WHEN gb.bale_no ~ '^[0-9]+$' THEN CAST(gb.bale_no AS BIGINT) ELSE 0 END), 0) AS pressno_to
-                FROM
+                    MIN(gb.bale_no) AS pressno_from,
+               MAX(LPAD(gb.bale_no, 10, ' ')) AS pressno_to 
+               FROM
                     "gin-bales" gb
                 GROUP BY
                     gb.process_id
@@ -2536,9 +2536,9 @@ const generateGinnerProcess = async () => {
                 sold_data sd ON gd.process_id = sd.process_id
             LIMIT :limit OFFSET :offset
             `, {
-            replacements: { limit: batchSize, offset },
-            type: sequelize.QueryTypes.SELECT,
-          });
+        replacements: { limit: batchSize, offset },
+        type: sequelize.QueryTypes.SELECT,
+      });
 
       if (ginProcess.length === 0) {
         hasNextBatch = false;
@@ -2563,7 +2563,7 @@ const generateGinnerProcess = async () => {
         // Set bold font for header row
         // Set bold font for header row
         const headerRow = currentWorksheet.addRow([
-          "Sr No.", "Process Date", "Data Entry Date", "Seed Cotton Consumed Season" ,"Lint process Season choosen", "Ginner Name", "Heap Number", "Gin Lot No", "Gin Press No", "REEL Lot No", "REEL Press No", "No of Bales", "Lint Quantity(Kgs)", "Total Seed Cotton Consumed(Kgs)", "GOT", "Total lint cotton sold(Kgs)", "Total Bales Sold", "Total lint cotton in stock(Kgs)", "Total Bales in stock", "Programme", "Village", "Grey Out Status"
+          "Sr No.", "Process Date", "Data Entry Date", "Seed Cotton Consumed Season", "Lint process Season choosen", "Ginner Name", "Heap Number", "Gin Lot No", "Gin Press No", "REEL Lot No", "REEL Press No", "No of Bales", "Lint Quantity(Kgs)", "Total Seed Cotton Consumed(Kgs)", "GOT", "Total lint cotton sold(Kgs)", "Total Bales Sold", "Total lint cotton in stock(Kgs)", "Total Bales in stock", "Programme", "Village", "Grey Out Status"
         ]);
         headerRow.font = { bold: true };
       }
@@ -2577,7 +2577,7 @@ const generateGinnerProcess = async () => {
           seed_consumed_seasons: item.seed_consumed_seasons ? item.seed_consumed_seasons : "",
           season: item.season ? item.season : "",
           ginner: item.ginner_name ? item.ginner_name : "",
-          heap: item.heap_number ?  item.heap_number : '',
+          heap: item.heap_number ? item.heap_number : '',
           lot_no: item.lot_no ? item.lot_no : "",
           press_no: item.press_no !== "NaN-NaN" ? item.press_no : item?.gin_press_no,
           reel_lot_no: item.reel_lot_no ? item.reel_lot_no : "",
@@ -2624,9 +2624,9 @@ const generateGinnerSales = async () => {
   try {
 
     whereCondition.push(`gs.status <> 'To be Submitted'`);
-  whereCondition.push(`gs.id IS NOT NULL`);
+    whereCondition.push(`gs.id IS NOT NULL`);
 
-  const whereClause = whereCondition.length > 0 ? `WHERE ${whereCondition.join(' AND ')}` : '';
+    const whereClause = whereCondition.length > 0 ? `WHERE ${whereCondition.join(' AND ')}` : '';
     // Create the excel workbook file
     const workbook = new ExcelJS.stream.xlsx.WorkbookWriter({
       stream: fs.createWriteStream("./upload/Ginner-sales-report-test.xlsx")
@@ -2943,7 +2943,7 @@ const generatePendingGinnerSales = async () => {
           [Sequelize.literal('"sales"."total_qty"'), "total_qty"],
           [Sequelize.literal('"sales"."invoice_no"'), "invoice_no"],
           [Sequelize.col('"sales"."lot_no"'), "lot_no"],
-          [Sequelize.fn('STRING_AGG', Sequelize.literal('DISTINCT "bale->ginprocess"."reel_lot_no"'), ', ' ) , "reel_lot_no"],
+          [Sequelize.fn('STRING_AGG', Sequelize.literal('DISTINCT "bale->ginprocess"."reel_lot_no"'), ', '), "reel_lot_no"],
           [Sequelize.literal('"sales"."rate"'), "rate"],
           [Sequelize.literal('"sales"."candy_rate"'), "candy_rate"],
           [Sequelize.literal('"sales"."no_of_bales"'), "no_of_bales"],
@@ -3178,7 +3178,7 @@ const generateGinnerCottonStock = async () => {
 
         obj.cotton_procured = cottonProcured?.dataValues?.cotton_procured ?? 0;
         obj.cotton_stock = cottonProcured?.dataValues?.cotton_stock ?? 0;
-        obj.cotton_processed =  obj.cotton_procured  - obj.cotton_stock;
+        obj.cotton_processed = obj.cotton_procured - obj.cotton_stock;
 
         const rowValues = Object.values({
           index: index + offset + 1,
@@ -3265,50 +3265,50 @@ const generateSpinnerSummary = async () => {
         ] = await Promise.all([
           BaleSelection.findOne({
             attributes: [
-                [
+              [
+                sequelize.fn(
+                  "COALESCE",
                   sequelize.fn(
-                    "COALESCE",
-                    sequelize.fn(
-                      "SUM",
-                      Sequelize.literal(`
+                    "SUM",
+                    Sequelize.literal(`
                         CASE
                           WHEN "bale"."accepted_weight" IS NOT NULL THEN "bale"."accepted_weight"
                           ELSE CAST("bale"."weight" AS DOUBLE PRECISION)
                         END
                       `)
-                    ),
-                    0
                   ),
-                  "lint_cotton_procured",
-                ]
+                  0
+                ),
+                "lint_cotton_procured",
+              ]
             ],
             where: {
               "$sales.buyer$": item.id,
               "$sales.status$": { [Op.in]: ['Sold', 'Partially Accepted', 'Partially Rejected'] },
               [Op.or]: [
                 { spinner_status: true },
-                {"$sales.status$": 'Sold'}
+                { "$sales.status$": 'Sold' }
               ]
             },
             include: [
-                {
-                    model: GinBale,
-                    as: "bale",
-                    attributes: []
-                },
-                {
-                  model: GinSales,
-                  as: "sales",
-                  attributes: []
+              {
+                model: GinBale,
+                as: "bale",
+                attributes: []
+              },
+              {
+                model: GinSales,
+                as: "sales",
+                attributes: []
               },
             ],
             group: ["sales.buyer"],
-           }),
+          }),
           BaleSelection.findOne({
             attributes: [
-                [Sequelize.fn('COALESCE', Sequelize.fn('SUM', Sequelize.literal(
-                    'CAST("bale"."weight" AS DOUBLE PRECISION)'
-                )), 0), 'lint_cotton_procured_pending']
+              [Sequelize.fn('COALESCE', Sequelize.fn('SUM', Sequelize.literal(
+                'CAST("bale"."weight" AS DOUBLE PRECISION)'
+              )), 0), 'lint_cotton_procured_pending']
             ],
             where: {
               "$sales.buyer$": item.id,
@@ -3316,19 +3316,19 @@ const generateSpinnerSummary = async () => {
               spinner_status: null,
             },
             include: [
-                {
-                    model: GinBale,
-                    as: "bale",
-                    attributes: []
-                },
-                {
-                  model: GinSales,
-                  as: "sales",
-                  attributes: []
+              {
+                model: GinBale,
+                as: "bale",
+                attributes: []
+              },
+              {
+                model: GinSales,
+                as: "sales",
+                attributes: []
               },
             ],
             group: ["sales.buyer"],
-        }),
+          }),
           LintSelections.findOne({
             attributes: [
               [
@@ -3372,7 +3372,7 @@ const generateSpinnerSummary = async () => {
               ...wheree,
               buyer: item.id,
               status: { [Op.in]: ['Sold', 'Partially Accepted', 'Partially Rejected'] },
-              greyout_status: true, 
+              greyout_status: true,
             },
           }),
           GinSales.findOne({
@@ -3418,7 +3418,7 @@ const generateSpinnerSummary = async () => {
           }),
           SpinProcess.findOne({
             attributes: [
-             [
+              [
                 sequelize.fn(
                   "COALESCE",
                   sequelize.fn("SUM", sequelize.col("qty_stock")),
@@ -3455,43 +3455,43 @@ const generateSpinnerSummary = async () => {
           ? Number(lint_cotton_procured?.dataValues.lint_cotton_procured ?? 0)
           : 0;
         obj.lintCottonProcuredPendingKG = lint_cotton_procured_pending
-          ? Number(lint_cotton_procured_pending?.dataValues.lint_cotton_procured_pending?? 0)
+          ? Number(lint_cotton_procured_pending?.dataValues.lint_cotton_procured_pending ?? 0)
           : 0;
         obj.lintConsumedKG = lint_consumed
-          ? Number(lint_consumed?.dataValues.lint_cotton_consumed?? 0)
+          ? Number(lint_consumed?.dataValues.lint_cotton_consumed ?? 0)
           : 0;
         obj.lintStockKG = lint_cotton_stock
-          ? Number(lint_cotton_stock?.dataValues.lint_cotton_stock?? 0)
+          ? Number(lint_cotton_stock?.dataValues.lint_cotton_stock ?? 0)
           : 0;
 
-        obj.lintGreyoutKg =  lint_greyout?.dataValues.lint_greyout ?? 0;
+        obj.lintGreyoutKg = lint_greyout?.dataValues.lint_greyout ?? 0;
 
-        obj.lintActualStockKg = Number(obj.lintStockKG) >  Number(obj.lintGreyoutKg)
-        ? Number(obj.lintStockKG) - (Number(obj.lintGreyoutKg))
-        : 0;
+        obj.lintActualStockKg = Number(obj.lintStockKG) > Number(obj.lintGreyoutKg)
+          ? Number(obj.lintStockKG) - (Number(obj.lintGreyoutKg))
+          : 0;
 
         obj.yarnProcuredKG = yarnProcured
-          ? Number(yarnProcured?.dataValues.yarn_procured?? 0)
+          ? Number(yarnProcured?.dataValues.yarn_procured ?? 0)
           : 0;
-        obj.yarnSoldKG = yarnSold ? Number(yarnSold.dataValues.yarn_sold?? 0) : 0;
+        obj.yarnSoldKG = yarnSold ? Number(yarnSold.dataValues.yarn_sold ?? 0) : 0;
         obj.yarnStockKG = yarnProcured
           ? Number(yarnProcured?.dataValues.yarn_stock ?? 0)
           : 0;
 
-        obj.yarnGreyoutKg =  yarnGreyout?.dataValues.yarn_greyout ?? 0;
+        obj.yarnGreyoutKg = yarnGreyout?.dataValues.yarn_greyout ?? 0;
 
-        obj.yarnActualStockKg = Number(obj.yarnStockKG) >  Number(obj.yarnGreyoutKg)
-        ? Number(obj.yarnStockKG) - (Number(obj.yarnGreyoutKg))
-        : 0;
+        obj.yarnActualStockKg = Number(obj.yarnStockKG) > Number(obj.yarnGreyoutKg)
+          ? Number(obj.yarnStockKG) - (Number(obj.yarnGreyoutKg))
+          : 0;
         obj.lintCottonProcuredMT = Number(convert_kg_to_mt(obj.lintCottonProcuredKG)) ?? 0;
         obj.lintCottonProcuredPendingMT = Number(convert_kg_to_mt(obj.lintCottonProcuredPendingKG)) ?? 0;
         obj.lintConsumedMT = Number(convert_kg_to_mt(obj.lintConsumedKG));
         obj.lintStockMT = Number(convert_kg_to_mt(obj.lintStockKG));
-        obj.lintGreyoutMT  = convert_kg_to_mt(obj.lintGreyoutKg);
+        obj.lintGreyoutMT = convert_kg_to_mt(obj.lintGreyoutKg);
         obj.lintActualStockMT = convert_kg_to_mt(obj.lintActualStockKg);
         obj.yarnSoldMT = Number(convert_kg_to_mt(obj.yarnSoldKG));
         obj.yarnProcuredMT = Number(convert_kg_to_mt(obj.yarnProcuredKG));
-        obj.yarnGreyoutMT  = convert_kg_to_mt(obj.yarnGreyoutKg);
+        obj.yarnGreyoutMT = convert_kg_to_mt(obj.yarnGreyoutKg);
         obj.yarnActualStockMT = convert_kg_to_mt(obj.yarnActualStockKg);
         obj.yarnStockMT = Number(convert_kg_to_mt(obj.yarnStockKG));
 
@@ -3571,7 +3571,7 @@ const generateSpinnerBale = async () => {
   try {
 
     whereCondition.push(`gs.status IN ('Sold', 'Partially Accepted', 'Partially Rejected')`);
-  
+
     // const whereClause = whereCondition.length > 0 ? `WHERE ${whereCondition.join(' AND ')}` : '';
     const whereClause = whereCondition.length > 0 ? `WHERE ${whereCondition.join(' AND ')} AND bd.total_qty > 0` : 'WHERE bd.total_qty > 0';
 
@@ -3648,14 +3648,14 @@ const generateSpinnerBale = async () => {
                     gs."id" ASC
                 LIMIT 
                     :limit OFFSET :offset;`
-                    
 
-        const [rows] = await Promise.all([
-            sequelize.query(dataQuery, {
-                replacements: { limit: batchSize, offset },
-                type: sequelize.QueryTypes.SELECT,
-            })
-        ]);
+
+      const [rows] = await Promise.all([
+        sequelize.query(dataQuery, {
+          replacements: { limit: batchSize, offset },
+          type: sequelize.QueryTypes.SELECT,
+        })
+      ]);
       // // Append data to worksheet
 
       if (rows.length === 0) {
@@ -3870,7 +3870,7 @@ const generateSpinnerYarnProcess = async () => {
 
       // Execute the queries
       const rows = await sequelize.query(dataQuery, {
-        replacements: { limit : batchSize, offset },
+        replacements: { limit: batchSize, offset },
         type: sequelize.QueryTypes.SELECT,
       });
 
@@ -3888,7 +3888,7 @@ const generateSpinnerYarnProcess = async () => {
         let blendValue = "";
         let blendqty = "";
         let yarnCount = "";
-  
+
         if (item.cottonmix_type && item.cottonmix_type.length > 0) {
           let blend = await CottonMix.findAll({
             where: { id: { [Op.in]: item.cottonmix_type } },
@@ -3900,7 +3900,7 @@ const generateSpinnerYarnProcess = async () => {
             blendqty += `${obj},`;
           }
         }
-  
+
         const rowValues = Object.values({
           index: index + offset + 1,
           createdAt: item.createdAt ? item.createdAt : "",
@@ -3917,19 +3917,19 @@ const generateSpinnerYarnProcess = async () => {
           blend: blendValue,
           blendqty: blendqty,
           cotton_consumed: item?.cotton_consumed
-          ? Number(item?.cotton_consumed)
-          : 0,
-        comber_consumed: item?.comber_consumed
-          ? Number(item?.comber_consumed)
-          : 0,
-        total_lint_blend_consumed: item?.total_qty
-        ? Number(item?.total_qty)
-        : 0,
+            ? Number(item?.cotton_consumed)
+            : 0,
+          comber_consumed: item?.comber_consumed
+            ? Number(item?.comber_consumed)
+            : 0,
+          total_lint_blend_consumed: item?.total_qty
+            ? Number(item?.total_qty)
+            : 0,
           program: item.program ? item.program : "",
           total: item.net_yarn_qty ? Number(item.net_yarn_qty) : 0,
           yarn_sold: item?.yarn_sold
-          ? Number(item?.yarn_sold)
-          : 0,
+            ? Number(item?.yarn_sold)
+            : 0,
           yarn_stock: item.qty_stock ? Number(item.qty_stock) : 0,
           greyout_status: item.greyout_status ? "Yes" : "No",
         });
@@ -4041,7 +4041,7 @@ const generateSpinnerSale = async () => {
 
     while (hasNextBatch) {
 
-      const rows : any = await SpinProcessYarnSelection.findAll(
+      const rows: any = await SpinProcessYarnSelection.findAll(
         {
           attributes: [
             [Sequelize.literal('"sales"."id"'), "sales_id"],
@@ -4063,7 +4063,7 @@ const generateSpinnerSale = async () => {
             [Sequelize.literal('"sales"."total_qty"'), "total_qty"],
             [Sequelize.literal('"sales"."invoice_no"'), "invoice_no"],
             [Sequelize.literal('"sales"."batch_lot_no"'), "batch_lot_no"],
-            [Sequelize.fn('STRING_AGG', Sequelize.literal('DISTINCT "process"."reel_lot_no"'), ',' ) , "reel_lot_no"],
+            [Sequelize.fn('STRING_AGG', Sequelize.literal('DISTINCT "process"."reel_lot_no"'), ','), "reel_lot_no"],
             [Sequelize.fn('ARRAY_AGG', Sequelize.literal('DISTINCT "process"."id"')), "process_ids"],
             [Sequelize.literal('"sales"."no_of_boxes"'), "no_of_boxes"],
             [Sequelize.literal('"sales"."price"'), "price"],
@@ -4112,7 +4112,7 @@ const generateSpinnerSale = async () => {
         }
       );
 
-      
+
       if (rows.length === 0) {
         hasNextBatch = false;
         break;
@@ -4125,13 +4125,13 @@ const generateSpinnerSale = async () => {
       for await (const [index, item] of rows.entries()) {
 
         let processIds = item?.dataValues?.process_ids && Array.isArray(item?.dataValues?.process_ids)
-        ? item.dataValues.process_ids.filter((id: any) => id !== null && id !== undefined)
-        : [];
+          ? item.dataValues.process_ids.filter((id: any) => id !== null && id !== undefined)
+          : [];
 
-      let seedSeason = [];
+        let seedSeason = [];
 
-      if (processIds.length > 0) {
-        [seedSeason] = await sequelize.query(`
+        if (processIds.length > 0) {
+          [seedSeason] = await sequelize.query(`
           SELECT 
               STRING_AGG(DISTINCT s.name, ', ') AS seasons
           FROM
@@ -4143,21 +4143,21 @@ const generateSpinnerSale = async () => {
           WHERE 
               ls.process_id IN (${processIds.join(',')})
       `);
-      }
+        }
 
         let yarnCount: string = "";
         let yarnTypeData: string = "";
 
-        const formatDate = (dateString:any) => {
+        const formatDate = (dateString: any) => {
           if (!dateString) return "";
           const date = new Date(dateString);
-          
-          const day = String(date.getDate()).padStart(2, '0'); 
+
+          const day = String(date.getDate()).padStart(2, '0');
           const month = String(date.getMonth() + 1).padStart(2, '0');
           const year = date.getFullYear();
-        
+
           return `${day}-${month}-${year}`;
-      };
+        };
 
         if (item.dataValues.yarn_count && item.dataValues.yarn_count?.length > 0) {
           let type = await YarnCount.findAll({
@@ -4267,13 +4267,13 @@ const generateSpinnerSale = async () => {
 
 const generateSpinProcessBackwardfTraceabilty = async () => {
   const maxRowsPerWorksheet = 500000;
-  const whereCondition:any = {};
+  const whereCondition: any = {};
   try {
-        // Create the excel workbook file
-        const workbook = new ExcelJS.stream.xlsx.WorkbookWriter({
-          stream: fs.createWriteStream("./upload/spin-process-backward-traceability-test.xlsx")
-        });
-    
+    // Create the excel workbook file
+    const workbook = new ExcelJS.stream.xlsx.WorkbookWriter({
+      stream: fs.createWriteStream("./upload/spin-process-backward-traceability-test.xlsx")
+    });
+
     const batchSize = 5000;
     let worksheetIndex = 0;
     let offset = 0;
@@ -4449,8 +4449,8 @@ const generateSpinProcessBackwardfTraceabilty = async () => {
           yc.processor_name,
           lc.qr;`
       );
-  
-  
+
+
       // const groupedData = Object.values(rows[0]?.reduce((acc: any, curr: any) => {
       //   const { spinprocess_id, spinner_name,reel_lot_no, net_yarn_qty, gnr_lot_no, gnr_reel_lot_no, gnr_invoice_no, gnr_name, lint_consumed, spnr_invoice_no, spnr_yarn_sold, knitter, weaver, village_names } = curr;
       //   if (!acc[spinprocess_id]) {
@@ -4502,27 +4502,27 @@ const generateSpinProcessBackwardfTraceabilty = async () => {
 
       for await (let [index, item] of rows[0]?.entries()) {
         let knitterName =
-        item.knitter && item.knitter.length > 0
-          ? item.knitter
-            .map((val: any) => val)
-            .filter((item: any) => item !== null && item !== undefined && item !== '')
-          : [];
+          item.knitter && item.knitter.length > 0
+            ? item.knitter
+              .map((val: any) => val)
+              .filter((item: any) => item !== null && item !== undefined && item !== '')
+            : [];
 
-      let weaverName =
-        item.weaver && item.weaver.length > 0
-          ? item.weaver
-            .map((val: any) => val)
-            .filter((item: any) => item !== null && item !== undefined && item !== '')
-          : [];
+        let weaverName =
+          item.weaver && item.weaver.length > 0
+            ? item.weaver
+              .map((val: any) => val)
+              .filter((item: any) => item !== null && item !== undefined && item !== '')
+            : [];
 
-      let processorName =
-        item.processor_name && item.processor_name.length > 0
-          ? item.processor_name
-            .map((val: any) => val)
-            .filter((item: any) => item !== null && item !== undefined && item !== '')
-          : [];
+        let processorName =
+          item.processor_name && item.processor_name.length > 0
+            ? item.processor_name
+              .map((val: any) => val)
+              .filter((item: any) => item !== null && item !== undefined && item !== '')
+            : [];
 
-      let fbrc_name = [...new Set([...knitterName, ...weaverName, ...processorName])];
+        let fbrc_name = [...new Set([...knitterName, ...weaverName, ...processorName])];
 
         const rowValues = [
           index + offset + 1,
@@ -4537,7 +4537,7 @@ const generateSpinProcessBackwardfTraceabilty = async () => {
           item?.gnr_invoice_no ? item?.gnr_invoice_no : "",
           item?.lint_consumed ? Number(item?.lint_consumed) : 0,
           item.village_names && item.village_names.length > 0 ? item.village_names.join(", ") : "",
-          item?.gnr_name ? item?.gnr_name: "",
+          item?.gnr_name ? item?.gnr_name : "",
         ];
         currentWorksheet.addRow(rowValues).commit();
       }
@@ -4619,7 +4619,7 @@ const generatePendingSpinnerBale = async () => {
           [Sequelize.literal('"sales"."total_qty"'), "total_qty"],
           [Sequelize.literal('"sales"."invoice_no"'), "invoice_no"],
           [Sequelize.col('"sales"."lot_no"'), "lot_no"],
-          [Sequelize.fn('STRING_AGG', Sequelize.literal('DISTINCT "bale->ginprocess"."reel_lot_no"'), ',' ) , "reel_lot_no"],
+          [Sequelize.fn('STRING_AGG', Sequelize.literal('DISTINCT "bale->ginprocess"."reel_lot_no"'), ','), "reel_lot_no"],
           [Sequelize.literal('"sales"."rate"'), "rate"],
           [Sequelize.literal('"sales"."candy_rate"'), "candy_rate"],
           [Sequelize.literal('"sales"."total_qty"'), "lint_quantity"],
@@ -4751,21 +4751,21 @@ const generatePendingSpinnerBale = async () => {
   }
 };
 
-const generateBrandWiseData = async () =>{
+const generateBrandWiseData = async () => {
   const maxRowsPerWorksheet = 500000; // Maximum number of rows per worksheet in Excel
 
   try {
-        // Create the excel workbook file
-        const workbook = new ExcelJS.stream.xlsx.WorkbookWriter({
-          stream: fs.createWriteStream("./upload/brand-wise-data-report-test.xlsx")
-        });
-    
-        const batchSize = 5000;
-        let worksheetIndex = 0;
-        let offset = 0;
-        let hasNextBatch = true;
+    // Create the excel workbook file
+    const workbook = new ExcelJS.stream.xlsx.WorkbookWriter({
+      stream: fs.createWriteStream("./upload/brand-wise-data-report-test.xlsx")
+    });
 
-      while (hasNextBatch) {
+    const batchSize = 5000;
+    let worksheetIndex = 0;
+    let offset = 0;
+    let hasNextBatch = true;
+
+    while (hasNextBatch) {
 
       const rows = await Brand.findAll({
         offset: offset,
@@ -4782,37 +4782,38 @@ const generateBrandWiseData = async () =>{
       }
 
       let currentWorksheet = workbook.getWorksheet(`Sheet${worksheetIndex}`);
-        if (!currentWorksheet) {
-          currentWorksheet = workbook.addWorksheet(`Sheet${worksheetIndex}`);
-          if (worksheetIndex == 1) {
-            currentWorksheet.mergeCells("A1:J1");
-            const mergedCell = currentWorksheet.getCell("A1");
-            mergedCell.value = "CottonConnect | Brand Wise Data Report";
-            mergedCell.font = { bold: true };
-            mergedCell.alignment = { horizontal: "center", vertical: "middle" };
-          }
-          // Set bold font for header row
-          const headerRow = currentWorksheet.addRow([
-            "Sr No.",
-              "Brand",
-              "Total Numbers of Farmers Registered",
-              "Total Estimated Seed Cotton (MT)",
-              "Total Seed Cotton Procured (MT)",
-              "Total Number of Bales Processed",
-              "Total Lint Processed (MT)",
-              "Total Lint Sold (MT)",
-              "Total Yarn Processed (MT)",
-              "Total Yarn Sold (MT)",
-          ]);
-          headerRow.font = { bold: true };
+      if (!currentWorksheet) {
+        currentWorksheet = workbook.addWorksheet(`Sheet${worksheetIndex}`);
+        if (worksheetIndex == 1) {
+          currentWorksheet.mergeCells("A1:J1");
+          const mergedCell = currentWorksheet.getCell("A1");
+          mergedCell.value = "CottonConnect | Brand Wise Data Report";
+          mergedCell.font = { bold: true };
+          mergedCell.alignment = { horizontal: "center", vertical: "middle" };
         }
+        // Set bold font for header row
+        const headerRow = currentWorksheet.addRow([
+          "Sr No.",
+          "Brand",
+          "Total Numbers of Farmers Registered",
+          "Total Estimated Seed Cotton (MT)",
+          "Total Seed Cotton Procured (MT)",
+          "Total Number of Bales Processed",
+          "Total Lint Processed (MT)",
+          "Total Lint Sold (MT)",
+          "Total Yarn Processed (MT)",
+          "Total Yarn Sold (MT)",
+        ]);
+        headerRow.font = { bold: true };
+      }
 
       for await (let [index, item] of rows.entries()) {
         let [result, trans, lintProcured, lintSold, yarnProcessed, yarnSold]: any =
           await Promise.all([
             Farm.findOne({
               where: {
-                "$farmer.brand_id$": item.dataValues.id},
+                "$farmer.brand_id$": item.dataValues.id
+              },
               attributes: [
                 [Sequelize.fn('COUNT', Sequelize.literal('DISTINCT farmer_id')), 'total_farmers'],
                 [Sequelize.fn('COALESCE', Sequelize.fn('SUM', Sequelize.col('farms.total_estimated_cotton')), 0), 'total_estimated_cotton']
@@ -4822,7 +4823,7 @@ const generateBrandWiseData = async () =>{
                 as: 'farmer',
                 attributes: []
               }],
-              group:["farmer.brand_id"]
+              group: ["farmer.brand_id"]
             }),
             Transaction.findOne({
               attributes: [
@@ -4921,7 +4922,7 @@ const generateBrandWiseData = async () =>{
               ],
               where: {
                 "$sales.ginner.brand$": { [Op.overlap]: [item?.dataValues?.id] },
-                "$sales.status$" : { [Op.in]: ['Pending', 'Pending for QR scanning', 'Partially Accepted', 'Partially Rejected','Sold'] }
+                "$sales.status$": { [Op.in]: ['Pending', 'Pending for QR scanning', 'Partially Accepted', 'Partially Rejected', 'Sold'] }
               },
               group: ["sales.ginner.brand"],
             }),
@@ -4986,21 +4987,21 @@ const generateBrandWiseData = async () =>{
           yarnSold ? Number(formatDecimal(convert_kg_to_mt(yarnSold?.dataValues?.yarn_sold ?? 0))) : 0,
         ];
         currentWorksheet.addRow(rowValues).commit();
-        }
-        offset += batchSize;
       }
+      offset += batchSize;
+    }
 
     // Save the workbook
     await workbook.commit()
-    .then(() => {
-      // Rename the temporary file to the final filename
-      fs.renameSync("./upload/brand-wise-data-report-test.xlsx", './upload/brand-wise-data-report.xlsx');
-      console.log('brand-wise-data report generation completed.');
-    })
-    .catch(error => {
-      console.log('Failed generation Report.');
-      throw error;
-    });
+      .then(() => {
+        // Rename the temporary file to the final filename
+        fs.renameSync("./upload/brand-wise-data-report-test.xlsx", './upload/brand-wise-data-report.xlsx');
+        console.log('brand-wise-data report generation completed.');
+      })
+      .catch(error => {
+        console.log('Failed generation Report.');
+        throw error;
+      });
 
   } catch (error: any) {
     console.log(error);
@@ -5008,39 +5009,39 @@ const generateBrandWiseData = async () =>{
 }
 
 
-const generatePremiumValidationData = async () =>{
+const generatePremiumValidationData = async () => {
   const maxRowsPerWorksheet = 500000; // Maximum number of rows per worksheet in Excel
 
   try {
-        // Create the excel workbook file
-        const workbook = new ExcelJS.stream.xlsx.WorkbookWriter({
-          stream: fs.createWriteStream("./upload/premium-validation-report-test.xlsx")
-        });
-    
-        const batchSize = 5000;
-        let worksheetIndex = 0;
-        let offset = 0;
-        let hasNextBatch = true;
+    // Create the excel workbook file
+    const workbook = new ExcelJS.stream.xlsx.WorkbookWriter({
+      stream: fs.createWriteStream("./upload/premium-validation-report-test.xlsx")
+    });
 
-        let include = [
-          {
-            model: FarmGroup,
-            as: "farmGroup",
-            attributes: ["id", "name", "status"],
-          },
-          {
-            model: Brand,
-            as: "brand",
-            attributes: ["id", "brand_name", "address"],
-          },
-          {
-            model: Season,
-            as: "season",
-            attributes: ["id", "name"],
-          },
-        ];
+    const batchSize = 5000;
+    let worksheetIndex = 0;
+    let offset = 0;
+    let hasNextBatch = true;
 
-      while (hasNextBatch) {
+    let include = [
+      {
+        model: FarmGroup,
+        as: "farmGroup",
+        attributes: ["id", "name", "status"],
+      },
+      {
+        model: Brand,
+        as: "brand",
+        attributes: ["id", "brand_name", "address"],
+      },
+      {
+        model: Season,
+        as: "season",
+        attributes: ["id", "name"],
+      },
+    ];
+
+    while (hasNextBatch) {
 
       const rows = await ValidationProject.findAll({
         include: include,
@@ -5058,32 +5059,32 @@ const generatePremiumValidationData = async () =>{
       }
 
       let currentWorksheet = workbook.getWorksheet(`Sheet${worksheetIndex}`);
-        if (!currentWorksheet) {
-          currentWorksheet = workbook.addWorksheet(`Sheet${worksheetIndex}`);
-          if (worksheetIndex == 1) {
-            currentWorksheet.mergeCells("A1:L1");
-            const mergedCell = currentWorksheet.getCell("A1");
-            mergedCell.value = "CottonConnect | Premium Validation Report";
-            mergedCell.font = { bold: true };
-            mergedCell.alignment = { horizontal: "center", vertical: "middle" };
-          }
-          // Set bold font for header row
-          const headerRow = currentWorksheet.addRow([
-            "S.No",
-            "Date and Time",
-            "Season",
-            "Farm Group",
-            "Total Number of Farmers",
-            "Total Seed Cotton Purchased (MT)",
-            "Lint Cotton Sold to Spinner (MT)",
-            "Lint Cost Recieved from Spinner (INR)",
-            "Premium Transferred to Farmers (INR)",
-            "Average Seed Cotton Purchase Price (INR/Kg)",
-            "Average Conventional Cotton Price (INR/Kg)",
-            "% Premium Transferred per KG of Seed Cotton Procured",
-          ]);
-          headerRow.font = { bold: true };
+      if (!currentWorksheet) {
+        currentWorksheet = workbook.addWorksheet(`Sheet${worksheetIndex}`);
+        if (worksheetIndex == 1) {
+          currentWorksheet.mergeCells("A1:L1");
+          const mergedCell = currentWorksheet.getCell("A1");
+          mergedCell.value = "CottonConnect | Premium Validation Report";
+          mergedCell.font = { bold: true };
+          mergedCell.alignment = { horizontal: "center", vertical: "middle" };
         }
+        // Set bold font for header row
+        const headerRow = currentWorksheet.addRow([
+          "S.No",
+          "Date and Time",
+          "Season",
+          "Farm Group",
+          "Total Number of Farmers",
+          "Total Seed Cotton Purchased (MT)",
+          "Lint Cotton Sold to Spinner (MT)",
+          "Lint Cost Recieved from Spinner (INR)",
+          "Premium Transferred to Farmers (INR)",
+          "Average Seed Cotton Purchase Price (INR/Kg)",
+          "Average Conventional Cotton Price (INR/Kg)",
+          "% Premium Transferred per KG of Seed Cotton Procured",
+        ]);
+        headerRow.font = { bold: true };
+      }
 
       for await (let [index, item] of rows.entries()) {
 
@@ -5102,21 +5103,21 @@ const generatePremiumValidationData = async () =>{
           item.dataValues.price_variance ? Number(item.dataValues.price_variance) : 0,
         ];
         currentWorksheet.addRow(rowValues).commit();
-        }
-        offset += batchSize;
       }
+      offset += batchSize;
+    }
 
     // Save the workbook
     await workbook.commit()
-    .then(() => {
-      // Rename the temporary file to the final filename
-      fs.renameSync("./upload/premium-validation-report-test.xlsx", './upload/premium-validation-report.xlsx');
-      console.log('premium-validation report generation completed.');
-    })
-    .catch(error => {
-      console.log('Failed generation Report.');
-      throw error;
-    });
+      .then(() => {
+        // Rename the temporary file to the final filename
+        fs.renameSync("./upload/premium-validation-report-test.xlsx", './upload/premium-validation-report.xlsx');
+        console.log('premium-validation report generation completed.');
+      })
+      .catch(error => {
+        console.log('Failed generation Report.');
+        throw error;
+      });
 
   } catch (error: any) {
     console.log(error);
