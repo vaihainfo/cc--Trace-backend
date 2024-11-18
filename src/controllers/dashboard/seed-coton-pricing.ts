@@ -119,8 +119,8 @@ const getPricyByCountry = async (
 
     const reqData = await getQueryParams(req, res);
     const where = getOverAllDataQuery(reqData);
-    const procuredData = await getProcuredByCountryData(where);
-    const data = await getProcuredDataRes(procuredData, reqData.season);
+    const pricingData = await getPricingByCountryData(where);
+    const data = await getPricingDataRes(pricingData, reqData.season);
     return res.sendSuccess(res, data);
 
   } catch (error: any) {
@@ -132,7 +132,7 @@ const getPricyByCountry = async (
 };
 
 
-const getProcuredByCountryData = async (where: any) => {
+const getPricingByCountryData = async (where: any) => {
   where.status = 'Sold';
   const result = await Transaction.findAll({
     attributes: [
@@ -163,7 +163,7 @@ const getProcuredByCountryData = async (where: any) => {
 };
 
 
-const getProcuredDataRes = async (
+const getPricingDataRes = async (
   procuredCountList: any = [],
   reqSeason: any
 ) => {
