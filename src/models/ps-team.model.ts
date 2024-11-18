@@ -41,7 +41,7 @@ const PSTeam = db.define('ps_teams', {
   email: {
     type: DataTypes.STRING
   },
-  bmUser_id: {
+  psUser_id: {
     allowNull: false,
     type: DataTypes.ARRAY(DataTypes.INTEGER)
   },
