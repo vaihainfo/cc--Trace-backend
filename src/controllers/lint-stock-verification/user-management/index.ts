@@ -465,337 +465,522 @@ const createLSVUser = async (req: Request, res: Response) => {
       let results;
       let data = {};
       let userIds: any = [];
-
+  
       if (!req.query.processorType) {
         return res.sendError(res, 'Need processor Type')
       }
-
-        if(processorType === 'Traceability_Executive'){
-          results= await TraceabilityExecutive.findOne(
-            {where:{id: id},
-            include:[
+  
+      if (processorType === 'Traceability_Executive') {
+        results = await TraceabilityExecutive.findOne(
+          {
+            where: { id: id },
+            include: [
               {
-                  model: Country, as: 'country', attributes: ['id', 'county_name']
+                model: Country, as: 'country', attributes: ['id', 'county_name']
               }
             ]
           });
-          if (results) {
-            userIds = results.teUser_id;
-          }
+        if (results) {
+          userIds = results.teUser_id;
         }
-
-        if(processorType === 'Supply_Chain_Manager'){
-          results = await SupplyChainManager.findOne(
-            {where:{id: id},
-            include:[
+      }
+  
+      if (processorType === 'Supply_Chain_Manager') {
+        results = await SupplyChainManager.findOne(
+          {
+            where: { id: id },
+            include: [
               {
-                  model: Country, as: 'country', attributes: ['id', 'county_name']
+                model: Country, as: 'country', attributes: ['id', 'county_name']
               }
             ]
           });
-          if (results) {
-            userIds = results.scmUser_id;
-          }
+        if (results) {
+          userIds = results.scmUser_id;
         }
-
-        if(processorType === 'Supply_Chain_Director'){
-          results = await SupplyChainDirector.findOne(
-            {where:{id: id},
-            include:[
+      }
+  
+      if (processorType === 'Supply_Chain_Director') {
+        results = await SupplyChainDirector.findOne(
+          {
+            where: { id: id },
+            include: [
               {
-                  model: Country, as: 'country', attributes: ['id', 'county_name']
+                model: Country, as: 'country', attributes: ['id', 'county_name']
               }
             ]
           });
-          if (results) {
-            userIds = results.scdUser_id;
-          }
+        if (results) {
+          userIds = results.scdUser_id;
         }
-
-        if(results){
-          let states = null;
-            let brands = null;
-            let ginners = null;
-            let spinners = null;
-            let programs = null;
-            let te = null;
-            let scm = null;
-            let scd = null;
-
-            let userData = null;
-            console.log(results)
-
-            if(results?.dataValues?.program_id && results?.dataValues?.program_id.length > 0){
-              programs = await Program.findAll({attributes: ['id', 'program_name'],where:{id: results?.dataValues?.program_id}})
-            }
-
-            if(results?.dataValues?.mapped_states && results?.dataValues?.mapped_states.length > 0){
-              states = await State.findAll({attributes: ['id', 'state_name'],where:{id: results?.dataValues?.mapped_states}})
-            }
+      }
   
-            if(results?.dataValues?.brand && results?.dataValues?.brand.length > 0){
-              brands = await Brand.findAll({attributes: ['id', 'brand_name'],where:{id: results?.dataValues?.brand}})
-            }
-  
-            if(results?.dataValues?.mapped_ginners && results?.dataValues?.mapped_ginners.length > 0){
-              ginners = await Ginner.findAll({attributes: ['id', 'name'],where:{id: results?.dataValues?.mapped_ginners}})
-            }
-  
-            if(results?.dataValues?.mapped_spinners && results?.dataValues?.mapped_spinners.length > 0){
-              spinners = await Spinner.findAll({attributes: ['id', 'name'],where:{id: results?.dataValues?.mapped_spinners}})
-            }
-
-            if(results?.dataValues?.mapped_spinners && results?.dataValues?.mapped_spinners.length > 0){
-              spinners = await Spinner.findAll({attributes: ['id', 'name'],where:{id: results?.dataValues?.mapped_spinners}})
-            }
-
-            te = await TraceabilityExecutive.findOne({ where: { teUser_id: { [Op.overlap]: userIds } } })
-            scm = await SupplyChainManager.findOne({ where: { scmUser_id: { [Op.overlap]: userIds } } })
-            scd = await SupplyChainDirector.findOne({ where: { scdUser_id: { [Op.overlap]: userIds } } })
-
-            if(userIds && userIds.length > 0){
-              userData = await User.findAll({
-                where: { id: userIds }, 
-                attributes: {
-                    exclude: ["password", "createdAt", "updatedAt"]
-                },
-                include: [
-                    {
-                        model: UserRole,
-                        as: "user_role",
-                    }
-                ]
-            })
-            }
-
-            data = { ...results?.dataValues, states, programs, brands,ginners,spinners, te, scm, scd, userData }
+      if (processorType === 'Brand_Executive') {
+        results = await BrandExecutive.findOne(
+          {
+            where: { id: id },
+            include: [
+              {
+                model: Country, as: 'country', attributes: ['id', 'county_name']
+              }
+            ]
+          });
+        if (results) {
+          userIds = results.beUser_id;
         }
-
-        return res.sendSuccess(res, data, 200);
-
+      }
+  
+      if (processorType === 'Brand_Manager') {
+        results = await BrandManager.findOne(
+          {
+            where: { id: id },
+            include: [
+              {
+                model: Country, as: 'country', attributes: ['id', 'county_name']
+              }
+            ]
+          });
+        if (results) {
+          userIds = results.bmUser_id;
+        }
+      }
+  
+      if (processorType === 'PS_Team') {
+        results = await PSTeam.findOne(
+          {
+            where: { id: id },
+            include: [
+              {
+                model: Country, as: 'country', attributes: ['id', 'county_name']
+              }
+            ]
+          });
+        if (results) {
+          userIds = results.psUser_id;
+        }
+      }
+  
+      if (results) {
+        let states = null;
+        let brands = null;
+        let ginners = null;
+        let spinners = null;
+        let programs = null;
+        let userData = null;
+  
+        if (results?.dataValues?.program_id && results?.dataValues?.program_id.length > 0) {
+          programs = await Program.findAll({ attributes: ['id', 'program_name'], where: { id: results?.dataValues?.program_id } })
+        }
+  
+        if (results?.dataValues?.mapped_states && results?.dataValues?.mapped_states.length > 0) {
+          states = await State.findAll({ attributes: ['id', 'state_name'], where: { id: results?.dataValues?.mapped_states } })
+        }
+  
+        if (results?.dataValues?.brand && results?.dataValues?.brand.length > 0) {
+          brands = await Brand.findAll({ attributes: ['id', 'brand_name'], where: { id: results?.dataValues?.brand } })
+        }
+  
+        if (results?.dataValues?.mapped_ginners && results?.dataValues?.mapped_ginners.length > 0) {
+          ginners = await Ginner.findAll({ attributes: ['id', 'name'], where: { id: results?.dataValues?.mapped_ginners } })
+        }
+  
+        if (results?.dataValues?.mapped_spinners && results?.dataValues?.mapped_spinners.length > 0) {
+          spinners = await Spinner.findAll({ attributes: ['id', 'name'], where: { id: results?.dataValues?.mapped_spinners } })
+        }
+  
+        if (userIds && userIds.length > 0) {
+          userData = await User.findAll({
+            where: { id: userIds },
+            attributes: {
+              exclude: ["password", "createdAt", "updatedAt"]
+            },
+            include: [
+              {
+                model: UserRole,
+                as: "user_role",
+              }
+            ]
+          })
+        }
+  
+        data = { ...results?.dataValues, states, programs, brands, ginners, spinners, userData }
+      }
+  
+      return res.sendSuccess(res, data, 200);
+  
     } catch (error: any) {
       console.log(error)
       res.sendError(res, error?.message);
     }
   }
-
-
+  
+  
   const updateProcessor = async (req: Request, res: Response) => {
     try {
-        let userIds = [];
-        let allUserInactive = false; 
-
-        for await (let user of req.body.userData) {
-            const userData = {
-                firstname: user.firstname,
-                lastname: user.lastname ? user.lastname : '',
-                position: user.position,
-                mobile: user.mobile,
-                password: user.password ? await hash.generate(user.password) : undefined,
-                status: user.status,
-                role: req.body.process_role[0],
-                process_role: req.body.process_role,
-                is_lsv_user: true,
-            };
-            if (user.id) {
-                const result = await User.update({...userData, username: user.username, email: user.email }, { where: { id: user.id } });
-                userIds.push(user.id);
-            } else {
-                const result = await User.create({ ...userData, username: user.username, email: user.email });
-                userIds.push(result.id);
-            }
-            if (user.status) {
-                allUserInactive = true;
-            }
+      let userIds = [];
+      let allUserInactive = false;
+  
+      for await (let user of req.body.userData) {
+        const userData = {
+          firstname: user.firstname,
+          lastname: user.lastname ? user.lastname : '',
+          position: user.position,
+          mobile: user.mobile,
+          password: user.password ? await hash.generate(user.password) : undefined,
+          status: user.status,
+          role: req.body.process_role[0],
+          process_role: req.body.process_role,
+          is_lsv_user: true,
+        };
+        if (user.id) {
+          const result = await User.update({ ...userData, username: user.username, email: user.email }, { where: { id: user.id } });
+          userIds.push(user.id);
+        } else {
+          const result = await User.create({ ...userData, username: user.username, email: user.email });
+          userIds.push(result.id);
         }
-
-        let mainData: any = [];
-        let data = {
-          name: req.body.name,
-          country_id: req.body.countryId,
-          program_id: req.body.programIds,
-          brand: req.body.brand,
-          mobile: req.body.mobile,
-          email: req.body.email,
-          mapped_to: req.body.lsvMappedTo,
-          mapped_states: req.body.lsvState || null,
+        if (user.status) {
+          allUserInactive = true;
+        }
+      }
+  
+      let mainData: any = [];
+      let data = {
+        name: req.body.name,
+        country_id: req.body.countryId,
+        program_id: req.body.programIds,
+        brand: req.body.brand,
+        mobile: req.body.mobile,
+        email: req.body.email,
+        mapped_to: req.body.lsvMappedTo,
+        mapped_states: req.body.lsvState || null,
+      }
+  
+      if (req.body.processType.includes('Traceability Executive')) {
+        let obj = {
+          ...data,
           mapped_ginners: req.body.lsvGinners && req.body.lsvGinners.length > 0 ? req.body.lsvGinners : null,
+          mapped_spinners: req.body.lsvSpinners && req.body.lsvSpinners.length > 0 ? req.body.lsvSpinners : null,
+          teUser_id: userIds,
+          status: allUserInactive
+        }
+        if (req.body.teId) {
+          const result = await TraceabilityExecutive.update(obj, { where: { id: req.body.teId } });
+          mainData.push(result);
+        } else {
+          const result = await TraceabilityExecutive.create(obj);
+          mainData.push(result);
+        }
+      }
+  
+      if (req.body.processType.includes('Supply Chain Manager')) {
+        let obj = {
+          ...data,
+          mapped_ginners: req.body.lsvGinners && req.body.lsvGinners.length > 0 ? req.body.lsvGinners : null,
+          scmUser_id: userIds,
+          status: allUserInactive
+        }
+        if (req.body.scmId) {
+          const result = await SupplyChainManager.update(obj, { where: { id: req.body.scmId } });
+          mainData.push(result);
+        } else {
+          const result = await SupplyChainManager.create(obj);
+          mainData.push(result);
+        }
+      }
+  
+      if (req.body.processType.includes('Supply Chain Director')) {
+        let obj = {
+          ...data,
+          mapped_ginners: req.body.lsvGinners && req.body.lsvGinners.length > 0 ? req.body.lsvGinners : null,
+          scdUser_id: userIds,
+          status: allUserInactive
+        }
+        if (req.body.scdId) {
+          const result = await SupplyChainDirector.update(obj, { where: { id: req.body.scdId } });
+          mainData.push(result);
+        } else {
+          const result = await SupplyChainDirector.create(obj);
+          mainData.push(result);
+        }
+      }
+  
+      if (req.body.processType.includes('Brand Executive')) {
+        let obj = {
+          ...data,
           mapped_spinners: req.body.lsvSpinners && req.body.lsvSpinners.length > 0 ? req.body.lsvSpinners  : null,
+          beUser_id: userIds,
+          status: allUserInactive
         }
-
-        if (req.body.processType.includes('Traceability Executive')) {
-            let obj = {
-                ...data,
-                teUser_id: userIds,
-                status: allUserInactive
-              }
-            if (req.body.teId) {
-                const result = await TraceabilityExecutive.update(obj, { where: { id: req.body.teId } });
-                mainData.push(result);
-            } else {
-                const result = await TraceabilityExecutive.create(obj);
-                mainData.push(result);
-            }
+        if (req.body.beId) {
+          const result = await BrandExecutive.update(obj, { where: { id: req.body.beId } });
+          mainData.push(result);
+        } else {
+          const result = await BrandExecutive.create(obj);
+          mainData.push(result);
         }
-
-        if (req.body.processType.includes('Supply Chain Manager')) {
-            let obj = {
-                ...data,
-                scmUser_id: userIds,
-                status: allUserInactive
-            }
-            if (req.body.scmId) {
-                const result = await SupplyChainManager.update(obj, { where: { id: req.body.scmId } });
-                mainData.push(result);
-            } else {
-                const result = await SupplyChainManager.create(obj);
-                mainData.push(result);
-            }
+      }
+  
+      if (req.body.processType.includes('Brand Manager')) {
+        let obj = {
+          ...data,
+          mapped_spinners: req.body.lsvSpinners && req.body.lsvSpinners.length > 0 ? req.body.lsvSpinners  : null,
+          bmUser_id: userIds,
+          status: allUserInactive
         }
-
-        if (req.body.processType.includes('Supply Chain Director')) {
-            let obj = {
-                ...data,
-                scdUser_id: userIds,
-                status: allUserInactive
-            }
-            if (req.body.scdId) {
-                const result = await SupplyChainDirector.update(obj, { where: { id: req.body.scdId } });
-                mainData.push(result);
-            } else {
-                const result = await SupplyChainDirector.create(obj);
-                mainData.push(result);
-            }
+        if (req.body.bmId) {
+          const result = await BrandManager.update(obj, { where: { id: req.body.bmId } });
+          mainData.push(result);
+        } else {
+          const result = await BrandManager.create(obj);
+          mainData.push(result);
         }
-
-        if (req.body.deletedTeId) {
-            const result = await TraceabilityExecutive.update({ teUser_id: [] }, { where: { id: req.body.deletedTeId } });
+      }
+  
+      if (req.body.processType.includes('PS Team')) {
+        let obj = {
+          ...data,
+          mapped_spinners: req.body.lsvSpinners && req.body.lsvSpinners.length > 0 ? req.body.lsvSpinners  : null,
+          psUser_id: userIds,
+          status: allUserInactive
         }
-        if (req.body.deletedScmId) {
-            const result = await SupplyChainManager.update({ scmUser_id: [] }, { where: { id: req.body.deletedScmId } });
+        if (req.body.psId) {
+          const result = await PSTeam.update(obj, { where: { id: req.body.psId } });
+          mainData.push(result);
+        } else {
+          const result = await PSTeam.create(obj);
+          mainData.push(result);
         }
-        if (req.body.deletedScdId) {
-            const result = await SupplyChainDirector.update({ scdUser_id: [] }, { where: { id: req.body.deletedScdId } });
-        }
-
-        res.sendSuccess(res, mainData);
+      }
+  
+      if (req.body.deletedTeId) {
+        const result = await TraceabilityExecutive.update({ teUser_id: [] }, { where: { id: req.body.deletedTeId } });
+      }
+      if (req.body.deletedScmId) {
+        const result = await SupplyChainManager.update({ scmUser_id: [] }, { where: { id: req.body.deletedScmId } });
+      }
+      if (req.body.deletedScdId) {
+        const result = await SupplyChainDirector.update({ scdUser_id: [] }, { where: { id: req.body.deletedScdId } });
+      }
+      if (req.body.deletedBeId) {
+        const result = await BrandExecutive.update({ beUser_id: [] }, { where: { id: req.body.deletedBeId } });
+      }
+      if (req.body.deletedBmId) {
+        const result = await BrandManager.update({ bmUser_id: [] }, { where: { id: req.body.deletedBmId } });
+      }
+      if (req.body.deletedPsId) {
+        const result = await PSTeam.update({ psUser_id: [] }, { where: { id: req.body.deletedPsId } });
+      }
+  
+      res.sendSuccess(res, mainData);
     } catch (error: any) {
-        console.log(error);
-        return res.sendError(res, error.message);
+      console.log(error);
+      return res.sendError(res, error.message);
     }
-}
-
-
-const deleteLSVUser = async (req: Request, res: Response) => {
-  try {
+  }
+  
+  
+  const deleteLSVUser = async (req: Request, res: Response) => {
+    try {
       let users = [];
       let userRole: any;
-
-      if(req.body.processorType === 'Traceability_Executive'){
+  
+      if (req.body.processorType === 'Traceability_Executive') {
         const ginn = await TraceabilityExecutive.findOne({
-            where: {
-                id: req.body.id
-            },
+          where: {
+            id: req.body.id
+          },
         });
   
         users = await User.findAll({
-            where: {
-                id: ginn.teUser_id
-            },
+          where: {
+            id: ginn.teUser_id
+          },
         });
-
-         userRole = await UserRole.findOne({
-            where: Sequelize.where(
-                Sequelize.fn('LOWER', Sequelize.col('user_role')),
-                'traceability executive'
-            )
+  
+        userRole = await UserRole.findOne({
+          where: Sequelize.where(
+            Sequelize.fn('LOWER', Sequelize.col('user_role')),
+            'traceability executive'
+          )
         });
       }
-
-      if(req.body.processorType === 'Supply_Chain_Manager'){
+  
+      if (req.body.processorType === 'Supply_Chain_Manager') {
         const ginn = await SupplyChainManager.findOne({
-            where: {
-                id: req.body.id
-            },
+          where: {
+            id: req.body.id
+          },
         });
   
         users = await User.findAll({
-            where: {
-                id: ginn.scmUser_id
-            },
+          where: {
+            id: ginn.scmUser_id
+          },
         });
-
-         userRole = await UserRole.findOne({
-            where: Sequelize.where(
-                Sequelize.fn('LOWER', Sequelize.col('user_role')),
-                'supply chain manager'
-            )
+  
+        userRole = await UserRole.findOne({
+          where: Sequelize.where(
+            Sequelize.fn('LOWER', Sequelize.col('user_role')),
+            'supply chain manager'
+          )
         });
       }
-
-      if(req.body.processorType === 'Supply_Chain_Director'){
+  
+      if (req.body.processorType === 'Supply_Chain_Director') {
         const ginn = await SupplyChainDirector.findOne({
-            where: {
-                id: req.body.id
-            },
+          where: {
+            id: req.body.id
+          },
         });
   
         users = await User.findAll({
-            where: {
-                id: ginn.scdUser_id
-            },
+          where: {
+            id: ginn.scdUser_id
+          },
         });
-
-         userRole = await UserRole.findOne({
-            where: Sequelize.where(
-                Sequelize.fn('LOWER', Sequelize.col('user_role')),
-                'supply chain director'
-            )
+  
+        userRole = await UserRole.findOne({
+          where: Sequelize.where(
+            Sequelize.fn('LOWER', Sequelize.col('user_role')),
+            'supply chain director'
+          )
         });
       }
-
-      for await (let user of users){
+  
+      if (req.body.processorType === 'Brand_Executive') {
+        const ginn = await BrandExecutive.findOne({
+          where: {
+            id: req.body.id
+          },
+        });
+  
+        users = await User.findAll({
+          where: {
+            id: ginn.beUser_id
+          },
+        });
+  
+        userRole = await UserRole.findOne({
+          where: Sequelize.where(
+            Sequelize.fn('LOWER', Sequelize.col('user_role')),
+            'brand executive'
+          )
+        });
+      }
+  
+      if (req.body.processorType === 'Brand_Manager') {
+        const ginn = await BrandManager.findOne({
+          where: {
+            id: req.body.id
+          },
+        });
+  
+        users = await User.findAll({
+          where: {
+            id: ginn.bmUser_id
+          },
+        });
+  
+        userRole = await UserRole.findOne({
+          where: Sequelize.where(
+            Sequelize.fn('LOWER', Sequelize.col('user_role')),
+            'brand manager'
+          )
+        });
+      }
+  
+      if (req.body.processorType === 'PS_Team') {
+        const ginn = await PSTeam.findOne({
+          where: {
+            id: req.body.id
+          },
+        });
+  
+        users = await User.findAll({
+          where: {
+            id: ginn.psUser_id
+          },
+        });
+  
+        userRole = await UserRole.findOne({
+          where: Sequelize.where(
+            Sequelize.fn('LOWER', Sequelize.col('user_role')),
+            'ps team'
+          )
+        });
+      }
+  
+      for await (let user of users) {
         const updatedProcessRole = user.process_role.filter((roleId: any) => roleId !== userRole.id);
   
         if (updatedProcessRole && updatedProcessRole.length > 0) {
-            const updatedUser = await User.update({
-                process_role: updatedProcessRole,
-                role: updatedProcessRole[0]
-            }, { where: { id: user.id } });
+          const updatedUser = await User.update({
+            process_role: updatedProcessRole,
+            role: updatedProcessRole[0]
+          }, { where: { id: user.id } });
         } else {
-            await User.destroy({ where: { id: user.id }});
+          await User.destroy({ where: { id: user.id } });
         }
       }
-
-      if(req.body.processorType === 'Traceability_Executive'){
-          const ginner = await TraceabilityExecutive.destroy({
-            where: {
-                id: req.body.id
-            }
+  
+      if (req.body.processorType === 'Traceability_Executive') {
+        const ginner = await TraceabilityExecutive.destroy({
+          where: {
+            id: req.body.id
+          }
         });
         return res.sendSuccess(res, { ginner });
       }
-
-      if(req.body.processorType === 'Supply_Chain_Manager'){
+  
+      if (req.body.processorType === 'Supply_Chain_Manager') {
         const ginner = await SupplyChainManager.destroy({
           where: {
-              id: req.body.id
+            id: req.body.id
           }
         });
         return res.sendSuccess(res, { ginner });
       }
-
-      if(req.body.processorType === 'Supply_Chain_Director'){
+  
+      if (req.body.processorType === 'Supply_Chain_Director') {
         const ginner = await SupplyChainDirector.destroy({
           where: {
-              id: req.body.id
+            id: req.body.id
           }
         });
         return res.sendSuccess(res, { ginner });
       }
-  } catch (error: any) {
+  
+      if (req.body.processorType === 'Brand_Executive') {
+        const ginner = await BrandExecutive.destroy({
+          where: {
+            id: req.body.id
+          }
+        });
+        return res.sendSuccess(res, { ginner });
+      }
+  
+      if (req.body.processorType === 'Brand_Manager') {
+        const ginner = await BrandManager.destroy({
+          where: {
+            id: req.body.id
+          }
+        });
+        return res.sendSuccess(res, { ginner });
+      }
+  
+      if (req.body.processorType === 'PS_Team') {
+        const ginner = await PSTeam.destroy({
+          where: {
+            id: req.body.id
+          }
+        });
+        return res.sendSuccess(res, { ginner });
+      }
+    } catch (error: any) {
       return res.sendError(res, error.message);
+    }
   }
-}
+  
 
   export { createLSVUser,fetchAllLSVProcessor, fetchUsers, fetchUser, updateProcessor, deleteLSVUser };
