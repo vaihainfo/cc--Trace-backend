@@ -12,6 +12,7 @@ import GinSales from "../../models/gin-sales.model";
 import TraceabilityExecutive from "../../models/traceability-executive.model";
 import SupplyChainManager from "../../models/supply-chain-manager.model";
 import SupplyChainDirector from "../../models/supply-chain-director.model";
+import BrandExecutive from "../../models/brand-executive.model";
 
 const getGinProcessLotNo = async (req: Request, res: Response) => {
   try {
@@ -30,6 +31,30 @@ const getGinProcessLotNo = async (req: Request, res: Response) => {
       return res.sendSuccess(res, lotNo);
     } else {
       return res.sendError(res, "No Ginner Process is created for this Ginner");
+    }
+  } catch (error: any) {
+    console.log(error);
+    return res.sendError(res, error?.message);
+  }
+};
+
+const getGinSaleLotNo = async (req: Request, res: Response) => {
+  try {
+    const spinnerId = req.query.spinnerId;
+
+    if (!spinnerId) {
+      return res.sendError(res, "No Spinner Id Found");
+    }
+
+    const lotNo = await GinSales.findAll({
+      attributes: ["id", "lot_no", "reel_lot_no","invoice_no", "press_no"],
+      where: { buyer: spinnerId, te_verified_status: { [Op.not]: true }, be_verified_status: { [Op.not]: true }, status: { [Op.in]: ['Sold', 'Partially Accepted', 'Partially Rejected'] } },
+    });
+
+    if (lotNo && lotNo.length > 0) {
+      return res.sendSuccess(res, lotNo);
+    } else {
+      return res.sendError(res, "No Sale lot found");
     }
   } catch (error: any) {
     console.log(error);
@@ -94,10 +119,93 @@ const getGinProcessLotDetials = async (req: Request, res: Response) => {
   }
 };
 
+const getGinSalesLotDetials = async (req: Request, res: Response) => {
+  try {
+    const salesId = req.query.salesId;
+
+    if (!salesId) {
+      return res.sendError(res, "No Sales Id Found");
+    }
+
+    const [results] = await sequelize.query(
+      `SELECT 
+            jsonb_build_object(
+                'id', gs.id,
+                'ginner_id', g.id,
+                'ginner_name', g.name,
+                'spinner_name', ss.name,
+                'spinner_id', ss.id,
+                'lot_no', gs.lot_no,
+                'date', gs.date,
+                'press_no', gs.press_no,
+                'reel_lot_no', gs.reel_lot_no,
+                'greyout_status', gs.greyout_status,
+                'total_qty', gs.total_qty,
+                'no_of_bales', gs.no_of_bales,
+                'received_qty', SUM(CAST(gb.weight AS DOUBLE PRECISION)),
+                'accepted_total_qty', COALESCE(
+                            SUM(
+                                CASE
+                                WHEN gb.accepted_weight IS NOT NULL THEN gb.accepted_weight
+                                ELSE CAST(gb.weight AS DOUBLE PRECISION)
+                                END
+                            ), 0
+                        ),
+                'accepted_no_of_bales', COUNT(DISTINCT gb.id),
+                'status', gs.status,
+                'qty_stock', gs.qty_stock,
+                'bales', jsonb_agg(jsonb_build_object(
+                    'id', gb.id,
+                    'bale_no', gb.bale_no,
+                    'weight', gb.weight,
+                    'old_weight', gb.old_weight,
+                    'accepted_weight', gb.accepted_weight,
+                    'sold_status', gb.sold_status,
+                    'is_all_rejected', gb.is_all_rejected,
+                    'greyout_status', gs.greyout_status
+                ) ORDER BY gb.id ASC)
+            ) AS result
+        FROM 
+            gin_sales gs
+        JOIN 
+            bale_selections bs ON gs.id = bs.sales_id
+        JOIN 
+            "gin-bales" gb ON gb.id = bs.bale_id AND (bs.spinner_status = true OR gs.status = 'Sold')
+        JOIN 
+            ginners g ON gs.ginner_id = g.id
+        JOIN 
+            spinners ss ON gs.buyer = ss.id
+        JOIN 
+            seasons s ON gs.season_id = s.id
+        JOIN 
+            programs p ON gs.program_id = p.id
+        WHERE 
+            gs.id = ${salesId}
+            AND gs.status IN ('Sold', 'Partially Accepted', 'Partially Rejected')
+        GROUP BY 
+            gs.id, gs.lot_no, gs.date, gs.press_no, gs.reel_lot_no, g.id, ss.id
+        ORDER BY 
+            gs.id DESC;
+      `
+    );
+
+    const simplifiedResults = results.map((item: any) => item.result);
+    return res.sendSuccess(res, simplifiedResults);
+  } catch (error: any) {
+    console.log(error);
+    return res.sendError(res, error?.message);
+  }
+};
+
 const createVerifiedLintStock = async (req: Request, res: Response) => {
   try {
+    if(!req.body.processorType){
+      return res.sendError(res, 'Processor Type is needed either Ginner/Spinner');
+    }
+
     const data = {
       te_id: req.body.teId,
+      be_id: req.body.beId,
       ginner_id: req.body.ginnerId,
       spinner_id: req.body.spinnerId,
       country_id: req.body.countryId,
@@ -111,37 +219,73 @@ const createVerifiedLintStock = async (req: Request, res: Response) => {
       reel_lot_no: req.body.reelLotNo,
       actual_total_qty: req.body.actualTotalQty,
       actual_no_of_bales: req.body.actualNoOfBales,
-      consent_form_te: req.body.consentForm,
-      uploaded_photos_te: req.body.uploadedPhotos,
+      consent_form_te: req.body.teId ? req.body.consentForm : null,
+      uploaded_photos_te: req.body.teId ? req.body.uploadedPhotos : null,
+      consent_form_be: req.body.beId ? req.body.consentForm : null,
+      uploaded_photos_be: req.body.beId ? req.body.uploadedPhotos : null,
       status: "Pending",
     };
     const lintVerified = await LintStockVerified.create(data);
 
     if (lintVerified) {
-      for await (const bale of req.body.bales) {
-        let baleData = {
-          te_verified_weight: bale.actualWeight,
-          te_verified_status: bale.verifiedStatus,
-        };
-        const gin = await GinBale.update(baleData, {
-          where: {
-            id: bale.id,
+      if(req.body.processorType == 'Ginner' || req.body.processorType == 'ginner'){
+        for await (const bale of req.body.bales) {
+          let baleData = {
+            te_verified_weight: bale.actualWeight,
+            te_verified_status: bale.verifiedStatus,
+          };
+          const gin = await GinBale.update(baleData, {
+            where: {
+              id: bale.id,
+            },
+          });
+        }
+  
+        const gin = await GinProcess.update(
+          {
+            te_verified_status: true,
+            te_verified_total_qty: req.body.actualTotalQty,
+            te_verified_bales: req.body.actualNoOfBales,
           },
-        });
+          {
+            where: {
+              id: req.body.processId,
+            },
+          }
+        );
       }
 
-      const gin = await GinProcess.update(
-        {
-          te_verified_status: true,
-          te_verified_total_qty: req.body.actualTotalQty,
-          te_verified_bales: req.body.actualNoOfBales,
-        },
-        {
-          where: {
-            id: req.body.processId,
-          },
+      if(req.body.processorType == 'Spinner' || req.body.processorType == 'spinner'){
+        for await (const bale of req.body.bales) {
+          let baleData = {
+            te_sale_verified_weight: req.body.teId ? bale.actualWeight : null,
+            te_sale_verified_status:  req.body.teId ? bale.verifiedStatus : null,
+            be_verified_weight: req.body.beId ? bale.actualWeight : null,
+            be_verified_status:  req.body.beId ? bale.verifiedStatus : null
+          };
+          const gin = await GinBale.update(baleData, {
+            where: {
+              id: bale.id,
+            },
+          });
         }
-      );
+  
+        const gin = await GinSales.update(
+          {
+            te_verified_status: req.body.teId ? true : null,
+            te_verified_total_qty: req.body.teId ? req.body.actualTotalQty : null,
+            te_verified_bales: req.body.teId ? req.body.actualNoOfBales : null,
+            be_verified_status: req.body.beId ? true : null,
+            be_verified_total_qty: req.body.beId ? req.body.actualTotalQty : null,
+            be_verified_bales: req.body.beId ? req.body.actualNoOfBales : null,
+          },
+          {
+            where: {
+              id: req.body.salesId,
+            },
+          }
+        );
+      }
     }
 
     return res.sendSuccess(res, lintVerified);
@@ -231,6 +375,8 @@ const getLintVerifiedStocks = async (req: Request, res: Response) => {
       };
     }
 
+    whereCondition.processor_type = 'Ginner';
+
     let include = [
       {
         model: Ginner,
@@ -309,6 +455,10 @@ const getLintVerifiedStock = async (req: Request, res: Response) => {
         {
           model: TraceabilityExecutive,
           as: "traceability_executive",
+        },
+        {
+          model: BrandExecutive,
+          as: "brand_executive",
         },
         {
           model: Country,
@@ -1348,11 +1498,86 @@ const fetchTeGinner = async (req: Request, res: Response) => {
     }
 }
 
+const fetchTeSpinner = async (req: Request, res: Response) => {
+  try {
+      const result = await TraceabilityExecutive.findOne({
+          where: {
+              id: req.query.teId 
+          }
+      });
+      
+      let spinners = [];
+      if (result) {
+        const mappedspinners = result.mapped_spinners;
+         spinners = await Spinner.findAll({
+          where: {
+              id: mappedspinners,
+          },
+      });
+    }
+    return res.sendSuccess(res, spinners);
+
+  } catch (error: any) {
+      console.log(error);
+      return res.sendError(res, error.message);
+  }
+}
+
+const fetchBeSpinner = async (req: Request, res: Response) => {
+  try {
+      const result = await BrandExecutive.findOne({
+          where: {
+              id: req.query.beId 
+          }
+      });
+      
+      let spinners = [];
+      if (result) {
+        const mappedspinners = result.mapped_spinners;
+         spinners = await Spinner.findAll({
+          where: {
+              id: mappedspinners,
+          },
+      });
+    }
+    return res.sendSuccess(res, spinners);
+
+  } catch (error: any) {
+      console.log(error);
+      return res.sendError(res, error.message);
+  }
+}
+
 const fetchTeCountries = async (req: Request, res: Response) => {
   try {
       const result = await TraceabilityExecutive.findOne({
           where: {
               id: req.query.teId 
+          }
+      });
+      
+      let countries = [];
+      if (result) {
+        const mappedCountry = result.country_id;
+        countries = await Country.findOne({
+          where: {
+              id: mappedCountry,
+          },
+      });
+    }
+    return res.sendSuccess(res, countries);
+
+  } catch (error: any) {
+      console.log(error);
+      return res.sendError(res, error.message);
+  }
+}
+
+const fetchBeCountries = async (req: Request, res: Response) => {
+  try {
+      const result = await BrandExecutive.findOne({
+          where: {
+              id: req.query.beId 
           }
       });
       
@@ -1398,6 +1623,31 @@ const fetchTeStates= async (req: Request, res: Response) => {
   }
 }
 
+const fetchBeStates= async (req: Request, res: Response) => {
+  try {
+      const result = await BrandExecutive.findOne({
+          where: {
+              id: req.query.beId 
+          }
+      });
+      
+      let states = [];
+      if (result) {
+        const mappedStates = result.mapped_states;
+        states = await State.findAll({
+          where: {
+              id: mappedStates,
+          },
+      });
+    }
+    return res.sendSuccess(res, states);
+
+  } catch (error: any) {
+      console.log(error);
+      return res.sendError(res, error.message);
+  }
+}
+
 export {
   getGinProcessLotNo,
   getGinProcessLotDetials,
@@ -1414,5 +1664,11 @@ export {
   getTypeWiseListVerifiedStocks,
   fetchTeGinner,
   fetchTeCountries,
-  fetchTeStates
+  fetchTeStates,
+  getGinSaleLotNo,
+  getGinSalesLotDetials,
+  fetchBeSpinner,
+  fetchBeStates,
+  fetchTeSpinner,
+  fetchBeCountries
 };

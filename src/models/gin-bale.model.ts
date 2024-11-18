@@ -75,6 +75,42 @@ const GinBale = db.define('gin-bales', {
   scd_verified_weight: {
     type: DataTypes.DOUBLE
   },
+  te_sale_verified_status: {
+    type: DataTypes.BOOLEAN,
+  },
+  te_sale_verified_weight: {
+    type: DataTypes.DOUBLE
+  },
+  be_verified_status: {
+    type: DataTypes.BOOLEAN,
+  },
+  be_verified_weight: {
+    type: DataTypes.DOUBLE
+  },
+  spin_verified_status: {
+    type: DataTypes.BOOLEAN,
+  },
+  spin_verified_weight: {
+    type: DataTypes.DOUBLE
+  },
+  bm_verified_status: {
+    type: DataTypes.BOOLEAN,
+  },
+  bm_verified_weight: {
+    type: DataTypes.DOUBLE
+  },
+  ps_verified_status: {
+    type: DataTypes.BOOLEAN,
+  },
+  ps_verified_weight: {
+    type: DataTypes.DOUBLE
+  },
+  gin_level_verify: {
+    type: DataTypes.BOOLEAN,
+  },
+  spin_level_verify: {
+    type: DataTypes.BOOLEAN,
+  },
 });
 
 GinBale.belongsTo(GinProcess, {
