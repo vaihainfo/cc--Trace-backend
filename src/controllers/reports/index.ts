@@ -185,8 +185,8 @@ const fetchBaleProcess = async (req: Request, res: Response) => {
                       CAST(gb.old_weight AS DOUBLE PRECISION)
                     ), 0
                   ) AS old_weight_total,
-                  COALESCE(MIN(CASE WHEN gb.bale_no ~ '^[0-9]+$' THEN CAST(gb.bale_no AS BIGINT) ELSE 0 END), 0) AS pressno_from,
-                  COALESCE(MAX(CASE WHEN gb.bale_no ~ '^[0-9]+$' THEN CAST(gb.bale_no AS BIGINT) ELSE 0 END), 0) AS pressno_to
+               MIN(gb.bale_no) AS pressno_from,
+             MAX(LPAD(gb.bale_no, 10, ' ')) AS pressno_to
               FROM
                   "gin-bales" gb
               GROUP BY
@@ -623,36 +623,35 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
             pr.program_name ILIKE '%${searchTerm}%' OR
             gp.lot_no ILIKE '%${searchTerm}%' OR
             gp.reel_lot_no ILIKE '%${searchTerm}%' OR
-            gb.press_no ILIKE '%${searchTerm}%'
+            gp.press_no ILIKE '%${searchTerm}%'
           )
         `);
       }
-
       if (brandId) {
         const idArray = brandId.split(",").map((id: any) => parseInt(id, 10));
         whereCondition.push(`g.brand && ARRAY[${idArray.join(',')}]`);
       }
-
+  
       if (seasonId) {
         const idArray = seasonId.split(",").map((id: any) => parseInt(id, 10));
         whereCondition.push(`gp.season_id IN (${idArray.join(',')})`);
       }
-
+  
       if (ginnerId) {
         const idArray = ginnerId.split(",").map((id: any) => parseInt(id, 10));
         whereCondition.push(`gp.ginner_id IN (${idArray.join(',')})`);
       }
-
+  
       if (countryId) {
         const idArray = countryId.split(",").map((id: any) => parseInt(id, 10));
         whereCondition.push(`g.country_id IN (${idArray.join(',')})`);
       }
-
+  
       if (programId) {
         const idArray = programId.split(",").map((id: any) => parseInt(id, 10));
         whereCondition.push(`gp.program_id IN (${idArray.join(',')})`);
       }
-
+  
       if (startDate && endDate) {
         const startOfDay = new Date(startDate);
         startOfDay.setUTCHours(0, 0, 0, 0);
@@ -660,7 +659,7 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
         endOfDay.setUTCHours(23, 59, 59, 999);
         whereCondition.push(`"gp"."createdAt" BETWEEN '${startOfDay.toISOString()}' AND '${endOfDay.toISOString()}'`);
       }
-
+  
       const whereClause = whereCondition.length > 0 ? `WHERE ${whereCondition.join(' AND ')}` : '';
 
       // Create the excel workbook file
@@ -736,8 +735,8 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
                       CAST(gb.old_weight AS DOUBLE PRECISION)
                     ), 0
                   ) AS old_weight_total,
-                  COALESCE(MIN(CASE WHEN gb.bale_no ~ '^[0-9]+$' THEN CAST(gb.bale_no AS BIGINT) ELSE 0 END), 0) AS pressno_from,
-                  COALESCE(MAX(CASE WHEN gb.bale_no ~ '^[0-9]+$' THEN CAST(gb.bale_no AS BIGINT) ELSE 0 END), 0) AS pressno_to
+                    MIN(gb.bale_no) AS pressno_from,
+                    MAX(LPAD(gb.bale_no, 10, ' ')) AS pressno_to
               FROM
                   "gin-bales" gb
               GROUP BY
@@ -3189,27 +3188,68 @@ const fetchSpinnerBalePagination = async (req: Request, res: Response) => {
       whereCondition.push(`gs."createdAt" BETWEEN '${startOfDay.toISOString()}' AND '${endOfDay.toISOString()}'`);
     }
 
+
+    // const whereClause = whereCondition.length > 0 ? `WHERE ${whereCondition.join(' AND ')}` : '';
     whereCondition.push(`gs.status IN ('Sold', 'Partially Accepted', 'Partially Rejected')`);
 
-    const whereClause = whereCondition.length > 0 ? `WHERE ${whereCondition.join(' AND ')}` : '';
+    const whereClause = whereCondition.length > 0 ? `WHERE ${whereCondition.join(' AND ')} AND bd.total_qty > 0` : 'WHERE bd.total_qty > 0';
 
     //fetch data with pagination
     const nData: any = [];
 
-    const countQuery = `
-            SELECT COUNT(*) AS total_count
-            FROM 
-                    gin_sales gs
-                LEFT JOIN 
-                    ginners g ON gs.ginner_id = g.id
-                LEFT JOIN 
-                    seasons s ON gs.season_id = s.id
-                LEFT JOIN 
-                    programs p ON gs.program_id = p.id
-                LEFT JOIN 
-                    spinners sp ON gs.buyer = sp.id
-            ${whereClause}`;
+    // const countQuery = `
+    //         SELECT COUNT(*) AS total_count
+    //         FROM 
+    //                 gin_sales gs
+    //             LEFT JOIN 
+    //                 ginners g ON gs.ginner_id = g.id
+    //             LEFT JOIN 
+    //                 seasons s ON gs.season_id = s.id
+    //             LEFT JOIN 
+    //                 programs p ON gs.program_id = p.id
+    //             LEFT JOIN 
+    //                 spinners sp ON gs.buyer = sp.id
+    //         ${whereClause}`;
 
+    const countQuery = `
+    WITH bale_details AS (
+        SELECT 
+            bs.sales_id,
+            COALESCE(
+                SUM(
+                    CASE
+                    WHEN gb.accepted_weight IS NOT NULL THEN gb.accepted_weight
+                    ELSE CAST(gb.weight AS DOUBLE PRECISION)
+                    END
+                ), 0
+            ) AS total_qty
+        FROM 
+            bale_selections bs
+        JOIN 
+            gin_sales gs ON bs.sales_id = gs.id
+        LEFT JOIN 
+            "gin-bales" gb ON bs.bale_id = gb.id
+        WHERE 
+            gs.status IN ('Sold', 'Partially Accepted', 'Partially Rejected')
+            AND (bs.spinner_status = true OR gs.status = 'Sold')
+        GROUP BY 
+            bs.sales_id
+    )
+    SELECT COUNT(*) AS total_count
+    FROM 
+        gin_sales gs
+    LEFT JOIN 
+        ginners g ON gs.ginner_id = g.id
+    LEFT JOIN 
+        seasons s ON gs.season_id = s.id
+    LEFT JOIN 
+        programs p ON gs.program_id = p.id
+    LEFT JOIN 
+        spinners sp ON gs.buyer = sp.id
+    LEFT JOIN 
+        bale_details bd ON gs.id = bd.sales_id
+    ${whereClause};
+`;
 
     let dataQuery = `
                 WITH bale_details AS (
@@ -3578,8 +3618,9 @@ const exportSpinnerBale = async (req: Request, res: Response) => {
       }
 
       whereCondition.push(`gs.status IN ('Sold', 'Partially Accepted', 'Partially Rejected')`);
+      const whereClause = whereCondition.length > 0 ? `WHERE ${whereCondition.join(' AND ')} AND bd.total_qty > 0` : 'WHERE bd.total_qty > 0';
 
-      const whereClause = whereCondition.length > 0 ? `WHERE ${whereCondition.join(' AND ')}` : '';
+      // const whereClause = whereCondition.length > 0 ? `WHERE ${whereCondition.join(' AND ')}` : '';
 
       // Create the excel workbook file
       const workbook = new ExcelJS.Workbook();
@@ -11264,7 +11305,7 @@ const exportGinnerSummary = async (req: Request, res: Response) => {
         const cottonProcessedQty = isNaN(cottonProcessed?.dataValues?.qty) ? 0 : cottonProcessed?.dataValues?.qty;
         const cottonProcessedByHeapQty = isNaN(cottonProcessedByHeap?.dataValues?.qty) ? 0 : cottonProcessedByHeap?.dataValues?.qty;
         const totalCottonProcessedQty = cottonProcessedQty + cottonProcessedByHeapQty;
-       
+
         obj.cottonProcuredKg = cottonProcured?.dataValues?.qty ?? 0;
         obj.cottonProcessedKg = totalCottonProcessedQty ?? 0;
         obj.cottonStockKg = cottonProcured ?
