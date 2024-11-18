@@ -9,6 +9,8 @@ import GinProcess from "../../models/gin-process.model";
 import Ginner from "../../models/ginner.model";
 import GinBale from "../../models/gin-bale.model";
 import Country from "../../models/country.model";
+import SeedCottonPricing from "../../models/seed-cotton-pricings.model";
+import Program from "models/program.model";
 
 
 const getOverAllDataQuery = (
@@ -120,7 +122,9 @@ const getPricyByCountry = async (
     const reqData = await getQueryParams(req, res);
     const where = getOverAllDataQuery(reqData);
     const pricingData = await getPricingByCountryData(where);
-    const data = await getPricingDataRes(pricingData, reqData.season);
+    const averageReelData = await getPricingByCountryData(where);
+    const averageOrganicData = await getPricingByCountryData(where);
+    const data = await getPricingDataRes(pricingData);
     return res.sendSuccess(res, data);
 
   } catch (error: any) {
@@ -133,30 +137,25 @@ const getPricyByCountry = async (
 
 
 const getPricingByCountryData = async (where: any) => {
-  where.status = 'Sold';
-  const result = await Transaction.findAll({
+  const result = await SeedCottonPricing.findAll({  
     attributes: [
-      [Sequelize.fn('SUM', Sequelize.literal('CAST(qty_purchased  as numeric)')), 'procured'],
+      [Sequelize.col('market_price'),  'conventionalPrice'],
       [Sequelize.col('country.id'), 'countryId'],
       [Sequelize.col('country.county_name'), 'countryName'],
-      [Sequelize.col('season.id'), 'seasonId'],
-      [Sequelize.col('season.name'), 'seasonName']
+      [Sequelize.col('program.id'), 'programId'],
+      [Sequelize.col('program.name'), 'programName']
     ],
     include: [{
       model: Country,
       as: 'country',
       attributes: []
     }, {
-      model: Season,
-      as: 'season',
-      attributes: []
-    }, {
-      model: Ginner,
-      as: 'ginner',
+      model: Program,
+      as: 'program',
       attributes: []
     }],
     where,
-    group: ['country.id', 'season.id']
+    group: ['country.id', 'program.id']
   });
 
   return result;
@@ -165,7 +164,6 @@ const getPricingByCountryData = async (where: any) => {
 
 const getPricingDataRes = async (
   procuredCountList: any = [],
-  reqSeason: any
 ) => {
   let seasonIds: number[] = [];
   let countries: number[] = [];
@@ -184,7 +182,7 @@ const getPricingDataRes = async (
       ["id", "DESC"],
     ],
   });
-  if (seasonIds.length != 3 && !reqSeason) {
+  if (seasonIds.length != 3 ) {
     for (const season of seasons) {
       let currentDate = moment(); // Current date using moment
       let checkDate = moment('2024-10-01'); // October 1st, 2024
