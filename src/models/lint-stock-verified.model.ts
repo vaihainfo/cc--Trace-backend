@@ -12,6 +12,9 @@ import GinSales from './gin-sales.model';
 import TraceabilityExecutive from './traceability-executive.model';
 import SupplyChainManager from './supply-chain-manager.model';
 import SupplyChainDirector from './supply-chain-director.model';
+import BrandExecutive from './brand-executive.model';
+import BrandManager from './brand-manager.model';
+import PSTeam from './ps-team.model';
 
 const LintStockVerified = db.define('lint_stock_verifieds', {
   id: {
@@ -80,6 +83,24 @@ const LintStockVerified = db.define('lint_stock_verifieds', {
   confirmed_scd_no_of_bales: {
     type: DataTypes.DOUBLE
   },
+  confirmed_spin_total_qty: {
+    type: DataTypes.DOUBLE
+  },
+  confirmed_spin_no_of_bales: {
+    type: DataTypes.DOUBLE
+  },
+  confirmed_bm_total_qty: {
+    type: DataTypes.DOUBLE
+  },
+  confirmed_bm_no_of_bales: {
+    type: DataTypes.DOUBLE
+  },
+  confirmed_ps_total_qty: {
+    type: DataTypes.DOUBLE
+  },
+  confirmed_ps_no_of_bales: {
+    type: DataTypes.DOUBLE
+  },
   consent_form_te: {
     type: DataTypes.ARRAY(DataTypes.STRING)
   },
@@ -110,23 +131,49 @@ const LintStockVerified = db.define('lint_stock_verifieds', {
   uploaded_photos_spinner: {
     type: DataTypes.ARRAY(DataTypes.STRING)
   },
+  consent_form_be: {
+    type: DataTypes.ARRAY(DataTypes.STRING)
+  },
+  uploaded_photos_be: {
+    type: DataTypes.ARRAY(DataTypes.STRING)
+  },
+  consent_form_bm: {
+    type: DataTypes.ARRAY(DataTypes.STRING)
+  },
+  uploaded_photos_bm: {
+    type: DataTypes.ARRAY(DataTypes.STRING)
+  },
+  consent_form_ps: {
+    type: DataTypes.ARRAY(DataTypes.STRING)
+  },
+  uploaded_photos_ps: {
+    type: DataTypes.ARRAY(DataTypes.STRING)
+  },
   status: {
     type: DataTypes.STRING
-  },
-  status_scm: {
+  }, 
+  status_bm: {
     type: DataTypes.STRING
   },
-  status_scd: {
+  status_ps: {
     type: DataTypes.STRING
   },
   te_id: {
-    allowNull: false,
     type: DataTypes.INTEGER
   },
   scm_id: {
     type: DataTypes.INTEGER
   },
   scd_id: {
+    type: DataTypes.INTEGER
+  },
+  be_id: {
+    type: DataTypes.INTEGER
+  },
+  bm_id: {
+    type: DataTypes.INTEGER
+  },
+  ps_id: {
     type: DataTypes.INTEGER
   },
 });
@@ -175,6 +222,21 @@ LintStockVerified.belongsTo(SupplyChainManager, {
 LintStockVerified.belongsTo(SupplyChainDirector, {
   foreignKey: "scd_id",
   as: "supply_chain_director",
+});
+
+LintStockVerified.belongsTo(BrandExecutive, {
+  foreignKey: "be_id",
+  as: "brand_executive",
+})
+
+LintStockVerified.belongsTo(BrandManager, {
+  foreignKey: "bm_id",
+  as: "brand_manager",
+});
+
+LintStockVerified.belongsTo(PSTeam, {
+  foreignKey: "ps_id",
+  as: "ps_team",
 });
 
 LintStockVerified.sync();

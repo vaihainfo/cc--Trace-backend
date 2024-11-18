@@ -160,6 +160,51 @@ const GinSales = db.define('gin_sales', {
   logistics_documents: {
     type: DataTypes.ARRAY(DataTypes.TEXT)
   },
+  te_verified_status: {
+    type: DataTypes.BOOLEAN,
+  },
+  te_verified_total_qty: {
+    type: DataTypes.DOUBLE,
+  },
+  te_verified_bales: {
+    type: DataTypes.DOUBLE,
+  },
+  be_verified_status: {
+    type: DataTypes.BOOLEAN,
+  },
+  be_verified_total_qty: {
+    type: DataTypes.DOUBLE,
+  },
+  be_verified_bales: {
+    type: DataTypes.DOUBLE,
+  },
+  spin_verified_status: {
+    type: DataTypes.BOOLEAN,
+  },
+  spin_verified_total_qty: {
+    type: DataTypes.DOUBLE,
+  },
+  spin_verified_bales: {
+    type: DataTypes.DOUBLE,
+  },
+  bm_verified_status: {
+    type: DataTypes.BOOLEAN,
+  },
+  bm_verified_total_qty: {
+    type: DataTypes.DOUBLE,
+  },
+  bm_verified_bales: {
+    type: DataTypes.DOUBLE,
+  },
+  ps_verified_status: {
+    type: DataTypes.BOOLEAN,
+  },
+  ps_verified_total_qty: {
+    type: DataTypes.DOUBLE,
+  },
+  ps_verified_bales: {
+    type: DataTypes.DOUBLE,
+  }
 });
 
 GinSales.belongsTo(Ginner, {
