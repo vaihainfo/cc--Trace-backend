@@ -69,6 +69,7 @@ import CropGrade from "../../models/crop-grade.model";
 import FailedRecords from "../../models/failed-records.model";
 import { NUMBER } from "sequelize";
 import GinHeap from "../../models/gin-heap.model";
+import ValidationProject from "../../models/validation-project.model";
 
 
 const exportReportsTameTaking = async () => {
@@ -85,6 +86,8 @@ const exportReportsTameTaking = async () => {
 
 const exportReportsOnebyOne = async () => {
   //call all export reports one by one on every cron
+  await generatePremiumValidationData();
+  
   await generateFaildReport("Farmer");
   await generateFaildReport("Procurement");
   // await generateExportFarmer();
@@ -4992,6 +4995,122 @@ const generateBrandWiseData = async () =>{
       // Rename the temporary file to the final filename
       fs.renameSync("./upload/brand-wise-data-report-test.xlsx", './upload/brand-wise-data-report.xlsx');
       console.log('brand-wise-data report generation completed.');
+    })
+    .catch(error => {
+      console.log('Failed generation Report.');
+      throw error;
+    });
+
+  } catch (error: any) {
+    console.log(error);
+  }
+}
+
+
+const generatePremiumValidationData = async () =>{
+  const maxRowsPerWorksheet = 500000; // Maximum number of rows per worksheet in Excel
+
+  try {
+        // Create the excel workbook file
+        const workbook = new ExcelJS.stream.xlsx.WorkbookWriter({
+          stream: fs.createWriteStream("./upload/premium-validation-report-test.xlsx")
+        });
+    
+        const batchSize = 5000;
+        let worksheetIndex = 0;
+        let offset = 0;
+        let hasNextBatch = true;
+
+        let include = [
+          {
+            model: FarmGroup,
+            as: "farmGroup",
+            attributes: ["id", "name", "status"],
+          },
+          {
+            model: Brand,
+            as: "brand",
+            attributes: ["id", "brand_name", "address"],
+          },
+          {
+            model: Season,
+            as: "season",
+            attributes: ["id", "name"],
+          },
+        ];
+
+      while (hasNextBatch) {
+
+      const rows = await ValidationProject.findAll({
+        include: include,
+        offset: offset,
+        limit: batchSize,
+      });
+
+      if (rows.length === 0) {
+        hasNextBatch = false;
+        break;
+      }
+
+      if (offset % maxRowsPerWorksheet === 0) {
+        worksheetIndex++;
+      }
+
+      let currentWorksheet = workbook.getWorksheet(`Sheet${worksheetIndex}`);
+        if (!currentWorksheet) {
+          currentWorksheet = workbook.addWorksheet(`Sheet${worksheetIndex}`);
+          if (worksheetIndex == 1) {
+            currentWorksheet.mergeCells("A1:L1");
+            const mergedCell = currentWorksheet.getCell("A1");
+            mergedCell.value = "CottonConnect | Premium Validation Report";
+            mergedCell.font = { bold: true };
+            mergedCell.alignment = { horizontal: "center", vertical: "middle" };
+          }
+          // Set bold font for header row
+          const headerRow = currentWorksheet.addRow([
+            "S.No",
+            "Date and Time",
+            "Season",
+            "Farm Group",
+            "Total Number of Farmers",
+            "Total Seed Cotton Purchased (MT)",
+            "Lint Cotton Sold to Spinner (MT)",
+            "Lint Cost Recieved from Spinner (INR)",
+            "Premium Transferred to Farmers (INR)",
+            "Average Seed Cotton Purchase Price (INR/Kg)",
+            "Average Conventional Cotton Price (INR/Kg)",
+            "% Premium Transferred per KG of Seed Cotton Procured",
+          ]);
+          headerRow.font = { bold: true };
+        }
+
+      for await (let [index, item] of rows.entries()) {
+
+        const rowValues = [
+          index + offset + 1,
+          item.dataValues.createdAt ? item.dataValues.createdAt : "",
+          item.dataValues.season.name ? item.dataValues.season.name : "",
+          item.dataValues.farmGroup?.name ? item.dataValues.farmGroup?.name : "",
+          item.dataValues.no_of_farmers ? Number(item.dataValues.no_of_farmers) : 0,
+          item.dataValues.cotton_purchased ? Number(item.dataValues.cotton_purchased) : 0,
+          item.dataValues.qty_of_lint_sold ? Number(item.dataValues.qty_of_lint_sold) : 0,
+          item.dataValues.premium_recieved ? Number(item.dataValues.premium_recieved) : 0,
+          item.dataValues.premium_transfered_cost && item.dataValues.premium_transfered_cost.length > 0 ? item.dataValues.premium_transfered_cost.reduce((acc: any, val: any) => acc + parseFloat(val), 0) : 0,
+          item.dataValues.avg_purchase_price ? Number(item.dataValues.avg_purchase_price) : 0,
+          item.dataValues.avg_market_price ? Number(item.dataValues.avg_market_price) : 0,
+          item.dataValues.price_variance ? Number(item.dataValues.price_variance) : 0,
+        ];
+        currentWorksheet.addRow(rowValues).commit();
+        }
+        offset += batchSize;
+      }
+
+    // Save the workbook
+    await workbook.commit()
+    .then(() => {
+      // Rename the temporary file to the final filename
+      fs.renameSync("./upload/premium-validation-report-test.xlsx", './upload/premium-validation-report.xlsx');
+      console.log('premium-validation report generation completed.');
     })
     .catch(error => {
       console.log('Failed generation Report.');
