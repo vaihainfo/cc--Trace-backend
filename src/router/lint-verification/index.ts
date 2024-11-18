@@ -30,3 +30,5 @@ router.post("/update-gin-verified-stock", editGinVerifiedStockConfirm);
 router.post("/update-scm-verified-stock", updateSCMVerifiedStockConfirm);
 router.post("/update-scd-verified-stock", updateSCDVerifiedStockConfirm);
 
+
+export default router;
