@@ -23,7 +23,7 @@ const getGinProcessLotNo = async (req: Request, res: Response) => {
 
     const lotNo = await GinProcess.findAll({
       attributes: ["id", "lot_no", "reel_lot_no"],
-      where: { ginner_id: ginnerId },
+      where: { ginner_id: ginnerId, te_verified_status: { [Op.not]: true }, },
     });
 
     if (lotNo && lotNo.length > 0) {
@@ -378,6 +378,7 @@ const getGinnerVerifiedStocks = async (req: Request, res: Response) => {
     stateId,
     countryId,
     spinnerId,
+    scmId,
     status
   }: any = req.query;
   const offset = (page - 1) * limit;
@@ -387,6 +388,7 @@ const getGinnerVerifiedStocks = async (req: Request, res: Response) => {
     if (searchTerm) {
       whereCondition[Op.or] = [
         { "$traceability_executive.name$": { [Op.iLike]: `%${searchTerm}%` } },
+        { "$supply_chain_manager.name$": { [Op.iLike]: `%${searchTerm}%` } },
         { lot_no: { [Op.iLike]: `%${searchTerm}%` } },
         { reel_lot_no: { [Op.iLike]: `%${searchTerm}%` } },
         { "$country.county_name$": { [Op.iLike]: `%${searchTerm}%` } },
@@ -403,6 +405,12 @@ const getGinnerVerifiedStocks = async (req: Request, res: Response) => {
         .split(",")
         .map((id: any) => parseInt(id, 10));
       whereCondition.te_id = { [Op.in]: idArray };
+    }
+    if (scmId) {
+      const idArray: number[] = scmId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.scm_id = { [Op.in]: idArray };
     }
 
     if (ginnerId) {
@@ -464,6 +472,10 @@ const getGinnerVerifiedStocks = async (req: Request, res: Response) => {
       {
         model: TraceabilityExecutive,
         as: "traceability_executive",
+      },
+      {
+        model: SupplyChainManager,
+        as: "supply_chain_manager",
       },
       {
         model: Country,
@@ -1311,6 +1323,81 @@ const getTypeWiseListVerifiedStocks = async (req: Request, res: Response) => {
 };
 
 
+const fetchTeGinner = async (req: Request, res: Response) => {
+    try {
+        const result = await TraceabilityExecutive.findOne({
+            where: {
+                id: req.query.teId 
+            }
+        });
+        
+        let ginners = [];
+        if (result) {
+          const mappedGinners = result.mapped_ginners;
+           ginners = await Ginner.findAll({
+            where: {
+                id: mappedGinners,
+            },
+        });
+      }
+      return res.sendSuccess(res, ginners);
+
+    } catch (error: any) {
+        console.log(error);
+        return res.sendError(res, error.message);
+    }
+}
+
+const fetchTeCountries = async (req: Request, res: Response) => {
+  try {
+      const result = await TraceabilityExecutive.findOne({
+          where: {
+              id: req.query.teId 
+          }
+      });
+      
+      let countries = [];
+      if (result) {
+        const mappedCountry = result.country_id;
+        countries = await Country.findOne({
+          where: {
+              id: mappedCountry,
+          },
+      });
+    }
+    return res.sendSuccess(res, countries);
+
+  } catch (error: any) {
+      console.log(error);
+      return res.sendError(res, error.message);
+  }
+}
+
+const fetchTeStates= async (req: Request, res: Response) => {
+  try {
+      const result = await TraceabilityExecutive.findOne({
+          where: {
+              id: req.query.teId 
+          }
+      });
+      
+      let states = [];
+      if (result) {
+        const mappedStates = result.mapped_states;
+        states = await State.findAll({
+          where: {
+              id: mappedStates,
+          },
+      });
+    }
+    return res.sendSuccess(res, states);
+
+  } catch (error: any) {
+      console.log(error);
+      return res.sendError(res, error.message);
+  }
+}
+
 export {
   getGinProcessLotNo,
   getGinProcessLotDetials,
@@ -1324,5 +1411,8 @@ export {
   getSCMVerifiedStocks,
   getSCDVerifiedStocks,
   getListVerifiedStocks,
-  getTypeWiseListVerifiedStocks
+  getTypeWiseListVerifiedStocks,
+  fetchTeGinner,
+  fetchTeCountries,
+  fetchTeStates
 };

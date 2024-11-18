@@ -262,7 +262,7 @@ const createLSVUser = async (req: Request, res: Response) => {
       whereCondition[Op.or] = [
         { name: { [Op.iLike]: `%${search}%` } },
         { email: { [Op.iLike]: `%${search}%` } },
-        { "$country.count_name$": { [Op.iLike]: `%${search}%` } },
+        { "$country.county_name$": { [Op.iLike]: `%${search}%` } },
         { mobile: { [Op.iLike]: `%${search}%` } },
       ];
     }
@@ -518,6 +518,10 @@ const createLSVUser = async (req: Request, res: Response) => {
             let ginners = null;
             let spinners = null;
             let programs = null;
+            let te = null;
+            let scm = null;
+            let scd = null;
+
             let userData = null;
             console.log(results)
 
@@ -545,6 +549,10 @@ const createLSVUser = async (req: Request, res: Response) => {
               spinners = await Spinner.findAll({attributes: ['id', 'name'],where:{id: results?.dataValues?.mapped_spinners}})
             }
 
+            te = await TraceabilityExecutive.findOne({ where: { teUser_id: { [Op.overlap]: userIds } } })
+            scm = await SupplyChainManager.findOne({ where: { scmUser_id: { [Op.overlap]: userIds } } })
+            scd = await SupplyChainDirector.findOne({ where: { scdUser_id: { [Op.overlap]: userIds } } })
+
             if(userIds && userIds.length > 0){
               userData = await User.findAll({
                 where: { id: userIds }, 
@@ -560,7 +568,7 @@ const createLSVUser = async (req: Request, res: Response) => {
             })
             }
 
-            data = { ...results?.dataValues, states, programs, brands,ginners,spinners, userData }
+            data = { ...results?.dataValues, states, programs, brands,ginners,spinners, te, scm, scd, userData }
         }
 
         return res.sendSuccess(res, data, 200);
