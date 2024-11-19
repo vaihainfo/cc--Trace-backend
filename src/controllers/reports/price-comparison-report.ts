@@ -103,10 +103,11 @@ const fetchPriceComparisonLint = async (req: Request, res: Response) => {
     let whereConditions: string[] = [];
     let replacements: any = { limit, offset };
 
+    let brandIdArray = brandId ? brandId.split(",").map((id: any) => parseInt(id, 10)) : [];
+
     if (brandId) {
-      const idArray = brandId.split(",").map((id: any) => parseInt(id, 10));
       whereConditions.push('"brand_id" IN (:brandId)');
-      replacements.brandId = idArray;
+      replacements.brandId = brandIdArray;
     }
 
     if (seasonId) {
@@ -145,21 +146,30 @@ const fetchPriceComparisonLint = async (req: Request, res: Response) => {
       type: sequelize.QueryTypes.SELECT,
     });
 
+    whereConditions = whereConditions.filter(condition => !condition.includes('brand_id'));
+    delete replacements.brandId;
     const count = rows.length;
+
     await Promise.all(rows.map(async (row: any) => {
       const { startDate, endDate } = row;
 
       const avgQuery = `
         SELECT 
-          AVG(CASE WHEN "program_id" = 4 THEN CAST("rate" AS FLOAT) END) AS "organic_average_price",
-          AVG(CASE WHEN "program_id" = 5 THEN CAST("rate" AS FLOAT) END) AS "reel_average_price"
-        FROM "gin_sales"
-        WHERE "date" >= :startDate AND "date" <= :endDate
+          AVG(CASE WHEN ss."program_id" = 4 THEN CAST(ss."rate" AS FLOAT) END) AS "organic_average_price",
+          AVG(CASE WHEN ss."program_id" = 5 THEN CAST(ss."rate" AS FLOAT) END) AS "reel_average_price"
+        FROM "gin_sales" ss
+        INNER JOIN "ginners" s ON ss."ginner_id" = s."id"
+        WHERE ss."date" >= :startDate AND ss."date" <= :endDate
         ${whereConditions.length > 0 ? 'AND ' + whereConditions.join(' AND ') : ''};
       `;
 
       const [avgResult] = await sequelize.query(avgQuery, {
-        replacements: { startDate, endDate, ...replacements },
+        replacements: {
+          startDate,
+          endDate,
+          brandIdArray: brandIdArray || [],
+          ...replacements
+        },
         type: sequelize.QueryTypes.SELECT,
       });
 
@@ -189,10 +199,11 @@ const fetchPriceComparisonYarn = async (req: Request, res: Response) => {
     let whereConditions: string[] = [];
     let replacements: any = { limit, offset };
 
+    let brandIdArray = brandId ? brandId.split(",").map((id: any) => parseInt(id, 10)) : [];
+
     if (brandId) {
-      const idArray = brandId.split(",").map((id: any) => parseInt(id, 10));
       whereConditions.push('"brand_id" IN (:brandId)');
-      replacements.brandId = idArray;
+      replacements.brandId = brandIdArray;
     }
 
     if (seasonId) {
@@ -231,21 +242,30 @@ const fetchPriceComparisonYarn = async (req: Request, res: Response) => {
       type: sequelize.QueryTypes.SELECT,
     });
 
+    whereConditions = whereConditions.filter(condition => !condition.includes('brand_id'));
+    delete replacements.brandId;
     const count = rows.length;
+
     await Promise.all(rows.map(async (row: any) => {
       const { startDate, endDate } = row;
 
       const avgQuery = `
         SELECT 
-          AVG(CASE WHEN "program_id" = 4 THEN CAST("price" AS FLOAT) END) AS "organic_average_price",
-          AVG(CASE WHEN "program_id" = 5 THEN CAST("price" AS FLOAT) END) AS "reel_average_price"
-        FROM "spin_sales"
-        WHERE "date" >= :startDate AND "date" <= :endDate
+          AVG(CASE WHEN ss."program_id" = 4 THEN CAST(ss."price" AS FLOAT) END) AS "organic_average_price",
+          AVG(CASE WHEN ss."program_id" = 5 THEN CAST(ss."price" AS FLOAT) END) AS "reel_average_price"
+        FROM "spin_sales" ss
+        INNER JOIN "spinners" s ON ss."spinner_id" = s."id"
+        WHERE ss."date" >= :startDate AND ss."date" <= :endDate
         ${whereConditions.length > 0 ? 'AND ' + whereConditions.join(' AND ') : ''};
       `;
 
       const [avgResult] = await sequelize.query(avgQuery, {
-        replacements: { startDate, endDate, ...replacements },
+        replacements: {
+          startDate,
+          endDate,
+          brandIdArray: brandIdArray || [],
+          ...replacements
+        },
         type: sequelize.QueryTypes.SELECT,
       });
 
