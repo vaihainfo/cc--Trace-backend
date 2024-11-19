@@ -62,7 +62,7 @@ const getPricyByCountry = async (req: Request, res: Response) => {
     const count = rows.length;
 
     if (count === 0) {
-      return res.sendPaginationSuccess(res, { country: [], reel: [], organic: [], conventional: [] }, count);
+      return res.sendSuccess(res, { country: [], reel: [], organic: [], conventional: [] });
     }
 
     const responseData: any = {
@@ -99,7 +99,7 @@ const getPricyByCountry = async (req: Request, res: Response) => {
       }
     }));
 
-    return res.sendPaginationSuccess(res, responseData, count);
+    return res.sendSuccess(res, responseData);
   } catch (error: any) {
     return res.sendError(res, error.message);
   }
@@ -200,7 +200,7 @@ const getStatesByCountryAndStateId = async (stateIds: number[], countryIds: numb
 //       row.state_name = stateName;
 //     });
 
-//     return res.sendPaginationSuccess(res, rows, count);
+//     return res.sendSuccess(res, rows, count);
 //   } catch (error: any) {
 //     return res.sendError(res, error.message);
 //   }
@@ -256,7 +256,7 @@ const getPricyByStates = async (req: Request, res: Response) => {
     const count = rows.length;
 
     if (count === 0) {
-      return res.sendPaginationSuccess(res, { state: [], reel: [], organic: [], conventional: [] }, count);
+      return res.sendSuccess(res, { state: [], reel: [], organic: [], conventional: [] });
     }
 
     const responseData: any = {
@@ -298,12 +298,11 @@ const getPricyByStates = async (req: Request, res: Response) => {
       }
     }));
 
-    return res.sendPaginationSuccess(res, responseData, count);
+    return res.sendSuccess(res, responseData);
   } catch (error: any) {
     return res.sendError(res, error.message);
   }
 };
-
 
 export {
   getPricyByCountry,
