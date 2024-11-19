@@ -19,6 +19,9 @@ import TraceabilityExecutive from "../../../models/traceability-executive.model"
 import SupplyChainManager from "../../../models/supply-chain-manager.model";
 import SupplyChainDirector from "../../../models/supply-chain-director.model";
 import UserApp from "../../../models/users-app.model";
+import BrandExecutive from "../../../models/brand-executive.model";
+import BrandManager from "../../../models/brand-manager.model";
+import PSTeam from "../../../models/ps-team.model";
 
 const getUserInfo = async (req: Request, res: Response) => {
     try {
@@ -178,6 +181,49 @@ const getUserInfo = async (req: Request, res: Response) => {
             role = role.dataValues;
         }
 
+        if (req.query.BrandExecutiveId) {
+            role = await UserRole.findOne({
+                where: { user_role: 'Brand Executive' },
+                include: [
+                    {
+                        model: UserCategory,
+                        as: 'userCategory',
+                        attributes: ['id', 'category_name'], // Include only the name attribute of the category
+                    },
+                ],
+            });
+            role = role.dataValues;
+        }
+
+        if (req.query.BrandManagerId) {
+            role = await UserRole.findOne({
+                where: { user_role: 'Brand Manager' },
+                include: [
+                    {
+                        model: UserCategory,
+                        as: 'userCategory',
+                        attributes: ['id', 'category_name'], // Include only the name attribute of the category
+                    },
+                ],
+            });
+            role = role.dataValues;
+        }
+
+        if (req.query.PSTeamId) {
+            role = await UserRole.findOne({
+                where: { user_role: 'PS Team' },
+                include: [
+                    {
+                        model: UserCategory,
+                        as: 'userCategory',
+                        attributes: ['id', 'category_name'], // Include only the name attribute of the category
+                    },
+                ],
+            });
+            role = role.dataValues;
+        }
+
+
         let menuList = await MenuList.findAll(
             {
                 where: {
@@ -205,7 +251,7 @@ const getUserInfo = async (req: Request, res: Response) => {
             ],
         });
 
-        let [spinner, ginner, weaver, knitter, garment, trader, fabric, brand, physicalPartner, traceabilityExecutive, supplyChainManager, supplyChainDirector] = await Promise.all([
+        let [spinner, ginner, weaver, knitter, garment, trader, fabric, brand, physicalPartner, traceabilityExecutive, supplyChainManager, supplyChainDirector, brandExecutive, brandManager, psTeam] = await Promise.all([
             Spinner.findOne({ where: { spinnerUser_id: { [Op.contains]: [user.dataValues.id] } } }),
             Ginner.findOne({ where: { ginnerUser_id: { [Op.contains]: [user.dataValues.id] } } }),
             Weaver.findOne({ where: { weaverUser_id: { [Op.contains]: [user.dataValues.id] } } }),
@@ -226,6 +272,9 @@ const getUserInfo = async (req: Request, res: Response) => {
             TraceabilityExecutive.findOne({ where: { teUser_id: { [Op.contains]: [user.dataValues.id] } } }),
             SupplyChainManager.findOne({ where: { scmUser_id: { [Op.contains]: [user.dataValues.id] } } }),
             SupplyChainDirector.findOne({ where: { scdUser_id: { [Op.contains]: [user.dataValues.id] } } }),
+            BrandExecutive.findOne({ where: { beUser_id: { [Op.contains]: [user.dataValues.id] } } }),
+            BrandManager.findOne({ where: { bmUser_id: { [Op.contains]: [user.dataValues.id] } } }),
+            PSTeam.findOne({ where: { psUser_id: { [Op.contains]: [user.dataValues.id] } } }),
         ]);
 
         let processor = [];
@@ -241,6 +290,9 @@ const getUserInfo = async (req: Request, res: Response) => {
         traceabilityExecutive ? processor.push('Traceability_Executive') : "";
         supplyChainManager ? processor.push('Supply_Chain_Manager') : "";
         supplyChainDirector ? processor.push('Supply_Chain_Director') : "";
+        brandExecutive ? processor.push('Brand_Executive') : "";
+        brandManager ? processor.push('Brand_Manager') : "";
+        psTeam ? processor.push('PS_Team') : "";
 
         if (req.query.ginnerId) {
             ginner = await Ginner.findOne({ where: { id: req.query.ginnerId } })
@@ -272,7 +324,18 @@ const getUserInfo = async (req: Request, res: Response) => {
         if (req.query.SupplyChainDirectorId) {
             supplyChainDirector = await SupplyChainDirector.findOne({ where: { id: req.query.SupplyChainDirectorId } })
         }
-        return res.sendSuccess(res, { user, role, menuList, privileges, spinner, ginner, weaver, knitter, garment, trader, fabric, brand, physicalPartner, traceabilityExecutive, supplyChainManager, supplyChainDirector, processor });
+
+        if (req.query.BrandExecutiveId) {
+            brandExecutive = await BrandExecutive.findOne({ where: { id: req.query.BrandExecutiveId } })
+        }
+        if (req.query.BrandManagerId) {
+            brandManager = await BrandManager.findOne({ where: { id: req.query.BrandManagerId } })
+        }
+        if (req.query.PSTeamId) {
+            psTeam = await PSTeam.findOne({ where: { id: req.query.PSTeamId } })
+        }
+
+        return res.sendSuccess(res, { user, role, menuList, privileges, spinner, ginner, weaver, knitter, garment, trader, fabric, brand, physicalPartner, traceabilityExecutive, supplyChainManager, supplyChainDirector, brandExecutive, brandManager, psTeam, processor });
     } catch (error: any) {
         console.log(error)
         return res.sendError(res, error.message);
@@ -333,6 +396,23 @@ const processorLoginAdmin = async (req: Request, res: Response) => {
             let supplyChainDirector = await SupplyChainDirector.findOne({ where: { id: req.query.SupplyChainDirectorId } });
             userId = supplyChainDirector.dataValues.scdUser_id;
         }
+
+        if (req.query.type === 'BrandExecutive') {
+            name = "Brand Executive";
+            let brandExecutive = await BrandExecutive.findOne({ where: { id: req.query.BrandExecutiveId } });
+            userId = brandExecutive.dataValues.beUser_id;
+        }
+        if (req.query.type === 'BrandManager') {
+            name = "Brand Manager";
+            let brandManager = await BrandManager.findOne({ where: { id: req.query.BrandManagerId } });
+            userId = brandManager.dataValues.bmUser_id;
+        }
+        if (req.query.type === 'PSTeam') {
+            name = "PS Team";
+            let psTeam = await PSTeam.findOne({ where: { id: req.query.PSTeamId } });
+            userId = psTeam.dataValues.psUser_id;
+        }
+
         if (req.query.type === 'brand') {
             let brand = await Brand.findOne({ where: { id: req.query.brandId } });
             userId = brand.dataValues.brandUser_id;
@@ -366,7 +446,16 @@ const getMobileUserInfo = async (req: Request, res: Response) => {
             { 
                 where: {id: authenticatedReq.user.id},
                 attributes: { exclude: ['password', 'createdAt', 'updatedAt'] }, 
-                include: [{
+                include: [
+                {
+                    model: Ginner,
+                    as: 'ginner',
+                },
+                {
+                    model: Spinner,
+                    as: 'spinner',
+                },
+                {
                     model: TraceabilityExecutive,
                     as: 'traceability_executive',
                 },
@@ -377,6 +466,18 @@ const getMobileUserInfo = async (req: Request, res: Response) => {
                 {
                     model: SupplyChainDirector,
                     as: 'supply_chain_director',
+                },
+                {
+                    model: BrandExecutive,
+                    as: 'brand_executive',
+                },
+                {
+                    model: BrandManager,
+                    as: 'brand_manager',
+                },
+                {
+                    model: PSTeam,
+                    as: 'ps_team',
                 },
             ] }
         );

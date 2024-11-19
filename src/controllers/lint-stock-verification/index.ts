@@ -13,6 +13,8 @@ import TraceabilityExecutive from "../../models/traceability-executive.model";
 import SupplyChainManager from "../../models/supply-chain-manager.model";
 import SupplyChainDirector from "../../models/supply-chain-director.model";
 import BrandExecutive from "../../models/brand-executive.model";
+import BrandManager from "../../models/brand-manager.model";
+import PSTeam from "../../models/ps-team.model";
 
 const getGinProcessLotNo = async (req: Request, res: Response) => {
   try {
@@ -231,6 +233,7 @@ const createVerifiedLintStock = async (req: Request, res: Response) => {
       if(req.body.processorType == 'Ginner' || req.body.processorType == 'ginner'){
         for await (const bale of req.body.bales) {
           let baleData = {
+            gin_level_verify: true,
             te_verified_weight: bale.actualWeight,
             te_verified_status: bale.verifiedStatus,
           };
@@ -258,6 +261,7 @@ const createVerifiedLintStock = async (req: Request, res: Response) => {
       if(req.body.processorType == 'Spinner' || req.body.processorType == 'spinner'){
         for await (const bale of req.body.bales) {
           let baleData = {
+            spin_level_verify: true,
             te_sale_verified_weight: req.body.teId ? bale.actualWeight : null,
             te_sale_verified_status:  req.body.teId ? bale.verifiedStatus : null,
             be_verified_weight: req.body.beId ? bale.actualWeight : null,
@@ -455,10 +459,32 @@ const getLintVerifiedStock = async (req: Request, res: Response) => {
         {
           model: TraceabilityExecutive,
           as: "traceability_executive",
+          attributes: ["id", "name"],
         },
         {
           model: BrandExecutive,
           as: "brand_executive",
+          attributes: ["id", "name"],
+        },
+        {
+          model: SupplyChainManager,
+          as: "supply_chain_manager",
+          attributes: ["id", "name"],
+        },
+        {
+          model: SupplyChainDirector,
+          as: "supply_chain_director",
+          attributes: ["id", "name"],
+        },
+        {
+          model: BrandManager,
+          as: "brand_manager",
+          attributes: ["id", "name"],
+        },
+        {
+          model: PSTeam,
+          as: "ps_team",
+          attributes: ["id", "name"],
         },
         {
           model: Country,
@@ -482,30 +508,76 @@ const getLintVerifiedStock = async (req: Request, res: Response) => {
     });
 
     if (stock) {
-      let bales = await GinBale.findAll({
-        attributes: [
-          "id",
-          "bale_no",
-          "process_id",
-          "weight",
-          "old_weight",
-          "sold_status",
-          "te_verified_status",
-          "te_verified_weight",
-          "gin_verified_status",
-          "gin_verified_weight",
-          "scm_verified_status",
-          "scm_verified_weight",
-          "scd_verified_status",
-          "scd_verified_weight"
-        ],
-        where: { process_id: stock?.dataValues?.process_id },
-      });
-      if (bales && bales.length > 0) {
-        stock = {
-          ...stock?.dataValues,
-          bales,
-        };
+      if(stock?.dataValues?.processor_type === 'Ginner' && stock?.dataValues.process_id){
+
+        let bales = await GinBale.findAll({
+          attributes: [
+            "id",
+            "bale_no",
+            "process_id",
+            "weight",
+            "old_weight",
+            "sold_status",
+            "te_verified_status",
+            "te_verified_weight",
+            "gin_verified_status",
+            "gin_verified_weight",
+            "scm_verified_status",
+            "scm_verified_weight",
+            "scd_verified_status",
+            "scd_verified_weight",
+            "gin_level_verify"
+          ],
+          where: { process_id: stock?.dataValues?.process_id },
+        });
+        if (bales && bales.length > 0) {
+          stock = {
+            ...stock?.dataValues,
+            bales,
+          };
+        }
+      }else if(stock?.dataValues?.processor_type === 'Spinner' && stock?.dataValues.sales_id){
+        let [bales] = await sequelize.query(`
+          SELECT 
+            gb.id,
+            gb.bale_no,
+            gb.process_id,
+            gb.weight,
+            gb.old_weight,
+            gb.sold_status,
+            gb.te_verified_status,
+            gb.te_verified_weight,
+            gb."gin_verified_status",
+            gb."gin_verified_weight",
+            gb."scm_verified_status",
+            gb."scm_verified_weight",
+            gb."scd_verified_status",
+            gb."scd_verified_weight",
+            gb."te_sale_verified_status",
+            gb."te_sale_verified_weight",
+            gb."be_verified_status",
+            gb."be_verified_weight",
+            gb."spin_verified_status",
+            gb."spin_verified_status",
+            gb."bm_verified_status",
+            gb."bm_verified_weight",
+            gb."ps_verified_status",
+            gb."ps_verified_weight",
+            gb."gin_level_verify",
+            gb."spin_level_verify"
+          FROM gin_sales gs
+          JOIN bale_selections bs ON gs.id = bs.sales_id
+          JOIN "gin-bales" gb ON bs.bale_id = gb.id AND (bs.spinner_status = true OR gs.status = 'Sold')
+          WHERE gs.id = ${stock?.dataValues.sales_id}
+          AND gs.status IN ('Sold', 'Partially Accepted', 'Partially Rejected')
+          `);
+
+        if (bales && bales.length > 0) {
+          stock = {
+            ...stock?.dataValues,
+            bales,
+          };
+        }
       }
     }
     return res.sendSuccess(res, stock);
@@ -612,6 +684,8 @@ const getGinnerVerifiedStocks = async (req: Request, res: Response) => {
     }else{
       whereCondition.status = 'Accepted'
     }
+
+    whereCondition.processor_type = 'Ginner';
 
     let include = [
       {
@@ -923,6 +997,7 @@ const getSCMVerifiedStocks = async (req: Request, res: Response) => {
     }
     
     whereCondition.status = 'Accepted'
+    whereCondition.processor_type = 'Ginner';
 
     let include = [
       {
@@ -1093,8 +1168,7 @@ const getSCDVerifiedStocks = async (req: Request, res: Response) => {
 
     whereCondition.status_scm = 'Accepted'
     whereCondition.status = 'Accepted'
-
-
+    whereCondition.processor_type = 'Ginner';
 
     let include = [
       {
@@ -1249,7 +1323,7 @@ const getListVerifiedStocks = async (req: Request, res: Response) => {
     whereCondition.status_scm = 'Accepted'
     whereCondition.status = 'Accepted'
 
-
+    whereCondition.processor_type = 'Ginner';
 
     let include = [
       {
@@ -1411,6 +1485,8 @@ const getTypeWiseListVerifiedStocks = async (req: Request, res: Response) => {
       whereCondition.status_scm = 'Accepted';
       whereCondition.status_scd = { [Op.in]: ['Accepted', 'Rejected'] };
     }
+
+    whereCondition.processor_type = 'Ginner';
 
     let include = [
       {
@@ -1648,6 +1724,1267 @@ const fetchBeStates= async (req: Request, res: Response) => {
   }
 }
 
+//Spinner Flow
+const getLintSpinVerifiedStocks = async (req: Request, res: Response) => {
+  const searchTerm = req.query.search || "";
+  const page = Number(req.query.page) || 1;
+  const limit = Number(req.query.limit) || 10;
+  const {
+    ginnerId,
+    teId,
+    beId,
+    programId,
+    brandId,
+    stateId,
+    countryId,
+    spinnerId,
+  }: any = req.query;
+  const offset = (page - 1) * limit;
+  const whereCondition: any = {};
+
+  try {
+    if (searchTerm) {
+      whereCondition[Op.or] = [
+        { "$spinner.name$": { [Op.iLike]: `%${searchTerm}%` } },
+        { lot_no: { [Op.iLike]: `%${searchTerm}%` } },
+        { reel_lot_no: { [Op.iLike]: `%${searchTerm}%` } },
+        { "$country.county_name$": { [Op.iLike]: `%${searchTerm}%` } },
+        { "$state.state_name$": { [Op.iLike]: `%${searchTerm}%` } },
+      ];
+    }
+
+    if (teId) {
+      const idArray: number[] = teId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.te_id = { [Op.in]: idArray };
+    }
+
+    if (beId) {
+      const idArray: number[] = beId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.be_id = { [Op.in]: idArray };
+    }
+
+    if (ginnerId) {
+      const idArray: number[] = ginnerId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.ginner_id = { [Op.in]: idArray };
+    }
+
+    if (spinnerId) {
+      const idArray: number[] = spinnerId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.spinner_id = { [Op.in]: idArray };
+    }
+
+    if (brandId) {
+      const idArray: number[] = brandId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+        if(beId){
+          whereCondition["$brand_executive.brand$"] = {
+            [Op.overlap]: idArray,
+          };
+        }else{
+          whereCondition["$traceability_executive.brand$"] = {
+            [Op.overlap]: idArray,
+          };
+        }
+    }
+
+    if (stateId) {
+      const idArray: number[] = stateId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.state_id = { [Op.in]: idArray };
+    }
+
+    if (countryId) {
+      const idArray: number[] = countryId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.country_id = { [Op.in]: idArray };
+    }
+
+    if (programId) {
+      const idArray: number[] = programId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+
+      if(beId){
+        whereCondition["$brand_executive.program_id$"] = {
+          [Op.overlap]: idArray,
+        };
+      }else{
+        whereCondition["$traceability_executive.program_id$"] = {
+          [Op.overlap]: idArray,
+        };
+      }
+    }
+
+    whereCondition.processor_type = 'Spinner';
+
+    let include = [
+      {
+        model: Spinner,
+        as: "spinner",
+        attributes: ["id", "name"],
+      },
+      {
+        model: TraceabilityExecutive,
+        as: "traceability_executive",
+        attributes: ["id", "name"],
+      },
+      {
+        model: BrandExecutive,
+        as: "brand_executive",
+        attributes: ["id", "name"],
+      },
+      {
+        model: BrandManager,
+        as: "brand_manager",
+        attributes: ["id", "name"],
+      },
+      {
+        model: PSTeam,
+        as: "ps_team",
+        attributes: ["id", "name"],
+      },
+      {
+        model: Country,
+        as: "country",
+        attributes: ["id", "county_name"],
+      },
+      {
+        model: State,
+        as: "state",
+        attributes: ["id", "state_name"],
+      },
+      {
+        model: GinProcess,
+        as: "ginprocess",
+      },
+      {
+        model: GinSales,
+        as: "ginsales",
+      },
+    ];
+
+    if (req.query.pagination === "true") {
+      const { count, rows } = await LintStockVerified.findAndCountAll({
+        where: whereCondition,
+        include: include,
+        offset: offset,
+        limit: limit,
+        order: [["id", "desc"]],
+      });
+      return res.sendPaginationSuccess(res, rows, count);
+    } else {
+      const stock = await LintStockVerified.findAll({
+        where: whereCondition,
+        include: include,
+        order: [["id", "desc"]],
+      });
+      return res.sendSuccess(res, stock);
+    }
+  } catch (error: any) {
+    console.log(error);
+    return res.sendError(res, error?.message);
+  }
+};
+
+const updateSpinVerifiedStockConfirm = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const data = {
+      bm_id: req.body.bmId,
+      confirmed_spin_total_qty: req.body.confirmedTotalQty,
+      confirmed_spin_no_of_bales: req.body.confirmedNoOfBales,
+      consent_form_spinner: req.body.consentForm,
+      uploaded_photos_spinner: req.body.uploadedPhotos,
+      status: req.body.status === "Accepted" ? "Accepted" : "Rejected",
+      status_bm: "Pending",
+    };
+
+    const lintVerified = await LintStockVerified.update(data, {
+      where: { id: req.body.id },
+    });
+
+    if (lintVerified) {
+      for await (const bale of req.body.bales) {
+        let baleData = {
+          spin_verified_weight: bale.actualWeight,
+          spin_verified_status: bale.verifiedStatus,
+        };
+        const gin = await GinBale.update(baleData, {
+          where: {
+            id: bale.id,
+          },
+        });
+      }
+
+      const gin = await GinSales.update(
+        {
+          spin_verified_status: req.body.status === "Accepted" ? true : false,
+          spin_verified_total_qty: req.body.confirmedTotalQty,
+          spin_verified_bales: req.body.confirmedNoOfBales,
+        },
+        {
+          where: {
+            id: req.body.salesId,
+          },
+        }
+      );
+    }
+
+    return res.sendSuccess(res, lintVerified);
+  } catch (error: any) {
+    console.log(error);
+    return res.sendError(res, error?.message);
+  }
+};
+
+const updateBMVerifiedStockConfirm = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const data = {
+      ps_id: req.body.psId,
+      confirmed_bm_total_qty: req.body.confirmedTotalQty,
+      confirmed_bm_no_of_bales: req.body.confirmedNoOfBales,
+      consent_form_bm: req.body.consentForm,
+      uploaded_photos_bm: req.body.uploadedPhotos,
+      status_bm: req.body.status === "Accepted" ? "Accepted" : "Rejected",
+      status_ps: "Pending",
+    };
+
+    const lintVerified = await LintStockVerified.update(data, {
+      where: { id: req.body.id },
+    });
+
+    if (lintVerified) {
+      for await (const bale of req.body.bales) {
+        let baleData = {
+          bm_verified_weight: bale.actualWeight,
+          bm_verified_status: bale.verifiedStatus,
+        };
+        const gin = await GinBale.update(baleData, {
+          where: {
+            id: bale.id,
+          },
+        });
+      }
+
+      const gin = await GinSales.update(
+        {
+          bm_verified_status: req.body.status === "Accepted" ? true : false,
+          bm_verified_total_qty: req.body.confirmedTotalQty,
+          bm_verified_bales: req.body.confirmedNoOfBales,
+        },
+        {
+          where: {
+            id: req.body.salesId,
+          },
+        }
+      );
+    }
+
+    return res.sendSuccess(res, lintVerified);
+  } catch (error: any) {
+    console.log(error);
+    return res.sendError(res, error?.message);
+  }
+};
+
+const updatePSVerifiedStockConfirm = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const data = {
+      confirmed_ps_total_qty: req.body.confirmedTotalQty,
+      confirmed_ps_no_of_bales: req.body.confirmedNoOfBales,
+      consent_form_ps: req.body.consentForm,
+      uploaded_photos_ps: req.body.uploadedPhotos,
+      status_ps: req.body.status === "Accepted" ? "Accepted" : "Rejected",
+    };
+
+    const lintVerified = await LintStockVerified.update(data, {
+      where: { id: req.body.id },
+    });
+
+    if (lintVerified) {
+      for await (const bale of req.body.bales) {
+        let baleData = {
+          ps_verified_weight: bale.actualWeight,
+          ps_verified_status: bale.verifiedStatus,
+        };
+        const gin = await GinBale.update(baleData, {
+          where: {
+            id: bale.id,
+          },
+        });
+      }
+
+      const gin = await GinSales.update(
+        {
+          ps_verified_status: req.body.status === "Accepted" ? true : false,
+          ps_verified_total_qty: req.body.confirmedTotalQty,
+          ps_verified_bales: req.body.confirmedNoOfBales,
+        },
+        {
+          where: {
+            id: req.body.salesId,
+          },
+        }
+      );
+    }
+
+    return res.sendSuccess(res, lintVerified);
+  } catch (error: any) {
+    console.log(error);
+    return res.sendError(res, error?.message);
+  }
+};
+
+const getSpinnerVerifiedStocks = async (req: Request, res: Response) => {
+  const searchTerm = req.query.search || "";
+  const page = Number(req.query.page) || 1;
+  const limit = Number(req.query.limit) || 10;
+  const {
+    ginnerId,
+    teId,
+    beId,
+    programId,
+    brandId,
+    stateId,
+    countryId,
+    spinnerId,
+    bmId,
+    status
+  }: any = req.query;
+  const offset = (page - 1) * limit;
+  const whereCondition: any = {};
+
+  try {
+    if (searchTerm) {
+      whereCondition[Op.or] = [
+        { "$traceability_executive.name$": { [Op.iLike]: `%${searchTerm}%` } },
+        { "$brand_executive.name$": { [Op.iLike]: `%${searchTerm}%` } },
+        { "$brand_manager.name$": { [Op.iLike]: `%${searchTerm}%` } },
+        { lot_no: { [Op.iLike]: `%${searchTerm}%` } },
+        { reel_lot_no: { [Op.iLike]: `%${searchTerm}%` } },
+        { "$country.county_name$": { [Op.iLike]: `%${searchTerm}%` } },
+        { "$state.state_name$": { [Op.iLike]: `%${searchTerm}%` } },
+      ];
+    }
+
+    if (!spinnerId) {
+      return res.sendError(res, "Spinner ID is required");
+    }
+
+    if (teId) {
+      const idArray: number[] = teId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.te_id = { [Op.in]: idArray };
+    }
+
+    if (beId) {
+      const idArray: number[] = beId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.te_id = { [Op.in]: idArray };
+    }
+
+    if (bmId) {
+      const idArray: number[] = bmId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.bm_id = { [Op.in]: idArray };
+    }
+
+    if (ginnerId) {
+      const idArray: number[] = ginnerId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.ginner_id = { [Op.in]: idArray };
+    }
+
+    if (spinnerId) {
+      const idArray: number[] = spinnerId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.spinner_id = { [Op.in]: idArray };
+    }
+
+    if (brandId) {
+      const idArray: number[] = brandId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition["$spinner.brand$"] = { [Op.overlap]: idArray };
+    }
+
+    if (stateId) {
+      const idArray: number[] = stateId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.state_id = { [Op.in]: idArray };
+    }
+
+    if (countryId) {
+      const idArray: number[] = countryId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.country_id = { [Op.in]: idArray };
+    }
+
+    if (programId) {
+      const idArray: number[] = programId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition["$spinner.program_id$"] = { [Op.overlap]: idArray };
+    }
+
+    if(status == 'Pending'){
+      whereCondition.status = 'Pending'
+    }else if(status == 'Rejected'){
+      whereCondition.status = 'Rejected'
+    }else{
+      whereCondition.status = 'Accepted'
+    }
+
+    whereCondition.processor_type = 'Spinner';
+
+    let include = [
+      {
+        model: Ginner,
+        as: "ginner",
+        attributes: ["id", "name"],
+      },
+      {
+        model: Spinner,
+        as: "spinner",
+        attributes: ["id", "name"],
+      },
+      {
+        model: TraceabilityExecutive,
+        as: "traceability_executive",
+        attributes: ["id", "name"],
+      },
+      {
+        model: BrandExecutive,
+        as: "brand_executive",
+        attributes: ["id", "name"],
+      },
+      {
+        model: BrandManager,
+        as: "brand_manager",
+        attributes: ["id", "name"],
+      },
+      {
+        model: PSTeam,
+        as: "ps_team",
+        attributes: ["id", "name"],
+      },
+      {
+        model: Country,
+        as: "country",
+        attributes: ["id", "county_name"],
+      },
+      {
+        model: State,
+        as: "state",
+        attributes: ["id", "state_name"],
+      },
+      {
+        model: GinSales,
+        as: "ginsales",
+      },
+    ];
+
+    if (req.query.pagination === "true") {
+      const { count, rows } = await LintStockVerified.findAndCountAll({
+        where: whereCondition,
+        include: include,
+        offset: offset,
+        limit: limit,
+        order: [["id", "desc"]],
+      });
+      return res.sendPaginationSuccess(res, rows, count);
+    } else {
+      const stock = await LintStockVerified.findAll({
+        where: whereCondition,
+        include: include,
+        order: [["id", "desc"]],
+      });
+      return res.sendSuccess(res, stock);
+    }
+  } catch (error: any) {
+    console.log(error);
+    return res.sendError(res, error?.message);
+  }
+};
+
+const getBMVerifiedStocks = async (req: Request, res: Response) => {
+  const searchTerm = req.query.search || "";
+  const page = Number(req.query.page) || 1;
+  const limit = Number(req.query.limit) || 10;
+  const {
+    bmId,
+    ginnerId,
+    teId,
+    beId,
+    programId,
+    brandId,
+    stateId,
+    countryId,
+    spinnerId,
+    status
+  }: any = req.query;
+  const offset = (page - 1) * limit;
+  const whereCondition: any = {};
+
+  try {
+    if (searchTerm) {
+      whereCondition[Op.or] = [
+        { "$ginner.name$": { [Op.iLike]: `%${searchTerm}%` } },
+        { "$spinner.name$": { [Op.iLike]: `%${searchTerm}%` } },
+        { "$traceability_executive.name$": { [Op.iLike]: `%${searchTerm}%` } },
+        { "$brand_executive.name$": { [Op.iLike]: `%${searchTerm}%` } },
+        { "$ps_team.name$": { [Op.iLike]: `%${searchTerm}%` } },
+        { lot_no: { [Op.iLike]: `%${searchTerm}%` } },
+        { reel_lot_no: { [Op.iLike]: `%${searchTerm}%` } },
+        { "$country.county_name$": { [Op.iLike]: `%${searchTerm}%` } },
+        { "$state.state_name$": { [Op.iLike]: `%${searchTerm}%` } },
+      ];
+    }
+
+    if (!bmId) {
+      return res.sendError(res, "BM ID is required");
+    }
+    if (bmId) {
+      const idArray: number[] = bmId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.bm_id = { [Op.in]: idArray };
+    }
+
+    if (teId) {
+      const idArray: number[] = teId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.te_id = { [Op.in]: idArray };
+    }
+
+    if (beId) {
+      const idArray: number[] = beId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.be_id = { [Op.in]: idArray };
+    }
+
+    if (ginnerId) {
+      const idArray: number[] = ginnerId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.ginner_id = { [Op.in]: idArray };
+    }
+
+
+    if (spinnerId) {
+      const idArray: number[] = spinnerId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.spinner_id = { [Op.in]: idArray };
+    }
+
+    if (brandId) {
+      const idArray: number[] = brandId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition["$brand_manager.brand$"] = { [Op.overlap]: idArray };
+    }
+
+    if (stateId) {
+      const idArray: number[] = stateId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.state_id = { [Op.in]: idArray };
+    }
+
+    if (countryId) {
+      const idArray: number[] = countryId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.country_id = { [Op.in]: idArray };
+    }
+
+    if (programId) {
+      const idArray: number[] = programId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition["$brand_manager.program_id$"] = { [Op.overlap]: idArray };
+    }
+
+    if(status == 'Pending'){
+      whereCondition.status_bm = 'Pending'
+    }else if(status == 'Rejected'){
+      whereCondition.status_bm = 'Rejected'
+    }else{
+      whereCondition.status_bm = 'Accepted'
+    }
+    
+    whereCondition.status = 'Accepted'
+    whereCondition.processor_type = 'Spinner';
+
+    let include = [
+      {
+        model: Ginner,
+        as: "ginner",
+        attributes: ["id", "name"],
+      },
+      {
+        model: Spinner,
+        as: "spinner",
+        attributes: ["id", "name"],
+      },
+      {
+        model: BrandExecutive,
+        as: "brand_executive",
+        attributes: ["id", "name"],
+      },
+      {
+        model: BrandManager,
+        as: "brand_manager",
+        attributes: ["id", "name"],
+      },
+      {
+        model: PSTeam,
+        as: "ps_team",
+        attributes: ["id", "name"],
+      },
+      {
+        model: TraceabilityExecutive,
+        as: "traceability_executive",
+        attributes: ["id", "name"],
+      },
+      {
+        model: Country,
+        as: "country",
+        attributes: ["id", "county_name"],
+      },
+      {
+        model: State,
+        as: "state",
+        attributes: ["id", "state_name"],
+      },
+      {
+        model: GinSales,
+        as: "ginsales",
+      },
+    ];
+
+    if (req.query.pagination === "true") {
+      const { count, rows } = await LintStockVerified.findAndCountAll({
+        where: whereCondition,
+        include: include,
+        offset: offset,
+        limit: limit,
+        order: [["id", "desc"]],
+      });
+      return res.sendPaginationSuccess(res, rows, count);
+    } else {
+      const stock = await LintStockVerified.findAll({
+        where: whereCondition,
+        include: include,
+        order: [["id", "desc"]],
+      });
+      return res.sendSuccess(res, stock);
+    }
+  } catch (error: any) {
+    console.log(error);
+    return res.sendError(res, error?.message);
+  }
+};
+
+const getPSVerifiedStocks = async (req: Request, res: Response) => {
+  const searchTerm = req.query.search || "";
+  const page = Number(req.query.page) || 1;
+  const limit = Number(req.query.limit) || 10;
+  const {
+    bmID,
+    psId,
+    ginnerId,
+    teId,
+    beId,
+    programId,
+    brandId,
+    stateId,
+    countryId,
+    spinnerId,
+    status
+  }: any = req.query;
+  const offset = (page - 1) * limit;
+  const whereCondition: any = {};
+
+  try {
+    if (searchTerm) {
+      whereCondition[Op.or] = [
+        { "$ginner.name$": { [Op.iLike]: `%${searchTerm}%` } },
+        { "$spinner.name$": { [Op.iLike]: `%${searchTerm}%` } },
+        { "$traceability_executive.name$": { [Op.iLike]: `%${searchTerm}%` } },
+        { "$brand_executive.name$": { [Op.iLike]: `%${searchTerm}%` } },
+        { "$brand_manager.name$": { [Op.iLike]: `%${searchTerm}%` } },
+        { lot_no: { [Op.iLike]: `%${searchTerm}%` } },
+        { reel_lot_no: { [Op.iLike]: `%${searchTerm}%` } },
+        { "$country.county_name$": { [Op.iLike]: `%${searchTerm}%` } },
+        { "$state.state_name$": { [Op.iLike]: `%${searchTerm}%` } },
+      ];
+    }
+
+    if (!psId) {
+      return res.sendError(res, "PS ID is required");
+    }
+
+    if (psId) {
+      const idArray: number[] = psId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.ps_id = { [Op.in]: idArray };
+    }
+
+    if (bmID) {
+      const idArray: number[] = bmID
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.bm_id = { [Op.in]: idArray };
+    }
+
+    if (teId) {
+      const idArray: number[] = teId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.te_id = { [Op.in]: idArray };
+    }
+
+    if (beId) {
+      const idArray: number[] = beId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.be_id = { [Op.in]: idArray };
+    }
+
+    if (ginnerId) {
+      const idArray: number[] = ginnerId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.ginner_id = { [Op.in]: idArray };
+    }
+
+
+    if (spinnerId) {
+      const idArray: number[] = spinnerId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.spinner_id = { [Op.in]: idArray };
+    }
+
+    if (brandId) {
+      const idArray: number[] = brandId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition["$ps_team.brand$"] = { [Op.overlap]: idArray };
+    }
+
+    if (stateId) {
+      const idArray: number[] = stateId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.state_id = { [Op.in]: idArray };
+    }
+
+    if (countryId) {
+      const idArray: number[] = countryId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.country_id = { [Op.in]: idArray };
+    }
+
+    if (programId) {
+      const idArray: number[] = programId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition["$ps_team.program_id$"] = { [Op.overlap]: idArray };
+    }
+
+    if(status == 'Pending'){
+      whereCondition.status_ps = 'Pending'
+    }else if(status == 'Rejected'){
+      whereCondition.status_ps = 'Rejected'
+    }else{
+      whereCondition.status_ps = 'Accepted'
+    }
+
+    whereCondition.status_bm = 'Accepted'
+    whereCondition.status = 'Accepted'
+    whereCondition.processor_type = 'Spinner';
+
+    let include = [
+      {
+        model: Ginner,
+        as: "ginner",
+        attributes: ["id", "name"],
+      },
+      {
+        model: Spinner,
+        as: "spinner",
+        attributes: ["id", "name"],
+      },
+      {
+        model: BrandExecutive,
+        as: "brand_executive",
+        attributes: ["id", "name"],
+      },
+      {
+        model: BrandManager,
+        as: "brand_manager",
+        attributes: ["id", "name"],
+      },
+      {
+        model: PSTeam,
+        as: "ps_team",
+        attributes: ["id", "name"],
+      },
+      {
+        model: TraceabilityExecutive,
+        as: "traceability_executive",
+        attributes: ["id", "name"],
+      },
+      {
+        model: Country,
+        as: "country",
+        attributes: ["id", "county_name"],
+      },
+      {
+        model: State,
+        as: "state",
+        attributes: ["id", "state_name"],
+      },
+      {
+        model: GinSales,
+        as: "ginsales",
+      },
+    ];
+
+    if (req.query.pagination === "true") {
+      const { count, rows } = await LintStockVerified.findAndCountAll({
+        where: whereCondition,
+        include: include,
+        offset: offset,
+        limit: limit,
+        order: [["id", "desc"]],
+      });
+      return res.sendPaginationSuccess(res, rows, count);
+    } else {
+      const stock = await LintStockVerified.findAll({
+        where: whereCondition,
+        include: include,
+        order: [["id", "desc"]],
+      });
+      return res.sendSuccess(res, stock);
+    }
+  } catch (error: any) {
+    console.log(error);
+    return res.sendError(res, error?.message);
+  }
+};
+
+const getTypeWiseSpinVerifiedStocks = async (req: Request, res: Response) => {
+  const searchTerm = req.query.search || "";
+  const page = Number(req.query.page) || 1;
+  const limit = Number(req.query.limit) || 10;
+  const {
+    bmId,
+    psId,
+    ginnerId,
+    teId,
+    beId,
+    programId,
+    brandId,
+    stateId,
+    countryId,
+    type,
+    spinnerId,
+    status
+  }: any = req.query;
+  const offset = (page - 1) * limit;
+  const whereCondition: any = {};
+
+  try {
+    if (searchTerm) {
+      whereCondition[Op.or] = [
+        { "$ginner.name$": { [Op.iLike]: `%${searchTerm}%` } },
+        { "$spinner.name$": { [Op.iLike]: `%${searchTerm}%` } },
+        { "$traceability_executive.name$": { [Op.iLike]: `%${searchTerm}%` } },
+        { "$brand_executive.name$": { [Op.iLike]: `%${searchTerm}%` } },
+        { "$brand_manager.name$": { [Op.iLike]: `%${searchTerm}%` } },
+        { "$ps_team.name$": { [Op.iLike]: `%${searchTerm}%` } },
+        { lot_no: { [Op.iLike]: `%${searchTerm}%` } },
+        { reel_lot_no: { [Op.iLike]: `%${searchTerm}%` } },
+        { "$country.county_name$": { [Op.iLike]: `%${searchTerm}%` } },
+        { "$state.state_name$": { [Op.iLike]: `%${searchTerm}%` } },
+      ];
+    }
+
+    if (bmId) {
+      const idArray: number[] = bmId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.bm_id = { [Op.in]: idArray };
+    }
+
+    if (psId) {
+      const idArray: number[] = psId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.ps_id = { [Op.in]: idArray };
+    }
+
+    if (teId) {
+      const idArray: number[] = teId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.te_id = { [Op.in]: idArray };
+    }
+
+    if (beId) {
+      const idArray: number[] = beId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.be_id = { [Op.in]: idArray };
+    }
+
+    if (ginnerId) {
+      const idArray: number[] = ginnerId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.ginner_id = { [Op.in]: idArray };
+    }
+
+    if (spinnerId) {
+      const idArray: number[] = spinnerId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.spinner_id = { [Op.in]: idArray };
+    }
+
+    if (brandId) {
+      const idArray: number[] = brandId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition["$ps_team.brand$"] = { [Op.overlap]: idArray };
+    }
+
+    if (stateId) {
+      const idArray: number[] = stateId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.state_id = { [Op.in]: idArray };
+    }
+
+    if (countryId) {
+      const idArray: number[] = countryId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.country_id = { [Op.in]: idArray };
+    }
+
+    if (programId) {
+      const idArray: number[] = programId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition["$ps_team.program_id$"] = { [Op.overlap]: idArray };
+    }
+
+    if( type === 'Spinner'){
+      whereCondition.status = { [Op.in]: ['Accepted', 'Rejected'] };
+    }else if(type === 'Brand_Manager'){
+      whereCondition.status = 'Accepted';
+      whereCondition.status_bm = { [Op.in]: ['Accepted', 'Rejected'] };
+    }else if(type === 'PS_Team'){
+      whereCondition.status = 'Accepted';
+      whereCondition.status_bm = 'Accepted';
+      whereCondition.status_ps = { [Op.in]: ['Accepted', 'Rejected'] };
+    }else if(type === 'Brand_Executive'){
+      whereCondition.be_id = { [Op.not]: null }
+    }else if(type === 'Traceability_Executive'){
+      whereCondition.te_id = { [Op.not]: null }
+    }
+
+    whereCondition.processor_type = 'Spinner';
+
+    let include = [
+      {
+        model: Ginner,
+        as: "ginner",
+        attributes: ["id", "name"],
+      },
+      {
+        model: Spinner,
+        as: "spinner",
+        attributes: ["id", "name"],
+      },
+      {
+        model: BrandExecutive,
+        as: "brand_executive",
+        attributes: ["id", "name"],
+      },
+      {
+        model: BrandManager,
+        as: "brand_manager",
+        attributes: ["id", "name"],
+      },
+      {
+        model: PSTeam,
+        as: "ps_team",
+        attributes: ["id", "name"],
+      },
+      {
+        model: TraceabilityExecutive,
+        as: "traceability_executive",
+        attributes: ["id", "name"],
+      },
+      {
+        model: Country,
+        as: "country",
+        attributes: ["id", "county_name"],
+      },
+      {
+        model: State,
+        as: "state",
+        attributes: ["id", "state_name"],
+      },
+      {
+        model: GinSales,
+        as: "ginsales",
+      },
+    ];
+
+    if (req.query.pagination === "true") {
+      const { count, rows } = await LintStockVerified.findAndCountAll({
+        where: whereCondition,
+        include: include,
+        offset: offset,
+        limit: limit,
+        order: [["id", "desc"]],
+      });
+      return res.sendPaginationSuccess(res, rows, count);
+    } else {
+      const stock = await LintStockVerified.findAll({
+        where: whereCondition,
+        include: include,
+        order: [["id", "desc"]],
+      });
+      return res.sendSuccess(res, stock);
+    }
+  } catch (error: any) {
+    console.log(error);
+    return res.sendError(res, error?.message);
+  }
+};
+
+const getBrandListSpinVerifiedStocks = async (req: Request, res: Response) => {
+  const searchTerm = req.query.search || "";
+  const page = Number(req.query.page) || 1;
+  const limit = Number(req.query.limit) || 10;
+  const {
+    bmId,
+    psId,
+    ginnerId,
+    teId,
+    beId,
+    programId,
+    brandId,
+    stateId,
+    countryId,
+    spinnerId,
+    status
+  }: any = req.query;
+  const offset = (page - 1) * limit;
+  const whereCondition: any = {};
+
+  try {
+    if (searchTerm) {
+      whereCondition[Op.or] = [
+        { "$ginner.name$": { [Op.iLike]: `%${searchTerm}%` } },
+        { "$spinner.name$": { [Op.iLike]: `%${searchTerm}%` } },
+        { "$traceability_executive.name$": { [Op.iLike]: `%${searchTerm}%` } },
+        { "$brand_executive.name$": { [Op.iLike]: `%${searchTerm}%` } },
+        { "$brand_manager.name$": { [Op.iLike]: `%${searchTerm}%` } },
+        { "$ps_team.name$": { [Op.iLike]: `%${searchTerm}%` } },
+        { lot_no: { [Op.iLike]: `%${searchTerm}%` } },
+        { reel_lot_no: { [Op.iLike]: `%${searchTerm}%` } },
+        { "$country.county_name$": { [Op.iLike]: `%${searchTerm}%` } },
+        { "$state.state_name$": { [Op.iLike]: `%${searchTerm}%` } },
+      ];
+    }
+
+    if (bmId) {
+      const idArray: number[] = bmId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.bm_id = { [Op.in]: idArray };
+    }
+
+    if (psId) {
+      const idArray: number[] = psId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.ps_id = { [Op.in]: idArray };
+    }
+
+    if (teId) {
+      const idArray: number[] = teId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.te_id = { [Op.in]: idArray };
+    }
+
+    if (beId) {
+      const idArray: number[] = beId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.be_id = { [Op.in]: idArray };
+    }
+
+    if (ginnerId) {
+      const idArray: number[] = ginnerId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.ginner_id = { [Op.in]: idArray };
+    }
+
+    if (spinnerId) {
+      const idArray: number[] = spinnerId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.spinner_id = { [Op.in]: idArray };
+    }
+
+    if (brandId) {
+      const idArray: number[] = brandId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition["$ps_team.brand$"] = { [Op.overlap]: idArray };
+    }
+
+    if (stateId) {
+      const idArray: number[] = stateId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.state_id = { [Op.in]: idArray };
+    }
+
+    if (countryId) {
+      const idArray: number[] = countryId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.country_id = { [Op.in]: idArray };
+    }
+
+    if (programId) {
+      const idArray: number[] = programId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition["$ps_team.program_id$"] = { [Op.overlap]: idArray };
+    }
+
+    whereCondition.status_ps = 'Accepted'
+    whereCondition.status_bm = 'Accepted'
+    whereCondition.status = 'Accepted'
+
+    whereCondition.processor_type = 'Spinner';
+
+    let include = [
+      {
+        model: Ginner,
+        as: "ginner",
+        attributes: ["id", "name"],
+      },
+      {
+        model: Spinner,
+        as: "spinner",
+        attributes: ["id", "name"],
+      },
+      {
+        model: BrandExecutive,
+        as: "brand_executive",
+        attributes: ["id", "name"],
+      },
+      {
+        model: BrandManager,
+        as: "brand_manager",
+        attributes: ["id", "name"],
+      },
+      {
+        model: PSTeam,
+        as: "ps_team",
+        attributes: ["id", "name"],
+      },
+      {
+        model: TraceabilityExecutive,
+        as: "traceability_executive",
+        attributes: ["id", "name"],
+      },
+      {
+        model: Country,
+        as: "country",
+        attributes: ["id", "county_name"],
+      },
+      {
+        model: State,
+        as: "state",
+        attributes: ["id", "state_name"],
+      },
+      {
+        model: GinSales,
+        as: "ginsales",
+      },
+    ];
+
+    if (req.query.pagination === "true") {
+      const { count, rows } = await LintStockVerified.findAndCountAll({
+        where: whereCondition,
+        include: include,
+        offset: offset,
+        limit: limit,
+        order: [["id", "desc"]],
+      });
+      return res.sendPaginationSuccess(res, rows, count);
+    } else {
+      const stock = await LintStockVerified.findAll({
+        where: whereCondition,
+        include: include,
+        order: [["id", "desc"]],
+      });
+      return res.sendSuccess(res, stock);
+    }
+  } catch (error: any) {
+    console.log(error);
+    return res.sendError(res, error?.message);
+  }
+};
+
+
+
 export {
   getGinProcessLotNo,
   getGinProcessLotDetials,
@@ -1670,5 +3007,15 @@ export {
   fetchBeSpinner,
   fetchBeStates,
   fetchTeSpinner,
-  fetchBeCountries
+  fetchBeCountries,
+  //Spinner
+  updateSpinVerifiedStockConfirm,
+  updateBMVerifiedStockConfirm,
+  updatePSVerifiedStockConfirm,
+  getLintSpinVerifiedStocks,
+  getSpinnerVerifiedStocks,
+  getBMVerifiedStocks,
+  getPSVerifiedStocks,
+  getTypeWiseSpinVerifiedStocks,
+  getBrandListSpinVerifiedStocks
 };

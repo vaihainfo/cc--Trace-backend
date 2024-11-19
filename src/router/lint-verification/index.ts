@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { createLSVUser, deleteLSVUser, fetchUser, fetchUsers, updateProcessor } from "../../controllers/lint-stock-verification/user-management";
-import { createVerifiedLintStock, editGinVerifiedStockConfirm, fetchTeGinner,fetchTeCountries, fetchTeStates, getGinnerVerifiedStocks, getGinProcessLotDetials, getGinProcessLotNo, getLintVerifiedStock, getLintVerifiedStocks, getListVerifiedStocks, getSCDVerifiedStocks, getSCMVerifiedStocks, getTypeWiseListVerifiedStocks, updateSCDVerifiedStockConfirm, updateSCMVerifiedStockConfirm, getGinSalesLotDetials, getGinSaleLotNo, fetchTeSpinner, fetchBeSpinner, fetchBeCountries, fetchBeStates } from "../../controllers/lint-stock-verification";
+import { createVerifiedLintStock, editGinVerifiedStockConfirm, fetchTeGinner,fetchTeCountries, fetchTeStates, getGinnerVerifiedStocks, getGinProcessLotDetials, getGinProcessLotNo, getLintVerifiedStock, getLintVerifiedStocks, getListVerifiedStocks, getSCDVerifiedStocks, getSCMVerifiedStocks, getTypeWiseListVerifiedStocks, updateSCDVerifiedStockConfirm, updateSCMVerifiedStockConfirm, getGinSalesLotDetials, getGinSaleLotNo, fetchTeSpinner, fetchBeSpinner, fetchBeCountries, fetchBeStates, getLintSpinVerifiedStocks, updateSpinVerifiedStockConfirm, updateBMVerifiedStockConfirm, getSpinnerVerifiedStocks, getBMVerifiedStocks, updatePSVerifiedStockConfirm, getPSVerifiedStocks, getTypeWiseSpinVerifiedStocks, getBrandListSpinVerifiedStocks } from "../../controllers/lint-stock-verification";
 
 
 const router = Router();
@@ -37,5 +37,16 @@ router.get("/get-gin-sales-details", getGinSalesLotDetials);
 router.get("/get-be-spinners", fetchBeSpinner);
 router.get("/get-be-countries", fetchBeCountries);
 router.get("/get-be-states", fetchBeStates);
+
+router.get("/get-spin-verified-stocks", getLintSpinVerifiedStocks);
+router.get("/get-spinner-verified-stocks", getSpinnerVerifiedStocks);
+router.get("/get-bm-verified-stocks", getBMVerifiedStocks);
+router.get("/get-ps-verified-stocks", getPSVerifiedStocks);
+router.post("/update-spin-verified-stock", updateSpinVerifiedStockConfirm);
+router.post("/update-bm-verified-stock", updateBMVerifiedStockConfirm);
+router.post("/update-ps-verified-stock", updatePSVerifiedStockConfirm);
+router.get("/get-all-type-spin-verified-stocks", getTypeWiseSpinVerifiedStocks);
+router.get("/get-all-spin-verified-stocks", getBrandListSpinVerifiedStocks);
+
 
 export default router;

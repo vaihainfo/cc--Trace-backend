@@ -158,6 +158,12 @@ const LintStockVerified = db.define('lint_stock_verifieds', {
   status_ps: {
     type: DataTypes.STRING
   },
+  status_scd: {
+    type: DataTypes.STRING
+  },
+  status_scm: {
+    type: DataTypes.STRING
+  },
   te_id: {
     type: DataTypes.INTEGER
   },
