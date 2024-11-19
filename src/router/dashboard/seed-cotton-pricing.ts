@@ -8,6 +8,6 @@ const router = Router();
 router.use(accessControl);
 
 router.get('/pricing/seed-cotton/by/country', Dashboard.getPricyByCountry);
-// router.get('/pricing/seed-cotton/by/state', Dashboard.getPricyByState);
+router.get('/pricing/seed-cotton/by/state', Dashboard.getPricyByStates);
 
 export default router;
