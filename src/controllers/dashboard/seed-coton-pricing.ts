@@ -12,370 +12,312 @@ import Country from "../../models/country.model";
 import SeedCottonPricing from "../../models/seed-cotton-pricings.model";
 import Program from "../../models/program.model";
 
+// const getWeekDateRange = (weekRange: string, seasonStartDate: Date) => {
+//   const startDate = new Date(seasonStartDate);
 
-const getOverAllDataQuery = (
-  reqData: any
-) => {
-  const where: any = {
+//   const [weekStart, weekEnd] = weekRange.split("-").map((item) => parseInt(item));
 
-  };
-  if (reqData?.program)
-    where.program_id = reqData.program;
+//   if (isNaN(weekStart) || isNaN(weekEnd) || weekStart > weekEnd) {
+//     throw new Error("Invalid week range format.");
+//   }
 
-  if (reqData?.brand)
-    where['$ginner.brand$'] = {
-      [Op.contains]: Sequelize.literal(`ARRAY [${reqData.brand}]`)
-    };
+//   const startDayOfWeek = weekStart - 1; 
+//   const endDayOfWeek = weekEnd - 1; 
 
-  if (reqData?.season)
-    where.season_id = reqData.season;
+//   const weekStartDate = new Date(startDate.getTime() + startDayOfWeek * 24 * 60 * 60 * 1000); 
+//   const weekEndDate = new Date(startDate.getTime() + (endDayOfWeek + 1) * 24 * 60 * 60 * 1000); 
 
-  if (reqData?.country)
-    where['$ginner.country_id$'] = reqData.country;
+//   return { startDate: weekStartDate, endDate: weekEndDate };
+// };
 
-  if (reqData?.state)
-    where['$ginner.state_id$'] = reqData.state;
+// const getPricyByCountry = async (req: Request, res: Response) => {
+//   try {
+//     const { country, season, week, month } = req.query;
 
-  if (reqData?.district)
-    where['$ginner.district_id$'] = reqData.district;
+//     const seasonData = await Season.findOne({
+//       attributes: ['id', 'from', 'to', 'name'],
+//       where: { id: season },
+//     });
 
-  if (reqData?.ginner)
-    where['$ginner.id$'] = reqData.ginner;
+//     if (!seasonData) {
+//       return res.status(400).json({ success: false, message: "Season not found." });
+//     }
 
-  if (reqData?.fromDate)
-    where.date = { [Op.gte]: reqData.fromDate };
+//     const { from: seasonStartDate, to: seasonEndDate } = seasonData;
 
-  if (reqData?.toDate)
-    where.date = { [Op.lt]: reqData.toDate };
+//     const { startDate, endDate } = getWeekDateRange(week as string, new Date(seasonStartDate));
 
-  if (reqData?.fromDate && reqData?.toDate)
-    where.date = { [Op.between]: [reqData.fromDate, reqData.toDate] };
+//     if (!startDate || !endDate) {
+//       return res.status(400).json({ success: false, message: "Invalid week range." });
+//     }
 
-  return where;
+//     const whereSeedCotton: any = {
+//       country_id: country,
+//       startDate: { [Op.gte]: startDate },
+//       endDate: { [Op.lte]: endDate },
+//     };
+
+//     const whereTransactions: any = {
+//       country_id: country,
+//       date: { [Op.gte]: startDate, [Op.lte]: endDate },
+//       program_id: { [Op.in]: [4, 5] }, 
+//     };
+
+//     if (month) {
+//       const monthStartDate = new Date(seasonStartDate);
+//       monthStartDate.setMonth(parseInt(month as string) - 1); 
+
+//       const monthEndDate = new Date(monthStartDate);
+//       monthEndDate.setMonth(monthStartDate.getMonth() + 1); 
+//       monthEndDate.setDate(0);
+
+//       whereSeedCotton.startDate = { [Op.gte]: monthStartDate };
+//       whereSeedCotton.endDate = { [Op.lte]: monthEndDate };
+
+//       whereTransactions.date = { [Op.gte]: monthStartDate, [Op.lte]: monthEndDate };
+//     }
+
+//     // Fetch data from SeedCottonPricing
+//     const seedCottonData = await SeedCottonPricing.findAll({
+//       attributes: [
+//         "country_id",
+//         [Sequelize.fn("DATE", Sequelize.col("startDate")), "weekStart"],
+//         [Sequelize.fn("DATE", Sequelize.col("endDate")), "weekEnd"],
+//         [Sequelize.fn("AVG", Sequelize.col("market_price")), "averageMarketPrice"],
+//       ],
+//       where: whereSeedCotton,
+//       include: [
+//         {
+//           model: Country,
+//           as: "country",
+//           attributes: ["id", "county_name"],
+//         },
+//       ],
+//       group: ["country_id", "weekStart", "weekEnd", "country.id"],
+//     });
+
+//     // Fetch data from Transactions table
+//     const transactionsData = await Transaction.findAll({
+//       attributes: [
+//         "country_id",
+//         "program_id",
+//         [
+//           Sequelize.fn("AVG", Sequelize.cast(Sequelize.col("rate"), "FLOAT")),
+//           "averageRate",
+//         ],
+//       ],
+//       where: whereTransactions,
+//       group: ["country_id", "program_id", "program.id", "country.id"],
+//       include: [
+//         {
+//           model: Program,
+//           as: "program",
+//           attributes: ["program_name"],
+//         },
+//         {
+//           model: Country,
+//           as: "country",
+//           attributes: ["id","county_name"],
+//         },
+//       ],
+//     });
+
+//     const pricingMap: any = {};
+
+//     seedCottonData.forEach((row: any) => {
+//       const country = row.country.id;
+//       const week = `${row.weekStart} - ${row.weekEnd}`;
+//       if (!pricingMap[country]) pricingMap[country] = {};
+//       if (!pricingMap[country][week]) {
+//         pricingMap[country][week] = {
+//           conventional: parseFloat(row.averageMarketPrice),
+//           reel: 0,
+//           organic: 0,
+//         };
+//       }
+//     });
+
+ 
+//     transactionsData.forEach((row: any) => {
+//       const country = row.country.id;
+//       const programName = row.program.program_name.toLowerCase(); 
+
+//       Object.keys(pricingMap[country] || {}).forEach((week) => {
+//         pricingMap[country][week][programName] = parseFloat(row.averageRate);
+//       });
+//     });
+
+//     const finalData = Object.keys(pricingMap).map((country) => ({
+//       country,
+//       weeks: Object.keys(pricingMap[country]).map((week) => ({
+//         week,
+//         conventional: pricingMap[country][week].conventional || 0,
+//         reel: pricingMap[country][week].reel || 0,
+//         organic: pricingMap[country][week].organic || 0,
+//       })),
+//     }));
+
+//     return res.status(200).json({ success: true, data: finalData });
+//   } catch (error: any) {
+//     console.error(error);
+//     return res.status(500).json({
+//       success: false,
+//       message: error.message || "Internal Server Error",
+//     });
+//   }
+// };
+
+
+const getWeekDateRange = (weekRange: string, seasonStartDate: Date) => {
+  const startDate = new Date(seasonStartDate);
+
+  const [weekStart, weekEnd] = weekRange.split("-").map((item) => parseInt(item));
+
+  if (isNaN(weekStart) || isNaN(weekEnd) || weekStart > weekEnd) {
+    throw new Error("Invalid week range format.");
+  }
+
+  const startDayOfWeek = weekStart - 1; 
+  const endDayOfWeek = weekEnd - 1; 
+
+  
+  const weekStartDate = new Date(startDate.getTime() + startDayOfWeek * 24 * 60 * 60 * 1000); 
+  const weekEndDate = new Date(startDate.getTime() + (endDayOfWeek + 1) * 24 * 60 * 60 * 1000); 
+
+  return { startDate: weekStartDate, endDate: weekEndDate };
 };
 
-
-const getQueryParams = async (
-  req: Request, res: Response
-) => {
+const getPricyByCountry = async (req: Request, res: Response) => {
   try {
-    let {
-      program,
-      brand,
-      season,
+    const { country, seasonStartDate, seasonEndDate, week, month } = req.query;
+
+    if (!seasonStartDate || !seasonEndDate) {
+      return res.status(400).json({ success: false, message: "Season start and end date are required." });
+    }
+
+    const seasonStart = new Date(seasonStartDate as string);
+    const seasonEnd = new Date(seasonEndDate as string);
+
+    const { startDate, endDate } = getWeekDateRange(week as string, seasonStart);
+
+    if (!startDate || !endDate) {
+      return res.status(400).json({ success: false, message: "Invalid week range." });
+    }
+
+    const whereSeedCotton: any = {
+      country_id: country,
+      startDate: { [Op.gte]: startDate },
+      endDate: { [Op.lte]: endDate },
+    };
+
+    const whereTransactions: any = {
+      country_id: country,
+      date: { [Op.gte]: startDate, [Op.lte]: endDate },
+      program_id: { [Op.in]: [4, 5] }, 
+    };
+
+    if (month) {
+      const monthStartDate = new Date(seasonStart);
+      monthStartDate.setMonth(parseInt(month as string) - 1); 
+
+      const monthEndDate = new Date(monthStartDate);
+      monthEndDate.setMonth(monthStartDate.getMonth() + 1); 
+      monthEndDate.setDate(0); 
+
+      whereSeedCotton.startDate = { [Op.gte]: monthStartDate };
+      whereSeedCotton.endDate = { [Op.lte]: monthEndDate };
+
+      whereTransactions.date = { [Op.gte]: monthStartDate, [Op.lte]: monthEndDate };
+    }
+
+    const seedCottonData = await SeedCottonPricing.findAll({
+      attributes: [
+        "country_id",
+        [Sequelize.fn("DATE", Sequelize.col("startDate")), "weekStart"],
+        [Sequelize.fn("DATE", Sequelize.col("endDate")), "weekEnd"],
+        [Sequelize.fn("AVG", Sequelize.col("market_price")), "averageMarketPrice"],
+      ],
+      where: whereSeedCotton,
+      group: ["country_id", "weekStart", "weekEnd", "country.id"],
+      include: [
+        {
+          model: Country,
+          as: "country",
+          attributes: ["county_name"],
+        },
+      ],
+    });
+
+    const transactionsData = await Transaction.findAll({
+      attributes: [
+        "country_id",
+        "program_id",
+        [
+          Sequelize.fn("AVG", Sequelize.cast(Sequelize.col("rate"), "FLOAT")),
+          "averageRate",
+        ],
+      ],
+      where: whereTransactions,
+      group: ["country_id", "program_id", "program.id", "country.id"],
+      include: [
+        {
+          model: Program,
+          as: "program",
+          attributes: ["program_name"],
+        },
+        {
+          model: Country,
+          as: "country",
+          attributes: ["county_name"],
+        },
+      ],
+    });
+
+    const pricingMap: any = {};
+
+    seedCottonData.forEach((row: any) => {
+      const country = row.country.id;
+      const week = `${row.weekStart} - ${row.weekEnd}`;
+      if (!pricingMap[country]) pricingMap[country] = {};
+      if (!pricingMap[country][week]) {
+        pricingMap[country][week] = {
+          conventional: parseFloat(row.averageMarketPrice),
+          reel: 0,
+          organic: 0,
+        };
+      }
+    });
+
+    transactionsData.forEach((row: any) => {
+      const country = row.country.id;
+      const programName = row.program.program_name.toLowerCase(); 
+
+      Object.keys(pricingMap[country] || {}).forEach((week) => {
+        pricingMap[country][week][programName] = parseFloat(row.averageRate);
+      });
+    });
+
+
+    const finalData = Object.keys(pricingMap).map((country) => ({
       country,
-      state,
-      district,
-      block,
-      village,
-      ginner,
-      fromDate,
-      toDate
-    } = req.query;
-    const validator = yup.string()
-      .notRequired()
-      .nullable();
+      weeks: Object.keys(pricingMap[country]).map((week) => ({
+        week,
+        conventional: pricingMap[country][week].conventional || 0,
+        reel: pricingMap[country][week].reel || 0,
+        organic: pricingMap[country][week].organic || 0,
+      })),
+    }));
 
-    await validator.validate(program);
-    await validator.validate(brand);
-    await validator.validate(season);
-    await validator.validate(country);
-    await validator.validate(state);
-    await validator.validate(district);
-    await validator.validate(block);
-    await validator.validate(village);
-    await validator.validate(ginner);
-    await validator.validate(fromDate);
-    await validator.validate(toDate);
-
-    return {
-      program,
-      brand,
-      season,
-      country,
-      state,
-      district,
-      block,
-      village,
-      ginner,
-      fromDate,
-      toDate
-    };
-
+    return res.status(200).json({ success: true, data: finalData });
   } catch (error: any) {
-    throw {
-      errCode: "REQ_ERROR"
-    };
+    console.error(error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Internal Server Error",
+    });
   }
-};
-
-
-const mtConversion = (value: number) => {
-  return value > 0 ? Number((value / 1000).toFixed(2)) : 0;
-};
-
-const getPricyByCountry = async (
-  req: Request, res: Response
-) => {
-  try {
-
-    const reqData = await getQueryParams(req, res);
-    const where = getOverAllDataQuery(reqData);
-    const pricingData = await getPricingByCountryData(where);
-    const averageReelData = await getPricingByCountryData(where);
-    const averageOrganicData = await getPricingByCountryData(where);
-    const data = await getPricingDataRes(pricingData);
-    return res.sendSuccess(res, data);
-
-  } catch (error: any) {
-    const code = error.errCode
-      ? error.errCode
-      : "ERR_INTERNAL_SERVER_ERROR";
-    return res.sendError(res, code);
-  }
-};
-
-
-const getPricingByCountryData = async (where: any) => {
-  const result = await SeedCottonPricing.findAll({  
-    attributes: [
-      [Sequelize.col('market_price'),  'conventionalPrice'],
-      [Sequelize.col('country.id'), 'countryId'],
-      [Sequelize.col('country.county_name'), 'countryName'],
-      [Sequelize.col('program.id'), 'programId'],
-      [Sequelize.col('program.name'), 'programName']
-    ],
-    include: [{
-      model: Country,
-      as: 'country',
-      attributes: []
-    }, {
-      model: Program,
-      as: 'program',
-      attributes: []
-    }],
-    where,
-    group: ['country.id', 'program.id']
-  });
-
-  return result;
-};
-
-
-const getPricingDataRes = async (
-  procuredCountList: any = [],
-) => {
-  let seasonIds: number[] = [];
-  let countries: number[] = [];
-
-  procuredCountList.forEach((list: any) => {
-    if (!countries.includes(list.dataValues.countryName))
-      countries.push(list.dataValues.countryName);
-
-    if (!seasonIds.includes(list.dataValues.seasonId))
-      seasonIds.push(list.dataValues.seasonId);
-  });
-
-  const seasons = await Season.findAll({
-    // limit: 3,
-    order: [
-      ["id", "DESC"],
-    ],
-  });
-  if (seasonIds.length != 3 ) {
-    for (const season of seasons) {
-      let currentDate = moment(); // Current date using moment
-      let checkDate = moment('2024-10-01'); // October 1st, 2024
-      
-      if (currentDate.isSameOrAfter(checkDate) && season.name === '2024-25' && !seasonIds.includes(season.id)) {
-        seasonIds.push(season.id);
-      } else if(currentDate.isBefore(checkDate) && season.name === '2024-25' && seasonIds.includes(season.id)){
-        seasonIds = seasonIds.filter((id: number) => id != season.id)
-      }
-    }
-  }
-
-  seasonIds = seasonIds.sort((a, b) => a - b).slice(-3);
-
-  let seasonList: any[] = [];
-  let procuredList: any[] = [];
-
-
-
-
-  for (const countryName of countries) {
-    const data: any = {
-      name: countryName,
-      data: [],
-    };
-    const farmerList = procuredCountList.filter((list: any) =>
-      list.dataValues.countryName == countryName
-    );
-
-    for (const seasonId of seasonIds) {
-
-      let farmerCount = 0;
-      const fFarmerValue = farmerList.find((list: any) =>
-        list.dataValues.seasonId == seasonId
-      );
-
-      if (fFarmerValue) {
-        farmerCount = mtConversion(fFarmerValue.dataValues.procured);
-        if (!seasonList.includes(fFarmerValue.dataValues.seasonName))
-          seasonList.push(fFarmerValue.dataValues.seasonName);
-      } else {
-        seasons.forEach((season: any) => {
-          if (season.id == seasonId && !seasonList.includes(season.seasonName)) {
-            seasonList.push(season.name);
-          }
-        });
-      }
-      data.data.push(farmerCount);
-    }
-
-    procuredList.push(data);
-  }
-
-  return {
-    procuredList,
-    seasonList,
-  };
-};
-
-const getPricyByState = async (
-  req: Request, res: Response
-) => {
-  try {
-
-    const reqData = await getQueryParams(req, res);
-    const where = getOverAllDataQuery(reqData);
-    const processedData = await getProcessedByCountryData(where);
-    const data = await getProcessedDataRes(processedData, reqData.season);
-    return res.sendSuccess(res, data);
-
-  } catch (error: any) {
-    const code = error.errCode
-      ? error.errCode
-      : "ERR_INTERNAL_SERVER_ERROR";
-    return res.sendError(res, code);
-  }
-};
-
-
-const getProcessedByCountryData = async (where: any) => {
-  const result = await GinProcess.findAll({
-    attributes: [
-      [Sequelize.fn('SUM', Sequelize.col('total_qty')), 'processed'],
-      [Sequelize.col('ginner.country.id'), 'countryId'],
-      [Sequelize.col('ginner.country.county_name'), 'countryName'],
-      [Sequelize.col('season.id'), 'seasonId'],
-      [Sequelize.col('season.name'), 'seasonName']
-    ],
-    include: [{
-      model: Ginner,
-      as: 'ginner',
-      attributes: [],
-      include: [{
-        model: Country,
-        as: 'country',
-        attributes: []
-      }]
-    }, {
-      model: Season,
-      as: 'season',
-      attributes: []
-    }],
-    where,
-    group: ['ginner.country.id', 'season.id']
-  });
-
-  return result;
-};
-
-
-const getProcessedDataRes = async (
-  processedCountList: any = [],
-  reqSeason: any
-) => {
-  let seasonIds: number[] = [];
-  let countries: number[] = [];
-
-  processedCountList.forEach((list: any) => {
-    if (!countries.includes(list.dataValues.countryName))
-      countries.push(list.dataValues.countryName);
-
-    if (!seasonIds.includes(list.dataValues.seasonId))
-      seasonIds.push(list.dataValues.seasonId);
-  });
-
-  const seasons = await Season.findAll({
-    // limit: 3,
-    order: [
-      ["id", "DESC"],
-    ],
-  });
-  if (seasonIds.length != 3 && !reqSeason) {
-    for (const season of seasons) {
-      let currentDate = moment(); // Current date using moment
-      let checkDate = moment('2024-10-01'); // October 1st, 2024
-      
-      if (currentDate.isSameOrAfter(checkDate) && season.name === '2024-25' && !seasonIds.includes(season.id)) {
-        seasonIds.push(season.id);
-      } else if(currentDate.isBefore(checkDate) && season.name === '2024-25' && seasonIds.includes(season.id)){
-        seasonIds = seasonIds.filter((id: number) => id != season.id)
-      }
-    }
-  }
-
-
-  seasonIds = seasonIds.sort((a, b) => a - b).slice(-3);
-
-  let seasonList: any[] = [];
-  let processedList: any[] = [];
-
-
-
-
-  for (const countryName of countries) {
-    const data: any = {
-      name: countryName,
-      data: [],
-    };
-    const farmerList = processedCountList.filter((list: any) =>
-      list.dataValues.countryName == countryName
-    );
-
-    for (const seasonId of seasonIds) {
-
-      let farmerCount = 0;
-      const fFarmerValue = farmerList.find((list: any) =>
-        list.dataValues.seasonId == seasonId
-      );
-
-      if (fFarmerValue) {
-        farmerCount = mtConversion(fFarmerValue.dataValues.processed);
-        if (!seasonList.includes(fFarmerValue.dataValues.seasonName))
-          seasonList.push(fFarmerValue.dataValues.seasonName);
-      } else {
-        seasons.forEach((season: any) => {
-          if (season.id == seasonId && !seasonList.includes(season.seasonName)) {
-            seasonList.push(season.name);
-          }
-        });
-      }
-      data.data.push(farmerCount);
-    }
-
-    processedList.push(data);
-  }
-
-  return {
-    processedList,
-    seasonList,
-  };
 };
 
 export {
-  getPricyByCountry,
-  getPricyByState,
+  getPricyByCountry
 };
