@@ -185,8 +185,8 @@ const fetchBaleProcess = async (req: Request, res: Response) => {
                       CAST(gb.old_weight AS DOUBLE PRECISION)
                     ), 0
                   ) AS old_weight_total,
-                  COALESCE(MIN(CASE WHEN gb.bale_no ~ '^[0-9]+$' THEN CAST(gb.bale_no AS BIGINT) ELSE 0 END), 0) AS pressno_from,
-                  COALESCE(MAX(CASE WHEN gb.bale_no ~ '^[0-9]+$' THEN CAST(gb.bale_no AS BIGINT) ELSE 0 END), 0) AS pressno_to
+               MIN(gb.bale_no) AS pressno_from,
+             MAX(LPAD(gb.bale_no, 10, ' ')) AS pressno_to
               FROM
                   "gin-bales" gb
               GROUP BY
@@ -623,36 +623,35 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
             pr.program_name ILIKE '%${searchTerm}%' OR
             gp.lot_no ILIKE '%${searchTerm}%' OR
             gp.reel_lot_no ILIKE '%${searchTerm}%' OR
-            gb.press_no ILIKE '%${searchTerm}%'
+            gp.press_no ILIKE '%${searchTerm}%'
           )
         `);
       }
-
       if (brandId) {
         const idArray = brandId.split(",").map((id: any) => parseInt(id, 10));
         whereCondition.push(`g.brand && ARRAY[${idArray.join(',')}]`);
       }
-
+  
       if (seasonId) {
         const idArray = seasonId.split(",").map((id: any) => parseInt(id, 10));
         whereCondition.push(`gp.season_id IN (${idArray.join(',')})`);
       }
-
+  
       if (ginnerId) {
         const idArray = ginnerId.split(",").map((id: any) => parseInt(id, 10));
         whereCondition.push(`gp.ginner_id IN (${idArray.join(',')})`);
       }
-
+  
       if (countryId) {
         const idArray = countryId.split(",").map((id: any) => parseInt(id, 10));
         whereCondition.push(`g.country_id IN (${idArray.join(',')})`);
       }
-
+  
       if (programId) {
         const idArray = programId.split(",").map((id: any) => parseInt(id, 10));
         whereCondition.push(`gp.program_id IN (${idArray.join(',')})`);
       }
-
+  
       if (startDate && endDate) {
         const startOfDay = new Date(startDate);
         startOfDay.setUTCHours(0, 0, 0, 0);
@@ -660,7 +659,7 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
         endOfDay.setUTCHours(23, 59, 59, 999);
         whereCondition.push(`"gp"."createdAt" BETWEEN '${startOfDay.toISOString()}' AND '${endOfDay.toISOString()}'`);
       }
-
+  
       const whereClause = whereCondition.length > 0 ? `WHERE ${whereCondition.join(' AND ')}` : '';
 
       // Create the excel workbook file
@@ -736,8 +735,8 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
                       CAST(gb.old_weight AS DOUBLE PRECISION)
                     ), 0
                   ) AS old_weight_total,
-                  COALESCE(MIN(CASE WHEN gb.bale_no ~ '^[0-9]+$' THEN CAST(gb.bale_no AS BIGINT) ELSE 0 END), 0) AS pressno_from,
-                  COALESCE(MAX(CASE WHEN gb.bale_no ~ '^[0-9]+$' THEN CAST(gb.bale_no AS BIGINT) ELSE 0 END), 0) AS pressno_to
+                    MIN(gb.bale_no) AS pressno_from,
+                    MAX(LPAD(gb.bale_no, 10, ' ')) AS pressno_to
               FROM
                   "gin-bales" gb
               GROUP BY
@@ -3189,7 +3188,7 @@ const fetchSpinnerBalePagination = async (req: Request, res: Response) => {
       whereCondition.push(`gs."createdAt" BETWEEN '${startOfDay.toISOString()}' AND '${endOfDay.toISOString()}'`);
     }
 
-    
+
     // const whereClause = whereCondition.length > 0 ? `WHERE ${whereCondition.join(' AND ')}` : '';
     whereCondition.push(`gs.status IN ('Sold', 'Partially Accepted', 'Partially Rejected')`);
 
