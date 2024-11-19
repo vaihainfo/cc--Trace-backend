@@ -1,5 +1,9 @@
 import { DataTypes } from 'sequelize';
 import db from '../util/dbConn';
+import Brand from './brand.model';
+import Country from './country.model';
+import State from './state.model';
+import District from './district.model';
 
 const YarnPricing = db.define('yarn-pricings', {
   id: {
@@ -45,6 +49,31 @@ const YarnPricing = db.define('yarn-pricings', {
     allowNull: false,
   }
 });
+
+YarnPricing.belongsTo(Brand, {
+  foreignKey: "brand_id",
+  targetKey: "id",
+  as: "brand",
+});
+
+YarnPricing.belongsTo(Country, {
+  foreignKey: "country_id",
+  targetKey: "id",
+  as: "country",
+});
+
+YarnPricing.belongsTo(State, {
+  foreignKey: "state_id",
+  targetKey: "id",
+  as: "state",
+});
+
+YarnPricing.belongsTo(District, {
+  foreignKey: "district_id",
+  targetKey: "id",
+  as: "district",
+});
+
 
 
 export default YarnPricing;

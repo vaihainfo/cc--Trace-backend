@@ -1,5 +1,9 @@
 import { DataTypes } from 'sequelize';
 import db from '../util/dbConn';
+// import Brand from './brand.model';
+// import Country from './country.model';
+// import State from './state.model';
+// import District from './district.model';
 
 const SeedCottonPricing = db.define('seed-cotton-pricings', {
   id: {
@@ -45,6 +49,30 @@ const SeedCottonPricing = db.define('seed-cotton-pricings', {
     allowNull: false,
   },
 });
+
+// SeedCottonPricing.belongsTo(Brand, {
+//   foreignKey: "brand_id",
+//   targetKey: "id",
+//   as: "brand",
+// });
+
+// SeedCottonPricing.belongsTo(Country, {
+//   foreignKey: "country_id",
+//   targetKey: "id",
+//   as: "country",
+// });
+
+// SeedCottonPricing.belongsTo(State, {
+//   foreignKey: "state_id",
+//   targetKey: "id",
+//   as: "state",
+// });
+
+// SeedCottonPricing.belongsTo(District, {
+//   foreignKey: "district_id",
+//   targetKey: "id",
+//   as: "district",
+// });
 
 
 export default SeedCottonPricing;
