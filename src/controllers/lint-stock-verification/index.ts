@@ -557,7 +557,7 @@ const getLintVerifiedStock = async (req: Request, res: Response) => {
             gb."te_sale_verified_weight",
             gb."be_verified_status",
             gb."be_verified_weight",
-            gb."spin_verified_status",
+            gb."spin_verified_weight",
             gb."spin_verified_status",
             gb."bm_verified_status",
             gb."bm_verified_weight",
