@@ -2209,7 +2209,6 @@ const getSpinnerVerifiedStocks = async (req: Request, res: Response) => {
         as: "ginsales",
       },
     ];
-
     if (req.query.pagination === "true") {
       const { count, rows } = await LintStockVerified.findAndCountAll({
         where: whereCondition,
