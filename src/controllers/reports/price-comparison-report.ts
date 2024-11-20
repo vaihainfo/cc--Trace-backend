@@ -66,7 +66,7 @@ const fetchPriceComparisonSeedCotton = async (req: Request, res: Response) => {
       LEFT JOIN "seasons" AS s ON scp."season_id" = s."id"
       LEFT JOIN "states" AS st ON scp."state_id" = st."id"
       ${whereConditions.length > 0 ? 'WHERE ' + whereConditions.join(' AND ') : ''}
-      ORDER BY scp."id" DESC
+      ORDER BY scp."startDate" DESC
       LIMIT :limit OFFSET :offset;
     `;
 
@@ -169,7 +169,7 @@ const fetchPriceComparisonLint = async (req: Request, res: Response) => {
       LEFT JOIN "seasons" AS s ON lp."season_id" = s."id"
       LEFT JOIN "states" AS st ON lp."state_id" = st."id"
       ${whereConditions.length > 0 ? 'WHERE ' + whereConditions.join(' AND ') : ''}
-      ORDER BY lp."id" DESC
+      ORDER BY lp."startDate" DESC
       LIMIT :limit OFFSET :offset;
     `;
 
@@ -280,7 +280,7 @@ const fetchPriceComparisonYarn = async (req: Request, res: Response) => {
       LEFT JOIN "seasons" AS s ON yp."season_id" = s."id"
       LEFT JOIN "states" AS st ON yp."state_id" = st."id"
       ${whereConditions.length > 0 ? 'WHERE ' + whereConditions.join(' AND ') : ''}
-      ORDER BY yp."id" DESC
+      ORDER BY yp."startDate" DESC
       LIMIT :limit OFFSET :offset;
     `;
 
