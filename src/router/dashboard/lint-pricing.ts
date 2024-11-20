@@ -2,8 +2,6 @@ import * as Dashboard from "../../controllers/dashboard/lint-pricing";
 import accessControl from "../../middleware/access-control";
 import { Router } from "express";
 
-
-
 const router = Router();
 router.use(accessControl);
 

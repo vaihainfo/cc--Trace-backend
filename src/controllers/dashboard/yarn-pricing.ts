@@ -1,381 +1,238 @@
 import { Request, Response } from "express";
-import moment from 'moment';
-import { Op, QueryTypes, Sequelize } from "sequelize";
-import * as yup from 'yup';
 import sequelize from "../../util/dbConn";
-import Season from "../../models/season.model";
-import Transaction from "../../models/transaction.model";
-import GinProcess from "../../models/gin-process.model";
-import Ginner from "../../models/ginner.model";
-import GinBale from "../../models/gin-bale.model";
-import Country from "../../models/country.model";
-import SeedCottonPricing from "../../models/seed-cotton-pricings.model";
-import Program from "../../models/program.model";
 
 
-const getOverAllDataQuery = (
-  reqData: any
-) => {
-  const where: any = {
-
-  };
-  if (reqData?.program)
-    where.program_id = reqData.program;
-
-  if (reqData?.brand)
-    where['$ginner.brand$'] = {
-      [Op.contains]: Sequelize.literal(`ARRAY [${reqData.brand}]`)
-    };
-
-  if (reqData?.season)
-    where.season_id = reqData.season;
-
-  if (reqData?.country)
-    where['$ginner.country_id$'] = reqData.country;
-
-  if (reqData?.state)
-    where['$ginner.state_id$'] = reqData.state;
-
-  if (reqData?.district)
-    where['$ginner.district_id$'] = reqData.district;
-
-  if (reqData?.ginner)
-    where['$ginner.id$'] = reqData.ginner;
-
-  if (reqData?.fromDate)
-    where.date = { [Op.gte]: reqData.fromDate };
-
-  if (reqData?.toDate)
-    where.date = { [Op.lt]: reqData.toDate };
-
-  if (reqData?.fromDate && reqData?.toDate)
-    where.date = { [Op.between]: [reqData.fromDate, reqData.toDate] };
-
-  return where;
-};
-
-
-const getQueryParams = async (
-  req: Request, res: Response
-) => {
+const getPricyByCountry = async (req: Request, res: Response) => {
   try {
-    let {
-      program,
-      brand,
-      season,
-      country,
-      state,
-      district,
-      block,
-      village,
-      ginner,
-      fromDate,
-      toDate
-    } = req.query;
-    const validator = yup.string()
-      .notRequired()
-      .nullable();
+    const { countryId, stateId, districtId, brandId, from, to }: any = req.query;
 
-    await validator.validate(program);
-    await validator.validate(brand);
-    await validator.validate(season);
-    await validator.validate(country);
-    await validator.validate(state);
-    await validator.validate(district);
-    await validator.validate(block);
-    await validator.validate(village);
-    await validator.validate(ginner);
-    await validator.validate(fromDate);
-    await validator.validate(toDate);
+    let whereConditions: string[] = [];
+    let replacements: any = {};
+    let brandIdArray = brandId ? brandId.split(",").map((id: any) => parseInt(id, 10)) : [];
 
-    return {
-      program,
-      brand,
-      season,
-      country,
-      state,
-      district,
-      block,
-      village,
-      ginner,
-      fromDate,
-      toDate
+    if (brandId) {
+      const idArray = brandId.split(",").map((id: any) => parseInt(id, 10));
+      whereConditions.push('"brand_id" IN (:brandId)');
+      replacements.brandId = idArray;
+    }
+
+    if (countryId) {
+      const idArray = countryId.split(",").map((id: any) => parseInt(id, 10));
+      whereConditions.push('"country_id" IN (:countryId)');
+      replacements.countryId = idArray;
+    }
+
+    if (stateId) {
+      const idArray = stateId.split(",").map((id: any) => parseInt(id, 10));
+      whereConditions.push('"state_id" IN (:stateId)');
+      replacements.stateId = idArray;
+    }
+
+    if (districtId) {
+      const idArray = districtId.split(",").map((id: any) => parseInt(id, 10));
+      whereConditions.push('"district_id" IN (:districtId)');
+      replacements.districtId = idArray;
+    }
+
+    replacements.from = from;
+    replacements.to = to;
+
+    let query = `
+      SELECT * FROM "yarn-pricings"
+      ${whereConditions.length > 0 ? 'WHERE ' + whereConditions.join(' AND ') + ' AND ' : 'WHERE '} 
+      "startDate" >= :from AND "endDate" <= :to
+      ORDER BY "id" DESC;
+    `;
+
+    const rows = await sequelize.query(query, {
+      replacements,
+      type: sequelize.QueryTypes.SELECT,
+    });
+
+    const count = rows.length;
+
+    if (count === 0) {
+      return res.sendSuccess(res, { country: [], reel: [], organic: [], conventional: [] });
+    }
+
+    const responseData: any = {
+      country: [],
+      reel: [],
+      organic: [],
+      conventional: []
     };
 
+    await Promise.all(rows.map(async (row: any) => {
+      const { startDate, endDate, country_id, market_price } = row;
+
+      const avgQuery = `
+      SELECT 
+        AVG(CASE WHEN ss."program_id" = 4 THEN CAST(ss."price" AS FLOAT) END) AS "organic_average_price",
+        AVG(CASE WHEN ss."program_id" = 5 THEN CAST(ss."price" AS FLOAT) END) AS "reel_average_price"
+      FROM "spin_sales" ss
+      INNER JOIN "spinners" s ON ss."spinner_id" = s."id"
+      WHERE ss."date" >= :startDate AND ss."date" <= :endDate
+      ${whereConditions.length > 0 ? 'AND ' + whereConditions.join(' AND ') : ''};
+    `;
+
+      const [avgResult] = await sequelize.query(avgQuery, {
+        replacements: { startDate, endDate, brandId: brandIdArray || [], ...replacements },
+        type: sequelize.QueryTypes.SELECT,
+      });
+
+      const countryName = await getCountryNameById(country_id);
+
+      if (countryName) {
+        responseData.country.push(countryName);
+        responseData.reel.push(avgResult.reel_average_price || 0);
+        responseData.organic.push(avgResult.organic_average_price || 0);
+        responseData.conventional.push(Number(market_price) || 0);
+      }
+    }));
+
+    return res.sendSuccess(res, responseData);
   } catch (error: any) {
-    throw {
-      errCode: "REQ_ERROR"
-    };
+    return res.sendError(res, error.message);
   }
 };
 
+async function getCountryNameById(country_id: number): Promise<string> {
+  const query = `
+    SELECT "county_name" FROM "countries" WHERE "id" = :country_id;
+  `;
+  const [country] = await sequelize.query(query, {
+    replacements: { country_id },
+    type: sequelize.QueryTypes.SELECT,
+  });
+  return country ? country.county_name : '';
+}
 
-const mtConversion = (value: number) => {
-  return value > 0 ? Number((value / 1000).toFixed(2)) : 0;
-};
-
-const getPricyByCountry = async (
-  req: Request, res: Response
-) => {
+const getStatesByCountryAndStateId = async (stateIds: number[], countryIds: number[]) => {
   try {
+    const query = `
+      SELECT id, "state_name"
+      FROM "states"
+      WHERE "id" IN (:stateIds) AND "country_id" IN (:countryIds)
+    `;
 
-    const reqData = await getQueryParams(req, res);
-    const where = getOverAllDataQuery(reqData);
-    const pricingData = await getPricingByCountryData(where);
-    const averageReelData = await getPricingByCountryData(where);
-    const averageOrganicData = await getPricingByCountryData(where);
-    const data = await getPricingDataRes(pricingData);
-    return res.sendSuccess(res, data);
+    const result = await sequelize.query(query, {
+      replacements: { stateIds, countryIds },
+      type: sequelize.QueryTypes.SELECT
+    });
 
+
+    const stateMap = new Map();
+    result.forEach((state: any) => {
+      stateMap.set(state.id, state.state_name);
+    });
+
+    return stateMap;
   } catch (error: any) {
-    const code = error.errCode
-      ? error.errCode
-      : "ERR_INTERNAL_SERVER_ERROR";
-    return res.sendError(res, code);
+    console.error('Error fetching states:', error);
+    throw new Error('Error fetching states');
   }
 };
 
-
-const getPricingByCountryData = async (where: any) => {
-  const result = await SeedCottonPricing.findAll({  
-    attributes: [
-      [Sequelize.col('market_price'),  'conventionalPrice'],
-      [Sequelize.col('country.id'), 'countryId'],
-      [Sequelize.col('country.county_name'), 'countryName'],
-      [Sequelize.col('program.id'), 'programId'],
-      [Sequelize.col('program.name'), 'programName']
-    ],
-    include: [{
-      model: Country,
-      as: 'country',
-      attributes: []
-    }, {
-      model: Program,
-      as: 'program',
-      attributes: []
-    }],
-    where,
-    group: ['country.id', 'program.id']
-  });
-
-  return result;
-};
-
-
-const getPricingDataRes = async (
-  procuredCountList: any = [],
-) => {
-  let seasonIds: number[] = [];
-  let countries: number[] = [];
-
-  procuredCountList.forEach((list: any) => {
-    if (!countries.includes(list.dataValues.countryName))
-      countries.push(list.dataValues.countryName);
-
-    if (!seasonIds.includes(list.dataValues.seasonId))
-      seasonIds.push(list.dataValues.seasonId);
-  });
-
-  const seasons = await Season.findAll({
-    // limit: 3,
-    order: [
-      ["id", "DESC"],
-    ],
-  });
-  if (seasonIds.length != 3 ) {
-    for (const season of seasons) {
-      let currentDate = moment(); // Current date using moment
-      let checkDate = moment('2024-10-01'); // October 1st, 2024
-      
-      if (currentDate.isSameOrAfter(checkDate) && season.name === '2024-25' && !seasonIds.includes(season.id)) {
-        seasonIds.push(season.id);
-      } else if(currentDate.isBefore(checkDate) && season.name === '2024-25' && seasonIds.includes(season.id)){
-        seasonIds = seasonIds.filter((id: number) => id != season.id)
-      }
-    }
-  }
-
-  seasonIds = seasonIds.sort((a, b) => a - b).slice(-3);
-
-  let seasonList: any[] = [];
-  let procuredList: any[] = [];
-
-
-
-
-  for (const countryName of countries) {
-    const data: any = {
-      name: countryName,
-      data: [],
-    };
-    const farmerList = procuredCountList.filter((list: any) =>
-      list.dataValues.countryName == countryName
-    );
-
-    for (const seasonId of seasonIds) {
-
-      let farmerCount = 0;
-      const fFarmerValue = farmerList.find((list: any) =>
-        list.dataValues.seasonId == seasonId
-      );
-
-      if (fFarmerValue) {
-        farmerCount = mtConversion(fFarmerValue.dataValues.procured);
-        if (!seasonList.includes(fFarmerValue.dataValues.seasonName))
-          seasonList.push(fFarmerValue.dataValues.seasonName);
-      } else {
-        seasons.forEach((season: any) => {
-          if (season.id == seasonId && !seasonList.includes(season.seasonName)) {
-            seasonList.push(season.name);
-          }
-        });
-      }
-      data.data.push(farmerCount);
-    }
-
-    procuredList.push(data);
-  }
-
-  return {
-    procuredList,
-    seasonList,
-  };
-};
-
-const getPricyByState = async (
-  req: Request, res: Response
-) => {
+const getPricyByState = async (req: Request, res: Response) => {
   try {
+    const { countryId, stateId, districtId, brandId, from, to }: any = req.query;
 
-    const reqData = await getQueryParams(req, res);
-    const where = getOverAllDataQuery(reqData);
-    const processedData = await getProcessedByCountryData(where);
-    const data = await getProcessedDataRes(processedData, reqData.season);
-    return res.sendSuccess(res, data);
+    let whereConditions: string[] = [];
+    let replacements: any = {};
+    let brandIdArray = brandId ? brandId.split(",").map((id: any) => parseInt(id, 10)) : [];
 
-  } catch (error: any) {
-    const code = error.errCode
-      ? error.errCode
-      : "ERR_INTERNAL_SERVER_ERROR";
-    return res.sendError(res, code);
-  }
-};
-
-
-const getProcessedByCountryData = async (where: any) => {
-  const result = await GinProcess.findAll({
-    attributes: [
-      [Sequelize.fn('SUM', Sequelize.col('total_qty')), 'processed'],
-      [Sequelize.col('ginner.country.id'), 'countryId'],
-      [Sequelize.col('ginner.country.county_name'), 'countryName'],
-      [Sequelize.col('season.id'), 'seasonId'],
-      [Sequelize.col('season.name'), 'seasonName']
-    ],
-    include: [{
-      model: Ginner,
-      as: 'ginner',
-      attributes: [],
-      include: [{
-        model: Country,
-        as: 'country',
-        attributes: []
-      }]
-    }, {
-      model: Season,
-      as: 'season',
-      attributes: []
-    }],
-    where,
-    group: ['ginner.country.id', 'season.id']
-  });
-
-  return result;
-};
-
-
-const getProcessedDataRes = async (
-  processedCountList: any = [],
-  reqSeason: any
-) => {
-  let seasonIds: number[] = [];
-  let countries: number[] = [];
-
-  processedCountList.forEach((list: any) => {
-    if (!countries.includes(list.dataValues.countryName))
-      countries.push(list.dataValues.countryName);
-
-    if (!seasonIds.includes(list.dataValues.seasonId))
-      seasonIds.push(list.dataValues.seasonId);
-  });
-
-  const seasons = await Season.findAll({
-    // limit: 3,
-    order: [
-      ["id", "DESC"],
-    ],
-  });
-  if (seasonIds.length != 3 && !reqSeason) {
-    for (const season of seasons) {
-      let currentDate = moment(); // Current date using moment
-      let checkDate = moment('2024-10-01'); // October 1st, 2024
-      
-      if (currentDate.isSameOrAfter(checkDate) && season.name === '2024-25' && !seasonIds.includes(season.id)) {
-        seasonIds.push(season.id);
-      } else if(currentDate.isBefore(checkDate) && season.name === '2024-25' && seasonIds.includes(season.id)){
-        seasonIds = seasonIds.filter((id: number) => id != season.id)
-      }
+    if (brandId) {
+      const idArray = brandId.split(",").map((id: any) => parseInt(id, 10));
+      whereConditions.push('"brand_id" IN (:brandId)');
+      replacements.brandId = idArray;
     }
-  }
 
+    if (countryId) {
+      const idArray = countryId.split(",").map((id: any) => parseInt(id, 10));
+      whereConditions.push('"country_id" IN (:countryId)');
+      replacements.countryId = idArray;
+    }
 
-  seasonIds = seasonIds.sort((a, b) => a - b).slice(-3);
+    if (stateId) {
+      const idArray = stateId.split(",").map((id: any) => parseInt(id, 10));
+      whereConditions.push('"state_id" IN (:stateId)');
+      replacements.stateId = idArray;
+    }
 
-  let seasonList: any[] = [];
-  let processedList: any[] = [];
+    if (districtId) {
+      const idArray = districtId.split(",").map((id: any) => parseInt(id, 10));
+      whereConditions.push('"district_id" IN (:districtId)');
+      replacements.districtId = idArray;
+    }
 
+    replacements.from = from;
+    replacements.to = to;
 
+    let query = `
+      SELECT * FROM "yarn-pricings"
+      ${whereConditions.length > 0 ? 'WHERE ' + whereConditions.join(' AND ') + ' AND ' : 'WHERE '} 
+      "startDate" >= :from AND "endDate" <= :to
+      ORDER BY "id" DESC;
+    `;
 
+    const rows = await sequelize.query(query, {
+      replacements,
+      type: sequelize.QueryTypes.SELECT,
+    });
 
-  for (const countryName of countries) {
-    const data: any = {
-      name: countryName,
-      data: [],
+    const count = rows.length;
+
+    if (count === 0) {
+      return res.sendSuccess(res, { state: [], reel: [], organic: [], conventional: [] });
+    }
+
+    const responseData: any = {
+      state: [],
+      reel: [],
+      organic: [],
+      conventional: []
     };
-    const farmerList = processedCountList.filter((list: any) =>
-      list.dataValues.countryName == countryName
-    );
 
-    for (const seasonId of seasonIds) {
+    const stateIds = rows.map((row: any) => row.state_id);
+    const countryIds = rows.map((row: any) => row.country_id);
 
-      let farmerCount = 0;
-      const fFarmerValue = farmerList.find((list: any) =>
-        list.dataValues.seasonId == seasonId
-      );
+    const stateMap = await getStatesByCountryAndStateId(stateIds, countryIds);
 
-      if (fFarmerValue) {
-        farmerCount = mtConversion(fFarmerValue.dataValues.processed);
-        if (!seasonList.includes(fFarmerValue.dataValues.seasonName))
-          seasonList.push(fFarmerValue.dataValues.seasonName);
-      } else {
-        seasons.forEach((season: any) => {
-          if (season.id == seasonId && !seasonList.includes(season.seasonName)) {
-            seasonList.push(season.name);
-          }
-        });
+    await Promise.all(rows.map(async (row: any) => {
+      const { startDate, endDate, state_id, market_price } = row;
+
+      const avgQuery = `
+      SELECT 
+        AVG(CASE WHEN ss."program_id" = 4 THEN CAST(ss."price" AS FLOAT) END) AS "organic_average_price",
+        AVG(CASE WHEN ss."program_id" = 5 THEN CAST(ss."price" AS FLOAT) END) AS "reel_average_price"
+      FROM "spin_sales" ss
+      INNER JOIN "spinners" s ON ss."spinner_id" = s."id"
+      WHERE ss."date" >= :startDate AND ss."date" <= :endDate
+      ${whereConditions.length > 0 ? 'AND ' + whereConditions.join(' AND ') : ''};
+    `;
+
+      const [avgResult] = await sequelize.query(avgQuery, {
+        replacements: { startDate, endDate, brandId: brandIdArray || [], ...replacements },
+        type: sequelize.QueryTypes.SELECT,
+      });
+
+      const stateName = stateMap.get(state_id);
+
+      if (stateName) {
+        responseData.state.push(stateName);
+        responseData.reel.push(avgResult.reel_average_price || 0);
+        responseData.organic.push(avgResult.organic_average_price || 0);
+        responseData.conventional.push(Number(market_price) || 0);
       }
-      data.data.push(farmerCount);
-    }
+    }));
 
-    processedList.push(data);
+    return res.sendSuccess(res, responseData);
+  } catch (error: any) {
+    return res.sendError(res, error.message);
   }
-
-  return {
-    processedList,
-    seasonList,
-  };
 };
 
 export {
   getPricyByCountry,
-  getPricyByState,
+  getPricyByState
 };
