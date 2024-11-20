@@ -85,7 +85,7 @@ const fetchPriceComparisonSeedCotton = async (req: Request, res: Response) => {
           AVG(CASE WHEN t."program_id" = 5 THEN CAST(t."rate" AS FLOAT) END) AS "reel_average_price"
         FROM "transactions" AS t
         WHERE t."date" >= :startDate AND t."date" <= :endDate
-        AND "brand_id" IN (:brandId) 
+        ${brandIdArray.length > 0 ? 'AND "brand_id" IN (:brandId)' : ''}
         ${avgQueryConditions.length > 0 ? 'AND ' + avgQueryConditions.join(' AND ') : ''};
       `;
 
