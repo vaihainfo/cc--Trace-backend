@@ -17,6 +17,7 @@ const fetchPriceComparisonSeedCotton = async (req: Request, res: Response) => {
     let whereConditions: string[] = [];
     let avgQueryConditions: string[] = [];
     let replacements: any = { limit, offset };
+    let brandIdArray = brandId ? brandId.split(",").map((id: any) => parseInt(id, 10)) : [];
 
     const addCondition = (field: string, values: string, alias: string | null = null) => {
       const idArray = values.split(",").map((id: any) => parseInt(id, 10));
@@ -84,11 +85,12 @@ const fetchPriceComparisonSeedCotton = async (req: Request, res: Response) => {
           AVG(CASE WHEN t."program_id" = 5 THEN CAST(t."rate" AS FLOAT) END) AS "reel_average_price"
         FROM "transactions" AS t
         WHERE t."date" >= :startDate AND t."date" <= :endDate
+        AND "brand_id" IN (:brandId) 
         ${avgQueryConditions.length > 0 ? 'AND ' + avgQueryConditions.join(' AND ') : ''};
       `;
 
       const [avgResult] = await sequelize.query(avgQuery, {
-        replacements: { startDate, endDate, ...replacements },
+        replacements: { startDate, endDate, brandId: brandIdArray || [], ...replacements },
         type: sequelize.QueryTypes.SELECT,
       });
 
