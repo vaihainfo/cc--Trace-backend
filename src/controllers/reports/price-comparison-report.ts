@@ -15,42 +15,57 @@ const fetchPriceComparisonSeedCotton = async (req: Request, res: Response) => {
     const offset = (page - 1) * limit;
 
     let whereConditions: string[] = [];
+    let avgQueryConditions: string[] = [];
     let replacements: any = { limit, offset };
+
+    const addCondition = (field: string, values: string, alias: string | null = null) => {
+      const idArray = values.split(",").map((id: any) => parseInt(id, 10));
+      replacements[field] = idArray;
+      const condition = alias ? `"${alias}"."${field}" IN (:${field})` : `"${field}" IN (:${field})`;
+      whereConditions.push(condition);
+      avgQueryConditions.push(condition.replace(`"${alias}".`, ""));
+    };
 
     if (brandId) {
       const idArray = brandId.split(",").map((id: any) => parseInt(id, 10));
-      whereConditions.push('"brand_id" IN (:brandId)');
       replacements.brandId = idArray;
+      whereConditions.push('"scp"."brand_id" IN (:brandId)');
     }
 
     if (seasonId) {
-      const idArray = seasonId.split(",").map((id: any) => parseInt(id, 10));
-      whereConditions.push('"season_id" IN (:seasonId)');
-      replacements.seasonId = idArray;
+      addCondition("season_id", seasonId, "scp");
     }
 
     if (countryId) {
-      const idArray = countryId.split(",").map((id: any) => parseInt(id, 10));
-      whereConditions.push('"country_id" IN (:countryId)');
-      replacements.countryId = idArray;
+      addCondition("country_id", countryId, "scp");
     }
 
     if (stateId) {
-      const idArray = stateId.split(",").map((id: any) => parseInt(id, 10));
-      whereConditions.push('"state_id" IN (:stateId)');
-      replacements.stateId = idArray;
+      addCondition("state_id", stateId, "scp");
     }
 
     if (districtId) {
-      const idArray = districtId.split(",").map((id: any) => parseInt(id, 10));
-      whereConditions.push('"district_id" IN (:districtId)');
-      replacements.districtId = idArray;
+      addCondition("district_id", districtId, "scp");
     }
 
     let query = `
-      SELECT * FROM "seed-cotton-pricings"
+      SELECT 
+        scp.*, 
+        b."brand_name", 
+        c."county_name",
+        d."district_name", 
+        p."program_name",
+        s."name" AS "season_name",
+        st."state_name"
+      FROM "seed-cotton-pricings" AS scp
+      LEFT JOIN "brands" AS b ON scp."brand_id" = b."id"
+      LEFT JOIN "countries" AS c ON scp."country_id" = c."id"
+      LEFT JOIN "districts" AS d ON scp."district_id" = d."id"
+      LEFT JOIN "programs" AS p ON scp."program_id" = p."id"
+      LEFT JOIN "seasons" AS s ON scp."season_id" = s."id"
+      LEFT JOIN "states" AS st ON scp."state_id" = st."id"
       ${whereConditions.length > 0 ? 'WHERE ' + whereConditions.join(' AND ') : ''}
-      ORDER BY "id" DESC
+      ORDER BY scp."id" DESC
       LIMIT :limit OFFSET :offset;
     `;
 
@@ -65,11 +80,11 @@ const fetchPriceComparisonSeedCotton = async (req: Request, res: Response) => {
 
       const avgQuery = `
         SELECT 
-          AVG(CASE WHEN "program_id" = 4 THEN CAST("rate" AS FLOAT) END) AS "organic_average_price",
-          AVG(CASE WHEN "program_id" = 5 THEN CAST("rate" AS FLOAT) END) AS "reel_average_price"
-        FROM "transactions"
-        WHERE "date" >= :startDate AND "date" <= :endDate
-        ${whereConditions.length > 0 ? 'AND ' + whereConditions.join(' AND ') : ''};
+          AVG(CASE WHEN t."program_id" = 4 THEN CAST(t."rate" AS FLOAT) END) AS "organic_average_price",
+          AVG(CASE WHEN t."program_id" = 5 THEN CAST(t."rate" AS FLOAT) END) AS "reel_average_price"
+        FROM "transactions" AS t
+        WHERE t."date" >= :startDate AND t."date" <= :endDate
+        ${avgQueryConditions.length > 0 ? 'AND ' + avgQueryConditions.join(' AND ') : ''};
       `;
 
       const [avgResult] = await sequelize.query(avgQuery, {
@@ -100,44 +115,59 @@ const fetchPriceComparisonLint = async (req: Request, res: Response) => {
     }: any = req.query;
     const offset = (page - 1) * limit;
 
+    let brandIdArray = brandId ? brandId.split(",").map((id: any) => parseInt(id, 10)) : [];
     let whereConditions: string[] = [];
+    let avgQueryConditions: string[] = [];
     let replacements: any = { limit, offset };
 
-    let brandIdArray = brandId ? brandId.split(",").map((id: any) => parseInt(id, 10)) : [];
+    const addCondition = (field: string, values: string, alias: string | null = null) => {
+      const idArray = values.split(",").map((id: any) => parseInt(id, 10));
+      replacements[field] = idArray;
+      const condition = alias ? `"${alias}"."${field}" IN (:${field})` : `"${field}" IN (:${field})`;
+      whereConditions.push(condition);
+      avgQueryConditions.push(condition.replace(`"${alias}".`, ""));
+    };
 
     if (brandId) {
-      whereConditions.push('"brand_id" IN (:brandId)');
-      replacements.brandId = brandIdArray;
+      const idArray = brandId.split(",").map((id: any) => parseInt(id, 10));
+      replacements.brandId = idArray;
+      whereConditions.push('"lp"."brand_id" IN (:brandId)');
     }
 
     if (seasonId) {
-      const idArray = seasonId.split(",").map((id: any) => parseInt(id, 10));
-      whereConditions.push('"season_id" IN (:seasonId)');
-      replacements.seasonId = idArray;
+      addCondition("season_id", seasonId, "lp");
     }
 
     if (countryId) {
-      const idArray = countryId.split(",").map((id: any) => parseInt(id, 10));
-      whereConditions.push('"country_id" IN (:countryId)');
-      replacements.countryId = idArray;
+      addCondition("country_id", countryId, "lp");
     }
 
     if (stateId) {
-      const idArray = stateId.split(",").map((id: any) => parseInt(id, 10));
-      whereConditions.push('"state_id" IN (:stateId)');
-      replacements.stateId = idArray;
+      addCondition("state_id", stateId, "lp");
     }
 
     if (districtId) {
-      const idArray = districtId.split(",").map((id: any) => parseInt(id, 10));
-      whereConditions.push('"district_id" IN (:districtId)');
-      replacements.districtId = idArray;
+      addCondition("district_id", districtId, "lp");
     }
 
     let query = `
-      SELECT * FROM "lint-pricings"
+      SELECT 
+        lp.*, 
+        b."brand_name", 
+        c."county_name",
+        d."district_name", 
+        p."program_name",
+        s."name" AS "season_name",
+        st."state_name"
+      FROM "lint-pricings" AS lp
+      LEFT JOIN "brands" AS b ON lp."brand_id" = b."id"
+      LEFT JOIN "countries" AS c ON lp."country_id" = c."id"
+      LEFT JOIN "districts" AS d ON lp."district_id" = d."id"
+      LEFT JOIN "programs" AS p ON lp."program_id" = p."id"
+      LEFT JOIN "seasons" AS s ON lp."season_id" = s."id"
+      LEFT JOIN "states" AS st ON lp."state_id" = st."id"
       ${whereConditions.length > 0 ? 'WHERE ' + whereConditions.join(' AND ') : ''}
-      ORDER BY "id" DESC
+      ORDER BY lp."id" DESC
       LIMIT :limit OFFSET :offset;
     `;
 
@@ -160,7 +190,7 @@ const fetchPriceComparisonLint = async (req: Request, res: Response) => {
         FROM "gin_sales" ss
         INNER JOIN "ginners" s ON ss."ginner_id" = s."id"
         WHERE ss."date" >= :startDate AND ss."date" <= :endDate
-        ${whereConditions.length > 0 ? 'AND ' + whereConditions.join(' AND ') : ''};
+        ${avgQueryConditions.length > 0 ? 'AND ' + avgQueryConditions.join(' AND ') : ''};
       `;
 
       const [avgResult] = await sequelize.query(avgQuery, {
@@ -196,46 +226,62 @@ const fetchPriceComparisonYarn = async (req: Request, res: Response) => {
     }: any = req.query;
     const offset = (page - 1) * limit;
 
+    let brandIdArray = brandId ? brandId.split(",").map((id: any) => parseInt(id, 10)) : [];
     let whereConditions: string[] = [];
+    let avgQueryConditions: string[] = [];
     let replacements: any = { limit, offset };
 
-    let brandIdArray = brandId ? brandId.split(",").map((id: any) => parseInt(id, 10)) : [];
+    const addCondition = (field: string, values: string, alias: string | null = null) => {
+      const idArray = values.split(",").map((id: any) => parseInt(id, 10));
+      replacements[field] = idArray;
+      const condition = alias ? `"${alias}"."${field}" IN (:${field})` : `"${field}" IN (:${field})`;
+      whereConditions.push(condition);
+      avgQueryConditions.push(condition.replace(`"${alias}".`, ""));
+    };
 
     if (brandId) {
-      whereConditions.push('"brand_id" IN (:brandId)');
-      replacements.brandId = brandIdArray;
+      const idArray = brandId.split(",").map((id: any) => parseInt(id, 10));
+      replacements.brandId = idArray;
+      whereConditions.push('"yp"."brand_id" IN (:brandId)');
     }
 
     if (seasonId) {
-      const idArray = seasonId.split(",").map((id: any) => parseInt(id, 10));
-      whereConditions.push('"season_id" IN (:seasonId)');
-      replacements.seasonId = idArray;
+      addCondition("season_id", seasonId, "yp");
     }
 
     if (countryId) {
-      const idArray = countryId.split(",").map((id: any) => parseInt(id, 10));
-      whereConditions.push('"country_id" IN (:countryId)');
-      replacements.countryId = idArray;
+      addCondition("country_id", countryId, "yp");
     }
 
     if (stateId) {
-      const idArray = stateId.split(",").map((id: any) => parseInt(id, 10));
-      whereConditions.push('"state_id" IN (:stateId)');
-      replacements.stateId = idArray;
+      addCondition("state_id", stateId, "yp");
     }
 
     if (districtId) {
-      const idArray = districtId.split(",").map((id: any) => parseInt(id, 10));
-      whereConditions.push('"district_id" IN (:districtId)');
-      replacements.districtId = idArray;
+      addCondition("district_id", districtId, "yp");
     }
 
     let query = `
-      SELECT * FROM "yarn-pricings"
+      SELECT 
+        yp.*, 
+        b."brand_name", 
+        c."county_name",
+        d."district_name", 
+        p."program_name",
+        s."name" AS "season_name",
+        st."state_name"
+      FROM "yarn-pricings" AS yp
+      LEFT JOIN "brands" AS b ON yp."brand_id" = b."id"
+      LEFT JOIN "countries" AS c ON yp."country_id" = c."id"
+      LEFT JOIN "districts" AS d ON yp."district_id" = d."id"
+      LEFT JOIN "programs" AS p ON yp."program_id" = p."id"
+      LEFT JOIN "seasons" AS s ON yp."season_id" = s."id"
+      LEFT JOIN "states" AS st ON yp."state_id" = st."id"
       ${whereConditions.length > 0 ? 'WHERE ' + whereConditions.join(' AND ') : ''}
-      ORDER BY "id" DESC
+      ORDER BY yp."id" DESC
       LIMIT :limit OFFSET :offset;
     `;
+
 
     const rows = await sequelize.query(query, {
       replacements,
@@ -256,7 +302,7 @@ const fetchPriceComparisonYarn = async (req: Request, res: Response) => {
         FROM "spin_sales" ss
         INNER JOIN "spinners" s ON ss."spinner_id" = s."id"
         WHERE ss."date" >= :startDate AND ss."date" <= :endDate
-        ${whereConditions.length > 0 ? 'AND ' + whereConditions.join(' AND ') : ''};
+        ${avgQueryConditions.length > 0 ? 'AND ' + avgQueryConditions.join(' AND ') : ''};
       `;
 
       const [avgResult] = await sequelize.query(avgQuery, {
