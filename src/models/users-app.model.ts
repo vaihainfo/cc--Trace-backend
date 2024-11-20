@@ -13,6 +13,9 @@ import Brand from './brand.model';
 import TraceabilityExecutive from './traceability-executive.model';
 import SupplyChainManager from './supply-chain-manager.model';
 import SupplyChainDirector from './supply-chain-director.model';
+import BrandExecutive from './brand-executive.model';
+import BrandManager from './brand-manager.model';
+import PSTeam from './ps-team.model';
 
 const UserApp = db.define('users_apps', {
   id: {
@@ -135,6 +138,15 @@ const UserApp = db.define('users_apps', {
     scd_id: {
       type: DataTypes.INTEGER
     },
+    be_id: {
+      type: DataTypes.INTEGER
+    },
+    bm_id: {
+      type: DataTypes.INTEGER
+    },
+    ps_id: {
+      type: DataTypes.INTEGER
+    },
 });
 
 UserApp.belongsTo(UserRegistrations, {
@@ -200,6 +212,21 @@ UserApp.belongsTo(SupplyChainManager, {
 UserApp.belongsTo(SupplyChainDirector, {
   foreignKey: "scd_id",
   as: "supply_chain_director",
+});
+
+UserApp.belongsTo(BrandExecutive, {
+  foreignKey: "be_id",
+  as: "brand_executive",
+})
+
+UserApp.belongsTo(BrandManager, {
+  foreignKey: "bm_id",
+  as: "brand_manager",
+});
+
+UserApp.belongsTo(PSTeam, {
+  foreignKey: "ps_id",
+  as: "ps_team",
 });
 
 UserApp.sync();

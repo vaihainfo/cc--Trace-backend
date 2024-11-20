@@ -297,6 +297,7 @@ app.use("/organic-program-data-digitization", organicProgramDataDigitizationRout
 app.use("/data-monitoring", dataMonitorRouter);
 app.use("/update-greyout", updateGreyoutData);
 app.use("/lsv", lsvRouter);
+app.use("/update-greyout", updateGreyoutData);
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument, { customCss }));
 
 app.use(errorMiddleware);

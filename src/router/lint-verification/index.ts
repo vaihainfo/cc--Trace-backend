@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { createLSVUser, deleteLSVUser, fetchUser, fetchUsers, updateProcessor } from "../../controllers/lint-stock-verification/user-management";
-import { createVerifiedLintStock, editGinVerifiedStockConfirm, fetchTeGinner,fetchTeCountries, fetchTeStates, getGinnerVerifiedStocks, getGinProcessLotDetials, getGinProcessLotNo, getLintVerifiedStock, getLintVerifiedStocks, getListVerifiedStocks, getSCDVerifiedStocks, getSCMVerifiedStocks, getTypeWiseListVerifiedStocks, updateSCDVerifiedStockConfirm, updateSCMVerifiedStockConfirm } from "../../controllers/lint-stock-verification";
+import { createVerifiedLintStock, editGinVerifiedStockConfirm, fetchTeGinner,fetchTeCountries, fetchTeStates, getGinnerVerifiedStocks, getGinProcessLotDetials, getGinProcessLotNo, getLintVerifiedStock, getLintVerifiedStocks, getListVerifiedStocks, getSCDVerifiedStocks, getSCMVerifiedStocks, getTypeWiseListVerifiedStocks, updateSCDVerifiedStockConfirm, updateSCMVerifiedStockConfirm, getGinSalesLotDetials, getGinSaleLotNo, fetchTeSpinner, fetchBeSpinner, fetchBeCountries, fetchBeStates, getLintSpinVerifiedStocks, updateSpinVerifiedStockConfirm, updateBMVerifiedStockConfirm, getSpinnerVerifiedStocks, getBMVerifiedStocks, updatePSVerifiedStockConfirm, getPSVerifiedStocks, getTypeWiseSpinVerifiedStocks, getBrandListSpinVerifiedStocks } from "../../controllers/lint-stock-verification";
 
 
 const router = Router();
@@ -11,6 +11,7 @@ router.get("/get-user", fetchUser);
 router.put("/update-lsv-user", updateProcessor);
 router.delete("/delete-lsv-user", deleteLSVUser);
 router.get("/get-te-ginner", fetchTeGinner);
+router.get("/get-te-spinners", fetchTeSpinner);
 router.get("/get-te-countries", fetchTeCountries);
 router.get("/get-te-states", fetchTeStates);
 
@@ -29,6 +30,23 @@ router.post("/create-verified-stock", createVerifiedLintStock);
 router.post("/update-gin-verified-stock", editGinVerifiedStockConfirm);
 router.post("/update-scm-verified-stock", updateSCMVerifiedStockConfirm);
 router.post("/update-scd-verified-stock", updateSCDVerifiedStockConfirm);
+
+//spinner flow
+router.get("/get-spinner-lots", getGinSaleLotNo);
+router.get("/get-gin-sales-details", getGinSalesLotDetials);
+router.get("/get-be-spinners", fetchBeSpinner);
+router.get("/get-be-countries", fetchBeCountries);
+router.get("/get-be-states", fetchBeStates);
+
+router.get("/get-spin-verified-stocks", getLintSpinVerifiedStocks);
+router.get("/get-spinner-verified-stocks", getSpinnerVerifiedStocks);
+router.get("/get-bm-verified-stocks", getBMVerifiedStocks);
+router.get("/get-ps-verified-stocks", getPSVerifiedStocks);
+router.post("/update-spin-verified-stock", updateSpinVerifiedStockConfirm);
+router.post("/update-bm-verified-stock", updateBMVerifiedStockConfirm);
+router.post("/update-ps-verified-stock", updatePSVerifiedStockConfirm);
+router.get("/get-all-type-spin-verified-stocks", getTypeWiseSpinVerifiedStocks);
+router.get("/get-all-spin-verified-stocks", getBrandListSpinVerifiedStocks);
 
 
 export default router;
