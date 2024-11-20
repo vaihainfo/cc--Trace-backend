@@ -1,5 +1,6 @@
 import { DataTypes } from 'sequelize';
 import db from '../util/dbConn';
+import Country from './country.model';
 
 const SeedCottonPricing = db.define('seed-cotton-pricings', {
   id: {
@@ -44,6 +45,11 @@ const SeedCottonPricing = db.define('seed-cotton-pricings', {
     type: DataTypes.DECIMAL,
     allowNull: false,
   },
+});
+
+SeedCottonPricing.belongsTo(Country, {
+  foreignKey: "country_id",
+  as: "country",
 });
 
 

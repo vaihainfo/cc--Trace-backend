@@ -75,6 +75,7 @@ import {
     exportSpinnerProcessGreyOutReport,
 } from "../../controllers/reports";
 import accessControl from "../../middleware/access-control";
+import { fetchPriceComparisonLint, fetchPriceComparisonSeedCotton, fetchPriceComparisonYarn } from "../../controllers/reports/price-comparison-report";
 
 const router = Router();
 
@@ -173,4 +174,8 @@ router.get('/entry/data/monitoring/dashboard', fetchDataEntryMonitorDashboardPag
 router.get('/get-gin-heap-report', fetchGinHeapReport);
 router.get('/export-gin-heap-report', exportGinHeapReport);
 
-export default router;  
+router.get('/get-pricing-comparison-report-seed', fetchPriceComparisonSeedCotton);
+router.get('/get-pricing-comparison-report-lint', fetchPriceComparisonLint);
+router.get('/get-pricing-comparison-report-yarn', fetchPriceComparisonYarn);
+
+export default router;
