@@ -4,9 +4,9 @@
   "description": "",
   "main": "/src/app.ts",
   "scripts": {
-    "watch": "cp -r src/swagger/ dist/ && tsc --watch",
-    "dev": "npx sequelize db:migrate && node --max-old-space-size=4096 src/app.ts ",
-    "start": "npx sequelize db:migrate && node --max-old-space-size=4096 dist/app.js",
+    "watch": "tsc --watch",
+    "dev": "npx sequelize db:migrate && nodemon --max-old-space-size=4096 src/app.ts ",
+    "start": "npx sequelize db:migrate && nodemon --max-old-space-size=4096 dist/app.js",
     "build": "rm -Rf dist/ && tsc",
     "serve": "rimraf dist && tsc && node ./dist/app.js"
   },

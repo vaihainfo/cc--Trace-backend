@@ -80,7 +80,9 @@ const createSpinnerProcess = async (req: Request, res: Response) => {
             qty_stock: req.body.netYarnQty,
             dyeing_id: dyeing ? dyeing.id : null,
             tot_box_user: req.body.noOfBox,
-            status: 'Pending'
+            status: 'Pending',
+            from_date: req.body.from_date,
+            to_date: req.body.to_date,
         };
         const spin = await SpinProcess.create(data);
         let uniqueFilename = `spin_procees_qrcode_${Date.now()}.png`;
@@ -257,16 +259,16 @@ const yarnId = async (id: any, date: any) => {
 
     let count = 0;
 
-    if(spinLatest){
+    if (spinLatest) {
         let reelLot = spinLatest?.dataValues?.reel_lot_no;
         let split = reelLot ? reelLot.split('/') : [];
         count = split && split.length > 0 ? Number(split[1]) : 0;
     }
 
     let currentDate = date ? new Date(date) : new Date();
-    let day = String(currentDate.getDate()).padStart(2, "0"); 
+    let day = String(currentDate.getDate()).padStart(2, "0");
     let month = String(currentDate.getMonth() + 1).padStart(2, "0"); // Local month, zero-indexed, so add 1
-    let year = String(currentDate.getFullYear()); 
+    let year = String(currentDate.getFullYear());
 
     let prcs_date = day + month + year;
 
@@ -354,7 +356,7 @@ const fetchSpinnerProcessPagination = async (req: Request, res: Response) => {
 
             let data = [];
 
-            for await (let row of rows) {   
+            for await (let row of rows) {
                 let yarncount = [];
 
                 if (row.dataValues?.yarn_count.length > 0) {
@@ -644,14 +646,14 @@ const exportSpinnerProcess = async (req: Request, res: Response) => {
         // Create the excel workbook file
         const workbook = new ExcelJS.Workbook();
         const worksheet = workbook.addWorksheet("Sheet1");
-        worksheet.mergeCells('A1:L1');
+        worksheet.mergeCells('A1:O1');
         const mergedCell = worksheet.getCell('A1');
         mergedCell.value = 'CottonConnect | Process';
         mergedCell.font = { bold: true };
         mergedCell.alignment = { horizontal: 'center', vertical: 'middle' };
         // Set bold font for header row
         const headerRow = worksheet.addRow([
-            "Sr No.", "Date", "Season",
+            "Sr No.", "Date", "Yarn Production Start Date", "Yarn Production End Date", "Season",
             "Spin Lot No", "Yarn Type", "Yarn Count", "Yarn Realisation %", "No of Boxes",
             "Box ID", "Blend", "Blend Qty", "Total Yarn weight (Kgs)", "Grey Out Status"
         ]);
@@ -706,6 +708,8 @@ const exportSpinnerProcess = async (req: Request, res: Response) => {
             const rowValues = Object.values({
                 index: index + 1,
                 date: item.date ? item.date : '',
+                from: item.from_date ? item.from_date : "",
+                to: item.to_date ? item.to_date : "",
                 season: item.season ? item.season.name : '',
                 lotNo: item.batch_lot_no ? item.batch_lot_no : '',
                 yarnType: item.yarn_type ? item.yarn_type : '',
@@ -875,7 +879,7 @@ const createSpinnerSales = async (req: Request, res: Response) => {
             for await (let obj of req.body.chooseYarn) {
                 const spinProcessData = await SpinProcess.findOne({ where: { id: obj.process_id } });
                 let update = await SpinProcess.update({ qty_stock: spinProcessData.qty_stock - obj.qtyUsed, status: 'Sold' }, { where: { id: obj.process_id } });
-                 const spinYarnData = await SpinYarn.findOne({ where: { id: obj.id } });
+                const spinYarnData = await SpinYarn.findOne({ where: { id: obj.id } });
 
                 let updateyarns = {}
                 if (spinYarnData.yarn_qty_stock - obj.qtyUsed <= 0) {
@@ -1419,7 +1423,7 @@ const fetchTransactionAlert = async (req: Request, res: Response) => {
                 { '$season.name$': { [Op.iLike]: `%${searchTerm}%` } }, // Search by crop Type
             ];
         }
-        
+
         if (status === 'Pending') {
             whereCondition.buyer = spinnerId
             whereCondition.status = { [Op.in]: ['Pending', 'Pending for QR scanning', 'Partially Accepted', 'Partially Rejected'] }
@@ -1574,7 +1578,7 @@ const fetchTransactionAlert = async (req: Request, res: Response) => {
 //                         rejectedBalesId.push(bale.id);
 //                         // await GinBale.update({ sold_status: false }, { where: { id: bale.id } });
 //                     }
-    
+
 //                     if (obj.status === 'Sold') {
 //                         await GinBale.update({ accepted_weight: bale.qtyUsed ? Number(bale.qtyUsed).toFixed(2) : 0 }, { where: { id: bale.id } });
 //                     }
@@ -1698,7 +1702,7 @@ const updateStatusSales = async (req: Request, res: Response) => {
                     if (obj.status === 'Sold') {
                         for (const bale of obj.bales) {
                             const acceptedWeight = bale.qtyUsed ? Number(bale.qtyUsed).toFixed(2) : 0;
-                            
+
                             await GinBale.update(
                                 { accepted_weight: acceptedWeight },
                                 { where: { id: bale.id }, transaction: t }
@@ -1735,21 +1739,21 @@ const updateStatusSales = async (req: Request, res: Response) => {
                         THEN gb.accepted_weight ELSE CAST(gb.weight AS DOUBLE PRECISION) END), 0) AS total_qty
                     FROM bale_selections bs
                     LEFT JOIN "gin-bales" gb ON bs.bale_id = gb.id
-                    WHERE bs.sales_id = :sales_id AND bs.spinner_status = true`, 
+                    WHERE bs.sales_id = :sales_id AND bs.spinner_status = true`,
                     { replacements: { sales_id: obj.id }, type: sequelize.QueryTypes.SELECT, transaction: t });
 
                 const ginSale = await GinSales.findOne({ where: { id: obj.id }, transaction: t });
                 const lintSale = await LintSelections.findAll({ where: { lint_id: obj.id }, transaction: t });
 
-                console.log("max qty stock to be in gin sales=============",total, Math.ceil(Number(total.total_qty)), ginSale.qty_stock + Number(obj.qtyStock))
+                console.log("max qty stock to be in gin sales=============", total, Math.ceil(Number(total.total_qty)), ginSale.qty_stock + Number(obj.qtyStock))
 
                 if (ginSale && obj.status === 'Sold' && (ginSale.qty_stock + Number(obj.qtyStock)) <= Math.ceil(Number(total.total_qty))) {
                     data.qty_stock = Number(ginSale.qty_stock) + Number(obj.qtyStock);
-                    if(lintSale && lintSale?.length > 0){
-                        let sum = lintSale?.reduce((acc: any, value:any) => Number(value?.qty_used) + acc,0);
+                    if (lintSale && lintSale?.length > 0) {
+                        let sum = lintSale?.reduce((acc: any, value: any) => Number(value?.qty_used) + acc, 0);
 
-                        data.accepted_bales_weight = Number(ginSale.qty_stock) + Number(obj.qtyStock) + sum;  
-                    }else{
+                        data.accepted_bales_weight = Number(ginSale.qty_stock) + Number(obj.qtyStock) + sum;
+                    } else {
                         data.accepted_bales_weight = Number(ginSale.qty_stock) + Number(obj.qtyStock);
                     }
                 }
@@ -1931,7 +1935,7 @@ const fetchTransactionList = async (req: Request, res: Response) => {
                     gs."updatedAt" DESC
                 LIMIT 
                     :limit OFFSET :offset;`
-                    
+
 
         const [countResult, rows] = await Promise.all([
             sequelize.query(countQuery, {
@@ -2605,7 +2609,7 @@ const chooseYarn = async (req: Request, res: Response) => {
                             as: 'spinprocess',
                             attributes: ['greyout_status'],
                         }
-                    ],
+                        ],
                         order: [["id", "desc"]],
                         where: {
                             process_id: row?.dataValues?.id,
@@ -2703,94 +2707,94 @@ const getYarnReelLotNo = async (req: Request, res: Response) => {
     }
 };
 
-const _getSpinnerProcessTracingChartData = async (reelLotNo:any) => {
+const _getSpinnerProcessTracingChartData = async (reelLotNo: any) => {
     let offset = 0;
-    let allSpinData:any = [];
-  
+    let allSpinData: any = [];
+
     let include = [{ model: Spinner, as: "spinner", attributes: ['id', 'name'] }];
-    let whereCondition:any = {};
-  
-    if (reelLotNo!==null) {
-      const idArray = reelLotNo.split(",");
-      whereCondition.reel_lot_no = { [Op.in]: idArray };
+    let whereCondition: any = {};
+
+    if (reelLotNo !== null) {
+        const idArray = reelLotNo.split(",");
+        whereCondition.reel_lot_no = { [Op.in]: idArray };
     }
-    
+
     // const BATCH_SIZE = 10;
     // while (true) {
-      let batchSpinData = await queryWithRetry(() =>
+    let batchSpinData = await queryWithRetry(() =>
         SpinProcess.findAll({
-          where: whereCondition,
-          include: include,
-          order: [['id', 'desc']],
-        //   limit: BATCH_SIZE,
-        //   offset: offset,
-          attributes: ['id', 'reel_lot_no']
+            where: whereCondition,
+            include: include,
+            order: [['id', 'desc']],
+            //   limit: BATCH_SIZE,
+            //   offset: offset,
+            attributes: ['id', 'reel_lot_no']
         })
-      );
-  
-    //   if (batchSpinData.length === 0) break;
-  
-    //   offset += BATCH_SIZE;
-  
-      let spinWithGinSales = await Promise.all(
-        batchSpinData.map(async (spin:any) => {
-          spin = spin.toJSON();
-  
-          // Fetch lintSele for spin
-          spin.lintSele = await LintSelections.findAll({
-            where: {
-              process_id: spin.id,
-            }
-          });
-  
-          // Fetch ginSales for spin
-          spin.ginSales = await Promise.all(
-            spin.lintSele.map(async (lintSeleItem: any) => {
-              let ginSales = await GinSales.findAll({
-                where: { id: lintSeleItem.lint_id },
-                include: [{ model: Ginner, as: "ginner", attributes: ['id', 'name'] }],
-                attributes: ['id', 'ginner_id','reel_lot_no']
-              });
-              return ginSales;
-            })
-          );
-  
-          // Process ginSales and transactions
-          spin.ginSales = await Promise.all(
-            spin.ginSales.map(async (sales: any) => {
-              return await Promise.all(
-                sales.map(async (sale: any) => {
-                  // Assuming _getGinnerProcessTracingChartData returns data or handles async operations correctly
-                  return await _getGinnerProcessTracingChartData(sale.reel_lot_no);
-                })
-              );
-            })
-          );
-          
-          return spin;
-        })
-      );
-  
-      allSpinData = allSpinData.concat(spinWithGinSales);
-    // }
-  
-    return formatDataForSpinnerProcess(reelLotNo, allSpinData);
-  };
+    );
 
-  async function queryWithRetry(queryFunction:any, retries = 0) {
+    //   if (batchSpinData.length === 0) break;
+
+    //   offset += BATCH_SIZE;
+
+    let spinWithGinSales = await Promise.all(
+        batchSpinData.map(async (spin: any) => {
+            spin = spin.toJSON();
+
+            // Fetch lintSele for spin
+            spin.lintSele = await LintSelections.findAll({
+                where: {
+                    process_id: spin.id,
+                }
+            });
+
+            // Fetch ginSales for spin
+            spin.ginSales = await Promise.all(
+                spin.lintSele.map(async (lintSeleItem: any) => {
+                    let ginSales = await GinSales.findAll({
+                        where: { id: lintSeleItem.lint_id },
+                        include: [{ model: Ginner, as: "ginner", attributes: ['id', 'name'] }],
+                        attributes: ['id', 'ginner_id', 'reel_lot_no']
+                    });
+                    return ginSales;
+                })
+            );
+
+            // Process ginSales and transactions
+            spin.ginSales = await Promise.all(
+                spin.ginSales.map(async (sales: any) => {
+                    return await Promise.all(
+                        sales.map(async (sale: any) => {
+                            // Assuming _getGinnerProcessTracingChartData returns data or handles async operations correctly
+                            return await _getGinnerProcessTracingChartData(sale.reel_lot_no);
+                        })
+                    );
+                })
+            );
+
+            return spin;
+        })
+    );
+
+    allSpinData = allSpinData.concat(spinWithGinSales);
+    // }
+
+    return formatDataForSpinnerProcess(reelLotNo, allSpinData);
+};
+
+async function queryWithRetry(queryFunction: any, retries = 0) {
     try {
-      return await queryFunction();
+        return await queryFunction();
     } catch (error) {
-      if (error instanceof sequelize.ConnectionAcquireTimeoutError && retries < 3) {
-        console.error(`Connection timeout, retrying... (attempt ${retries + 1}/3)`);
-        await new Promise(resolve => setTimeout(resolve, 1000)); // Retry after 1 second
-        return await queryWithRetry(queryFunction, retries + 1);
-      }
-      throw error; // Propagate other errors
+        if (error instanceof sequelize.ConnectionAcquireTimeoutError && retries < 3) {
+            console.error(`Connection timeout, retrying... (attempt ${retries + 1}/3)`);
+            await new Promise(resolve => setTimeout(resolve, 1000)); // Retry after 1 second
+            return await queryWithRetry(queryFunction, retries + 1);
+        }
+        throw error; // Propagate other errors
     }
-  }
-  
-  const getSpinnerProcessTracingChartData = async (req: Request, res: Response) => {
+}
+
+const getSpinnerProcessTracingChartData = async (req: Request, res: Response) => {
     const { reelLotNo } = req.query;
 
     // await createIndexes();
@@ -2799,8 +2803,8 @@ const _getSpinnerProcessTracingChartData = async (reelLotNo:any) => {
 
     // await createIndexes();
     res.sendSuccess(res, data);
-  }
-  const createIndexIfNotExists= async (tableName:any, indexName:any, fields:any) => {
+}
+const createIndexIfNotExists = async (tableName: any, indexName: any, fields: any) => {
     try {
         const indexExistsQuery = `
             SELECT indexname
@@ -2812,7 +2816,7 @@ const _getSpinnerProcessTracingChartData = async (reelLotNo:any) => {
 
         if (!existingIndex || existingIndex.length === 0) {
             const createIndexQuery = `
-                CREATE INDEX CONCURRENTLY ${indexName} ON "${tableName}" (${fields.map((field:any) => `"${field}"`).join(', ')});
+                CREATE INDEX CONCURRENTLY ${indexName} ON "${tableName}" (${fields.map((field: any) => `"${field}"`).join(', ')});
             `;
             await sequelize.query(createIndexQuery);
             console.log(`Index ${indexName} created successfully on ${tableName} table.`);
