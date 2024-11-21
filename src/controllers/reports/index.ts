@@ -142,6 +142,8 @@ const fetchBaleProcess = async (req: Request, res: Response) => {
         SELECT
             gp.id AS process_id,
             gp.date,
+            gp.from_date,
+            gp.to_date,
             gp."createdAt" AS created_date,
             s.name AS season_name,
             g.name AS ginner_name,
@@ -272,6 +274,8 @@ const fetchBaleProcess = async (req: Request, res: Response) => {
           SELECT
               gd.process_id,
               gd.date AS date,
+              gd.from_date AS from_date,
+              gd.to_date AS to_date,
               gd.created_date AS "createdAt",
               gd.season_name AS season,
               gd.ginner_name AS ginner_name,
@@ -631,27 +635,27 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
         const idArray = brandId.split(",").map((id: any) => parseInt(id, 10));
         whereCondition.push(`g.brand && ARRAY[${idArray.join(',')}]`);
       }
-  
+
       if (seasonId) {
         const idArray = seasonId.split(",").map((id: any) => parseInt(id, 10));
         whereCondition.push(`gp.season_id IN (${idArray.join(',')})`);
       }
-  
+
       if (ginnerId) {
         const idArray = ginnerId.split(",").map((id: any) => parseInt(id, 10));
         whereCondition.push(`gp.ginner_id IN (${idArray.join(',')})`);
       }
-  
+
       if (countryId) {
         const idArray = countryId.split(",").map((id: any) => parseInt(id, 10));
         whereCondition.push(`g.country_id IN (${idArray.join(',')})`);
       }
-  
+
       if (programId) {
         const idArray = programId.split(",").map((id: any) => parseInt(id, 10));
         whereCondition.push(`gp.program_id IN (${idArray.join(',')})`);
       }
-  
+
       if (startDate && endDate) {
         const startOfDay = new Date(startDate);
         startOfDay.setUTCHours(0, 0, 0, 0);
@@ -659,16 +663,16 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
         endOfDay.setUTCHours(23, 59, 59, 999);
         whereCondition.push(`"gp"."createdAt" BETWEEN '${startOfDay.toISOString()}' AND '${endOfDay.toISOString()}'`);
       }
-  
+
       const whereClause = whereCondition.length > 0 ? `WHERE ${whereCondition.join(' AND ')}` : '';
 
       // Create the excel workbook file
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet("Sheet1");
       if (isBrand === 'true') {
-        worksheet.mergeCells('A1:O1');
+        worksheet.mergeCells('A1:Q1');
       } else {
-        worksheet.mergeCells('A1:V1');
+        worksheet.mergeCells('A1:X1');
       }
       const mergedCell = worksheet.getCell('A1');
       mergedCell.value = 'CottonConnect | Ginner Bale Process Report';
@@ -678,11 +682,11 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
       let headerRow;
       if (isBrand === 'true') {
         headerRow = worksheet.addRow([
-          "Sr No.", "Process Date", "Data Entry Date and Time", "Lint process Season choosen", "Ginner Name", "Heap Number", "Gin Lot No", "Gin Press No", "REEL Lot No", "REEL Press Nos", "No of Bales", "Lint Quantity(Kgs)", "Programme", "Grey Out Status"
+          "Sr No.", "Process Date", "Data Entry Date and Time", "Lint Production Start Date", "Lint Production End Date", "Lint process Season choosen", "Ginner Name", "Heap Number", "Gin Lot No", "Gin Press No", "REEL Lot No", "REEL Press Nos", "No of Bales", "Lint Quantity(Kgs)", "Programme", "Grey Out Status"
         ]);
       } else {
         headerRow = worksheet.addRow([
-          "Sr No.", "Process Date", "Data Entry Date and Time", "Seed Cotton Consumed Season", "Lint process Season choosen", "Ginner Name", "Heap Number", "Gin Lot No", "Gin Press No", "REEL Lot No", "REEL Press Nos", "No of Bales", "Lint Quantity(Kgs)", "Total Seed Cotton Consumed(Kgs)", "GOT", "Total lint cotton sold(Kgs)", "Total Bales Sold", "Total lint cotton in stock(Kgs)", "Total Bales in stock", "Programme", "Village", "Grey Out Status"
+          "Sr No.", "Process Date", "Data Entry Date and Time", "Lint Production Start Date", "Lint Production End Date", "Seed Cotton Consumed Season", "Lint process Season choosen", "Ginner Name", "Heap Number", "Gin Lot No", "Gin Press No", "REEL Lot No", "REEL Press Nos", "No of Bales", "Lint Quantity(Kgs)", "Total Seed Cotton Consumed(Kgs)", "GOT", "Total lint cotton sold(Kgs)", "Total Bales Sold", "Total lint cotton in stock(Kgs)", "Total Bales in stock", "Programme", "Village", "Grey Out Status"
         ]);
       }
       headerRow.font = { bold: true };
@@ -692,6 +696,8 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
           SELECT
               gp.id AS process_id,
               gp.date,
+              gp.from_date,
+              gp.to_date,
               gp."createdAt" AS created_date,
               s.name AS season_name,
               g.name AS ginner_name,
@@ -822,6 +828,8 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
           SELECT
               gd.process_id,
               gd.date AS date,
+              gd.from_date AS from_date,
+              gd.to_date AS to_date,
               gd.created_date AS "createdAt",
               gd.season_name AS season,
               gd.ginner_name AS ginner_name,
@@ -871,6 +879,8 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
             index: index + 1,
             date: item.date ? item.date : "",
             created_date: item.createdAt ? item.createdAt : "",
+            from_date: item.from_date ? item.from_date : "",
+            to_date: item.to_date ? item.to_date : "",
             season: item.season ? item.season : "",
             ginner: item.ginner_name ? item.ginner_name : "",
             heap: item.heap_number ? item.heap_number : '',
@@ -888,6 +898,8 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
             index: index + 1,
             date: item.date ? item.date : "",
             created_date: item.createdAt ? item.createdAt : "",
+            from_date: item.from_date ? item.from_date : "",
+            to_date: item.to_date ? item.to_date : "",
             seed_consumed_seasons: item.seed_consumed_seasons ? item.seed_consumed_seasons : "",
             season: item.season ? item.season : "",
             ginner: item.ginner_name ? item.ginner_name : "",
@@ -4154,6 +4166,8 @@ const fetchSpinnerYarnProcessPagination = async (
       SELECT
         spin_process.id AS process_id,
         spin_process.date,
+        spin_process.from_date,
+        spin_process.to_date,
         spin_process."createdAt",
         season.name AS season_name,
         spinner.name AS spinner_name,
@@ -4364,6 +4378,8 @@ const exportSpinnerYarnProcess = async (req: Request, res: Response) => {
         headerRow = worksheet.addRow([
           "Sr No.",
           "Date and Time",
+          "Yarn Production Start Date",
+          "Yarn Production End Date",
           "Yarn Process Season",
           "Spinner Name",
           "Spin Lot No",
@@ -4388,6 +4404,8 @@ const exportSpinnerYarnProcess = async (req: Request, res: Response) => {
           "Sr No.",
           "Date and Time",
           "Process Date",
+          "Yarn Production Start Date",
+          "Yarn Production End Date",
           "Lint Cotton Consumed Season",
           "Yarn Process Season",
           "Spinner Name",
@@ -4439,6 +4457,8 @@ const exportSpinnerYarnProcess = async (req: Request, res: Response) => {
       SELECT
         spin_process.id AS process_id,
         spin_process.date,
+        spin_process.from_date,
+        spin_process.to_date,
         spin_process."createdAt",
         season.name AS season_name,
         spinner.name AS spinner_name,
@@ -4569,6 +4589,8 @@ const exportSpinnerYarnProcess = async (req: Request, res: Response) => {
           rowValues = Object.values({
             index: index + 1,
             createdAt: item.createdAt ? item.createdAt : "",
+            from_date: item.from_date ? item.from_date : "",
+            to_date: item.to_date ? item.to_date : "",
             season: item.season_name ? item.season_name : "",
             spinner: item.spinner_name ? item.spinner_name : "",
             lotNo: item.batch_lot_no ? item.batch_lot_no : "",
@@ -4602,6 +4624,8 @@ const exportSpinnerYarnProcess = async (req: Request, res: Response) => {
             index: index + 1,
             createdAt: item.createdAt ? item.createdAt : "",
             date: item.date ? item.date : "",
+            from_date: item.from_date ? item.from_date : "",
+            to_date: item.to_date ? item.to_date : "",
             lint_consumed_seasons: item.lint_consumed_seasons ? item.lint_consumed_seasons : "",
             season: item.season_name ? item.season_name : "",
             spinner: item.spinner_name ? item.spinner_name : "",

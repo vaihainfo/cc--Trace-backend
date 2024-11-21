@@ -85,7 +85,7 @@ const GinProcess = db.define('gin_process', {
   },
   bale_process: {
     type: DataTypes.STRING
-  },  
+  },
   greyout_status: {
     type: DataTypes.BOOLEAN,
     defaultValue: false,
@@ -125,7 +125,17 @@ const GinProcess = db.define('gin_process', {
   },
   scd_verified_bales: {
     type: DataTypes.DOUBLE,
-  }
+  },
+  from_date: {
+    type: DataTypes.DATE,
+    allowNull: true,
+    defaultValue: null,
+  },
+  to_date: {
+    type: DataTypes.DATE,
+    allowNull: true,
+    defaultValue: null,
+  },
 });
 
 GinProcess.belongsTo(Season, {

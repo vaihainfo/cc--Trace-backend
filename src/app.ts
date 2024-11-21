@@ -99,9 +99,10 @@ import lsvRouter from './router/lint-verification';
 import { sendScheduledEmails } from "./controllers/email-management/scheduled-email.controller";
 import ExportData from "./models/export-data-check.model";
 import { exportReportsTameTaking, exportReportsOnebyOne } from "./controllers/reports/export-cron";
-import  updateGreyoutData from "./router/update-greyout/";
+import updateGreyoutData from "./router/update-greyout/";
 import moment from "moment";
 import 'moment-timezone';
+import GinProcess from "./models/gin-process.model";
 
 
 const app = express();
@@ -160,35 +161,35 @@ const IST = 'Asia/Kolkata';
 
 const IST_to_Denver_offset = moment().tz(serverTimezone).utcOffset();
 const IST_to_India_offset = moment().tz(IST).utcOffset();
-const differenceInMinutes = IST_to_Denver_offset-IST_to_India_offset;
+const differenceInMinutes = IST_to_Denver_offset - IST_to_India_offset;
 const differenceInHours = Math.round(differenceInMinutes / 60);
-  
-const checkTimeDiff = (cronTime:number,differenceInHours:number) => {
+
+const checkTimeDiff = (cronTime: number, differenceInHours: number) => {
   let newCronTime;
-  if (differenceInHours<0) {
+  if (differenceInHours < 0) {
     newCronTime = (cronTime + differenceInHours) % 24;
     newCronTime = newCronTime > 0 ? newCronTime : 24 + newCronTime;
-  }else{
+  } else {
     newCronTime = (cronTime - differenceInHours) % 24;
     newCronTime = newCronTime > 0 ? newCronTime : 24 + newCronTime;
   }
-  return newCronTime>=24?0:newCronTime;
+  return newCronTime >= 24 ? 0 : newCronTime;
 }
 
 
-cron.schedule(`0 ${checkTimeDiff(23,differenceInHours)} * * *`, async () => {
+cron.schedule(`0 ${checkTimeDiff(23, differenceInHours)} * * *`, async () => {
   console.log('running a task once a day at 11 pm');
   sendScheduledEmails();
 });
 
-cron.schedule(`0 ${checkTimeDiff(7,differenceInHours)} * * *`, async () => {
+cron.schedule(`0 ${checkTimeDiff(7, differenceInHours)} * * *`, async () => {
   console.log('Running a task at 7 am IST');
   // Add your task for 8 am IST here
   exportReportsOnebyOne();
   // cronWorker.stdin.write('exportReportsOnebyOne\n');
 });
 // Schedule cron job for 4 pm in India time (UTC+5:30)
-cron.schedule(`0 ${checkTimeDiff(20,differenceInHours)} * * *`, async () => {
+cron.schedule(`0 ${checkTimeDiff(20, differenceInHours)} * * *`, async () => {
   console.log('Running a task at 8 pm IST');
   // Add your task for 4 pm IST here
   exportReportsOnebyOne();
@@ -196,7 +197,7 @@ cron.schedule(`0 ${checkTimeDiff(20,differenceInHours)} * * *`, async () => {
 });
 
 // Schedule cron job for 12 am (midnight) in India time (UTC+5:30)
-cron.schedule(`0 ${checkTimeDiff(0,differenceInHours)} * * *`, async () => {
+cron.schedule(`0 ${checkTimeDiff(0, differenceInHours)} * * *`, async () => {
   console.log('Running a task at 12 am IST');
   // Add your task for 12 am IST here
   exportReportsOnebyOne();
@@ -204,7 +205,7 @@ cron.schedule(`0 ${checkTimeDiff(0,differenceInHours)} * * *`, async () => {
 });
 
 // Schedule cron job for 2 am in India time (UTC+5:30)
-cron.schedule(`0 ${checkTimeDiff(3,differenceInHours)} * * *`, async () => {
+cron.schedule(`0 ${checkTimeDiff(3, differenceInHours)} * * *`, async () => {
   console.log('Running a task at 3 am IST');
   // Add your task for 2 am IST here
   exportReportsTameTaking();
