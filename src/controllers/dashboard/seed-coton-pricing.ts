@@ -1,16 +1,5 @@
 import { Request, Response } from "express";
-import moment from 'moment';
-import { Op, QueryTypes, Sequelize } from "sequelize";
-import * as yup from 'yup';
 import sequelize from "../../util/dbConn";
-import Season from "../../models/season.model";
-import Transaction from "../../models/transaction.model";
-import GinProcess from "../../models/gin-process.model";
-import Ginner from "../../models/ginner.model";
-import GinBale from "../../models/gin-bale.model";
-import Country from "../../models/country.model";
-import SeedCottonPricing from "../../models/seed-cotton-pricings.model";
-import Program from "../../models/program.model";
 
 
 const getPricyByCountry = async (req: Request, res: Response) => {
