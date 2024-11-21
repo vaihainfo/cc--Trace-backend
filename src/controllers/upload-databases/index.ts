@@ -2713,6 +2713,36 @@ const uploadOrganicFarmer = async (req: Request, res: Response) => {
     }
 }
 
+function isValidDateRange(startDate: Date, endDate: Date): boolean {
+    const startDay = new Date(startDate).getDate();
+    const endDay = new Date(endDate).getDate();
+
+    // Get the month and year from the start date
+    const month = new Date(startDate).getMonth();
+    const year = new Date(startDate).getFullYear();
+
+    // Calculate the number of days in the month
+    const daysInMonth = new Date(year, month + 1, 0).getDate(); // Get the last day of the month
+
+    // Define the allowed ranges
+    const validRanges = [
+        { start: 1, end: 7 },
+        { start: 8, end: 14 },
+        { start: 15, end: 21 },
+        { start: 22, end: 28 },
+        { start: 29, end: 31 },
+    ];
+
+    // If it's a month with 30 days, adjust the valid range for 29-31
+    if (daysInMonth === 30) {
+        validRanges[4] = { start: 29, end: 30 }; // Adjust for 30 days
+    }
+
+    // If it's February or a month with 31 days, no change is needed for the 29-31 range
+    // Ensure the date falls within a valid range
+    return validRanges.some(range => startDay === range.start && endDay === range.end && endDay <= daysInMonth);
+}
+
 const uploadPriceMapping = async (req: Request, res: Response) => {
     try {
         let fail: any = [];
@@ -2904,63 +2934,73 @@ const uploadPriceMapping = async (req: Request, res: Response) => {
                     }
                 }
 
-                if (country && state && district) {
-
-                    const priceData = {
-                        brand_id: brand.id,
-                        program_id: program.id,
-                        season_id: season.id,
-                        country_id: country.id,
-                        state_id: state.id,
-                        district_id: district.id,
-                        startDate: data.start_date_of_week,
-                        endDate: data.end_date_of_week,
-                        market_price: type === "cotton" ? data.convetional_market_seed_cotton_pricekg : type === "lint" ? data.convetional_market_lint_pricekg : data.convetional_market_yarn_pricekg,
-                    };
-
-                    // Perform the duplicate check using individual fields (not the entire priceData object)
-                    let check = await (type === "cotton" ? SeedCottonPricing : type === "lint" ? LintPricing : YarnPricing).findOne({
-                        where: {
-                            brand_id: priceData.brand_id,
-                            program_id: priceData.program_id,
-                            season_id: priceData.season_id,
-                            country_id: priceData.country_id,
-                            state_id: priceData.state_id,
-                            district_id: priceData.district_id,
-                            startDate: priceData.startDate,
-                            endDate: priceData.endDate
-                        }
+                const result = isValidDateRange(data.start_date_of_week, data.end_date_of_week);
+                if (!result) {
+                    fail.push({
+                        success: false,
+                        data: { district: data.district ? data.district : '', season: req.body.season ? req.body.season : '', country: data.country ? data.country : '', state: data.state ? data.state : '' },
+                        message: "Start date and end date are not within the range (1-7, 8-14, 15-21, 22-28, 29-30/31)"
                     });
+                } else {
 
-                    if (check) {
-                        if (Number(type === "cotton" ? data.convetional_market_seed_cotton_pricekg : type === "lint" ? data.convetional_market_lint_pricekg : data.convetional_market_yarn_pricekg) !== Number(check.market_price)) {
-                            let updatePrice = await (type === "cotton" ? SeedCottonPricing : type === "lint" ? LintPricing : YarnPricing).update({
-                                market_price: type === "cotton" ? data.convetional_market_seed_cotton_pricekg : type === "lint" ? data.convetional_market_lint_pricekg : data.convetional_market_yarn_pricekg
-                            }, {
-                                where: {
-                                    id: check.id
-                                }
-                            });
+                    if (country && state && district) {
+
+                        const priceData = {
+                            brand_id: brand.id,
+                            program_id: program.id,
+                            season_id: season.id,
+                            country_id: country.id,
+                            state_id: state.id,
+                            district_id: district.id,
+                            startDate: data.start_date_of_week,
+                            endDate: data.end_date_of_week,
+                            market_price: type === "cotton" ? data.convetional_market_seed_cotton_pricekg : type === "lint" ? data.convetional_market_lint_pricekg : data.convetional_market_yarn_pricekg,
+                        };
+
+                        // Perform the duplicate check using individual fields (not the entire priceData object)
+                        let check = await (type === "cotton" ? SeedCottonPricing : type === "lint" ? LintPricing : YarnPricing).findOne({
+                            where: {
+                                brand_id: priceData.brand_id,
+                                program_id: priceData.program_id,
+                                season_id: priceData.season_id,
+                                country_id: priceData.country_id,
+                                state_id: priceData.state_id,
+                                district_id: priceData.district_id,
+                                startDate: priceData.startDate,
+                                endDate: priceData.endDate
+                            }
+                        });
+
+                        if (check) {
+                            if (Number(type === "cotton" ? data.convetional_market_seed_cotton_pricekg : type === "lint" ? data.convetional_market_lint_pricekg : data.convetional_market_yarn_pricekg) !== Number(check.market_price)) {
+                                let updatePrice = await (type === "cotton" ? SeedCottonPricing : type === "lint" ? LintPricing : YarnPricing).update({
+                                    market_price: type === "cotton" ? data.convetional_market_seed_cotton_pricekg : type === "lint" ? data.convetional_market_lint_pricekg : data.convetional_market_yarn_pricekg
+                                }, {
+                                    where: {
+                                        id: check.id
+                                    }
+                                });
+                                pass.push({
+                                    success: true,
+                                    data: updatePrice,
+                                    message: "Price updated succesfully"
+                                });
+                            } else {
+                                fail.push({
+                                    success: false,
+                                    data: { district: data.district ? data.district : '', season: req.body.season ? req.body.season : '', country: data.country ? data.country : '', state: data.state ? data.state : '' },
+                                    message: `Conventional Market ${type === "cotton" ? "Seed Cotton" : type === "lint" ? "lint" : "yarn"} Price for this record is already exists`
+                                })
+                            }
+
+                        } else {
+                            const priceCreated = await (type === "cotton" ? SeedCottonPricing : type === "lint" ? LintPricing : YarnPricing).create(priceData);
                             pass.push({
                                 success: true,
-                                data: updatePrice,
-                                message: "Price updated succesfully"
+                                data: priceCreated,
+                                message: "Price created successfully"
                             });
-                        } else {
-                            fail.push({
-                                success: false,
-                                data: { district: data.district ? data.district : '', season: req.body.season ? req.body.season : '', country: data.country ? data.country : '', state: data.state ? data.state : '' },
-                                message: `Conventional Market ${type === "cotton" ? "Seed Cotton" : type === "lint" ? "lint" : "yarn"} Price for this record is already exists`
-                            })
                         }
-
-                    } else {
-                        const priceCreated = await (type === "cotton" ? SeedCottonPricing : type === "lint" ? LintPricing : YarnPricing).create(priceData);
-                        pass.push({
-                            success: true,
-                            data: priceCreated,
-                            message: "Price created successfully"
-                        });
                     }
                 }
             }
