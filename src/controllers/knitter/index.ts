@@ -34,6 +34,7 @@ import FarmGroup from "../../models/farm-group.model";
 import Transaction from "../../models/transaction.model";
 import GinSales from "../../models/gin-sales.model";
 import Ginner from "../../models/ginner.model";
+
 const createKnitterProcess = async (req: Request, res: Response) => {
   try {
     let dyeing
@@ -53,6 +54,8 @@ const createKnitterProcess = async (req: Request, res: Response) => {
       program_id: req.body.programId,
       season_id: req.body.seasonId,
       date: req.body.date,
+      from_date: req.body.from_date,
+      to_date: req.body.to_date,
       garment_order_ref: req.body.garmentOrderRef,
       brand_order_ref: req.body.brandOrderRef,
       other_mix: req.body.blendChoosen,
@@ -943,7 +946,7 @@ const exportKnitterProcess = async (req: Request, res: Response) => {
     // Create the excel workbook file
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet("Sheet1");
-    worksheet.mergeCells("A1:N1");
+    worksheet.mergeCells("A1:P1");
     const mergedCell = worksheet.getCell("A1");
     mergedCell.value = "CottonConnect | Process";
     mergedCell.font = { bold: true };
@@ -952,6 +955,8 @@ const exportKnitterProcess = async (req: Request, res: Response) => {
     const headerRow = worksheet.addRow([
       "Sr No.",
       "Date",
+      "Fabric Production Start Date",
+      "Fabric Production End Date",
       "Season",
       "Finished Batch Lot No",
       "Fabric Reel Lot No",
@@ -1022,6 +1027,8 @@ const exportKnitterProcess = async (req: Request, res: Response) => {
       const rowValues = Object.values({
         index: index + 1,
         date: item.date ? item.date : "",
+        from_date: item.from_date ? item.from_date : "",
+        to_date: item.to_date ? item.to_date : "",
         season: item.season ? item.season.name : "",
         lotNo: item.batch_lot_no ? item.batch_lot_no : "",
         reelLotNo: item.reel_lot_no ? item.reel_lot_no : "",
@@ -1663,7 +1670,7 @@ const chooseFabricProcess = async (req: Request, res: Response) => {
 
 
 
-const _getKnitterProcessTracingChartData = async (query:any) => {
+const _getKnitterProcessTracingChartData = async (query: any) => {
 
   let whereCondition: any = {};
   if (query) {
@@ -1677,7 +1684,7 @@ const _getKnitterProcessTracingChartData = async (query:any) => {
       as: "knitter",
     },
   ];
-  
+
   let knitters = await KnitProcess.findAll({
     where: query,
     include,
@@ -1733,7 +1740,7 @@ const _getKnitterProcessTracingChartData = async (query:any) => {
   );
 
   let key = Object.keys(whereCondition)[0];
- return formatDataFromKnitter(whereCondition[key], knitters);
+  return formatDataFromKnitter(whereCondition[key], knitters);
 };
 
 const getKnitterProcessTracingChartData = async (

@@ -290,6 +290,8 @@ const createDyingProcess = async (req: Request, res: Response) => {
       program_id: req.body.programId,
       season_id: req.body.seasonId,
       date: req.body.date,
+      from_date: req.body.from_date,
+      to_date: req.body.to_date,
       brand_order_ref: req.body.brandOrderRef,
       garment_order_ref: req.body.garmentOrderRef,
       buyer_type: req.body.buyerType,
@@ -458,7 +460,7 @@ const exportDyingProcess = async (req: Request, res: Response) => {
     // Create the excel workbook file
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet("Sheet1");
-    worksheet.mergeCells("A1:K1");
+    worksheet.mergeCells("A1:M1");
     const mergedCell = worksheet.getCell("A1");
     mergedCell.value = "CottonConnect | Process/Sale";
     mergedCell.font = { bold: true };
@@ -467,6 +469,8 @@ const exportDyingProcess = async (req: Request, res: Response) => {
     const headerRow = worksheet.addRow([
       "Sr No.",
       "Date",
+      "Dying start date",
+      "Dying end date",
       "Fabric Processor Type",
       "Sold To",
       "Invoice No",
@@ -514,6 +518,8 @@ const exportDyingProcess = async (req: Request, res: Response) => {
       const rowValues = Object.values({
         index: index + 1,
         date: item.date ? item.date : "",
+        from_date: item.from_date ? item.from_date : "",
+        to_date: item.to_date ? item.to_date : "",
         buyer_type: item.buyer_type ?? "",
         buyer: item.buyer
           ? item.buyer.name
@@ -968,6 +974,8 @@ const createWashingProcess = async (req: Request, res: Response) => {
       program_id: req.body.programId,
       season_id: req.body.seasonId,
       date: req.body.date,
+      from_date: req.body.from_date,
+      to_date: req.body.to_date,
       brand_order_ref: req.body.brandOrderRef,
       garment_order_ref: req.body.garmentOrderRef,
       buyer_type: req.body.buyerType,
@@ -1264,7 +1272,7 @@ const exportWashingProcess = async (req: Request, res: Response) => {
     // Create the excel workbook file
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet("Sheet1");
-    worksheet.mergeCells("A1:K1");
+    worksheet.mergeCells("A1:M1");
     const mergedCell = worksheet.getCell("A1");
     mergedCell.value = "CottonConnect | Process/Sale";
     mergedCell.font = { bold: true };
@@ -1273,6 +1281,8 @@ const exportWashingProcess = async (req: Request, res: Response) => {
     const headerRow = worksheet.addRow([
       "Sr No.",
       "Date",
+      "Washing start date",
+      "Washing end date",
       "Fabric Processor Type",
       "Sold To",
       "Invoice No",
@@ -1315,6 +1325,8 @@ const exportWashingProcess = async (req: Request, res: Response) => {
       const rowValues = Object.values({
         index: index + 1,
         date: item.date ? item.date : "",
+        from_date: item.from_date ? item.from_date : "",
+        to_date: item.to_date ? item.to_date : "",
         buyer_type: item.buyer_type ?? "",
         buyer: item.buyer
           ? item.buyer.name
@@ -1542,6 +1554,8 @@ const createPrintingProcess = async (req: Request, res: Response) => {
       program_id: req.body.programId,
       season_id: req.body.seasonId,
       date: req.body.date,
+      from_date: req.body.from_date,
+      to_date: req.body.to_date,
       brand_order_ref: req.body.brandOrderRef,
       garment_order_ref: req.body.garmentOrderRef,
       buyer_type: req.body.buyerType,
@@ -1766,7 +1780,7 @@ const exportPrintingProcess = async (req: Request, res: Response) => {
     // Create the excel workbook file
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet("Sheet1");
-    worksheet.mergeCells("A1:K1");
+    worksheet.mergeCells("A1:M1");
     const mergedCell = worksheet.getCell("A1");
     mergedCell.value = "CottonConnect | Process/Sale";
     mergedCell.font = { bold: true };
@@ -1775,6 +1789,8 @@ const exportPrintingProcess = async (req: Request, res: Response) => {
     const headerRow = worksheet.addRow([
       "Sr No.",
       "Date",
+      "Printing start date",
+      "Printing end date",
       "Fabric Processor Type",
       "Sold To",
       "Invoice No",
@@ -1817,6 +1833,8 @@ const exportPrintingProcess = async (req: Request, res: Response) => {
       const rowValues = Object.values({
         index: index + 1,
         date: item.date ? item.date : "",
+        from_date: item.from_date ? item.from_date : "",
+        to_date: item.to_date ? item.to_date : "",
         buyer_type: item.buyer_type ?? "",
         buyer: item.buyer
           ? item.buyer.name
@@ -2144,6 +2162,8 @@ const createCompactingProcess = async (req: Request, res: Response) => {
       program_id: req.body.programId,
       season_id: req.body.seasonId,
       date: req.body.date,
+      from_date: req.body.from_date,
+      to_date: req.body.to_date,
       brand_order_ref: req.body.brandOrderRef,
       garment_order_ref: req.body.garmentOrderRef,
       buyer_type: req.body.buyerType,
@@ -2453,6 +2473,8 @@ const exportCompactingProcess = async (req: Request, res: Response) => {
     const headerRow = worksheet.addRow([
       "Sr No.",
       "Date",
+      "Compacting start date",
+      "Compacting end date",
       "Fabric Processor Type",
       "Sold To",
       "Invoice No",
@@ -2491,6 +2513,8 @@ const exportCompactingProcess = async (req: Request, res: Response) => {
       const rowValues = Object.values({
         index: index + 1,
         date: item.date ? item.date : "",
+        from_date: item.from_date ? item.from_date : "",
+        to_date: item.to_date ? item.to_date : "",
         buyer_type: item.buyer_type ?? "",
         buyer: item.buyer ? item.buyer.name : item.processor_name,
         invoice: item.invoice_no ? item.invoice_no : "",
