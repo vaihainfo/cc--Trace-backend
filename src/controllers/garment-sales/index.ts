@@ -749,6 +749,8 @@ const createGarmentProcess = async (req: Request, res: Response) => {
       program_id: req.body.programId,
       season_id: req.body.seasonId,
       date: req.body.date,
+      from_date: req.body.from_date,
+      to_date: req.body.to_date,
       fabric_order_ref: req.body.fabricOrderRef,
       brand_order_ref: req.body.brandOrderRef,
       department_id: req.body.departmentId,
