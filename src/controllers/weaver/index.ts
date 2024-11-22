@@ -48,6 +48,8 @@ const createWeaverProcess = async (req: Request, res: Response) => {
       program_id: req.body.programId,
       season_id: req.body.seasonId,
       date: req.body.date,
+      from_date: req.body.from_date,
+      to_date: req.body.to_date,
       garment_order_ref: req.body.garmentOrderRef,
       brand_order_ref: req.body.brandOrderRef,
       other_mix: req.body.blendChoosen,
@@ -839,14 +841,14 @@ const exportWeaverProcess = async (req: Request, res: Response) => {
     // Create the excel workbook file
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet("Sheet1");
-    worksheet.mergeCells('A1:N1');
+    worksheet.mergeCells('A1:P1');
     const mergedCell = worksheet.getCell('A1');
     mergedCell.value = 'CottonConnect | Process';
     mergedCell.font = { bold: true };
     mergedCell.alignment = { horizontal: 'center', vertical: 'middle' };
     // Set bold font for header row
     const headerRow = worksheet.addRow([
-      "Sr No.", "Date", "Season", "Finished Batch Lot No", "Fabric Reel Lot No", "Garment Order Reference", "Brand Order Reference", "Programme",
+      "Sr No.", "Date", "Fabric Production Start Date", "Fabric Production End Date", "Season", "Finished Batch Lot No", "Fabric Reel Lot No", "Garment Order Reference", "Brand Order Reference", "Programme",
       "Job Details from garment", "Knit Fabric Type", "Fabric Length in Mts", "Fabric GSM", "Total Finished Fabric Length in Mts", "Total Yarn Utilized"
     ]);
     headerRow.font = { bold: true };
@@ -907,6 +909,8 @@ const exportWeaverProcess = async (req: Request, res: Response) => {
       const rowValues = Object.values({
         index: index + 1,
         date: item.date ? item.date : '',
+        from_date: item.from_date ? item.from_date : '',
+        to_date: item.to_date ? item.to_date : '',
         season: item.season ? item.season.name : '',
         lotNo: item.batch_lot_no ? item.batch_lot_no : '',
         reelLotNo: item.reel_lot_no ? item.reel_lot_no : '',
@@ -1673,7 +1677,7 @@ const chooseWeaverFabric = async (req: Request, res: Response) => {
 };
 
 const _getWeaverProcessTracingChartData = async (
-  query:any
+  query: any
 ) => {
   let include = [
     {
@@ -1681,7 +1685,7 @@ const _getWeaverProcessTracingChartData = async (
       as: "weaver",
     },
   ];
-  
+
   let weavers = await WeaverProcess.findAll({
     where: query,
     include,
@@ -1708,7 +1712,7 @@ const _getWeaverProcessTracingChartData = async (
             yarn_id: weavSeleItem.yarn_id,
             spinSales: spinSales,
           };
-        })); 
+        }));
 
       el.spinsCount = el.spin.reduce((total: number, item: any) => total + item.spinSales.length, 0);
       el.spinskIds = el.spin.map((el: any) => el.buyer_id);
@@ -1749,7 +1753,7 @@ const exportWeaverTransactionList = async (req: Request, res: Response) => {
   try {
     const searchTerm = req.query.search || "";
     // Create the excel workbook file
-    const {seasonId, weaverId, status, filter, programId, spinnerId, invoice, lotNo, yarnCount, yarnType, reelLotNo }: any = req.query;
+    const { seasonId, weaverId, status, filter, programId, spinnerId, invoice, lotNo, yarnCount, yarnType, reelLotNo }: any = req.query;
     const yarnTypeArray = yarnType?.split(',')?.map((item: any) => item.trim());
 
     if (!weaverId) {

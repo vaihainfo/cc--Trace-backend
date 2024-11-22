@@ -134,7 +134,17 @@ const GarmentProcess = db.define('garment_processes', {
   },
   qr: {
     type: DataTypes.STRING
-  }
+  },
+  from_date: {
+    type: DataTypes.DATE,
+    allowNull: true,
+    defaultValue: null,
+  },
+  to_date: {
+    type: DataTypes.DATE,
+    allowNull: true,
+    defaultValue: null,
+  },
 });
 
 GarmentProcess.belongsTo(Garment, {

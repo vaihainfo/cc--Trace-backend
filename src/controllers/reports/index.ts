@@ -6056,7 +6056,7 @@ const exportKnitterYarnProcess = async (req: Request, res: Response) => {
     // Create the excel workbook file
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet("Sheet1");
-    worksheet.mergeCells("A1:O1");
+    worksheet.mergeCells("A1:Q1");
     const mergedCell = worksheet.getCell("A1");
     mergedCell.value = "CottonConnect | Knitter Yarn Process Report";
     mergedCell.font = { bold: true };
@@ -6066,6 +6066,8 @@ const exportKnitterYarnProcess = async (req: Request, res: Response) => {
       "Sr No.",
       "Date of Process",
       "Date",
+      "Fabric Production Start Date",
+      "Fabric Production End Date",
       "Knitter Unit Name",
       "Garment order reference no.",
       "Brand reference no",
@@ -6144,6 +6146,8 @@ const exportKnitterYarnProcess = async (req: Request, res: Response) => {
         index: index + 1,
         accept_date: item.createdAt ? item.createdAt : "",
         date: item.date ? item.date : "",
+        from_date: item.from_date ? item.from_date : "",
+        to_date: item.to_date ? item.to_date : "",
         knitter: item.knitter ? item.knitter.name : "",
         garmentOrderRef: item.garment_order_ref ? item.garment_order_ref : "",
         brandOrderRef: item.brand_order_ref ? item.brand_order_ref : "",
@@ -7406,7 +7410,7 @@ const exportWeaverYarnProcess = async (req: Request, res: Response) => {
     // Create the excel workbook file
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet("Sheet1");
-    worksheet.mergeCells("A1:O1");
+    worksheet.mergeCells("A1:Q1");
     const mergedCell = worksheet.getCell("A1");
     mergedCell.value = "CottonConnect | Weaver Yarn Process Report";
     mergedCell.font = { bold: true };
@@ -7416,6 +7420,8 @@ const exportWeaverYarnProcess = async (req: Request, res: Response) => {
       "Sr No.",
       "Date of Process",
       "Date",
+      "Fabric Production Start Date",
+      "Fabric Production End Date",
       "Weaving Unit Name",
       "Garment order reference no.",
       "Brand reference no",
@@ -7494,6 +7500,8 @@ const exportWeaverYarnProcess = async (req: Request, res: Response) => {
         index: index + 1,
         accept_date: item.createdAt ? item.createdAt : "",
         date: item.date ? item.date : "",
+        from_date: item.from_date ? item.from_date : "",
+        to_date: item.to_date ? item.to_date : "",
         weaver: item.weaver ? item.weaver.name : "",
         garmentOrderRef: item.garment_order_ref ? item.garment_order_ref : "",
         brandOrderRef: item.brand_order_ref ? item.brand_order_ref : "",
@@ -8956,7 +8964,7 @@ const exportGarmentFabricProcess = async (req: Request, res: Response) => {
     // Create the excel workbook file
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet("Sheet1");
-    worksheet.mergeCells("A1:O1");
+    worksheet.mergeCells("A1:Q1");
     const mergedCell = worksheet.getCell("A1");
     mergedCell.value = "CottonConnect | Garment Fabric Process Report";
     mergedCell.font = { bold: true };
@@ -8967,6 +8975,8 @@ const exportGarmentFabricProcess = async (req: Request, res: Response) => {
       "S No.",
       "Process Date",
       "Date",
+      "Garment Production Start Date",
+      "Garment Production End Date",
       "Season",
       "Garment Processor Unit",
       "Fabric Order Reference No.",
@@ -9052,6 +9062,8 @@ const exportGarmentFabricProcess = async (req: Request, res: Response) => {
         index: index + 1,
         createdAt: item.createdAt ? item.createdAt : "",
         date: item.date ? item.date : "",
+        from_date: item.from_date ? item.from_date : "",
+        to_date: item.to_date ? item.to_date : "",
         season: item.season ? item.season.name : "",
         garment: item.garment ? item.garment.name : "",
         fabricOrderRef: item.fabric_order_ref ? item.fabric_order_ref : "",
