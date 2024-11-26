@@ -212,6 +212,33 @@ const updateReportOrganicIntegrity = async (req: Request, res: Response) => {
     }
 };
 
+const deleteReportFromOrganicIntegrity = async (req: Request, res: Response) => {
+    try {
+        const { id, reportToDelete } = req.body;
+
+        if (!id || !reportToDelete) {
+            return res.sendError(res, "Missing id or name of the report");
+        }
+
+        const organicIntegrity = await OrganicIntegrity.findOne({ where: { id } });
+
+        if (!organicIntegrity) {
+            return res.sendError(res, "Record not found.");
+        }
+        let currentReports = organicIntegrity.uploaded_reports || [];
+
+        currentReports = currentReports.filter((report: string) => report !== reportToDelete);
+
+        const result =  await OrganicIntegrity.update(
+            { uploaded_reports: currentReports },
+            { where: { id } }
+        );
+
+        res.sendSuccess(res, {...result, msg: "Report deleted successfully."});
+    } catch (error: any) {
+        return res.sendError(res, error.message);
+    }
+};
 
 
 const deleteOrganicIntegrity = async (req: Request, res: Response) => {
@@ -234,5 +261,6 @@ export {
     updateOrganicIntegrity,
     updateReportOrganicIntegrity,
     deleteOrganicIntegrity,
-    fetchOrganicIntegrity
+    fetchOrganicIntegrity,
+    deleteReportFromOrganicIntegrity
 };
