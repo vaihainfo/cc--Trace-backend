@@ -3,7 +3,8 @@ import {
     fetchOrganicIntegrityPagination,
     updateOrganicIntegrity,
     deleteOrganicIntegrity,
-    fetchOrganicIntegrity
+    fetchOrganicIntegrity,
+    updateReportOrganicIntegrity
 } from "../../controllers/organic-integrity";
 
 import { Router } from "express";
@@ -15,5 +16,6 @@ router.post("/", createOrganicIntegrity);
 router.put("/", updateOrganicIntegrity);
 router.delete("/", deleteOrganicIntegrity);
 router.get("/get-organic-integrity", fetchOrganicIntegrity);
+router.put("/upload-reports", updateReportOrganicIntegrity)
 
 export default router;

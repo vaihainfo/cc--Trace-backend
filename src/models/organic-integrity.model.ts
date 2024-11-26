@@ -63,6 +63,9 @@ const OrganicIntegrity = db.define('organic_integrities', {
     allowNull: false,
     type: DataTypes.STRING
   },
+  uploaded_reports: {
+    type: DataTypes.ARRAY(DataTypes.TEXT)
+  },
 });
 
 OrganicIntegrity.belongsTo(Brand, {
