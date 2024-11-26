@@ -191,30 +191,27 @@ const updateOrganicIntegrity = async (req: Request, res: Response) => {
 
 const updateReportOrganicIntegrity = async (req: Request, res: Response) => {
     try {
-        const updates = req.body;
-
-        if (!Array.isArray(updates)) {
-            return res.sendError(res, "Input should be an array of updates.");
-        }
-
-        const updatePromises = updates.map(async (update) => {
+        let updatedData = []
+        for await (const update of req.body) {
             if (!update.id || !update.uploaded_reports) {
                 throw new Error(`Missing id or uploaded_reports for record`);
             }
 
-            return OrganicIntegrity.update(
+            const result = await OrganicIntegrity.update(
                 { uploaded_reports: update.uploaded_reports },
                 { where: { id: update.id } }
             );
-        });
+            updatedData.push({
+                data: result
+            });
+        }
 
-        await Promise.all(updatePromises);
-
-        res.sendSuccess(res, updatePromises);
+        res.sendSuccess(res, updatedData);
     } catch (error: any) {
         return res.sendError(res, error.message);
     }
 };
+
 
 
 const deleteOrganicIntegrity = async (req: Request, res: Response) => {
