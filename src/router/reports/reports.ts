@@ -167,7 +167,7 @@ router.get('/export-spinner-traceability-report', exportSpinnerBackwardTraceabil
 router.get('/get-village-seed-cotton-report', villageSeedCottonReport);
 router.get('/export-village-seed-cotton-report', exportVillageSeedCotton);
 
-router.get('/get-village-seed-cotton-report', villageSeedCottonReport);
+router.get('/get-village-seed-cotton-allocation-report', villageSeedCottonAllocationReport);
 router.get('/export-village-seed-cotton-allocation-report', exportVillageSeedCottonAllocation);
 
 router.get('/get-spin-process-backward-traceability-report', spinnerProcessBackwardTraceabiltyReport);
