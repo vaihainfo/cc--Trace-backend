@@ -2768,15 +2768,13 @@ const updateStatusLintSales = async (req: Request, res: Response) => {
                       { where: { bale_id: balesToUpdate, sales_id: obj.id, ginner_status: null, gin_to_gin_sale: true }, transaction: t }
                   );
 
+                  await GinToGinSale.update(
+                    { gin_accepted_status: obj.status === 'Sold' ? true : false },
+                    { where: { bale_id: balesToUpdate, sales_id: obj.id}, transaction: t }
+                );
+
                   if (obj.status === 'Sold') {
-                      for (const bale of obj.bales) {
-                          const acceptedWeight = bale.qtyUsed ? Number(bale.qtyUsed).toFixed(2) : 0;
-                          
-                          await GinBale.update(
-                              { accepted_weight: acceptedWeight },
-                              { where: { id: bale.id }, transaction: t }
-                          );
-                      }
+                      await GinBale.update({ gin_to_gin_status: true }, { where: { id: balesToUpdate }, transaction: t });
                   } else {
                       rejectedBalesId = balesToUpdate;
                       await GinBale.update({ sold_status: false }, { where: { id: rejectedBalesId }, transaction: t });
@@ -2785,14 +2783,14 @@ const updateStatusLintSales = async (req: Request, res: Response) => {
 
               // Retrieve bale data for status calculation
               const bales = await BaleSelection.findAll({
-                  where: { sales_id: obj.id },
-                  attributes: ['spinner_status'],
+                  where: { sales_id: obj.id, gin_to_gin_sale: true },
+                  attributes: ['ginner_status'],
                   transaction: t
               });
 
               // Count status types in bales
-              soldCount = bales.filter((bale: any) => bale.spinner_status === true).length;
-              rejectedCount = bales.filter((bale: any) => bale.spinner_status === false).length;
+              soldCount = bales.filter((bale: any) => bale.ginner_status === true).length;
+              rejectedCount = bales.filter((bale: any) => bale.ginner_status === false).length;
 
               // Determine the status
               let status = 'Partially Rejected';
@@ -2808,23 +2806,23 @@ const updateStatusLintSales = async (req: Request, res: Response) => {
                       THEN gb.accepted_weight ELSE CAST(gb.weight AS DOUBLE PRECISION) END), 0) AS total_qty
                   FROM bale_selections bs
                   LEFT JOIN "gin-bales" gb ON bs.bale_id = gb.id
-                  WHERE bs.sales_id = :sales_id AND bs.spinner_status = true`, 
+                  WHERE bs.sales_id = :sales_id AND bs.ginner_status = true`, 
                   { replacements: { sales_id: obj.id }, type: sequelize.QueryTypes.SELECT, transaction: t });
 
               const ginSale = await GinSales.findOne({ where: { id: obj.id }, transaction: t });
-              const lintSale = await LintSelections.findAll({ where: { lint_id: obj.id }, transaction: t });
+              // const lintSale = await LintSelections.findAll({ where: { lint_id: obj.id }, transaction: t });
 
               console.log("max qty stock to be in gin sales=============",total, Math.ceil(Number(total.total_qty)), ginSale.qty_stock + Number(obj.qtyStock))
 
               if (ginSale && obj.status === 'Sold' && (ginSale.qty_stock + Number(obj.qtyStock)) <= Math.ceil(Number(total.total_qty))) {
                   data.qty_stock = Number(ginSale.qty_stock) + Number(obj.qtyStock);
-                  if(lintSale && lintSale?.length > 0){
-                      let sum = lintSale?.reduce((acc: any, value:any) => Number(value?.qty_used) + acc,0);
+                  // if(lintSale && lintSale?.length > 0){
+                  //     let sum = lintSale?.reduce((acc: any, value:any) => Number(value?.qty_used) + acc,0);
 
-                      data.accepted_bales_weight = Number(ginSale.qty_stock) + Number(obj.qtyStock) + sum;  
-                  }else{
+                  //     data.accepted_bales_weight = Number(ginSale.qty_stock) + Number(obj.qtyStock) + sum;  
+                  // }else{
                       data.accepted_bales_weight = Number(ginSale.qty_stock) + Number(obj.qtyStock);
-                  }
+                  // }
               }
 
               // Update GinSales with calculated data
@@ -2884,5 +2882,6 @@ export {
   checkReport,
   _getGinnerProcessTracingChartData,
   fetchGinLintAlert,
-  fetchGinLintList
+  fetchGinLintList,
+  updateStatusLintSales
 };

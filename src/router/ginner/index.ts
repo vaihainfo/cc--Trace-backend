@@ -33,7 +33,8 @@ import {
     getReelHeapId,
     fetchGinSaleAllBales,
     fetchGinLintAlert,
-    fetchGinLintList
+    fetchGinLintList,
+    updateStatusLintSales
     
 } from "../../controllers/ginner";
 import accessControl from "../../middleware/access-control";
@@ -84,6 +85,7 @@ router.get('/check-report', checkReport);
 
 router.get('/lint-transaction-alert', fetchGinLintAlert);
 router.get('/lint-transaction-list', fetchGinLintList);
+router.put('/update-status-lint', updateStatusLintSales);
 
 
 

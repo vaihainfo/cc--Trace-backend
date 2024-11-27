@@ -118,6 +118,9 @@ const GinBale = db.define('gin-bales', {
   gin_to_gin_status: {
     type: DataTypes.BOOLEAN,
   },
+  gin_to_gin_sold_status: {
+    type: DataTypes.BOOLEAN,
+  },
   sold_by_sales_id: {
     type: DataTypes.INTEGER,
   },
