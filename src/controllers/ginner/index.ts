@@ -2446,147 +2446,408 @@ const fetchGinLintAlert = async (req: Request, res: Response) => {
   const limit = Number(req.query.limit) || 10;
   const { ginnerId, status, filter, programId, sellerGinnerId, seasonId }: any = req.query;
   const offset = (page - 1) * limit;
-  const afterDate = new Date('2019-11-01');
-  const whereCondition: any = {
-      date: { [Op.gte]: afterDate }
-  };
+  const whereCondition: any = [];
 
   try {
-      if (searchTerm) {
-          whereCondition[Op.or] = [
-              { lot_no: { [Op.iLike]: `%${searchTerm}%` } }, // Search by
-              { invoice_no: { [Op.iLike]: `%${searchTerm}%` } }, // Search by
-              { "$ginner.name$": { [Op.iLike]: `%${searchTerm}%` } }, // Search by
-              { '$program.program_name$': { [Op.iLike]: `%${searchTerm}%` } }, // Search by program
-              { '$season.name$': { [Op.iLike]: `%${searchTerm}%` } }, // Search by crop Type
-          ];
+        if (searchTerm) {
+          whereCondition.push(`
+            (
+              g.name ILIKE '%${searchTerm}%' OR
+              s.name ILIKE '%${searchTerm}%' OR
+              p.program_name ILIKE '%${searchTerm}%' OR
+              gs.lot_no ILIKE '%${searchTerm}%' OR
+              gs.reel_lot_no ILIKE '%${searchTerm}%' OR
+              gs.invoice_no ILIKE '%${searchTerm}%'
+            )
+          `);
       }
-      
-          whereCondition.buyer_ginner = ginnerId
-          whereCondition.buyer_type = 'Ginner'
-          whereCondition.status = { [Op.in]: ['Pending', 'Pending for QR scanning', 'Partially Accepted', 'Partially Rejected'] }
-     
 
-      if (sellerGinnerId) {
-          const idArray: number[] = sellerGinnerId
-              .split(",")
-              .map((id: any) => parseInt(id, 10));
-          whereCondition.ginner_id = { [Op.in]: idArray };
-      }
-      if (filter === 'Quantity') {
-          whereCondition.qty_stock = { [Op.gt]: 0 }
-      }
-      if (programId) {
-          const idArray: number[] = programId
-              .split(",")
-              .map((id: any) => parseInt(id, 10));
-          whereCondition.program_id = { [Op.in]: idArray };
+      if (!ginnerId) {
+        return res.sendError(res, "Ginner Id is required");
       }
 
       if (seasonId) {
-          const idArray: number[] = seasonId
-              .split(",")
-              .map((id: any) => parseInt(id, 10));
-          whereCondition.season_id = { [Op.in]: idArray };
+          const idArray = seasonId.split(",").map((id: any) => parseInt(id, 10));
+          whereCondition.push(`gs.season_id IN (${idArray.join(',')})`);
       }
 
-      whereCondition.visible_flag = true;
-
-      let include = [
-          {
-              model: Ginner,
-              as: "ginner",
-              attributes: ['id', 'name'],
-              include: [{
-                  model: State,
-                  as: "state",
-                  attributes: ['id', 'state_name'],
-              }]
-          },
-          {
-              model: Season,
-              as: "season",
-              attributes: ['id', 'name'],
-          },
-          {
-              model: Program,
-              as: "program",
-              attributes: ['id', 'program_name'],
-          },
-          {
-              model: Ginner,
-              as: "buyerdata_ginner",
-              attributes: ['id', 'name', 'address'],
-          }
-      ];
-      //fetch data with pagination
-      const rows = await GinSales.findAll({
-          where: whereCondition,
-          include: include,
-          order: [
-              [
-                  'id', 'desc'
-              ]
-          ]
-      });
-
-      let data = [];
-
-      for await (const row of rows) {
-          const bale_details = await BaleSelection.findOne({
-              attributes: [
-                  [Sequelize.fn('COUNT', Sequelize.literal('DISTINCT "bale"."id"')), 'no_of_bales'],
-                  [Sequelize.fn('COALESCE', Sequelize.fn('SUM', Sequelize.literal(
-                      'CAST("bale"."weight" AS DOUBLE PRECISION)'
-                  )), 0), 'total_qty']
-                  // Add other attributes here...
-              ],
-              where: {
-                  sales_id: row?.dataValues?.id,
-                  spinner_status: null,
-              },
-              include: [
-                  {
-                      model: GinBale,
-                      as: "bale",
-                      attributes: []
-                  },
-              ],
-              group: ["sales_id"],
-          });
-
-          const bales = await BaleSelection.findAll({
-              attributes: [
-                  'bale_id'
-                  // Add other attributes here...
-              ],
-              where: {
-                  sales_id: row?.dataValues?.id,
-                  spinner_status: null,
-              },
-              include: [
-                  {
-                      model: GinBale,
-                      as: "bale",
-                  },
-              ],
-          });
-
-          if (bales && bales.length > 0) {
-              data.push({
-                  ...row?.dataValues,
-                  bale_details,
-                  bales: bales.map((item: any) => item.bale)
-              })
-
-          }
+      if (ginnerId) {
+          const idArray = ginnerId.split(",").map((id: any) => parseInt(id, 10));
+          whereCondition.push(`gs.buyer_ginner IN (${idArray.join(',')})`);
       }
 
-      return res.sendSuccess(res, data);
+      if (sellerGinnerId) {
+        const idArray: number[] = sellerGinnerId
+            .split(",")
+            .map((id: any) => parseInt(id, 10));
+        whereCondition.push(`gs.ginner_id IN (${idArray.join(',')})`);
+      }
+
+
+      if (programId) {
+          const idArray = programId.split(",").map((id: any) => parseInt(id, 10));
+          whereCondition.push(`gs.program_id IN (${idArray.join(',')})`);
+      }
+      whereCondition.push(`gs.buyer IS NULL`);
+      whereCondition.push(`gs.buyer_type ='Ginner'`);
+      whereCondition.push(`gtg.gin_accepted_status IS NULL`);
+      whereCondition.push(`gs.visible_flag = true`);
+      whereCondition.push(`gs.status IN ('Pending', 'Pending for QR scanning', 'Partially Accepted', 'Partially Rejected')`);
+
+      const whereClause = whereCondition.length > 0 ? `WHERE ${whereCondition.join(' AND ')}` : '';
+
+      const [results, metadata] = await sequelize.query(
+        `SELECT 
+          jsonb_build_object(
+				  'id', gs.id,
+                  'season_id', s.id,
+                  'season_name', s.name,
+                  'lot_no', gs.lot_no,
+                  'date', gs.date,
+                  'press_no', gs.press_no,
+                  'reel_lot_no', gs.reel_lot_no,
+                  'invoice_no', gs.invoice_no,
+                  'vehicle_no', gs.vehicle_no,
+                  'total_qty', gs.total_qty,
+                  'no_of_bales', gs.no_of_bales,
+                  'buyer_type', gs.buyer_type,
+                  'ginner_id', g.id,
+                  'ginner_name', g.name,
+                  'buyer_ginner_id', buyer.id,
+                  'buyer_ginner_name', buyer.name,
+                  'status', gs.status,
+                  'greyout_status', gs.greyout_status,
+              'weight', SUM(CAST(gb.weight AS DOUBLE PRECISION)),
+              'bales', jsonb_agg(jsonb_build_object(
+                  'id', gb.id,
+                  'bale_no', gb.bale_no,
+                  'weight', gb.weight,
+                  'is_all_rejected', gb.is_all_rejected,
+                  'greyout_status', gp.greyout_status,
+				  'ginprocess', jsonb_build_object(
+                  'id', gp.id,
+                  'lot_no', gp.lot_no,
+                  'date', gp.date,
+                  'press_no', gp.press_no,
+                  'reel_lot_no', gp.reel_lot_no,
+                  'greyout_status', gp.greyout_status
+              	)
+              ) ORDER BY gb.id ASC)
+          ) AS result
+      FROM 
+          gin_to_gin_sales gtg
+	    JOIN
+		      gin_sales gs ON gtg.sales_id = gs.id
+      JOIN 
+          "gin-bales" gb ON gtg.bale_id = gb.id
+	    JOIN
+          gin_processes gp ON gb.process_id = gp.id
+      JOIN 
+          ginners g ON gs.ginner_id = g.id
+	    JOIN 
+          ginners buyer ON gs.buyer_ginner = buyer.id
+      JOIN 
+          seasons s ON gs.season_id = s.id
+      JOIN 
+          programs p ON gs.program_id = p.id
+      ${whereClause}
+      GROUP BY 
+          gs.id, s.id, g.id, buyer.id
+      ORDER BY 
+          gs.id DESC;
+  `
+      )
+  
+      const simplifiedResults = results.map((item: any) => item.result);
+      return res.sendSuccess(res, simplifiedResults); //bales_list
   } catch (error: any) {
       return res.sendError(res, error.message);
   }
 };
+
+
+const fetchGinLintList = async (req: Request, res: Response) => {
+  const searchTerm = req.query.search || "";
+  const page = Number(req.query.page) || 1;
+  const limit = Number(req.query.limit) || 10;
+  const { ginnerId, status, filter, programId, sellerGinnerId, seasonId }: any = req.query;
+  const offset = (page - 1) * limit;
+  const whereCondition: any = [];
+
+  try {
+        if (searchTerm) {
+          whereCondition.push(`
+            (
+              g.name ILIKE '%${searchTerm}%' OR
+              s.name ILIKE '%${searchTerm}%' OR
+              p.program_name ILIKE '%${searchTerm}%' OR
+              gs.lot_no ILIKE '%${searchTerm}%' OR
+              gs.reel_lot_no ILIKE '%${searchTerm}%' OR
+              gs.invoice_no ILIKE '%${searchTerm}%'
+            )
+          `);
+      }
+
+      if (!ginnerId) {
+        return res.sendError(res, "Ginner Id is required");
+      }
+
+      if (seasonId) {
+          const idArray = seasonId.split(",").map((id: any) => parseInt(id, 10));
+          whereCondition.push(`gs.season_id IN (${idArray.join(',')})`);
+      }
+
+      if (ginnerId) {
+          const idArray = ginnerId.split(",").map((id: any) => parseInt(id, 10));
+          whereCondition.push(`gs.buyer_ginner IN (${idArray.join(',')})`);
+      }
+
+      if (sellerGinnerId) {
+        const idArray: number[] = sellerGinnerId
+            .split(",")
+            .map((id: any) => parseInt(id, 10));
+        whereCondition.push(`gs.ginner_id IN (${idArray.join(',')})`);
+      }
+
+
+      if (programId) {
+          const idArray = programId.split(",").map((id: any) => parseInt(id, 10));
+          whereCondition.push(`gs.program_id IN (${idArray.join(',')})`);
+      }
+      whereCondition.push(`gs.buyer IS NULL`);
+      whereCondition.push(`gs.buyer_type ='Ginner'`);
+      whereCondition.push(`gtg.gin_accepted_status = true`);
+      whereCondition.push(`gs.visible_flag = true`);
+      whereCondition.push(`gs.status IN ('Sold', 'Partially Accepted', 'Partially Rejected')`);
+
+      const whereClause = whereCondition.length > 0 ? `WHERE ${whereCondition.join(' AND ')}` : '';
+
+      const countQuery = `
+          SELECT COUNT(*)
+          FROM (
+            SELECT 
+              gs.id
+            FROM 
+              gin_to_gin_sales gtg
+            JOIN
+                gin_sales gs ON gtg.sales_id = gs.id
+            JOIN 
+                "gin-bales" gb ON gtg.bale_id = gb.id
+            JOIN
+                gin_processes gp ON gb.process_id = gp.id
+            JOIN 
+                ginners g ON gs.ginner_id = g.id
+            JOIN 
+                ginners buyer ON gs.buyer_ginner = buyer.id
+            JOIN 
+                seasons s ON gs.season_id = s.id
+            JOIN 
+                programs p ON gs.program_id = p.id
+            ${whereClause}
+            GROUP BY 
+                gs.id, s.id, g.id, buyer.id
+            HAVING 
+              SUM(CAST(gb.weight AS DOUBLE PRECISION)) > 0
+          ) AS subquery;
+       `;
+
+       let dataQuery =
+        `SELECT 
+          jsonb_build_object(
+				          'id', gs.id,
+                  'season_id', s.id,
+                  'season_name', s.name,
+                  'lot_no', gs.lot_no,
+                  'date', gs.date,
+                  'press_no', gs.press_no,
+                  'reel_lot_no', gs.reel_lot_no,
+                  'invoice_no', gs.invoice_no,
+                  'vehicle_no', gs.vehicle_no,
+                  'received_total_qty', gs.total_qty,
+                  'received_no_of_bales', gs.no_of_bales,
+                  'buyer_type', gs.buyer_type,
+                  'ginner_id', g.id,
+                  'ginner_name', g.name,
+                  'buyer_ginner_id', buyer.id,
+                  'buyer_ginner_name', buyer.name,
+                  'status', gs.status,
+                  'greyout_status', gs.greyout_status,
+                  'accepted_total_qty', SUM(CAST(gb.weight AS DOUBLE PRECISION)),
+                  'accepted_no_of_bales', COUNT(DISTINCT gb.id),
+                  'bales', jsonb_agg(jsonb_build_object(
+                    'id', gb.id,
+                    'bale_no', gb.bale_no,
+                    'weight', gb.weight,
+                    'is_all_rejected', gb.is_all_rejected,
+                    'greyout_status', gp.greyout_status,
+                    'ginprocess', jsonb_build_object(
+                      'id', gp.id,
+                      'lot_no', gp.lot_no,
+                      'date', gp.date,
+                      'press_no', gp.press_no,
+                      'reel_lot_no', gp.reel_lot_no,
+                      'greyout_status', gp.greyout_status
+                    )
+                  ) ORDER BY gb.id ASC)
+            ) AS result
+          FROM 
+              gin_to_gin_sales gtg
+          JOIN
+              gin_sales gs ON gtg.sales_id = gs.id
+          JOIN 
+              "gin-bales" gb ON gtg.bale_id = gb.id
+          JOIN
+              gin_processes gp ON gb.process_id = gp.id
+          JOIN 
+              ginners g ON gs.ginner_id = g.id
+          JOIN 
+              ginners buyer ON gs.buyer_ginner = buyer.id
+          JOIN 
+              seasons s ON gs.season_id = s.id
+          JOIN 
+              programs p ON gs.program_id = p.id
+          ${whereClause}
+          GROUP BY 
+              gs.id, s.id, g.id, buyer.id
+          HAVING 
+            SUM(CAST(gb.weight AS DOUBLE PRECISION)) > 0
+          ORDER BY 
+              gs.id DESC
+          LIMIT 
+              :limit 
+          OFFSET 
+              :offset;
+      `;
+
+      const [countResult, results] = await Promise.all([
+        sequelize.query(countQuery, {
+            type: sequelize.QueryTypes.SELECT,
+        }),
+        sequelize.query(dataQuery, {
+            replacements: { limit, offset },
+            type: sequelize.QueryTypes.SELECT,
+        })
+      ]);
+      
+      const totalCount = countResult && countResult.length > 0 ? Number(countResult[0]?.count) : 0;
+      const simplifiedResults = results.map((item: any) => item.result);
+      return res.sendPaginationSuccess(res, simplifiedResults, totalCount); //bales_list
+  } catch (error: any) {
+      return res.sendError(res, error.message);
+  }
+};
+
+
+const updateStatusLintSales = async (req: Request, res: Response) => {
+  try {
+      let update: any = [];
+
+      // Begin transaction to manage multiple operations as a single unit
+      await sequelize.transaction(async (t: any) => {
+          // Update visibility flag for all items in bulk
+          await GinSales.update({ visible_flag: false }, {
+              where: { id: req.body.items?.map((obj: any) => obj.id) },
+              transaction: t
+          });
+
+          // Loop through items in request body to process each one
+          for (const obj of req.body.items) {
+              let soldCount = 0;
+              let rejectedCount = 0;
+              let rejectedBalesId = [];
+
+              let data: any = {
+                  accept_date: obj.status === 'Sold' ? new Date().toISOString() : null,
+              };
+
+              // Batch update for bales
+              const balesToUpdate = obj.bales.map((bale: any) => bale.id);
+              if (balesToUpdate.length > 0) {
+                  await BaleSelection.update(
+                      { ginner_status: obj.status === 'Sold' ? true : false },
+                      { where: { bale_id: balesToUpdate, sales_id: obj.id, ginner_status: null, gin_to_gin_sale: true }, transaction: t }
+                  );
+
+                  if (obj.status === 'Sold') {
+                      for (const bale of obj.bales) {
+                          const acceptedWeight = bale.qtyUsed ? Number(bale.qtyUsed).toFixed(2) : 0;
+                          
+                          await GinBale.update(
+                              { accepted_weight: acceptedWeight },
+                              { where: { id: bale.id }, transaction: t }
+                          );
+                      }
+                  } else {
+                      rejectedBalesId = balesToUpdate;
+                      await GinBale.update({ sold_status: false }, { where: { id: rejectedBalesId }, transaction: t });
+                  }
+              }
+
+              // Retrieve bale data for status calculation
+              const bales = await BaleSelection.findAll({
+                  where: { sales_id: obj.id },
+                  attributes: ['spinner_status'],
+                  transaction: t
+              });
+
+              // Count status types in bales
+              soldCount = bales.filter((bale: any) => bale.spinner_status === true).length;
+              rejectedCount = bales.filter((bale: any) => bale.spinner_status === false).length;
+
+              // Determine the status
+              let status = 'Partially Rejected';
+              if (soldCount === bales.length) status = 'Sold';
+              else if (rejectedCount === bales.length) status = 'Rejected';
+              else if (soldCount > rejectedCount) status = 'Partially Accepted';
+
+              data.status = status;
+
+              // Calculate total quantity
+              const [total] = await sequelize.query(`
+                  SELECT COALESCE(SUM(CASE WHEN gb.accepted_weight IS NOT NULL 
+                      THEN gb.accepted_weight ELSE CAST(gb.weight AS DOUBLE PRECISION) END), 0) AS total_qty
+                  FROM bale_selections bs
+                  LEFT JOIN "gin-bales" gb ON bs.bale_id = gb.id
+                  WHERE bs.sales_id = :sales_id AND bs.spinner_status = true`, 
+                  { replacements: { sales_id: obj.id }, type: sequelize.QueryTypes.SELECT, transaction: t });
+
+              const ginSale = await GinSales.findOne({ where: { id: obj.id }, transaction: t });
+              const lintSale = await LintSelections.findAll({ where: { lint_id: obj.id }, transaction: t });
+
+              console.log("max qty stock to be in gin sales=============",total, Math.ceil(Number(total.total_qty)), ginSale.qty_stock + Number(obj.qtyStock))
+
+              if (ginSale && obj.status === 'Sold' && (ginSale.qty_stock + Number(obj.qtyStock)) <= Math.ceil(Number(total.total_qty))) {
+                  data.qty_stock = Number(ginSale.qty_stock) + Number(obj.qtyStock);
+                  if(lintSale && lintSale?.length > 0){
+                      let sum = lintSale?.reduce((acc: any, value:any) => Number(value?.qty_used) + acc,0);
+
+                      data.accepted_bales_weight = Number(ginSale.qty_stock) + Number(obj.qtyStock) + sum;  
+                  }else{
+                      data.accepted_bales_weight = Number(ginSale.qty_stock) + Number(obj.qtyStock);
+                  }
+              }
+
+              // Update GinSales with calculated data
+              const result = await GinSales.update({ ...data, visible_flag: true }, {
+                  where: { id: obj.id },
+                  transaction: t
+              });
+
+              // Store result data
+              update.push({ id: obj.id, status: data.status, qty_stock: data.qty_stock, visible_flag: true });
+          }
+      });
+
+      // Send combined response with all updates
+      res.sendSuccess(res, { update });
+  } catch (error: any) {
+      console.log(error);
+      await GinSales.update({ visible_flag: true }, { where: { id: req.body.items?.map((obj: any) => obj.id) } });
+      return res.sendError(res, error.message);
+  }
+};
+
+
 
 export {
   createGinnerProcess,
@@ -2621,5 +2882,7 @@ export {
   fetchGinProcess,
   exportGinnerProcess,
   checkReport,
-  _getGinnerProcessTracingChartData
+  _getGinnerProcessTracingChartData,
+  fetchGinLintAlert,
+  fetchGinLintList
 };
