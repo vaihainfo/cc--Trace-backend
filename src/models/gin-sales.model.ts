@@ -45,7 +45,6 @@ const GinSales = db.define('gin_sales', {
     type: DataTypes.STRING
   },
   buyer: {
-    allowNull: false,
     type: DataTypes.INTEGER
   },
   shipping_address: {
@@ -198,7 +197,13 @@ const GinSales = db.define('gin_sales', {
   },
   ps_verified_bales: {
     type: DataTypes.DOUBLE,
-  }
+  },
+  buyer_type: {
+    type: DataTypes.STRING,
+  },
+  buyer_ginner: {
+    type: DataTypes.INTEGER,
+  },
 });
 
 GinSales.belongsTo(Ginner, {
@@ -210,6 +215,12 @@ GinSales.belongsTo(Spinner, {
   foreignKey: "buyer",
   as: "buyerdata",
 });
+
+GinSales.belongsTo(Ginner, {
+  foreignKey: "buyer_ginner",
+  as: "buyerdata_ginner",
+});
+
 
 GinSales.belongsTo(Season, {
   foreignKey: "season_id",

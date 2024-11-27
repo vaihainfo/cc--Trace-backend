@@ -28,6 +28,7 @@ import Brand from "../../models/brand.model";
 import PhysicalTraceabilityDataGinner from "../../models/physical-traceability-data-ginner.model";
 import PhysicalTraceabilityDataGinnerSample from "../../models/physical-traceability-data-ginner-sample.model";
 import GinnerAllocatedVillage from "../../models/ginner-allocated-vilage.model";
+import GinToGinSale from "../../models/gin-to-gin-sale.model";
 
 //create Ginner Process
 const createGinnerProcess = async (req: Request, res: Response) => {
@@ -1429,6 +1430,10 @@ const exportGinnerSales = async (req: Request, res: Response) => {
         model: Spinner,
         as: "buyerdata",
       },
+      {
+        model: Ginner,
+        as: "buyerdata_ginner",
+      },
     ];
     const gin = await GinSales.findAll({
       where: whereCondition,
@@ -1497,6 +1502,8 @@ const createGinnerSales = async (req: Request, res: Response) => {
       press_no: req.body.pressNo,
       status: "To be Submitted",
       qty_stock: 0,
+      buyer_type: req.body.buyerType?.toLowerCase() === 'ginner' ? 'Ginner' : 'Spinner',
+      buyer_ginner: req.body.buyerGinner,
     };
     const ginSales = await GinSales.create(data);
     let uniqueFilename = `gin_sales_qrcode_${Date.now()}.png`;
@@ -1511,14 +1518,29 @@ const createGinnerSales = async (req: Request, res: Response) => {
       }
     );
     for await (const bale of req.body.bales) {
+
+      if(req.body.buyerType?.toLowerCase() === 'ginner'){
+        let gintogin = {
+          sales_id: ginSales.id,
+          bale_id: bale.id,
+          process_id: bale.process_id,
+          bale_weight: bale.weight,
+          old_ginner_id: req.body.ginnerId,
+          new_ginner_id: req.body.buyerGinner,
+        }
+
+        const bales = await GinToGinSale.create(gintogin);
+      }
+
       let baleData = {
         sales_id: ginSales.id,
-        bale_id: bale,
+        bale_id: bale.id,
+        gin_to_gin_sale: req.body.buyerType?.toLowerCase() === 'ginner' ? true : false
       };
       const bales = await BaleSelection.create(baleData);
       const ginbaleSatus = await GinBale.update(
-        { sold_status: true },
-        { where: { id: bale } }
+        { sold_status: true, is_gin_to_gin_sale: req.body.buyerType?.toLowerCase() === 'ginner' ? true : null },
+        { where: { id: bale.id } }
       );
     }
     res.sendSuccess(res, { ginSales });
@@ -1669,6 +1691,10 @@ const fetchGinSalesPagination = async (req: Request, res: Response) => {
         model: Spinner,
         as: "buyerdata",
       },
+      {
+        model: Ginner,
+        as: "buyerdata_ginner",
+      },
     ];
     //fetch data with pagination
     if (req.query.pagination === "true") {
@@ -1748,6 +1774,10 @@ const fetchGinSale = async (req: Request, res: Response) => {
       {
         model: Spinner,
         as: "buyerdata",
+      },
+      {
+        model: Ginner,
+        as: "buyerdata_ginner",
       },
     ];
     //fetch data with pagination
@@ -2405,6 +2435,156 @@ const checkReport = async (req: Request, res: Response) => {
   } catch (error: any) {
     console.error(error);
     return res.sendError(res, error.meessage);
+  }
+};
+
+
+//gin to gin sales changes
+const fetchGinLintAlert = async (req: Request, res: Response) => {
+  const searchTerm = req.query.search || "";
+  const page = Number(req.query.page) || 1;
+  const limit = Number(req.query.limit) || 10;
+  const { ginnerId, status, filter, programId, sellerGinnerId, seasonId }: any = req.query;
+  const offset = (page - 1) * limit;
+  const afterDate = new Date('2019-11-01');
+  const whereCondition: any = {
+      date: { [Op.gte]: afterDate }
+  };
+
+  try {
+      if (searchTerm) {
+          whereCondition[Op.or] = [
+              { lot_no: { [Op.iLike]: `%${searchTerm}%` } }, // Search by
+              { invoice_no: { [Op.iLike]: `%${searchTerm}%` } }, // Search by
+              { "$ginner.name$": { [Op.iLike]: `%${searchTerm}%` } }, // Search by
+              { '$program.program_name$': { [Op.iLike]: `%${searchTerm}%` } }, // Search by program
+              { '$season.name$': { [Op.iLike]: `%${searchTerm}%` } }, // Search by crop Type
+          ];
+      }
+      
+          whereCondition.buyer_ginner = ginnerId
+          whereCondition.buyer_type = 'Ginner'
+          whereCondition.status = { [Op.in]: ['Pending', 'Pending for QR scanning', 'Partially Accepted', 'Partially Rejected'] }
+     
+
+      if (sellerGinnerId) {
+          const idArray: number[] = sellerGinnerId
+              .split(",")
+              .map((id: any) => parseInt(id, 10));
+          whereCondition.ginner_id = { [Op.in]: idArray };
+      }
+      if (filter === 'Quantity') {
+          whereCondition.qty_stock = { [Op.gt]: 0 }
+      }
+      if (programId) {
+          const idArray: number[] = programId
+              .split(",")
+              .map((id: any) => parseInt(id, 10));
+          whereCondition.program_id = { [Op.in]: idArray };
+      }
+
+      if (seasonId) {
+          const idArray: number[] = seasonId
+              .split(",")
+              .map((id: any) => parseInt(id, 10));
+          whereCondition.season_id = { [Op.in]: idArray };
+      }
+
+      whereCondition.visible_flag = true;
+
+      let include = [
+          {
+              model: Ginner,
+              as: "ginner",
+              attributes: ['id', 'name'],
+              include: [{
+                  model: State,
+                  as: "state",
+                  attributes: ['id', 'state_name'],
+              }]
+          },
+          {
+              model: Season,
+              as: "season",
+              attributes: ['id', 'name'],
+          },
+          {
+              model: Program,
+              as: "program",
+              attributes: ['id', 'program_name'],
+          },
+          {
+              model: Ginner,
+              as: "buyerdata_ginner",
+              attributes: ['id', 'name', 'address'],
+          }
+      ];
+      //fetch data with pagination
+      const rows = await GinSales.findAll({
+          where: whereCondition,
+          include: include,
+          order: [
+              [
+                  'id', 'desc'
+              ]
+          ]
+      });
+
+      let data = [];
+
+      for await (const row of rows) {
+          const bale_details = await BaleSelection.findOne({
+              attributes: [
+                  [Sequelize.fn('COUNT', Sequelize.literal('DISTINCT "bale"."id"')), 'no_of_bales'],
+                  [Sequelize.fn('COALESCE', Sequelize.fn('SUM', Sequelize.literal(
+                      'CAST("bale"."weight" AS DOUBLE PRECISION)'
+                  )), 0), 'total_qty']
+                  // Add other attributes here...
+              ],
+              where: {
+                  sales_id: row?.dataValues?.id,
+                  spinner_status: null,
+              },
+              include: [
+                  {
+                      model: GinBale,
+                      as: "bale",
+                      attributes: []
+                  },
+              ],
+              group: ["sales_id"],
+          });
+
+          const bales = await BaleSelection.findAll({
+              attributes: [
+                  'bale_id'
+                  // Add other attributes here...
+              ],
+              where: {
+                  sales_id: row?.dataValues?.id,
+                  spinner_status: null,
+              },
+              include: [
+                  {
+                      model: GinBale,
+                      as: "bale",
+                  },
+              ],
+          });
+
+          if (bales && bales.length > 0) {
+              data.push({
+                  ...row?.dataValues,
+                  bale_details,
+                  bales: bales.map((item: any) => item.bale)
+              })
+
+          }
+      }
+
+      return res.sendSuccess(res, data);
+  } catch (error: any) {
+      return res.sendError(res, error.message);
   }
 };
 

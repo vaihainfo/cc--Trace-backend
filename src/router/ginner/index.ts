@@ -39,7 +39,7 @@ import { Router } from "express";
 
 const router = Router();
 
-router.use(accessControl);
+// router.use(accessControl);
 
 // Ginner Routes
 router.get('/', fetchGinProcessPagination);
