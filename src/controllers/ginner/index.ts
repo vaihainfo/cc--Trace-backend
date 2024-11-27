@@ -2777,7 +2777,7 @@ const updateStatusLintSales = async (req: Request, res: Response) => {
                       await GinBale.update({ gin_to_gin_status: true }, { where: { id: balesToUpdate }, transaction: t });
                   } else {
                       rejectedBalesId = balesToUpdate;
-                      await GinBale.update({ sold_status: false }, { where: { id: rejectedBalesId }, transaction: t });
+                      await GinBale.update({ sold_status: false, is_all_rejected: false }, { where: { id: rejectedBalesId }, transaction: t });
                   }
               }
 
@@ -2798,6 +2798,31 @@ const updateStatusLintSales = async (req: Request, res: Response) => {
               else if (rejectedCount === bales.length) status = 'Rejected';
               else if (soldCount > rejectedCount) status = 'Partially Accepted';
 
+              if(status === 'Rejected'){
+                console.log("==== Completely Rejected Gin To Gin Sales ====")
+                // await GinBale.update({ is_all_rejected: true }, { where: { id: rejectedBalesId } });
+                await sequelize.query(
+                    `
+                    UPDATE 
+                        "gin-bales" gb
+                    SET 
+                        is_all_rejected = true
+                    FROM 
+                        bale_selections bs
+                    WHERE 
+                        gb.id = bs.bale_id
+                        AND bs.sales_id = :rejectedId
+                    `,
+                    {
+                      replacements: { rejectedId: obj.id },
+                      transaction: t,
+                      type: sequelize.QueryTypes.UPDATE,
+                    }
+                  );
+                
+                  console.log("==== GinBale Updated for Rejected Gin To Gin Sales ====");
+            }
+
               data.status = status;
 
               // Calculate total quantity
@@ -2812,7 +2837,7 @@ const updateStatusLintSales = async (req: Request, res: Response) => {
               const ginSale = await GinSales.findOne({ where: { id: obj.id }, transaction: t });
               // const lintSale = await LintSelections.findAll({ where: { lint_id: obj.id }, transaction: t });
 
-              console.log("max qty stock to be in gin sales=============",total, Math.ceil(Number(total.total_qty)), ginSale.qty_stock + Number(obj.qtyStock))
+              console.log("max qty stock to be in Gin To Gin Sales=============",total, Math.ceil(Number(total.total_qty)), ginSale.qty_stock + Number(obj.qtyStock))
 
               if (ginSale && obj.status === 'Sold' && (ginSale.qty_stock + Number(obj.qtyStock)) <= Math.ceil(Number(total.total_qty))) {
                   data.qty_stock = Number(ginSale.qty_stock) + Number(obj.qtyStock);
