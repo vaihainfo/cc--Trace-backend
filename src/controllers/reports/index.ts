@@ -18071,6 +18071,143 @@ const villageSeedCottonReport = async (req: Request, res: Response) => {
   }
 };
 
+const villageSeedCottonAllocationReport = async (req: Request, res: Response) => {
+  const searchTerm = req.query.search || "";
+  const page = Number(req.query.page) || 1;
+  const limit = Number(req.query.limit) || 10;
+  const offset = (page - 1) * limit;
+  const whereCondition: any = [];
+  const { brandId, stateId, countryId, seasonId , ginnerId}: any = req.query;
+
+
+  try {
+    if (searchTerm) {
+
+      whereCondition.push(`
+        (
+          farmer.village.village_name ILIKE '%${searchTerm}%' OR
+        )
+      `);
+      
+    }
+
+    if (countryId) {
+      const idArray: number[] = countryId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+        whereCondition.push(`farmer.country_id IN (${idArray.join(',')})`);
+     
+    }
+    if (brandId) {
+      const idArray: number[] = brandId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+     
+      whereCondition.push(`farmer.brand_id IN (${idArray.join(',')})`);
+    }
+
+    if (stateId) {
+      const idArray: number[] = stateId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      
+      whereCondition.push(`farmer.state_id IN (${idArray.join(',')})`);
+    }
+
+    if (ginnerId) {
+      const idArray: number[] = ginnerId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      
+      whereCondition.push(`gv.ginner_id IN (${idArray.join(',')})`);
+    }
+
+    if (seasonId) {
+      const idArray: number[] = seasonId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      
+      whereCondition.push(`gv.season_id IN (${idArray.join(',')})`);
+    }
+
+    const whereClause = whereCondition.length > 0 ? `WHERE ${whereCondition.join(' AND ')}` : '';
+
+    let data: any = [];
+
+    const countQuery = ` SELECT COUNT(DISTINCT "gv"."id") AS total_records
+                     FROM "ginner_allocated_villages" as gv
+                     LEFT JOIN 
+                          "villages" AS "farmer->village" ON "gv"."village_id" = "farmer->village"."id" 
+                     LEFT JOIN 
+                          "farmers" AS "farmer" ON "farmer->village"."id" = "farmer"."village_id" 
+                     LEFT JOIN 
+                          "farms" as "farms" on farms.farmer_id = "farmer".id and farms.season_id = gv.season_id
+                     LEFT JOIN 
+                          "seasons" AS "season" ON "gv"."season_id" = "season"."id"
+                    ${whereClause} `;
+
+    const dataQuery = `SELECT 
+                     "gv"."village_id" AS "village_id", 
+                     "farmer->village"."village_name" AS "village_name", 
+                     "season"."id" AS "season_id", 
+                     "season"."name" AS "season_name", 
+                     COALESCE(SUM(CAST("farms"."total_estimated_cotton"AS DOUBLE PRECISION)), 0) AS "estimated_seed_cotton", 
+                     COALESCE(SUM(CAST("farms"."cotton_transacted" AS DOUBLE PRECISION)), 0) AS "procured_seed_cotton", 
+                     (COALESCE(SUM(CAST("farms"."total_estimated_cotton" AS DOUBLE PRECISION)), 0) - COALESCE(SUM(CAST("farms"."cotton_transacted" AS DOUBLE PRECISION)), 0)) AS "avaiable_seed_cotton" 
+                     FROM "ginner_allocated_villages" as gv
+                     LEFT JOIN 
+                          "villages" AS "farmer->village" ON "gv"."village_id" = "farmer->village"."id" 
+                     LEFT JOIN 
+                          "farmers" AS "farmer" ON "farmer->village"."id" = "farmer"."village_id" 
+                     LEFT JOIN 
+                          "farms" as "farms" on farms.farmer_id = "farmer".id and farms.season_id = gv.season_id
+                     LEFT JOIN 
+                          "seasons" AS "season" ON "gv"."season_id" = "season"."id"
+                     ${whereClause}
+                    GROUP BY 
+                          "gv"."village_id", "farmer->village"."id", "season"."id" 
+                    ORDER BY "gv"."village_id" DESC 
+                    OFFSET ${offset} LIMIT ${limit}
+                      `;
+  
+                      
+                      const [countResult, rows] = await Promise.all([
+                        sequelize.query(countQuery, {
+                          type: sequelize.QueryTypes.SELECT,
+                        }),
+                        sequelize.query(dataQuery, {
+                          type: sequelize.QueryTypes.SELECT,
+                        })
+                      ]);
+
+                      // Extract and parse total_records
+                     
+                      const totalCount = countResult ? Number(countResult[0]?.total_records) : 0;
+
+   
+
+    for await (let row of rows) {
+      let percentage =
+        Number(row.estimated_seed_cotton) >
+          Number(row.procured_seed_cotton)
+          ? (Number(row.procured_seed_cotton) /
+            Number(row.estimated_seed_cotton)) *
+          100
+          : 0;
+
+      data.push({
+        ...row,
+        prct_procured_cotton: formatDecimal(percentage),
+      });
+    }
+    
+    return res.sendPaginationSuccess(res, data, totalCount);
+  } catch (error: any) {
+    console.error(error);
+    return res.sendError(res, error.message);
+  }
+};
+
 const exportVillageSeedCotton = async (req: Request, res: Response) => {
   // village_seed_cotton_load
   await ExportData.update({
@@ -18272,6 +18409,186 @@ const exportVillageSeedCotton = async (req: Request, res: Response) => {
         village_seed_cotton_load: false
       }, { where: { village_seed_cotton_load: true } })
     })
+    console.error(error);
+    return res.sendError(res, error.message);
+  }
+};
+
+const exportVillageSeedCottonAllocation = async (req: Request, res: Response) => {
+   
+  const excelFilePath = path.join("./upload", "excel-village-seed-cotton-allocation.xlsx");
+  const searchTerm = req.query.search || "";
+  const page = Number(req.query.page) || 1;
+  const limit = Number(req.query.limit) || 10;
+  const offset = (page - 1) * limit;
+  const whereCondition: any = [];
+  const { exportType,stateId, brandId, countryId, seasonId, ginnerId }: any = req.query;
+  try {
+    if (exportType === "all") {
+      return res.status(200).send({
+        success: true,
+        messgage: "File successfully Generated",
+        data: process.env.BASE_URL + "village-seed-cotton-allocation.xlsx",
+      });
+    } 
+    else {
+    if (searchTerm) {
+
+      whereCondition.push(`
+        (
+          farmer.village.village_name ILIKE '%${searchTerm}%' OR
+        )
+      `);
+      
+    }
+
+    if (countryId) {
+      const idArray: number[] = countryId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+        whereCondition.push(`farmer.country_id IN (${idArray.join(',')})`);
+     
+    }
+    if (brandId) {
+      const idArray: number[] = brandId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+     
+      whereCondition.push(`farmer.brand_id IN (${idArray.join(',')})`);
+    }
+
+    if (stateId) {
+      const idArray: number[] = stateId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      
+      whereCondition.push(`farmer.state_id IN (${idArray.join(',')})`);
+    }
+
+    if (ginnerId) {
+      const idArray: number[] = ginnerId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      
+      whereCondition.push(`gv.ginner_id IN (${idArray.join(',')})`);
+    }
+
+    if (seasonId) {
+      const idArray: number[] = seasonId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      
+      whereCondition.push(`gv.season_id IN (${idArray.join(',')})`);
+    }
+
+    const whereClause = whereCondition.length > 0 ? `WHERE ${whereCondition.join(' AND ')}` : '';
+
+   // Create the excel workbook file
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet("Sheet1");
+    worksheet.mergeCells("A1:G1");
+    const mergedCell = worksheet.getCell("A1");
+    mergedCell.value = "CottonConnect | Village Seed Cotton Allocation Report";
+    mergedCell.font = { bold: true };
+    mergedCell.alignment = { horizontal: "center", vertical: "middle" };
+    // Set bold font for header row
+    const headerRow = worksheet.addRow([
+      "Sr No.",
+      "Village Name ",
+      "Season ",
+      "Total Estimated Seed cotton of village (Kgs)",
+      "Total Seed Cotton Procured from village (Kgs)",
+      "Total Seed Cotton in Stock at village (Kgs)",
+      "% Seed Cotton Procured",
+    ]);
+    headerRow.font = { bold: true };
+
+    const dataQuery = `SELECT 
+                     "gv"."village_id" AS "village_id", 
+                     "farmer->village"."village_name" AS "village_name", 
+                     "season"."id" AS "season_id", 
+                     "season"."name" AS "season_name", 
+                     COALESCE(SUM(CAST("farms"."total_estimated_cotton"AS DOUBLE PRECISION)), 0) AS "estimated_seed_cotton", 
+                     COALESCE(SUM(CAST("farms"."cotton_transacted" AS DOUBLE PRECISION)), 0) AS "procured_seed_cotton", 
+                     (COALESCE(SUM(CAST("farms"."total_estimated_cotton" AS DOUBLE PRECISION)), 0) - COALESCE(SUM(CAST("farms"."cotton_transacted" AS DOUBLE PRECISION)), 0)) AS "avaiable_seed_cotton" 
+                     FROM "ginner_allocated_villages" as gv
+                     LEFT JOIN 
+                          "villages" AS "farmer->village" ON "gv"."village_id" = "farmer->village"."id" 
+                     LEFT JOIN 
+                          "farmers" AS "farmer" ON "farmer->village"."id" = "farmer"."village_id" 
+                     LEFT JOIN 
+                          "farms" as "farms" on farms.farmer_id = "farmer".id and farms.season_id = gv.season_id
+                     LEFT JOIN 
+                          "seasons" AS "season" ON "gv"."season_id" = "season"."id"
+                     ${whereClause}
+                    GROUP BY 
+                          "gv"."village_id", "farmer->village"."id", "season"."id" 
+                    ORDER BY "gv"."village_id" DESC 
+                    OFFSET ${offset} LIMIT ${limit}
+                      `;
+  
+                      
+      const rows = await sequelize.query(dataQuery, {type: sequelize.QueryTypes.SELECT,})
+                  
+
+    // Append data to worksheet
+    for await (const [index, item] of rows.entries()) {
+      let percentage =
+        Number(item?.estimated_seed_cotton) >
+          Number(item?.procured_seed_cotton)
+          ? (Number(item?.procured_seed_cotton) /
+            Number(item?.estimated_seed_cotton)) *
+          100
+          : 0;
+
+      const rowValues = Object.values({
+        index: index + 1,
+        village_name: item?.village_name
+          ? item?.village_name
+          : "",
+        season_name: item?.season_name
+          ? item?.season_name
+          : "",
+        estimated_seed_cotton: item?.estimated_seed_cotton
+          ? Number(item?.estimated_seed_cotton)
+          : 0,
+        procured_seed_cotton: item?.procured_seed_cotton
+          ? Number(item?.procured_seed_cotton)
+          : 0,
+        avaiable_seed_cotton:
+          item?.avaiable_seed_cotton &&
+            item?.avaiable_seed_cotton > 0
+            ? Number(item?.avaiable_seed_cotton)
+            : 0,
+        prct_procured_cotton: percentage
+          ? Number(formatDecimal(percentage))
+          : 0,
+      });
+      worksheet.addRow(rowValues);
+      
+    }
+
+    // Set the width for the S No. column
+    // Auto-adjust column widths based on content
+    worksheet.columns.forEach((column: any) => {
+      let maxCellLength = 0;
+      column.eachCell({ includeEmpty: true }, (cell: any) => {
+        const cellLength = (cell.value ? cell.value.toString() : "").length;
+        maxCellLength = Math.max(maxCellLength, cellLength);
+      });
+      column.width = Math.min(14, maxCellLength + 2); // Limit width to 30 characters
+    });
+
+    // Save the workbook
+    await workbook.xlsx.writeFile(excelFilePath);
+    res.status(200).send({
+      success: true,
+      messgage: "File successfully Generated",
+      data: process.env.BASE_URL + "excel-village-seed-cotton-allocation.xlsx",
+    });
+  }
+  } catch (error: any) {
+    
     console.error(error);
     return res.sendError(res, error.message);
   }
@@ -19677,7 +19994,9 @@ export {
   spinnerBackwardTraceabiltyReport,
   exportSpinnerBackwardTraceability,
   villageSeedCottonReport,
+  villageSeedCottonAllocationReport,
   exportVillageSeedCotton,
+  exportVillageSeedCottonAllocation,
   spinnerProcessBackwardTraceabiltyReport,
   exportSpinProcessBackwardfTraceabilty,
   brandWiseDataReport,
