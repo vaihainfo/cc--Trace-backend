@@ -31,7 +31,9 @@ import {
     exportGinHeapReport,
     fetchGinHeapPagination,
     getReelHeapId,
-    fetchGinSaleAllBales
+    fetchGinSaleAllBales,
+    fetchGinLintAlert,
+    fetchGinLintList
     
 } from "../../controllers/ginner";
 import accessControl from "../../middleware/access-control";
@@ -79,6 +81,10 @@ router.get('/get-village-farmer', getVillageAndFarmer);
 router.get('/export-ginner-transactions', exportGinnerProcurement);
 router.get('/tracing/chart', getGinnerProcessTracingChartData);
 router.get('/check-report', checkReport);
+
+router.get('/lint-transaction-alert', fetchGinLintAlert);
+router.get('/lint-transaction-list', fetchGinLintList);
+
 
 
 export default router;
