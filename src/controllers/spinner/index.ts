@@ -1706,7 +1706,7 @@ const updateStatusSales = async (req: Request, res: Response) => {
                         }
                     } else {
                         rejectedBalesId = balesToUpdate;
-                        await GinBale.update({ sold_status: false }, { where: { id: rejectedBalesId }, transaction: t });
+                        await GinBale.update({ sold_status: false, is_all_rejected: false }, { where: { id: rejectedBalesId }, transaction: t });
                     }
                 }
 
@@ -1726,6 +1726,31 @@ const updateStatusSales = async (req: Request, res: Response) => {
                 if (soldCount === bales.length) status = 'Sold';
                 else if (rejectedCount === bales.length) status = 'Rejected';
                 else if (soldCount > rejectedCount) status = 'Partially Accepted';
+
+                if(status === 'Rejected'){
+                    console.log("==== Completely Rejected ====")
+                    // await GinBale.update({ is_all_rejected: true }, { where: { id: rejectedBalesId } });
+                    await sequelize.query(
+                        `
+                        UPDATE 
+                            "gin-bales" gb
+                        SET 
+                            is_all_rejected = true
+                        FROM 
+                            bale_selections bs
+                        WHERE 
+                            gb.id = bs.bale_id
+                            AND bs.sales_id = :rejectedId
+                        `,
+                        {
+                          replacements: { rejectedId: obj.id },
+                          transaction: t,
+                          type: sequelize.QueryTypes.UPDATE,
+                        }
+                      );
+                    
+                      console.log("==== GinBale Updated for Rejected Sales ====");
+                }
 
                 data.status = status;
 
