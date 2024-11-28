@@ -785,139 +785,264 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
   }
 };
 
+// const chooseBale = async (req: Request, res: Response) => {
+//   const searchTerm = req.query.search || "";
+//   const { ginnerId, seasonId, programId }: any = req.query;
+//   const whereCondition: any = {};
+//   try {
+//     if (searchTerm) {
+//       whereCondition[Op.or] = [
+//         { "$season.name$": { [Op.iLike]: `%${searchTerm}%` } },
+//         { lot_no: { [Op.iLike]: `%${searchTerm}%` } },
+//         { reel_lot_no: { [Op.iLike]: `%${searchTerm}%` } },
+//         { press_no: { [Op.iLike]: `%${searchTerm}%` } },
+//       ];
+//     }
+//     if (!ginnerId) {
+//       return res.sendError(res, "Ginner Id is required");
+//     }
+//     if (!programId) {
+//       return res.sendError(res, "Programme Id is required");
+//     }
+//     if (ginnerId) {
+//       whereCondition.ginner_id = ginnerId;
+//     }
+//     if (programId) {
+//       const idArray: number[] = programId
+//         .split(",")
+//         .map((id: any) => parseInt(id, 10));
+//       whereCondition.program_id = { [Op.in]: idArray };
+//     }
+
+//     let include = [
+//       {
+//         model: Ginner,
+//         as: "ginner",
+//       },
+//       {
+//         model: Season,
+//         as: "season",
+//       },
+//       {
+//         model: Program,
+//         as: "program",
+//       },
+//     ];
+//     //fetch data with pagination
+
+//     // let result = await GinProcess.findAll({
+//     //   where: whereCondition,
+//     //   include: include,
+//     //   order: [["id", "DESC"]],
+//     // });
+//     // const id_array = result.map((item: any) => item.id);
+//     // const bales_list = [];
+//     // for await (const id of id_array) {
+//     //   const lot_details = await GinBale.findAll({
+//     //     attributes: [
+//     //       [
+//     //         sequelize.fn(
+//     //           "SUM",
+//     //           Sequelize.literal(
+//     //             'CAST("gin-bales"."weight" AS DOUBLE PRECISION)'
+//     //           )
+//     //         ),
+//     //         "weight",
+//     //       ],
+//     //       // Add other attributes here...
+//     //     ],
+//     //     where: {
+//     //       sold_status: false,
+//     //     },
+//     //     include: [
+//     //       {
+//     //         model: GinProcess,
+//     //         as: "ginprocess",
+//     //         attributes: ["id", "lot_no", "date", "press_no", "reel_lot_no"],
+//     //         where: { id: id },
+//     //       },
+//     //     ],
+//     //     group: ["ginprocess.id", "ginprocess.lot_no"],
+//     //   });
+//     //   if (lot_details.length > 0) {
+//     //     const bales = await GinBale.findAll({
+//     //       where: {
+//     //         process_id: id,
+//     //         sold_status: false,
+//     //       },
+//     //     });
+
+//     //     if (bales.length > 0) {
+//     //       lot_details[0].dataValues.bales = bales;
+//     //       bales_list.push(lot_details[0]);
+//     //     }
+//     //   }
+//     // }
+
+//     const [results, metadata] = await sequelize.query(
+//       `SELECT 
+//           jsonb_build_object(
+//               'ginprocess', jsonb_build_object(
+//                   'id', gp.id,
+//                   'lot_no', gp.lot_no,
+//                   'date', gp.date,
+//                   'press_no', gp.press_no,
+//                   'reel_lot_no', gp.reel_lot_no,
+//                   'greyout_status', gp.greyout_status
+//               ),
+//               'weight', SUM(CAST(gb.weight AS DOUBLE PRECISION)),
+//               'bales', jsonb_agg(jsonb_build_object(
+//                   'id', gb.id,
+//                   'bale_no', gb.bale_no,
+//                   'weight', gb.weight,
+//                   'is_all_rejected', gb.is_all_rejected,
+//                   'greyout_status', gp.greyout_status
+//               ) ORDER BY gb.id ASC)
+//           ) AS result
+//       FROM 
+//           gin_processes gp
+//       JOIN 
+//           "gin-bales" gb ON gp.id = gb.process_id
+//       JOIN 
+//           ginners g ON gp.ginner_id = g.id
+//       JOIN 
+//           seasons s ON gp.season_id = s.id
+//       JOIN 
+//           programs p ON gp.program_id = p.id
+//       WHERE 
+//           gp.ginner_id = ${ginnerId}
+//           AND gp.program_id IN (${programId})
+//           AND gb.sold_status = false
+//       GROUP BY 
+//           gp.id, gp.lot_no, gp.date, gp.press_no, gp.reel_lot_no
+//       ORDER BY 
+//           gp.id DESC;
+// `
+//     )
+
+//     const simplifiedResults = results.map((item: any) => item.result);
+//     return res.sendSuccess(res, simplifiedResults); //bales_list
+//   } catch (error: any) {
+//     console.error(error);
+//     return res.sendError(res, error.meessage);
+//   }
+// };
+
 const chooseBale = async (req: Request, res: Response) => {
   const searchTerm = req.query.search || "";
   const { ginnerId, seasonId, programId }: any = req.query;
   const whereCondition: any = {};
   try {
-    if (searchTerm) {
-      whereCondition[Op.or] = [
-        { "$season.name$": { [Op.iLike]: `%${searchTerm}%` } },
-        { lot_no: { [Op.iLike]: `%${searchTerm}%` } },
-        { reel_lot_no: { [Op.iLike]: `%${searchTerm}%` } },
-        { press_no: { [Op.iLike]: `%${searchTerm}%` } },
-      ];
-    }
+
     if (!ginnerId) {
       return res.sendError(res, "Ginner Id is required");
     }
     if (!programId) {
       return res.sendError(res, "Programme Id is required");
     }
-    if (ginnerId) {
-      whereCondition.ginner_id = ginnerId;
-    }
-    if (programId) {
-      const idArray: number[] = programId
-        .split(",")
-        .map((id: any) => parseInt(id, 10));
-      whereCondition.program_id = { [Op.in]: idArray };
-    }
-
-    let include = [
-      {
-        model: Ginner,
-        as: "ginner",
-      },
-      {
-        model: Season,
-        as: "season",
-      },
-      {
-        model: Program,
-        as: "program",
-      },
-    ];
-    //fetch data with pagination
-
-    // let result = await GinProcess.findAll({
-    //   where: whereCondition,
-    //   include: include,
-    //   order: [["id", "DESC"]],
-    // });
-    // const id_array = result.map((item: any) => item.id);
-    // const bales_list = [];
-    // for await (const id of id_array) {
-    //   const lot_details = await GinBale.findAll({
-    //     attributes: [
-    //       [
-    //         sequelize.fn(
-    //           "SUM",
-    //           Sequelize.literal(
-    //             'CAST("gin-bales"."weight" AS DOUBLE PRECISION)'
-    //           )
-    //         ),
-    //         "weight",
-    //       ],
-    //       // Add other attributes here...
-    //     ],
-    //     where: {
-    //       sold_status: false,
-    //     },
-    //     include: [
-    //       {
-    //         model: GinProcess,
-    //         as: "ginprocess",
-    //         attributes: ["id", "lot_no", "date", "press_no", "reel_lot_no"],
-    //         where: { id: id },
-    //       },
-    //     ],
-    //     group: ["ginprocess.id", "ginprocess.lot_no"],
-    //   });
-    //   if (lot_details.length > 0) {
-    //     const bales = await GinBale.findAll({
-    //       where: {
-    //         process_id: id,
-    //         sold_status: false,
-    //       },
-    //     });
-
-    //     if (bales.length > 0) {
-    //       lot_details[0].dataValues.bales = bales;
-    //       bales_list.push(lot_details[0]);
-    //     }
-    //   }
-    // }
 
     const [results, metadata] = await sequelize.query(
       `SELECT 
           jsonb_build_object(
               'ginprocess', jsonb_build_object(
-                  'id', gp.id,
-                  'lot_no', gp.lot_no,
-                  'date', gp.date,
-                  'press_no', gp.press_no,
-                  'reel_lot_no', gp.reel_lot_no,
-                  'greyout_status', gp.greyout_status
+                  'id', combined_data.process_id,
+                  'lot_no', combined_data.lot_no,
+                  'date', combined_data.date,
+                  'press_no', combined_data.press_no,
+                  'reel_lot_no', combined_data.reel_lot_no,
+                  'greyout_status', combined_data.greyout_status,
+                  'is_gin_to_gin', combined_data.is_gin_to_gin
               ),
-              'weight', SUM(CAST(gb.weight AS DOUBLE PRECISION)),
+              'weight', SUM(CAST(combined_data.weight AS DOUBLE PRECISION)),
               'bales', jsonb_agg(jsonb_build_object(
-                  'id', gb.id,
-                  'bale_no', gb.bale_no,
-                  'weight', gb.weight,
-                  'is_all_rejected', gb.is_all_rejected,
-                  'greyout_status', gp.greyout_status
-              ) ORDER BY gb.id ASC)
+                  'id', combined_data.bale_id,
+              'process_id', combined_data.process_id,
+                  'bale_no', combined_data.bale_no,
+                  'weight', combined_data.weight,
+                  'is_all_rejected', combined_data.is_all_rejected,
+                  'greyout_status', combined_data.greyout_status,
+                  'sales_id', combined_data.sales_id,
+                  'is_gin_to_gin', combined_data.is_gin_to_gin
+              ) ORDER BY combined_data.bale_id ASC)
           ) AS result
-      FROM 
-          gin_processes gp
-      JOIN 
-          "gin-bales" gb ON gp.id = gb.process_id
-      JOIN 
-          ginners g ON gp.ginner_id = g.id
-      JOIN 
-          seasons s ON gp.season_id = s.id
-      JOIN 
-          programs p ON gp.program_id = p.id
-      WHERE 
-          gp.ginner_id = ${ginnerId}
-          AND gp.program_id IN (${programId})
-          AND gb.sold_status = false
+      FROM (
+          -- First Query: Direct gin-bales
+          SELECT 
+              gp.id AS process_id,
+              gp.lot_no,
+              gp.date,
+              gp.press_no,
+              gp.reel_lot_no,
+              gp.greyout_status,
+              gb.id AS bale_id,
+              gb.bale_no,
+              gb.weight,
+              gb.is_all_rejected,
+              g.id AS ginner_id,
+              gp.program_id,
+              gp.season_id,
+              null AS sales_id,
+              false AS is_gin_to_gin -- Add a flag to identify the source
+          FROM 
+              gin_processes gp
+          JOIN 
+              "gin-bales" gb ON gp.id = gb.process_id
+          JOIN 
+              ginners g ON gp.ginner_id = g.id
+          JOIN 
+              seasons s ON gp.season_id = s.id
+          JOIN 
+              programs p ON gp.program_id = p.id
+          WHERE 
+              gp.ginner_id = ${ginnerId}
+              AND gp.program_id IN (${programId})
+              AND gb.sold_status = false
+          
+          UNION ALL
+
+          -- Second Query: Gin-to-Gin sales
+          SELECT 
+              gp.id AS process_id,
+              gp.lot_no,
+              gp.date,
+              gp.press_no,
+              gp.reel_lot_no,
+              gp.greyout_status,
+              gb.id AS bale_id,
+              gb.bale_no,
+              gb.weight,
+              gb.is_all_rejected,
+              g.id AS ginner_id,
+              gp.program_id,
+              gp.season_id,
+              gs.id AS sales_id,
+              true AS is_gin_to_gin -- Add a flag to identify the source
+          FROM 
+              gin_to_gin_sales gtg
+          JOIN 
+              gin_processes gp ON gtg.process_id = gp.id
+          JOIN 
+              "gin-bales" gb ON gtg.bale_id = gb.id
+          JOIN 
+              gin_sales gs ON gtg.sales_id = gs.id
+          JOIN 
+              ginners g ON gtg.new_ginner_id = g.id
+          JOIN 
+              seasons s ON gp.season_id = s.id
+          JOIN 
+              programs p ON gp.program_id = p.id
+          WHERE 
+              gtg.new_ginner_id = ${ginnerId}
+              AND gp.program_id IN (${programId})
+              AND gb.sold_status = true
+              AND gtg.gin_accepted_status = true
+              AND gtg.gin_sold_status IS NULL
+      ) combined_data
       GROUP BY 
-          gp.id, gp.lot_no, gp.date, gp.press_no, gp.reel_lot_no
+          combined_data.process_id, combined_data.lot_no, combined_data.date, combined_data.press_no, combined_data.reel_lot_no, combined_data.greyout_status, combined_data.is_gin_to_gin
       ORDER BY 
-          gp.id DESC;
-`
+          combined_data.process_id DESC;
+    `
     )
 
     const simplifiedResults = results.map((item: any) => item.result);
@@ -927,6 +1052,7 @@ const chooseBale = async (req: Request, res: Response) => {
     return res.sendError(res, error.meessage);
   }
 };
+
 
 const deleteGinnerProcess = async (req: Request, res: Response) => {
   try {
@@ -1520,6 +1646,19 @@ const createGinnerSales = async (req: Request, res: Response) => {
     for await (const bale of req.body.bales) {
 
       if(req.body.buyerType?.toLowerCase() === 'ginner'){
+        if(bale.sales_id && bale.is_gin_to_gin && bale.process_id){
+          const gin = await GinToGinSale.update(
+            { gin_sold_status: true },
+            {
+              where: {
+                sales_id: bale.sales_id,
+                bale_id: bale.id,
+                process_id: bale.process_id,
+              },
+            }
+          );
+        }
+
         let gintogin = {
           sales_id: ginSales.id,
           bale_id: bale.id,
@@ -1527,6 +1666,7 @@ const createGinnerSales = async (req: Request, res: Response) => {
           bale_weight: bale.weight,
           old_ginner_id: req.body.ginnerId,
           new_ginner_id: req.body.buyerGinner,
+          old_gin_sales_id: bale.sales_id ? bale.sales_id : null 
         }
 
         const bales = await GinToGinSale.create(gintogin);
@@ -1539,7 +1679,11 @@ const createGinnerSales = async (req: Request, res: Response) => {
       };
       const bales = await BaleSelection.create(baleData);
       const ginbaleSatus = await GinBale.update(
-        { sold_status: true, is_gin_to_gin_sale: req.body.buyerType?.toLowerCase() === 'ginner' ? true : null },
+        { sold_status: true, 
+          is_gin_to_gin_sale: req.body.buyerType?.toLowerCase() === 'ginner' ? true : bale.is_gin_to_gin ? true : null, 
+          gin_to_gin_sold_status:  bale.is_gin_to_gin ? true : null , 
+          sold_by_sales_id: ginSales.id
+        },
         { where: { id: bale.id } }
       );
     }
@@ -2522,7 +2666,12 @@ const fetchGinLintAlert = async (req: Request, res: Response) => {
                   'id', gb.id,
                   'bale_no', gb.bale_no,
                   'weight', gb.weight,
+                  'process_id', gp.id,
                   'is_all_rejected', gb.is_all_rejected,
+                  'is_gin_to_gin_sale', gb.is_gin_to_gin_sale,
+                  'gin_to_gin_status', gb.gin_to_gin_status,
+                  'gin_to_gin_sold_status', gb.gin_to_gin_sold_status,
+                  'old_gin_sales_id', gtg.old_gin_sales_id,
                   'greyout_status', gp.greyout_status,
 				  'ginprocess', jsonb_build_object(
                   'id', gp.id,
@@ -2777,7 +2926,18 @@ const updateStatusLintSales = async (req: Request, res: Response) => {
                       await GinBale.update({ gin_to_gin_status: true }, { where: { id: balesToUpdate }, transaction: t });
                   } else {
                       rejectedBalesId = balesToUpdate;
-                      await GinBale.update({ sold_status: false, is_all_rejected: false }, { where: { id: rejectedBalesId }, transaction: t });
+                      let rejectedBale = obj.bales.filter((bale: any) => bale.is_gin_to_gin_sale && bale.gin_to_gin_sold_status && bale.old_gin_sales_id)?.map((bale: any) => bale.id);
+                      let rejectedSale = obj.bales.filter((bale: any) => bale.is_gin_to_gin_sale && bale.gin_to_gin_sold_status && bale.old_gin_sales_id)?.map((bale: any) => bale.old_gin_sales_id);
+                      let notGintoGinBale = obj.bales.filter((bale: any) => !bale.is_gin_to_gin_sale)?.map((bale: any) => bale.id);
+                      if(rejectedBale && rejectedBale.length > 0 && rejectedSale && rejectedSale.length > 0){
+                        await GinToGinSale.update(
+                          { gin_sold_status: null },
+                          { where: { bale_id: rejectedBale, sales_id: rejectedSale}, transaction: t }
+                        );
+                      }
+                      if(notGintoGinBale && notGintoGinBale.length > 0){
+                        await GinBale.update({ sold_status: false, is_all_rejected: false }, { where: { id: notGintoGinBale }, transaction: t });
+                      }
                   }
               }
 

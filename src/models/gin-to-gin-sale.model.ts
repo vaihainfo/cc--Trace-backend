@@ -40,6 +40,9 @@ const GinToGinSale = db.define('gin_to_gin_sales', {
   gin_sold_status: {
     type: DataTypes.BOOLEAN
   },
+  old_gin_sales_id: {
+    type: DataTypes.INTEGER
+  },
 });
 
 GinToGinSale.belongsTo(Ginner, {
@@ -66,6 +69,12 @@ GinToGinSale.belongsTo(GinSales, {
   foreignKey: "sales_id",
   as: "ginsales",
 });
+
+GinToGinSale.belongsTo(GinSales, {
+  foreignKey: "old_gin_sales_id",
+  as: "old_ginsales",
+});
+
 
 GinToGinSale.sync();
 
