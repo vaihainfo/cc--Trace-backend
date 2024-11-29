@@ -2268,7 +2268,7 @@ const uploadIntegrityTest = async (req: Request, res: Response) => {
                 const brand = await Brand.findOne({ where: { brand_name: data.brand } });
                 const farmGroup = await FarmGroup.findOne({ where: { name: data.farmGroup } });
                 const ics = await ICS.findOne({ where: { ics_name: data.icsName } });
-
+                const farmer = await Farmer.findOne({ where: { firstName: data.farmer, tracenet_id: data.tracenetId} });
 
                 if (!brand) {
                     fail.push({
@@ -2343,8 +2343,7 @@ const uploadIntegrityTest = async (req: Request, res: Response) => {
                 //     }
                 // }
 
-                const farmer = await Farmer.findOne({ where: { firstName: data.farmer, tracenet_id: data.tracenetId} });
-                console.log("farmer--------------",farmer)
+                
                 console.log("brand---", brand.id, "ics---", ics.id, "farmGroup---", farmGroup.id, "farmer------",farmer.id)
                 if (!farmer) {
                     fail.push({
