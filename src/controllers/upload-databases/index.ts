@@ -2270,7 +2270,6 @@ const uploadIntegrityTest = async (req: Request, res: Response) => {
                 const ics = await ICS.findOne({ where: { ics_name: data.icsName } });
 
 
-
                 if (!brand) {
                     fail.push({
                         success: false,
@@ -2351,6 +2350,7 @@ const uploadIntegrityTest = async (req: Request, res: Response) => {
                         data: { brand: data.brand ? data.brand : '', farmerName: data.farmer ? data.farmer : '', farmGroupName: data.farmGroup ? data.farmGroup : '', icsName: data.icsName ? data.icsName : '' },
                         message: "Farmer does not exists"
                     });
+                    return res.sendSuccess(res, { pass, fail });
                 }
           
 
