@@ -2344,6 +2344,7 @@ const uploadIntegrityTest = async (req: Request, res: Response) => {
                 }
 
                 const farmer = await Farmer.findOne({ where: { firstName: data.farmer, tracenet_id: data.tracenetId} });
+                console.log("farmer--------------",farmer)
                 if (!farmer) {
                     fail.push({
                         success: false,
@@ -2352,7 +2353,6 @@ const uploadIntegrityTest = async (req: Request, res: Response) => {
                     });
                     return res.sendSuccess(res, { pass, fail });
                 }
-          
 
                 else {
                     const obj = {
@@ -2370,7 +2370,6 @@ const uploadIntegrityTest = async (req: Request, res: Response) => {
                         documents: ""
                     };
 
-                    console.log("obj--------",obj)
                     const result = await OrganicIntegrity.create(obj);
                     pass.push({
                         success: true,
