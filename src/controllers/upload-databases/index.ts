@@ -2327,24 +2327,25 @@ const uploadIntegrityTest = async (req: Request, res: Response) => {
                         return res.sendSuccess(res, { pass, fail });
                     }
                 }
-                if (data.tracenetId) {
-                    let tracCheck;
-                    tracCheck = await Farmer.findOne({
-                        where: {
-                            tracenet_id: data.tracenetId,
-                        }
-                    });
-                    if (!tracCheck) {
-                        fail.push({
-                            success: false,
-                            message: "Tracenet Id is not associated with the entered Farmer"
-                        });
-                        return res.sendSuccess(res, { pass, fail });
-                    }
-                }
+                // if (data.tracenetId) {
+                //     let tracCheck;
+                //     tracCheck = await Farmer.findOne({
+                //         where: {
+                //             tracenet_id: data.tracenetId,
+                //         }
+                //     });
+                //     if (!tracCheck) {
+                //         fail.push({
+                //             success: false,
+                //             message: "Tracenet Id is not associated with the entered Farmer"
+                //         });
+                //         return res.sendSuccess(res, { pass, fail });
+                //     }
+                // }
 
                 const farmer = await Farmer.findOne({ where: { firstName: data.farmer, tracenet_id: data.tracenetId} });
                 console.log("farmer--------------",farmer)
+                console.log("brand---", brand.id, "ics---", ics.id, "farmGroup---", farmGroup.id, "farmer------",farmer.id)
                 if (!farmer) {
                     fail.push({
                         success: false,
