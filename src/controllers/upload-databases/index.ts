@@ -2369,6 +2369,8 @@ const uploadIntegrityTest = async (req: Request, res: Response) => {
                         integrity_score: data.integrityScore.toLowerCase() === "positive" ? true : false,
                         documents: ""
                     };
+
+                    console.log("obj--------",obj)
                     const result = await OrganicIntegrity.create(obj);
                     pass.push({
                         success: true,
