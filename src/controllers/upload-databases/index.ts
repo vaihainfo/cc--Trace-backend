@@ -2344,7 +2344,7 @@ const uploadIntegrityTest = async (req: Request, res: Response) => {
                     }
                 }
 
-                const farmer = await Farmer.findOne({ where: { firstName: data.farmer, tracenet_id: data.tracenetId, ics_id: ics.id, farmGroup_id: farmGroup.id } });
+                const farmer = await Farmer.findOne({ where: { firstName: data.farmer, tracenet_id: data.tracenetId} });
                 if (!farmer) {
                     fail.push({
                         success: false,
