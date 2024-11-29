@@ -2354,7 +2354,7 @@ const uploadIntegrityTest = async (req: Request, res: Response) => {
                     return res.sendSuccess(res, { pass, fail });
                 }
 
-                else {
+                else if(farmer || brand || farmGroup || ics) {
                     const obj = {
                         date: data.date,
                         brand_id: brand.id,
