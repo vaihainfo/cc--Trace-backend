@@ -18108,7 +18108,7 @@ const villageSeedCottonAllocationReport = async (req: Request, res: Response) =>
 
       whereCondition.push(`
         (
-          farmer.village.village_name ILIKE '%${searchTerm}%' OR
+          village_name ILIKE '%${searchTerm}%'
         )
       `);
       
@@ -18459,7 +18459,7 @@ const exportVillageSeedCottonAllocation = async (req: Request, res: Response) =>
 
       whereCondition.push(`
         (
-          farmer.village.village_name ILIKE '%${searchTerm}%' OR
+          village_name ILIKE '%${searchTerm}%'
         )
       `);
       
