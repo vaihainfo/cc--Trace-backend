@@ -2266,9 +2266,8 @@ const uploadIntegrityTest = async (req: Request, res: Response) => {
                 });
             } else {
                 const brand = await Brand.findOne({ where: { brand_name: data.brand } });
-                const farmGroup = await FarmGroup.findOne({ where: { name: data.farmGroup } });
-                const ics = await ICS.findOne({ where: { ics_name: data.icsName } });
-                const farmer = await Farmer.findOne({ where: { firstName: data.farmer, tracenet_id: data.tracenetId} });
+                const farmer = await Farmer.findOne({ where: { tracenet_id: data.tracenetId,brand_id:brand.id} });
+                const season = await Season.findOne({ where: { name: data.season}});
 
                 if (!brand) {
                     fail.push({
@@ -2277,21 +2276,6 @@ const uploadIntegrityTest = async (req: Request, res: Response) => {
                         message: "Brand does not exists"
                     });
                 }
-                if (!farmGroup) {
-                    fail.push({
-                        success: false,
-                        data: { brand: data.brand ? data.brand : '', farmerName: data.farmer ? data.farmer : '', farmGroupName: data.farmGroup ? data.farmGroup : '', icsName: data.icsName ? data.icsName : '' },
-                        message: "Farm Group does not exists"
-                    });
-                }
-                if (!ics) {
-                    fail.push({
-                        success: false,
-                        data: { brand: data.brand ? data.brand : '', farmerName: data.farmer ? data.farmer : '', farmGroupName: data.farmGroup ? data.farmGroup : '', icsName: data.icsName ? data.icsName : '' },
-                        message: "ICS does not exists"
-                    });
-                }
-
                 if (brand) {
                     let brandCheck;
                     brandCheck = await Brand.findOne({
@@ -2311,55 +2295,29 @@ const uploadIntegrityTest = async (req: Request, res: Response) => {
                     }
                 }
 
-                if (farmGroup) {
-                    let farmChecked;
-                    farmChecked = await FarmGroup.findOne({
-                        where: {
-                            brand_id: brand.id,
-                            id: farmGroup.id
-                        }
+                if (!season) {
+                    fail.push({
+                        success: false,
+                        data: { season: data.season ? data.season : ''},
+                        message: data.season + " season does not exists"
                     });
-                    if (!farmChecked) {
-                        fail.push({
-                            success: false,
-                            message: "Farm Group is not associated with the entered Brand"
-                        });
-                        return res.sendSuccess(res, { pass, fail });
-                    }
                 }
-                // if (data.tracenetId) {
-                //     let tracCheck;
-                //     tracCheck = await Farmer.findOne({
-                //         where: {
-                //             tracenet_id: data.tracenetId,
-                //         }
-                //     });
-                //     if (!tracCheck) {
-                //         fail.push({
-                //             success: false,
-                //             message: "Tracenet Id is not associated with the entered Farmer"
-                //         });
-                //         return res.sendSuccess(res, { pass, fail });
-                //     }
-                // }
 
-                
-                console.log("brand---", brand.id, "ics---", ics.id, "farmGroup---", farmGroup.id, "farmer------",farmer.id)
                 if (!farmer) {
                     fail.push({
                         success: false,
                         data: { brand: data.brand ? data.brand : '', farmerName: data.farmer ? data.farmer : '', farmGroupName: data.farmGroup ? data.farmGroup : '', icsName: data.icsName ? data.icsName : '' },
-                        message: "Farmer does not exists"
+                        message: "Farmer with mentioned Tracenet Id "+ data.tracenetId +" does not exists"
                     });
                     return res.sendSuccess(res, { pass, fail });
                 }
 
-                else if(farmer || brand || farmGroup || ics) {
+                else if(farmer || brand || season ) {
                     const obj = {
                         date: data.date,
                         brand_id: brand.id,
-                        farmGroup_id: farmGroup.id,
-                        ics_id: ics.id,
+                        farmGroup_id: farmer.farmGroup_id,
+                        ics_id: farmer.ics_id,
                         ginner_id: 0,
                         test_stage: data.stageOfTesting,
                         farmer: farmer.id,
@@ -2367,7 +2325,8 @@ const uploadIntegrityTest = async (req: Request, res: Response) => {
                         sample_code: data.sampleCodeNo,
                         seed_lot: data.seedLotNo,
                         integrity_score: data.integrityScore.toLowerCase() === "positive" ? true : false,
-                        documents: ""
+                        documents: "",
+                        season_id: season.id
                     };
 
                     const result = await OrganicIntegrity.create(obj);
