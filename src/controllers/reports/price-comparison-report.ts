@@ -5,12 +5,15 @@ const fetchPriceComparisonSeedCotton = async (req: Request, res: Response) => {
   try {
     const page = Number(req.query.page) || 1;
     const limit = Number(req.query.limit) || 10;
-    const {
-      seasonId,
+    let {
       countryId,
       stateId,
       districtId,
       brandId,
+      seasonId,
+      monthId,
+      from,
+      to
     }: any = req.query;
     const offset = (page - 1) * limit;
 
@@ -49,7 +52,51 @@ const fetchPriceComparisonSeedCotton = async (req: Request, res: Response) => {
       addCondition("district_id", districtId, "scp");
     }
 
-    let query = `
+    if (monthId) {
+      monthId = Number(monthId) + 1;
+    }
+
+    let fromDate;
+    let toDate;
+    if (from && to) {
+      fromDate = new Date(`2024-${monthId}-${from}`);
+      fromDate.setHours(0, 0, 0, 0);
+      replacements.from = fromDate;
+      toDate = new Date(`2024-${monthId}-${to}`);
+      toDate.setHours(23, 59, 59, 999);
+      replacements.to = toDate;
+      replacements.fromDate = fromDate;
+      whereConditions.push('"scp"."startDate" BETWEEN :fromDate AND :toDate');
+      replacements.toDate = toDate;
+      whereConditions.push('"scp"."endDate" BETWEEN :fromDate AND :toDate');
+    }
+
+    let query;
+    if (monthId) {
+      query = `
+      SELECT 
+        scp.*, 
+        b."brand_name", 
+        c."county_name",
+        d."district_name", 
+        p."program_name",
+        s."name" AS "season_name",
+        st."state_name" 
+        FROM "seed-cotton-pricings" AS scp
+        LEFT JOIN "brands" AS b ON scp."brand_id" = b."id"
+        LEFT JOIN "countries" AS c ON scp."country_id" = c."id"
+        LEFT JOIN "districts" AS d ON scp."district_id" = d."id"
+        LEFT JOIN "programs" AS p ON scp."program_id" = p."id"
+        LEFT JOIN "seasons" AS s ON scp."season_id" = s."id"
+        LEFT JOIN "states" AS st ON scp."state_id" = st."id"
+        WHERE EXTRACT(MONTH FROM scp."startDate") = ${monthId}
+        AND EXTRACT(MONTH FROM scp."endDate") = ${monthId}
+        ${whereConditions.length > 0 ? 'AND ' + whereConditions.join(' AND ') : ''}
+      ORDER BY scp."startDate" DESC
+      LIMIT :limit OFFSET :offset;
+        `
+    } else {
+      query = `
       SELECT 
         scp.*, 
         b."brand_name", 
@@ -69,6 +116,7 @@ const fetchPriceComparisonSeedCotton = async (req: Request, res: Response) => {
       ORDER BY scp."startDate" DESC
       LIMIT :limit OFFSET :offset;
     `;
+    }
 
     const rows = await sequelize.query(query, {
       replacements,
@@ -76,6 +124,7 @@ const fetchPriceComparisonSeedCotton = async (req: Request, res: Response) => {
     });
 
     const count = rows.length;
+
     await Promise.all(rows.map(async (row: any) => {
       let { startDate, endDate, country_id, district_id, state_id } = row;
 
