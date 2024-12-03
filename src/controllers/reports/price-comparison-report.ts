@@ -94,7 +94,7 @@ const fetchPriceComparisonSeedCotton = async (req: Request, res: Response) => {
         ${whereConditions.length > 0 ? 'AND ' + whereConditions.join(' AND ') : ''}
       ORDER BY scp."startDate" DESC
       LIMIT :limit OFFSET :offset;
-        `
+        `;
     } else {
       query = `
       SELECT 
@@ -164,19 +164,22 @@ const fetchPriceComparisonLint = async (req: Request, res: Response) => {
   try {
     const page = Number(req.query.page) || 1;
     const limit = Number(req.query.limit) || 10;
-    const {
+    let {
       seasonId,
       countryId,
       stateId,
       districtId,
       brandId,
+      monthId,
+      from,
+      to
     }: any = req.query;
     const offset = (page - 1) * limit;
 
-    let brandIdArray = brandId ? brandId.split(",").map((id: any) => parseInt(id, 10)) : [];
     let whereConditions: string[] = [];
     let avgQueryConditions: string[] = [];
     let replacements: any = { limit, offset };
+    let brandIdArray = brandId ? brandId.split(",").map((id: any) => parseInt(id, 10)) : [];
 
     const addCondition = (field: string, values: string, alias: string | null = null) => {
       const idArray = values.split(",").map((id: any) => parseInt(id, 10));
@@ -208,7 +211,51 @@ const fetchPriceComparisonLint = async (req: Request, res: Response) => {
       addCondition("district_id", districtId, "lp");
     }
 
-    let query = `
+    if (monthId) {
+      monthId = Number(monthId) + 1;
+    }
+
+    let fromDate;
+    let toDate;
+    if (from && to) {
+      fromDate = new Date(`2024-${monthId}-${from}`);
+      fromDate.setHours(0, 0, 0, 0);
+      replacements.from = fromDate;
+      toDate = new Date(`2024-${monthId}-${to}`);
+      toDate.setHours(23, 59, 59, 999);
+      replacements.to = toDate;
+      replacements.fromDate = fromDate;
+      whereConditions.push('"lp"."startDate" BETWEEN :fromDate AND :toDate');
+      replacements.toDate = toDate;
+      whereConditions.push('"lp"."endDate" BETWEEN :fromDate AND :toDate');
+    }
+    let query;
+    if (monthId) {
+      query = `
+      SELECT 
+        lp.*, 
+        b."brand_name", 
+        c."county_name",
+        d."district_name", 
+        p."program_name",
+        s."name" AS "season_name",
+        st."state_name"
+      FROM "lint-pricings" AS lp
+      LEFT JOIN "brands" AS b ON lp."brand_id" = b."id"
+      LEFT JOIN "countries" AS c ON lp."country_id" = c."id"
+      LEFT JOIN "districts" AS d ON lp."district_id" = d."id"
+      LEFT JOIN "programs" AS p ON lp."program_id" = p."id"
+      LEFT JOIN "seasons" AS s ON lp."season_id" = s."id"
+      LEFT JOIN "states" AS st ON lp."state_id" = st."id"
+      WHERE EXTRACT(MONTH FROM lp."startDate") = ${monthId}
+      AND EXTRACT(MONTH FROM lp."endDate") = ${monthId}
+      ${whereConditions.length > 0 ? 'AND ' + whereConditions.join(' AND ') : ''}
+      ORDER BY lp."startDate" DESC
+      LIMIT :limit OFFSET :offset;
+    `;
+    }
+    else { 
+      query = `
       SELECT 
         lp.*, 
         b."brand_name", 
@@ -228,16 +275,18 @@ const fetchPriceComparisonLint = async (req: Request, res: Response) => {
       ORDER BY lp."startDate" DESC
       LIMIT :limit OFFSET :offset;
     `;
+    }
 
     const rows = await sequelize.query(query, {
       replacements,
       type: sequelize.QueryTypes.SELECT,
     });
 
+    
     whereConditions = whereConditions.filter(condition => !condition.includes('brand_id'));
     delete replacements.brandId;
+    
     const count = rows.length;
-
     await Promise.all(rows.map(async (row: any) => {
       let { startDate, endDate, country_id, district_id, state_id } = row;
 
@@ -283,12 +332,15 @@ const fetchPriceComparisonYarn = async (req: Request, res: Response) => {
   try {
     const page = Number(req.query.page) || 1;
     const limit = Number(req.query.limit) || 10;
-    const {
+    let {
       seasonId,
       countryId,
       stateId,
       districtId,
       brandId,
+      monthId,
+      from,
+      to
     }: any = req.query;
     const offset = (page - 1) * limit;
 
@@ -326,8 +378,51 @@ const fetchPriceComparisonYarn = async (req: Request, res: Response) => {
     if (districtId) {
       addCondition("district_id", districtId, "yp");
     }
+    if (monthId) {
+      monthId = Number(monthId) + 1;
+    }
 
-    let query = `
+    let fromDate;
+    let toDate;
+    if (from && to) {
+      fromDate = new Date(`2024-${monthId}-${from}`);
+      fromDate.setHours(0, 0, 0, 0);
+      replacements.from = fromDate;
+      toDate = new Date(`2024-${monthId}-${to}`);
+      toDate.setHours(23, 59, 59, 999);
+      replacements.to = toDate;
+      replacements.fromDate = fromDate;
+      whereConditions.push('"yp"."startDate" BETWEEN :fromDate AND :toDate');
+      replacements.toDate = toDate;
+      whereConditions.push('"yp"."endDate" BETWEEN :fromDate AND :toDate');
+    }
+    let query;
+    if (monthId) {
+     query = `
+      SELECT 
+        yp.*, 
+        b."brand_name", 
+        c."county_name",
+        d."district_name", 
+        p."program_name",
+        s."name" AS "season_name",
+        st."state_name"
+      FROM "yarn-pricings" AS yp
+      LEFT JOIN "brands" AS b ON yp."brand_id" = b."id"
+      LEFT JOIN "countries" AS c ON yp."country_id" = c."id"
+      LEFT JOIN "districts" AS d ON yp."district_id" = d."id"
+      LEFT JOIN "programs" AS p ON yp."program_id" = p."id"
+      LEFT JOIN "seasons" AS s ON yp."season_id" = s."id"
+      LEFT JOIN "states" AS st ON yp."state_id" = st."id"
+      WHERE EXTRACT(MONTH FROM yp."startDate") = ${monthId}
+      AND EXTRACT(MONTH FROM yp."endDate") = ${monthId}
+      ${whereConditions.length > 0 ? 'AND ' + whereConditions.join(' AND ') : ''}
+      ORDER BY yp."startDate" DESC
+      LIMIT :limit OFFSET :offset;
+    `;
+    }
+    else{
+      query = `
       SELECT 
         yp.*, 
         b."brand_name", 
@@ -347,6 +442,7 @@ const fetchPriceComparisonYarn = async (req: Request, res: Response) => {
       ORDER BY yp."startDate" DESC
       LIMIT :limit OFFSET :offset;
     `;
+    }
 
 
     const rows = await sequelize.query(query, {
