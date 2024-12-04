@@ -2768,6 +2768,11 @@ function isValidDateRange(startDate: Date, endDate: Date): boolean {
     return validRanges.some(range => startDay === range.start && endDay === range.end && endDay <= daysInMonth);
 }
 
+function isFutureDate(startDate: Date, endDate: Date) {
+    const now = new Date();
+    return new Date(startDate) > now || new Date(endDate) > now;
+}
+
 const uploadPriceMapping = async (req: Request, res: Response) => {
     try {
         let fail: any = [];
@@ -2960,16 +2965,30 @@ const uploadPriceMapping = async (req: Request, res: Response) => {
                 }
 
                 const result = isValidDateRange(data.start_date_of_week, data.end_date_of_week);
+                const futureDates = isFutureDate(data.start_date_of_week, data.end_date_of_week);
                 if (!result) {
                     fail.push({
                         success: false,
                         data: { district: data.district ? data.district : '', season: req.body.season ? req.body.season : '', country: data.country ? data.country : '', state: data.state ? data.state : '' },
                         message: "Start date and end date are not within the range (1-7, 8-14, 15-21, 22-28, 29-30/31)"
                     });
-                } else {
+                }
+                
+                if (futureDates) {
+                    fail.push({
+                        success: false,
+                        data: {
+                            district: data.district || '',
+                            season: req.body.season || '',
+                            country: data.country || '',
+                            state: data.state || ''
+                        },
+                        message: "Start date or end date cannot be a future date."
+                    });
+                }
 
+                else {
                     if (country && state && district) {
-
                         const priceData = {
                             brand_id: brand.id,
                             program_id: program.id,
