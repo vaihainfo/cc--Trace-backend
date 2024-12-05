@@ -18487,6 +18487,9 @@ const villageSeedCottonAllocationReport = async (req: Request, res: Response) =>
                      "farmer->village"."village_name" AS "village_name", 
                      "season"."id" AS "season_id", 
                      "season"."name" AS "season_name", 
+                     "gn"."name" as "ginner_name",
+                     "bk"."block_name" as "block_name",
+                     "ds"."district_name" as "district_name",
                      COALESCE(SUM(CAST("farms"."total_estimated_cotton"AS DOUBLE PRECISION)), 0) AS "estimated_seed_cotton", 
                      COALESCE(SUM(CAST("farms"."cotton_transacted" AS DOUBLE PRECISION)), 0) AS "procured_seed_cotton", 
                      (COALESCE(SUM(CAST("farms"."total_estimated_cotton" AS DOUBLE PRECISION)), 0) - COALESCE(SUM(CAST("farms"."cotton_transacted" AS DOUBLE PRECISION)), 0)) AS "avaiable_seed_cotton" 
@@ -18499,9 +18502,16 @@ const villageSeedCottonAllocationReport = async (req: Request, res: Response) =>
                           "farms" as "farms" on farms.farmer_id = "farmer".id and farms.season_id = gv.season_id
                      LEFT JOIN 
                           "seasons" AS "season" ON "gv"."season_id" = "season"."id"
+                     LEFT JOIN 
+                          "ginners" AS gn ON "gn"."id" = "gv"."ginner_id" 
+                     LEFT JOIN 
+                          "blocks" AS bk ON "bk"."id" = "farmer->village"."block_id"
+                     LEFT JOIN 
+                          "districts" AS ds ON "ds"."id" = "bk"."district_id"
+
                      ${whereClause}
                     GROUP BY 
-                          "gv"."village_id", "farmer->village"."id", "season"."id" 
+                          "gv"."village_id", "farmer->village"."id", "season"."id" ,"gn".id,"bk".id,"ds".id
                     ORDER BY "gv"."village_id" DESC 
                     OFFSET ${offset} LIMIT ${limit}
                       `;
@@ -18819,10 +18829,10 @@ const exportVillageSeedCottonAllocation = async (req: Request, res: Response) =>
 
     const whereClause = whereCondition.length > 0 ? `WHERE ${whereCondition.join(' AND ')}` : '';
 
-   // Create the excel workbook file
+    // Create the excel workbook file
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet("Sheet1");
-    worksheet.mergeCells("A1:G1");
+    worksheet.mergeCells("A1:J1");
     const mergedCell = worksheet.getCell("A1");
     mergedCell.value = "CottonConnect | Village Seed Cotton Allocation Report";
     mergedCell.font = { bold: true };
@@ -18831,6 +18841,9 @@ const exportVillageSeedCottonAllocation = async (req: Request, res: Response) =>
     const headerRow = worksheet.addRow([
       "Sr No.",
       "Village Name ",
+      "Ginner Name",
+      "block Name",
+      "District Name",
       "Season ",
       "Total Estimated Seed cotton of village (Kgs)",
       "Total Seed Cotton Procured from village (Kgs)",
@@ -18844,6 +18857,9 @@ const exportVillageSeedCottonAllocation = async (req: Request, res: Response) =>
                      "farmer->village"."village_name" AS "village_name", 
                      "season"."id" AS "season_id", 
                      "season"."name" AS "season_name", 
+                     "gn"."name" as "ginner_name",
+                     "bk"."block_name" as "block_name",
+                     "ds"."district_name" as "district_name",
                      COALESCE(SUM(CAST("farms"."total_estimated_cotton"AS DOUBLE PRECISION)), 0) AS "estimated_seed_cotton", 
                      COALESCE(SUM(CAST("farms"."cotton_transacted" AS DOUBLE PRECISION)), 0) AS "procured_seed_cotton", 
                      (COALESCE(SUM(CAST("farms"."total_estimated_cotton" AS DOUBLE PRECISION)), 0) - COALESCE(SUM(CAST("farms"."cotton_transacted" AS DOUBLE PRECISION)), 0)) AS "avaiable_seed_cotton" 
@@ -18856,9 +18872,15 @@ const exportVillageSeedCottonAllocation = async (req: Request, res: Response) =>
                           "farms" as "farms" on farms.farmer_id = "farmer".id and farms.season_id = gv.season_id
                      LEFT JOIN 
                           "seasons" AS "season" ON "gv"."season_id" = "season"."id"
+                     LEFT JOIN 
+                          "ginners" AS gn ON "gn"."id" = "gv"."ginner_id" 
+                     LEFT JOIN 
+                          "blocks" AS bk ON "bk"."id" = "farmer->village"."block_id"
+                     LEFT JOIN 
+                          "districts" AS ds ON "ds"."id" = "bk"."district_id"
                      ${whereClause}
                     GROUP BY 
-                          "gv"."village_id", "farmer->village"."id", "season"."id" 
+                          "gv"."village_id", "farmer->village"."id", "season"."id" ,"gn".id,"bk".id,"ds".id
                     ORDER BY "gv"."village_id" DESC 
                     OFFSET ${offset} LIMIT ${limit}
                       `;
@@ -18881,6 +18903,15 @@ const exportVillageSeedCottonAllocation = async (req: Request, res: Response) =>
         index: index + 1,
         village_name: item?.village_name
           ? item?.village_name
+          : "",
+          ginner_name: item?.ginner_name
+          ? item?.ginner_name
+          : "",
+          block_name: item?.block_name
+          ? item?.block_name
+          : "",
+          district_name: item?.district_name
+          ? item?.district_name
           : "",
         season_name: item?.season_name
           ? item?.season_name
