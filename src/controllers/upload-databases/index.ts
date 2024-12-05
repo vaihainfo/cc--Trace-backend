@@ -2742,14 +2742,12 @@ function isValidDateRange(startDate: Date, endDate: Date): boolean {
     const startDay = new Date(startDate).getDate();
     const endDay = new Date(endDate).getDate();
 
-    // Get the month and year from the start date
+
     const month = new Date(startDate).getMonth();
     const year = new Date(startDate).getFullYear();
 
-    // Calculate the number of days in the month
-    const daysInMonth = new Date(year, month + 1, 0).getDate(); // Get the last day of the month
+    const daysInMonth = new Date(year, month + 1, 0).getDate(); 
 
-    // Define the allowed ranges
     const validRanges = [
         { start: 1, end: 7 },
         { start: 8, end: 14 },
@@ -2758,15 +2756,28 @@ function isValidDateRange(startDate: Date, endDate: Date): boolean {
         { start: 29, end: 31 },
     ];
 
-    // If it's a month with 30 days, adjust the valid range for 29-31
     if (daysInMonth === 30) {
-        validRanges[4] = { start: 29, end: 30 }; // Adjust for 30 days
+        validRanges[4] = { start: 29, end: 30 }; 
     }
 
-    // If it's February or a month with 31 days, no change is needed for the 29-31 range
-    // Ensure the date falls within a valid range
     return validRanges.some(range => startDay === range.start && endDay === range.end && endDay <= daysInMonth);
 }
+
+function isFutureDate(startDate: Date, endDate: Date) {
+    const now = new Date();
+    return new Date(startDate) > now || new Date(endDate) > now;
+}
+
+const validateDatesBelongToSeason = (startDate: Date, endDate: Date, season:any) => {
+    const seasonStartDate = new Date(season.from);
+    const seasonEndDate = new Date(season.to);
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    if (start < seasonStartDate || end > seasonEndDate) {
+        return false;
+    }
+    return true;
+};
 
 const uploadPriceMapping = async (req: Request, res: Response) => {
     try {
@@ -2960,16 +2971,45 @@ const uploadPriceMapping = async (req: Request, res: Response) => {
                 }
 
                 const result = isValidDateRange(data.start_date_of_week, data.end_date_of_week);
+                const futureDates = isFutureDate(data.start_date_of_week, data.end_date_of_week);
+                const isValidSeasonDates = validateDatesBelongToSeason(data.start_date_of_week, data.end_date_of_week, season);
                 if (!result) {
                     fail.push({
                         success: false,
                         data: { district: data.district ? data.district : '', season: req.body.season ? req.body.season : '', country: data.country ? data.country : '', state: data.state ? data.state : '' },
                         message: "Start date and end date are not within the range (1-7, 8-14, 15-21, 22-28, 29-30/31)"
                     });
-                } else {
+                }
+                
+                if (futureDates) {
+                    fail.push({
+                        success: false,
+                        data: {
+                            district: data.district || '',
+                            season: req.body.season || '',
+                            country: data.country || '',
+                            state: data.state || ''
+                        },
+                        message: "Start date or end date cannot be a future date."
+                    });
+                }
 
+                if (!isValidSeasonDates) {
+                    fail.push({
+                        success: false,
+                        data: { 
+                            district: data.district || '', 
+                            season: req.body.season || '', 
+                            country: data.country || '', 
+                            state: data.state || '' 
+                        },
+                        message: "Start date or end date does not belong to the entered season."
+                    });
+                }
+
+
+                else {
                     if (country && state && district) {
-
                         const priceData = {
                             brand_id: brand.id,
                             program_id: program.id,
