@@ -1657,6 +1657,16 @@ const createGinnerSales = async (req: Request, res: Response) => {
               },
             }
           );
+
+          const ginsaledata = await GinSales.findOne({ where: { id: bale.sales_id } });
+          if(ginsaledata){
+            if (Number(ginsaledata?.qty_stock) - Number(bale.weight) <= 0) {
+              await GinSales.update({ qty_stock: 0}, { where: { id: bale.sales_id } });
+            }else{
+              let update = await GinSales.update({ qty_stock: Number(ginsaledata?.qty_stock) - Number(bale.weight) }, { where: { id: bale.sales_id } });
+            }
+          }
+
         }
 
         let gintogin = {
@@ -1865,36 +1875,163 @@ const fetchGinSalesPagination = async (req: Request, res: Response) => {
 };
 
 const deleteGinSales = async (req: Request, res: Response) => {
+  const transaction = await sequelize.transaction();
   try {
-    const res1 = await GinBale.update(
-      { sold_status: false },
-      {
-        where: {
-          id: {
-            [Op.in]: sequelize.literal(
-              `(SELECT bale_id FROM bale_selections WHERE sales_id = ${req.body.id})`
-            ),
-          },
-        },
-      }
-    );
+    if(!req.body.id){
+      return res.sendError(res, "Id is missing");
+    }
 
+    const sale = await GinSales.findOne({
+      where: {
+        id: req.body.id,
+      },
+    })
+
+    if(sale.dataValues.status === 'Sold' || sale.dataValues.status === 'Partially Accepted' || sale.dataValues.status === 'Partially Rejected'){
+      return res.sendError(res, "Unable to delete this sales since some lint of this sales is already in use");
+    }
+
+    if(sale){
+      if(sale.dataValues.buyer_type === 'Ginner' && sale.dataValues.buyer_ginner){
+        const gintogin = await GinToGinSale.findAll({
+          where: {sales_id: req.body.id}, transaction
+        })
+
+        if(gintogin && gintogin.length > 0){
+          let alreadyGinSalesIds = [];
+          let alreadyGinBalesIds = [];
+          let alreadyGiProcessIds = [];
+          for (let item of gintogin){
+            if(item?.old_gin_sales_id){
+              alreadyGinSalesIds.push(item?.old_gin_sales_id);
+              alreadyGinBalesIds.push(item?.bale_id);
+              alreadyGiProcessIds.push(item?.process_id);
+              let gin = await GinSales.findOne({
+                where:{ id: item?.old_gin_sales_id}, transaction
+              });
+              if(gin){
+                await GinSales.update({qty_stock: Number(gin.dataValues.qty_stock) + Number(item.bale_weight)},{
+                  where:{ id: item?.old_gin_sales_id}, transaction
+                })
+              }
+            }
+          }
+          alreadyGinSalesIds = [...new Set(alreadyGinSalesIds)];
+          alreadyGinBalesIds = [...new Set(alreadyGinBalesIds)];
+          alreadyGiProcessIds = [...new Set(alreadyGiProcessIds)];
+          if(alreadyGinSalesIds && alreadyGinSalesIds.length > 0){
+            await GinToGinSale.update(
+              { gin_sold_status: null },
+              {
+                where: {
+                  sales_id: alreadyGinSalesIds,
+                  bale_id: alreadyGinBalesIds,
+                  process_id: alreadyGiProcessIds,
+                },
+                transaction
+              }
+            );
+          }
+        }
+        await GinToGinSale.destroy({ where: {sales_id: req.body.id }, transaction });
+
+      }else{
+        const bales = await GinBale.findAll(
+            {
+              attributes: ['id','process_id','weight','sold_status','is_gin_to_gin_sale','gin_to_gin_status','gin_to_gin_sold_status','sold_by_sales_id'],
+              where: {
+                id: {
+                  [Op.in]: sequelize.literal(
+                    `(SELECT bale_id FROM bale_selections WHERE sales_id = ${req.body.id})`
+                  ),
+                },
+              },
+              transaction
+            }
+          );
+
+          if(bales && bales.length > 0){
+            let baleIds = [];
+            for await(let bale of bales){
+              if(bale.is_gin_to_gin_sale){
+                let gin = await GinToGinSale.findOne({
+                  where:{bale_id: bale.id, process_id: bale.process_id},
+                  order: [['id','desc']], transaction
+                });
+                await GinToGinSale.update(
+                  { gin_sold_status: null },
+                  {
+                    where: {
+                      sales_id: gin.sales_id,
+                      bale_id: bale.id, 
+                      process_id: bale.process_id
+                    }, 
+                    transaction
+                  }
+                );
+
+                if(!gin.old_gin_sales_id){
+                  await GinBale.update(
+                    { 
+                      is_gin_to_gin_sale:  null, 
+                      gin_to_gin_sold_status: null , 
+                      sold_by_sales_id: null
+                    },
+                    { where: { id: bale.id }, transaction }
+                  ); 
+                }else{
+                  await GinBale.update(
+                    { 
+                      gin_to_gin_sold_status: null , 
+                      sold_by_sales_id: null
+                    },
+                    { where: { id: bale.id }, transaction }
+                  ); 
+                }
+              }else{
+                baleIds.push(bale.id)
+              }
+            }
+            const res1 = await GinBale.update(
+                { 
+                  sold_status: false,
+                  is_gin_to_gin_sale: null,
+                  gin_to_gin_sold_status: null,
+                  sold_by_sales_id: null, 
+                },
+                {
+                  where: {
+                    id: {
+                      [Op.in]: baleIds,
+                    },
+                  }, transaction
+                }
+              );
+          }
+        
+      }    
+    }
     const res2 = await BaleSelection.destroy({
       where: {
         sales_id: req.body.id,
       },
+      transaction
     });
 
     const res3 = await GinSales.destroy({
       where: {
         id: req.body.id,
       },
+      transaction
     });
+    
+    await transaction.commit();
     return res.sendSuccess(res, {
       message: "Successfully deleted this process",
     });
   } catch (error: any) {
     console.error(error);
+    await transaction.rollback();
     return res.sendError(res, error.meessage);
   }
 };
