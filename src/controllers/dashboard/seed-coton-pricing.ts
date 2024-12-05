@@ -1,14 +1,22 @@
 import { Request, Response } from "express";
 import sequelize from "../../util/dbConn";
 
-
 const getPricyByCountry = async (req: Request, res: Response) => {
   try {
-    const { countryId, stateId, districtId, brandId, from, to }: any = req.query;
+    let { from, to }: any = req.query;
+    const { countryId, districtId, brandId, seasonId}: any =
+      req.query;
 
     let whereConditions: string[] = [];
     let replacements: any = {};
-    let brandIdArray = brandId ? brandId.split(",").map((id: any) => parseInt(id, 10)) : [];
+    let brandIdArray = brandId
+      ? brandId.split(",").map((id: any) => parseInt(id, 10))
+      : [];
+
+    if (seasonId) {
+      whereConditions.push('"season_id" = :seasonId');
+      replacements.seasonId = Number(seasonId);
+    }
 
     if (brandId) {
       const idArray = brandId.split(",").map((id: any) => parseInt(id, 10));
@@ -22,75 +30,129 @@ const getPricyByCountry = async (req: Request, res: Response) => {
       replacements.countryId = idArray;
     }
 
-    if (stateId) {
-      const idArray = stateId.split(",").map((id: any) => parseInt(id, 10));
-      whereConditions.push('"state_id" IN (:stateId)');
-      replacements.stateId = idArray;
-    }
-
     if (districtId) {
       const idArray = districtId.split(",").map((id: any) => parseInt(id, 10));
       whereConditions.push('"district_id" IN (:districtId)');
       replacements.districtId = idArray;
     }
 
-    replacements.from = from;
-    replacements.to = to;
 
-    let query = `
-      SELECT * FROM "seed-cotton-pricings"
-      ${whereConditions.length > 0 ? 'WHERE ' + whereConditions.join(' AND ') + ' AND ' : 'WHERE '} 
-      "startDate" >= :from AND "endDate" <= :to
-      ORDER BY "id" DESC;
-    `;
+const fixYearFormat = (dateString:any) => {
+  const year = dateString.slice(0, 2);  
+  const monthAndDay = dateString.slice(2); 
 
-    const rows = await sequelize.query(query, {
+  const fullYear = `20${year}`;  
+
+
+  return `${fullYear}${monthAndDay}`;
+};
+
+
+from = fixYearFormat(from);
+to = fixYearFormat(to);
+
+let fromDate = new Date(Date.parse(from)); 
+let toDate = new Date(Date.parse(to));     
+
+
+if (isNaN(fromDate.getTime()) || isNaN(toDate.getTime())) {
+  console.error('Invalid date:', from, to);
+} else {
+  fromDate.setUTCHours(0, 0, 0, 0); 
+  toDate.setUTCHours(23, 59, 59, 999);    
+
+  replacements.from = fromDate.toISOString();
+  replacements.to = toDate.toISOString();
+}
+
+
+    let allcountryIds: any = new Set();
+
+    let queryNew = `
+            SELECT 
+              "country_id",
+              AVG(CASE WHEN "program_id" = 4 THEN CAST("rate" AS FLOAT) END) AS "organic_average_price",
+              AVG(CASE WHEN "program_id" = 5 THEN CAST("rate" AS FLOAT) END) AS "reel_average_price"
+            FROM "transactions"
+            WHERE "date" >= :from AND "date" <= :to
+            ${whereConditions.length > 0
+        ? "AND " + whereConditions.join(" AND ")
+        : ""
+      }
+           GROUP BY "country_id"
+           ORDER BY "country_id" DESC;
+           `;
+
+    const rows = await sequelize.query(queryNew, {
       replacements,
       type: sequelize.QueryTypes.SELECT,
     });
 
-    const count = rows.length;
+    rows.forEach((row: any) => {
+      allcountryIds.add(row.country_id);
+    })
 
-    if (count === 0) {
-      return res.sendSuccess(res, { country: [], reel: [], organic: [], conventional: [] });
-    }
+    const avgQueryNew = `SELECT "country_id", AVG("market_price") AS "avg_market_price" FROM "seed-cotton-pricings"
+      ${whereConditions.length > 0
+        ? "WHERE " + whereConditions.join(" AND ") + " AND "
+        : "WHERE "
+      } 
+      "startDate" >= :from AND "endDate" <= :to
+      GROUP BY "country_id"
+      ORDER BY "country_id" DESC
+       `;
 
-    const responseData: any = {
+    const rows2 = await sequelize.query(avgQueryNew, {
+      replacements,
+      type: sequelize.QueryTypes.SELECT,
+    });
+
+    rows2.forEach((row: any) => {
+      allcountryIds.add(row.country_id);
+    })
+
+    const responseData: {
+      country: string[],
+      reel: number[],
+      organic: number[],
+      conventional: number[],
+    } = {
       country: [],
       reel: [],
       organic: [],
-      conventional: []
+      conventional: [],
     };
 
-    await Promise.all(rows.map(async (row: any) => {
-      const { startDate, endDate, country_id, market_price } = row;
+    await Promise.all(
+      Array.from(allcountryIds).map(async (country_id: any, index: number) => {
+        const countryName: string = await getCountryNameById(country_id);
 
-      const avgQuery = `
-        SELECT 
-          AVG(CASE WHEN "program_id" = 4 THEN CAST("rate" AS FLOAT) END) AS "organic_average_price",
-          AVG(CASE WHEN "program_id" = 5 THEN CAST("rate" AS FLOAT) END) AS "reel_average_price"
-        FROM "transactions"
-        WHERE "date" >= :startDate AND "date" <= :endDate
-        ${whereConditions.length > 0 ? 'AND ' + whereConditions.join(' AND ') : ''}
-      `;
-
-      const [avgResult] = await sequelize.query(avgQuery, {
-        replacements: { startDate, endDate, brandId: brandIdArray || [], ...replacements },
-        type: sequelize.QueryTypes.SELECT,
-      });
-
-      const countryName = await getCountryNameById(country_id);
-
-      if (countryName) {
         responseData.country.push(countryName);
-        responseData.reel.push(avgResult.reel_average_price || 0);
-        responseData.organic.push(avgResult.organic_average_price || 0);
-        responseData.conventional.push(Number(market_price) || 0);
-      }
-    }));
+
+        const data1Item = rows.find((item: any) => item.country_id === country_id);
+
+        if (data1Item) {
+          responseData.reel.push(data1Item.reel_average_price || 0);
+          responseData.organic.push(data1Item.organic_average_price || 0);
+        } else {
+          responseData.reel.push(0);
+          responseData.organic.push(0);
+        }
+
+        const data2Item = rows2.find((item: any) => item.country_id === country_id);
+
+        if (data2Item) {
+
+          responseData.conventional.push(Number(data2Item.avg_market_price) || 0);
+        } else {
+          responseData.conventional.push(0);
+        }
+      })
+    );
 
     return res.sendSuccess(res, responseData);
-  } catch (error: any) {
+  }
+   catch (error: any) {
     return res.sendError(res, error.message);
   }
 };
@@ -103,42 +165,51 @@ async function getCountryNameById(country_id: number): Promise<string> {
     replacements: { country_id },
     type: sequelize.QueryTypes.SELECT,
   });
-  return country ? country.county_name : '';
+  return country ? country.county_name : "";
 }
 
-const getStatesByCountryAndStateId = async (stateIds: number[], countryIds: number[]) => {
+const getStatesByCountryAndStateId = async (
+  stateId: string
+) => {
   try {
     const query = `
       SELECT id, "state_name"
       FROM "states"
-      WHERE "id" IN (:stateIds) AND "country_id" IN (:countryIds)
+      WHERE "id" = :stateId;
     `;
 
     const result = await sequelize.query(query, {
-      replacements: { stateIds, countryIds },
-      type: sequelize.QueryTypes.SELECT
+      replacements: { stateId },
+      type: sequelize.QueryTypes.SELECT,
     });
 
-
-    const stateMap = new Map();
-    result.forEach((state: any) => {
-      stateMap.set(state.id, state.state_name);
-    });
-
-    return stateMap;
+    return result[0].state_name;
   } catch (error: any) {
-    console.error('Error fetching states:', error);
-    throw new Error('Error fetching states');
+    console.error("Error fetching states:", error);
+    throw new Error("Error fetching states");
   }
 };
 
 const getPricyByStates = async (req: Request, res: Response) => {
   try {
-    const { countryId, stateId, districtId, brandId, from, to }: any = req.query;
+    let { from, to }: any = req.query;
+    const { countryId, stateId, districtId, brandId, seasonId}: any =
+      req.query;
+
+    if (!countryId) {
+      return res.sendError(res, "Please send countryId");
+    }
 
     let whereConditions: string[] = [];
     let replacements: any = {};
-    let brandIdArray = brandId ? brandId.split(",").map((id: any) => parseInt(id, 10)) : [];
+    let brandIdArray = brandId
+      ? brandId.split(",").map((id: any) => parseInt(id, 10))
+      : [];
+
+    if (seasonId) {
+      whereConditions.push('"season_id" = :seasonId');
+      replacements.seasonId = Number(seasonId);
+    }
 
     if (brandId) {
       const idArray = brandId.split(",").map((id: any) => parseInt(id, 10));
@@ -164,73 +235,125 @@ const getPricyByStates = async (req: Request, res: Response) => {
       replacements.districtId = idArray;
     }
 
-    replacements.from = from;
-    replacements.to = to;
+    const fixYearFormat = (dateString:any) => {
+      const year = dateString.slice(0, 2);  
+      const monthAndDay = dateString.slice(2); 
+    
+      const fullYear = `20${year}`;  
+    
+    
+      return `${fullYear}${monthAndDay}`;
+    };
+    
+    
+    from = fixYearFormat(from);
+    to = fixYearFormat(to);
+    
+    let fromDate = new Date(Date.parse(from)); 
+    let toDate = new Date(Date.parse(to));     
+    
+    
+    if (isNaN(fromDate.getTime()) || isNaN(toDate.getTime())) {
+      console.error('Invalid date:', from, to);
+    } else {
+      fromDate.setUTCHours(0, 0, 0, 0); 
+      toDate.setUTCHours(23, 59, 59, 999);    
+    
+      replacements.from = fromDate.toISOString();
+      replacements.to = toDate.toISOString();
+    }
+    
 
-    let query = `
-      SELECT * FROM "seed-cotton-pricings"
-      ${whereConditions.length > 0 ? 'WHERE ' + whereConditions.join(' AND ') + ' AND ' : 'WHERE '} 
-      "startDate" >= :from AND "endDate" <= :to
-      ORDER BY "id" DESC;
-    `;
+    let allStateIds: any = new Set();
 
-    const rows = await sequelize.query(query, {
+    let queryNew = `
+            SELECT 
+              "state_id",
+              AVG(CASE WHEN "program_id" = 4 THEN CAST("rate" AS FLOAT) END) AS "organic_average_price",
+              AVG(CASE WHEN "program_id" = 5 THEN CAST("rate" AS FLOAT) END) AS "reel_average_price"
+            FROM "transactions"
+            WHERE "date" >= :from AND "date" <= :to
+            ${whereConditions.length > 0
+        ? "AND " + whereConditions.join(" AND ")
+        : ""
+      }
+           GROUP BY "state_id"
+           ORDER BY "state_id" DESC;
+           `;
+
+    const rows = await sequelize.query(queryNew, {
       replacements,
       type: sequelize.QueryTypes.SELECT,
     });
 
-    const count = rows.length;
+    rows.forEach((row: any) => {
+      allStateIds.add(row.state_id);
+    })
 
-    if (count === 0) {
-      return res.sendSuccess(res, { state: [], reel: [], organic: [], conventional: [] });
-    }
+    const avgQueryNew = `SELECT "state_id", AVG("market_price") AS "avg_market_price" FROM "seed-cotton-pricings"
+      ${whereConditions.length > 0
+        ? "WHERE " + whereConditions.join(" AND ") + " AND "
+        : "WHERE "
+      } 
+      "startDate" >= :from AND "endDate" <= :to
+      GROUP BY "state_id"
+      ORDER BY "state_id" DESC
+       `;
 
-    const responseData: any = {
+    const rows2 = await sequelize.query(avgQueryNew, {
+      replacements,
+      type: sequelize.QueryTypes.SELECT,
+    });
+
+    rows2.forEach((row: any) => {
+      allStateIds.add(row.state_id);
+    })
+
+    const responseData: {
+      state: string[],
+      reel: number[],
+      organic: number[],
+      conventional: number[],
+    } = {
       state: [],
       reel: [],
       organic: [],
-      conventional: []
+      conventional: [],
     };
 
-    const stateIds = rows.map((row: any) => row.state_id);
-    const countryIds = rows.map((row: any) => row.country_id);
+    await Promise.all(
+      Array.from(allStateIds).map(async (state_id: any, index: number) => {
+        const stateName: string = await getStatesByCountryAndStateId(state_id);
 
-    const stateMap = await getStatesByCountryAndStateId(stateIds, countryIds);
-
-    await Promise.all(rows.map(async (row: any) => {
-      const { startDate, endDate, state_id, market_price } = row;
-
-      const avgQuery = `
-        SELECT 
-          AVG(CASE WHEN "program_id" = 4 THEN CAST("rate" AS FLOAT) END) AS "organic_average_price",
-          AVG(CASE WHEN "program_id" = 5 THEN CAST("rate" AS FLOAT) END) AS "reel_average_price"
-        FROM "transactions"
-        WHERE "date" >= :startDate AND "date" <= :endDate
-        ${whereConditions.length > 0 ? 'AND ' + whereConditions.join(' AND ') : ''}
-      `;
-
-      const [avgResult] = await sequelize.query(avgQuery, {
-        replacements: { startDate, endDate, brandId: brandIdArray || [], ...replacements },
-        type: sequelize.QueryTypes.SELECT,
-      });
-
-      const stateName = stateMap.get(state_id);
-
-      if (stateName) {
         responseData.state.push(stateName);
-        responseData.reel.push(avgResult.reel_average_price || 0);
-        responseData.organic.push(avgResult.organic_average_price || 0);
-        responseData.conventional.push(Number(market_price) || 0);
-      }
-    }));
+
+        const data1Item = rows.find((item: any) => item.state_id === state_id);
+
+        if (data1Item) {
+          responseData.reel.push(data1Item.reel_average_price || 0);
+          responseData.organic.push(data1Item.organic_average_price || 0);
+        } else {
+          responseData.reel.push(0);
+          responseData.organic.push(0);
+        }
+
+        const data2Item = rows2.find((item: any) => item.state_id === state_id);
+
+        if (data2Item) {
+
+          responseData.conventional.push(Number(data2Item.avg_market_price) || 0);
+        } else {
+          responseData.conventional.push(0);
+        }
+      })
+    );
 
     return res.sendSuccess(res, responseData);
-  } catch (error: any) {
+  }
+  catch (error: any) {
+    console.log(error)
     return res.sendError(res, error.message);
   }
 };
 
-export {
-  getPricyByCountry,
-  getPricyByStates
-};
+export { getPricyByCountry, getPricyByStates };

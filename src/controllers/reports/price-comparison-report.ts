@@ -123,10 +123,44 @@ const fetchPriceComparisonSeedCotton = async (req: Request, res: Response) => {
       type: sequelize.QueryTypes.SELECT,
     });
 
-    const count = rows.length;
+    let countQuery;
+    if (monthId) {
+      countQuery = `
+        SELECT COUNT(*) AS "totalCount"
+        FROM "seed-cotton-pricings" AS scp
+        LEFT JOIN "brands" AS b ON scp."brand_id" = b."id"
+        LEFT JOIN "countries" AS c ON scp."country_id" = c."id"
+        LEFT JOIN "districts" AS d ON scp."district_id" = d."id"
+        LEFT JOIN "programs" AS p ON scp."program_id" = p."id"
+        LEFT JOIN "seasons" AS s ON scp."season_id" = s."id"
+        LEFT JOIN "states" AS st ON scp."state_id" = st."id"
+        WHERE EXTRACT(MONTH FROM scp."startDate") = ${monthId}
+        AND EXTRACT(MONTH FROM scp."endDate") = ${monthId}
+        ${whereConditions.length > 0 ? 'AND ' + whereConditions.join(' AND ') : ''};
+      `;
+    } else {
+      countQuery = `
+        SELECT COUNT(*) AS "totalCount"
+        FROM "seed-cotton-pricings" AS scp
+        LEFT JOIN "brands" AS b ON scp."brand_id" = b."id"
+        LEFT JOIN "countries" AS c ON scp."country_id" = c."id"
+        LEFT JOIN "districts" AS d ON scp."district_id" = d."id"
+        LEFT JOIN "programs" AS p ON scp."program_id" = p."id"
+        LEFT JOIN "seasons" AS s ON scp."season_id" = s."id"
+        LEFT JOIN "states" AS st ON scp."state_id" = st."id"
+        ${whereConditions.length > 0 ? 'WHERE ' + whereConditions.join(' AND ') : ''};
+      `;
+    }
+    
+    const totalCountResult = await sequelize.query(countQuery, {
+      replacements,
+      type: sequelize.QueryTypes.SELECT,
+    });
+
+    const count = totalCountResult[0].totalCount;
 
     await Promise.all(rows.map(async (row: any) => {
-      let { startDate, endDate, country_id, district_id, state_id } = row;
+      let { startDate, endDate, country_id, district_id, state_id, brand_id } = row;
 
       startDate = new Date(startDate);
       startDate.setHours(0, 0, 0, 0);
@@ -140,13 +174,13 @@ const fetchPriceComparisonSeedCotton = async (req: Request, res: Response) => {
           AVG(CASE WHEN t."program_id" = 5 THEN CAST(t."rate" AS FLOAT) END) AS "reel_average_price"
         FROM "transactions" AS t
         WHERE t."date" >= :startDate AND t."date" <= :endDate
-        AND t."country_id"= :country_id AND t."state_id"= :state_id AND t."district_id"= :district_id
+        AND t."country_id"= :country_id AND t."state_id"= :state_id AND t."district_id"= :district_id AND "brand_id" = :brand_Id_diff
         ${brandIdArray.length > 0 ? 'AND "brand_id" IN (:brandId)' : ''}
         ${avgQueryConditions.length > 0 ? 'AND ' + avgQueryConditions.join(' AND ') : ''};
       `;
 
       const [avgResult] = await sequelize.query(avgQuery, {
-        replacements: { startDate, endDate, country_id, state_id, district_id, brandId: brandIdArray || [], ...replacements },
+        replacements: { startDate, endDate, country_id, state_id, district_id, brand_Id_diff: brand_id, brandId: brandIdArray || [], ...replacements },
         type: sequelize.QueryTypes.SELECT,
       });
 
@@ -286,7 +320,42 @@ const fetchPriceComparisonLint = async (req: Request, res: Response) => {
     whereConditions = whereConditions.filter(condition => !condition.includes('brand_id'));
     delete replacements.brandId;
     
-    const count = rows.length;
+    let countQuery;
+    if (monthId) {
+      countQuery = `
+        SELECT COUNT(*) AS "totalCount"
+        FROM "lint-pricings" AS lp
+        LEFT JOIN "brands" AS b ON lp."brand_id" = b."id"
+        LEFT JOIN "countries" AS c ON lp."country_id" = c."id"
+        LEFT JOIN "districts" AS d ON lp."district_id" = d."id"
+        LEFT JOIN "programs" AS p ON lp."program_id" = p."id"
+        LEFT JOIN "seasons" AS s ON lp."season_id" = s."id"
+        LEFT JOIN "states" AS st ON lp."state_id" = st."id"
+        WHERE EXTRACT(MONTH FROM lp."startDate") = ${monthId}
+        AND EXTRACT(MONTH FROM lp."endDate") = ${monthId}
+        ${whereConditions.length > 0 ? 'AND ' + whereConditions.join(' AND ') : ''};
+      `;
+    } else {
+      countQuery = `
+        SELECT COUNT(*) AS "totalCount"
+        FROM "lint-pricings" AS lp
+        LEFT JOIN "brands" AS b ON lp."brand_id" = b."id"
+        LEFT JOIN "countries" AS c ON lp."country_id" = c."id"
+        LEFT JOIN "districts" AS d ON lp."district_id" = d."id"
+        LEFT JOIN "programs" AS p ON lp."program_id" = p."id"
+        LEFT JOIN "seasons" AS s ON lp."season_id" = s."id"
+        LEFT JOIN "states" AS st ON lp."state_id" = st."id"
+        ${whereConditions.length > 0 ? 'WHERE ' + whereConditions.join(' AND ') : ''};
+      `;
+    }
+
+    const totalCountResult = await sequelize.query(countQuery, {
+      replacements,
+      type: sequelize.QueryTypes.SELECT,
+    });
+
+    const count = totalCountResult[0].totalCount;
+
     await Promise.all(rows.map(async (row: any) => {
       let { startDate, endDate, country_id, district_id, state_id } = row;
 
@@ -452,7 +521,42 @@ const fetchPriceComparisonYarn = async (req: Request, res: Response) => {
 
     whereConditions = whereConditions.filter(condition => !condition.includes('brand_id'));
     delete replacements.brandId;
-    const count = rows.length;
+    
+    let countQuery;
+    if (monthId) {
+      countQuery = `
+        SELECT COUNT(*) AS "totalCount"
+        FROM "yarn-pricings" AS yp
+        LEFT JOIN "brands" AS b ON yp."brand_id" = b."id"
+        LEFT JOIN "countries" AS c ON yp."country_id" = c."id"
+        LEFT JOIN "districts" AS d ON yp."district_id" = d."id"
+        LEFT JOIN "programs" AS p ON yp."program_id" = p."id"
+        LEFT JOIN "seasons" AS s ON yp."season_id" = s."id"
+        LEFT JOIN "states" AS st ON yp."state_id" = st."id"
+        WHERE EXTRACT(MONTH FROM yp."startDate") = ${monthId}
+        AND EXTRACT(MONTH FROM yp."endDate") = ${monthId}
+        ${whereConditions.length > 0 ? 'AND ' + whereConditions.join(' AND ') : ''};
+      `;
+    } else {
+      countQuery = `
+        SELECT COUNT(*) AS "totalCount"
+        FROM "yarn-pricings" AS yp
+        LEFT JOIN "brands" AS b ON yp."brand_id" = b."id"
+        LEFT JOIN "countries" AS c ON yp."country_id" = c."id"
+        LEFT JOIN "districts" AS d ON yp."district_id" = d."id"
+        LEFT JOIN "programs" AS p ON yp."program_id" = p."id"
+        LEFT JOIN "seasons" AS s ON yp."season_id" = s."id"
+        LEFT JOIN "states" AS st ON yp."state_id" = st."id"
+        ${whereConditions.length > 0 ? 'WHERE ' + whereConditions.join(' AND ') : ''};
+      `;
+    }
+
+    const totalCountResult = await sequelize.query(countQuery, {
+      replacements,
+      type: sequelize.QueryTypes.SELECT,
+    });
+
+    const count = totalCountResult[0].totalCount;
 
     await Promise.all(rows.map(async (row: any) => {
       let { startDate, endDate, country_id, district_id, state_id } = row;
