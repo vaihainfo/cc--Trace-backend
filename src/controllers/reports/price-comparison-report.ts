@@ -160,7 +160,7 @@ const fetchPriceComparisonSeedCotton = async (req: Request, res: Response) => {
     const count = totalCountResult[0].totalCount;
 
     await Promise.all(rows.map(async (row: any) => {
-      let { startDate, endDate, country_id, district_id, state_id } = row;
+      let { startDate, endDate, country_id, district_id, state_id, brand_id } = row;
 
       startDate = new Date(startDate);
       startDate.setHours(0, 0, 0, 0);
@@ -174,13 +174,13 @@ const fetchPriceComparisonSeedCotton = async (req: Request, res: Response) => {
           AVG(CASE WHEN t."program_id" = 5 THEN CAST(t."rate" AS FLOAT) END) AS "reel_average_price"
         FROM "transactions" AS t
         WHERE t."date" >= :startDate AND t."date" <= :endDate
-        AND t."country_id"= :country_id AND t."state_id"= :state_id AND t."district_id"= :district_id
+        AND t."country_id"= :country_id AND t."state_id"= :state_id AND t."district_id"= :district_id AND "brand_id" = :brand_Id_diff
         ${brandIdArray.length > 0 ? 'AND "brand_id" IN (:brandId)' : ''}
         ${avgQueryConditions.length > 0 ? 'AND ' + avgQueryConditions.join(' AND ') : ''};
       `;
 
       const [avgResult] = await sequelize.query(avgQuery, {
-        replacements: { startDate, endDate, country_id, state_id, district_id, brandId: brandIdArray || [], ...replacements },
+        replacements: { startDate, endDate, country_id, state_id, district_id, brand_Id_diff: brand_id, brandId: brandIdArray || [], ...replacements },
         type: sequelize.QueryTypes.SELECT,
       });
 
