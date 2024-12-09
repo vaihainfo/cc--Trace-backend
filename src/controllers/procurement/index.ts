@@ -662,9 +662,16 @@ const deleteTransaction = async (req: Request, res: Response) => {
 
     if (trans.dataValues.farm_id) {
       let farm = await Farm.findOne({ where: { id: trans.dataValues.farm_id } })
-      let s = await Farm.update({
-        cotton_transacted: (Number(farm.cotton_transacted) || 0) - (Number(trans.dataValues.qty_purchased) || 0)
-      }, { where: { id: trans.dataValues.farm_id } });
+      if(farm && Number(farm.dataValues.cotton_transacted) >= Number(trans.dataValues.qty_purchased)){
+        let s = await Farm.update({
+          cotton_transacted: (Number(farm.dataValues.cotton_transacted) || 0) - (Number(trans.dataValues.qty_purchased) || 0)
+        }, { where: { id: trans.dataValues.farm_id } });
+      }
+      else{
+        await Farm.update({
+          cotton_transacted: 0
+        }, { where: { id: trans.dataValues.farm_id } });
+      }
     }
 
     const transaction = await Transaction.destroy({
@@ -1369,7 +1376,8 @@ const exportProcurement = async (req: Request, res: Response) => {
       whereCondition.mapped_ginner = { [Op.in]: idArray };
     }
     if (status) {
-      whereCondition.status = status;
+      const statuses = status.split(',').map((s:any) => s.trim()); 
+      whereCondition.status = statuses.length === 1 ? statuses[0] : { [Op.in]: statuses }; 
     }
     if (startDate && endDate) {
       const startOfDay = new Date(startDate);
