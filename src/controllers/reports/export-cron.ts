@@ -517,6 +517,9 @@ const exportVillageSeedCottonAllocation = async () => {
             "farmer->village"."village_name" AS "village_name", 
             "season"."id" AS "season_id", 
             "season"."name" AS "season_name", 
+            "gn"."name" as "ginner_name",
+            "bk"."block_name" as "block_name",
+            "ds"."district_name" as "district_name",
             COALESCE(SUM(CAST("farms"."total_estimated_cotton"AS DOUBLE PRECISION)), 0) AS "estimated_seed_cotton", 
             COALESCE(SUM(CAST("farms"."cotton_transacted" AS DOUBLE PRECISION)), 0) AS "procured_seed_cotton", 
             (COALESCE(SUM(CAST("farms"."total_estimated_cotton" AS DOUBLE PRECISION)), 0) - COALESCE(SUM(CAST("farms"."cotton_transacted" AS DOUBLE PRECISION)), 0)) AS "avaiable_seed_cotton" 
@@ -529,8 +532,14 @@ const exportVillageSeedCottonAllocation = async () => {
                 "farms" as "farms" on farms.farmer_id = "farmer".id and farms.season_id = gv.season_id
             LEFT JOIN 
                 "seasons" AS "season" ON "gv"."season_id" = "season"."id"
+            LEFT JOIN 
+                "ginners" AS gn ON "gn"."id" = "gv"."ginner_id" 
+            LEFT JOIN 
+                "blocks" AS bk ON "bk"."id" = "farmer->village"."block_id"
+            LEFT JOIN 
+                "districts" AS ds ON "ds"."id" = "bk"."district_id"
             GROUP BY 
-                "gv"."village_id", "farmer->village"."id", "season"."id" 
+                "gv"."village_id", "farmer->village"."id", "season"."id","gn".id,"bk".id,"ds".id
             ORDER BY "gv"."village_id" DESC 
         `,
         {
@@ -548,6 +557,9 @@ const exportVillageSeedCottonAllocation = async () => {
         const rowValues = Object.values({
           index: index + 1,
           village_name: obj.village_name ? obj?.village_name : "",
+          ginner_name: obj.ginner_name ? obj?.ginner_name : "",
+          block_name: obj.block_name ? obj?.block_name : "",
+          district_name: obj.district_name ? obj?.district_name : "",
           season_name: obj.season_name ? obj?.season_name : "",
           estimated_seed_cotton: obj.estimated_seed_cotton ? obj?.estimated_seed_cotton : "",
           procured_seed_cotton: obj.procured_seed_cotton ? obj?.procured_seed_cotton : "",
@@ -560,7 +572,7 @@ const exportVillageSeedCottonAllocation = async () => {
         if (!currentWorksheet) {
           currentWorksheet = workbook.addWorksheet(`Sheet${worksheetIndex}`);
           if (worksheetIndex == 1) {
-            currentWorksheet.mergeCells("A1:G1");
+            currentWorksheet.mergeCells("A1:J1");
             const mergedCell = currentWorksheet.getCell("A1");
             mergedCell.value = "CottonConnect | Village Seed Cotton Allocation Report";
             mergedCell.font = { bold: true };
@@ -570,6 +582,9 @@ const exportVillageSeedCottonAllocation = async () => {
           const headerRow = currentWorksheet.addRow([
             "Sr No.",
             "Village Name ",
+            "Ginner Name ",
+            "Block Name ",
+            "District Name ",
             "Season ",
             "Total Estimated Seed cotton of village (Kgs)",
             "Total Seed Cotton Procured from village (Kgs)",
