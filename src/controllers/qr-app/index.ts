@@ -25,6 +25,7 @@ import Spinner from "../../models/spinner.model";
 import Knitter from "../../models/knitter.model";
 import Weaver from "../../models/weaver.model";
 import Garment from "../../models/garment.model";
+import GinnerAllocatedVillage from "../../models/ginner-allocated-vilage.model";
 import moment from "moment";
 
 const getRegisteredDevices = async (req: Request, res: Response) => {
@@ -1135,7 +1136,130 @@ const fetchAgentList = async (req: Request, res: Response) => {
     }
 }
 
+const fetchCountryByGinner = async (req: Request, res: Response) => {
+    let ginnerId: any = req.query.ginnerId;
 
+    try {
+      if (!ginnerId) {
+        return res.sendError(res, "Need ginner Id");
+      }
+
+      const allocatedCountry = await GinnerAllocatedVillage.findAll({
+        attributes: ['country_id'],
+        where:{
+          ginner_id: ginnerId
+        },
+        include: [
+          { model: Country, as: "country", attributes: ['id','county_name'] },
+        ],
+        group: ['country_id', 'country.id']
+      })
+      return res.sendSuccess(res, allocatedCountry);
+    } catch (error: any) {
+      console.error(error);
+      return res.sendError(res, error.meessage);
+    }
+  };
+
+  const fetchStateByCountry = async (req: Request, res: Response) => {
+    let countryId: any = req.query.countryId;
+
+    try {
+      if (!countryId) {
+        return res.sendError(res, "Need country Id");
+      }
+
+      const allocatedState = await GinnerAllocatedVillage.findAll({
+        attributes: ['state_id'],
+        where:{
+          country_id: countryId
+        },
+        include: [
+          { model: State, as: "state", attributes: ['id','state_name'] },
+        ],
+        group: ['state_id', 'state.id']
+      })
+      return res.sendSuccess(res, allocatedState);
+    } catch (error: any) {
+      console.error(error);
+      return res.sendError(res, error.meessage);
+    }
+  };
+
+  const fetchDistrictByState = async (req: Request, res: Response) => {
+    let stateId: any = req.query.stateId;
+
+    try {
+      if (!stateId) {
+        return res.sendError(res, "Need state Id");
+      }
+
+      const allocatedDistrict = await GinnerAllocatedVillage.findAll({
+        attributes: ['district_id'],
+        where:{
+          state_id: stateId
+        },
+        include: [
+          { model: District, as: "district", attributes: ['id','district_name'] },
+        ],
+        group: ['district_id', 'district.id']
+      })
+      return res.sendSuccess(res, allocatedDistrict);
+    } catch (error: any) {
+      console.error(error);
+      return res.sendError(res, error.meessage);
+    }
+  };
+
+  const fetchBlockByDistrict = async (req: Request, res: Response) => {
+    let districtId: any = req.query.districtId;
+
+    try {
+      if (!districtId) {
+        return res.sendError(res, "Need district Id");
+      }
+
+      const allocatedBlock= await GinnerAllocatedVillage.findAll({
+        attributes: ['block_id'],
+        where:{
+          district_id: districtId
+        },
+        include: [
+          { model: Block, as: "block", attributes: ['id','block_name'] },
+        ],
+        group: ['block_id', 'block.id']
+      })
+      return res.sendSuccess(res, allocatedBlock);
+    } catch (error: any) {
+      console.error(error);
+      return res.sendError(res, error.meessage);
+    }
+  };
+
+  const fetchVillageByBlock = async (req: Request, res: Response) => {
+    let blockId: any = req.query.blockId;
+
+    try {
+      if (!blockId) {
+        return res.sendError(res, "Need block Id");
+      }
+
+      const allocatedVillage = await GinnerAllocatedVillage.findAll({
+        attributes: ['village_id'],
+        where:{
+            block_id: blockId
+        },
+        include: [
+          { model: Village, as: "village", attributes: ['id','village_name'] },
+        ],
+        group: ['village_id', 'village.id']
+      })
+      return res.sendSuccess(res, allocatedVillage);
+    } catch (error: any) {
+      console.error(error);
+      return res.sendError(res, error.meessage);
+    }
+  };
 
 export {
     getRegisteredDevices,
@@ -1152,5 +1276,10 @@ export {
     updateUserApp,
     deleteUserApp,
     findUser,
-    fetchAgentList
+    fetchAgentList,
+    fetchCountryByGinner,
+    fetchStateByCountry,
+    fetchDistrictByState,
+    fetchBlockByDistrict,
+    fetchVillageByBlock
 }
