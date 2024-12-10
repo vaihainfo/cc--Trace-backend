@@ -1032,11 +1032,19 @@ const chooseBale = async (req: Request, res: Response) => {
           JOIN 
               programs p ON gp.program_id = p.id
           WHERE 
+          (
               gtg.new_ginner_id = ${ginnerId}
               AND gp.program_id IN (${programId})
               AND gb.sold_status = true
               AND gtg.gin_accepted_status = true
               AND gtg.gin_sold_status IS NULL
+          ) OR (
+              gtg.old_ginner_id = ${ginnerId}
+              AND gp.program_id IN (${programId})
+              AND gb.sold_status = true
+              AND gtg.gin_accepted_status = false
+              AND gtg.gin_sold_status IS NULL
+           )
       ) combined_data
       GROUP BY 
           combined_data.process_id, combined_data.lot_no, combined_data.date, combined_data.press_no, combined_data.reel_lot_no, combined_data.greyout_status, combined_data.is_gin_to_gin
@@ -1646,28 +1654,6 @@ const createGinnerSales = async (req: Request, res: Response) => {
     for await (const bale of req.body.bales) {
 
       if(req.body.buyerType?.toLowerCase() === 'ginner'){
-        if(bale.sales_id && bale.is_gin_to_gin && bale.process_id){
-          const gin = await GinToGinSale.update(
-            { gin_sold_status: true },
-            {
-              where: {
-                sales_id: bale.sales_id,
-                bale_id: bale.id,
-                process_id: bale.process_id,
-              },
-            }
-          );
-
-          const ginsaledata = await GinSales.findOne({ where: { id: bale.sales_id } });
-          if(ginsaledata){
-            if (Number(ginsaledata?.qty_stock) - Number(bale.weight) <= 0) {
-              await GinSales.update({ qty_stock: 0}, { where: { id: bale.sales_id } });
-            }else{
-              let update = await GinSales.update({ qty_stock: Number(ginsaledata?.qty_stock) - Number(bale.weight) }, { where: { id: bale.sales_id } });
-            }
-          }
-
-        }
 
         let gintogin = {
           sales_id: ginSales.id,
@@ -1680,6 +1666,29 @@ const createGinnerSales = async (req: Request, res: Response) => {
         }
 
         const bales = await GinToGinSale.create(gintogin);
+      }
+
+      if(bale.sales_id && bale.is_gin_to_gin && bale.process_id){
+        const gin = await GinToGinSale.update(
+          { gin_sold_status: true },
+          {
+            where: {
+              sales_id: bale.sales_id,
+              bale_id: bale.id,
+              process_id: bale.process_id,
+            },
+          }
+        );
+
+        const ginsaledata = await GinSales.findOne({ where: { id: bale.sales_id } });
+        if(ginsaledata){
+          if (Number(ginsaledata?.qty_stock) - Number(bale.weight) <= 0) {
+            await GinSales.update({ qty_stock: 0}, { where: { id: bale.sales_id } });
+          }else{
+            let update = await GinSales.update({ qty_stock: Number(ginsaledata?.qty_stock) - Number(bale.weight) }, { where: { id: bale.sales_id } });
+          }
+        }
+
       }
 
       let baleData = {
@@ -3071,6 +3080,7 @@ const updateStatusLintSales = async (req: Request, res: Response) => {
                           { gin_sold_status: null },
                           { where: { bale_id: rejectedBale, sales_id: rejectedSale}, transaction: t }
                         );
+                        await GinBale.update({ is_all_rejected: false }, { where: { id: rejectedBale }, transaction: t });
                       }
                       if(notGintoGinBale && notGintoGinBale.length > 0){
                         await GinBale.update({ sold_status: false, is_all_rejected: false }, { where: { id: notGintoGinBale }, transaction: t });
