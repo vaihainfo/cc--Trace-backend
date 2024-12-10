@@ -501,7 +501,7 @@ const exportAgentTransactions = async (req: Request, res: Response) => {
             // Create the excel workbook file
             const workbook = new ExcelJS.Workbook();
             const worksheet = workbook.addWorksheet("Sheet1");
-            worksheet.mergeCells('A1:U1');
+            worksheet.mergeCells('A1:V1');
             const mergedCell = worksheet.getCell('A1');
             mergedCell.value = 'CottonConnect | QR App Procurement Report';
             mergedCell.font = { bold: true };
@@ -510,7 +510,7 @@ const exportAgentTransactions = async (req: Request, res: Response) => {
             const headerRow = worksheet.addRow([
                 "Sr No.", 'Date', 'Farmer Code', 'Farmer Name', 'Season', 'Country',
                 'State', 'District', 'Block', 'Village', 'Transaction Id', 'Quantity Purchased (Kgs)',
-                'Available Cotton (Kgs)', 'Price/KG(Local Currency)', 'Programme', 'Transport Vehicle No', 'Payment Method', 'Ginner Name', 'Agent', 'Latitude', 'longitude'
+                'Available Cotton (Kgs)', 'Price/KG(Local Currency)', 'Programme', 'Transport Vehicle No', 'Payment Method', 'Ginner Name', 'Agent', 'Latitude', 'longitude', 'Status'
             ]);
             headerRow.font = { bold: true };
             const whereCondition: any = {}
@@ -719,7 +719,8 @@ const exportAgentTransactions = async (req: Request, res: Response) => {
                     ginner: item.ginner ? item.ginner.name : "",
                     agent: item.agent ? item.agent.firstName : "",
                     latitude: item.latitude ? item.latitude : "",
-                    longitude: item.longitude ? item.longitude : ""
+                    longitude: item.longitude ? item.longitude : "",
+                    status: item.status ? item.status : ''
                 });
                 worksheet.addRow(rowValues);
             }
