@@ -1106,6 +1106,14 @@ const deleteGinnerProcess = async (req: Request, res: Response) => {
             },
           }
         );
+        await GinHeap.update(
+          { status: true },
+          {
+            where: {
+              id: heap.dataValues.heap_id,
+            },
+          }
+        );
       }
       await heapSelection.destroy({
         where: {
