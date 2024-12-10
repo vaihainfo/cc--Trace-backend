@@ -567,7 +567,13 @@ const createLSVUser = async (req: Request, res: Response) => {
         let spinners = null;
         let programs = null;
         let userData = null;
-  
+        let te = null;
+        let scm = null;
+        let scd = null;
+        let be = null;
+        let bm = null;
+        let ps = null;
+      
         if (results?.dataValues?.program_id && results?.dataValues?.program_id.length > 0) {
           programs = await Program.findAll({ attributes: ['id', 'program_name'], where: { id: results?.dataValues?.program_id } })
         }
@@ -587,6 +593,13 @@ const createLSVUser = async (req: Request, res: Response) => {
         if (results?.dataValues?.mapped_spinners && results?.dataValues?.mapped_spinners.length > 0) {
           spinners = await Spinner.findAll({ attributes: ['id', 'name'], where: { id: results?.dataValues?.mapped_spinners } })
         }
+
+        te = await TraceabilityExecutive.findOne({ where: { teUser_id: { [Op.overlap]: userIds } } })
+        scm = await SupplyChainManager.findOne({ where: { scmUser_id: { [Op.overlap]: userIds } } })
+        scd = await SupplyChainDirector.findOne({ where: { scdUser_id: { [Op.overlap]: userIds } } })
+        be = await BrandExecutive.findOne({ where: { beUser_id: { [Op.overlap]: userIds } } })
+        bm = await BrandManager.findOne({ where: { bmUser_id: { [Op.overlap]: userIds } } })
+        ps = await PSTeam.findOne({ where: { psUser_id: { [Op.overlap]: userIds } } })
   
         if (userIds && userIds.length > 0) {
           userData = await User.findAll({
@@ -602,8 +615,8 @@ const createLSVUser = async (req: Request, res: Response) => {
             ]
           })
         }
-  
-        data = { ...results?.dataValues, states, programs, brands, ginners, spinners, userData }
+
+        data = { ...results?.dataValues, states, programs, brands, ginners, spinners, te, scm, scd, be, bm, ps, userData }
       }
   
       return res.sendSuccess(res, data, 200);
