@@ -27,6 +27,7 @@ import QualityParameter from "../../models/quality-parameter.model";
 import Brand from "../../models/brand.model";
 import PhysicalTraceabilityDataGinner from "../../models/physical-traceability-data-ginner.model";
 import PhysicalTraceabilityDataGinnerSample from "../../models/physical-traceability-data-ginner-sample.model";
+import GinnerAllocatedVillage from "../../models/ginner-allocated-vilage.model";
 
 //create Ginner Process
 const createGinnerProcess = async (req: Request, res: Response) => {
@@ -970,6 +971,14 @@ const deleteGinnerProcess = async (req: Request, res: Response) => {
             },
           }
         );
+        await GinHeap.update(
+          { status: true },
+          {
+            where: {
+              id: heap.dataValues.heap_id,
+            },
+          }
+        );
       }
       await heapSelection.destroy({
         where: {
@@ -1066,7 +1075,9 @@ const chooseCotton = async (req: Request, res: Response) => {
     }
     let villageId: any = req.query.villageId;
     let seasonId: any = req.query.seasonId;
-    let whereCondition: any = {
+    let whereCondition: any = {};
+
+    let transactionCondition: any = {
       status: "Sold",
       heap_status: {
         [Op.or]: [null, "Pending"],
@@ -1097,6 +1108,22 @@ const chooseCotton = async (req: Request, res: Response) => {
       whereCondition["$season.name$"] = { [Op.gte]: "2024-25" };
     }
 
+    const allocated = await GinnerAllocatedVillage.findAll({
+      where:{
+        ginner_id: ginnerid,
+        program_id: programId,
+        ...whereCondition
+      },
+      include: [
+        { model: Village, as: "village" },
+        { model: Program, as: "program" },
+        { model: Season, as: "season" },
+      ]
+    })
+    const summedData: any = {};
+
+    for await (let row of allocated){
+
     const results = await Transaction.findAll({
       // attributes: [
       // [Sequelize.fn("SUM", Sequelize.col("qty_stock")), "qty_stock"],
@@ -1119,32 +1146,21 @@ const chooseCotton = async (req: Request, res: Response) => {
         { model: Program, as: "program" },
         { model: Season, as: "season" },
       ],
-      where: whereCondition,
+      where: {
+        ...transactionCondition,
+        village_id: row?.dataValues?.village_id,
+        season_id: row?.dataValues?.season_id,
+      },
       // group: ["transactions.village_id, transactions.id"],
       order: [
         ["id", "DESC"],
         [Sequelize.col("accept_date"), "DESC"],
       ],
     });
-    const summedData: any = {};
+
 
     results.forEach((result: any) => {
       const villageId = result.dataValues.village_id;
-      // if (summedData[villageId]) {
-      //   summedData[villageId].qty_stock += result.dataValues.qty_stock;
-      //   summedData[villageId].qty_used += result.dataValues.qty_used;
-      //   summedData[villageId].estimated_qty += result.dataValues.estimated_qty;
-      // } else {
-      //   summedData[villageId] = {
-      //     qty_stock: result.dataValues.qty_stock,
-      //     qty_used: result.dataValues.qty_used,
-      //     estimated_qty: result.dataValues.estimated_qty,
-      //     vlg_id: villageId,
-      //     village: result.village,
-      //     program: result.program,
-      //     season: result.season,
-      //   };
-      // }
       if (summedData[villageId]) {
         summedData[villageId].qty_stock += result.dataValues.qty_stock;
         summedData[villageId].vehicle = [
@@ -1179,6 +1195,7 @@ const chooseCotton = async (req: Request, res: Response) => {
         };
       }
     });
+  }
 
     const finalResult = Object.values(summedData);
     res.sendSuccess(res, finalResult);

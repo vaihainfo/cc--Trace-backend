@@ -382,7 +382,8 @@ const updateFarmer = async (req: Request, res: Response) => {
       let village = await Village.findOne({ where: { id: Number(req.body.villageId) } })
       let name = req.body.lastName ? req.body.firstName  + " " + req.body.lastName : req.body.firstName 
       let uniqueFilename = `qrcode_${name.replace(/\//g, '-')}_${req.body.code.replace(/\//g, '-')}.png`;
-      let aa = await generateQrCode(`${farmer.id}`,
+      const farmerId = req.body.id?.toString()
+      let aa = await generateQrCode(farmerId,
         name, uniqueFilename, req.body.code, village ? village.village_name : '');
       const farmerPLace = await Farmer.update({ qrUrl: uniqueFilename }, {
         where: {
@@ -654,8 +655,9 @@ const exportFarmer = async (req: Request, res: Response) => {
   const maxRowsPerWorksheet = 100000;
   const batchSize = 5000;
   let offset = 0;
-  let currentRow = 0;
   let worksheetIndex = 0;
+  let hasNextBatch = true;
+
   const whereCondition: any = {};
   try {
     if (searchTerm) {
@@ -730,7 +732,7 @@ const exportFarmer = async (req: Request, res: Response) => {
 
     const workbook = new ExcelJS.Workbook();
 
-    while (true) {
+      while (hasNextBatch) {
       const farmers = await Farm.findAll({
         where: whereCondition,
         attributes: [
@@ -823,14 +825,16 @@ const exportFarmer = async (req: Request, res: Response) => {
         limit: batchSize,
       });
 
-      if (farmers.length === 0) break;
+      if (farmers.length === 0) {
+        hasNextBatch = false;
+        break;
+      }
 
-      for (const [index,item] of farmers.entries()) {
-        if (currentRow % maxRowsPerWorksheet === 0) {
-          worksheetIndex++;
-          currentRow = 0;
-        }
+      if (offset % maxRowsPerWorksheet === 0) {
+        worksheetIndex++;
+      }
 
+      for await (const [index,item] of farmers.entries()) {
         let currentWorksheet = workbook.getWorksheet(`Farmer Report ${worksheetIndex}`);
         if (!currentWorksheet) {
           currentWorksheet = workbook.addWorksheet(`Farmer Report ${worksheetIndex}`);
@@ -866,9 +870,8 @@ const exportFarmer = async (req: Request, res: Response) => {
         });
 
         currentWorksheet.addRow(rowValues).commit();
-        currentRow++;
       }
-
+      
       offset += batchSize;
     }
 

@@ -16,7 +16,7 @@ import District from "../../models/district.model";
 import Block from "../../models/block.model";
 import Farmer from "../../models/farmer.model";
 import ICS from "../../models/ics.model";
-import Farm from "../../models/farm.model";
+import Farm from "../../models/farm.model"
 import ProcessorList from "../../models/processor-list.model";
 import Transaction from "../../models/transaction.model";
 import { saveFailedRecord } from "../failed-records";
@@ -31,6 +31,7 @@ import IcsQuantityEstimation from "../../models/ics-quantity-estimation.model";
 import FarmGroupEvaluation from "../../models/farm-group-evaluation.model";
 import OrganicIntegrity from "../../models/organic-integrity.model";
 import { generateQrCode, updateQrCode } from "../../provider/qrcode";
+import GinnerAllocatedVillage from "../../models/ginner-allocated-vilage.model";
 import SeedCottonPricing from "../../models/seed-cotton-pricings.model";
 import LintPricing from "../../models/lint-pricings.model";
 import YarnPricing from "../../models/yarn-pricings.model";
@@ -1330,6 +1331,48 @@ const uploadImpactData = async (req: Request, res: Response) => {
     }
 };
 
+function isValidDateRange(startDate: Date, endDate: Date): boolean {
+    const startDay = new Date(startDate).getDate();
+    const endDay = new Date(endDate).getDate();
+
+
+    const month = new Date(startDate).getMonth();
+    const year = new Date(startDate).getFullYear();
+
+    const daysInMonth = new Date(year, month + 1, 0).getDate(); 
+
+    const validRanges = [
+        { start: 1, end: 7 },
+        { start: 8, end: 14 },
+        { start: 15, end: 21 },
+        { start: 22, end: 28 },
+        { start: 29, end: 31 },
+    ];
+
+    if (daysInMonth === 30) {
+        validRanges[4] = { start: 29, end: 30 }; 
+    }
+
+    return validRanges.some(range => startDay === range.start && endDay === range.end && endDay <= daysInMonth);
+}
+
+function isFutureDate(startDate: Date, endDate: Date) {
+    const now = new Date();
+    return new Date(startDate) > now || new Date(endDate) > now;
+}
+
+const validateDatesBelongToSeason = (startDate: Date, endDate: Date, season:any) => {
+    const seasonStartDate = new Date(season.from);
+    const seasonEndDate = new Date(season.to);
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    if (start < seasonStartDate || end > seasonEndDate) {
+        return false;
+    }
+    return true;
+};
+
+
 const uploadSeedAvailability = async (req: Request, res: Response) => {
     try {
         let fail = [];
@@ -2268,36 +2311,58 @@ const uploadIntegrityTest = async (req: Request, res: Response) => {
                 });
             } else {
                 const brand = await Brand.findOne({ where: { brand_name: data.brand } });
-                const farmer = await Farmer.findOne({ where: { firstName: data.farmer } });
-                const farmGroup = await FarmGroup.findOne({ where: { name: data.farmGroup } });
-                const ics = await ICS.findOne({ where: { ics_name: data.icsName } });
+                const farmer = await Farmer.findOne({ where: { tracenet_id: data.tracenetId,brand_id:brand.id} });
+                const season = await Season.findOne({ where: { name: data.season}});
 
                 if (!brand) {
                     fail.push({
                         success: false,
-                        message: "Brand Id not available"
+                        data: { brand: data.brand ? data.brand : '', farmerName: data.farmer ? data.farmer : '', farmGroupName: data.farmGroup ? data.farmGroup : '', icsName: data.icsName ? data.icsName : '' },
+                        message: "Brand does not exists"
                     });
-                } else if (!farmer) {
+                }
+                if (brand) {
+                    let brandCheck;
+                    brandCheck = await Brand.findOne({
+                        where: {
+                            programs_id: {
+                                [Op.contains]: [4]
+                            },
+                            id: brand.id
+                        }
+                    });
+                    if (!brandCheck) {
+                        fail.push({
+                            success: false,
+                            message: "Brand is not associated with the Organic Programme"
+                        });
+                        return res.sendSuccess(res, { pass, fail });
+                    }
+                }
+
+                if (!season) {
                     fail.push({
                         success: false,
-                        message: "Farmer Id not available"
+                        data: { season: data.season ? data.season : ''},
+                        message: data.season + " season does not exists"
                     });
-                } else if (!farmGroup) {
+                }
+
+                if (!farmer) {
                     fail.push({
                         success: false,
-                        message: "Farm Group Id not available"
+                        data: { brand: data.brand ? data.brand : '', farmerName: data.farmer ? data.farmer : '', farmGroupName: data.farmGroup ? data.farmGroup : '', icsName: data.icsName ? data.icsName : '' },
+                        message: "Farmer with mentioned Tracenet Id "+ data.tracenetId +" does not exists"
                     });
-                } else if (!ics) {
-                    fail.push({
-                        success: false,
-                        message: "ICS Id not available"
-                    });
-                } else {
+                    return res.sendSuccess(res, { pass, fail });
+                }
+
+                else if(farmer || brand || season ) {
                     const obj = {
                         date: data.date,
                         brand_id: brand.id,
-                        farmGroup_id: farmGroup.id,
-                        ics_id: ics.id,
+                        farmGroup_id: farmer.farmGroup_id,
+                        ics_id: farmer.ics_id,
                         ginner_id: 0,
                         test_stage: data.stageOfTesting,
                         farmer: farmer.id,
@@ -2305,8 +2370,10 @@ const uploadIntegrityTest = async (req: Request, res: Response) => {
                         sample_code: data.sampleCodeNo,
                         seed_lot: data.seedLotNo,
                         integrity_score: data.integrityScore.toLowerCase() === "positive" ? true : false,
-                        documents: ""
+                        documents: "",
+                        season_id: season.id
                     };
+
                     const result = await OrganicIntegrity.create(obj);
                     pass.push({
                         success: true,
@@ -2713,46 +2780,300 @@ const uploadOrganicFarmer = async (req: Request, res: Response) => {
     }
 }
 
-function isValidDateRange(startDate: Date, endDate: Date): boolean {
-    const startDay = new Date(startDate).getDate();
-    const endDay = new Date(endDate).getDate();
+const uploadAllocatedGinnerVillage = async (req: Request, res: Response) => {
+    try {
+        let fail: any = [];
+        let pass: any = [];
+        let season;
+        let program;
+        let brand;
+        if (!req.body.program) {
+            fail.push({
+                success: false,
+                message: "Programme cannot be empty"
+            });
+            return res.sendSuccess(res, { pass, fail });
+        } else {
+            program = await Program.findOne({
+                where: {
+                    program_name: req.body.program
+                }
+            });
 
+            if (!program) {
+                fail.push({
+                    success: false,
+                    message: "Programme not found"
+                })
+                return res.sendSuccess(res, { pass, fail });
+            }
+        }
 
-    const month = new Date(startDate).getMonth();
-    const year = new Date(startDate).getFullYear();
+        if (!req.body.brand) {
+            fail.push({
+                success: false,
+                message: "Brand cannot be empty"
+            });
 
-    const daysInMonth = new Date(year, month + 1, 0).getDate(); 
+            return res.sendSuccess(res, { pass, fail });
+        } else {
+            brand = await Brand.findOne({
+                where: {
+                    brand_name: req.body.brand
+                }
+            });
 
-    const validRanges = [
-        { start: 1, end: 7 },
-        { start: 8, end: 14 },
-        { start: 15, end: 21 },
-        { start: 22, end: 28 },
-        { start: 29, end: 31 },
-    ];
+            if (!brand) {
+                fail.push({
+                    success: false,
+                    message: "Brand not found"
+                });
+                return res.sendSuccess(res, { pass, fail });
+            }
 
-    if (daysInMonth === 30) {
-        validRanges[4] = { start: 29, end: 30 }; 
+            else {
+                let brandCheck;
+                if (req.body.brand) {
+                    brandCheck = await Brand.findOne({
+                        where: {
+                            programs_id: {
+                                [Op.contains]: [program.id]
+                            },
+                            id: brand.id
+                        }
+                    });
+                    if (!brandCheck) {
+                        fail.push({
+                            success: false,
+                            message: "Brand is not associated with the entered Programme"
+                        });
+                        return res.sendSuccess(res, { pass, fail });
+                    }
+                }
+            }
+        }
+
+        if (!req.body.season) {
+            fail.push({
+                success: false,
+                message: "Season cannot be empty"
+            });
+
+            return res.sendSuccess(res, { pass, fail });
+        } else {
+            season = await Season.findOne({
+                where: {
+                    name: req.body.season
+                }
+            });
+            if (!season) {
+                fail.push({
+                    success: false,
+                    message: "Season not found"
+                })
+
+                return res.sendSuccess(res, { pass, fail });
+            }
+        }
+
+        for await (const data of req.body.villages) {
+            if (!data.country) {
+                fail.push({
+                    success: false,
+                    data: { village: data.village ? data.village : '', season: req.body.season ? req.body.season : '', ginner: data.ginner ? data.ginner : '' },
+                    message: "Country cannot be empty"
+                });
+            } else if (!data.state) {
+                fail.push({
+                    success: false,
+                    data: { village: data.village ? data.village : '', season: req.body.season ? req.body.season : '', ginner: data.ginner ? data.ginner : '' },
+                    message: "State cannot be empty"
+                })
+            } else if (!data.district) {
+                fail.push({
+                    success: false,
+                    data: { village: data.village ? data.village : '', season: req.body.season ? req.body.season : '', ginner: data.ginner ? data.ginner : '' },
+                    message: "District cannot be empty"
+                })
+            } else if (!data.block) {
+                fail.push({
+                    success: false,
+                    data: { village: data.village ? data.village : '', season: req.body.season ? req.body.season : '', ginner: data.ginner ? data.ginner : '' },
+                    message: "Block cannot be empty"
+                })
+            } else if (!data.village) {
+                fail.push({
+                    success: false,
+                    data: { village: data.village ? data.village : '', season: req.body.season ? req.body.season : '', ginner: data.ginner ? data.ginner : '' },
+                    message: "Village cannot be empty"
+                })
+            } else if (!data.ginner) {
+                fail.push({
+                    success: false,
+                    data: { village: data.village ? data.village : '', season: req.body.season ? req.body.season : '', ginner: data.ginner ? data.ginner : '' },
+                    message: "Ginner cannot be empty"
+                })
+            } else {
+                let country;
+                let state;
+                let district;
+                let block;
+                let village;
+                let ginner;
+                if (data.country) {
+                    country = await Country.findOne({
+                        where: {
+                            county_name: data.country
+                        }
+                    });
+                    if (!country) {
+                        fail.push({
+                            success: false,
+                            data: { village: data.village ? data.village : '', season: req.body.season ? req.body.season : '', ginner: data.ginner ? data.ginner : '' },
+                            message: "Country not found"
+                        });
+                    } else {
+                        if (data.state) {
+                            state = await State.findOne({
+                                where: {
+                                    country_id: country.id,
+                                    state_name: data.state
+                                }
+                            });
+                            if (!state) {
+                                fail.push({
+                                    success: false,
+                                    data: { village: data.village ? data.village : '', season: req.body.season ? req.body.season : '', ginner: data.ginner ? data.ginner : '' },
+                                    message: "State is not associated with the entered Country"
+                                });
+                            } else {
+                                if (data.district) {
+                                    district = await District.findOne({
+                                        where: {
+                                            state_id: state.id,
+                                            district_name: data.district
+                                        }
+                                    });
+
+                                    if (!district) {
+                                        fail.push({
+                                            success: false,
+                                            data: { village: data.village ? data.village : '', season: req.body.season ? req.body.season : '', ginner: data.ginner ? data.ginner : '' },
+                                            message: "District is not associated with entered State"
+                                        });
+                                    } else {
+
+                                        if (data.block) {
+                                            block = await Block.findOne({
+                                                where: {
+                                                    district_id: district.id,
+                                                    block_name: data.block
+                                                }
+                                            });
+
+                                            if (!block) {
+                                                fail.push({
+                                                    success: false,
+                                                    data: { village: data.village ? data.village : '', season: req.body.season ? req.body.season : '', ginner: data.ginner ? data.ginner : '' },
+                                                    message: "Block is not associated with entered District"
+                                                });
+                                            } else {
+                                                if (data.village) {
+                                                    village = await Village.findOne({
+                                                        where: {
+                                                            block_id: block.id,
+                                                            village_name: {
+                                                                [Op.iLike]:
+                                                                    data.village
+                                                            }
+                                                        }
+                                                    });
+
+                                                    if (!village) {
+                                                        fail.push({
+                                                            success: false,
+                                                            data: { village: data.village ? data.village : '', season: req.body.season ? req.body.season : '', ginner: data.ginner ? data.ginner : '' },
+                                                            message: "Village is not associated with entered Taluk/Block"
+                                                        })
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (data.ginner) {
+                    ginner = await Ginner.findOne({
+                        where: {
+                            name: {
+                                [Op.iLike]: data.ginner
+                            },
+                            brand: { [Op.contains]: [Number(brand.id)] }
+                        }
+                    });
+
+                    if (!ginner) {
+                        fail.push({
+                            success: false,
+                            data: { village: data.village ? data.village : '', season: req.body.season ? req.body.season : '', ginner: data.ginner ? data.ginner : '' },
+                            message: "Ginner is not associated with entered Brand"
+                        });
+                    }
+                }
+
+                if (country && state && district && block && village && ginner) {
+                    let villageExist = await GinnerAllocatedVillage.findOne({ where: { village_id: village.id, season_id: season.id } });
+
+                    if (villageExist) {
+                        let ginnerExist = await GinnerAllocatedVillage.findOne({ where: { village_id: village.id, season_id: season.id, ginner_id: ginner.id } });
+                        if (ginnerExist) {
+                            fail.push({
+                                success: false,
+                                data: { village: data.village ? data.village : '', season: req.body.season ? req.body.season : '', ginner: data.ginner ? data.ginner : '' },
+                                message: "Village is already mapped with entered Ginner for this Season"
+                            });
+                        } else {
+                            fail.push({
+                                success: false,
+                                data: { village: data.village ? data.village : '', season: req.body.season ? req.body.season : '', ginner: data.ginner ? data.ginner : '' },
+                                message: "Village is already mapped with another Ginner for this Season"
+                            });
+                        }
+
+                    } else {
+                        const villageData = {
+                            brand_id: brand.id,
+                            program_id: program.id,
+                            season_id: season.id,
+                            country_id: country.id,
+                            state_id: state.id,
+                            district_id: district.id,
+                            block_id: block.id,
+                            village_id: village.id,
+                            ginner_id: ginner.id,
+                        };
+                        const villageCreated = await GinnerAllocatedVillage.create(villageData);
+
+                        pass.push({
+                            success: true,
+                            data: villageCreated,
+                            message: "Village mapped with entered ginner succesfully"
+                        });
+                    }
+                }
+            }
+        }
+
+        res.sendSuccess(res, { pass, fail });
+    } catch (error: any) {
+        console.error(error);
+        return res.sendError(res, error.message);
     }
-
-    return validRanges.some(range => startDay === range.start && endDay === range.end && endDay <= daysInMonth);
 }
-
-function isFutureDate(startDate: Date, endDate: Date) {
-    const now = new Date();
-    return new Date(startDate) > now || new Date(endDate) > now;
-}
-
-const validateDatesBelongToSeason = (startDate: Date, endDate: Date, season:any) => {
-    const seasonStartDate = new Date(season.from);
-    const seasonEndDate = new Date(season.to);
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    if (start < seasonStartDate || end > seasonEndDate) {
-        return false;
-    }
-    return true;
-};
 
 const uploadPriceMapping = async (req: Request, res: Response) => {
     try {
@@ -3070,5 +3391,6 @@ export {
     uploadFarmGroupEvaluationData,
     uploadIntegrityTest,
     uploadOrganicFarmer,
+    uploadAllocatedGinnerVillage,
     uploadPriceMapping
 }

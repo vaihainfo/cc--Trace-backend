@@ -16,7 +16,8 @@ import {
     uploadFarmGroupEvaluationData,
     uploadIntegrityTest,
     uploadOrganicFarmer,
-    uploadPriceMapping
+    uploadPriceMapping,
+    uploadAllocatedGinnerVillage
 } from "../../controllers/upload-databases";
 import accessControl from "../../middleware/access-control";
 import { Router } from "express";
@@ -43,5 +44,6 @@ router.post('/farm-group-evaluation-data', uploadFarmGroupEvaluationData);
 router.post('/integrity-test', uploadIntegrityTest);
 router.post('/organic-farmer', uploadOrganicFarmer);
 router.post('/upload-pricing', uploadPriceMapping);
+router.post('/allocated-village-ginner', uploadAllocatedGinnerVillage);
 
 export default router;
