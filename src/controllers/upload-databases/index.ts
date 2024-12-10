@@ -16,7 +16,7 @@ import District from "../../models/district.model";
 import Block from "../../models/block.model";
 import Farmer from "../../models/farmer.model";
 import ICS from "../../models/ics.model";
-import Farm from "../../models/farm.model";
+import Farm from "../../models/farm.model"
 import ProcessorList from "../../models/processor-list.model";
 import Transaction from "../../models/transaction.model";
 import { saveFailedRecord } from "../failed-records";
