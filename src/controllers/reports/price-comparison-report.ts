@@ -1,5 +1,7 @@
 import { Request, Response } from "express";
 import sequelize from "../../util/dbConn";
+import Season from "../../models/season.model";
+
 
 const fetchPriceComparisonSeedCotton = async (req: Request, res: Response) => {
   try {
@@ -38,6 +40,14 @@ const fetchPriceComparisonSeedCotton = async (req: Request, res: Response) => {
 
     if (seasonId) {
       addCondition("season_id", seasonId, "scp");
+    } else {
+      const latestSeason = await Season.findOne({
+        order: [['id', 'DESC']],
+        attributes: ['id']
+          }); 
+      if (latestSeason) {
+          addCondition("season_id", latestSeason.id.toString(), "scp");
+      }
     }
 
     if (countryId) {
@@ -59,7 +69,7 @@ const fetchPriceComparisonSeedCotton = async (req: Request, res: Response) => {
     let fromDate;
     let toDate;
     if (from && to) {
-      fromDate = new Date(`2024-${monthId}-${from}`);
+      fromDate = new Date(`${new Date().getFullYear()}-${monthId}-${from}`);
       fromDate.setHours(0, 0, 0, 0);
       replacements.from = fromDate;
       toDate = new Date(`2024-${monthId}-${to}`);
