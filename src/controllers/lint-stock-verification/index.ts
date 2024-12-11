@@ -770,6 +770,7 @@ const editGinVerifiedStockConfirm = async (
       uploaded_photos_ginner: req.body.uploadedPhotos,
       status: req.body.status === "Accepted" ? "Accepted" : "Rejected",
       status_scm: "Pending",
+      reason_ginner: req.body.reason
     };
 
     const lintVerified = await LintStockVerified.update(data, {
@@ -823,6 +824,7 @@ const updateSCMVerifiedStockConfirm = async (
       uploaded_photos_scm: req.body.uploadedPhotos,
       status_scm: req.body.status === "Accepted" ? "Accepted" : "Rejected",
       status_scd: "Pending",
+      reason_scm: req.body.reason
     };
 
     const lintVerified = await LintStockVerified.update(data, {
@@ -873,7 +875,8 @@ const updateSCDVerifiedStockConfirm = async (
       confirmed_scd_no_of_bales: req.body.confirmedNoOfBales,
       consent_form_scd: req.body.consentForm,
       uploaded_photos_scd: req.body.uploadedPhotos,
-      status_scd: req.body.status === "Accepted" ? "Accepted" : "Rejected"
+      status_scd: req.body.status === "Accepted" ? "Accepted" : "Rejected",
+      reason_scd: req.body.reason
     };
 
     const lintVerified = await LintStockVerified.update(data, {
@@ -1930,6 +1933,7 @@ const updateSpinVerifiedStockConfirm = async (
       uploaded_photos_spinner: req.body.uploadedPhotos,
       status: req.body.status === "Accepted" ? "Accepted" : "Rejected",
       status_bm: "Pending",
+      reason_spinner: req.body.reason
     };
 
     const lintVerified = await LintStockVerified.update(data, {
@@ -1983,6 +1987,7 @@ const updateBMVerifiedStockConfirm = async (
       uploaded_photos_bm: req.body.uploadedPhotos,
       status_bm: req.body.status === "Accepted" ? "Accepted" : "Rejected",
       status_ps: "Pending",
+      reason_bm: req.body.reason
     };
 
     const lintVerified = await LintStockVerified.update(data, {
@@ -2034,6 +2039,7 @@ const updatePSVerifiedStockConfirm = async (
       consent_form_ps: req.body.consentForm,
       uploaded_photos_ps: req.body.uploadedPhotos,
       status_ps: req.body.status === "Accepted" ? "Accepted" : "Rejected",
+      reason_ps: req.body.reason
     };
 
     const lintVerified = await LintStockVerified.update(data, {
