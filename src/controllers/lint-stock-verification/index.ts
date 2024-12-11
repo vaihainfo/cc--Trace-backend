@@ -24,10 +24,20 @@ const getGinProcessLotNo = async (req: Request, res: Response) => {
       return res.sendError(res, "No Ginner Id Found");
     }
 
-    const lotNo = await GinProcess.findAll({
-      attributes: ["id", "lot_no", "reel_lot_no"],
-      where: { ginner_id: ginnerId, te_verified_status: { [Op.not]: true }, },
-    });
+    // const lotNo = await GinProcess.findAll({
+    //   attributes: ["id", "lot_no", "reel_lot_no"],
+    //   where: { ginner_id: ginnerId, te_verified_status: { [Op.not]: true }, },
+    // });
+
+    const [lotNo] = await sequelize.query(`
+      SELECT gp.id, gp.lot_no,gp.reel_lot_no
+        FROM gin_processes gp
+        JOIN "gin-bales" gb ON gb.process_id = gp.id
+        WHERE gp.ginner_id = ${ginnerId}
+          AND gp.te_verified_status IS NOT TRUE
+          AND gp.greyout_status IS FALSE
+          AND gb.sold_status IS FALSE
+        GROUP BY gp.id`)
 
     if (lotNo && lotNo.length > 0) {
       return res.sendSuccess(res, lotNo);
@@ -50,7 +60,14 @@ const getGinSaleLotNo = async (req: Request, res: Response) => {
 
     const lotNo = await GinSales.findAll({
       attributes: ["id", "lot_no", "reel_lot_no","invoice_no", "press_no"],
-      where: { buyer: spinnerId, te_verified_status: { [Op.not]: true }, be_verified_status: { [Op.not]: true }, status: { [Op.in]: ['Sold', 'Partially Accepted', 'Partially Rejected'] } },
+      where: { 
+        buyer: spinnerId, 
+        te_verified_status: { [Op.not]: true }, 
+        be_verified_status: { [Op.not]: true }, 
+        status: { [Op.in]: ['Sold', 'Partially Accepted', 'Partially Rejected'] },
+        greyout_status: false,
+        qty_stock: { [Op.gt]: 0 }
+      }
     });
 
     if (lotNo && lotNo.length > 0) {
@@ -753,6 +770,7 @@ const editGinVerifiedStockConfirm = async (
       uploaded_photos_ginner: req.body.uploadedPhotos,
       status: req.body.status === "Accepted" ? "Accepted" : "Rejected",
       status_scm: "Pending",
+      reason_ginner: req.body.reason
     };
 
     const lintVerified = await LintStockVerified.update(data, {
@@ -806,6 +824,7 @@ const updateSCMVerifiedStockConfirm = async (
       uploaded_photos_scm: req.body.uploadedPhotos,
       status_scm: req.body.status === "Accepted" ? "Accepted" : "Rejected",
       status_scd: "Pending",
+      reason_scm: req.body.reason
     };
 
     const lintVerified = await LintStockVerified.update(data, {
@@ -856,7 +875,8 @@ const updateSCDVerifiedStockConfirm = async (
       confirmed_scd_no_of_bales: req.body.confirmedNoOfBales,
       consent_form_scd: req.body.consentForm,
       uploaded_photos_scd: req.body.uploadedPhotos,
-      status_scd: req.body.status === "Accepted" ? "Accepted" : "Rejected"
+      status_scd: req.body.status === "Accepted" ? "Accepted" : "Rejected",
+      reason_scd: req.body.reason
     };
 
     const lintVerified = await LintStockVerified.update(data, {
@@ -996,7 +1016,8 @@ const getSCMVerifiedStocks = async (req: Request, res: Response) => {
       whereCondition.status_scm = 'Accepted'
     }
     
-    whereCondition.status = 'Accepted'
+    // whereCondition.status = 'Accepted'
+    whereCondition.status = { [Op.in]: ['Accepted', 'Rejected'] };
     whereCondition.processor_type = 'Ginner';
 
     let include = [
@@ -1166,8 +1187,10 @@ const getSCDVerifiedStocks = async (req: Request, res: Response) => {
       whereCondition.status_scd = 'Accepted'
     }
 
-    whereCondition.status_scm = 'Accepted'
-    whereCondition.status = 'Accepted'
+    // whereCondition.status_scm = 'Accepted'
+    whereCondition.status_scm = { [Op.in]: ['Accepted', 'Rejected'] };
+    // whereCondition.status = 'Accepted'
+    whereCondition.status = { [Op.in]: ['Accepted', 'Rejected'] };
     whereCondition.processor_type = 'Ginner';
 
     let include = [
@@ -1910,6 +1933,7 @@ const updateSpinVerifiedStockConfirm = async (
       uploaded_photos_spinner: req.body.uploadedPhotos,
       status: req.body.status === "Accepted" ? "Accepted" : "Rejected",
       status_bm: "Pending",
+      reason_spinner: req.body.reason
     };
 
     const lintVerified = await LintStockVerified.update(data, {
@@ -1963,6 +1987,7 @@ const updateBMVerifiedStockConfirm = async (
       uploaded_photos_bm: req.body.uploadedPhotos,
       status_bm: req.body.status === "Accepted" ? "Accepted" : "Rejected",
       status_ps: "Pending",
+      reason_bm: req.body.reason
     };
 
     const lintVerified = await LintStockVerified.update(data, {
@@ -2014,6 +2039,7 @@ const updatePSVerifiedStockConfirm = async (
       consent_form_ps: req.body.consentForm,
       uploaded_photos_ps: req.body.uploadedPhotos,
       status_ps: req.body.status === "Accepted" ? "Accepted" : "Rejected",
+      reason_ps: req.body.reason
     };
 
     const lintVerified = await LintStockVerified.update(data, {

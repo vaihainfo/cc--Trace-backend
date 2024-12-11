@@ -24,6 +24,14 @@ const BaleSelection = db.define('bale_selections', {
     type: DataTypes.BOOLEAN,
     defaultValue: null
   },
+  ginner_status: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: null
+  },
+  gin_to_gin_sale: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: null
+  },
 });
 
 BaleSelection.belongsTo(GinSales, {

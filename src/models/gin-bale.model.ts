@@ -2,6 +2,7 @@ import { DataTypes } from 'sequelize';
 import db from '../util/dbConn';
 
 import GinProcess from './gin-process.model';
+import GinSales from './gin-sales.model';
 
 const GinBale = db.define('gin-bales', {
   id: {
@@ -111,12 +112,30 @@ const GinBale = db.define('gin-bales', {
   spin_level_verify: {
     type: DataTypes.BOOLEAN,
   },
+  is_gin_to_gin_sale: {
+    type: DataTypes.BOOLEAN,
+  },
+  gin_to_gin_status: {
+    type: DataTypes.BOOLEAN,
+  },
+  gin_to_gin_sold_status: {
+    type: DataTypes.BOOLEAN,
+  },
+  sold_by_sales_id: {
+    type: DataTypes.INTEGER,
+  },
 });
 
 GinBale.belongsTo(GinProcess, {
   foreignKey: "process_id",
   as: "ginprocess",
 });
+
+GinBale.belongsTo(GinSales, {
+  foreignKey: "sold_by_sales_id",
+  as: "ginsales",
+});
+
 
 GinBale.sync();
 
