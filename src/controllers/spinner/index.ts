@@ -33,6 +33,7 @@ import PhysicalTraceabilityDataSpinnerSample from "../../models/physical-traceab
 import BaleSelection from "../../models/bale-selection.model";
 import GinBale from "../../models/gin-bale.model";
 import { _getGinnerProcessTracingChartData } from "../ginner";
+import GinToGinSale from "../../models/gin-to-gin-sale.model";
 
 //create Spinner Process
 const createSpinnerProcess = async (req: Request, res: Response) => {
@@ -1706,7 +1707,27 @@ const updateStatusSales = async (req: Request, res: Response) => {
                         }
                     } else {
                         rejectedBalesId = balesToUpdate;
-                        await GinBale.update({ sold_status: false, is_all_rejected: false }, { where: { id: rejectedBalesId }, transaction: t });
+                        let notGintoGinBalesId = obj.bales.filter((bale: any) => !bale.is_gin_to_gin_sale)?.map((bale: any) => bale.id);
+                        let GintoGinBalesId = obj.bales.filter((bale: any) => bale.is_gin_to_gin_sale)?.map((bale: any) => bale.id);
+                        if(GintoGinBalesId && GintoGinBalesId.length > 0){
+                            for await(let id of GintoGinBalesId){
+                                let oldSale = await GinToGinSale.findOne({
+                                    where: {bale_id: id},
+                                    order:[['sales_id','desc']],
+                                    transaction: t 
+                                });
+                                if(oldSale){
+                                    await GinToGinSale.update(
+                                      { gin_sold_status: null },
+                                      { where: { bale_id: id, sales_id: oldSale?.dataValues?.sales_id}, transaction: t }
+                                    );
+                                    await GinBale.update({ is_all_rejected: false }, { where: { id }, transaction: t });
+                                }
+
+                            }
+                        }else if(notGintoGinBalesId && notGintoGinBalesId.length > 0){
+                            await GinBale.update({ sold_status: false, is_all_rejected: false }, { where: { id: notGintoGinBalesId }, transaction: t });
+                        }
                     }
                 }
 
