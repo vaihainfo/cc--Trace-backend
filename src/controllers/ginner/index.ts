@@ -950,8 +950,7 @@ const chooseBale = async (req: Request, res: Response) => {
                   'date', combined_data.date,
                   'press_no', combined_data.press_no,
                   'reel_lot_no', combined_data.reel_lot_no,
-                  'greyout_status', combined_data.greyout_status,
-                  'is_gin_to_gin', combined_data.is_gin_to_gin
+                  'greyout_status', combined_data.greyout_status
               ),
               'weight', SUM(CAST(combined_data.weight AS DOUBLE PRECISION)),
               'bales', jsonb_agg(jsonb_build_object(
@@ -1047,7 +1046,7 @@ const chooseBale = async (req: Request, res: Response) => {
            )
       ) combined_data
       GROUP BY 
-          combined_data.process_id, combined_data.lot_no, combined_data.date, combined_data.press_no, combined_data.reel_lot_no, combined_data.greyout_status, combined_data.is_gin_to_gin
+          combined_data.process_id, combined_data.lot_no, combined_data.date, combined_data.press_no, combined_data.reel_lot_no, combined_data.greyout_status
       ORDER BY 
           combined_data.process_id DESC;
     `
@@ -3080,19 +3079,7 @@ const updateStatusLintSales = async (req: Request, res: Response) => {
                       await GinBale.update({ gin_to_gin_status: true }, { where: { id: balesToUpdate }, transaction: t });
                   } else {
                       rejectedBalesId = balesToUpdate;
-                      let rejectedBale = obj.bales.filter((bale: any) => bale.is_gin_to_gin_sale && bale.gin_to_gin_sold_status && bale.old_gin_sales_id)?.map((bale: any) => bale.id);
-                      let rejectedSale = obj.bales.filter((bale: any) => bale.is_gin_to_gin_sale && bale.gin_to_gin_sold_status && bale.old_gin_sales_id)?.map((bale: any) => bale.old_gin_sales_id);
-                      let notGintoGinBale = obj.bales.filter((bale: any) => !bale.is_gin_to_gin_sale)?.map((bale: any) => bale.id);
-                      if(rejectedBale && rejectedBale.length > 0 && rejectedSale && rejectedSale.length > 0){
-                        await GinToGinSale.update(
-                          { gin_sold_status: null },
-                          { where: { bale_id: rejectedBale, sales_id: rejectedSale}, transaction: t }
-                        );
-                        await GinBale.update({ is_all_rejected: false }, { where: { id: rejectedBale }, transaction: t });
-                      }
-                      if(notGintoGinBale && notGintoGinBale.length > 0){
-                        await GinBale.update({ sold_status: false, is_all_rejected: false }, { where: { id: notGintoGinBale }, transaction: t });
-                      }
+                      await GinBale.update({ is_all_rejected: false }, { where: { id: rejectedBalesId }, transaction: t });
                   }
               }
 
