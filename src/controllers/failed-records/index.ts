@@ -18,6 +18,7 @@ const saveFailedRecord = async (data: any) => {
             reason: data.reason ? data.reason : null,
             body: body
         };
+
         const failedRecords = await FailedRecords.create(ndata);
         return failedRecords;
     } catch (error) {

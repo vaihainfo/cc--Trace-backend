@@ -86,6 +86,10 @@ import dashboardKnitterRouter from './router/dashboard/knitter';
 import dashboardFabricRouter from './router/dashboard/fabric';
 import dashboardGarmentRouter from './router/dashboard/garment';
 import dashboardWeaverRouter from './router/dashboard/weaver';
+import dashboardSeedCottonPricingRouter from './router/dashboard/seed-cotton-pricing';
+import dashboardLintPricingRouter from './router/dashboard/lint-pricing';
+import dashboardYarnPricingRouter from './router/dashboard/yarn-pricing';
+
 import labMasterRouter from './router/master/lab-master';
 import seedCompanyRouter from './router/master/seed-company';
 import cropCurrentSeasonRouter from './router/master/crop-current-season';
@@ -290,6 +294,10 @@ app.use("/dashboard/knitter", dashboardKnitterRouter)
 app.use("/dashboard/fabric", dashboardFabricRouter)
 app.use("/dashboard/garment", dashboardGarmentRouter)
 app.use("/dashboard/weaver", dashboardWeaverRouter)
+app.use("/dashboard/seed-cotton-pricing", dashboardSeedCottonPricingRouter)
+app.use("/dashboard/lint-pricing", dashboardLintPricingRouter)
+app.use("/dashboard/yarn-pricing", dashboardYarnPricingRouter)
+
 app.use("/lab-master", labMasterRouter);
 app.use("/seed-company", seedCompanyRouter);
 app.use("/crop-current-season", cropCurrentSeasonRouter);
