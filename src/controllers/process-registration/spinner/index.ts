@@ -247,12 +247,15 @@ const fetchSpinner = async (req: Request, res: Response) => {
                 where: { id: result.brand },
             });
             if (result.yarn_count_range) {
-                const idArray: number[] = result.yarn_count_range
+                const idArray: number[] =  result?.yarn_count_range != 'NULL' && result.yarn_count_range
                     .split(",")
                     .map((id: any) => parseInt(id, 10));
-                yarnCount = await YarnCount.findAll({
-                    where: { id: { [Op.in]: idArray } },
+
+           if(idArray){
+               yarnCount = await YarnCount.findAll({
+                   where: { id: { [Op.in]: idArray } },
                 });
+            }
             }
         }
         return res.sendSuccess(res, result ? { ...result.dataValues, userData, programs, unitCerts, brands, yarnCount } : null);
