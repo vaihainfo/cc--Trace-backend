@@ -546,6 +546,7 @@ const getLintVerifiedStock = async (req: Request, res: Response) => {
             "gin_level_verify"
           ],
           where: { process_id: stock?.dataValues?.process_id },
+          order: [['id','asc']]
         });
         if (bales && bales.length > 0) {
           stock = {
