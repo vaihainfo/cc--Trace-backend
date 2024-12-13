@@ -1751,8 +1751,26 @@ const generatePscpProcurementLiveTracker = async () => {
             ),
           expected_cotton_data AS (
             SELECT
+              gv.ginner_id,
+              COALESCE(SUM(CAST("farms"."total_estimated_cotton"AS DOUBLE PRECISION)), 0) AS expected_seed_cotton
+              FROM "ginner_allocated_villages" as gv
+                      LEFT JOIN 
+                            "villages" AS "farmer->village" ON "gv"."village_id" = "farmer->village"."id" 
+                      LEFT JOIN 
+                            "farmers" AS "farmer" ON "farmer->village"."id" = "farmer"."village_id" 
+                      LEFT JOIN 
+                            "farms" as "farms" on farms.farmer_id = "farmer".id and farms.season_id = gv.season_id
+                      LEFT JOIN 
+                            "seasons" AS "season" ON "gv"."season_id" = "season"."id"
+            LEFT JOIN filtered_ginners ON gv.ginner_id = filtered_ginners.id
+            WHERE
+              "farmer".program_id = ANY (filtered_ginners.program_id)
+            GROUP BY
+              gv.ginner_id
+          ),
+          expected_lint_cotton_data AS (
+            SELECT
               gec.ginner_id,
-              SUM(CAST(gec.expected_seed_cotton AS DOUBLE PRECISION)) AS expected_seed_cotton,
               SUM(CAST(gec.expected_lint AS DOUBLE PRECISION)) AS expected_lint
             FROM
               ginner_expected_cottons gec
@@ -1780,7 +1798,7 @@ const generatePscpProcurementLiveTracker = async () => {
           fg.county_name,
           fg.program_name,
           COALESCE(ec.expected_seed_cotton, 0) / 1000 AS expected_seed_cotton,
-          COALESCE(ec.expected_lint, 0) AS expected_lint,
+          COALESCE(elc.expected_lint, 0) AS expected_lint,
           COALESCE(pd.procurement_seed_cotton, 0) / 1000 AS procurement_seed_cotton,
           COALESCE(gb.total_qty, 0) AS procured_lint_cotton_kgs,
           COALESCE(gb.total_qty, 0) / 1000 AS procured_lint_cotton_mt,
@@ -1827,6 +1845,7 @@ const generatePscpProcurementLiveTracker = async () => {
           LEFT JOIN pending_seed_cotton_data psc ON fg.id = psc.mapped_ginner
           LEFT JOIN gin_sales_data gs ON fg.id = gs.ginner_id
           LEFT JOIN expected_cotton_data ec ON fg.id = ec.ginner_id
+          LEFT JOIN expected_lint_cotton_data elc ON fg.id = elc.ginner_id          
           LEFT JOIN ginner_order_data go ON fg.id = go.ginner_id
         ORDER BY
           fg.id ASC
