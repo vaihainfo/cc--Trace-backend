@@ -1536,8 +1536,16 @@ const updateGinnerSales = async (req: Request, res: Response) => {
       for await (let obj of req.body.lossData) {
         let bale = await GinBale.findOne({
           where: {
-            "$ginprocess.reel_lot_no$": String(obj.reelLotNo),
-            bale_no: String(obj.baleNo),
+            [Op.and]: [
+              Sequelize.where(
+                Sequelize.fn('TRIM', Sequelize.col('ginprocess.reel_lot_no')),
+                String(obj.reelLotNo)
+              ),
+              Sequelize.where(
+                Sequelize.fn('TRIM', Sequelize.col('bale_no')),
+                String(obj.baleNo)
+              )
+            ]
           },
           include: [{ model: GinProcess, as: "ginprocess" }],
         });
