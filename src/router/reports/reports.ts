@@ -1,4 +1,4 @@
-import { fetchValidationProjectReport, fetchValidationProjectReportTemplate } from "../../controllers/reports/validation-project-report";
+import { exportValidationProjectReport, fetchValidationProjectReport, fetchValidationProjectReportTemplate } from "../../controllers/reports/validation-project-report";
 import { getOrganicIntegrityReport } from "../../controllers/reports/integrity-report";
 import { fetchTransactionsReport, fetchSumOfQtyPurchasedByProgram, exportProcurementReport } from "../../controllers/reports/procurement-report";
 import { Router } from "express";
@@ -75,6 +75,7 @@ import {
     exportSpinnerProcessGreyOutReport,
 } from "../../controllers/reports";
 import accessControl from "../../middleware/access-control";
+import { fetchPriceComparisonLint, fetchPriceComparisonSeedCotton, fetchPriceComparisonYarn } from "../../controllers/reports/price-comparison-report";
 
 const router = Router();
 
@@ -89,6 +90,7 @@ router.get('/get-procured-quantities', fetchSumOfQtyPurchasedByProgram);
 router.get('/get-organic-integrity-report', getOrganicIntegrityReport);
 
 router.get('/get-validation-project-report', fetchValidationProjectReport);
+router.get('/export-validation-project-report', exportValidationProjectReport);
 router.get('/get-validation-project-report-template', fetchValidationProjectReportTemplate);
 //farmer Report for Organic and Non Organic
 router.get('/get-farmer-report', fetchFarmerReportPagination);
@@ -173,4 +175,8 @@ router.get('/entry/data/monitoring/dashboard', fetchDataEntryMonitorDashboardPag
 router.get('/get-gin-heap-report', fetchGinHeapReport);
 router.get('/export-gin-heap-report', exportGinHeapReport);
 
-export default router;  
+router.get('/get-pricing-comparison-report-seed', fetchPriceComparisonSeedCotton);
+router.get('/get-pricing-comparison-report-lint', fetchPriceComparisonLint);
+router.get('/get-pricing-comparison-report-yarn', fetchPriceComparisonYarn);
+
+export default router;

@@ -86,6 +86,10 @@ import dashboardKnitterRouter from './router/dashboard/knitter';
 import dashboardFabricRouter from './router/dashboard/fabric';
 import dashboardGarmentRouter from './router/dashboard/garment';
 import dashboardWeaverRouter from './router/dashboard/weaver';
+import dashboardSeedCottonPricingRouter from './router/dashboard/seed-cotton-pricing';
+import dashboardLintPricingRouter from './router/dashboard/lint-pricing';
+import dashboardYarnPricingRouter from './router/dashboard/yarn-pricing';
+
 import labMasterRouter from './router/master/lab-master';
 import seedCompanyRouter from './router/master/seed-company';
 import cropCurrentSeasonRouter from './router/master/crop-current-season';
@@ -94,6 +98,7 @@ import dataMonitorRouter from './router/data-monitoring';
 import { sendScheduledEmails } from "./controllers/email-management/scheduled-email.controller";
 import ExportData from "./models/export-data-check.model";
 import { exportReportsTameTaking, exportReportsOnebyOne } from "./controllers/reports/export-cron";
+import  updateGreyoutData from "./router/update-greyout/";
 import moment from "moment";
 import 'moment-timezone';
 
@@ -174,15 +179,15 @@ cron.schedule(`0 ${checkTimeDiff(23,differenceInHours)} * * *`, async () => {
   sendScheduledEmails();
 });
 
-cron.schedule(`0 ${checkTimeDiff(8,differenceInHours)} * * *`, async () => {
-  console.log('Running a task at 8 am IST');
+cron.schedule(`0 ${checkTimeDiff(7,differenceInHours)} * * *`, async () => {
+  console.log('Running a task at 7 am IST');
   // Add your task for 8 am IST here
   exportReportsOnebyOne();
   // cronWorker.stdin.write('exportReportsOnebyOne\n');
 });
 // Schedule cron job for 4 pm in India time (UTC+5:30)
-cron.schedule(`0 ${checkTimeDiff(16,differenceInHours)} * * *`, async () => {
-  console.log('Running a task at 4 pm IST');
+cron.schedule(`0 ${checkTimeDiff(20,differenceInHours)} * * *`, async () => {
+  console.log('Running a task at 8 pm IST');
   // Add your task for 4 pm IST here
   exportReportsOnebyOne();
   //  cronWorker.stdin.write('exportReportsOnebyOne\n');
@@ -197,8 +202,8 @@ cron.schedule(`0 ${checkTimeDiff(0,differenceInHours)} * * *`, async () => {
 });
 
 // Schedule cron job for 2 am in India time (UTC+5:30)
-cron.schedule(`0 ${checkTimeDiff(2,differenceInHours)} * * *`, async () => {
-  console.log('Running a task at 2 am IST');
+cron.schedule(`0 ${checkTimeDiff(3,differenceInHours)} * * *`, async () => {
+  console.log('Running a task at 3 am IST');
   // Add your task for 2 am IST here
   exportReportsTameTaking();
   // cronWorker.stdin.write('exportReportsTameTaking\n');
@@ -288,11 +293,16 @@ app.use("/dashboard/knitter", dashboardKnitterRouter)
 app.use("/dashboard/fabric", dashboardFabricRouter)
 app.use("/dashboard/garment", dashboardGarmentRouter)
 app.use("/dashboard/weaver", dashboardWeaverRouter)
+app.use("/dashboard/seed-cotton-pricing", dashboardSeedCottonPricingRouter)
+app.use("/dashboard/lint-pricing", dashboardLintPricingRouter)
+app.use("/dashboard/yarn-pricing", dashboardYarnPricingRouter)
+
 app.use("/lab-master", labMasterRouter);
 app.use("/seed-company", seedCompanyRouter);
 app.use("/crop-current-season", cropCurrentSeasonRouter);
 app.use("/organic-program-data-digitization", organicProgramDataDigitizationRouter);
 app.use("/data-monitoring", dataMonitorRouter);
+app.use("/update-greyout", updateGreyoutData);
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument, { customCss }));
 
 app.use(errorMiddleware);

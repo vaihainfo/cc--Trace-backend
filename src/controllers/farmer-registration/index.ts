@@ -382,7 +382,8 @@ const updateFarmer = async (req: Request, res: Response) => {
       let village = await Village.findOne({ where: { id: Number(req.body.villageId) } })
       let name = req.body.lastName ? req.body.firstName  + " " + req.body.lastName : req.body.firstName 
       let uniqueFilename = `qrcode_${name.replace(/\//g, '-')}_${req.body.code.replace(/\//g, '-')}.png`;
-      let aa = await generateQrCode(`${farmer.id}`,
+      const farmerId = req.body.id?.toString()
+      let aa = await generateQrCode(farmerId,
         name, uniqueFilename, req.body.code, village ? village.village_name : '');
       const farmerPLace = await Farmer.update({ qrUrl: uniqueFilename }, {
         where: {
@@ -651,11 +652,12 @@ const exportFarmer = async (req: Request, res: Response) => {
   const programId: string = req.query.programId as string;
   const brandId: string = req.query.brandId as string;
   const { icsId, farmGroupId, countryId, stateId, villageId, cert, seasonId }: any = req.query;
-  const maxRowsPerWorksheet = 200000;
-  const batchSize = 100000;
+  const maxRowsPerWorksheet = 100000;
+  const batchSize = 5000;
   let offset = 0;
-  let currentRow = 0;
   let worksheetIndex = 0;
+  let hasNextBatch = true;
+
   const whereCondition: any = {};
   try {
     if (searchTerm) {
@@ -730,7 +732,7 @@ const exportFarmer = async (req: Request, res: Response) => {
 
     const workbook = new ExcelJS.Workbook();
 
-    while (true) {
+      while (hasNextBatch) {
       const farmers = await Farm.findAll({
         where: whereCondition,
         attributes: [
@@ -823,14 +825,16 @@ const exportFarmer = async (req: Request, res: Response) => {
         limit: batchSize,
       });
 
-      if (farmers.length === 0) break;
+      if (farmers.length === 0) {
+        hasNextBatch = false;
+        break;
+      }
 
-      for (const [index,item] of farmers.entries()) {
-        if (currentRow % maxRowsPerWorksheet === 0) {
-          worksheetIndex++;
-          currentRow = 0;
-        }
+      if (offset % maxRowsPerWorksheet === 0) {
+        worksheetIndex++;
+      }
 
+      for await (const [index,item] of farmers.entries()) {
         let currentWorksheet = workbook.getWorksheet(`Farmer Report ${worksheetIndex}`);
         if (!currentWorksheet) {
           currentWorksheet = workbook.addWorksheet(`Farmer Report ${worksheetIndex}`);
@@ -855,20 +859,19 @@ const exportFarmer = async (req: Request, res: Response) => {
           farmGroup: item.farmGroup,
           brand: item.brand,
           program:item.program,
-          agriTotalArea: item.agriTotalArea,
-          agriEstimatedYield: item.agriEstimatedYield,
-          agriEstimatedProd: item.agriEstimatedProd,
-          cottonTotalArea: item.cottonTotalArea,
-          totalEstimatedCotton: item.totalEstimatedCotton,
+          agriTotalArea: item.agriTotalArea ? Number(item.agriTotalArea)?.toFixed(2) : 0,
+          agriEstimatedYield: item.agriEstimatedYield ? Number(item.agriEstimatedYield)?.toFixed(2) : 0,
+          agriEstimatedProd: item.agriEstimatedProd ? Number(item.agriEstimatedProd)?.toFixed(2) : 0,
+          cottonTotalArea: item.cottonTotalArea ? Number(item.cottonTotalArea)?.toFixed(2) : 0,
+          totalEstimatedCotton: item.totalEstimatedCotton ? Number(item.totalEstimatedCotton)?.toFixed(2) : 0,
           tracenetId: item.tracenetId,
           iscName: item.icsName ? item.icsName : '',
           cert: item.cert ? item.cert : '',
         });
 
         currentWorksheet.addRow(rowValues).commit();
-        currentRow++;
       }
-
+      
       offset += batchSize;
     }
 
