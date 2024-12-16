@@ -62,18 +62,48 @@ const fetchPriceComparisonSeedCotton = async (req: Request, res: Response) => {
     // Handle date range filter
     if (from && to) {
       const adjustedMonthId = Number(monthId) + 1;
-      const currentYear = new Date().getFullYear();
+      let yearToUse =  new Date().getFullYear();
+
+      if (seasonId) {
+        // Fetch season dates when seasonId is present
+        const [seasonDates] = await sequelize.query(`
+          SELECT 
+            "from",
+            "to"
+          FROM "seasons"
+          WHERE id = :seasonId
+        `, {
+          replacements: { seasonId: seasonId  },
+          type: sequelize.QueryTypes.SELECT
+        });
+    
+        if (seasonDates) {
+          const startDate = new Date((seasonDates as any).from);
+          const endDate = new Date((seasonDates as any).to);
       
-      const fromDate = new Date(`${currentYear}-${adjustedMonthId}-${from}`);
+          // If month is between October(10) to December(12), use start year
+         // If month is between January(1) to September(9), use end year
+          if (adjustedMonthId >= 10 && adjustedMonthId <= 12) {
+            yearToUse = startDate.getFullYear();
+          } else if (adjustedMonthId >= 1 && adjustedMonthId <= 9) {
+            yearToUse = endDate.getFullYear();
+          }
+        }
+      }
+      
+      
+      const fromDate = new Date(`${yearToUse}-${adjustedMonthId}-${from}`);
       fromDate.setHours(0, 0, 0, 0);
       
-      const toDate = new Date(`${currentYear}-${adjustedMonthId}-${to}`);
+      const toDate = new Date(`${yearToUse}-${adjustedMonthId}-${to}`);
       toDate.setHours(23, 59, 59, 999);
 
       filterConditions.push("wr.week_start_date BETWEEN :fromDate AND :toDate");
+      console.log(fromDate, toDate, yearToUse)
       filterReplacements.fromDate = fromDate;
       filterReplacements.toDate = toDate;
     }
+
 
     const filterClause = filterConditions.length 
       ? `WHERE ${filterConditions.join(" AND ")}` 
@@ -258,18 +288,48 @@ const fetchPriceComparisonLint = async (req: Request, res: Response) => {
     // Handle date range filter
     if (from && to) {
       const adjustedMonthId = Number(monthId) + 1;
-      const currentYear = new Date().getFullYear();
+      let yearToUse =  new Date().getFullYear();
+
+      if (seasonId) {
+        // Fetch season dates when seasonId is present
+        const [seasonDates] = await sequelize.query(`
+          SELECT 
+            "from",
+            "to"
+          FROM "seasons"
+          WHERE id = :seasonId
+        `, {
+          replacements: { seasonId: seasonId  },
+          type: sequelize.QueryTypes.SELECT
+        });
+    
+        if (seasonDates) {
+          const startDate = new Date((seasonDates as any).from);
+          const endDate = new Date((seasonDates as any).to);
       
-      const fromDate = new Date(`${currentYear}-${adjustedMonthId}-${from}`);
+          // If month is between October(10) to December(12), use start year
+         // If month is between January(1) to September(9), use end year
+          if (adjustedMonthId >= 10 && adjustedMonthId <= 12) {
+            yearToUse = startDate.getFullYear();
+          } else if (adjustedMonthId >= 1 && adjustedMonthId <= 9) {
+            yearToUse = endDate.getFullYear();
+          }
+        }
+      }
+      
+      
+      const fromDate = new Date(`${yearToUse}-${adjustedMonthId}-${from}`);
       fromDate.setHours(0, 0, 0, 0);
       
-      const toDate = new Date(`${currentYear}-${adjustedMonthId}-${to}`);
+      const toDate = new Date(`${yearToUse}-${adjustedMonthId}-${to}`);
       toDate.setHours(23, 59, 59, 999);
 
       filterConditions.push("wr.week_start_date BETWEEN :fromDate AND :toDate");
+      console.log(fromDate, toDate, yearToUse)
       filterReplacements.fromDate = fromDate;
       filterReplacements.toDate = toDate;
     }
+
 
     const filterClause = filterConditions.length 
       ? `WHERE ${filterConditions.join(" AND ")}` 
@@ -456,18 +516,48 @@ const fetchPriceComparisonYarn = async (req: Request, res: Response) => {
     // Handle date range filter
     if (from && to) {
       const adjustedMonthId = Number(monthId) + 1;
-      const currentYear = new Date().getFullYear();
+      let yearToUse =  new Date().getFullYear();
+
+      if (seasonId) {
+        // Fetch season dates when seasonId is present
+        const [seasonDates] = await sequelize.query(`
+          SELECT 
+            "from",
+            "to"
+          FROM "seasons"
+          WHERE id = :seasonId
+        `, {
+          replacements: { seasonId: seasonId  },
+          type: sequelize.QueryTypes.SELECT
+        });
+    
+        if (seasonDates) {
+          const startDate = new Date((seasonDates as any).from);
+          const endDate = new Date((seasonDates as any).to);
       
-      const fromDate = new Date(`${currentYear}-${adjustedMonthId}-${from}`);
+          // If month is between October(10) to December(12), use start year
+         // If month is between January(1) to September(9), use end year
+          if (adjustedMonthId >= 10 && adjustedMonthId <= 12) {
+            yearToUse = startDate.getFullYear();
+          } else if (adjustedMonthId >= 1 && adjustedMonthId <= 9) {
+            yearToUse = endDate.getFullYear();
+          }
+        }
+      }
+      
+      
+      const fromDate = new Date(`${yearToUse}-${adjustedMonthId}-${from}`);
       fromDate.setHours(0, 0, 0, 0);
       
-      const toDate = new Date(`${currentYear}-${adjustedMonthId}-${to}`);
+      const toDate = new Date(`${yearToUse}-${adjustedMonthId}-${to}`);
       toDate.setHours(23, 59, 59, 999);
 
       filterConditions.push("wr.week_start_date BETWEEN :fromDate AND :toDate");
+      console.log(fromDate, toDate, yearToUse)
       filterReplacements.fromDate = fromDate;
       filterReplacements.toDate = toDate;
     }
+
 
     const filterClause = filterConditions.length 
       ? `WHERE ${filterConditions.join(" AND ")}` 
