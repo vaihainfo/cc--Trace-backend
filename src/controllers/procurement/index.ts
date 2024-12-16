@@ -63,8 +63,27 @@ const createTransaction = async (req: Request, res: Response) => {
       if (!farm) {
         return res.sendError(res, "Farm is not present");
       }
-      data.estimated_cotton = Number(farm.total_estimated_cotton);
-      data.available_cotton = Number(farm.available_cotton) - Number(farm.cotton_transacted || 0);
+
+      let available_cotton = 0;
+            if(!farm.available_cotton){
+              if(farm.cotton_transacted == 0 || !farm.cotton_transacted){
+                data.available_cotton =Number(farm.total_estimated_cotton) + (0.15 * Number(farm.total_estimated_cotton));
+                available_cotton =Number(farm.total_estimated_cotton) + (0.15 * Number(farm.total_estimated_cotton));
+              }else{
+                let maxCotton = Number(farm.total_estimated_cotton) + (0.15 * Number(farm.total_estimated_cotton))
+                available_cotton = Number(maxCotton)-Number(farm.cotton_transacted);
+              }
+            }else{
+              if(Number(farm.available_cotton) <= Number(farm.total_estimated_cotton)){
+                let maxCotton = Number(farm.total_estimated_cotton) + (0.15 * Number(farm.total_estimated_cotton))
+                available_cotton = Number(maxCotton)-Number(farm.cotton_transacted);
+              }else{
+                available_cotton = Number(farm.available_cotton) - Number(farm.cotton_transacted);
+              }
+            }
+
+            data.estimated_cotton = Number(farm.total_estimated_cotton);
+            data.available_cotton = available_cotton;
     }
  
     const transaction = await Transaction.create(data);
@@ -446,7 +465,7 @@ const fetchTransactionsBySeasonAndFarmer = async (req: Request, res: Response) =
         [Sequelize.col('"farm"."total_estimated_cotton"'), 'total_estimated_cotton'],
         'available_cotton',
         'qty_purchased',
-        [Sequelize.literal('("farm"."available_cotton" - CAST("qty_purchased" AS DOUBLE PRECISION))'), 'qty_stock']
+        [Sequelize.literal('("transactions"."available_cotton" - CAST("qty_purchased" AS DOUBLE PRECISION))'), 'qty_stock']
       ],
       where: {
         farmer_id: farmerId,
@@ -470,6 +489,17 @@ const updateTransaction = async (req: Request, res: Response) => {
     if (Number(req.body.rate) < 0) {
       return res.sendError(res, 'Rate should be greater than 0')
     }
+
+    const transactionExist = await Transaction.findOne({
+      where:{
+        id: req.body.id,
+      }
+    });
+
+    if(!transactionExist){
+      return res.sendError(res, 'Transaction not exist')
+    }
+
     const data: any = {
       date: req.body.date,
       district_id: req.body.districtId,
@@ -501,8 +531,27 @@ const updateTransaction = async (req: Request, res: Response) => {
       if (!farm) {
         return res.sendError(res, "Farm is not present");
       }
-      data.estimated_cotton = farm.total_estimated_cotton;
-      data.available_cotton = farm.total_estimated_cotton - (farm.cotton_transacted || 0);
+
+      let available_cotton = 0;
+      if(!farm.available_cotton){
+        if(farm.cotton_transacted == 0 || !farm.cotton_transacted){
+          data.available_cotton =Number(farm.total_estimated_cotton) + (0.15 * Number(farm.total_estimated_cotton));
+          available_cotton =Number(farm.total_estimated_cotton) + (0.15 * Number(farm.total_estimated_cotton));
+        }else{
+          let maxCotton = Number(farm.total_estimated_cotton) + (0.15 * Number(farm.total_estimated_cotton))
+          available_cotton = Number(maxCotton)-Number(farm.cotton_transacted);
+        }
+      }else{
+        if(Number(farm.available_cotton) <= Number(farm.total_estimated_cotton)){
+          let maxCotton = Number(farm.total_estimated_cotton) + (0.15 * Number(farm.total_estimated_cotton))
+          available_cotton = Number(maxCotton)-Number(farm.cotton_transacted);
+        }else{
+          available_cotton = Number(farm.available_cotton) - Number(farm.cotton_transacted);
+        }
+      }
+
+      data.estimated_cotton = Number(farm.total_estimated_cotton);
+      data.available_cotton = available_cotton;
     }
     const transaction = await Transaction.update(data, {
       where: {
@@ -510,7 +559,7 @@ const updateTransaction = async (req: Request, res: Response) => {
       },
     });
     let s = await Farm.update({
-      cotton_transacted: (farm.cotton_transacted || 0) + Number(req.body.qtyPurchased)
+      cotton_transacted: (Number(farm.cotton_transacted || 0) - Number(transactionExist.qty_purchased)) + Number(req.body.qtyPurchased)
     }, { where: { id: req.body.farmId } });
     res.sendSuccess(res, transaction);
   } catch (error: any) {
@@ -1290,28 +1339,62 @@ const uploadTransactionBulk = async (req: Request, res: Response) => {
               proof: data.proof ? data.proof : "",
               status: 'Pending',
             };
-            let available_cotton = Number(farm.available_cotton) - Number(farm.cotton_transacted);
+            // let available_cotton = Number(farm.available_cotton) - Number(farm.cotton_transacted);
+            let available_cotton = 0;
+            if(!farm.available_cotton){
+              if(farm.cotton_transacted == 0 || !farm.cotton_transacted){
+                transactionData.available_cotton =Number(farm.total_estimated_cotton) + (0.15 * Number(farm.total_estimated_cotton));
+                available_cotton =Number(farm.total_estimated_cotton) + (0.15 * Number(farm.total_estimated_cotton));
+              }else{
+                let maxCotton = Number(farm.total_estimated_cotton) + (0.15 * Number(farm.total_estimated_cotton))
+                available_cotton = Number(maxCotton)-Number(farm.cotton_transacted);
+              }
+            }else{
+              if(Number(farm.available_cotton) <= Number(farm.total_estimated_cotton)){
+                let maxCotton = Number(farm.total_estimated_cotton) + (0.15 * Number(farm.total_estimated_cotton))
+                available_cotton = Number(maxCotton)-Number(farm.cotton_transacted);
+              }else{
+                available_cotton = Number(farm.available_cotton) - Number(farm.cotton_transacted);
+              }
+            }
+
             transactionData.estimated_cotton = Number(farm.total_estimated_cotton);
             transactionData.available_cotton = available_cotton;
-            if (farm.cotton_transacted==0 && farm.available_cotton <= farm.total_estimated_cotton) {
-                  transactionData.available_cotton += (0.15 * Number(farm.total_estimated_cotton));
-                  // transactionData.qty_stock += 0.15 * Number(transactionData.estimated_cotton);
-                }
-            if (available_cotton && data.qtyPurchased > available_cotton) {
-              transactionData.qty_purchased = available_cotton;
-              transactionData.qty_stock = available_cotton;
-              transactionData.total_amount = available_cotton * data.rate;
+
+            if(available_cotton <= 0){
+              fail.push({
+                success: false,
+                data: { farmerName: data.farmerName ? data.farmerName : '', farmerCode: data.farmerCode ? data.farmerCode : '' },
+                message: "This season used all the cotton",
+              });
+              let failedRecord = {
+                type: 'Procurement',
+                season: season,
+                farmerCode: data.farmerCode ? data.farmerCode : '',
+                farmerName: data.farmerName ? data.farmerName : '',
+                body: { ...data },
+                reason: "This season used all the cotton"
+              }
+              saveFailedRecord(failedRecord)
+            }else{
+              if (available_cotton && data.qtyPurchased > available_cotton) {
+                transactionData.qty_purchased = available_cotton;
+                transactionData.qty_stock = available_cotton;
+                transactionData.total_amount = available_cotton * data.rate;
+              }
+              console.log("object", farm, available_cotton, transactionData.qty_purchased, transactionData.qty_stock, transactionData.total_amount)
+          
+              const result = await Transaction.create(transactionData);
+              let s = await Farm.update({
+                cotton_transacted: (Number(farm.cotton_transacted) || 0) + (Number(transactionData.qty_purchased) || 0)
+              }, { where: { id: farm.id } });
+              pass.push({
+                success: true,
+                data: result,
+                message: "Transaction created",
+              });
             }
-        
-            const result = await Transaction.create(transactionData);
-            let s = await Farm.update({
-              cotton_transacted: (Number(farm.cotton_transacted) || 0) + (Number(transactionData.qty_purchased) || 0)
-            }, { where: { id: farm.id } });
-            pass.push({
-              success: true,
-              data: result,
-              message: "Transaction created",
-            });
+
           }
         }
       }
