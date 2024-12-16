@@ -381,7 +381,9 @@ const organicCottonSpecialUsersOverview = async (req: Request, res: Response) =>
 
         let total_lint_procured = await sumbrandginnerProcured(brandId, seasonId);
         let total_lint_sold = await sumbrandginnerSales(brandId, seasonId);
-        let total_lint_stock = await sumbrandginnerStock(brandId, seasonId);
+        // let total_lint_stock = await sumbrandginnerStock(brandId, seasonId);
+        let total_lint_stock = Number(total_lint_procured) > Number(total_lint_sold) ?Number(total_lint_procured) - Number(total_lint_sold) : 0;
+        
         let total_yarn_procured = await sumbrandspinnerYarnProcured(brandId, seasonId);
         let total_yarn_sold = await sumbrandspinnerYarnSales(brandId, seasonId);
         let total_yarn_stock = await sumbrandspinnerYarnStock(brandId, seasonId);
@@ -401,33 +403,34 @@ const organicCottonSpecialUsersOverview = async (req: Request, res: Response) =>
 
 const sumbrandginnerProcured = async (brandId: any, seasonId: any) => {
     try {
-        let whereCondition: any = {}
-        if (seasonId) {
-            whereCondition.season_id = seasonId
-        }
-        const ginnerList = await GinProcess.findAll({
-            where: {
-                ...whereCondition,
-                // status: 'Pending for QR scanning',
-                '$ginner.brand$': { [Op.contains]: [Number(brandId)] }
-            },
-            attributes: [
-                [Sequelize.fn('COALESCE', Sequelize.fn('SUM', Sequelize.col('total_qty')), 0), 'total_procured_lint_mt'],
-            ],
-            include: [
-                {
-                    model: Ginner,
-                    as: 'ginner',
-                    attributes: [],
-                }
-            ],
-            group: ['ginner_id', "ginner.id"]
-        });
         let cottonQty = 0;
-        ginnerList.forEach((value: any) => {
-            cottonQty = value.dataValues.total_procured_lint_mt;
-        });
 
+        const [result] = await sequelize.query(
+           `SELECT 
+                COUNT(DISTINCT "gin-bales"."id") AS "procured",
+                COALESCE(
+                    SUM(
+                    CASE
+                        WHEN "gin-bales"."old_weight" IS NOT NULL THEN CAST("gin-bales"."old_weight" AS DOUBLE PRECISION)
+                        ELSE CAST("gin-bales"."weight" AS DOUBLE PRECISION)
+                    END
+                    ),
+                    0
+                ) AS "lintProcured"
+                FROM "gin-bales" AS "gin-bales"
+                LEFT OUTER JOIN "gin_processes" AS "ginprocess" 
+                ON "gin-bales"."process_id" = "ginprocess"."id"
+                LEFT OUTER JOIN "seasons" AS "ginprocess->season" 
+                ON "ginprocess"."season_id" = "ginprocess->season"."id"
+                LEFT OUTER JOIN "ginners" AS "ginprocess->ginner" 
+                ON "ginprocess"."ginner_id" = "ginprocess->ginner"."id"
+                WHERE "ginprocess->ginner"."brand" && ARRAY[${Number(brandId)}]
+                    ${seasonId ? `AND "ginprocess"."season_id" IN (${seasonId})` : ''}
+                ;
+        `)
+
+          cottonQty = result && result.length > 0 ? result[0].lintProcured : 0
+ 
         return cottonQty / 1000;
     } catch (error) {
         console.log(error);
@@ -437,35 +440,39 @@ const sumbrandginnerProcured = async (brandId: any, seasonId: any) => {
 
 const sumbrandginnerSales = async (brandId: any, seasonId: any) => {
     try {
-        let whereCondition: any = {}
-        if (seasonId) {
-            whereCondition.season_id = seasonId
-        }
+        const whereCondition: any = [];
 
-        const ginnerList = await GinSales.findAll({
-            where: {
-                ...whereCondition,
-                status: { [Op.in]: ['Sold', 'Pending', 'Pending for QR scanning'] },
-                '$ginner.brand$': { [Op.contains]: [Number(brandId)] }
-            },
-            attributes: [
-                [Sequelize.fn('COALESCE', Sequelize.fn('SUM', Sequelize.col('total_qty')), 0), 'total_lint_mt'],
-            ],
-            include: [
-                {
-                    model: Ginner,
-                    as: 'ginner',
-                    attributes: [],
-                }
-            ],
-            raw: true,
-            // group: ['ginner.brand'] // Remove the group clause if not necessary
-        });
+        if (brandId) {
+            const idArray: number[] = brandId
+              .split(",")
+              .map((id: any) => parseInt(id, 10));
+            whereCondition.push(`g.brand && ARRAY[${idArray.join(',')}]`);
+          }
 
-        let cottonQty = 0;
-        if (ginnerList.length > 0) {
-            cottonQty = ginnerList[0].total_lint_mt;
-        }
+          if (seasonId) {
+            const idArray = seasonId.split(",").map((id: any) => parseInt(id, 10));
+            whereCondition.push(`gs.season_id IN (${idArray.join(',')})`);
+          }
+
+          whereCondition.push(`gs.status <> 'To be Submitted'`);
+          whereCondition.push(`gs.id IS NOT NULL`);
+    
+          const whereClause = whereCondition.length > 0 ? `WHERE ${whereCondition.join(' AND ')}` : '';
+
+        const [result] = await sequelize.query(`
+            SELECT 
+                SUM(gs.total_qty) AS total_qty
+            FROM gin_sales gs
+            LEFT JOIN ginners g ON gs.ginner_id = g.id
+            LEFT JOIN (
+                SELECT DISTINCT sales_id FROM bale_selections
+            ) bs ON gs.id = bs.sales_id
+            ${whereClause}`)
+
+            console.log(result)
+
+        let cottonQty = result && result.length > 0 ? result[0].total_qty : 0
+ 
         return cottonQty / 1000;
     } catch (error) {
         console.log(error);
