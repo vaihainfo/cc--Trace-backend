@@ -92,7 +92,8 @@ if (isNaN(fromDate.getTime()) || isNaN(toDate.getTime())) {
       allcountryIds.add(row.country_id);
     })
 
-    const avgQueryNew = `SELECT "country_id", AVG("market_price") AS "avg_market_price" FROM "seed-cotton-pricings"
+    const avgQueryNew = `SELECT "country_id", AVG("market_price") AS "avg_market_price",
+    AVG("programme_price") AS "avg_programme_price" FROM "seed-cotton-pricings"
       ${whereConditions.length > 0
         ? "WHERE " + whereConditions.join(" AND ") + " AND "
         : "WHERE "
@@ -116,11 +117,13 @@ if (isNaN(fromDate.getTime()) || isNaN(toDate.getTime())) {
       reel: number[],
       organic: number[],
       conventional: number[],
+      programme: number[]
     } = {
       country: [],
       reel: [],
       organic: [],
       conventional: [],
+      programme: []
     };
 
     await Promise.all(
@@ -144,8 +147,10 @@ if (isNaN(fromDate.getTime()) || isNaN(toDate.getTime())) {
         if (data2Item) {
 
           responseData.conventional.push(Number(data2Item.avg_market_price) || 0);
+          responseData.programme.push(Number(data2Item.avg_programme_price) || 0);
         } else {
           responseData.conventional.push(0);
+          responseData.programme.push(0);
         }
       })
     );
@@ -290,7 +295,9 @@ const getPricyByStates = async (req: Request, res: Response) => {
       allStateIds.add(row.state_id);
     })
 
-    const avgQueryNew = `SELECT "state_id", AVG("market_price") AS "avg_market_price" FROM "seed-cotton-pricings"
+    const avgQueryNew = `SELECT "state_id", AVG("market_price") AS "avg_market_price",
+     AVG("programme_price") AS "avg_programme_price" 
+    FROM "seed-cotton-pricings"
       ${whereConditions.length > 0
         ? "WHERE " + whereConditions.join(" AND ") + " AND "
         : "WHERE "
@@ -314,11 +321,13 @@ const getPricyByStates = async (req: Request, res: Response) => {
       reel: number[],
       organic: number[],
       conventional: number[],
+      programme: number[]
     } = {
       state: [],
       reel: [],
       organic: [],
       conventional: [],
+      programme: []
     };
 
     await Promise.all(
@@ -342,8 +351,11 @@ const getPricyByStates = async (req: Request, res: Response) => {
         if (data2Item) {
 
           responseData.conventional.push(Number(data2Item.avg_market_price) || 0);
+          responseData.programme.push(Number(data2Item.avg_programme_price) || 0);
+
         } else {
           responseData.conventional.push(0);
+          responseData.programme.push(0);
         }
       })
     );
