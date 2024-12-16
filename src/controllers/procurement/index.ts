@@ -1382,7 +1382,7 @@ const uploadTransactionBulk = async (req: Request, res: Response) => {
                 transactionData.qty_stock = available_cotton;
                 transactionData.total_amount = available_cotton * data.rate;
               }
-              console.log("object", farm, available_cotton, transactionData.qty_purchased, transactionData.qty_stock, transactionData.total_amount)
+              
           
               const result = await Transaction.create(transactionData);
               let s = await Farm.update({
