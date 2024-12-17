@@ -652,8 +652,8 @@ const exportFarmer = async (req: Request, res: Response) => {
   const programId: string = req.query.programId as string;
   const brandId: string = req.query.brandId as string;
   const { icsId, farmGroupId, countryId, stateId, villageId, cert, seasonId }: any = req.query;
-  const maxRowsPerWorksheet = 100000;
-  const batchSize = 5000;
+  const maxRowsPerWorksheet = 500000;
+  const batchSize = 100000;
   let offset = 0;
   let worksheetIndex = 0;
   let hasNextBatch = true;
@@ -736,7 +736,7 @@ const exportFarmer = async (req: Request, res: Response) => {
       const farmers = await Farm.findAll({
         where: whereCondition,
         attributes: [
-          [Sequelize.fn("DISTINCT", Sequelize.col("farms.id")), "farmId"], 
+          [Sequelize.fn("DISTINCT", Sequelize.col("farmer.id")), "farmerId"], 
           [Sequelize.fn("concat", Sequelize.col("firstName"), Sequelize.col("lastName")), "farmerName"],
           [Sequelize.col('"farmer"."code"'), 'fatherCode'],
           [Sequelize.col('"farmer"."country"."county_name"'), 'country'],
@@ -817,7 +817,6 @@ const exportFarmer = async (req: Request, res: Response) => {
           }
         ],
         raw: true,
-        subQuery: false,
         offset,
         limit: batchSize,
       });
