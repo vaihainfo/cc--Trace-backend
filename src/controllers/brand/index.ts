@@ -386,7 +386,8 @@ const organicCottonSpecialUsersOverview = async (req: Request, res: Response) =>
         
         let total_yarn_procured = await sumbrandspinnerYarnProcured(brandId, seasonId);
         let total_yarn_sold = await sumbrandspinnerYarnSales(brandId, seasonId);
-        let total_yarn_stock = await sumbrandspinnerYarnStock(brandId, seasonId);
+        // let total_yarn_stock = await sumbrandspinnerYarnStock(brandId, seasonId);
+        let total_yarn_stock = Number(total_yarn_procured) > Number(total_yarn_sold) ? Number(total_yarn_procured) - Number(total_yarn_sold) : 0;
 
         res.sendSuccess(res, {
             total_lint_procured: total_lint_procured ? total_lint_procured : 0,
