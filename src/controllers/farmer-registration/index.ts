@@ -736,6 +736,7 @@ const exportFarmer = async (req: Request, res: Response) => {
       const farmers = await Farm.findAll({
         where: whereCondition,
         attributes: [
+          [Sequelize.fn("DISTINCT", Sequelize.col("farms.id")), "farmId"], 
           [Sequelize.fn("concat", Sequelize.col("firstName"), Sequelize.col("lastName")), "farmerName"],
           [Sequelize.col('"farmer"."code"'), 'fatherCode'],
           [Sequelize.col('"farmer"."country"."county_name"'), 'country'],
@@ -803,11 +804,6 @@ const exportFarmer = async (req: Request, res: Response) => {
                 attributes: [],
               },
               {
-                model: Block,
-                as: "block",
-                attributes: [],
-              },
-              {
                 model: ICS,
                 as: "ics",
                 attributes: [],
@@ -821,6 +817,7 @@ const exportFarmer = async (req: Request, res: Response) => {
           }
         ],
         raw: true,
+        subQuery: false,
         offset,
         limit: batchSize,
       });
