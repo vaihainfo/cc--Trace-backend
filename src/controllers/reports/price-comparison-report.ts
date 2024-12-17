@@ -99,7 +99,6 @@ const fetchPriceComparisonSeedCotton = async (req: Request, res: Response) => {
       toDate.setHours(23, 59, 59, 999);
 
       filterConditions.push("wr.week_start_date BETWEEN :fromDate AND :toDate");
-      console.log(fromDate, toDate, yearToUse)
       filterReplacements.fromDate = fromDate;
       filterReplacements.toDate = toDate;
     }
@@ -325,7 +324,6 @@ const fetchPriceComparisonLint = async (req: Request, res: Response) => {
       toDate.setHours(23, 59, 59, 999);
 
       filterConditions.push("wr.week_start_date BETWEEN :fromDate AND :toDate");
-      console.log(fromDate, toDate, yearToUse)
       filterReplacements.fromDate = fromDate;
       filterReplacements.toDate = toDate;
     }
@@ -553,7 +551,6 @@ const fetchPriceComparisonYarn = async (req: Request, res: Response) => {
       toDate.setHours(23, 59, 59, 999);
 
       filterConditions.push("wr.week_start_date BETWEEN :fromDate AND :toDate");
-      console.log(fromDate, toDate, yearToUse)
       filterReplacements.fromDate = fromDate;
       filterReplacements.toDate = toDate;
     }
