@@ -35,6 +35,8 @@ import GinnerAllocatedVillage from "../../models/ginner-allocated-vilage.model";
 import SeedCottonPricing from "../../models/seed-cotton-pricings.model";
 import LintPricing from "../../models/lint-pricings.model";
 import YarnPricing from "../../models/yarn-pricings.model";
+import SpinSales from "../../models/spin-sales.model";
+import GinSales from "../../models/gin-sales.model";
 
 const uploadGinnerOrder = async (req: Request, res: Response) => {
     try {
@@ -3336,6 +3338,82 @@ const uploadPriceMapping = async (req: Request, res: Response) => {
                                 endDate: priceData.endDate
                             }
                         });
+                        if(type === "cotton") {
+                            const transactionExists = await Transaction.findOne({
+                                where: {
+                                    date: {
+                                        [Op.between]: [priceData.startDate, priceData.endDate]
+                                    },
+                                    brand_id: priceData.brand_id,
+                                    country_id: priceData.country_id,
+                                    district_id: priceData.district_id,
+                                    state_id: priceData.state_id
+                                }
+                            });
+                        
+                            if (!transactionExists) {
+                                fail.push({
+                                    success: false,
+                                    data: { 
+                                        district: data.district || '', 
+                                        season: req.body.season || '', 
+                                        country: data.country || '', 
+                                        state: data.state || '' 
+                                    },
+                                    message: "No transactions found within the specified date range for the selected location."
+                                });
+                            }
+                        } else if (type === "lint") {
+                            const lintTransactionExists = await GinSales.findOne({
+                                where: {
+                                    date: {
+                                        [Op.between]: [priceData.startDate, priceData.endDate]
+                                    },
+                                    brand_id: priceData.brand_id,
+                                    country_id: priceData.country_id,
+                                    district_id: priceData.district_id,
+                                    state_id: priceData.state_id
+                                }
+                            });
+                        
+                            if (!lintTransactionExists) {
+                                fail.push({
+                                    success: false,
+                                    data: { 
+                                        district: data.district || '', 
+                                        season: req.body.season || '', 
+                                        country: data.country || '', 
+                                        state: data.state || '' 
+                                    },
+                                    message: "No lint transactions found within the specified date range for the selected location."
+                                });
+                            }
+                        } else  {
+                            const yarnTransactionExists = await SpinSales.findOne({
+                                where: {
+                                    date: {
+                                        [Op.between]: [priceData.startDate, priceData.endDate]
+                                    },
+                                    brand_id: priceData.brand_id,
+                                    country_id: priceData.country_id,
+                                    district_id: priceData.district_id,
+                                    state_id: priceData.state_id
+                                }
+                            });
+                        
+                            if (!yarnTransactionExists) {
+                                fail.push({
+                                    success: false,
+                                    data: { 
+                                        district: data.district || '', 
+                                        season: req.body.season || '', 
+                                        country: data.country || '', 
+                                        state: data.state || '' 
+                                    },
+                                    message: "No yarn transactions found within the specified date range for the selected location."
+                                });
+                            }
+                        }
 
                         if(fail.length === 0) {
                             if (check) {
