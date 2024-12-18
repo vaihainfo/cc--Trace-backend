@@ -125,7 +125,10 @@ const GinProcess = db.define('gin_process', {
   },
   scd_verified_bales: {
     type: DataTypes.DOUBLE,
-  }
+  },
+  verification_status: {
+    type: DataTypes.STRING
+  },
 });
 
 GinProcess.belongsTo(Season, {

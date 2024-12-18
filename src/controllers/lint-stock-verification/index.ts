@@ -266,6 +266,7 @@ const createVerifiedLintStock = async (req: Request, res: Response) => {
             te_verified_status: true,
             te_verified_total_qty: req.body.actualTotalQty,
             te_verified_bales: req.body.actualNoOfBales,
+            verification_status: 'Pending',
           },
           {
             where: {
@@ -902,6 +903,7 @@ const updateSCDVerifiedStockConfirm = async (
           scd_verified_status: req.body.status === "Accepted" ? true : false,
           scd_verified_total_qty: req.body.confirmedTotalQty,
           scd_verified_bales: req.body.confirmedNoOfBales,
+          verification_status: 'Completed',
         },
         {
           where: {
