@@ -657,7 +657,6 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
       "Programme",
       "Got",
       "Total Seed Cotton Consumed(kgs)",
-      "Village",
       "Grey Out Status"
     ]);
     headerRow.font = { bold: true };
@@ -756,7 +755,7 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
         program: item.program ? item.program.program_name : "",
         gin_out_turn: item.gin_out_turn ? item.gin_out_turn : "",
         total_qty: item.total_qty ? item.total_qty : "",
-        a: village.map((obj: any) => obj?.dataValues?.village?.village_name)?.toString() ?? '',
+        // a: village.map((obj: any) => obj?.dataValues?.village?.village_name)?.toString() ?? '',
         greyout_status: item.greyout_status ? "Yes" : "No",
       });
       worksheet.addRow(rowValues);
