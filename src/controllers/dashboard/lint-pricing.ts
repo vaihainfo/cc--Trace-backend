@@ -80,7 +80,7 @@ const getPricyByCountry = async (req: Request, res: Response) => {
       AVG(CASE WHEN ss."program_id" = 5 THEN CAST(ss."rate" AS FLOAT) END) AS "reel_average_price"
     FROM "gin_sales" ss
     INNER JOIN "ginners" s ON ss."ginner_id" = s."id"
-    WHERE ss."date" >= :from AND ss."date" <= :to
+    WHERE ss."date" >= :from AND ss."date" <= :to AND  ss."status" = 'Sold'
     ${avgQueryConditions.length > 0 ? 'AND ' + avgQueryConditions.join(' AND ') : ''}
     GROUP BY s."country_id"
     ORDER BY s."country_id" DESC;
@@ -278,7 +278,7 @@ const getPricyByState = async (req: Request, res: Response) => {
       AVG(CASE WHEN ss."program_id" = 5 THEN CAST(ss."rate" AS FLOAT) END) AS "reel_average_price"
     FROM "gin_sales" ss
     INNER JOIN "ginners" s ON ss."ginner_id" = s."id"
-    WHERE ss."date" >= :from AND ss."date" <= :to
+    WHERE ss."date" >= :from AND ss."date" <= :to AND ss."status" = 'Sold'
     ${avgQueryConditions.length > 0 ? 'AND ' + avgQueryConditions.join(' AND ') : ''}
     GROUP BY s."state_id"
     ORDER BY s."state_id" DESC;

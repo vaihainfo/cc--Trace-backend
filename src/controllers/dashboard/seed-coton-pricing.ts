@@ -74,7 +74,7 @@ if (isNaN(fromDate.getTime()) || isNaN(toDate.getTime())) {
               AVG(CASE WHEN "program_id" = 4 THEN CAST("rate" AS FLOAT) END) AS "organic_average_price",
               AVG(CASE WHEN "program_id" = 5 THEN CAST("rate" AS FLOAT) END) AS "reel_average_price"
             FROM "transactions"
-            WHERE "date" >= :from AND "date" <= :to
+            WHERE "date" >= :from AND "date" <= :to AND "status" = 'Sold'
             ${whereConditions.length > 0
         ? "AND " + whereConditions.join(" AND ")
         : ""
@@ -277,7 +277,8 @@ const getPricyByStates = async (req: Request, res: Response) => {
               AVG(CASE WHEN "program_id" = 4 THEN CAST("rate" AS FLOAT) END) AS "organic_average_price",
               AVG(CASE WHEN "program_id" = 5 THEN CAST("rate" AS FLOAT) END) AS "reel_average_price"
             FROM "transactions"
-            WHERE "date" >= :from AND "date" <= :to
+            
+            WHERE "date" >= :from AND "date" <= :to AND "status" = 'Sold'
             ${whereConditions.length > 0
         ? "AND " + whereConditions.join(" AND ")
         : ""
