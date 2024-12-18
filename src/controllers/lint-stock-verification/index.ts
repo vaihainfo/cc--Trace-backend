@@ -467,42 +467,42 @@ const getLintVerifiedStock = async (req: Request, res: Response) => {
         {
           model: Ginner,
           as: "ginner",
-          attributes: ["id", "name"],
+          attributes: ["id", "name", "brand"],
         },
         {
           model: Spinner,
           as: "spinner",
-          attributes: ["id", "name"],
+          attributes: ["id", "name", "brand"],
         },
         {
           model: TraceabilityExecutive,
           as: "traceability_executive",
-          attributes: ["id", "name"],
+          attributes: ["id", "name", "brand"],
         },
         {
           model: BrandExecutive,
           as: "brand_executive",
-          attributes: ["id", "name"],
+          attributes: ["id", "name", "brand"],
         },
         {
           model: SupplyChainManager,
           as: "supply_chain_manager",
-          attributes: ["id", "name"],
+          attributes: ["id", "name", "brand"],
         },
         {
           model: SupplyChainDirector,
           as: "supply_chain_director",
-          attributes: ["id", "name"],
+          attributes: ["id", "name", "brand"],
         },
         {
           model: BrandManager,
           as: "brand_manager",
-          attributes: ["id", "name"],
+          attributes: ["id", "name", "brand"],
         },
         {
           model: PSTeam,
           as: "ps_team",
-          attributes: ["id", "name"],
+          attributes: ["id", "name", "brand"],
         },
         {
           model: Country,
