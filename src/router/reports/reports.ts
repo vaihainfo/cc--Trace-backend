@@ -57,6 +57,8 @@ import {
     exportConsolidatedTraceability,
     villageSeedCottonReport,
     exportVillageSeedCotton,
+    villageSeedCottonAllocationReport,
+    exportVillageSeedCottonAllocation,
     spinnerBackwardTraceabiltyReport,
     exportSpinnerBackwardTraceability,
     exportLoad,
@@ -75,6 +77,7 @@ import {
     exportSpinnerProcessGreyOutReport,
 } from "../../controllers/reports";
 import accessControl from "../../middleware/access-control";
+import { fetchPriceComparisonLint, fetchPriceComparisonSeedCotton, fetchPriceComparisonYarn } from "../../controllers/reports/price-comparison-report";
 
 const router = Router();
 
@@ -165,6 +168,9 @@ router.get('/export-spinner-traceability-report', exportSpinnerBackwardTraceabil
 router.get('/get-village-seed-cotton-report', villageSeedCottonReport);
 router.get('/export-village-seed-cotton-report', exportVillageSeedCotton);
 
+router.get('/get-village-seed-cotton-allocation-report', villageSeedCottonAllocationReport);
+router.get('/export-village-seed-cotton-allocation-report', exportVillageSeedCottonAllocation);
+
 router.get('/get-spin-process-backward-traceability-report', spinnerProcessBackwardTraceabiltyReport);
 router.get('/export-spin-process-backward-traceability-report', exportSpinProcessBackwardfTraceabilty);
 
@@ -174,4 +180,8 @@ router.get('/entry/data/monitoring/dashboard', fetchDataEntryMonitorDashboardPag
 router.get('/get-gin-heap-report', fetchGinHeapReport);
 router.get('/export-gin-heap-report', exportGinHeapReport);
 
-export default router;  
+router.get('/get-pricing-comparison-report-seed', fetchPriceComparisonSeedCotton);
+router.get('/get-pricing-comparison-report-lint', fetchPriceComparisonLint);
+router.get('/get-pricing-comparison-report-yarn', fetchPriceComparisonYarn);
+
+export default router;

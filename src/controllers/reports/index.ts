@@ -606,6 +606,7 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
   const searchTerm = req.query.search || "";
   const page = Number(req.query.page) || 1;
   const limit = Number(req.query.limit) || 10;
+  const isOrganic = req.query.isOrganic || false;
   const isBrand = req.query.isBrand || false;
   const { exportType, ginnerId, seasonId, programId, brandId, countryId, startDate, endDate }: any = req.query;
   const offset = (page - 1) * limit;
@@ -669,7 +670,9 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
       // Create the excel workbook file
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet("Sheet1");
-      if (isBrand === 'true') {
+      if (isOrganic === 'true') {
+        worksheet.mergeCells('A1:N1');
+      }else if (isBrand === 'true') {
         worksheet.mergeCells('A1:Q1');
       } else {
         worksheet.mergeCells('A1:X1');
@@ -680,7 +683,12 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
       mergedCell.alignment = { horizontal: 'center', vertical: 'middle' };
       // Set bold font for header row
       let headerRow;
-      if (isBrand === 'true') {
+     if (isOrganic === 'true') {
+        headerRow = worksheet.addRow([
+        "Sr No.", "Process Date", "Data Entry Date and Time", "Lint Production Start Date", "Lint Production End Date", "Lint process Season choosen", "Ginner Name", "Heap Number", "Gin Lot No", "Gin Press No",  "No of Bales", "Lint Quantity(Kgs)", "Programme", "Grey Out Status"
+        ]);
+      }
+      else if (isBrand === 'true') {
         headerRow = worksheet.addRow([
           "Sr No.", "Process Date", "Data Entry Date and Time", "Lint Production Start Date", "Lint Production End Date", "Lint process Season choosen", "Ginner Name", "Heap Number", "Gin Lot No", "Gin Press No", "REEL Lot No", "REEL Press Nos", "No of Bales", "Lint Quantity(Kgs)", "Programme", "Grey Out Status"
         ]);
@@ -874,7 +882,26 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
       // Append data to worksheet
       for await (const [index, item] of rows.entries()) {
         let rowValues;
-        if (isBrand === 'true') {
+       if (isOrganic === 'true') {
+          rowValues = Object.values({
+            index: index + 1,
+            date: item.date ? item.date : "",
+            created_date: item.createdAt ? item.createdAt : "",
+            from_date: item.from_date ? item.from_date : "",
+            to_date: item.to_date ? item.to_date : "",
+            season: item.season ? item.season : "",
+            ginner: item.ginner_name ? item.ginner_name : "",
+            heap: item.heap_number ? item.heap_number : '',
+            lot_no: item.lot_no ? item.lot_no : "",
+            press_no: item.press_no !== "NaN-NaN" ? item.press_no : item?.gin_press_no,
+            reel_press_no: item.reel_press_no ? item.reel_press_no : "",
+            noOfBales: item.no_of_bales ? Number(item.no_of_bales) : 0,
+            lint_quantity: item.lint_quantity ? Number(item.lint_quantity) : 0,
+            program: item.program ? item.program : "",
+            greyout_status: item.greyout_status ? "Yes" : "No",
+          });
+        }
+        else if (isBrand === 'true') {
           rowValues = Object.values({
             index: index + 1,
             date: item.date ? item.date : "",
@@ -1121,6 +1148,8 @@ const exportPendingGinnerSales = async (req: Request, res: Response) => {
   const status = req.query.status || "To be Submitted";
   const { exportType, ginnerId, seasonId, programId, brandId, countryId, startDate, endDate }: any = req.query;
   const whereCondition: any = {};
+  const isOrganic = req.query.isOrganic || false;
+
   const page = Number(req.query.page) || 1;
   const limit = Number(req.query.limit) || 10;
   const offset = (page - 1) * limit;
@@ -1192,13 +1221,36 @@ const exportPendingGinnerSales = async (req: Request, res: Response) => {
       // Create the excel workbook file
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet("Sheet1");
-      worksheet.mergeCells("A1:N1");
+      if (isOrganic === 'true') {
+        worksheet.mergeCells('A1:M1');
+      } else {
+        worksheet.mergeCells("A1:N1");
+      }
       const mergedCell = worksheet.getCell("A1");
       mergedCell.value = "CottonConnect | Ginner Pending Sales Report";
       mergedCell.font = { bold: true };
       mergedCell.alignment = { horizontal: "center", vertical: "middle" };
       // Set bold font for header row
-      const headerRow = worksheet.addRow([
+      let headerRow;
+      if (isOrganic === 'true') {
+        headerRow = worksheet.addRow([
+          "Sr No.",
+          "Date",
+          "Season",
+          "Ginner Name",
+          "Invoice No",
+          "Sold To",
+          "Bale Lot No",
+          "No of Bales",
+          "Press/Bale No",
+          "Rate/Kg",
+          "Total Quantity",
+          "Programme",
+          "Status",
+        ]);
+      }
+      else{
+       headerRow = worksheet.addRow([
         "Sr No.",
         "Date",
         "Season",
@@ -1214,6 +1266,7 @@ const exportPendingGinnerSales = async (req: Request, res: Response) => {
         "Programme",
         "Status",
       ]);
+    }
       headerRow.font = { bold: true };
 
       let include = [
@@ -1298,7 +1351,26 @@ const exportPendingGinnerSales = async (req: Request, res: Response) => {
 
       // Append data to worksheet
       for await (const [index, item] of rows.entries()) {
-        const rowValues = Object.values({
+        let rowValues;
+        if(isOrganic === 'true'){
+          rowValues = Object.values({
+            index: index + 1,
+            date: item.dataValues.date ? item.dataValues.date : "",
+            season: item.dataValues.season_name ? item.dataValues.season_name : "",
+            ginner: item.dataValues.ginner ? item.dataValues.ginner : "",
+            invoice: item.dataValues.invoice_no ? item.dataValues.invoice_no : "",
+            buyer: item.dataValues.buyerdata ? item.dataValues.buyerdata : "",
+            lot_no: item.dataValues.lot_no ? item.dataValues.lot_no : "",
+            no_of_bales: item.dataValues.no_of_bales ? item.dataValues.no_of_bales : "",
+            press_no: item.dataValues.press_no ? item.dataValues.press_no : "",
+            rate: item.dataValues.rate ? Number(item.dataValues.rate) : 0,
+            total_qty: item.dataValues.total_qty ? item.dataValues.total_qty : 0,
+            program: item.dataValues.program ? item.dataValues.program : "",
+            status: item.dataValues.status ? item.dataValues.status : "",
+          });
+        }
+        else{
+        rowValues = Object.values({
           index: index + 1,
           date: item.dataValues.date ? item.dataValues.date : "",
           season: item.dataValues.season_name ? item.dataValues.season_name : "",
@@ -1314,6 +1386,7 @@ const exportPendingGinnerSales = async (req: Request, res: Response) => {
           program: item.dataValues.program ? item.dataValues.program : "",
           status: item.dataValues.status ? item.dataValues.status : "",
         });
+      }
         worksheet.addRow(rowValues);
       }
       // Auto-adjust column widths based on content
@@ -2780,6 +2853,8 @@ const exportGinnerSales = async (req: Request, res: Response) => {
   const searchTerm = req.query.search || "";
   const page = Number(req.query.page) || 1;
   const limit = Number(req.query.limit) || 10;
+  const isOrganic = req.query.isOrganic || false;
+
   const isBrand = req.query.isBrand || false;
   const { exportType, ginnerId, seasonId, programId, brandId, countryId, startDate, endDate }: any = req.query;
   const offset = (page - 1) * limit;
@@ -2855,7 +2930,9 @@ const exportGinnerSales = async (req: Request, res: Response) => {
       // Create the excel workbook file
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet("Sheet1");
-      if (isBrand === 'true') {
+       if (isOrganic === 'true') {
+        worksheet.mergeCells('A1:P1');
+      } else if (isBrand === 'true') {
         worksheet.mergeCells('A1:Q1');
       } else {
         worksheet.mergeCells('A1:U1');
@@ -2866,7 +2943,14 @@ const exportGinnerSales = async (req: Request, res: Response) => {
       mergedCell.alignment = { horizontal: 'center', vertical: 'middle' };
       // Set bold font for header row
       let headerRow;
-      if (isBrand === 'true') {
+      if (isOrganic === 'true') {
+        headerRow = worksheet.addRow([
+          "Sr No.", "Process Date", "Data Entry Date", "Lint sale chosen season", "Ginner Name",
+          "Invoice No", "Sold To", "Bale Lot No", "No of Bales", "Press/Bale No", "Rate/Kg",
+          "Total Quantity", "Vehicle No", "Transporter Name", "Programme", "Agent Detials"
+        ]);
+      }
+      else if (isBrand === 'true') {
         headerRow = worksheet.addRow([
           "Sr No.", "Process Date", "Data Entry Date", "Lint sale chosen season", "Ginner Name",
           "Invoice No", "Sold To", "Bale Lot No", "REEL Lot No", "No of Bales", "Press/Bale No", "Rate/Kg",
@@ -3056,7 +3140,27 @@ const exportGinnerSales = async (req: Request, res: Response) => {
       // Append data to worksheet
       for await (const [index, item] of rows.entries()) {
         let rowValues;
-        if (isBrand === 'true') {
+        if (isOrganic === 'true') {
+          rowValues = Object.values({
+            index: index + 1,
+            date: item.date ? item.date : '',
+            created_at: item.createdAt ? item.createdAt : '',
+            season: item.season_name ? item.season_name : '',
+            ginner: item.ginner ? item.ginner : '',
+            invoice: item.invoice_no ? item.invoice_no : '',
+            buyer: item.buyerdata ? item.buyerdata : '',
+            lot_no: item.lot_no ? item.lot_no : '',
+            no_of_bales: item.no_of_bales ? Number(item.no_of_bales) : 0,
+            press_no: item.press_no ? item.press_no : '',
+            rate: item.rate ? Number(item.rate) : 0,
+            lint_quantity: item.lint_quantity ? item.lint_quantity : '',
+            vehicle_no: item.vehicle_no ? item.vehicle_no : '',
+            transporter_name: item.transporter_name ? item.transporter_name : '',
+            program: item.program ? item.program : '',
+            agentDetails: item.transaction_agent ? item.transaction_agent : 'NA'
+          });
+        }
+        else if (isBrand === 'true') {
           rowValues = Object.values({
             index: index + 1,
             date: item.date ? item.date : '',
@@ -3555,6 +3659,8 @@ const exportSpinnerBale = async (req: Request, res: Response) => {
   const searchTerm = req.query.search || "";
   const page = Number(req.query.page) || 1;
   const limit = Number(req.query.limit) || 10;
+  const isOrganic = req.query.isOrganic || false;
+
   const { exportType, ginnerId, spinnerId, seasonId, programId, brandId, countryId, startDate, endDate }: any =
     req.query;
   const offset = (page - 1) * limit;
@@ -3637,13 +3743,35 @@ const exportSpinnerBale = async (req: Request, res: Response) => {
       // Create the excel workbook file
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet("Sheet1");
-      worksheet.mergeCells("A1:N1");
+      if (isOrganic === 'true') {
+        worksheet.mergeCells('A1:M1');
+      } else{
+        worksheet.mergeCells("A1:N1");
+      }
       const mergedCell = worksheet.getCell("A1");
       mergedCell.value = "CottonConnect | Spinner Bale Receipt Report";
       mergedCell.font = { bold: true };
       mergedCell.alignment = { horizontal: "center", vertical: "middle" };
       // Set bold font for header row
-      const headerRow = worksheet.addRow([
+      let headerRow;
+      if(isOrganic === 'true') {
+        headerRow = worksheet.addRow([
+          "Sr No.",
+          "Date of transaction accepted",
+          "Date of transaction received",
+          "Season",
+          "Spinner Name",
+          "Ginner Name",
+          "Invoice Number",
+          "Ginner Lot No",
+          "Press/Bale No",
+          "No of Bales(Accepted)",
+          "Total Lint Accepted Quantity(Kgs)",
+          "Programme",
+          "Grey Out Status",
+        ]);
+      }else{
+       headerRow = worksheet.addRow([
         "Sr No.",
         "Date of transaction accepted",
         "Date of transaction received",
@@ -3659,6 +3787,7 @@ const exportSpinnerBale = async (req: Request, res: Response) => {
         "Programme",
         "Grey Out Status",
       ]);
+    }
       headerRow.font = { bold: true };
 
       // //fetch data with pagination
@@ -3736,7 +3865,32 @@ const exportSpinnerBale = async (req: Request, res: Response) => {
       // // Append data to worksheet
 
       for await (const [index, item] of rows.entries()) {
-        const rowValues = Object.values({
+        let rowValues;
+        if (isOrganic === 'true') {
+       rowValues = Object.values({
+          index: index + 1,
+          accept_date: item.accept_date
+            ? item.accept_date
+            : "",
+          date: item.date ? item.date : "",
+          season: item.season_name ? item.season_name : "",
+          spinner: item.spinner ? item.spinner : "",
+          ginner: item.ginner ? item.ginner : "",
+          invoice: item.invoice_no ? item.invoice_no : "",
+          lot_no: item.lot_no ? item.lot_no : "",
+          press_no: item.press_no ? item.press_no : "",
+          no_of_bales: item.accepted_no_of_bales
+            ? Number(item.accepted_no_of_bales)
+            : 0,
+          lint_quantity: item.accepted_total_qty
+            ? Number(item.accepted_total_qty)
+            : 0,
+          program: item.program ? item.program : "",
+          greyout_status: item.greyout_status ? "Yes" : "No",
+        });
+      }
+      else{
+        rowValues = Object.values({
           index: index + 1,
           accept_date: item.accept_date
             ? item.accept_date
@@ -3760,6 +3914,7 @@ const exportSpinnerBale = async (req: Request, res: Response) => {
           program: item.program ? item.program : "",
           greyout_status: item.greyout_status ? "Yes" : "No",
         });
+      }
         worksheet.addRow(rowValues);
       }
       // Auto-adjust column widths based on content
@@ -3796,6 +3951,8 @@ const exportPendingSpinnerBale = async (req: Request, res: Response) => {
   const page = Number(req.query.page) || 1;
   const limit = Number(req.query.limit) || 10;
   const pagination = req.query.pagination;
+  const isOrganic = req.query.isOrganic || false;
+
   const isBrand = req.query.isBrand || false;
   const { exportType, ginnerId, spinnerId, seasonId, programId, brandId, countryId, startDate, endDate }: any =
     req.query;
@@ -3888,7 +4045,9 @@ const exportPendingSpinnerBale = async (req: Request, res: Response) => {
       // Create the excel workbook file
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet("Sheet1");
-      if (isBrand === 'true') {
+       if (isOrganic === 'true') {
+        worksheet.mergeCells('A1:L1');
+      } else if (isBrand === 'true') {
         worksheet.mergeCells('A1:M1');
       } else {
         worksheet.mergeCells("A1:N1");
@@ -3899,7 +4058,23 @@ const exportPendingSpinnerBale = async (req: Request, res: Response) => {
       mergedCell.alignment = { horizontal: "center", vertical: "middle" };
       // Set bold font for header row
       let headerRow;
-      if (isBrand === 'true') {
+      if (isOrganic === 'true') {
+        headerRow = worksheet.addRow([
+          "Sr No.",
+          "Date and Time",
+          "Date",
+          "Season",
+          "Ginner Name",
+          "Spinner Name",
+          "Invoice No",
+          "No of Bales",
+          "Bale Lot No",
+          "Quantity(KGs)",
+          "Programme",
+          "Vehicle No",
+        ]);
+      }
+      else if (isBrand === 'true') {
         headerRow = worksheet.addRow([
           "Sr No.",
           "Date and Time",
@@ -4016,7 +4191,27 @@ const exportPendingSpinnerBale = async (req: Request, res: Response) => {
       // Append data to worksheet
       for await (const [index, item] of rows.entries()) {
         let rowValues;
-        if (isBrand === 'true') {
+        if (isOrganic === 'true') {
+          rowValues = Object.values({
+            index: index + 1,
+            createdAt: item.dataValues.createdAt ? item.dataValues.createdAt : "",
+            date: item.dataValues.date ? item.dataValues.date : "",
+            season: item.dataValues.season_name ? item.dataValues.season_name : "",
+            ginner: item.dataValues.ginner ? item.dataValues.ginner : "",
+            spinner: item.dataValues.spinner ? item.dataValues.spinner : "",
+            invoice: item.dataValues.invoice_no ? item.dataValues.invoice_no : "",
+            no_of_bales: item.dataValues.no_of_bales
+              ? item.dataValues.no_of_bales
+              : "",
+            lot_no: item.dataValues.lot_no ? item.dataValues.lot_no : "",
+            total_qty: item.dataValues.lint_quantity
+              ? item.dataValues.lint_quantity
+              : "",
+            program: item.dataValues.program ? item.dataValues.program : "",
+            village: item.dataValues.vehicle_no ? item.dataValues.vehicle_no : ""
+          });
+        }
+        else if (isBrand === 'true') {
           rowValues = Object.values({
             index: index + 1,
             createdAt: item.dataValues.createdAt ? item.dataValues.createdAt : "",
@@ -4298,6 +4493,8 @@ const exportSpinnerYarnProcess = async (req: Request, res: Response) => {
   const searchTerm = req.query.search || "";
   const page = Number(req.query.page) || 1;
   const limit = Number(req.query.limit) || 10;
+  const isOrganic = req.query.isOrganic || false;
+
   const isBrand = req.query.isBrand || false;
   const { exportType, spinnerId, seasonId, programId, brandId, countryId, startDate, endDate }: any = req.query;
   const offset = (page - 1) * limit;
@@ -4363,7 +4560,9 @@ const exportSpinnerYarnProcess = async (req: Request, res: Response) => {
       // Create the excel workbook file
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet("Sheet1");
-      if (isBrand === 'true') {
+      if (isOrganic === 'true') {
+        worksheet.mergeCells('A1:S1');
+      } else if (isBrand === 'true' && isOrganic === false) {
         worksheet.mergeCells('A1:T1');
       } else {
         worksheet.mergeCells('A1:V1');
@@ -4374,7 +4573,33 @@ const exportSpinnerYarnProcess = async (req: Request, res: Response) => {
       mergedCell.alignment = { horizontal: "center", vertical: "middle" };
       // Set bold font for header row
       let headerRow;
-      if (isBrand === 'true') {
+
+   if (isOrganic === 'true') {
+        headerRow = worksheet.addRow([
+          "Sr No.",
+          "Date and Time",
+          "Yarn Production Start Date",
+          "Yarn Production End Date",
+          "Yarn Process Season",
+          "Spinner Name",
+          "Spin Lot No",
+          "Yarn Type",
+          "Yarn Count",
+          "Yarn Realisation %",
+          "Comber Noil (Kgs)",
+          "Blend Material",
+          "Blend Quantity (Kgs)",
+          "Total Lint cotton consumed (Kgs)",
+          "Total Comber Noil Consumed(kgs)",
+          "Total lint+Blend material + Comber Noil consumed",
+          "Programme",
+          "Total Yarn weight (Kgs)",
+          "Total yarn sold (Kgs)",
+          "Total Yarn in stock (Kgs)",
+          "Grey Out Status",
+        ]);
+      }
+      else if (isBrand === 'true' && isOrganic === false) {
         headerRow = worksheet.addRow([
           "Sr No.",
           "Date and Time",
@@ -4585,7 +4810,40 @@ const exportSpinnerYarnProcess = async (req: Request, res: Response) => {
         }
 
         let rowValues;
-        if (isBrand === 'true') {
+       if (isOrganic === 'true') {
+          rowValues = Object.values({
+            index: index + 1,
+            createdAt: item.createdAt ? item.createdAt : "",
+            from_date: item.from_date ? item.from_date : "",
+            to_date: item.to_date ? item.to_date : "",
+            season: item.season_name ? item.season_name : "",
+            spinner: item.spinner_name ? item.spinner_name : "",
+            lotNo: item.batch_lot_no ? item.batch_lot_no : "",
+            yarnType: item.yarn_type ? item.yarn_type : "",
+            count: item.yarncount ? item.yarncount : "",
+            resa: item.yarn_realisation ? Number(item.yarn_realisation) : 0,
+            comber: item.comber_noil ? Number(item.comber_noil) : 0,
+            blend: blendValue,
+            blendqty: blendqty,
+            cotton_consumed: item?.cotton_consumed
+              ? Number(item?.cotton_consumed)
+              : 0,
+            comber_consumed: item?.comber_consumed
+              ? Number(item?.comber_consumed)
+              : 0,
+            total_lint_blend_consumed: item?.total_qty
+              ? Number(item?.total_qty)
+              : 0,
+            program: item.program ? item.program : "",
+            total: item.net_yarn_qty ? Number(item.net_yarn_qty) : 0,
+            yarn_sold: item?.yarn_sold
+              ? Number(item?.yarn_sold)
+              : 0,
+            yarn_stock: item.qty_stock ? Number(item.qty_stock) : 0,
+            greyout_status: item.greyout_status ? "Yes" : "No",
+          });
+        }
+        else if (isBrand === 'true' && isOrganic === false) {
           rowValues = Object.values({
             index: index + 1,
             createdAt: item.createdAt ? item.createdAt : "",
@@ -4916,6 +5174,8 @@ const exportSpinnerSale = async (req: Request, res: Response) => {
   const searchTerm = req.query.search || "";
   const page = Number(req.query.page) || 1;
   const limit = Number(req.query.limit) || 10;
+  const isOrganic = req.query.isOrganic || false;
+  
   const isBrand = req.query.isBrand || false;
   const { exportType, spinnerId, seasonId, programId, brandId, countryId, startDate, endDate }: any = req.query;
   const offset = (page - 1) * limit;
@@ -4992,7 +5252,9 @@ const exportSpinnerSale = async (req: Request, res: Response) => {
       // Create the excel workbook file
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet("Sheet1");
-      if (isBrand === 'true') {
+      if(isOrganic === 'true') {
+        worksheet.mergeCells('A1:Q1');
+      } else if (isBrand === 'true' && isOrganic === false) {
         worksheet.mergeCells('A1:R1');
       } else {
         worksheet.mergeCells("A1:U1");
@@ -5003,7 +5265,28 @@ const exportSpinnerSale = async (req: Request, res: Response) => {
       mergedCell.alignment = { horizontal: "center", vertical: "middle" };
       // Set bold font for header row
       let headerRow;
-      if (isBrand === 'true') {
+      if (isOrganic === 'true') {
+        headerRow = worksheet.addRow([
+          "Sr No.",
+          "Created Date and Time",
+          "Date of transaction",
+          "Season",
+          "Spinner Name",
+          "Knitter/Weaver Name",
+          "Invoice Number",
+          "Order Reference",
+          "Lot/Batch Number",
+          "Programme",
+          "Yarn Type",
+          "Yarn Count",
+          "No of Boxes",
+          "Box ID",
+          "Price",
+          "Yarn Net Weight(Kgs)",
+          "Agent Details",
+        ]);
+      }
+      else if (isBrand === 'true' && isOrganic === false) {
         headerRow = worksheet.addRow([
           "Sr No.",
           "Created Date and Time",
@@ -5220,9 +5503,37 @@ const exportSpinnerSale = async (req: Request, res: Response) => {
       `);
         }
 
-
         let rowValues;
-        if (isBrand === 'true') {
+        if (isOrganic === 'true') {
+          rowValues = Object.values({
+            index: index + 1,
+            createdAt: item.dataValues.createdAt ? item.dataValues.createdAt : "",
+            date: item.dataValues.date ? formatDate(item.dataValues.date) : "",
+            season: item.dataValues.season_name ? item.dataValues.season_name : "",
+            spinner: item.dataValues.spinner ? item.dataValues.spinner : "",
+            buyer_id: item.dataValues.weaver
+              ? item.dataValues.weaver
+              : item.dataValues.knitter
+                ? item.dataValues.knitter
+                : item.dataValues.processor_name,
+            invoice: item.dataValues.invoice_no ? item.dataValues.invoice_no : "",
+            order_ref: item.dataValues.order_ref ? item.dataValues.order_ref : "",
+            lotNo: item.dataValues.batch_lot_no ? item.dataValues.batch_lot_no : "",
+            program: item.dataValues.program ? item.dataValues.program : "",
+            yarnType: yarnTypeData ? yarnTypeData : "",
+            count: yarnCount
+              ? yarnCount
+              : "",
+            boxes: item.dataValues.no_of_boxes ? item.dataValues.no_of_boxes : "",
+            boxId: item.dataValues.box_ids ? item.dataValues.box_ids : "",
+            price: item.dataValues.price ? item.dataValues.price : "",
+            total: item.dataValues.total_qty ? item.dataValues.total_qty : 0,
+            agent: item.dataValues.transaction_agent
+              ? item.dataValues.transaction_agent
+              : "",
+          });
+        } 
+        else if (isBrand === 'true' && isOrganic === false) {
           rowValues = Object.values({
             index: index + 1,
             createdAt: item.dataValues.createdAt ? item.dataValues.createdAt : "",
@@ -13354,6 +13665,7 @@ const fetchPscpProcurementLiveTracker = async (req: Request, res: Response) => {
     let brandCondition: string[] = [];
     let baleCondition: string[] = [];
     let baleSaleCondition: string[] = [];
+    let seedAllocationCondition: string[] = [];
 
     if (search) {
       brandCondition.push(`(name ILIKE :searchTerm OR "s.state_name" ILIKE :searchTerm)`);
@@ -13376,6 +13688,7 @@ const fetchPscpProcurementLiveTracker = async (req: Request, res: Response) => {
       seasonCondition.push(`season_id IN (:seasonIds)`);
       baleCondition.push(`gp.season_id IN (:seasonIds)`);
       baleSaleCondition.push(`gp.season_id IN (:seasonIds)`);
+      seedAllocationCondition.push(`gv.season_id IN (:seasonIds)`);
     }
 
     if (ginnerId) {
@@ -13388,6 +13701,7 @@ const fetchPscpProcurementLiveTracker = async (req: Request, res: Response) => {
     const brandConditionSql = brandCondition.length ? `${brandCondition.join(' AND ')}` : '1=1';
     const baleConditionSql = baleCondition.length ? `${baleCondition.join(' AND ')}` : '1=1';
     const baleSaleConditionSql = baleSaleCondition.length ? `${baleSaleCondition.join(' AND ')}` : '1=1';
+    const seedAllocationConditionSql = seedAllocationCondition.length ? `${seedAllocationCondition.join(' AND ')}` : '1=1';
 
 
     const currentDate = new Date();
@@ -13549,8 +13863,27 @@ const fetchPscpProcurementLiveTracker = async (req: Request, res: Response) => {
             ),
         expected_cotton_data AS (
           SELECT
+            gv.ginner_id,
+            COALESCE(SUM(CAST("farms"."total_estimated_cotton"AS DOUBLE PRECISION)), 0) AS expected_seed_cotton
+            FROM "ginner_allocated_villages" as gv
+                    LEFT JOIN 
+                          "villages" AS "farmer->village" ON "gv"."village_id" = "farmer->village"."id" 
+                     LEFT JOIN 
+                          "farmers" AS "farmer" ON "farmer->village"."id" = "farmer"."village_id" 
+                     LEFT JOIN 
+                          "farms" as "farms" on farms.farmer_id = "farmer".id and farms.season_id = gv.season_id
+                     LEFT JOIN 
+                          "seasons" AS "season" ON "gv"."season_id" = "season"."id"
+          LEFT JOIN filtered_ginners ON gv.ginner_id = filtered_ginners.id
+          WHERE
+            "farmer".program_id = ANY (filtered_ginners.program_id)
+           AND ${seedAllocationConditionSql} 
+          GROUP BY
+            gv.ginner_id
+        ),
+        expected_lint_cotton_data AS (
+          SELECT
             gec.ginner_id,
-            SUM(CAST(gec.expected_seed_cotton AS DOUBLE PRECISION)) AS expected_seed_cotton,
             SUM(CAST(gec.expected_lint AS DOUBLE PRECISION)) AS expected_lint
           FROM
             ginner_expected_cottons gec
@@ -13581,7 +13914,7 @@ const fetchPscpProcurementLiveTracker = async (req: Request, res: Response) => {
         fg.county_name,
         fg.program_name,
         COALESCE(ec.expected_seed_cotton, 0) / 1000 AS expected_seed_cotton,
-        COALESCE(ec.expected_lint, 0) AS expected_lint,
+        COALESCE(elc.expected_lint, 0) AS expected_lint,
         COALESCE(pd.procurement_seed_cotton, 0) / 1000 AS procurement_seed_cotton,
         COALESCE(gb.total_qty, 0) AS procured_lint_cotton_kgs,
         COALESCE(gb.total_qty, 0) / 1000 AS procured_lint_cotton_mt,
@@ -13628,6 +13961,7 @@ const fetchPscpProcurementLiveTracker = async (req: Request, res: Response) => {
         LEFT JOIN pending_seed_cotton_data psc ON fg.id = psc.mapped_ginner
         LEFT JOIN gin_sales_data gs ON fg.id = gs.ginner_id
         LEFT JOIN expected_cotton_data ec ON fg.id = ec.ginner_id
+        LEFT JOIN expected_lint_cotton_data elc ON fg.id = elc.ginner_id
         LEFT JOIN ginner_order_data go ON fg.id = go.ginner_id
       ORDER BY
         fg.id DESC
@@ -13914,6 +14248,7 @@ const exportPscpProcurementLiveTracker = async (
     let brandCondition: string[] = [];
     let baleCondition: string[] = [];
     let baleSaleCondition: string[] = [];
+    let seedAllocationCondition: string[] = [];
 
     if (exportType === "all") {
 
@@ -13946,6 +14281,7 @@ const exportPscpProcurementLiveTracker = async (
         seasonCondition.push(`season_id IN (:seasonIds)`);
         baleCondition.push(`gp.season_id IN (:seasonIds)`);
         baleSaleCondition.push(`gp.season_id IN (:seasonIds)`);
+        seedAllocationCondition.push(`gv.season_id IN (:seasonIds)`);
       }
 
       if (ginnerId) {
@@ -13958,6 +14294,7 @@ const exportPscpProcurementLiveTracker = async (
       const brandConditionSql = brandCondition.length ? `${brandCondition.join(' AND ')}` : '1=1';
       const baleConditionSql = baleCondition.length ? `${baleCondition.join(' AND ')}` : '1=1';
       const baleSaleConditionSql = baleSaleCondition.length ? `${baleSaleCondition.join(' AND ')}` : '1=1';
+      const seedAllocationConditionSql = seedAllocationCondition.length ? `${seedAllocationCondition.join(' AND ')}` : '1=1';
 
 
       const currentDate = new Date();
@@ -14148,19 +14485,38 @@ const exportPscpProcurementLiveTracker = async (
                     gs.ginner_id
             ),
           expected_cotton_data AS (
-            SELECT
-              gec.ginner_id,
-              SUM(CAST(gec.expected_seed_cotton AS DOUBLE PRECISION)) AS expected_seed_cotton,
-              SUM(CAST(gec.expected_lint AS DOUBLE PRECISION)) AS expected_lint
-            FROM
-              ginner_expected_cottons gec
-            LEFT JOIN filtered_ginners ON gec.ginner_id = filtered_ginners.id
-            WHERE
-              gec.program_id = ANY (filtered_ginners.program_id)
-              AND ${seasonConditionSql}
-            GROUP BY
-              gec.ginner_id
-          ),
+          SELECT
+            gv.ginner_id,
+            COALESCE(SUM(CAST("farms"."total_estimated_cotton"AS DOUBLE PRECISION)), 0) AS expected_seed_cotton
+            FROM "ginner_allocated_villages" as gv
+                    LEFT JOIN 
+                          "villages" AS "farmer->village" ON "gv"."village_id" = "farmer->village"."id" 
+                     LEFT JOIN 
+                          "farmers" AS "farmer" ON "farmer->village"."id" = "farmer"."village_id" 
+                     LEFT JOIN 
+                          "farms" as "farms" on farms.farmer_id = "farmer".id and farms.season_id = gv.season_id
+                     LEFT JOIN 
+                          "seasons" AS "season" ON "gv"."season_id" = "season"."id"
+          LEFT JOIN filtered_ginners ON gv.ginner_id = filtered_ginners.id
+          WHERE
+            "farmer".program_id = ANY (filtered_ginners.program_id)
+           AND ${seedAllocationConditionSql} 
+          GROUP BY
+            gv.ginner_id
+        ),
+        expected_lint_cotton_data AS (
+          SELECT
+            gec.ginner_id,
+            SUM(CAST(gec.expected_lint AS DOUBLE PRECISION)) AS expected_lint
+          FROM
+            ginner_expected_cottons gec
+          LEFT JOIN filtered_ginners ON gec.ginner_id = filtered_ginners.id
+          WHERE
+            gec.program_id = ANY (filtered_ginners.program_id)
+            AND ${seasonConditionSql}
+          GROUP BY
+            gec.ginner_id
+        ),
           ginner_order_data AS (
             SELECT
               go.ginner_id,
@@ -14180,7 +14536,7 @@ const exportPscpProcurementLiveTracker = async (
           fg.county_name,
           fg.program_name,
           COALESCE(ec.expected_seed_cotton, 0) / 1000 AS expected_seed_cotton,
-          COALESCE(ec.expected_lint, 0) AS expected_lint,
+          COALESCE(elc.expected_lint, 0) AS expected_lint,
           COALESCE(pd.procurement_seed_cotton, 0) / 1000 AS procurement_seed_cotton,
           COALESCE(gb.total_qty, 0) AS procured_lint_cotton_kgs,
           COALESCE(gb.total_qty, 0) / 1000 AS procured_lint_cotton_mt,
@@ -14227,6 +14583,7 @@ const exportPscpProcurementLiveTracker = async (
           LEFT JOIN pending_seed_cotton_data psc ON fg.id = psc.mapped_ginner
           LEFT JOIN gin_sales_data gs ON fg.id = gs.ginner_id
           LEFT JOIN expected_cotton_data ec ON fg.id = ec.ginner_id
+          LEFT JOIN expected_lint_cotton_data elc ON fg.id = elc.ginner_id
           LEFT JOIN ginner_order_data go ON fg.id = go.ginner_id
         ORDER BY
           fg.id DESC
@@ -18070,6 +18427,152 @@ const villageSeedCottonReport = async (req: Request, res: Response) => {
     return res.sendError(res, error.message);
   }
 };
+const villageSeedCottonAllocationReport = async (req: Request, res: Response) => {
+  const searchTerm = req.query.search || "";
+  const page = Number(req.query.page) || 1;
+  const limit = Number(req.query.limit) || 10;
+  const offset = (page - 1) * limit;
+  const whereCondition: any = [];
+  const { brandId, stateId, countryId, seasonId , ginnerId}: any = req.query;
+
+
+  try {
+    if (searchTerm) {
+
+      whereCondition.push(`
+        (
+          village_name ILIKE '%${searchTerm}%'
+        )
+      `);
+      
+    }
+
+    if (countryId) {
+      const idArray: number[] = countryId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+        whereCondition.push(`farmer.country_id IN (${idArray.join(',')})`);
+     
+    }
+    if (brandId) {
+      const idArray: number[] = brandId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+     
+      whereCondition.push(`farmer.brand_id IN (${idArray.join(',')})`);
+    }
+
+    if (stateId) {
+      const idArray: number[] = stateId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      
+      whereCondition.push(`farmer.state_id IN (${idArray.join(',')})`);
+    }
+
+    if (ginnerId) {
+      const idArray: number[] = ginnerId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      
+      whereCondition.push(`gv.ginner_id IN (${idArray.join(',')})`);
+    }
+
+    if (seasonId) {
+      const idArray: number[] = seasonId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      
+      whereCondition.push(`gv.season_id IN (${idArray.join(',')})`);
+    }
+
+    const whereClause = whereCondition.length > 0 ? `WHERE ${whereCondition.join(' AND ')}` : '';
+
+    let data: any = [];
+
+    const countQuery = ` SELECT COUNT(DISTINCT "gv"."id") AS total_records
+                     FROM "ginner_allocated_villages" as gv
+                     LEFT JOIN 
+                          "villages" AS "farmer->village" ON "gv"."village_id" = "farmer->village"."id" 
+                     LEFT JOIN 
+                          "farmers" AS "farmer" ON "farmer->village"."id" = "farmer"."village_id" 
+                     LEFT JOIN 
+                          "farms" as "farms" on farms.farmer_id = "farmer".id and farms.season_id = gv.season_id
+                     LEFT JOIN 
+                          "seasons" AS "season" ON "gv"."season_id" = "season"."id"
+                    ${whereClause} `;
+
+    const dataQuery = `SELECT 
+                     "gv"."village_id" AS "village_id", 
+                     "farmer->village"."village_name" AS "village_name", 
+                     "season"."id" AS "season_id", 
+                     "season"."name" AS "season_name", 
+                     "gn"."name" as "ginner_name",
+                     "bk"."block_name" as "block_name",
+                     "ds"."district_name" as "district_name",
+                     COALESCE(SUM(CAST("farms"."total_estimated_cotton"AS DOUBLE PRECISION)), 0) AS "estimated_seed_cotton", 
+                     COALESCE(SUM(CAST("farms"."cotton_transacted" AS DOUBLE PRECISION)), 0) AS "procured_seed_cotton", 
+                     (COALESCE(SUM(CAST("farms"."total_estimated_cotton" AS DOUBLE PRECISION)), 0) - COALESCE(SUM(CAST("farms"."cotton_transacted" AS DOUBLE PRECISION)), 0)) AS "avaiable_seed_cotton" 
+                     FROM "ginner_allocated_villages" as gv
+                     LEFT JOIN 
+                          "villages" AS "farmer->village" ON "gv"."village_id" = "farmer->village"."id" 
+                     LEFT JOIN 
+                          "farmers" AS "farmer" ON "farmer->village"."id" = "farmer"."village_id" 
+                     LEFT JOIN 
+                          "farms" as "farms" on farms.farmer_id = "farmer".id and farms.season_id = gv.season_id
+                     LEFT JOIN 
+                          "seasons" AS "season" ON "gv"."season_id" = "season"."id"
+                     LEFT JOIN 
+                          "ginners" AS gn ON "gn"."id" = "gv"."ginner_id" 
+                     LEFT JOIN 
+                          "blocks" AS bk ON "bk"."id" = "farmer->village"."block_id"
+                     LEFT JOIN 
+                          "districts" AS ds ON "ds"."id" = "bk"."district_id"
+
+                     ${whereClause}
+                    GROUP BY 
+                          "gv"."village_id", "farmer->village"."id", "season"."id" ,"gn".id,"bk".id,"ds".id
+                    ORDER BY "gv"."village_id" DESC 
+                    OFFSET ${offset} LIMIT ${limit}
+                      `;
+  
+                      
+                      const [countResult, rows] = await Promise.all([
+                        sequelize.query(countQuery, {
+                          type: sequelize.QueryTypes.SELECT,
+                        }),
+                        sequelize.query(dataQuery, {
+                          type: sequelize.QueryTypes.SELECT,
+                        })
+                      ]);
+
+                      // Extract and parse total_records
+                     
+                      const totalCount = countResult ? Number(countResult[0]?.total_records) : 0;
+
+   
+
+    for await (let row of rows) {
+      let percentage =
+        Number(row.estimated_seed_cotton) >
+          Number(row.procured_seed_cotton)
+          ? (Number(row.procured_seed_cotton) /
+            Number(row.estimated_seed_cotton)) *
+          100
+          : 0;
+
+      data.push({
+        ...row,
+        prct_procured_cotton: formatDecimal(percentage),
+      });
+    }
+    
+    return res.sendPaginationSuccess(res, data, totalCount);
+  } catch (error: any) {
+    console.error(error);
+    return res.sendError(res, error.message);
+  }
+};
 
 const exportVillageSeedCotton = async (req: Request, res: Response) => {
   // village_seed_cotton_load
@@ -18272,6 +18775,207 @@ const exportVillageSeedCotton = async (req: Request, res: Response) => {
         village_seed_cotton_load: false
       }, { where: { village_seed_cotton_load: true } })
     })
+    console.error(error);
+    return res.sendError(res, error.message);
+  }
+};
+
+const exportVillageSeedCottonAllocation = async (req: Request, res: Response) => {
+   
+  const excelFilePath = path.join("./upload", "excel-village-seed-cotton-allocation.xlsx");
+  const searchTerm = req.query.search || "";
+  const page = Number(req.query.page) || 1;
+  const limit = Number(req.query.limit) || 10;
+  const offset = (page - 1) * limit;
+  const whereCondition: any = [];
+  const { exportType,stateId, brandId, countryId, seasonId, ginnerId }: any = req.query;
+  try {
+    if (exportType === "all") {
+      return res.status(200).send({
+        success: true,
+        messgage: "File successfully Generated",
+        data: process.env.BASE_URL + "village-seed-cotton-allocation.xlsx",
+      });
+    } 
+    else {
+    if (searchTerm) {
+
+      whereCondition.push(`
+        (
+          village_name ILIKE '%${searchTerm}%'
+        )
+      `);
+      
+    }
+
+    if (countryId) {
+      const idArray: number[] = countryId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+        whereCondition.push(`farmer.country_id IN (${idArray.join(',')})`);
+     
+    }
+    if (brandId) {
+      const idArray: number[] = brandId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+     
+      whereCondition.push(`farmer.brand_id IN (${idArray.join(',')})`);
+    }
+
+    if (stateId) {
+      const idArray: number[] = stateId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      
+      whereCondition.push(`farmer.state_id IN (${idArray.join(',')})`);
+    }
+
+    if (ginnerId) {
+      const idArray: number[] = ginnerId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      
+      whereCondition.push(`gv.ginner_id IN (${idArray.join(',')})`);
+    }
+
+    if (seasonId) {
+      const idArray: number[] = seasonId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      
+      whereCondition.push(`gv.season_id IN (${idArray.join(',')})`);
+    }
+
+    const whereClause = whereCondition.length > 0 ? `WHERE ${whereCondition.join(' AND ')}` : '';
+
+    // Create the excel workbook file
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet("Sheet1");
+    worksheet.mergeCells("A1:J1");
+    const mergedCell = worksheet.getCell("A1");
+    mergedCell.value = "CottonConnect | Village Seed Cotton Allocation Report";
+    mergedCell.font = { bold: true };
+    mergedCell.alignment = { horizontal: "center", vertical: "middle" };
+    // Set bold font for header row
+    const headerRow = worksheet.addRow([
+      "Sr No.",
+      "Village Name ",
+      "Ginner Name",
+      "block Name",
+      "District Name",
+      "Season ",
+      "Total Estimated Seed cotton of village (Kgs)",
+      "Total Seed Cotton Procured from village (Kgs)",
+      "Total Seed Cotton in Stock at village (Kgs)",
+      "% Seed Cotton Procured",
+    ]);
+    headerRow.font = { bold: true };
+
+    const dataQuery = `SELECT 
+                     "gv"."village_id" AS "village_id", 
+                     "farmer->village"."village_name" AS "village_name", 
+                     "season"."id" AS "season_id", 
+                     "season"."name" AS "season_name", 
+                     "gn"."name" as "ginner_name",
+                     "bk"."block_name" as "block_name",
+                     "ds"."district_name" as "district_name",
+                     COALESCE(SUM(CAST("farms"."total_estimated_cotton"AS DOUBLE PRECISION)), 0) AS "estimated_seed_cotton", 
+                     COALESCE(SUM(CAST("farms"."cotton_transacted" AS DOUBLE PRECISION)), 0) AS "procured_seed_cotton", 
+                     (COALESCE(SUM(CAST("farms"."total_estimated_cotton" AS DOUBLE PRECISION)), 0) - COALESCE(SUM(CAST("farms"."cotton_transacted" AS DOUBLE PRECISION)), 0)) AS "avaiable_seed_cotton" 
+                     FROM "ginner_allocated_villages" as gv
+                     LEFT JOIN 
+                          "villages" AS "farmer->village" ON "gv"."village_id" = "farmer->village"."id" 
+                     LEFT JOIN 
+                          "farmers" AS "farmer" ON "farmer->village"."id" = "farmer"."village_id" 
+                     LEFT JOIN 
+                          "farms" as "farms" on farms.farmer_id = "farmer".id and farms.season_id = gv.season_id
+                     LEFT JOIN 
+                          "seasons" AS "season" ON "gv"."season_id" = "season"."id"
+                     LEFT JOIN 
+                          "ginners" AS gn ON "gn"."id" = "gv"."ginner_id" 
+                     LEFT JOIN 
+                          "blocks" AS bk ON "bk"."id" = "farmer->village"."block_id"
+                     LEFT JOIN 
+                          "districts" AS ds ON "ds"."id" = "bk"."district_id"
+                     ${whereClause}
+                    GROUP BY 
+                          "gv"."village_id", "farmer->village"."id", "season"."id" ,"gn".id,"bk".id,"ds".id
+                    ORDER BY "gv"."village_id" DESC 
+                    OFFSET ${offset} LIMIT ${limit}
+                      `;
+  
+                      
+      const rows = await sequelize.query(dataQuery, {type: sequelize.QueryTypes.SELECT,})
+                  
+
+    // Append data to worksheet
+    for await (const [index, item] of rows.entries()) {
+      let percentage =
+        Number(item?.estimated_seed_cotton) >
+          Number(item?.procured_seed_cotton)
+          ? (Number(item?.procured_seed_cotton) /
+            Number(item?.estimated_seed_cotton)) *
+          100
+          : 0;
+
+      const rowValues = Object.values({
+        index: index + 1,
+        village_name: item?.village_name
+          ? item?.village_name
+          : "",
+          ginner_name: item?.ginner_name
+          ? item?.ginner_name
+          : "",
+          block_name: item?.block_name
+          ? item?.block_name
+          : "",
+          district_name: item?.district_name
+          ? item?.district_name
+          : "",
+        season_name: item?.season_name
+          ? item?.season_name
+          : "",
+        estimated_seed_cotton: item?.estimated_seed_cotton
+          ? Number(item?.estimated_seed_cotton)
+          : 0,
+        procured_seed_cotton: item?.procured_seed_cotton
+          ? Number(item?.procured_seed_cotton)
+          : 0,
+        avaiable_seed_cotton:
+          item?.avaiable_seed_cotton &&
+            item?.avaiable_seed_cotton > 0
+            ? Number(item?.avaiable_seed_cotton)
+            : 0,
+        prct_procured_cotton: percentage
+          ? Number(formatDecimal(percentage))
+          : 0,
+      });
+      worksheet.addRow(rowValues);
+      
+    }
+
+    // Set the width for the S No. column
+    // Auto-adjust column widths based on content
+    worksheet.columns.forEach((column: any) => {
+      let maxCellLength = 0;
+      column.eachCell({ includeEmpty: true }, (cell: any) => {
+        const cellLength = (cell.value ? cell.value.toString() : "").length;
+        maxCellLength = Math.max(maxCellLength, cellLength);
+      });
+      column.width = Math.min(14, maxCellLength + 2); // Limit width to 30 characters
+    });
+
+    // Save the workbook
+    await workbook.xlsx.writeFile(excelFilePath);
+    res.status(200).send({
+      success: true,
+      messgage: "File successfully Generated",
+      data: process.env.BASE_URL + "excel-village-seed-cotton-allocation.xlsx",
+    });
+  }
+  } catch (error: any) {
+    
     console.error(error);
     return res.sendError(res, error.message);
   }
@@ -19677,7 +20381,9 @@ export {
   spinnerBackwardTraceabiltyReport,
   exportSpinnerBackwardTraceability,
   villageSeedCottonReport,
+  villageSeedCottonAllocationReport,
   exportVillageSeedCotton,
+  exportVillageSeedCottonAllocation,
   spinnerProcessBackwardTraceabiltyReport,
   exportSpinProcessBackwardfTraceabilty,
   brandWiseDataReport,

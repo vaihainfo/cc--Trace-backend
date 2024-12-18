@@ -189,6 +189,58 @@ const updateOrganicIntegrity = async (req: Request, res: Response) => {
     }
 }
 
+const updateReportOrganicIntegrity = async (req: Request, res: Response) => {
+    try {
+        let updatedData = []
+        for await (const update of req.body) {
+            if (!update.id || !update.uploaded_reports) {
+                throw new Error(`Missing id or uploaded_reports for record`);
+            }
+
+            const result = await OrganicIntegrity.update(
+                { uploaded_reports: update.uploaded_reports },
+                { where: { id: update.id } }
+            );
+            updatedData.push({
+                data: result
+            });
+        }
+
+        res.sendSuccess(res, updatedData);
+    } catch (error: any) {
+        return res.sendError(res, error.message);
+    }
+};
+
+const deleteReportFromOrganicIntegrity = async (req: Request, res: Response) => {
+    try {
+        const { id, reportToDelete } = req.body;
+
+        if (!id || !reportToDelete) {
+            return res.sendError(res, "Missing id or name of the report");
+        }
+
+        const organicIntegrity = await OrganicIntegrity.findOne({ where: { id } });
+
+        if (!organicIntegrity) {
+            return res.sendError(res, "Record not found.");
+        }
+        let currentReports = organicIntegrity.uploaded_reports || [];
+
+        currentReports = currentReports.filter((report: string) => report !== reportToDelete);
+
+        const result =  await OrganicIntegrity.update(
+            { uploaded_reports: currentReports },
+            { where: { id } }
+        );
+
+        res.sendSuccess(res, {...result, msg: "Report deleted successfully."});
+    } catch (error: any) {
+        return res.sendError(res, error.message);
+    }
+};
+
+
 const deleteOrganicIntegrity = async (req: Request, res: Response) => {
     try {
         const organicIntegrity = await OrganicIntegrity.destroy({
@@ -207,6 +259,8 @@ export {
     createOrganicIntegrity,
     fetchOrganicIntegrityPagination,
     updateOrganicIntegrity,
+    updateReportOrganicIntegrity,
     deleteOrganicIntegrity,
-    fetchOrganicIntegrity
+    fetchOrganicIntegrity,
+    deleteReportFromOrganicIntegrity
 };
