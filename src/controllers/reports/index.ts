@@ -4546,7 +4546,7 @@ const exportSpinnerYarnProcess = async (req: Request, res: Response) => {
       const worksheet = workbook.addWorksheet("Sheet1");
       if (isOrganic === 'true') {
         worksheet.mergeCells('A1:S1');
-      } else if (isBrand === 'true' && isOrganic === 'false') {
+      } else if (isBrand === 'true' && isOrganic === false) {
         worksheet.mergeCells('A1:T1');
       } else {
         worksheet.mergeCells('A1:V1');
@@ -4581,7 +4581,7 @@ const exportSpinnerYarnProcess = async (req: Request, res: Response) => {
           "Grey Out Status",
         ]);
       }
-      else if (isBrand === 'true' && isOrganic === 'false') {
+      else if (isBrand === 'true' && isOrganic === false) {
         headerRow = worksheet.addRow([
           "Sr No.",
           "Date and Time",
@@ -4817,7 +4817,7 @@ const exportSpinnerYarnProcess = async (req: Request, res: Response) => {
             greyout_status: item.greyout_status ? "Yes" : "No",
           });
         }
-        else if (isBrand === 'true' && isOrganic === 'false') {
+        else if (isBrand === 'true' && isOrganic === false) {
           rowValues = Object.values({
             index: index + 1,
             createdAt: item.createdAt ? item.createdAt : "",
@@ -5149,8 +5149,6 @@ const exportSpinnerSale = async (req: Request, res: Response) => {
   const isBrand = req.query.isBrand || false;
   const { exportType, spinnerId, seasonId, programId, brandId, countryId, startDate, endDate }: any = req.query;
   const offset = (page - 1) * limit;
-
-  console.log("isOrganic---------------", isOrganic)
   const whereCondition: any = {};
   try {
 
@@ -5226,7 +5224,7 @@ const exportSpinnerSale = async (req: Request, res: Response) => {
       const worksheet = workbook.addWorksheet("Sheet1");
       if(isOrganic === 'true') {
         worksheet.mergeCells('A1:Q1');
-      } else if (isBrand === 'true' && isOrganic === 'false') {
+      } else if (isBrand === 'true' && isOrganic === false) {
         worksheet.mergeCells('A1:R1');
       } else {
         worksheet.mergeCells("A1:U1");
@@ -5258,7 +5256,7 @@ const exportSpinnerSale = async (req: Request, res: Response) => {
           "Agent Details",
         ]);
       }
-      else if (isBrand === 'true' && isOrganic === 'false') {
+      else if (isBrand === 'true' && isOrganic === false) {
         headerRow = worksheet.addRow([
           "Sr No.",
           "Created Date and Time",
@@ -5475,7 +5473,6 @@ const exportSpinnerSale = async (req: Request, res: Response) => {
       `);
         }
 
-
         let rowValues;
         if (isOrganic === 'true') {
           rowValues = Object.values({
@@ -5506,7 +5503,7 @@ const exportSpinnerSale = async (req: Request, res: Response) => {
               : "",
           });
         } 
-        else if (isBrand === 'true' && isOrganic === 'false') {
+        else if (isBrand === 'true' && isOrganic === false) {
           rowValues = Object.values({
             index: index + 1,
             createdAt: item.dataValues.createdAt ? item.dataValues.createdAt : "",
