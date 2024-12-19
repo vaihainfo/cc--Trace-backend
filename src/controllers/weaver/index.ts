@@ -960,7 +960,7 @@ const deleteWeaverSales = async (req: Request, res: Response) => {
         sales_id: req.body.id,
       },
     });
-    yarn_selections.forEach((yarn: any) => {
+    for await (let yarn of yarn_selections) {
       WeaverProcess.update(
         {
           qty_stock: sequelize.literal(`qty_stock + ${yarn.qty_used}`),
@@ -971,10 +971,10 @@ const deleteWeaverSales = async (req: Request, res: Response) => {
           },
         }
       );
-      const fabrics = WeaverFabric.findOne({ where: { id: yarn.yarn_id } });
+      const fabrics = await WeaverFabric.findOne({ where: { id: yarn.weaver_fabric } });
       if (fabrics) {
-        WeaverFabric.update(
-          { sold_status: false, fabric_length_stock: +fabrics.fabric_length_stock + +yarn.qty_used },
+       WeaverFabric.update(
+          { sold_status: false, fabric_length_stock: Number(fabrics.fabric_length_stock) + Number(yarn.qty_used)},
           { where: { id: yarn.weaver_fabric } }
         );
       }
@@ -982,7 +982,7 @@ const deleteWeaverSales = async (req: Request, res: Response) => {
       //   { sold_status: false },
       //   { where: { id: yarn.weaver_fabric } }
       // );
-    });
+    };
 
     WeaverSales.destroy({
       where: {
