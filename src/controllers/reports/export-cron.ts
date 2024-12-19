@@ -2510,6 +2510,8 @@ const generateGinnerProcess = async () => {
           SELECT
               gp.id AS process_id,
               gp.date,
+              gp.from_date,
+              gp.to_date,
               gp."createdAt" AS created_date,
               s.name AS season_name,
               g.name AS ginner_name,
@@ -2634,6 +2636,8 @@ const generateGinnerProcess = async () => {
             SELECT
                 gd.process_id,
                 gd.date AS date,
+                gd.from_date AS from_date,
+                gd.to_date AS to_date,
                 gd.created_date AS "createdAt",
                 gd.season_name AS season,
                 gd.ginner_name AS ginner_name,
@@ -2687,7 +2691,7 @@ const generateGinnerProcess = async () => {
       if (!currentWorksheet) {
         currentWorksheet = workbook.addWorksheet(`Sheet${worksheetIndex}`);
         if (worksheetIndex == 1) {
-          currentWorksheet.mergeCells('A1:V1');
+          currentWorksheet.mergeCells('A1:X1');
           const mergedCell = currentWorksheet.getCell('A1');
           mergedCell.value = 'CottonConnect | Ginner Bale Process Report';
           mergedCell.font = { bold: true };
@@ -2697,7 +2701,7 @@ const generateGinnerProcess = async () => {
         // Set bold font for header row
         // Set bold font for header row
         const headerRow = currentWorksheet.addRow([
-          "Sr No.", "Process Date", "Data Entry Date", "Seed Cotton Consumed Season", "Lint process Season choosen", "Ginner Name", "Heap Number", "Gin Lot No", "Gin Press No", "REEL Lot No", "REEL Press No", "No of Bales", "Lint Quantity(Kgs)", "Total Seed Cotton Consumed(Kgs)", "GOT", "Total lint cotton sold(Kgs)", "Total Bales Sold", "Total lint cotton in stock(Kgs)", "Total Bales in stock", "Programme", "Village", "Grey Out Status"
+          "Sr No.", "Process Date", "Data Entry Date", "Lint Production Start Date", "Lint Production End Date", "Seed Cotton Consumed Season", "Lint process Season choosen", "Ginner Name", "Heap Number", "Gin Lot No", "Gin Press No", "REEL Lot No", "REEL Press No", "No of Bales", "Lint Quantity(Kgs)", "Total Seed Cotton Consumed(Kgs)", "GOT", "Total lint cotton sold(Kgs)", "Total Bales Sold", "Total lint cotton in stock(Kgs)", "Total Bales in stock", "Programme", "Village", "Grey Out Status"
         ]);
         headerRow.font = { bold: true };
       }
@@ -2708,6 +2712,8 @@ const generateGinnerProcess = async () => {
           index: index + offset + 1,
           date: item.date ? item.date : "",
           created_date: item.createdAt ? item.createdAt : "",
+          from_date: item.from_date ? item.from_date : "",
+          to_date: item.to_date ? item.to_date : "",
           seed_consumed_seasons: item.seed_consumed_seasons ? item.seed_consumed_seasons : "",
           season: item.season ? item.season : "",
           ginner: item.ginner_name ? item.ginner_name : "",
@@ -3903,6 +3909,8 @@ const generateSpinnerYarnProcess = async () => {
           SELECT
             spin_process.id AS process_id,
             spin_process.date,
+            spin_process.from_date,
+            spin_process.to_date,
             spin_process."createdAt",
             season.name AS season_name,
             spinner.name AS spinner_name,
@@ -4039,6 +4047,8 @@ const generateSpinnerYarnProcess = async () => {
           index: index + offset + 1,
           createdAt: item.createdAt ? item.createdAt : "",
           date: item.date ? item.date : "",
+          from_date: item.from_date ? item.from_date : "",
+          to_date: item.to_date ? item.to_date : "",
           lint_consumed_seasons: item.lint_consumed_seasons ? item.lint_consumed_seasons : "",
           season: item.season_name ? item.season_name : "",
           spinner: item.spinner_name ? item.spinner_name : "",
@@ -4072,7 +4082,7 @@ const generateSpinnerYarnProcess = async () => {
         if (!currentWorksheet) {
           currentWorksheet = workbook.addWorksheet(`Spinner Yarn Process ${worksheetIndex}`);
           if (worksheetIndex == 1) {
-            currentWorksheet.mergeCells("A1:V1");
+            currentWorksheet.mergeCells("A1:X1");
             const mergedCell = currentWorksheet.getCell("A1");
             mergedCell.value = "CottonConnect | Spinner Yarn Process Report";
             mergedCell.font = { bold: true };
@@ -4083,6 +4093,8 @@ const generateSpinnerYarnProcess = async () => {
             "Sr No.",
             "Date and Time",
             "Process Date",
+            "Yarn Production Start Date",
+            "Yarn Production End Date",
             "Lint Cotton Consumed Season",
             "Yarn Process Season",
             "Spinner Name",

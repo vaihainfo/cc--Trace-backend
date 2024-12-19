@@ -107,7 +107,16 @@ const getGinProcessLotDetials = async (req: Request, res: Response) => {
                     'bale_no', gb.bale_no,
                     'weight', gb.weight,
                     'is_all_rejected', gb.is_all_rejected,
-                    'greyout_status', gp.greyout_status
+                    'greyout_status', gp.greyout_status,
+                    'sold_status', gb.sold_status,
+                    'te_verified_status', gb.te_verified_status,
+                    'te_verified_weight', gb.te_verified_weight,
+                    'gin_verified_status', gb.gin_verified_status,
+                    'gin_verified_weight', gb.gin_verified_weight,
+                    'scm_verified_status', gb.scm_verified_status,
+                    'scm_verified_weight', gb.scm_verified_weight,
+                    'scd_verified_status', gb.scd_verified_status,
+                    'scd_verified_weight', gb.scd_verified_weight
                 ) ORDER BY gb.id ASC)
             ) AS result
         FROM 
@@ -300,6 +309,7 @@ const createVerifiedLintStock = async (req: Request, res: Response) => {
             be_verified_status: req.body.beId ? true : null,
             be_verified_total_qty: req.body.beId ? req.body.actualTotalQty : null,
             be_verified_bales: req.body.beId ? req.body.actualNoOfBales : null,
+            verification_status: 'Pending',
           },
           {
             where: {
@@ -2067,6 +2077,7 @@ const updatePSVerifiedStockConfirm = async (
           ps_verified_status: req.body.status === "Accepted" ? true : false,
           ps_verified_total_qty: req.body.confirmedTotalQty,
           ps_verified_bales: req.body.confirmedNoOfBales,
+          verification_status: 'Completed',
         },
         {
           where: {

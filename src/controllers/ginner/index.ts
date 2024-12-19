@@ -64,6 +64,8 @@ const createGinnerProcess = async (req: Request, res: Response) => {
       weigh_bridge: req.body.weighBridge,
       delivery_challan: req.body.deliveryChallan,
       bale_process: req.body.baleProcess,
+      from_date: req.body.from_date,
+      to_date: req.body.to_date,
     };
     const ginprocess = await GinProcess.create(data);
 
@@ -108,9 +110,9 @@ const createGinnerProcess = async (req: Request, res: Response) => {
     for await (const heap of req.body.chooseHeap) {
       let val = await GinHeap.findOne({ where: { id: heap.id } });
       if (val) {
-        if(Number(val.dataValues.qty_stock) >= Number(heap.qtyUsed)){
+        if (Number(val.dataValues.qty_stock) >= Number(heap.qtyUsed)) {
           let update = await GinHeap.update({ qty_stock: isNaN(val.dataValues.qty_stock - heap.qtyUsed) ? 0 : val.dataValues.qty_stock - heap.qtyUsed }, { where: { id: heap.id } });
-        }else{
+        } else {
           let update = await GinHeap.update({ qty_stock: 0 }, { where: { id: heap.id } });
         }
       }
@@ -274,6 +276,7 @@ const fetchGinProcessPagination = async (req: Request, res: Response) => {
         limit: limit,
         order: [["id", "desc"]],
       });
+     
       let sendData: any = [];
       for await (let row of rows) {
         let cotton = await CottonSelection.findAll({
@@ -285,10 +288,10 @@ const fetchGinProcessPagination = async (req: Request, res: Response) => {
           attributes: ["transaction_id"],
           where: { process_id: row.dataValues.id },
         });
-        
-        let transactionIds = heap.flatMap((item: any)=> item?.dataValues?.transaction_id || []).filter((id:any)=> id !== undefined);
-        
-        let cottonHeap = [...cotton.map((item: any) => item?.dataValues?.transaction_id).filter((id:any) => id !== undefined), ...transactionIds];
+
+        let transactionIds = heap.flatMap((item: any) => item?.dataValues?.transaction_id || []).filter((id: any) => id !== undefined);
+
+        let cottonHeap = [...cotton.map((item: any) => item?.dataValues?.transaction_id).filter((id: any) => id !== undefined), ...transactionIds];
 
         let village = [];
         if (cottonHeap.length > 0) {
@@ -307,7 +310,7 @@ const fetchGinProcessPagination = async (req: Request, res: Response) => {
             group: ["village_id", "village.id"],
           });
         }
-        
+
         let bale = await GinBale.findOne({
           attributes: [
             [
@@ -637,7 +640,7 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
     // Create the excel workbook file
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet("Sheet1");
-    worksheet.mergeCells("A1:O1");
+    worksheet.mergeCells("A1:R1");
     const mergedCell = worksheet.getCell("A1");
     mergedCell.value = "CottonConnect | Ginner Process";
     mergedCell.font = { bold: true };
@@ -647,6 +650,8 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
       "Sr No.",
       "Created Date",
       "Date",
+      "Lint Production Start Date",
+      "Lint Production End Date",
       "Season",
       "Gin Lot No",
       "Gin Press No",
@@ -699,23 +704,23 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
         attributes: ["transaction_id"],
         where: { process_id: item.dataValues.id },
       });
-      
+
       let b = await heapSelection.findAll({
         attributes: ["transaction_id"],
         where: { process_id: item.dataValues.id },
       });
 
       let cotton = [
-        ...a.map((item:any) => item?.dataValues?.transaction_id).flat(),
-        ...b.map((item:any) => item?.dataValues?.transaction_id).flat()
+        ...a.map((item: any) => item?.dataValues?.transaction_id).flat(),
+        ...b.map((item: any) => item?.dataValues?.transaction_id).flat()
       ];
-      
+
       let village = [];
       if (cotton.length > 0) {
         village = await Transaction.findAll({
           attributes: ["village_id"],
           where: {
-            id: cotton, 
+            id: cotton,
           },
           include: [
             {
@@ -727,7 +732,7 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
           group: ["village_id", "village.id"],
         });
       }
-      
+
       let bale = ginBales.find((obj: any) => obj.process_id == item.id);
       let gin_press_no =
         (bale?.pressno_from || "") + "-" + (bale?.pressno_to || "").trim();
@@ -745,6 +750,8 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
         index: index + 1,
         createdDate: item.createdAt ? item.createdAt : "",
         date: item.date ? item.date : "",
+        from: item.from_date ? item.from_date : "",
+        to: item.to_date ? item.to_date : "",
         season: item.season ? item.season.name : "",
         lot: item.lot_no ? item.lot_no : "",
         gin_press_no: gin_press_no ? gin_press_no : "",
@@ -1347,7 +1354,7 @@ const chooseCotton = async (req: Request, res: Response) => {
     }
 
     const allocated = await GinnerAllocatedVillage.findAll({
-      where:{
+      where: {
         ginner_id: ginnerid,
         program_id: programId,
         ...whereCondition
@@ -1360,80 +1367,80 @@ const chooseCotton = async (req: Request, res: Response) => {
     })
     const summedData: any = {};
 
-    for await (let row of allocated){
+    for await (let row of allocated) {
 
-    const results = await Transaction.findAll({
-      // attributes: [
-      // [Sequelize.fn("SUM", Sequelize.col("qty_stock")), "qty_stock"],
-      // [Sequelize.fn("SUM", Sequelize.col("qty_stock")), "qty_used"],
-      // [
-      //   sequelize.fn(
-      //     "COALESCE",
-      //     sequelize.fn(
-      //       "SUM",
-      //       Sequelize.literal('CAST("qty_purchased" AS DOUBLE PRECISION)')
-      //     ),
-      //     0
-      //   ),
-      //   "estimated_qty",
-      // ],
-      // ],
-      attributes: ["id", "qty_stock", "qty_purchased", "village_id", "vehicle", "date"],
-      include: [
-        { model: Village, as: "village" },
-        { model: Program, as: "program" },
-        { model: Season, as: "season" },
-      ],
-      where: {
-        ...transactionCondition,
-        village_id: row?.dataValues?.village_id,
-        season_id: row?.dataValues?.season_id,
-      },
-      // group: ["transactions.village_id, transactions.id"],
-      order: [
-        ["id", "DESC"],
-        [Sequelize.col("accept_date"), "DESC"],
-      ],
-    });
+      const results = await Transaction.findAll({
+        // attributes: [
+        // [Sequelize.fn("SUM", Sequelize.col("qty_stock")), "qty_stock"],
+        // [Sequelize.fn("SUM", Sequelize.col("qty_stock")), "qty_used"],
+        // [
+        //   sequelize.fn(
+        //     "COALESCE",
+        //     sequelize.fn(
+        //       "SUM",
+        //       Sequelize.literal('CAST("qty_purchased" AS DOUBLE PRECISION)')
+        //     ),
+        //     0
+        //   ),
+        //   "estimated_qty",
+        // ],
+        // ],
+        attributes: ["id", "qty_stock", "qty_purchased", "village_id", "vehicle", "date"],
+        include: [
+          { model: Village, as: "village" },
+          { model: Program, as: "program" },
+          { model: Season, as: "season" },
+        ],
+        where: {
+          ...transactionCondition,
+          village_id: row?.dataValues?.village_id,
+          season_id: row?.dataValues?.season_id,
+        },
+        // group: ["transactions.village_id, transactions.id"],
+        order: [
+          ["id", "DESC"],
+          [Sequelize.col("accept_date"), "DESC"],
+        ],
+      });
 
 
-    results.forEach((result: any) => {
-      const villageId = result.dataValues.village_id;
-      if (summedData[villageId]) {
-        summedData[villageId].qty_stock += result.dataValues.qty_stock;
-        summedData[villageId].vehicle = [
-          ...summedData[villageId].vehicle,
-          {
-            tran_id: result.dataValues.id,
-            village_id: villageId,
+      results.forEach((result: any) => {
+        const villageId = result.dataValues.village_id;
+        if (summedData[villageId]) {
+          summedData[villageId].qty_stock += result.dataValues.qty_stock;
+          summedData[villageId].vehicle = [
+            ...summedData[villageId].vehicle,
+            {
+              tran_id: result.dataValues.id,
+              village_id: villageId,
+              qty_stock: result.dataValues.qty_stock,
+              qty_used: result.dataValues.qty_stock,
+              estimated_qty: result.dataValues.qty_purchased,
+              date_of_procurement: result.dataValues.date,
+              vehicle_no: result.dataValues.vehicle
+            }
+          ]
+        }
+        else {
+          summedData[villageId] = {
+            ...result.village.dataValues,
             qty_stock: result.dataValues.qty_stock,
-            qty_used: result.dataValues.qty_stock,
-            estimated_qty: result.dataValues.qty_purchased,
-            date_of_procurement: result.dataValues.date,
-            vehicle_no: result.dataValues.vehicle
-          }
-        ]
-      }
-      else {
-        summedData[villageId] = {
-          ...result.village.dataValues,
-          qty_stock: result.dataValues.qty_stock,
-          vehicle: [{
-            tran_id: result.dataValues.id,
-            village_id: villageId,
-            qty_stock: result.dataValues.qty_stock,
-            qty_used: result.dataValues.qty_stock,
-            estimated_qty: result.dataValues.qty_purchased,
-            date_of_procurement: result.dataValues.date,
-            vehicle_no: result.dataValues.vehicle
-          }],
-          vlg_id: villageId,
-          program: result.program,
-          season: result.season,
-        };
-      }
-    });
-  }
+            vehicle: [{
+              tran_id: result.dataValues.id,
+              village_id: villageId,
+              qty_stock: result.dataValues.qty_stock,
+              qty_used: result.dataValues.qty_stock,
+              estimated_qty: result.dataValues.qty_purchased,
+              date_of_procurement: result.dataValues.date,
+              vehicle_no: result.dataValues.vehicle
+            }],
+            vlg_id: villageId,
+            program: result.program,
+            season: result.season,
+          };
+        }
+      });
+    }
 
     const finalResult = Object.values(summedData);
     res.sendSuccess(res, finalResult);
@@ -1877,13 +1884,13 @@ const updateGinnerSales = async (req: Request, res: Response) => {
         LEFT JOIN gin_sales gs ON bs.sales_id = gs.id
         WHERE bs.sales_id = ${req.body.id}`);
 
-        if(newSum && newSum[0]){
-          let newQuantity = newSum[0]?.lint_quantity;
-          data.total_qty = newQuantity;
-        }
+      if (newSum && newSum[0]) {
+        let newQuantity = newSum[0]?.lint_quantity;
+        data.total_qty = newQuantity;
+      }
     }
 
-        const ginSales = await GinSales.update(data, {
+    const ginSales = await GinSales.update(data, {
       where: { id: req.body.id },
     });
 
@@ -2201,9 +2208,9 @@ const fetchGinSale = async (req: Request, res: Response) => {
         sales_id: gin.id,
       },
       include: [
-        { 
-          model: GinBale, 
-          as: "bale" ,
+        {
+          model: GinBale,
+          as: "bale",
           include: [
             {
               model: GinProcess,
@@ -2257,7 +2264,7 @@ const fetchGinSaleBale = async (req: Request, res: Response) => {
             {
               model: GinProcess,
               as: "ginprocess",
-              attributes: ["date","lot_no", "reel_lot_no"],
+              attributes: ["date", "lot_no", "reel_lot_no"],
             },
           ],
         },
@@ -2310,7 +2317,7 @@ const fetchGinSaleAllBales = async (req: Request, res: Response) => {
             {
               model: GinProcess,
               as: "ginprocess",
-              attributes: ["date","lot_no", "reel_lot_no"],
+              attributes: ["date", "lot_no", "reel_lot_no"],
             },
           ],
         },

@@ -124,6 +124,16 @@ const KnitProcess = db.define('knit_processes', {
   status: {
     type: DataTypes.STRING
   },
+  from_date: {
+    type: DataTypes.DATE,
+    allowNull: true,
+    defaultValue: null,
+  },
+  to_date: {
+    type: DataTypes.DATE,
+    allowNull: true,
+    defaultValue: null,
+  },
 });
 
 

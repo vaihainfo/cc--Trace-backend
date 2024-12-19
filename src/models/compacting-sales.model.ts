@@ -121,9 +121,19 @@ const CompactingSales = db.define('compacting_sales', {
   other_docs: {
     type: DataTypes.ARRAY(DataTypes.STRING)
   },
-  sales_type : {
+  sales_type: {
     type: DataTypes.STRING
-  }
+  },
+  from_date: {
+    type: DataTypes.DATE,
+    allowNull: true,
+    defaultValue: null,
+  },
+  to_date: {
+    type: DataTypes.DATE,
+    allowNull: true,
+    defaultValue: null,
+  },
 });
 
 CompactingSales.belongsTo(Fabric, {
