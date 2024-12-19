@@ -736,7 +736,6 @@ const exportFarmer = async (req: Request, res: Response) => {
       const farmers = await Farm.findAll({
         where: whereCondition,
         attributes: [
-          [Sequelize.fn("DISTINCT", Sequelize.col("farmer.id")), "farmerId"], 
           [Sequelize.fn("concat", Sequelize.col("firstName"), Sequelize.col("lastName")), "farmerName"],
           [Sequelize.col('"farmer"."code"'), 'fatherCode'],
           [Sequelize.col('"farmer"."country"."county_name"'), 'country'],
@@ -819,6 +818,7 @@ const exportFarmer = async (req: Request, res: Response) => {
         raw: true,
         offset,
         limit: batchSize,
+        order: [['id', 'asc']],
       });
 
       if (farmers.length === 0) {

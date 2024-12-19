@@ -77,7 +77,7 @@ const getPricyByCountry = async (req: Request, res: Response) => {
       AVG(CASE WHEN ss."program_id" = 5 THEN CAST(ss."price" AS FLOAT) END) AS "reel_average_price"
     FROM "spin_sales" ss
     INNER JOIN "spinners" s ON ss."spinner_id" = s."id"
-    WHERE ss."date" >= :from AND ss."date" <= :to
+    WHERE ss."date" >= :from AND ss."date" <= :to AND ss."status" = 'Sold'
     ${avgQueryConditions.length > 0 ? 'AND ' + avgQueryConditions.join(' AND ') : ''}
     GROUP BY s."country_id"
     ORDER BY s."country_id" DESC;
@@ -92,7 +92,8 @@ const getPricyByCountry = async (req: Request, res: Response) => {
       allcountryIds.add(row.country_id);
     })
 
-    const avgQueryNew = `SELECT "country_id", AVG("market_price") AS "avg_market_price" FROM "yarn-pricings" AS "lp"
+    const avgQueryNew = `SELECT "country_id", AVG("market_price") AS "avg_market_price",
+    AVG("programme_price") AS "avg_programme_price" FROM "yarn-pricings" AS "lp"
       ${whereConditions.length > 0
         ? "WHERE " + whereConditions.join(" AND ") + " AND "
         : "WHERE "
@@ -116,11 +117,13 @@ const getPricyByCountry = async (req: Request, res: Response) => {
       reel: number[],
       organic: number[],
       conventional: number[],
+      programme: number[]
     } = {
       country: [],
       reel: [],
       organic: [],
       conventional: [],
+      programme: []
     };
 
     await Promise.all(
@@ -144,8 +147,10 @@ const getPricyByCountry = async (req: Request, res: Response) => {
         if (data2Item) {
 
           responseData.conventional.push(Number(data2Item.avg_market_price) || 0);
+          responseData.programme.push(Number(data2Item.avg_programme_price) || 0);
         } else {
           responseData.conventional.push(0);
+          responseData.programme.push(0);
         }
       })
     );
@@ -269,7 +274,7 @@ const getPricyByState = async (req: Request, res: Response) => {
       AVG(CASE WHEN ss."program_id" = 5 THEN CAST(ss."price" AS FLOAT) END) AS "reel_average_price"
     FROM "spin_sales" ss
     INNER JOIN "spinners" s ON ss."spinner_id" = s."id"
-    WHERE ss."date" >= :from AND ss."date" <= :to
+    WHERE ss."date" >= :from AND ss."date" <= :to AND ss."status" = 'Sold'
     ${avgQueryConditions.length > 0 ? 'AND ' + avgQueryConditions.join(' AND ') : ''}
     GROUP BY s."state_id"
     ORDER BY s."state_id" DESC;
@@ -284,7 +289,8 @@ const getPricyByState = async (req: Request, res: Response) => {
       allcountryIds.add(row.state_id);
     })
 
-    const avgQueryNew = `SELECT "state_id", AVG("market_price") AS "avg_market_price" FROM "yarn-pricings" AS "lp"
+    const avgQueryNew = `SELECT "state_id", AVG("market_price") AS "avg_market_price",
+    AVG("programme_price") AS "avg_programme_price" FROM "yarn-pricings" AS "lp"
       ${whereConditions.length > 0
         ? "WHERE " + whereConditions.join(" AND ") + " AND "
         : "WHERE "
@@ -308,11 +314,13 @@ const getPricyByState = async (req: Request, res: Response) => {
       reel: number[],
       organic: number[],
       conventional: number[],
+      programme: number[]
     } = {
       state: [],
       reel: [],
       organic: [],
       conventional: [],
+      programme: []
     };
 
     await Promise.all(
@@ -336,8 +344,10 @@ const getPricyByState = async (req: Request, res: Response) => {
         if (data2Item) {
 
           responseData.conventional.push(Number(data2Item.avg_market_price) || 0);
+          responseData.programme.push(Number(data2Item.avg_programme_price) || 0);
         } else {
           responseData.conventional.push(0);
+          responseData.programme.push(0);
         }
       })
     );
