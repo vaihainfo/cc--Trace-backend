@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import { Op } from "sequelize";
+import moment from 'moment';
 import GinnerOrder from "../../models/ginner-order.model";
 import Season from "../../models/season.model";
 import Program from "../../models/program.model";
@@ -1335,31 +1336,6 @@ const uploadImpactData = async (req: Request, res: Response) => {
         return res.sendError(res, error.message);
     }
 };
-
-function isValidDateRange(startDate: Date, endDate: Date): boolean {
-    const startDay = new Date(startDate).getDate();
-    const endDay = new Date(endDate).getDate();
-
-
-    const month = new Date(startDate).getMonth();
-    const year = new Date(startDate).getFullYear();
-
-    const daysInMonth = new Date(year, month + 1, 0).getDate(); 
-
-    const validRanges = [
-        { start: 1, end: 7 },
-        { start: 8, end: 14 },
-        { start: 15, end: 21 },
-        { start: 22, end: 28 },
-        { start: 29, end: 31 },
-    ];
-
-    if (daysInMonth === 30) {
-        validRanges[4] = { start: 29, end: 30 }; 
-    }
-
-    return validRanges.some(range => startDay === range.start && endDay === range.end && endDay <= daysInMonth);
-}
 
 function isFutureDate(startDate: Date, endDate: Date) {
     const now = new Date();
@@ -3078,6 +3054,37 @@ const uploadAllocatedGinnerVillage = async (req: Request, res: Response) => {
         console.error(error);
         return res.sendError(res, error.message);
     }
+
+}
+function isValidDateRange(startDate: Date | string, endDate: Date | string): boolean {
+    // Convert to moment objects and set to UTC
+    const start = moment.utc(startDate).startOf('day');
+    const end = moment.utc(endDate).startOf('day');
+    
+    // Get date components
+    const startDay = start.date();
+    const endDay = end.date();
+    const daysInMonth = start.daysInMonth();
+
+    const validRanges = [
+        { start: 1, end: 7 },
+        { start: 8, end: 14 },
+        { start: 15, end: 21 },
+        { start: 22, end: 28 },
+        { start: 29, end: daysInMonth },
+    ];
+
+    // Check if dates are in same month and year
+    if (!start.isSame(end, 'month') || !start.isSame(end, 'year')) {
+        return false;
+    }
+
+    // Check if the range matches any valid range
+    return validRanges.some(range => 
+        startDay === range.start && 
+        endDay === range.end && 
+        endDay <= daysInMonth
+    );
 }
 
 const uploadPriceMapping = async (req: Request, res: Response) => {
