@@ -608,6 +608,8 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
   const limit = Number(req.query.limit) || 10;
   const isOrganic = req.query.isOrganic || false;
   const isBrand = req.query.isBrand || false;
+  const isAdmin = req.query.isAdmin || false;
+
   const { exportType, ginnerId, seasonId, programId, brandId, countryId, startDate, endDate }: any = req.query;
   const offset = (page - 1) * limit;
   const whereCondition: any = [];
@@ -674,7 +676,11 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
         worksheet.mergeCells('A1:N1');
       }else if (isBrand === 'true') {
         worksheet.mergeCells('A1:Q1');
-      } else {
+      }
+      else if(isAdmin === 'true') {
+        worksheet.mergeCells('A1:W1');
+      }
+      else {
         worksheet.mergeCells('A1:X1');
       }
       const mergedCell = worksheet.getCell('A1');
@@ -692,7 +698,12 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
         headerRow = worksheet.addRow([
           "Sr No.", "Process Date", "Data Entry Date and Time", "Lint Production Start Date", "Lint Production End Date", "Lint process Season choosen", "Ginner Name", "Heap Number", "Gin Lot No", "Gin Press No", "REEL Lot No", "REEL Press Nos", "No of Bales", "Lint Quantity(Kgs)", "Programme", "Grey Out Status"
         ]);
-      } else {
+      } 
+      else if(isAdmin === 'true') {
+        headerRow = worksheet.addRow([
+          "Sr No.", "Process Date", "Data Entry Date and Time", "Lint Production Start Date", "Lint Production End Date", "Seed Cotton Consumed Season", "Lint process Season choosen", "Ginner Name", "Heap Number", "Gin Lot No", "Gin Press No", "REEL Lot No", "REEL Press Nos", "No of Bales", "Lint Quantity(Kgs)", "Total Seed Cotton Consumed(Kgs)", "GOT", "Total lint cotton sold(Kgs)", "Total Bales Sold", "Total lint cotton in stock(Kgs)", "Total Bales in stock", "Programme","Grey Out Status"
+        ]);
+      }else {
         headerRow = worksheet.addRow([
           "Sr No.", "Process Date", "Data Entry Date and Time", "Lint Production Start Date", "Lint Production End Date", "Seed Cotton Consumed Season", "Lint process Season choosen", "Ginner Name", "Heap Number", "Gin Lot No", "Gin Press No", "REEL Lot No", "REEL Press Nos", "No of Bales", "Lint Quantity(Kgs)", "Total Seed Cotton Consumed(Kgs)", "GOT", "Total lint cotton sold(Kgs)", "Total Bales Sold", "Total lint cotton in stock(Kgs)", "Total Bales in stock", "Programme", "Village", "Grey Out Status"
         ]);
@@ -920,7 +931,35 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
             program: item.program ? item.program : "",
             greyout_status: item.greyout_status ? "Yes" : "No",
           });
-        } else {
+        }
+        else if(isAdmin === 'true'){
+          rowValues = Object.values({
+            index: index + 1,
+            date: item.date ? item.date : "",
+            created_date: item.createdAt ? item.createdAt : "",
+            from_date: item.from_date ? item.from_date : "",
+            to_date: item.to_date ? item.to_date : "",
+            seed_consumed_seasons: item.seed_consumed_seasons ? item.seed_consumed_seasons : "",
+            season: item.season ? item.season : "",
+            ginner: item.ginner_name ? item.ginner_name : "",
+            heap: item.heap_number ? item.heap_number : '',
+            lot_no: item.lot_no ? item.lot_no : "",
+            press_no: item.press_no !== "NaN-NaN" ? item.press_no : item?.gin_press_no,
+            reel_lot_no: item.reel_lot_no ? item.reel_lot_no : "",
+            reel_press_no: item.reel_press_no ? item.reel_press_no : "",
+            noOfBales: item.no_of_bales ? Number(item.no_of_bales) : 0,
+            lint_quantity: item.lint_quantity ? Number(item.lint_quantity) : 0,
+            seedConsmed: item.total_qty ? Number(item.total_qty) : 0,
+            got: item.gin_out_turn ? item.gin_out_turn : "",
+            lint_quantity_sold: item.lint_quantity_sold ? Number(item.lint_quantity_sold) : 0,
+            sold_bales: item.sold_bales ? Number(item.sold_bales) : 0,
+            lint_stock: item.lint_stock && Number(item.lint_stock) > 0 ? Number(item.lint_stock) : 0,
+            bale_stock: item.bale_stock && Number(item.bale_stock) > 0 ? Number(item.bale_stock) : 0,
+            program: item.program ? item.program : "",
+            greyout_status: item.greyout_status ? "Yes" : "No",
+          });
+        }
+        else {
           rowValues = Object.values({
             index: index + 1,
             date: item.date ? item.date : "",
@@ -4496,6 +4535,7 @@ const exportSpinnerYarnProcess = async (req: Request, res: Response) => {
   const isOrganic = req.query.isOrganic || false;
 
   const isBrand = req.query.isBrand || false;
+  const isAdmin = req.query.isAdmin || false;
   const { exportType, spinnerId, seasonId, programId, brandId, countryId, startDate, endDate }: any = req.query;
   const offset = (page - 1) * limit;
   const whereConditions: any = [];
@@ -4562,9 +4602,13 @@ const exportSpinnerYarnProcess = async (req: Request, res: Response) => {
       const worksheet = workbook.addWorksheet("Sheet1");
       if (isOrganic === 'true') {
         worksheet.mergeCells('A1:S1');
-      } else if (isBrand === 'true' && isOrganic === false) {
+      } else if (isBrand === 'true' &&  (isOrganic === false ||  isOrganic === 'false')) {
         worksheet.mergeCells('A1:T1');
-      } else {
+      } 
+      else if (isAdmin === 'true'){
+        worksheet.mergeCells('A1:U1');
+      }
+      else {
         worksheet.mergeCells('A1:V1');
       }
       const mergedCell = worksheet.getCell("A1");
@@ -4599,7 +4643,7 @@ const exportSpinnerYarnProcess = async (req: Request, res: Response) => {
           "Grey Out Status",
         ]);
       }
-      else if (isBrand === 'true' && isOrganic === false) {
+      else if (isBrand === 'true' && (isOrganic === false ||  isOrganic === 'false')) {
         headerRow = worksheet.addRow([
           "Sr No.",
           "Date and Time",
@@ -4624,7 +4668,35 @@ const exportSpinnerYarnProcess = async (req: Request, res: Response) => {
           "Total Yarn in stock (Kgs)",
           "Grey Out Status",
         ]);
-      } else {
+      } 
+      else if (isAdmin === 'true'){
+        headerRow = worksheet.addRow([
+          "Sr No.",
+          "Date and Time",
+          "Process Date",
+          "Yarn Production Start Date",
+          "Yarn Production End Date",
+          "Yarn Process Season",
+          "Spinner Name",
+          "Spin Lot No",
+          "Yarn Reel Lot No",
+          "Yarn Type",
+          "Yarn Count",
+          "Yarn Realisation %",
+          "Comber Noil (Kgs)",
+          "Blend Material",
+          "Blend Quantity (Kgs)",
+          "Total Lint cotton consumed (Kgs)",
+          "Total Comber Noil Consumed(kgs)",
+          "Total lint+Blend material + Comber Noil consumed",
+          "Programme",
+          "Total Yarn weight (Kgs)",
+          "Total yarn sold (Kgs)",
+          "Total Yarn in stock (Kgs)",
+          "Grey Out Status"
+        ]);
+      }
+      else {
         headerRow = worksheet.addRow([
           "Sr No.",
           "Date and Time",
@@ -4843,7 +4915,7 @@ const exportSpinnerYarnProcess = async (req: Request, res: Response) => {
             greyout_status: item.greyout_status ? "Yes" : "No",
           });
         }
-        else if (isBrand === 'true' && isOrganic === false) {
+        else if (isBrand === 'true' && (isOrganic === false ||  isOrganic === 'false')) {
           rowValues = Object.values({
             index: index + 1,
             createdAt: item.createdAt ? item.createdAt : "",
@@ -4876,6 +4948,41 @@ const exportSpinnerYarnProcess = async (req: Request, res: Response) => {
             yarn_stock: item.qty_stock ? Number(item.qty_stock) : 0,
             greyout_status: item.greyout_status ? "Yes" : "No",
           });
+        }
+        else if(isAdmin === 'true'){
+          rowValues = Object.values({
+            index: index + 1,
+            createdAt: item.createdAt ? item.createdAt : "",
+            date: item.date ? item.date : "",
+            from_date: item.from_date ? item.from_date : "",
+            to_date: item.to_date ? item.to_date : "",
+            season: item.season_name ? item.season_name : "",
+            spinner: item.spinner_name ? item.spinner_name : "",
+            lotNo: item.batch_lot_no ? item.batch_lot_no : "",
+            reel_lot_no: item.reel_lot_no ? item.reel_lot_no : "",
+            yarnType: item.yarn_type ? item.yarn_type : "",
+            count: item.yarncount ? item.yarncount : "",
+            resa: item.yarn_realisation ? Number(item.yarn_realisation) : 0,
+            comber: item.comber_noil ? Number(item.comber_noil) : 0,
+            blend: blendValue,
+            blendqty: blendqty,
+            cotton_consumed: item?.cotton_consumed
+              ? Number(item?.cotton_consumed)
+              : 0,
+            comber_consumed: item?.comber_consumed
+              ? Number(item?.comber_consumed)
+              : 0,
+            total_lint_blend_consumed: item?.total_qty
+              ? Number(item?.total_qty)
+              : 0,
+            program: item.program ? item.program : "",
+            total: item.net_yarn_qty ? Number(item.net_yarn_qty) : 0,
+            yarn_sold: item?.yarn_sold
+              ? Number(item?.yarn_sold)
+              : 0,
+            yarn_stock: item.qty_stock ? Number(item.qty_stock) : 0,
+            greyout_status: item.greyout_status ? "Yes" : "No",
+          }); 
         }
         else {
           rowValues = Object.values({
@@ -5175,7 +5282,8 @@ const exportSpinnerSale = async (req: Request, res: Response) => {
   const page = Number(req.query.page) || 1;
   const limit = Number(req.query.limit) || 10;
   const isOrganic = req.query.isOrganic || false;
-  
+  const isAdmin = req.query.isAdmin || false;
+
   const isBrand = req.query.isBrand || false;
   const { exportType, spinnerId, seasonId, programId, brandId, countryId, startDate, endDate }: any = req.query;
   const offset = (page - 1) * limit;
@@ -5254,9 +5362,13 @@ const exportSpinnerSale = async (req: Request, res: Response) => {
       const worksheet = workbook.addWorksheet("Sheet1");
       if(isOrganic === 'true') {
         worksheet.mergeCells('A1:Q1');
-      } else if (isBrand === 'true' && isOrganic === false) {
+      } else if (isBrand === 'true' &&  (isOrganic === false ||  isOrganic === 'false')) {
         worksheet.mergeCells('A1:R1');
-      } else {
+      }
+      else if(isAdmin === 'true'){
+        worksheet.mergeCells("A1:T1");
+      }
+      else {
         worksheet.mergeCells("A1:U1");
       }
       const mergedCell = worksheet.getCell("A1");
@@ -5286,7 +5398,7 @@ const exportSpinnerSale = async (req: Request, res: Response) => {
           "Agent Details",
         ]);
       }
-      else if (isBrand === 'true' && isOrganic === false) {
+      else if (isBrand === 'true' &&  (isOrganic === false ||  isOrganic === 'false')) {
         headerRow = worksheet.addRow([
           "Sr No.",
           "Created Date and Time",
@@ -5307,7 +5419,32 @@ const exportSpinnerSale = async (req: Request, res: Response) => {
           "Yarn Net Weight(Kgs)",
           "Agent Details",
         ]);
-      } else {
+      }
+      else if(isAdmin === 'true' ){
+        headerRow = worksheet.addRow([
+          "Sr No.",
+          "Created Date and Time",
+          "Date of transaction",
+          "Yarn sale season chosen",
+          "Spinner Name",
+          "Knitter/Weaver Name",
+          "Invoice Number",
+          "Order Reference",
+          "Lot/Batch Number",
+          "Reel Lot No",
+          "Programme",
+          "Yarn Type",
+          "Yarn Count",
+          "No of Boxes",
+          "Box ID",
+          "Price",
+          "Yarn Net Weight(Kgs)",
+          "Transporter Name",
+          "Vehicle No",
+          "Agent Details",
+        ]);
+      }
+      else {
         headerRow = worksheet.addRow([
           "Sr No.",
           "Created Date and Time",
@@ -5533,7 +5670,7 @@ const exportSpinnerSale = async (req: Request, res: Response) => {
               : "",
           });
         } 
-        else if (isBrand === 'true' && isOrganic === false) {
+        else if (isBrand === 'true' &&  (isOrganic === false ||  isOrganic === 'false')) {
           rowValues = Object.values({
             index: index + 1,
             createdAt: item.dataValues.createdAt ? item.dataValues.createdAt : "",
@@ -5562,7 +5699,44 @@ const exportSpinnerSale = async (req: Request, res: Response) => {
               ? item.dataValues.transaction_agent
               : "",
           });
-        } else {
+        }
+        else if (isAdmin === 'true') {
+          rowValues = Object.values({
+            index: index + 1,
+            createdAt: item.dataValues.createdAt ? item.dataValues.createdAt : "",
+            date: item.dataValues.date ? formatDate(item.dataValues.date) : "",
+            season: item.dataValues.season_name ? item.dataValues.season_name : "",
+            spinner: item.dataValues.spinner ? item.dataValues.spinner : "",
+            buyer_id: item.dataValues.weaver
+              ? item.dataValues.weaver
+              : item.dataValues.knitter
+                ? item.dataValues.knitter
+                : item.dataValues.processor_name,
+            invoice: item.dataValues.invoice_no ? item.dataValues.invoice_no : "",
+            order_ref: item.dataValues.order_ref ? item.dataValues.order_ref : "",
+            lotNo: item.dataValues.batch_lot_no ? item.dataValues.batch_lot_no : "",
+            reelLot: item.dataValues.reel_lot_no ? item.dataValues.reel_lot_no : "",
+            program: item.dataValues.program ? item.dataValues.program : "",
+            yarnType: yarnTypeData ? yarnTypeData : "",
+            count: yarnCount
+              ? yarnCount
+              : "",
+            boxes: item.dataValues.no_of_boxes ? item.dataValues.no_of_boxes : "",
+            boxId: item.dataValues.box_ids ? item.dataValues.box_ids : "",
+            price: item.dataValues.price ? item.dataValues.price : "",
+            total: item.dataValues.total_qty ? item.dataValues.total_qty : 0,
+            transporter_name: item.dataValues.transporter_name
+              ? item.dataValues.transporter_name
+              : "",
+            vehicle_no: item.dataValues.vehicle_no
+              ? item.dataValues.vehicle_no
+              : "",
+            agent: item.dataValues.transaction_agent
+              ? item.dataValues.transaction_agent
+              : "",
+          });
+        }    
+        else {
           rowValues = Object.values({
             index: index + 1,
             createdAt: item.dataValues.createdAt ? item.dataValues.createdAt : "",
