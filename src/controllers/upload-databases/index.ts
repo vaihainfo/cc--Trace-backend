@@ -2775,20 +2775,23 @@ function isValidDateRange(startDate: Date | string, endDate: Date | string): boo
     );
 }
 
-function isFutureDate(startDate: Date, endDate: Date) {
-    const now = new Date();
-    return new Date(startDate) > now || new Date(endDate) > now;
+function isFutureDate(startDate: Date | string, endDate: Date | string): boolean {
+    const now = moment.utc().startOf('day');
+    const start = moment.utc(startDate).startOf('day');
+    const end = moment.utc(endDate).startOf('day');
+    
+    return start.isAfter(now) || end.isAfter(now);
 }
 
-const validateDatesBelongToSeason = (startDate: Date, endDate: Date, season:any) => {
-    const seasonStartDate = new Date(season.from);
-    const seasonEndDate = new Date(season.to);
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    if (start < seasonStartDate || end > seasonEndDate) {
-        return false;
-    }
-    return true;
+const validateDatesBelongToSeason = (startDate: Date | string, endDate: Date | string, season: any): boolean => {
+    // Convert all dates to moment UTC and set to start of day
+    const seasonStart = moment.utc(season.from).startOf('day');
+    const seasonEnd = moment.utc(season.to).startOf('day');
+    const start = moment.utc(startDate).startOf('day');
+    const end = moment.utc(endDate).startOf('day');
+
+    // Check if dates are within season range
+    return start.isSameOrAfter(seasonStart) && end.isSameOrBefore(seasonEnd);
 };
 
 const uploadPriceMapping = async (req: Request, res: Response) => {
