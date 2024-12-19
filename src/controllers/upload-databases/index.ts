@@ -35,6 +35,8 @@ import GinnerAllocatedVillage from "../../models/ginner-allocated-vilage.model";
 import SeedCottonPricing from "../../models/seed-cotton-pricings.model";
 import LintPricing from "../../models/lint-pricings.model";
 import YarnPricing from "../../models/yarn-pricings.model";
+import SpinSales from "../../models/spin-sales.model";
+import GinSales from "../../models/gin-sales.model";
 
 const uploadGinnerOrder = async (req: Request, res: Response) => {
     try {
@@ -3319,6 +3321,8 @@ const uploadPriceMapping = async (req: Request, res: Response) => {
                             startDate: data.start_date_of_week,
                             endDate: data.end_date_of_week,
                             market_price: type === "cotton" ? data.convetional_market_seed_cotton_pricekg : type === "lint" ? data.convetional_market_lint_pricekg : data.convetional_market_yarn_pricekg,
+                            programme_price: data.other_sustainable_programme_pricekg,
+                       
                         };
 
                         // Perform the duplicate check using individual fields (not the entire priceData object)
@@ -3334,36 +3338,114 @@ const uploadPriceMapping = async (req: Request, res: Response) => {
                                 endDate: priceData.endDate
                             }
                         });
-
-                        if (check) {
-                            if (Number(type === "cotton" ? data.convetional_market_seed_cotton_pricekg : type === "lint" ? data.convetional_market_lint_pricekg : data.convetional_market_yarn_pricekg) !== Number(check.market_price)) {
-                                let updatePrice = await (type === "cotton" ? SeedCottonPricing : type === "lint" ? LintPricing : YarnPricing).update({
-                                    market_price: type === "cotton" ? data.convetional_market_seed_cotton_pricekg : type === "lint" ? data.convetional_market_lint_pricekg : data.convetional_market_yarn_pricekg
-                                }, {
-                                    where: {
-                                        id: check.id
-                                    }
-                                });
-                                pass.push({
-                                    success: true,
-                                    data: updatePrice,
-                                    message: "Price updated succesfully"
-                                });
-                            } else {
+                        if(type === "cotton") {
+                            const transactionExists = await Transaction.findOne({
+                                where: {
+                                    date: {
+                                        [Op.between]: [priceData.startDate, priceData.endDate]
+                                    },
+                                    brand_id: priceData.brand_id,
+                                    country_id: priceData.country_id,
+                                    district_id: priceData.district_id,
+                                    state_id: priceData.state_id
+                                }
+                            });
+                        
+                            if (!transactionExists) {
                                 fail.push({
                                     success: false,
-                                    data: { district: data.district ? data.district : '', season: req.body.season ? req.body.season : '', country: data.country ? data.country : '', state: data.state ? data.state : '' },
-                                    message: `Conventional Market ${type === "cotton" ? "Seed Cotton" : type === "lint" ? "lint" : "yarn"} Price for this record is already exists`
-                                })
+                                    data: { 
+                                        district: data.district || '', 
+                                        season: req.body.season || '', 
+                                        country: data.country || '', 
+                                        state: data.state || '' 
+                                    },
+                                    message: "No transactions found within the specified date range for the selected location."
+                                });
                             }
-
-                        } else {
-                            const priceCreated = await (type === "cotton" ? SeedCottonPricing : type === "lint" ? LintPricing : YarnPricing).create(priceData);
-                            pass.push({
-                                success: true,
-                                data: priceCreated,
-                                message: "Price created successfully"
+                        } else if (type === "lint") {
+                            const lintTransactionExists = await GinSales.findOne({
+                                where: {
+                                    date: {
+                                        [Op.between]: [priceData.startDate, priceData.endDate]
+                                    },
+                                    brand_id: priceData.brand_id,
+                                    country_id: priceData.country_id,
+                                    district_id: priceData.district_id,
+                                    state_id: priceData.state_id
+                                }
                             });
+                        
+                            if (!lintTransactionExists) {
+                                fail.push({
+                                    success: false,
+                                    data: { 
+                                        district: data.district || '', 
+                                        season: req.body.season || '', 
+                                        country: data.country || '', 
+                                        state: data.state || '' 
+                                    },
+                                    message: "No lint transactions found within the specified date range for the selected location."
+                                });
+                            }
+                        } else  {
+                            const yarnTransactionExists = await SpinSales.findOne({
+                                where: {
+                                    date: {
+                                        [Op.between]: [priceData.startDate, priceData.endDate]
+                                    },
+                                    brand_id: priceData.brand_id,
+                                    country_id: priceData.country_id,
+                                    district_id: priceData.district_id,
+                                    state_id: priceData.state_id
+                                }
+                            });
+                        
+                            if (!yarnTransactionExists) {
+                                fail.push({
+                                    success: false,
+                                    data: { 
+                                        district: data.district || '', 
+                                        season: req.body.season || '', 
+                                        country: data.country || '', 
+                                        state: data.state || '' 
+                                    },
+                                    message: "No yarn transactions found within the specified date range for the selected location."
+                                });
+                            }
+                        }
+
+                        if(fail.length === 0) {
+                            if (check) {
+                                if (Number(type === "cotton" ? data.convetional_market_seed_cotton_pricekg : type === "lint" ? data.convetional_market_lint_pricekg : data.convetional_market_yarn_pricekg) !== Number(check.market_price)) {
+                                    let updatePrice = await (type === "cotton" ? SeedCottonPricing : type === "lint" ? LintPricing : YarnPricing).update({
+                                        market_price: type === "cotton" ? data.convetional_market_seed_cotton_pricekg : type === "lint" ? data.convetional_market_lint_pricekg : data.convetional_market_yarn_pricekg
+                                    }, {
+                                        where: {
+                                            id: check.id
+                                        }
+                                    });
+                                    pass.push({
+                                        success: true,
+                                        data: updatePrice,
+                                        message: "Price updated succesfully"
+                                    });
+                                } else {
+                                    fail.push({
+                                        success: false,
+                                        data: { district: data.district ? data.district : '', season: req.body.season ? req.body.season : '', country: data.country ? data.country : '', state: data.state ? data.state : '' },
+                                        message: `Conventional Market ${type === "cotton" ? "Seed Cotton" : type === "lint" ? "lint" : "yarn"} Price for this record is already exists`
+                                    })
+                                }
+    
+                            } else {
+                                const priceCreated = await (type === "cotton" ? SeedCottonPricing : type === "lint" ? LintPricing : YarnPricing).create(priceData);
+                                pass.push({
+                                    success: true,
+                                    data: priceCreated,
+                                    message: "Price created successfully"
+                                });
+                            }
                         }
                     }
                 }

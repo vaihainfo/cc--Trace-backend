@@ -3,9 +3,10 @@ import sequelize from "../../util/dbConn";
 
 const fetchPriceComparisonSeedCotton = async (req: Request, res: Response) => {
   try {
-    const page = Number(req.query.page) || 1;
-    const limit = Number(req.query.limit) || 10;
-    let {
+    // Extract and validate query parameters
+    const {
+      page = 1,
+      limit = 10,
       countryId,
       stateId,
       districtId,
@@ -13,182 +14,213 @@ const fetchPriceComparisonSeedCotton = async (req: Request, res: Response) => {
       seasonId,
       monthId,
       from,
-      to
-    }: any = req.query;
-    const offset = (page - 1) * limit;
+      to,
+    } = req.query;
 
-    let whereConditions: string[] = [];
-    let avgQueryConditions: string[] = [];
-    let replacements: any = { limit, offset };
-    let brandIdArray = brandId ? brandId.split(",").map((id: any) => parseInt(id, 10)) : [];
-
-    const addCondition = (field: string, values: string, alias: string | null = null) => {
-      const idArray = values.split(",").map((id: any) => parseInt(id, 10));
-      replacements[field] = idArray;
-      const condition = alias ? `"${alias}"."${field}" IN (:${field})` : `"${field}" IN (:${field})`;
-      whereConditions.push(condition);
-      avgQueryConditions.push(condition.replace(`"${alias}".`, ""));
+    const offset = (Number(page) - 1) * Number(limit);
+    const filterConditions: string[] = [];
+    const filterReplacements: Record<string, any> = {
+      limit: Number(limit),
+      offset,
     };
 
-    if (brandId) {
-      const idArray = brandId.split(",").map((id: any) => parseInt(id, 10));
-      replacements.brandId = idArray;
-      whereConditions.push('"scp"."brand_id" IN (:brandId)');
+    // Helper function to add ID filters
+    const addIdFilter = (
+      paramValue: string | undefined,
+      fieldName: string,
+      replacementKey: string
+    ) => {
+      if (paramValue) {
+        const ids = paramValue.split(",").map(id => parseInt(id, 10));
+        filterConditions.push(`wr."${fieldName}" IN (:${replacementKey})`);
+        filterReplacements[replacementKey] = ids;
+      }
+    };
+
+    // Add filters for different IDs
+    addIdFilter(brandId as string, "brand_id", "brandIds");
+    addIdFilter(countryId as string, "country_id", "countryIds");
+    addIdFilter(stateId as string, "state_id", "stateIds");
+    addIdFilter(districtId as string, "district_id", "districtIds");
+    addIdFilter(seasonId as string, "season_id", "seasonIds");
+
+    // Handle season filter
+    if (!seasonId) {
+      const currentDate = new Date();
+      const oneYearAgo = new Date(
+        currentDate.getFullYear() - 1,
+        currentDate.getMonth(),
+        currentDate.getDate()
+      );
+      filterConditions.push(
+        "wr.week_start_date BETWEEN :oneYearAgo AND :currentDate"
+      );
+      filterReplacements.oneYearAgo = oneYearAgo;
+      filterReplacements.currentDate = currentDate;
     }
 
-    if (seasonId) {
-      addCondition("season_id", seasonId, "scp");
-    }
-
-    if (countryId) {
-      addCondition("country_id", countryId, "scp");
-    }
-
-    if (stateId) {
-      addCondition("state_id", stateId, "scp");
-    }
-
-    if (districtId) {
-      addCondition("district_id", districtId, "scp");
-    }
-
-    if (monthId) {
-      monthId = Number(monthId) + 1;
-    }
-
-    let fromDate;
-    let toDate;
+    // Handle date range filter
     if (from && to) {
-      fromDate = new Date(`2024-${monthId}-${from}`);
-      fromDate.setHours(0, 0, 0, 0);
-      replacements.from = fromDate;
-      toDate = new Date(`2024-${monthId}-${to}`);
-      toDate.setHours(23, 59, 59, 999);
-      replacements.to = toDate;
-      replacements.fromDate = fromDate;
-      whereConditions.push('"scp"."startDate" BETWEEN :fromDate AND :toDate');
-      replacements.toDate = toDate;
-      whereConditions.push('"scp"."endDate" BETWEEN :fromDate AND :toDate');
-    }
+      const adjustedMonthId = Number(monthId) + 1;
+      let yearToUse =  new Date().getFullYear();
 
-    let query;
-    if (monthId) {
-      query = `
-      SELECT 
-        scp.*, 
-        b."brand_name", 
-        c."county_name",
-        d."district_name", 
-        p."program_name",
-        s."name" AS "season_name",
-        st."state_name" 
-        FROM "seed-cotton-pricings" AS scp
-        LEFT JOIN "brands" AS b ON scp."brand_id" = b."id"
-        LEFT JOIN "countries" AS c ON scp."country_id" = c."id"
-        LEFT JOIN "districts" AS d ON scp."district_id" = d."id"
-        LEFT JOIN "programs" AS p ON scp."program_id" = p."id"
-        LEFT JOIN "seasons" AS s ON scp."season_id" = s."id"
-        LEFT JOIN "states" AS st ON scp."state_id" = st."id"
-        WHERE EXTRACT(MONTH FROM scp."startDate") = ${monthId}
-        AND EXTRACT(MONTH FROM scp."endDate") = ${monthId}
-        ${whereConditions.length > 0 ? 'AND ' + whereConditions.join(' AND ') : ''}
-      ORDER BY scp."startDate" DESC
-      LIMIT :limit OFFSET :offset;
-        `;
-    } else {
-      query = `
-      SELECT 
-        scp.*, 
-        b."brand_name", 
-        c."county_name",
-        d."district_name", 
-        p."program_name",
-        s."name" AS "season_name",
-        st."state_name"
-      FROM "seed-cotton-pricings" AS scp
-      LEFT JOIN "brands" AS b ON scp."brand_id" = b."id"
-      LEFT JOIN "countries" AS c ON scp."country_id" = c."id"
-      LEFT JOIN "districts" AS d ON scp."district_id" = d."id"
-      LEFT JOIN "programs" AS p ON scp."program_id" = p."id"
-      LEFT JOIN "seasons" AS s ON scp."season_id" = s."id"
-      LEFT JOIN "states" AS st ON scp."state_id" = st."id"
-      ${whereConditions.length > 0 ? 'WHERE ' + whereConditions.join(' AND ') : ''}
-      ORDER BY scp."startDate" DESC
-      LIMIT :limit OFFSET :offset;
-    `;
-    }
-
-    const rows = await sequelize.query(query, {
-      replacements,
-      type: sequelize.QueryTypes.SELECT,
-    });
-
-    let countQuery;
-    if (monthId) {
-      countQuery = `
-        SELECT COUNT(*) AS "totalCount"
-        FROM "seed-cotton-pricings" AS scp
-        LEFT JOIN "brands" AS b ON scp."brand_id" = b."id"
-        LEFT JOIN "countries" AS c ON scp."country_id" = c."id"
-        LEFT JOIN "districts" AS d ON scp."district_id" = d."id"
-        LEFT JOIN "programs" AS p ON scp."program_id" = p."id"
-        LEFT JOIN "seasons" AS s ON scp."season_id" = s."id"
-        LEFT JOIN "states" AS st ON scp."state_id" = st."id"
-        WHERE EXTRACT(MONTH FROM scp."startDate") = ${monthId}
-        AND EXTRACT(MONTH FROM scp."endDate") = ${monthId}
-        ${whereConditions.length > 0 ? 'AND ' + whereConditions.join(' AND ') : ''};
-      `;
-    } else {
-      countQuery = `
-        SELECT COUNT(*) AS "totalCount"
-        FROM "seed-cotton-pricings" AS scp
-        LEFT JOIN "brands" AS b ON scp."brand_id" = b."id"
-        LEFT JOIN "countries" AS c ON scp."country_id" = c."id"
-        LEFT JOIN "districts" AS d ON scp."district_id" = d."id"
-        LEFT JOIN "programs" AS p ON scp."program_id" = p."id"
-        LEFT JOIN "seasons" AS s ON scp."season_id" = s."id"
-        LEFT JOIN "states" AS st ON scp."state_id" = st."id"
-        ${whereConditions.length > 0 ? 'WHERE ' + whereConditions.join(' AND ') : ''};
-      `;
-    }
+      if (seasonId) {
+        // Fetch season dates when seasonId is present
+        const [seasonDates] = await sequelize.query(`
+          SELECT 
+            "from",
+            "to"
+          FROM "seasons"
+          WHERE id = :seasonId
+        `, {
+          replacements: { seasonId: seasonId  },
+          type: sequelize.QueryTypes.SELECT
+        });
     
-    const totalCountResult = await sequelize.query(countQuery, {
-      replacements,
-      type: sequelize.QueryTypes.SELECT,
-    });
+        if (seasonDates) {
+          const startDate = new Date((seasonDates as any).from);
+          const endDate = new Date((seasonDates as any).to);
+      
+          // If month is between October(10) to December(12), use start year
+         // If month is between January(1) to September(9), use end year
+          if (adjustedMonthId >= 10 && adjustedMonthId <= 12) {
+            yearToUse = startDate.getFullYear();
+          } else if (adjustedMonthId >= 1 && adjustedMonthId <= 9) {
+            yearToUse = endDate.getFullYear();
+          }
+        }
+      }
+      
+      
+      const fromDate = new Date(`${yearToUse}-${adjustedMonthId}-${from}`);
+      fromDate.setHours(0, 0, 0, 0);
+      
+      const toDate = new Date(`${yearToUse}-${adjustedMonthId}-${to}`);
+      toDate.setHours(23, 59, 59, 999);
 
-    const count = totalCountResult[0].totalCount;
+      filterConditions.push("wr.week_start_date BETWEEN :fromDate AND :toDate");
+      filterReplacements.fromDate = fromDate;
+      filterReplacements.toDate = toDate;
+    }
 
-    await Promise.all(rows.map(async (row: any) => {
-      let { startDate, endDate, country_id, district_id, state_id, brand_id } = row;
 
-      startDate = new Date(startDate);
-      startDate.setHours(0, 0, 0, 0);
+    const filterClause = filterConditions.length 
+      ? `WHERE ${filterConditions.join(" AND ")}` 
+      : "";
 
-      endDate = new Date(endDate);
-      endDate.setHours(23, 59, 59, 999);
-
-      const avgQuery = `
+    // Common CTE for both queries
+    const weekRangesCTE = `
+      WITH week_ranges AS (
         SELECT 
-          AVG(CASE WHEN t."program_id" = 4 THEN CAST(t."rate" AS FLOAT) END) AS "organic_average_price",
-          AVG(CASE WHEN t."program_id" = 5 THEN CAST(t."rate" AS FLOAT) END) AS "reel_average_price"
-        FROM "transactions" AS t
-        WHERE t."date" >= :startDate AND t."date" <= :endDate
-        AND t."country_id"= :country_id AND t."state_id"= :state_id AND t."district_id"= :district_id AND "brand_id" = :brand_Id_diff
-        ${brandIdArray.length > 0 ? 'AND "brand_id" IN (:brandId)' : ''}
-        ${avgQueryConditions.length > 0 ? 'AND ' + avgQueryConditions.join(' AND ') : ''};
-      `;
+          DATE_TRUNC('month', t."date") + 
+          INTERVAL '1 day' * (CASE 
+            WHEN EXTRACT(DAY FROM t."date") <= 7 THEN 1
+            WHEN EXTRACT(DAY FROM t."date") <= 14 THEN 8
+            WHEN EXTRACT(DAY FROM t."date") <= 21 THEN 15
+            WHEN EXTRACT(DAY FROM t."date") <= 28 THEN 22
+            ELSE 29
+          END - 1) AS week_start_date,
+          DATE_TRUNC('month', t."date") + 
+          INTERVAL '1 day' * (CASE 
+            WHEN EXTRACT(DAY FROM t."date") <= 7 THEN 7
+            WHEN EXTRACT(DAY FROM t."date") <= 14 THEN 14
+            WHEN EXTRACT(DAY FROM t."date") <= 21 THEN 21
+            WHEN EXTRACT(DAY FROM t."date") <= 28 THEN 28
+            ELSE (DATE_TRUNC('month', t."date" + INTERVAL '1 month') - INTERVAL '1 day')::date - (DATE_TRUNC('month', t."date"))::date + 1
+          END - 1) AS week_end_date,
+          t."date",
+          t."rate"::numeric as "rate",
+          t."program_id",
+          t."brand_id",
+          t."country_id",
+          t."district_id",
+          t."state_id",
+          t."season_id"
+        FROM "transactions" t
+        WHERE t."status" = 'Sold'
+      )
+    `;
 
-      const [avgResult] = await sequelize.query(avgQuery, {
-        replacements: { startDate, endDate, country_id, state_id, district_id, brand_Id_diff: brand_id, brandId: brandIdArray || [], ...replacements },
+    // Execute count query and data query in parallel
+    const [countResult, rows] = await Promise.all([
+      sequelize.query(`
+        ${weekRangesCTE}
+        SELECT COUNT(DISTINCT (
+          wr.week_start_date, 
+          wr."brand_id",
+          wr."country_id",
+          wr."district_id",
+          wr."program_id",
+          wr."season_id",
+          wr."state_id"
+        )) as total
+        FROM week_ranges wr
+        ${filterClause}
+      `, {
+        replacements: filterReplacements,
         type: sequelize.QueryTypes.SELECT,
-      });
+      }),
 
-      row.organic_average_price = avgResult.organic_average_price || 0;
-      row.reel_average_price = avgResult.reel_average_price || 0;
-    }));
+      sequelize.query(`
+        ${weekRangesCTE}
+        SELECT 
+          TO_CHAR(wr.week_start_date, 'DD-MM-YYYY') AS "startDate",
+          TO_CHAR(wr.week_end_date, 'DD-MM-YYYY') AS "endDate",
+          AVG(CASE WHEN wr.program_id = 4 THEN wr.rate END) AS "organic_average_price",
+          AVG(CASE WHEN wr.program_id = 5 THEN wr.rate END) AS "reel_average_price",
+          AVG(CAST(scp."market_price" AS FLOAT)) AS "market_price",
+          AVG(CAST(scp."programme_price" AS FLOAT)) AS "programme_price",
+          wr."brand_id",
+          b."brand_name",
+          wr."country_id",
+          c."county_name",
+          wr."district_id",
+          d."district_name",
+          wr."program_id",
+          p."program_name",
+          wr."season_id",
+          s."name" AS "season_name",
+          wr."state_id",
+          st."state_name"
+        FROM week_ranges wr
+        LEFT JOIN "brands" AS b ON wr."brand_id" = b."id"
+        LEFT JOIN "countries" AS c ON wr."country_id" = c."id"
+        LEFT JOIN "districts" AS d ON wr."district_id" = d."id"
+        LEFT JOIN "programs" AS p ON wr."program_id" = p."id"
+        LEFT JOIN "seasons" AS s ON wr."season_id" = s."id"
+        LEFT JOIN "states" AS st ON wr."state_id" = st."id"
+        LEFT JOIN "seed-cotton-pricings" AS scp ON 
+          DATE(wr.week_start_date) >= DATE(scp."startDate"::timestamp) 
+          AND DATE(wr.week_end_date) <= DATE(scp."endDate"::timestamp)
+          AND wr."brand_id" = scp."brand_id"
+          AND wr."country_id" = scp."country_id"
+          AND wr."district_id" = scp."district_id"
+          AND wr."state_id" = scp."state_id"
+        ${filterClause}
+        GROUP BY 
+          wr.week_start_date, 
+          wr.week_end_date,
+          wr."brand_id",
+          wr."country_id",
+          wr."district_id",
+          wr."program_id",
+          wr."season_id",
+          wr."state_id",
+          b."brand_name",
+          c."county_name",
+          d."district_name",
+          p."program_name",
+          s."name",
+          st."state_name"
+        ORDER BY wr.week_start_date DESC
+        LIMIT :limit OFFSET :offset
+      `, {
+        replacements: filterReplacements,
+        type: sequelize.QueryTypes.SELECT,
+      })
+    ]);
 
-    return res.sendPaginationSuccess(res, rows, count);
+    return res.sendPaginationSuccess(res, rows, (countResult[0] as any).total);
   } catch (error: any) {
     return res.sendError(res, error.message);
   }
@@ -196,9 +228,10 @@ const fetchPriceComparisonSeedCotton = async (req: Request, res: Response) => {
 
 const fetchPriceComparisonLint = async (req: Request, res: Response) => {
   try {
-    const page = Number(req.query.page) || 1;
-    const limit = Number(req.query.limit) || 10;
-    let {
+    // Extract and validate query parameters
+    const {
+      page = 1,
+      limit = 10,
       seasonId,
       countryId,
       stateId,
@@ -206,202 +239,226 @@ const fetchPriceComparisonLint = async (req: Request, res: Response) => {
       brandId,
       monthId,
       from,
-      to
-    }: any = req.query;
-    const offset = (page - 1) * limit;
+      to,
+    } = req.query;
 
-    let whereConditions: string[] = [];
-    let avgQueryConditions: string[] = [];
-    let replacements: any = { limit, offset };
-    let brandIdArray = brandId ? brandId.split(",").map((id: any) => parseInt(id, 10)) : [];
-
-    const addCondition = (field: string, values: string, alias: string | null = null) => {
-      const idArray = values.split(",").map((id: any) => parseInt(id, 10));
-      replacements[field] = idArray;
-      const condition = alias ? `"${alias}"."${field}" IN (:${field})` : `"${field}" IN (:${field})`;
-      whereConditions.push(condition);
-      avgQueryConditions.push(condition.replace(`"${alias}".`, ""));
+    const offset = (Number(page) - 1) * Number(limit);
+    const filterConditions: string[] = [];
+    const filterReplacements: Record<string, any> = {
+      limit: Number(limit),
+      offset,
     };
 
-    if (brandId) {
-      const idArray = brandId.split(",").map((id: any) => parseInt(id, 10));
-      replacements.brandId = idArray;
-      whereConditions.push('"lp"."brand_id" IN (:brandId)');
+    // Helper function to add ID filters
+    const addIdFilter = (
+      paramValue: string | undefined,
+      fieldName: string,
+      replacementKey: string
+    ) => {
+      if (paramValue) {
+        const ids = paramValue.split(",").map(id => parseInt(id, 10));
+        filterConditions.push(`wr."${fieldName}" IN (:${replacementKey})`);
+        filterReplacements[replacementKey] = ids;
+      }
+    };
+
+    // Add filters for different IDs
+    addIdFilter(brandId as string, "brand_id", "brandIds");
+    addIdFilter(countryId as string, "country_id", "countryIds");
+    addIdFilter(stateId as string, "state_id", "stateIds");
+    addIdFilter(districtId as string, "district_id", "districtIds");
+    addIdFilter(seasonId as string, "season_id", "seasonIds");
+
+    // Handle season filter
+    if (!seasonId) {
+      const currentDate = new Date();
+      const oneYearAgo = new Date(
+        currentDate.getFullYear() - 1,
+        currentDate.getMonth(),
+        currentDate.getDate()
+      );
+      filterConditions.push(
+        "wr.week_start_date BETWEEN :oneYearAgo AND :currentDate"
+      );
+      filterReplacements.oneYearAgo = oneYearAgo;
+      filterReplacements.currentDate = currentDate;
     }
 
-    if (seasonId) {
-      addCondition("season_id", seasonId, "lp");
-    }
-
-    if (countryId) {
-      addCondition("country_id", countryId, "lp");
-    }
-
-    if (stateId) {
-      addCondition("state_id", stateId, "lp");
-    }
-
-    if (districtId) {
-      addCondition("district_id", districtId, "lp");
-    }
-
-    if (monthId) {
-      monthId = Number(monthId) + 1;
-    }
-
-    let fromDate;
-    let toDate;
+    // Handle date range filter
     if (from && to) {
-      fromDate = new Date(`2024-${monthId}-${from}`);
+      const adjustedMonthId = Number(monthId) + 1;
+      let yearToUse =  new Date().getFullYear();
+
+      if (seasonId) {
+        // Fetch season dates when seasonId is present
+        const [seasonDates] = await sequelize.query(`
+          SELECT 
+            "from",
+            "to"
+          FROM "seasons"
+          WHERE id = :seasonId
+        `, {
+          replacements: { seasonId: seasonId  },
+          type: sequelize.QueryTypes.SELECT
+        });
+    
+        if (seasonDates) {
+          const startDate = new Date((seasonDates as any).from);
+          const endDate = new Date((seasonDates as any).to);
+      
+          // If month is between October(10) to December(12), use start year
+         // If month is between January(1) to September(9), use end year
+          if (adjustedMonthId >= 10 && adjustedMonthId <= 12) {
+            yearToUse = startDate.getFullYear();
+          } else if (adjustedMonthId >= 1 && adjustedMonthId <= 9) {
+            yearToUse = endDate.getFullYear();
+          }
+        }
+      }
+      
+      
+      const fromDate = new Date(`${yearToUse}-${adjustedMonthId}-${from}`);
       fromDate.setHours(0, 0, 0, 0);
-      replacements.from = fromDate;
-      toDate = new Date(`2024-${monthId}-${to}`);
+      
+      const toDate = new Date(`${yearToUse}-${adjustedMonthId}-${to}`);
       toDate.setHours(23, 59, 59, 999);
-      replacements.to = toDate;
-      replacements.fromDate = fromDate;
-      whereConditions.push('"lp"."startDate" BETWEEN :fromDate AND :toDate');
-      replacements.toDate = toDate;
-      whereConditions.push('"lp"."endDate" BETWEEN :fromDate AND :toDate');
-    }
-    let query;
-    if (monthId) {
-      query = `
-      SELECT 
-        lp.*, 
-        b."brand_name", 
-        c."county_name",
-        d."district_name", 
-        p."program_name",
-        s."name" AS "season_name",
-        st."state_name"
-      FROM "lint-pricings" AS lp
-      LEFT JOIN "brands" AS b ON lp."brand_id" = b."id"
-      LEFT JOIN "countries" AS c ON lp."country_id" = c."id"
-      LEFT JOIN "districts" AS d ON lp."district_id" = d."id"
-      LEFT JOIN "programs" AS p ON lp."program_id" = p."id"
-      LEFT JOIN "seasons" AS s ON lp."season_id" = s."id"
-      LEFT JOIN "states" AS st ON lp."state_id" = st."id"
-      WHERE EXTRACT(MONTH FROM lp."startDate") = ${monthId}
-      AND EXTRACT(MONTH FROM lp."endDate") = ${monthId}
-      ${whereConditions.length > 0 ? 'AND ' + whereConditions.join(' AND ') : ''}
-      ORDER BY lp."startDate" DESC
-      LIMIT :limit OFFSET :offset;
-    `;
-    }
-    else { 
-      query = `
-      SELECT 
-        lp.*, 
-        b."brand_name", 
-        c."county_name",
-        d."district_name", 
-        p."program_name",
-        s."name" AS "season_name",
-        st."state_name"
-      FROM "lint-pricings" AS lp
-      LEFT JOIN "brands" AS b ON lp."brand_id" = b."id"
-      LEFT JOIN "countries" AS c ON lp."country_id" = c."id"
-      LEFT JOIN "districts" AS d ON lp."district_id" = d."id"
-      LEFT JOIN "programs" AS p ON lp."program_id" = p."id"
-      LEFT JOIN "seasons" AS s ON lp."season_id" = s."id"
-      LEFT JOIN "states" AS st ON lp."state_id" = st."id"
-      ${whereConditions.length > 0 ? 'WHERE ' + whereConditions.join(' AND ') : ''}
-      ORDER BY lp."startDate" DESC
-      LIMIT :limit OFFSET :offset;
-    `;
+
+      filterConditions.push("wr.week_start_date BETWEEN :fromDate AND :toDate");
+      filterReplacements.fromDate = fromDate;
+      filterReplacements.toDate = toDate;
     }
 
-    const rows = await sequelize.query(query, {
-      replacements,
-      type: sequelize.QueryTypes.SELECT,
-    });
 
-    
-    whereConditions = whereConditions.filter(condition => !condition.includes('brand_id'));
-    delete replacements.brandId;
-    
-    let countQuery;
-    if (monthId) {
-      countQuery = `
-        SELECT COUNT(*) AS "totalCount"
-        FROM "lint-pricings" AS lp
-        LEFT JOIN "brands" AS b ON lp."brand_id" = b."id"
-        LEFT JOIN "countries" AS c ON lp."country_id" = c."id"
-        LEFT JOIN "districts" AS d ON lp."district_id" = d."id"
-        LEFT JOIN "programs" AS p ON lp."program_id" = p."id"
-        LEFT JOIN "seasons" AS s ON lp."season_id" = s."id"
-        LEFT JOIN "states" AS st ON lp."state_id" = st."id"
-        WHERE EXTRACT(MONTH FROM lp."startDate") = ${monthId}
-        AND EXTRACT(MONTH FROM lp."endDate") = ${monthId}
-        ${whereConditions.length > 0 ? 'AND ' + whereConditions.join(' AND ') : ''};
-      `;
-    } else {
-      countQuery = `
-        SELECT COUNT(*) AS "totalCount"
-        FROM "lint-pricings" AS lp
-        LEFT JOIN "brands" AS b ON lp."brand_id" = b."id"
-        LEFT JOIN "countries" AS c ON lp."country_id" = c."id"
-        LEFT JOIN "districts" AS d ON lp."district_id" = d."id"
-        LEFT JOIN "programs" AS p ON lp."program_id" = p."id"
-        LEFT JOIN "seasons" AS s ON lp."season_id" = s."id"
-        LEFT JOIN "states" AS st ON lp."state_id" = st."id"
-        ${whereConditions.length > 0 ? 'WHERE ' + whereConditions.join(' AND ') : ''};
-      `;
-    }
+    const filterClause = filterConditions.length 
+      ? `WHERE ${filterConditions.join(" AND ")}` 
+      : "";
 
-    const totalCountResult = await sequelize.query(countQuery, {
-      replacements,
-      type: sequelize.QueryTypes.SELECT,
-    });
-
-    const count = totalCountResult[0].totalCount;
-
-    await Promise.all(rows.map(async (row: any) => {
-      let { startDate, endDate, country_id, district_id, state_id } = row;
-
-      startDate = new Date(startDate);
-      startDate.setHours(0, 0, 0, 0);
-
-      endDate = new Date(endDate);
-      endDate.setHours(23, 59, 59, 999);
-
-
-      const avgQuery = `
+    // Common CTE for both queries
+    const weekRangesCTE = `
+      WITH week_ranges AS (
         SELECT 
-          AVG(CASE WHEN ss."program_id" = 4 THEN CAST(ss."rate" AS FLOAT) END) AS "organic_average_price",
-          AVG(CASE WHEN ss."program_id" = 5 THEN CAST(ss."rate" AS FLOAT) END) AS "reel_average_price"
-        FROM "gin_sales" ss
-        INNER JOIN "ginners" s ON ss."ginner_id" = s."id"
-        WHERE ss."date" >= :startDate AND ss."date" <= :endDate
-        ${avgQueryConditions.length > 0 ? 'AND ' + avgQueryConditions.join(' AND ') : ''};
-      `;
+          DATE_TRUNC('month', gs."date") + 
+          INTERVAL '1 day' * (CASE 
+            WHEN EXTRACT(DAY FROM gs."date") <= 7 THEN 1
+            WHEN EXTRACT(DAY FROM gs."date") <= 14 THEN 8
+            WHEN EXTRACT(DAY FROM gs."date") <= 21 THEN 15
+            WHEN EXTRACT(DAY FROM gs."date") <= 28 THEN 22
+            ELSE 29
+          END - 1) AS week_start_date,
+          DATE_TRUNC('month', gs."date") + 
+          INTERVAL '1 day' * (CASE 
+            WHEN EXTRACT(DAY FROM gs."date") <= 7 THEN 7
+            WHEN EXTRACT(DAY FROM gs."date") <= 14 THEN 14
+            WHEN EXTRACT(DAY FROM gs."date") <= 21 THEN 21
+            WHEN EXTRACT(DAY FROM gs."date") <= 28 THEN 28
+            ELSE (DATE_TRUNC('month', gs."date" + INTERVAL '1 month') - INTERVAL '1 day')::date - (DATE_TRUNC('month', gs."date"))::date + 1
+          END - 1) AS week_end_date,
+          gs."date",
+          gs."rate"::numeric as "rate",
+          p.program_id,
+          b.brand_id,
+          g."country_id",
+          g."district_id",
+          g."state_id",
+          gs."season_id",
+          gs."ginner_id"
+        FROM "gin_sales" gs
+        INNER JOIN "ginners" g ON gs."ginner_id" = g."id"
+        CROSS JOIN LATERAL unnest(g."program_id") as p(program_id)
+        CROSS JOIN LATERAL unnest(g."brand") as b(brand_id)
+      )
+    `;
 
-      const [avgResult] = await sequelize.query(avgQuery, {
-        replacements: {
-          startDate,
-          endDate,
-          country_id, state_id, district_id,
-          brandIdArray: brandIdArray || [],
-          ...replacements
-        },
+    // Execute count query and data query in parallel
+    const [countResult, rows] = await Promise.all([
+      sequelize.query(`
+        ${weekRangesCTE}
+        SELECT COUNT(DISTINCT (
+          wr.week_start_date, 
+          wr."brand_id",
+          wr."country_id",
+          wr."district_id",
+          wr."program_id",
+          wr."season_id",
+          wr."state_id"
+        )) as total
+        FROM week_ranges wr
+        ${filterClause}
+      `, {
+        replacements: filterReplacements,
         type: sequelize.QueryTypes.SELECT,
-      });
+      }),
 
-      row.organic_average_price = avgResult.organic_average_price || 0;
-      row.reel_average_price = avgResult.reel_average_price || 0;
-    }));
+      sequelize.query(`
+        ${weekRangesCTE}
+        SELECT 
+          TO_CHAR(wr.week_start_date, 'DD-MM-YYYY') AS "startDate",
+          TO_CHAR(wr.week_end_date, 'DD-MM-YYYY') AS "endDate",
+          AVG(CASE WHEN wr.program_id = 4 THEN wr.rate END) AS "organic_average_price",
+          AVG(CASE WHEN wr.program_id = 5 THEN wr.rate END) AS "reel_average_price",
+          AVG(CAST(lp."market_price" AS FLOAT)) AS "market_price",
+          AVG(CAST(lp."programme_price" AS FLOAT)) AS "programme_price",
+          wr."brand_id",
+          b."brand_name",
+          wr."country_id",
+          c."county_name",
+          wr."district_id",
+          d."district_name",
+          wr."program_id",
+          p."program_name",
+          wr."season_id",
+          s."name" AS "season_name",
+          wr."state_id",
+          st."state_name"
+        FROM week_ranges wr
+        LEFT JOIN "brands" AS b ON wr."brand_id" = b."id"
+        LEFT JOIN "countries" AS c ON wr."country_id" = c."id"
+        LEFT JOIN "districts" AS d ON wr."district_id" = d."id"
+        LEFT JOIN "programs" AS p ON wr."program_id" = p."id"
+        LEFT JOIN "seasons" AS s ON wr."season_id" = s."id"
+        LEFT JOIN "states" AS st ON wr."state_id" = st."id"
+        LEFT JOIN "lint-pricings" AS lp ON 
+          DATE(wr.week_start_date) >= DATE(lp."startDate"::timestamp) 
+          AND DATE(wr.week_end_date) <= DATE(lp."endDate"::timestamp)
+          AND wr."brand_id" = lp."brand_id"
+          AND wr."country_id" = lp."country_id"
+          AND wr."district_id" = lp."district_id"
+          AND wr."state_id" = lp."state_id"
+        ${filterClause}
+        GROUP BY 
+          wr.week_start_date, 
+          wr.week_end_date,
+          wr."brand_id",
+          wr."country_id",
+          wr."district_id",
+          wr."program_id",
+          wr."season_id",
+          wr."state_id",
+          b."brand_name",
+          c."county_name",
+          d."district_name",
+          p."program_name",
+          s."name",
+          st."state_name"
+        ORDER BY wr.week_start_date DESC
+        LIMIT :limit OFFSET :offset
+      `, {
+        replacements: filterReplacements,
+        type: sequelize.QueryTypes.SELECT,
+      })
+    ]);
 
-    return res.sendPaginationSuccess(res, rows, count);
+    return res.sendPaginationSuccess(res, rows, (countResult[0] as any).total);
   } catch (error: any) {
     return res.sendError(res, error.message);
   }
 };
-
 const fetchPriceComparisonYarn = async (req: Request, res: Response) => {
   try {
-    const page = Number(req.query.page) || 1;
-    const limit = Number(req.query.limit) || 10;
-    let {
+    // Extract and validate query parameters
+    const {
+      page = 1,
+      limit = 10,
       seasonId,
       countryId,
       stateId,
@@ -409,193 +466,222 @@ const fetchPriceComparisonYarn = async (req: Request, res: Response) => {
       brandId,
       monthId,
       from,
-      to
-    }: any = req.query;
-    const offset = (page - 1) * limit;
+      to,
+    } = req.query;
 
-    let brandIdArray = brandId ? brandId.split(",").map((id: any) => parseInt(id, 10)) : [];
-    let whereConditions: string[] = [];
-    let avgQueryConditions: string[] = [];
-    let replacements: any = { limit, offset };
-
-    const addCondition = (field: string, values: string, alias: string | null = null) => {
-      const idArray = values.split(",").map((id: any) => parseInt(id, 10));
-      replacements[field] = idArray;
-      const condition = alias ? `"${alias}"."${field}" IN (:${field})` : `"${field}" IN (:${field})`;
-      whereConditions.push(condition);
-      avgQueryConditions.push(condition.replace(`"${alias}".`, ""));
+    const offset = (Number(page) - 1) * Number(limit);
+    const filterConditions: string[] = [];
+    const filterReplacements: Record<string, any> = {
+      limit: Number(limit),
+      offset,
     };
 
-    if (brandId) {
-      const idArray = brandId.split(",").map((id: any) => parseInt(id, 10));
-      replacements.brandId = idArray;
-      whereConditions.push('"yp"."brand_id" IN (:brandId)');
+    // Helper function to add ID filters
+    const addIdFilter = (
+      paramValue: string | undefined,
+      fieldName: string,
+      replacementKey: string
+    ) => {
+      if (paramValue) {
+        const ids = paramValue.split(",").map(id => parseInt(id, 10));
+        filterConditions.push(`wr."${fieldName}" IN (:${replacementKey})`);
+        filterReplacements[replacementKey] = ids;
+      }
+    };
+
+    // Add filters for different IDs
+    addIdFilter(brandId as string, "brand_id", "brandIds");
+    addIdFilter(countryId as string, "country_id", "countryIds");
+    addIdFilter(stateId as string, "state_id", "stateIds");
+    addIdFilter(districtId as string, "district_id", "districtIds");
+    addIdFilter(seasonId as string, "season_id", "seasonIds");
+
+    // Handle season filter
+    if (!seasonId) {
+      const currentDate = new Date();
+      const oneYearAgo = new Date(
+        currentDate.getFullYear() - 1,
+        currentDate.getMonth(),
+        currentDate.getDate()
+      );
+      filterConditions.push(
+        "wr.week_start_date BETWEEN :oneYearAgo AND :currentDate"
+      );
+      filterReplacements.oneYearAgo = oneYearAgo;
+      filterReplacements.currentDate = currentDate;
     }
 
-    if (seasonId) {
-      addCondition("season_id", seasonId, "yp");
-    }
-
-    if (countryId) {
-      addCondition("country_id", countryId, "yp");
-    }
-
-    if (stateId) {
-      addCondition("state_id", stateId, "yp");
-    }
-
-    if (districtId) {
-      addCondition("district_id", districtId, "yp");
-    }
-    if (monthId) {
-      monthId = Number(monthId) + 1;
-    }
-
-    let fromDate;
-    let toDate;
+    // Handle date range filter
     if (from && to) {
-      fromDate = new Date(`2024-${monthId}-${from}`);
-      fromDate.setHours(0, 0, 0, 0);
-      replacements.from = fromDate;
-      toDate = new Date(`2024-${monthId}-${to}`);
-      toDate.setHours(23, 59, 59, 999);
-      replacements.to = toDate;
-      replacements.fromDate = fromDate;
-      whereConditions.push('"yp"."startDate" BETWEEN :fromDate AND :toDate');
-      replacements.toDate = toDate;
-      whereConditions.push('"yp"."endDate" BETWEEN :fromDate AND :toDate');
-    }
-    let query;
-    if (monthId) {
-     query = `
-      SELECT 
-        yp.*, 
-        b."brand_name", 
-        c."county_name",
-        d."district_name", 
-        p."program_name",
-        s."name" AS "season_name",
-        st."state_name"
-      FROM "yarn-pricings" AS yp
-      LEFT JOIN "brands" AS b ON yp."brand_id" = b."id"
-      LEFT JOIN "countries" AS c ON yp."country_id" = c."id"
-      LEFT JOIN "districts" AS d ON yp."district_id" = d."id"
-      LEFT JOIN "programs" AS p ON yp."program_id" = p."id"
-      LEFT JOIN "seasons" AS s ON yp."season_id" = s."id"
-      LEFT JOIN "states" AS st ON yp."state_id" = st."id"
-      WHERE EXTRACT(MONTH FROM yp."startDate") = ${monthId}
-      AND EXTRACT(MONTH FROM yp."endDate") = ${monthId}
-      ${whereConditions.length > 0 ? 'AND ' + whereConditions.join(' AND ') : ''}
-      ORDER BY yp."startDate" DESC
-      LIMIT :limit OFFSET :offset;
-    `;
-    }
-    else{
-      query = `
-      SELECT 
-        yp.*, 
-        b."brand_name", 
-        c."county_name",
-        d."district_name", 
-        p."program_name",
-        s."name" AS "season_name",
-        st."state_name"
-      FROM "yarn-pricings" AS yp
-      LEFT JOIN "brands" AS b ON yp."brand_id" = b."id"
-      LEFT JOIN "countries" AS c ON yp."country_id" = c."id"
-      LEFT JOIN "districts" AS d ON yp."district_id" = d."id"
-      LEFT JOIN "programs" AS p ON yp."program_id" = p."id"
-      LEFT JOIN "seasons" AS s ON yp."season_id" = s."id"
-      LEFT JOIN "states" AS st ON yp."state_id" = st."id"
-      ${whereConditions.length > 0 ? 'WHERE ' + whereConditions.join(' AND ') : ''}
-      ORDER BY yp."startDate" DESC
-      LIMIT :limit OFFSET :offset;
-    `;
-    }
+      const adjustedMonthId = Number(monthId) + 1;
+      let yearToUse =  new Date().getFullYear();
 
-
-    const rows = await sequelize.query(query, {
-      replacements,
-      type: sequelize.QueryTypes.SELECT,
-    });
-
-    whereConditions = whereConditions.filter(condition => !condition.includes('brand_id'));
-    delete replacements.brandId;
+      if (seasonId) {
+        // Fetch season dates when seasonId is present
+        const [seasonDates] = await sequelize.query(`
+          SELECT 
+            "from",
+            "to"
+          FROM "seasons"
+          WHERE id = :seasonId
+        `, {
+          replacements: { seasonId: seasonId  },
+          type: sequelize.QueryTypes.SELECT
+        });
     
-    let countQuery;
-    if (monthId) {
-      countQuery = `
-        SELECT COUNT(*) AS "totalCount"
-        FROM "yarn-pricings" AS yp
-        LEFT JOIN "brands" AS b ON yp."brand_id" = b."id"
-        LEFT JOIN "countries" AS c ON yp."country_id" = c."id"
-        LEFT JOIN "districts" AS d ON yp."district_id" = d."id"
-        LEFT JOIN "programs" AS p ON yp."program_id" = p."id"
-        LEFT JOIN "seasons" AS s ON yp."season_id" = s."id"
-        LEFT JOIN "states" AS st ON yp."state_id" = st."id"
-        WHERE EXTRACT(MONTH FROM yp."startDate") = ${monthId}
-        AND EXTRACT(MONTH FROM yp."endDate") = ${monthId}
-        ${whereConditions.length > 0 ? 'AND ' + whereConditions.join(' AND ') : ''};
-      `;
-    } else {
-      countQuery = `
-        SELECT COUNT(*) AS "totalCount"
-        FROM "yarn-pricings" AS yp
-        LEFT JOIN "brands" AS b ON yp."brand_id" = b."id"
-        LEFT JOIN "countries" AS c ON yp."country_id" = c."id"
-        LEFT JOIN "districts" AS d ON yp."district_id" = d."id"
-        LEFT JOIN "programs" AS p ON yp."program_id" = p."id"
-        LEFT JOIN "seasons" AS s ON yp."season_id" = s."id"
-        LEFT JOIN "states" AS st ON yp."state_id" = st."id"
-        ${whereConditions.length > 0 ? 'WHERE ' + whereConditions.join(' AND ') : ''};
-      `;
+        if (seasonDates) {
+          const startDate = new Date((seasonDates as any).from);
+          const endDate = new Date((seasonDates as any).to);
+      
+          // If month is between October(10) to December(12), use start year
+         // If month is between January(1) to September(9), use end year
+          if (adjustedMonthId >= 10 && adjustedMonthId <= 12) {
+            yearToUse = startDate.getFullYear();
+          } else if (adjustedMonthId >= 1 && adjustedMonthId <= 9) {
+            yearToUse = endDate.getFullYear();
+          }
+        }
+      }
+      
+      
+      const fromDate = new Date(`${yearToUse}-${adjustedMonthId}-${from}`);
+      fromDate.setHours(0, 0, 0, 0);
+      
+      const toDate = new Date(`${yearToUse}-${adjustedMonthId}-${to}`);
+      toDate.setHours(23, 59, 59, 999);
+
+      filterConditions.push("wr.week_start_date BETWEEN :fromDate AND :toDate");
+      filterReplacements.fromDate = fromDate;
+      filterReplacements.toDate = toDate;
     }
 
-    const totalCountResult = await sequelize.query(countQuery, {
-      replacements,
-      type: sequelize.QueryTypes.SELECT,
-    });
 
-    const count = totalCountResult[0].totalCount;
+    const filterClause = filterConditions.length 
+      ? `WHERE ${filterConditions.join(" AND ")}` 
+      : "";
 
-    await Promise.all(rows.map(async (row: any) => {
-      let { startDate, endDate, country_id, district_id, state_id } = row;
-
-      startDate = new Date(startDate);
-      startDate.setHours(0, 0, 0, 0);
-
-      endDate = new Date(endDate);
-      endDate.setHours(23, 59, 59, 999);
-
-
-      const avgQuery = `
+    // Common CTE for both queries
+    const weekRangesCTE = `
+      WITH week_ranges AS (
         SELECT 
-          AVG(CASE WHEN ss."program_id" = 4 THEN CAST(ss."price" AS FLOAT) END) AS "organic_average_price",
-          AVG(CASE WHEN ss."program_id" = 5 THEN CAST(ss."price" AS FLOAT) END) AS "reel_average_price"
+          DATE_TRUNC('month', ss."date") + 
+          INTERVAL '1 day' * (CASE 
+            WHEN EXTRACT(DAY FROM ss."date") <= 7 THEN 1
+            WHEN EXTRACT(DAY FROM ss."date") <= 14 THEN 8
+            WHEN EXTRACT(DAY FROM ss."date") <= 21 THEN 15
+            WHEN EXTRACT(DAY FROM ss."date") <= 28 THEN 22
+            ELSE 29
+          END - 1) AS week_start_date,
+          DATE_TRUNC('month', ss."date") + 
+          INTERVAL '1 day' * (CASE 
+            WHEN EXTRACT(DAY FROM ss."date") <= 7 THEN 7
+            WHEN EXTRACT(DAY FROM ss."date") <= 14 THEN 14
+            WHEN EXTRACT(DAY FROM ss."date") <= 21 THEN 21
+            WHEN EXTRACT(DAY FROM ss."date") <= 28 THEN 28
+            ELSE (DATE_TRUNC('month', ss."date" + INTERVAL '1 month') - INTERVAL '1 day')::date - (DATE_TRUNC('month', ss."date"))::date + 1
+          END - 1) AS week_end_date,
+          ss."date",
+          ss."price"::numeric as "price",
+          p.program_id,
+          b.brand_id,
+          s."country_id",
+          s."district_id",
+          s."state_id",
+          ss."season_id",
+          ss."spinner_id"
         FROM "spin_sales" ss
         INNER JOIN "spinners" s ON ss."spinner_id" = s."id"
-        WHERE ss."date" >= :startDate AND ss."date" <= :endDate
-        ${avgQueryConditions.length > 0 ? 'AND ' + avgQueryConditions.join(' AND ') : ''};
-      `;
+        CROSS JOIN LATERAL unnest(s."program_id") as p(program_id)
+        CROSS JOIN LATERAL unnest(s."brand") as b(brand_id)
+      )
+    `;
 
-      const [avgResult] = await sequelize.query(avgQuery, {
-        replacements: {
-          startDate,
-          endDate, country_id, state_id, district_id,
-          brandIdArray: brandIdArray || [],
-          ...replacements
-        },
+    // Execute count query and data query in parallel
+    const [countResult, rows] = await Promise.all([
+      sequelize.query(`
+        ${weekRangesCTE}
+        SELECT COUNT(DISTINCT (
+          wr.week_start_date, 
+          wr."brand_id",
+          wr."country_id",
+          wr."district_id",
+          wr."program_id",
+          wr."season_id",
+          wr."state_id"
+        )) as total
+        FROM week_ranges wr
+        ${filterClause}
+      `, {
+        replacements: filterReplacements,
         type: sequelize.QueryTypes.SELECT,
-      });
+      }),
 
-      row.organic_average_price = avgResult.organic_average_price || 0;
-      row.reel_average_price = avgResult.reel_average_price || 0;
-    }));
+      sequelize.query(`
+        ${weekRangesCTE}
+        SELECT 
+          TO_CHAR(wr.week_start_date, 'DD-MM-YYYY') AS "startDate",
+          TO_CHAR(wr.week_end_date, 'DD-MM-YYYY') AS "endDate",
+          AVG(CASE WHEN wr.program_id = 4 THEN wr.price END) AS "organic_average_price",
+          AVG(CASE WHEN wr.program_id = 5 THEN wr.price END) AS "reel_average_price",
+          AVG(CAST(yp."market_price" AS FLOAT)) AS "market_price",
+          AVG(CAST(yp."programme_price" AS FLOAT)) AS "programme_price",
+          wr."brand_id",
+          b."brand_name",
+          wr."country_id",
+          c."county_name",
+          wr."district_id",
+          d."district_name",
+          wr."program_id",
+          p."program_name",
+          wr."season_id",
+          s."name" AS "season_name",
+          wr."state_id",
+          st."state_name"
+        FROM week_ranges wr
+        LEFT JOIN "brands" AS b ON wr."brand_id" = b."id"
+        LEFT JOIN "countries" AS c ON wr."country_id" = c."id"
+        LEFT JOIN "districts" AS d ON wr."district_id" = d."id"
+        LEFT JOIN "programs" AS p ON wr."program_id" = p."id"
+        LEFT JOIN "seasons" AS s ON wr."season_id" = s."id"
+        LEFT JOIN "states" AS st ON wr."state_id" = st."id"
+        LEFT JOIN "yarn-pricings" AS yp ON 
+          DATE(wr.week_start_date) >= DATE(yp."startDate"::timestamp) 
+          AND DATE(wr.week_end_date) <= DATE(yp."endDate"::timestamp)
+          AND wr."brand_id" = yp."brand_id"
+          AND wr."country_id" = yp."country_id"
+          AND wr."district_id" = yp."district_id"
+          AND wr."state_id" = yp."state_id"
+        ${filterClause}
+        GROUP BY 
+          wr.week_start_date, 
+          wr.week_end_date,
+          wr."brand_id",
+          wr."country_id",
+          wr."district_id",
+          wr."program_id",
+          wr."season_id",
+          wr."state_id",
+          b."brand_name",
+          c."county_name",
+          d."district_name",
+          p."program_name",
+          s."name",
+          st."state_name"
+        ORDER BY wr.week_start_date DESC
+        LIMIT :limit OFFSET :offset
+      `, {
+        replacements: filterReplacements,
+        type: sequelize.QueryTypes.SELECT,
+      })
+    ]);
 
-    return res.sendPaginationSuccess(res, rows, count);
+    return res.sendPaginationSuccess(res, rows, (countResult[0] as any).total);
   } catch (error: any) {
     return res.sendError(res, error.message);
   }
 };
-
-export { fetchPriceComparisonSeedCotton, fetchPriceComparisonLint, fetchPriceComparisonYarn };
+export {
+  fetchPriceComparisonSeedCotton,
+  fetchPriceComparisonLint,
+  fetchPriceComparisonYarn,
+};
