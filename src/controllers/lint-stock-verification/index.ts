@@ -592,7 +592,7 @@ const getLintVerifiedStock = async (req: Request, res: Response) => {
             "scd_verified_weight",
             "gin_level_verify"
           ],
-          where: { process_id: stock?.dataValues?.process_id },
+          where: { process_id: stock?.dataValues?.process_id, sold_status: false },
           order: [['id','asc']]
         });
         if (bales && bales.length > 0) {
