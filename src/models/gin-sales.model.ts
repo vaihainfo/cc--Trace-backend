@@ -210,6 +210,9 @@ const GinSales = db.define('gin_sales', {
   buyer_ginner: {
     type: DataTypes.INTEGER,
   },
+  verification_status: {
+    type: DataTypes.STRING
+  },
 });
 
 GinSales.belongsTo(Ginner, {

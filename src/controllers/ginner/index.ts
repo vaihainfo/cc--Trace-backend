@@ -663,7 +663,6 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
       "Programme",
       "Got",
       "Total Seed Cotton Consumed(kgs)",
-      "Village",
       "Grey Out Status"
     ]);
     headerRow.font = { bold: true };
@@ -764,7 +763,7 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
         program: item.program ? item.program.program_name : "",
         gin_out_turn: item.gin_out_turn ? item.gin_out_turn : "",
         total_qty: item.total_qty ? item.total_qty : "",
-        a: village.map((obj: any) => obj?.dataValues?.village?.village_name)?.toString() ?? '',
+        // a: village.map((obj: any) => obj?.dataValues?.village?.village_name)?.toString() ?? '',
         greyout_status: item.greyout_status ? "Yes" : "No",
       });
       worksheet.addRow(rowValues);
@@ -957,19 +956,76 @@ const chooseBale = async (req: Request, res: Response) => {
                   'date', combined_data.date,
                   'press_no', combined_data.press_no,
                   'reel_lot_no', combined_data.reel_lot_no,
-                  'greyout_status', combined_data.greyout_status
-              ),
-              'weight', SUM(CAST(combined_data.weight AS DOUBLE PRECISION)),
-              'bales', jsonb_agg(jsonb_build_object(
-                  'id', combined_data.bale_id,
-              'process_id', combined_data.process_id,
-                  'bale_no', combined_data.bale_no,
-                  'weight', combined_data.weight,
-                  'is_all_rejected', combined_data.is_all_rejected,
                   'greyout_status', combined_data.greyout_status,
-                  'sales_id', combined_data.sales_id,
-                  'is_gin_to_gin', combined_data.is_gin_to_gin
-              ) ORDER BY combined_data.bale_id ASC)
+                  'verification_status', combined_data.verification_status,
+                  'te_process_verified_status', combined_data.te_process_verified_status,
+                  'te_verified_total_qty', combined_data.te_verified_total_qty,
+                  'te_verified_bales', combined_data.te_verified_bales,
+                  'gin_process_verified_status', combined_data.gin_process_verified_status,
+                  'gin_verified_total_qty', combined_data.gin_verified_total_qty,
+                  'gin_verified_bales', combined_data.gin_verified_bales,
+                  'scm_process_verified_status', combined_data.scm_process_verified_status,
+                  'scm_verified_total_qty', combined_data.scm_verified_total_qty,
+                  'scm_verified_bales', combined_data.scm_verified_bales,
+                  'scd_process_verified_status', combined_data.scd_process_verified_status,
+                  'scd_verified_total_qty', combined_data.scd_verified_total_qty,
+                  'scd_verified_bales', combined_data.scd_verified_bales
+              ),
+              'weight', SUM(
+                  CASE 
+                      WHEN (combined_data.verification_status = 'Completed' AND combined_data.scd_verified_status = true) THEN CAST(combined_data.weight AS DOUBLE PRECISION)
+                      WHEN (combined_data.verification_status != 'Completed' OR  combined_data.verification_status IS NULL) THEN CAST(combined_data.weight AS DOUBLE PRECISION)
+                      ELSE 0
+                  END
+              ),
+              'bales', jsonb_agg(
+                      CASE 
+                          WHEN (combined_data.verification_status = 'Completed' AND combined_data.scd_verified_status = true) THEN 
+                              jsonb_build_object(
+                                  'id', combined_data.bale_id,
+                                  'process_id', combined_data.process_id,
+                                  'bale_no', combined_data.bale_no,
+                                  'weight', combined_data.weight,
+                                  'is_all_rejected', combined_data.is_all_rejected,
+                                  'greyout_status', combined_data.greyout_status,
+                                  'sales_id', combined_data.sales_id,
+                                  'is_gin_to_gin', combined_data.is_gin_to_gin,
+                                  'te_verified_status', combined_data.te_verified_status,
+                                  'te_verified_weight', combined_data.te_verified_weight,
+                                  'gin_verified_status', combined_data.gin_verified_status,
+                                  'gin_verified_weight', combined_data.gin_verified_weight,
+                                  'scm_verified_status', combined_data.scm_verified_status,
+                                  'scm_verified_weight', combined_data.scm_verified_weight,
+                                  'scd_verified_status', combined_data.scd_verified_status,
+                                  'scd_verified_weight', combined_data.scd_verified_weight
+                              )
+                          WHEN (combined_data.verification_status != 'Completed' OR  combined_data.verification_status IS NULL) THEN 
+                              jsonb_build_object(
+                                  'id', combined_data.bale_id,
+                                  'process_id', combined_data.process_id,
+                                  'bale_no', combined_data.bale_no,
+                                  'weight', combined_data.weight,
+                                  'is_all_rejected', combined_data.is_all_rejected,
+                                  'greyout_status', combined_data.greyout_status,
+                                  'sales_id', combined_data.sales_id,
+                                  'is_gin_to_gin', combined_data.is_gin_to_gin,
+                                  'te_verified_status', combined_data.te_verified_status,
+                                  'te_verified_weight', combined_data.te_verified_weight,
+                                  'gin_verified_status', combined_data.gin_verified_status,
+                                  'gin_verified_weight', combined_data.gin_verified_weight,
+                                  'scm_verified_status', combined_data.scm_verified_status,
+                                  'scm_verified_weight', combined_data.scm_verified_weight,
+                                  'scd_verified_status', combined_data.scd_verified_status,
+                                  'scd_verified_weight', combined_data.scd_verified_weight
+                              )
+                          ELSE NULL
+                      END
+                  ORDER BY combined_data.bale_id ASC ) 
+                  FILTER (
+                  WHERE CASE 
+                      WHEN combined_data.verification_status = 'Completed' THEN combined_data.scd_verified_status = true
+                      ELSE TRUE
+                  END)
           ) AS result
       FROM (
           -- First Query: Direct gin-bales
@@ -980,9 +1036,32 @@ const chooseBale = async (req: Request, res: Response) => {
               gp.press_no,
               gp.reel_lot_no,
               gp.greyout_status,
+              gp.verification_status,
+              gp.te_verified_status AS te_process_verified_status,
+              gp.te_verified_total_qty,
+              gp.te_verified_bales,
+              gp."gin_verified_status" AS gin_process_verified_status,
+              gp."gin_verified_total_qty",
+              gp."gin_verified_bales",
+              gp."scm_verified_status" AS scm_process_verified_status,
+              gp."scm_verified_total_qty",
+              gp."scm_verified_bales",
+              gp."scd_verified_status" AS scd_process_verified_status,
+              gp."scd_verified_total_qty",
+              gp."scd_verified_bales",
               gb.id AS bale_id,
               gb.bale_no,
               gb.weight,
+              gb.sold_status,
+              gb.te_verified_status,
+              gb.te_verified_weight,
+              gb."gin_verified_status",
+              gb."gin_verified_weight",
+              gb."scm_verified_status",
+              gb."scm_verified_weight",
+              gb."scd_verified_status",
+              gb."scd_verified_weight",
+              gb."gin_level_verify",
               gb.is_all_rejected,
               g.id AS ginner_id,
               gp.program_id,
@@ -1014,9 +1093,32 @@ const chooseBale = async (req: Request, res: Response) => {
               gp.press_no,
               gp.reel_lot_no,
               gp.greyout_status,
+              gp.verification_status,
+              gp.te_verified_status AS te_process_verified_status,
+              gp.te_verified_total_qty,
+              gp.te_verified_bales,
+              gp."gin_verified_status" AS gin_process_verified_status,
+              gp."gin_verified_total_qty",
+              gp."gin_verified_bales",
+              gp."scm_verified_status" AS scm_process_verified_status,
+              gp."scm_verified_total_qty",
+              gp."scm_verified_bales",
+              gp."scd_verified_status" AS scd_process_verified_status,
+              gp."scd_verified_total_qty",
+              gp."scd_verified_bales",
               gb.id AS bale_id,
               gb.bale_no,
               gb.weight,
+              gb.sold_status,
+              gb.te_verified_status,
+              gb.te_verified_weight,
+              gb."gin_verified_status",
+              gb."gin_verified_weight",
+              gb."scm_verified_status",
+              gb."scm_verified_weight",
+              gb."scd_verified_status",
+              gb."scd_verified_weight",
+              gb."gin_level_verify",
               gb.is_all_rejected,
               g.id AS ginner_id,
               gp.program_id,
@@ -1053,7 +1155,9 @@ const chooseBale = async (req: Request, res: Response) => {
            )
       ) combined_data
       GROUP BY 
-          combined_data.process_id, combined_data.lot_no, combined_data.date, combined_data.press_no, combined_data.reel_lot_no, combined_data.greyout_status
+          combined_data.process_id, combined_data.lot_no, combined_data.date, combined_data.press_no, combined_data.reel_lot_no, combined_data.greyout_status,
+          combined_data.te_process_verified_status, combined_data.te_verified_total_qty, combined_data.te_verified_bales, combined_data.gin_process_verified_status, combined_data.gin_verified_total_qty, combined_data.gin_verified_bales, 
+          combined_data.scm_process_verified_status, combined_data.scm_verified_total_qty, combined_data.scm_verified_bales, combined_data.scd_process_verified_status, combined_data.scd_verified_total_qty, combined_data.scd_verified_bales, combined_data.verification_status
       ORDER BY 
           combined_data.process_id DESC;
     `
