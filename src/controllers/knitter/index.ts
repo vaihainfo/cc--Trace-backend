@@ -244,6 +244,24 @@ const fetchKnitterProcess = async (req: Request, res: Response) => {
   }
 };
 
+const deleteKnitterProcess = async (req: Request, res: Response) => {
+  try {
+    if (!req.body.id) {
+      return res.sendError(res, "Need Process Id");
+    }
+    await KnitFabric.destroy({ where: { process_id: req.body.id } });
+    const kniSale = await KnitProcess.destroy({
+      where: {
+        id: req.body.id,
+      },
+    });
+    return res.sendSuccess(res, kniSale);
+  } catch (error: any) {
+    console.log(error);
+    return res.sendError(res, error.meessage);
+  }
+};
+
 //fetch knitter process by id
 const fetchKnitterProcessPagination = async (req: Request, res: Response) => {
   const searchTerm = req.query.search || "";
@@ -512,6 +530,8 @@ const updateKnitterrSales = async (req: Request, res: Response) => {
     return res.sendError(res, error.meessage);
   }
 };
+
+
 
 const deleteKnitterSales = async (req: Request, res: Response) => {
   try {
@@ -2056,5 +2076,6 @@ export {
   chooseFabricProcess,
   getKnitterProcessTracingChartData,
   exportKnitterTransactionList,
-  _getKnitterProcessTracingChartData
+  _getKnitterProcessTracingChartData,
+  deleteKnitterProcess
 };
