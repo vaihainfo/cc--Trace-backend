@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import { Op } from "sequelize";
+import moment from 'moment';
 import GinnerOrder from "../../models/ginner-order.model";
 import Season from "../../models/season.model";
 import Program from "../../models/program.model";
@@ -1336,46 +1337,6 @@ const uploadImpactData = async (req: Request, res: Response) => {
     }
 };
 
-function isValidDateRange(startDate: Date, endDate: Date): boolean {
-    const startDay = new Date(startDate).getDate();
-    const endDay = new Date(endDate).getDate();
-
-
-    const month = new Date(startDate).getMonth();
-    const year = new Date(startDate).getFullYear();
-
-    const daysInMonth = new Date(year, month + 1, 0).getDate(); 
-
-    const validRanges = [
-        { start: 1, end: 7 },
-        { start: 8, end: 14 },
-        { start: 15, end: 21 },
-        { start: 22, end: 28 },
-        { start: 29, end: 31 },
-    ];
-
-    if (daysInMonth === 30) {
-        validRanges[4] = { start: 29, end: 30 }; 
-    }
-
-    return validRanges.some(range => startDay === range.start && endDay === range.end && endDay <= daysInMonth);
-}
-
-function isFutureDate(startDate: Date, endDate: Date) {
-    const now = new Date();
-    return new Date(startDate) > now || new Date(endDate) > now;
-}
-
-const validateDatesBelongToSeason = (startDate: Date, endDate: Date, season:any) => {
-    const seasonStartDate = new Date(season.from);
-    const seasonEndDate = new Date(season.to);
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    if (start < seasonStartDate || end > seasonEndDate) {
-        return false;
-    }
-    return true;
-};
 
 
 const uploadSeedAvailability = async (req: Request, res: Response) => {
@@ -3078,7 +3039,57 @@ const uploadAllocatedGinnerVillage = async (req: Request, res: Response) => {
         console.error(error);
         return res.sendError(res, error.message);
     }
+
 }
+function isValidDateRange(startDate: Date | string, endDate: Date | string): boolean {
+    // Convert to moment objects and set to UTC
+    const start = moment.utc(startDate).startOf('day');
+    const end = moment.utc(endDate).startOf('day');
+    
+    // Get date components
+    const startDay = start.date();
+    const endDay = end.date();
+    const daysInMonth = start.daysInMonth();
+
+    const validRanges = [
+        { start: 1, end: 7 },
+        { start: 8, end: 14 },
+        { start: 15, end: 21 },
+        { start: 22, end: 28 },
+        { start: 29, end: daysInMonth },
+    ];
+
+    // Check if dates are in same month and year
+    if (!start.isSame(end, 'month') || !start.isSame(end, 'year')) {
+        return false;
+    }
+
+    // Check if the range matches any valid range
+    return validRanges.some(range => 
+        startDay === range.start && 
+        endDay === range.end && 
+        endDay <= daysInMonth
+    );
+}
+
+function isFutureDate(startDate: Date | string, endDate: Date | string): boolean {
+    const now = moment.utc().startOf('day');
+    const start = moment.utc(startDate).startOf('day');
+    const end = moment.utc(endDate).startOf('day');
+    
+    return start.isAfter(now) || end.isAfter(now);
+}
+
+const validateDatesBelongToSeason = (startDate: Date | string, endDate: Date | string, season: any): boolean => {
+    // Convert all dates to moment UTC and set to start of day
+    const seasonStart = moment.utc(season.from).startOf('day');
+    const seasonEnd = moment.utc(season.to).startOf('day');
+    const start = moment.utc(startDate).startOf('day');
+    const end = moment.utc(endDate).startOf('day');
+
+    // Check if dates are within season range
+    return start.isSameOrAfter(seasonStart) && end.isSameOrBefore(seasonEnd);
+};
 
 const uploadPriceMapping = async (req: Request, res: Response) => {
     try {
