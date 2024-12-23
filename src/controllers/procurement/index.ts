@@ -725,15 +725,19 @@ const deleteTransaction = async (req: Request, res: Response) => {
 
         if(mappedTransactions && mappedTransactions.length > 0){
           const soldStatus = mappedTransactions[0].dataValues.status === 'Sold';
-          const mappedTransaction = mappedTransactions[0].dataValues.id === trans.dataValues.id;
+          const latestTransaction  = mappedTransactions[0].dataValues.id === trans.dataValues.id;
           if(soldStatus === true){
             return res.sendError(res, 'Cannot Delete this transaction as latest transaction associated with this farm is already sold')
           }
-          else if (mappedTransaction && soldStatus === false){
+          else if (latestTransaction && soldStatus === false){
             let farm = await Farm.findOne({ where: { id: trans.dataValues.farm_id } }) 
             if(farm && Number(farm.dataValues.cotton_transacted) >= Number(trans.dataValues.qty_purchased)){
+              const updatedCottonTransacted = Math.max(
+                0,
+                Number(farm.dataValues.cotton_transacted || 0) - Number(trans.dataValues.qty_purchased || 0)
+              );
               let s = await Farm.update({
-                cotton_transacted: (Number(farm.dataValues.cotton_transacted) || 0) - (Number(trans.dataValues.qty_purchased) || 0)
+                cotton_transacted: updatedCottonTransacted
               }, { where: { id: trans.dataValues.farm_id } });
             }
             else{
