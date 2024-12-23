@@ -400,7 +400,7 @@ const exportProcurementReport = async (req: Request, res: Response) => {
           "Transport Vehicle No",
           "Payment Method",
           "Ginner Name",
-          "Agent",
+          "Transaction User Details",
         ]);
       }else{
         headerRow = worksheet.addRow([
@@ -424,7 +424,7 @@ const exportProcurementReport = async (req: Request, res: Response) => {
           "Transport Vehicle No",
           "Payment Method",
           "Ginner Name",
-          "Agent",
+          "Transaction User Details",
         ]);
     }
     headerRow.font = { bold: true };
@@ -527,7 +527,7 @@ const exportProcurementReport = async (req: Request, res: Response) => {
             vehicle: item.dataValues.vehicle ? item.dataValues.vehicle : '',
             payment_method: item.dataValues.payment_method ? item.dataValues.payment_method : '',
             ginner: item.dataValues.ginner ? item.dataValues.ginner.name : '',
-            agent: item.dataValues.agent ? item.dataValues.agent.firstName : "",
+            agent: item?.dataValues?.agent && ( item?.dataValues?.agent?.lastName ? item?.dataValues?.agent?.firstName + " " + item?.dataValues?.agent?.lastName+ "-" + item?.dataValues?.agent?.access_level : item?.dataValues?.agent?.firstName+ "-" + item?.dataValues?.agent?.access_level),
           });
         }else{
         rowValues = Object.values({
@@ -551,7 +551,7 @@ const exportProcurementReport = async (req: Request, res: Response) => {
           vehicle: item.dataValues.vehicle ? item.dataValues.vehicle : '',
           payment_method: item.dataValues.payment_method ? item.dataValues.payment_method : '',
           ginner: item.dataValues.ginner ? item.dataValues.ginner.name : '',
-          agent: item.dataValues.agent ? item.dataValues.agent.firstName : "",
+          agent: item?.dataValues?.agent && ( item?.dataValues?.agent?.lastName ? item?.dataValues?.agent?.firstName + " " + item?.dataValues?.agent?.lastName+ "-" + item?.dataValues?.agent?.access_level : item?.dataValues?.agent?.firstName+ "-" + item?.dataValues?.agent?.access_level),
         });
       }
       worksheet.addRow(rowValues);
