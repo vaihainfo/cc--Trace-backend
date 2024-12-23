@@ -1207,7 +1207,8 @@ const uploadTransactionBulk = async (req: Request, res: Response) => {
                                       }
                                       saveFailedRecord(failedRecord)
                                     } else {
-                                      let available_cotton = (Number(farm.total_estimated_cotton) || 0) - (Number(farm.cotton_transacted) || 0);
+                                      let maximum_cotton = Number(farm.total_estimated_cotton) + (0.15 * Number(farm.total_estimated_cotton));
+                                      let available_cotton = (Number(maximum_cotton) || 0) - (Number(farm.cotton_transacted) || 0);
                                       if (available_cotton < 1) {
                                         fail.push({
                                           success: false,
@@ -1382,7 +1383,7 @@ const uploadTransactionBulk = async (req: Request, res: Response) => {
                 transactionData.qty_stock = available_cotton;
                 transactionData.total_amount = available_cotton * data.rate;
               }
-              console.log("object", farm, available_cotton, transactionData.qty_purchased, transactionData.qty_stock, transactionData.total_amount)
+              
           
               const result = await Transaction.create(transactionData);
               let s = await Farm.update({

@@ -386,7 +386,8 @@ const organicCottonSpecialUsersOverview = async (req: Request, res: Response) =>
         
         let total_yarn_procured = await sumbrandspinnerYarnProcured(brandId, seasonId);
         let total_yarn_sold = await sumbrandspinnerYarnSales(brandId, seasonId);
-        let total_yarn_stock = await sumbrandspinnerYarnStock(brandId, seasonId);
+        // let total_yarn_stock = await sumbrandspinnerYarnStock(brandId, seasonId);
+        let total_yarn_stock = Number(total_yarn_procured) > Number(total_yarn_sold) ? Number(total_yarn_procured) - Number(total_yarn_sold) : 0;
 
         res.sendSuccess(res, {
             total_lint_procured: total_lint_procured ? total_lint_procured : 0,
@@ -425,7 +426,7 @@ const sumbrandginnerProcured = async (brandId: any, seasonId: any) => {
                 LEFT OUTER JOIN "ginners" AS "ginprocess->ginner" 
                 ON "ginprocess"."ginner_id" = "ginprocess->ginner"."id"
                 WHERE "ginprocess->ginner"."brand" && ARRAY[${Number(brandId)}]
-                    ${seasonId ? `AND "ginprocess"."season_id" IN (${seasonId})` : ''}
+                    ${seasonId ? `AND "ginprocess"."season_id" IN (${seasonId})` : `AND "ginprocess"."season_id" NOT IN (2,3)`}
                 ;
         `)
 
@@ -452,6 +453,9 @@ const sumbrandginnerSales = async (brandId: any, seasonId: any) => {
           if (seasonId) {
             const idArray = seasonId.split(",").map((id: any) => parseInt(id, 10));
             whereCondition.push(`gs.season_id IN (${idArray.join(',')})`);
+          }
+          else {
+            whereCondition.push(`gs.season_id NOT IN (2,3)`);
           }
 
           whereCondition.push(`gs.status <> 'To be Submitted'`);
@@ -681,8 +685,15 @@ const sumbrandginnerStock = async (brandId: any, seasonId: any | null) => {
 const sumbrandspinnerYarnProcured = async (brandId: any, seasonId: any) => {
     try {
         let whereCondition:any = {};
+        
+        
         if(seasonId){
             whereCondition.season_id = seasonId
+        }
+        else
+        {
+           whereCondition.season_id = { [Op.notIn]: [2,3] };
+
         }
         const data = await SpinProcess.findOne({
             attributes: [
@@ -714,8 +725,13 @@ const sumbrandspinnerYarnProcured = async (brandId: any, seasonId: any) => {
 const sumbrandspinnerYarnSales = async (brandId: any, seasonId: any) => {
     try {
         let whereCondition: any = {}
-        if (seasonId) {
+        if(seasonId){
             whereCondition.season_id = seasonId
+        }
+        else
+        {
+           whereCondition.season_id = { [Op.notIn]: [2,3] };
+
         }
         let data = await SpinSales.findOne({
             attributes: [
