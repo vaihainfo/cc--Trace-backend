@@ -123,7 +123,7 @@ const fetchBrandPagination = async (req: Request, res: Response) => {
         }
         //fetch data with pagination
         if (req.query.pagination === "true") {
-            const { count, rows } = await Brand.findAndCountAll({
+            const { count, rows: brands } = await Brand.findAndCountAll({
                 where: whereCondition,
                 order: [
                     ["brand_name", sortOrder], // Sort the results based on the 'name' field and the specified order
@@ -131,15 +131,53 @@ const fetchBrandPagination = async (req: Request, res: Response) => {
                 offset: offset,
                 limit: limit,
             });
-            return res.sendPaginationSuccess(res, rows, count);
+             // Get all unique program IDs from all brands
+                const allProgramIds = [...new Set(brands.flatMap((brand: any) => brand.programs_id || []))];
+                
+                // Fetch all required programs in one query
+                const programs = await Program.findAll({
+                    where: {
+                        id: { [Op.in]: allProgramIds }
+                    },
+                    attributes: ['id', 'program_name']
+                });
+
+                // Create programs lookup map
+                const programsMap = new Map(programs.map((p: any) => [p.id, p]));
+
+                // Map programs to brands
+                const brandsWithPrograms = brands.map((brand: any) => ({
+                    ...brand.toJSON(),
+                    programs: (brand.programs_id || []).map((id: any) => programsMap.get(id))
+                }));
+            return res.sendPaginationSuccess(res, brandsWithPrograms, count);
         } else {
-            const cooperative = await Brand.findAll({
+            const brands = await Brand.findAll({
                 where: whereCondition,
                 order: [
                     ["brand_name", sortOrder], // Sort the results based on the 'name' field and the specified order
                 ],
             });
-            return res.sendSuccess(res, cooperative);
+            // Get all unique program IDs from all brands
+            const allProgramIds = [...new Set(brands.flatMap((brand: any) => brand.programs_id || []))];
+            
+            // Fetch all required programs in one query
+            const programs = await Program.findAll({
+                where: {
+                    id: { [Op.in]: allProgramIds }
+                },
+                attributes: ['id', 'program_name']
+            });
+
+            // Create programs lookup map
+            const programsMap = new Map(programs.map((p: any) => [p.id, p]));
+
+            // Map programs to brands
+            const brandsWithPrograms = brands.map((brand: any) => ({
+                ...brand.toJSON(),
+                programs: (brand.programs_id || []).map((id: any) => programsMap.get(id))
+            }));
+            return res.sendSuccess(res, brandsWithPrograms);
         }
     } catch (error: any) {
         console.log(error);
