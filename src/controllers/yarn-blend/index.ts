@@ -257,47 +257,81 @@ const exportYarnBlend = async (req: Request, res: Response) => {
 
     try {
 
+        //     const query = `
+        // SELECT 
+        //     yb.id,
+        //     yb.cotton_name,
+        //     yb.cotton_percentage,
+        //     yb.cotton_blend,
+        //     yb.cotton_blend_percentage,
+        //     array_agg(DISTINCT b.brand_name) AS brands,
+        //     yb.status,
+        //     array_agg(DISTINCT cm."cottonMix_name") AS cotton_mix_names
+        // FROM "yarn-blends" AS yb
+        // JOIN "cotton_mixes" AS cm
+        //     ON cm.id = ANY(yb.cotton_blend)
+        // JOIN "brands" AS b
+        //     ON b.id = ANY(yb.brand_id)
+        // ${req.query.brandId ? 'WHERE yb.brand_id @> ARRAY[:brandId]::integer[]' : ''}
+        // ${searchTerm ?
+        //             `AND (
+        //         b.brand_name ILIKE '%' || :searchTerm || '%' 
+        //         OR cm."cottonMix_name" ILIKE '%' || :searchTerm || '%'
+        //     )`
+        //             : ''}
+        // GROUP BY 
+        //     yb.id, 
+        //     yb.cotton_name,
+        //     yb.cotton_percentage,
+        //     yb.cotton_blend,
+        //     yb.cotton_blend_percentage,
+        //     yb.status
+        // ORDER BY yb.cotton_name ${sortOrder}
+        // ${req.query.pagination === "true" ? 'LIMIT :limit OFFSET :offset' : ''};
+        //     `;
+
         const query = `
-    SELECT 
-        yb.id,
-        yb.cotton_name,
-        yb.cotton_percentage,
-        yb.cotton_blend,
-        yb.cotton_blend_percentage,
-        array_agg(DISTINCT b.brand_name) AS brands,
-        yb.status,
-        array_agg(DISTINCT cm."cottonMix_name") AS cotton_mix_names
-    FROM "yarn-blends" AS yb
-    JOIN "cotton_mixes" AS cm
-        ON cm.id = ANY(yb.cotton_blend)
-    JOIN "brands" AS b
-        ON b.id = ANY(yb.brand_id)
-    ${req.query.brandId ? 'WHERE yb.brand_id @> ARRAY[:brandId]::integer[]' : ''}
-    ${searchTerm ?
-                `AND (
-            b.brand_name ILIKE '%' || :searchTerm || '%' 
-            OR cm."cottonMix_name" ILIKE '%' || :searchTerm || '%'
-        )`
-                : ''}
-    GROUP BY 
-        yb.id, 
-        yb.cotton_name,
-        yb.cotton_percentage,
-        yb.cotton_blend,
-        yb.cotton_blend_percentage,
-        yb.status
-    ORDER BY yb.cotton_name ${sortOrder}
-    ${req.query.pagination === "true" ? 'LIMIT :limit OFFSET :offset' : ''};
-`;
+            SELECT 
+                yb.id,
+                yb.cotton_name,
+                yb.cotton_percentage,
+                yb.cotton_blend,
+                yb.cotton_blend_percentage,
+                array_agg(DISTINCT b.brand_name) AS brands,
+                yb.status,
+                array_agg(DISTINCT cm."cottonMix_name") AS cotton_mix_names
+            FROM "yarn-blends" AS yb
+            JOIN "cotton_mixes" AS cm
+                ON cm.id = ANY(yb.cotton_blend)        
+            JOIN "brands" AS b
+                ON b.id = ANY(yb.brand_id)
 
+            WHERE
+                (yb.brand_id @> ARRAY(
+                    SELECT id FROM "brands" WHERE "brand_name" ILIKE :searchTerm
+                ) 
+                AND
+                yb.cotton_blend @> ARRAY(
+                    SELECT id FROM "cotton_mixes" WHERE "cottonMix_name" ILIKE :searchTerm
+                ))
 
+            GROUP BY
+                yb.id,
+                yb.cotton_name,
+                yb.cotton_percentage,
+                yb.cotton_blend,
+                yb.cotton_blend_percentage,
+                yb.status
+            ORDER BY yb.cotton_name ${sortOrder}
+            ${req.query.pagination === "true" ? 'LIMIT :limit OFFSET :offset' : ''};
+        `;
 
         let replacements: any = {
             limit: limit,
             offset: offset,
         };
 
-        if (req.query.search) {
+        if (searchTerm) {
             replacements.searchTerm = `%${searchTerm}%`;
         }
 
@@ -309,8 +343,6 @@ const exportYarnBlend = async (req: Request, res: Response) => {
             replacements: replacements,
             type: sequelize.QueryTypes.SELECT,
         });
-
-        console.log(data, "data========")
 
         // Create the excel workbook file
         const workbook = new ExcelJS.Workbook();
