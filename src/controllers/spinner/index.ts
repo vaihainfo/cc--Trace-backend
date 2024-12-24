@@ -85,6 +85,7 @@ const createSpinnerProcess = async (req: Request, res: Response) => {
             status: 'Pending',
             from_date: req.body.from_date,
             to_date: req.body.to_date,
+            yarn_blend_id: req.body.yarnBlendId
         };
         const spin = await SpinProcess.create(data);
         let uniqueFilename = `spin_procees_qrcode_${Date.now()}.png`;
