@@ -275,7 +275,7 @@ const deleteYarnBlend = async (req: Request, res: Response) => {
             },
         });
         if (checkAssociation) {
-            res.sendError(
+            return res.sendError(
                 res,
                 "Unable to delete this blend as it is already used by spinner"
             );
