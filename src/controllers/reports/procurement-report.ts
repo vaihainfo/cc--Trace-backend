@@ -17,6 +17,7 @@ import * as ExcelJS from "exceljs";
 import * as path from "path";
 import UserApp from "../../models/users-app.model";
 import sequelize from "../../util/dbConn";
+import moment from "moment";
 
 
 const fetchTransactionsReport = async (req: Request, res: Response) => {
@@ -89,12 +90,10 @@ const fetchTransactionsReport = async (req: Request, res: Response) => {
     }
 
     if (startDate && endDate) {
-      const startOfDay = new Date(startDate);
-      startOfDay.setUTCHours(0, 0, 0, 0);
-      const endOfDay = new Date(endDate);
-      endOfDay.setUTCHours(23, 59, 59, 999);
+      const startOfDay = moment(startDate).utc().startOf('day').toDate();
+      const endOfDay = moment(endDate).utc().endOf('day').toDate();
       whereCondition.date = { [Op.between]: [startOfDay, endOfDay] }
-  }
+    }
     // apply search
     if (searchTerm) {
       whereCondition[Op.or] = [
