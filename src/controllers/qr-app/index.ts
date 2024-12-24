@@ -510,7 +510,7 @@ const exportAgentTransactions = async (req: Request, res: Response) => {
             const headerRow = worksheet.addRow([
                 "Sr No.", 'Date', 'Farmer Code', 'Farmer Name', 'Season', 'Country',
                 'State', 'District', 'Block', 'Village', 'Transaction Id', 'Quantity Purchased (Kgs)',
-                'Available Cotton (Kgs)', 'Price/KG(Local Currency)', 'Programme', 'Transport Vehicle No', 'Payment Method', 'Ginner Name', 'Agent', 'Latitude', 'longitude'
+                'Available Cotton (Kgs)', 'Price/KG(Local Currency)', 'Programme', 'Transport Vehicle No', 'Payment Method', 'Ginner Name', 'Transaction User Details', 'Latitude', 'longitude'
             ]);
             headerRow.font = { bold: true };
             const whereCondition: any = {}
@@ -717,7 +717,7 @@ const exportAgentTransactions = async (req: Request, res: Response) => {
                     vehicle: item.vehicle ? item.vehicle : "",
                     payment_method: item.payment_method ? item.payment_method : "",
                     ginner: item.ginner ? item.ginner.name : "",
-                    agent: item.agent ? item.agent.firstName : "",
+                    agent: item?.agent && ( item?.agent?.lastName ? item?.agent?.firstName + " " + item?.agent?.lastName+ "-" + item?.agent?.access_level : item?.agent?.firstName+ "-" + item?.agent?.access_level),
                     latitude: item.latitude ? item.latitude : "",
                     longitude: item.longitude ? item.longitude : ""
                 });

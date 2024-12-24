@@ -710,17 +710,48 @@ const deleteTransaction = async (req: Request, res: Response) => {
     }
 
     if (trans.dataValues.farm_id) {
-      let farm = await Farm.findOne({ where: { id: trans.dataValues.farm_id } })
-      if(farm && Number(farm.dataValues.cotton_transacted) >= Number(trans.dataValues.qty_purchased)){
-        let s = await Farm.update({
-          cotton_transacted: (Number(farm.dataValues.cotton_transacted) || 0) - (Number(trans.dataValues.qty_purchased) || 0)
-        }, { where: { id: trans.dataValues.farm_id } });
+      if (trans.dataValues){
+        const mappedTransactions = await Transaction.findAll({
+          where: {
+            farm_id: trans.dataValues.farm_id,
+            farmer_id: trans.dataValues.farmer_id
+          },
+          order: [
+            [
+              'id', 'desc'
+            ]
+          ]
+        })
+
+        if(mappedTransactions && mappedTransactions.length > 0){
+          const soldStatus = mappedTransactions[0].dataValues.status === 'Sold';
+          const latestTransaction  = mappedTransactions[0].dataValues.id === trans.dataValues.id;
+          if(soldStatus === true){
+            return res.sendError(res, 'Cannot Delete this transaction as latest transaction associated with this farm is already sold')
+          }
+          else if (latestTransaction && soldStatus === false){
+            let farm = await Farm.findOne({ where: { id: trans.dataValues.farm_id } }) 
+            if(farm && Number(farm.dataValues.cotton_transacted) >= Number(trans.dataValues.qty_purchased)){
+              const updatedCottonTransacted = Math.max(
+                0,
+                Number(farm.dataValues.cotton_transacted || 0) - Number(trans.dataValues.qty_purchased || 0)
+              );
+              let s = await Farm.update({
+                cotton_transacted: updatedCottonTransacted
+              }, { where: { id: trans.dataValues.farm_id } });
+            }
+            else{
+              await Farm.update({
+                cotton_transacted: 0
+              }, { where: { id: trans.dataValues.farm_id } });
+            }
+          }
+          else {
+            return res.sendError(res, 'Only latest transaction can be deleted first from this farmer and farm')
+          }
+        }
       }
-      else{
-        await Farm.update({
-          cotton_transacted: 0
-        }, { where: { id: trans.dataValues.farm_id } });
-      }
+  
     }
 
     const transaction = await Transaction.destroy({
