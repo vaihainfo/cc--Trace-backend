@@ -24,11 +24,6 @@ const getGinProcessLotNo = async (req: Request, res: Response) => {
       return res.sendError(res, "No Ginner Id Found");
     }
 
-    // const lotNo = await GinProcess.findAll({
-    //   attributes: ["id", "lot_no", "reel_lot_no"],
-    //   where: { ginner_id: ginnerId, te_verified_status: { [Op.not]: true }, },
-    // });
-
     const [lotNo] = await sequelize.query(`
       SELECT gp.id, gp.lot_no,gp.reel_lot_no
         FROM gin_processes gp
@@ -57,24 +52,65 @@ const getGinSaleLotNo = async (req: Request, res: Response) => {
     if (!spinnerId) {
       return res.sendError(res, "No Spinner Id Found");
     }
+    const whereCondition: any = [];
 
-    const lotNo = await GinSales.findAll({
-      attributes: ["id", "lot_no", "reel_lot_no","invoice_no", "press_no"],
-      where: { 
-        buyer: spinnerId, 
-        te_verified_status: { [Op.not]: true }, 
-        be_verified_status: { [Op.not]: true }, 
-        status: { [Op.in]: ['Sold', 'Partially Accepted', 'Partially Rejected'] },
-        greyout_status: false,
-        qty_stock: { [Op.gt]: 0 }
-      }
-    });
+    whereCondition.push(`gs.buyer = ${spinnerId}`)
+    whereCondition.push(`gs.status IN ('Sold', 'Partially Accepted', 'Partially Rejected')`)
+    whereCondition.push(`gs.greyout_status IS FALSE`)
+    whereCondition.push(`gs.te_verified_status IS NOT TRUE`)
+    whereCondition.push(`gs.be_verified_status IS NOT TRUE`)
+    whereCondition.push(`gs.qty_stock > 0`)
 
-    if (lotNo && lotNo.length > 0) {
-      return res.sendSuccess(res, lotNo);
-    } else {
-      return res.sendError(res, "No Sale lot found");
-    }
+
+    const whereClause = whereCondition.length > 0 ? `WHERE ${whereCondition.join(' AND ')} AND bd.total_qty > 0` : 'WHERE bd.total_qty > 0';
+
+    let dataQuery = `
+                WITH bale_details AS (
+                    SELECT 
+                        bs.sales_id,
+                        COALESCE(
+                            SUM(
+                                CASE
+                                WHEN gb.accepted_weight IS NOT NULL THEN gb.accepted_weight
+                                ELSE CAST(gb.weight AS DOUBLE PRECISION)
+                                END
+                            ), 0
+                        ) AS total_qty
+                    FROM 
+                        bale_selections bs
+                    JOIN 
+                        gin_sales gs ON bs.sales_id = gs.id
+                    LEFT JOIN 
+                        "gin-bales" gb ON bs.bale_id = gb.id
+                    WHERE 
+                        gs.status IN ('Sold', 'Partially Accepted', 'Partially Rejected')
+                        AND (bs.spinner_status = true OR gs.status = 'Sold')
+                    GROUP BY 
+                        bs.sales_id
+                )
+                SELECT 
+                    gs.id, gs.lot_no,gs.reel_lot_no,gs.invoice_no
+                FROM 
+                    gin_sales gs
+                LEFT JOIN 
+                    ginners g ON gs.ginner_id = g.id
+                LEFT JOIN 
+                    seasons s ON gs.season_id = s.id
+                LEFT JOIN 
+                    programs p ON gs.program_id = p.id
+                LEFT JOIN 
+                    spinners sp ON gs.buyer = sp.id
+                LEFT JOIN 
+                    bale_details bd ON gs.id = bd.sales_id
+                ${whereClause}
+                ORDER BY 
+                    gs."id" ASC`;
+
+        const lotNo = await sequelize.query(dataQuery, {
+                    type: sequelize.QueryTypes.SELECT,
+                });
+
+    return res.sendSuccess(res, lotNo);
   } catch (error: any) {
     console.log(error);
     return res.sendError(res, error?.message);
