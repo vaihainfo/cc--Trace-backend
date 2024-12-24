@@ -11,44 +11,54 @@ const fetchYarnBlendPagination = async (req: Request, res: Response) => {
     const page = Number(req.query.page) || 1;
     const limit = Number(req.query.limit) || 10;
     const offset = (page - 1) * limit;
+    const searchTerm = req.query.search || '';
 
     try {
         const query = `
-    SELECT 
-            yb.id,
-            yb.cotton_name,
-            yb.cotton_percentage,
-            yb.cotton_blend,
-            yb.cotton_blend_percentage,
-            yb.brand_id,
-            array_agg(DISTINCT jsonb_build_object(
-                'brand_id', b.id,
-                'brand_name', b.brand_name
-            )) AS brands,
-            yb.status,
-            array_agg(DISTINCT cm."cottonMix_name") AS cotton_mix_names
-        FROM "yarn-blends" AS yb
-        JOIN "cotton_mixes" AS cm
-            ON cm.id = ANY(yb.cotton_blend)
-        JOIN "brands" AS b
-            ON b.id = ANY(yb.brand_id)
-        ${req.query.brandId ? 'WHERE yb.brand_id @> ARRAY[:brandId]::integer[]' : ''}
-        GROUP BY 
-            yb.id, 
-            yb.cotton_name,
-            yb.cotton_percentage,
-            yb.cotton_blend,
-            yb.cotton_blend_percentage,
-            yb.brand_id,
-            yb.status
-        ORDER BY yb.cotton_name ${sortOrder}
-        ${req.query.pagination === "true" ? 'LIMIT :limit OFFSET :offset' : ''};
+            SELECT 
+                yb.id,
+                yb.cotton_name,
+                yb.cotton_percentage,
+                yb.cotton_blend,
+                yb.cotton_blend_percentage,
+                array_agg(DISTINCT b.brand_name) AS brands,
+                yb.status,
+                array_agg(DISTINCT cm."cottonMix_name") AS cotton_mix_names
+            FROM "yarn-blends" AS yb
+            JOIN "cotton_mixes" AS cm
+                ON cm.id = ANY(yb.cotton_blend)        
+            JOIN "brands" AS b
+                ON b.id = ANY(yb.brand_id)
+            ${searchTerm && 
+           ` WHERE
+                (yb.brand_id @> ARRAY(
+                    SELECT id FROM "brands" WHERE "brand_name" ILIKE :searchTerm
+                ) 
+                AND
+                yb.cotton_blend @> ARRAY(
+                    SELECT id FROM "cotton_mixes" WHERE "cottonMix_name" ILIKE :searchTerm
+                ))`
+            }
+
+            GROUP BY
+                yb.id,
+                yb.cotton_name,
+                yb.cotton_percentage,
+                yb.cotton_blend,
+                yb.cotton_blend_percentage,
+                yb.status
+            ORDER BY yb.cotton_name ${sortOrder}
+            ${req.query.pagination === "true" ? 'LIMIT :limit OFFSET :offset' : ''};
         `;
 
         let replacements: any = {
             limit: limit,
             offset: offset,
         };
+
+        if (searchTerm) {
+            replacements.searchTerm = `%${searchTerm}%`;
+        }
 
         if (req.query.brandId) {
             replacements.brandId = Number(req.query.brandId);
@@ -60,14 +70,14 @@ const fetchYarnBlendPagination = async (req: Request, res: Response) => {
         });
 
         const countQuery = `
-    SELECT COUNT(*) AS total_count
-    FROM "yarn-blends" AS yb
-    JOIN "cotton_mixes" AS cm
-        ON cm.id = ANY(yb.cotton_blend)
-    JOIN "brands" AS b
-        ON b.id = ANY(yb.brand_id)
-    ${req.query.brandId ? 'WHERE yb.brand_id @> ARRAY[:brandId]::integer[]' : ''};
-        `;
+                SELECT COUNT(*) AS total_count
+                FROM "yarn-blends" AS yb
+                JOIN "cotton_mixes" AS cm
+                    ON cm.id = ANY(yb.cotton_blend)
+                JOIN "brands" AS b
+                    ON b.id = ANY(yb.brand_id)
+                ${req.query.brandId ? 'WHERE yb.brand_id @> ARRAY[:brandId]::integer[]' : ''}
+                    `;
 
         const countResult = await sequelize.query(countQuery, {
             replacements: replacements,
