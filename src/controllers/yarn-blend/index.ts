@@ -13,6 +13,7 @@ const fetchYarnBlendPagination = async (req: Request, res: Response) => {
     const limit = Number(req.query.limit) || 10;
     const offset = (page - 1) * limit;
     const searchTerm = req.query.search || '';
+    const brandId: any = req.query.brandId || []
 
     try {
         const query = `
@@ -43,6 +44,8 @@ const fetchYarnBlendPagination = async (req: Request, res: Response) => {
 
             ${status && `${searchTerm ? ' AND ' : ' WHERE '} status = true`}
 
+            ${brandId.length > 0 ? `${(searchTerm || status) ? ' AND ' : ' WHERE '} yb.brand_id @> ARRAY[:brandId]::integer[]` : ''}
+
             GROUP BY
                 yb.id,
                 yb.cotton_name,
@@ -64,7 +67,7 @@ const fetchYarnBlendPagination = async (req: Request, res: Response) => {
         }
 
         if (req.query.brandId) {
-            replacements.brandId = Number(req.query.brandId);
+            replacements.brandId = brandId;
         }
 
         const data = await sequelize.query(query, {
@@ -99,6 +102,8 @@ const fetchYarnBlendPagination = async (req: Request, res: Response) => {
             }
 
             ${status && `${searchTerm ? ' AND ' : ' WHERE '} status = true`}
+
+            ${brandId.length > 0 ? `${(searchTerm || status) ? ' AND ' : ' WHERE '} yb.brand_id @> ARRAY[:brandId]::integer[]` : ''}
 
             GROUP BY
                 yb.id,
