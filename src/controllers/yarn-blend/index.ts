@@ -43,7 +43,7 @@ const fetchYarnBlendPagination = async (req: Request, res: Response) => {
             yb.status
         ORDER BY yb.cotton_name ${sortOrder}
         ${req.query.pagination === "true" ? 'LIMIT :limit OFFSET :offset' : ''};
-`;
+        `;
 
         let replacements: any = {
             limit: limit,
@@ -59,7 +59,24 @@ const fetchYarnBlendPagination = async (req: Request, res: Response) => {
             type: sequelize.QueryTypes.SELECT,
         });
 
-        return res.sendSuccess(res, data);
+        const countQuery = `
+    SELECT COUNT(*) AS total_count
+    FROM "yarn-blends" AS yb
+    JOIN "cotton_mixes" AS cm
+        ON cm.id = ANY(yb.cotton_blend)
+    JOIN "brands" AS b
+        ON b.id = ANY(yb.brand_id)
+    ${req.query.brandId ? 'WHERE yb.brand_id @> ARRAY[:brandId]::integer[]' : ''};
+        `;
+
+        const countResult = await sequelize.query(countQuery, {
+            replacements: replacements,
+            type: sequelize.QueryTypes.SELECT,
+        });
+
+        const count = countResult[0].total_count;
+
+        return res.sendPaginationSuccess(res, data, Number(count));
 
     } catch (error) {
         console.log(error)
