@@ -2289,6 +2289,14 @@ const uploadIntegrityTest = async (req: Request, res: Response) => {
                         message: "Brand does not exists"
                     });
                 }
+                if (!ics) {
+                    fail.push({
+                        success: false,
+                        data: { ics: data.icsName ? data.icsName : '', farmerName: data.farmer ? data.farmer : '', farmGroupName: data.farmGroup ? data.farmGroup : '', icsName: data.icsName ? data.icsName : '' },
+                        message: data.icsName +" ICS name does not exists"
+                    });
+                }
+
                 if (brand) {
                     let brandCheck;
                     brandCheck = await Brand.findOne({
@@ -2325,7 +2333,7 @@ const uploadIntegrityTest = async (req: Request, res: Response) => {
                    
                 }
 
-                else if(farmer || brand || season ) {
+                else if(farmer && brand && season && ics ) {
                     const obj = {
                         date: data.date,
                         brand_id: brand.id,
