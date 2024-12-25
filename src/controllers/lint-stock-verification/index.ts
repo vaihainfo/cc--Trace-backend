@@ -592,7 +592,7 @@ const getLintVerifiedStock = async (req: Request, res: Response) => {
             "scd_verified_weight",
             "gin_level_verify"
           ],
-          where: { process_id: stock?.dataValues?.process_id },
+          where: { process_id: stock?.dataValues?.process_id, sold_status: false },
           order: [['id','asc']]
         });
         if (bales && bales.length > 0) {
@@ -2285,7 +2285,6 @@ const getSpinnerVerifiedStocks = async (req: Request, res: Response) => {
         as: "ginsales",
       },
     ];
-
     if (req.query.pagination === "true") {
       const { count, rows } = await LintStockVerified.findAndCountAll({
         where: whereCondition,
@@ -2418,7 +2417,7 @@ const getBMVerifiedStocks = async (req: Request, res: Response) => {
       whereCondition.status_bm = 'Accepted'
     }
     
-    whereCondition.status = 'Accepted'
+    whereCondition.status = { [Op.in]: ['Accepted', 'Rejected'] };
     whereCondition.processor_type = 'Spinner';
 
     let include = [
@@ -2609,8 +2608,8 @@ const getPSVerifiedStocks = async (req: Request, res: Response) => {
       whereCondition.status_ps = 'Accepted'
     }
 
-    whereCondition.status_bm = 'Accepted'
-    whereCondition.status = 'Accepted'
+    whereCondition.status_bm = { [Op.in]: ['Accepted', 'Rejected'] };
+    whereCondition.status = { [Op.in]: ['Accepted', 'Rejected'] };
     whereCondition.processor_type = 'Spinner';
 
     let include = [
