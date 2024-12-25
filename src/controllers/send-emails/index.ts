@@ -431,6 +431,41 @@ export const sendProcurementReport = async (jobId?: number) => {
     }
 };
 
+export const sendQrProcurementReport = async (jobId?: number) => {
+    try {
+        let template = await EmailTemplate.findOne({ where: { template_name: { [Op.iLike]: 'Qr Procurement Report' } } });
+        if (template) {
+            let adminEmail = await User.findAll({ where: { role: 1 }, attributes: ['email'] });
+            const emailJob = await EmailManagement.findOne({ where: { id: jobId } });
+            const currentDate = moment();
+            const excelFilePath = path.join("./upload", "agent-transactions.xlsx"); 
+
+            if (emailJob) {
+                let emails = await User.findAll({ where: { id: { [Op.in]: emailJob.dataValues.user_ids } }, attributes: ['email'] });
+                emails = emails.map((obj: any) => obj.email);
+                adminEmail = adminEmail.map((obj: any) => obj.email)
+               
+               // let { path, count }: any = await procurementReport(emailJob.brand_ids, emailJob.mail_type, emailJob.program_ids, emailJob.country_ids, currentDate);
+                let path = excelFilePath;
+                let count = 1;
+                let body_title = 'Qr Procurement Report ';
+                let subject = 'Qr Procurement Report ' + new Date().toLocaleDateString('en-GB');
+                let body = get_procurement_report_body(body_title, emailJob.mail_type === 'Daily' ? 'Day' : 'Week', emails, adminEmail);
+                
+                if (count > 0) {
+                    return sendEmail(body, emails, subject, adminEmail, [{ path: path, filename: 'agent-transactions.xlsx' }])
+                }else{
+                    return false;
+                }
+                
+            }
+        }
+    }  catch (error) {
+        console.log(error);
+        return false;
+    }
+};
+
 export const sendIntegrityReport = async (jobId?: number) => {
     try {
         let template = await EmailTemplate.findOne({ where: { template_name: { [Op.iLike]: 'Organic Integrity Report' } } });
@@ -802,6 +837,15 @@ function get_init_email_subject(buyer: any, seller: any, qty: any, product: any,
 function get_process_report_body(processor_type: any, time: any, to: any, cc: any) {
     let body = `<html> <body> Hi, <br/><br/> ${add_mail_id_to_email(to, cc)}
 		Please find the process report of ${processor_type} for the current  time ${time}. <br/><br/>
+		Thank you <br/>
+		TraceBale team <br/>									
+		 </body> </html>`;
+    return body;
+}
+
+function get_procurement_report_body(processor_type: any, time: any, to: any, cc: any) {
+    let body = `<html> <body> Hi, <br/><br/> ${add_mail_id_to_email(to, cc)}
+		Please find the ${processor_type} for the current  time ${time}. <br/><br/>
 		Thank you <br/>
 		TraceBale team <br/>									
 		 </body> </html>`;
