@@ -26,6 +26,7 @@ const accessControl = async (
     });
   }
   const { data, error }: any = await checkAccessToken(authToken);
+
   if (error) {
     switch (error.name) {
       case "JsonWebTokenError":
