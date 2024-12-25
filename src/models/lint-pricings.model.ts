@@ -44,6 +44,10 @@ const LintPricing = db.define('lint-pricings', {
     type: DataTypes.DECIMAL,
     allowNull: false,
   },
+  programme_price: {
+    type: DataTypes.DECIMAL,
+    allowNull: false,
+  }
 });
 
 

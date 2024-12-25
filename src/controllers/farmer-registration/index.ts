@@ -652,8 +652,8 @@ const exportFarmer = async (req: Request, res: Response) => {
   const programId: string = req.query.programId as string;
   const brandId: string = req.query.brandId as string;
   const { icsId, farmGroupId, countryId, stateId, villageId, cert, seasonId }: any = req.query;
-  const maxRowsPerWorksheet = 100000;
-  const batchSize = 5000;
+  const maxRowsPerWorksheet = 500000;
+  const batchSize = 100000;
   let offset = 0;
   let worksheetIndex = 0;
   let hasNextBatch = true;
@@ -803,11 +803,6 @@ const exportFarmer = async (req: Request, res: Response) => {
                 attributes: [],
               },
               {
-                model: Block,
-                as: "block",
-                attributes: [],
-              },
-              {
                 model: ICS,
                 as: "ics",
                 attributes: [],
@@ -823,6 +818,7 @@ const exportFarmer = async (req: Request, res: Response) => {
         raw: true,
         offset,
         limit: batchSize,
+        order: [['id', 'asc']],
       });
 
       if (farmers.length === 0) {

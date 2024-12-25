@@ -17,6 +17,7 @@ import * as ExcelJS from "exceljs";
 import * as path from "path";
 import UserApp from "../../models/users-app.model";
 import sequelize from "../../util/dbConn";
+import moment from "moment";
 
 
 const fetchTransactionsReport = async (req: Request, res: Response) => {
@@ -89,12 +90,10 @@ const fetchTransactionsReport = async (req: Request, res: Response) => {
     }
 
     if (startDate && endDate) {
-      const startOfDay = new Date(startDate);
-      startOfDay.setUTCHours(0, 0, 0, 0);
-      const endOfDay = new Date(endDate);
-      endOfDay.setUTCHours(23, 59, 59, 999);
+      const startOfDay = moment(startDate).utc().startOf('day').toDate();
+      const endOfDay = moment(endDate).utc().endOf('day').toDate();
       whereCondition.date = { [Op.between]: [startOfDay, endOfDay] }
-  }
+    }
     // apply search
     if (searchTerm) {
       whereCondition[Op.or] = [
@@ -400,7 +399,7 @@ const exportProcurementReport = async (req: Request, res: Response) => {
           "Transport Vehicle No",
           "Payment Method",
           "Ginner Name",
-          "Agent",
+          "Transaction User Details",
         ]);
       }else{
         headerRow = worksheet.addRow([
@@ -424,7 +423,7 @@ const exportProcurementReport = async (req: Request, res: Response) => {
           "Transport Vehicle No",
           "Payment Method",
           "Ginner Name",
-          "Agent",
+          "Transaction User Details",
         ]);
     }
     headerRow.font = { bold: true };
@@ -527,7 +526,7 @@ const exportProcurementReport = async (req: Request, res: Response) => {
             vehicle: item.dataValues.vehicle ? item.dataValues.vehicle : '',
             payment_method: item.dataValues.payment_method ? item.dataValues.payment_method : '',
             ginner: item.dataValues.ginner ? item.dataValues.ginner.name : '',
-            agent: item.dataValues.agent ? item.dataValues.agent.firstName : "",
+            agent: item?.dataValues?.agent && ( item?.dataValues?.agent?.lastName ? item?.dataValues?.agent?.firstName + " " + item?.dataValues?.agent?.lastName+ "-" + item?.dataValues?.agent?.access_level : item?.dataValues?.agent?.firstName+ "-" + item?.dataValues?.agent?.access_level),
           });
         }else{
         rowValues = Object.values({
@@ -551,7 +550,7 @@ const exportProcurementReport = async (req: Request, res: Response) => {
           vehicle: item.dataValues.vehicle ? item.dataValues.vehicle : '',
           payment_method: item.dataValues.payment_method ? item.dataValues.payment_method : '',
           ginner: item.dataValues.ginner ? item.dataValues.ginner.name : '',
-          agent: item.dataValues.agent ? item.dataValues.agent.firstName : "",
+          agent: item?.dataValues?.agent && ( item?.dataValues?.agent?.lastName ? item?.dataValues?.agent?.firstName + " " + item?.dataValues?.agent?.lastName+ "-" + item?.dataValues?.agent?.access_level : item?.dataValues?.agent?.firstName+ "-" + item?.dataValues?.agent?.access_level),
         });
       }
       worksheet.addRow(rowValues);

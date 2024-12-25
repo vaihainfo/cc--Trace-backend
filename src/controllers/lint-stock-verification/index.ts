@@ -24,10 +24,15 @@ const getGinProcessLotNo = async (req: Request, res: Response) => {
       return res.sendError(res, "No Ginner Id Found");
     }
 
-    const lotNo = await GinProcess.findAll({
-      attributes: ["id", "lot_no", "reel_lot_no"],
-      where: { ginner_id: ginnerId, te_verified_status: { [Op.not]: true }, },
-    });
+    const [lotNo] = await sequelize.query(`
+      SELECT gp.id, gp.lot_no,gp.reel_lot_no
+        FROM gin_processes gp
+        JOIN "gin-bales" gb ON gb.process_id = gp.id
+        WHERE gp.ginner_id = ${ginnerId}
+          AND gp.te_verified_status IS NOT TRUE
+          AND gp.greyout_status IS FALSE
+          AND gb.sold_status IS FALSE
+        GROUP BY gp.id`)
 
     if (lotNo && lotNo.length > 0) {
       return res.sendSuccess(res, lotNo);
@@ -47,17 +52,65 @@ const getGinSaleLotNo = async (req: Request, res: Response) => {
     if (!spinnerId) {
       return res.sendError(res, "No Spinner Id Found");
     }
+    const whereCondition: any = [];
 
-    const lotNo = await GinSales.findAll({
-      attributes: ["id", "lot_no", "reel_lot_no","invoice_no", "press_no"],
-      where: { buyer: spinnerId, te_verified_status: { [Op.not]: true }, be_verified_status: { [Op.not]: true }, status: { [Op.in]: ['Sold', 'Partially Accepted', 'Partially Rejected'] } },
-    });
+    whereCondition.push(`gs.buyer = ${spinnerId}`)
+    whereCondition.push(`gs.status IN ('Sold', 'Partially Accepted', 'Partially Rejected')`)
+    whereCondition.push(`gs.greyout_status IS FALSE`)
+    whereCondition.push(`gs.te_verified_status IS NOT TRUE`)
+    whereCondition.push(`gs.be_verified_status IS NOT TRUE`)
+    whereCondition.push(`gs.qty_stock > 0`)
 
-    if (lotNo && lotNo.length > 0) {
-      return res.sendSuccess(res, lotNo);
-    } else {
-      return res.sendError(res, "No Sale lot found");
-    }
+
+    const whereClause = whereCondition.length > 0 ? `WHERE ${whereCondition.join(' AND ')} AND bd.total_qty > 0` : 'WHERE bd.total_qty > 0';
+
+    let dataQuery = `
+                WITH bale_details AS (
+                    SELECT 
+                        bs.sales_id,
+                        COALESCE(
+                            SUM(
+                                CASE
+                                WHEN gb.accepted_weight IS NOT NULL THEN gb.accepted_weight
+                                ELSE CAST(gb.weight AS DOUBLE PRECISION)
+                                END
+                            ), 0
+                        ) AS total_qty
+                    FROM 
+                        bale_selections bs
+                    JOIN 
+                        gin_sales gs ON bs.sales_id = gs.id
+                    LEFT JOIN 
+                        "gin-bales" gb ON bs.bale_id = gb.id
+                    WHERE 
+                        gs.status IN ('Sold', 'Partially Accepted', 'Partially Rejected')
+                        AND (bs.spinner_status = true OR gs.status = 'Sold')
+                    GROUP BY 
+                        bs.sales_id
+                )
+                SELECT 
+                    gs.id, gs.lot_no,gs.reel_lot_no,gs.invoice_no
+                FROM 
+                    gin_sales gs
+                LEFT JOIN 
+                    ginners g ON gs.ginner_id = g.id
+                LEFT JOIN 
+                    seasons s ON gs.season_id = s.id
+                LEFT JOIN 
+                    programs p ON gs.program_id = p.id
+                LEFT JOIN 
+                    spinners sp ON gs.buyer = sp.id
+                LEFT JOIN 
+                    bale_details bd ON gs.id = bd.sales_id
+                ${whereClause}
+                ORDER BY 
+                    gs."id" ASC`;
+
+        const lotNo = await sequelize.query(dataQuery, {
+                    type: sequelize.QueryTypes.SELECT,
+                });
+
+    return res.sendSuccess(res, lotNo);
   } catch (error: any) {
     console.log(error);
     return res.sendError(res, error?.message);
@@ -90,7 +143,16 @@ const getGinProcessLotDetials = async (req: Request, res: Response) => {
                     'bale_no', gb.bale_no,
                     'weight', gb.weight,
                     'is_all_rejected', gb.is_all_rejected,
-                    'greyout_status', gp.greyout_status
+                    'greyout_status', gp.greyout_status,
+                    'sold_status', gb.sold_status,
+                    'te_verified_status', gb.te_verified_status,
+                    'te_verified_weight', gb.te_verified_weight,
+                    'gin_verified_status', gb.gin_verified_status,
+                    'gin_verified_weight', gb.gin_verified_weight,
+                    'scm_verified_status', gb.scm_verified_status,
+                    'scm_verified_weight', gb.scm_verified_weight,
+                    'scd_verified_status', gb.scd_verified_status,
+                    'scd_verified_weight', gb.scd_verified_weight
                 ) ORDER BY gb.id ASC)
             ) AS result
         FROM 
@@ -249,6 +311,7 @@ const createVerifiedLintStock = async (req: Request, res: Response) => {
             te_verified_status: true,
             te_verified_total_qty: req.body.actualTotalQty,
             te_verified_bales: req.body.actualNoOfBales,
+            verification_status: 'Pending',
           },
           {
             where: {
@@ -282,6 +345,7 @@ const createVerifiedLintStock = async (req: Request, res: Response) => {
             be_verified_status: req.body.beId ? true : null,
             be_verified_total_qty: req.body.beId ? req.body.actualTotalQty : null,
             be_verified_bales: req.body.beId ? req.body.actualNoOfBales : null,
+            verification_status: 'Pending',
           },
           {
             where: {
@@ -449,42 +513,42 @@ const getLintVerifiedStock = async (req: Request, res: Response) => {
         {
           model: Ginner,
           as: "ginner",
-          attributes: ["id", "name"],
+          attributes: ["id", "name", "brand"],
         },
         {
           model: Spinner,
           as: "spinner",
-          attributes: ["id", "name"],
+          attributes: ["id", "name", "brand"],
         },
         {
           model: TraceabilityExecutive,
           as: "traceability_executive",
-          attributes: ["id", "name"],
+          attributes: ["id", "name", "brand"],
         },
         {
           model: BrandExecutive,
           as: "brand_executive",
-          attributes: ["id", "name"],
+          attributes: ["id", "name", "brand"],
         },
         {
           model: SupplyChainManager,
           as: "supply_chain_manager",
-          attributes: ["id", "name"],
+          attributes: ["id", "name", "brand"],
         },
         {
           model: SupplyChainDirector,
           as: "supply_chain_director",
-          attributes: ["id", "name"],
+          attributes: ["id", "name", "brand"],
         },
         {
           model: BrandManager,
           as: "brand_manager",
-          attributes: ["id", "name"],
+          attributes: ["id", "name", "brand"],
         },
         {
           model: PSTeam,
           as: "ps_team",
-          attributes: ["id", "name"],
+          attributes: ["id", "name", "brand"],
         },
         {
           model: Country,
@@ -528,7 +592,8 @@ const getLintVerifiedStock = async (req: Request, res: Response) => {
             "scd_verified_weight",
             "gin_level_verify"
           ],
-          where: { process_id: stock?.dataValues?.process_id },
+          where: { process_id: stock?.dataValues?.process_id, sold_status: false },
+          order: [['id','asc']]
         });
         if (bales && bales.length > 0) {
           stock = {
@@ -753,6 +818,7 @@ const editGinVerifiedStockConfirm = async (
       uploaded_photos_ginner: req.body.uploadedPhotos,
       status: req.body.status === "Accepted" ? "Accepted" : "Rejected",
       status_scm: "Pending",
+      reason_ginner: req.body.reason
     };
 
     const lintVerified = await LintStockVerified.update(data, {
@@ -806,6 +872,7 @@ const updateSCMVerifiedStockConfirm = async (
       uploaded_photos_scm: req.body.uploadedPhotos,
       status_scm: req.body.status === "Accepted" ? "Accepted" : "Rejected",
       status_scd: "Pending",
+      reason_scm: req.body.reason
     };
 
     const lintVerified = await LintStockVerified.update(data, {
@@ -856,7 +923,8 @@ const updateSCDVerifiedStockConfirm = async (
       confirmed_scd_no_of_bales: req.body.confirmedNoOfBales,
       consent_form_scd: req.body.consentForm,
       uploaded_photos_scd: req.body.uploadedPhotos,
-      status_scd: req.body.status === "Accepted" ? "Accepted" : "Rejected"
+      status_scd: req.body.status === "Accepted" ? "Accepted" : "Rejected",
+      reason_scd: req.body.reason
     };
 
     const lintVerified = await LintStockVerified.update(data, {
@@ -881,6 +949,7 @@ const updateSCDVerifiedStockConfirm = async (
           scd_verified_status: req.body.status === "Accepted" ? true : false,
           scd_verified_total_qty: req.body.confirmedTotalQty,
           scd_verified_bales: req.body.confirmedNoOfBales,
+          verification_status: 'Completed',
         },
         {
           where: {
@@ -996,7 +1065,8 @@ const getSCMVerifiedStocks = async (req: Request, res: Response) => {
       whereCondition.status_scm = 'Accepted'
     }
     
-    whereCondition.status = 'Accepted'
+    // whereCondition.status = 'Accepted'
+    whereCondition.status = { [Op.in]: ['Accepted', 'Rejected'] };
     whereCondition.processor_type = 'Ginner';
 
     let include = [
@@ -1166,8 +1236,10 @@ const getSCDVerifiedStocks = async (req: Request, res: Response) => {
       whereCondition.status_scd = 'Accepted'
     }
 
-    whereCondition.status_scm = 'Accepted'
-    whereCondition.status = 'Accepted'
+    // whereCondition.status_scm = 'Accepted'
+    whereCondition.status_scm = { [Op.in]: ['Accepted', 'Rejected'] };
+    // whereCondition.status = 'Accepted'
+    whereCondition.status = { [Op.in]: ['Accepted', 'Rejected'] };
     whereCondition.processor_type = 'Ginner';
 
     let include = [
@@ -1910,6 +1982,7 @@ const updateSpinVerifiedStockConfirm = async (
       uploaded_photos_spinner: req.body.uploadedPhotos,
       status: req.body.status === "Accepted" ? "Accepted" : "Rejected",
       status_bm: "Pending",
+      reason_spinner: req.body.reason
     };
 
     const lintVerified = await LintStockVerified.update(data, {
@@ -1963,6 +2036,7 @@ const updateBMVerifiedStockConfirm = async (
       uploaded_photos_bm: req.body.uploadedPhotos,
       status_bm: req.body.status === "Accepted" ? "Accepted" : "Rejected",
       status_ps: "Pending",
+      reason_bm: req.body.reason
     };
 
     const lintVerified = await LintStockVerified.update(data, {
@@ -2014,6 +2088,7 @@ const updatePSVerifiedStockConfirm = async (
       consent_form_ps: req.body.consentForm,
       uploaded_photos_ps: req.body.uploadedPhotos,
       status_ps: req.body.status === "Accepted" ? "Accepted" : "Rejected",
+      reason_ps: req.body.reason
     };
 
     const lintVerified = await LintStockVerified.update(data, {
@@ -2038,6 +2113,7 @@ const updatePSVerifiedStockConfirm = async (
           ps_verified_status: req.body.status === "Accepted" ? true : false,
           ps_verified_total_qty: req.body.confirmedTotalQty,
           ps_verified_bales: req.body.confirmedNoOfBales,
+          verification_status: 'Completed',
         },
         {
           where: {

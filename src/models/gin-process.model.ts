@@ -90,6 +90,16 @@ const GinProcess = db.define('gin_process', {
     type: DataTypes.BOOLEAN,
     defaultValue: false,
   },
+  from_date: {
+    type: DataTypes.DATE,
+    allowNull: true,
+    defaultValue: null,
+  },
+  to_date: {
+    type: DataTypes.DATE,
+    allowNull: true,
+    defaultValue: null,
+  },
   te_verified_status: {
     type: DataTypes.BOOLEAN,
   },
@@ -126,15 +136,8 @@ const GinProcess = db.define('gin_process', {
   scd_verified_bales: {
     type: DataTypes.DOUBLE,
   },
-  from_date: {
-    type: DataTypes.DATE,
-    allowNull: true,
-    defaultValue: null,
-  },
-  to_date: {
-    type: DataTypes.DATE,
-    allowNull: true,
-    defaultValue: null,
+  verification_status: {
+    type: DataTypes.STRING
   },
 });
 

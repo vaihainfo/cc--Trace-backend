@@ -45,6 +45,10 @@ const SeedCottonPricing = db.define('seed-cotton-pricings', {
     type: DataTypes.DECIMAL,
     allowNull: false,
   },
+  programme_price: {
+    type: DataTypes.DECIMAL,
+    allowNull: false,
+  }
 });
 
 SeedCottonPricing.belongsTo(Country, {

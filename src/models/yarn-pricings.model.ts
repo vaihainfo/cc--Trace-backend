@@ -47,6 +47,10 @@ const YarnPricing = db.define('yarn-pricings', {
   market_price: {
     type: DataTypes.DECIMAL,
     allowNull: false,
+  },
+  programme_price: {
+    type: DataTypes.DECIMAL,
+    allowNull: false,
   }
 });
 

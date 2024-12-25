@@ -182,6 +182,24 @@ const LintStockVerified = db.define('lint_stock_verifieds', {
   ps_id: {
     type: DataTypes.INTEGER
   },
+  reason_ginner: {
+    type: DataTypes.STRING
+  }, 
+  reason_scm: {
+    type: DataTypes.STRING
+  }, 
+  reason_scd: {
+    type: DataTypes.STRING
+  }, 
+  reason_spinner: {
+    type: DataTypes.STRING
+  }, 
+  reason_bm: {
+    type: DataTypes.STRING
+  }, 
+  reason_ps: {
+    type: DataTypes.STRING
+  }, 
 });
 
 LintStockVerified.belongsTo(Country, {
