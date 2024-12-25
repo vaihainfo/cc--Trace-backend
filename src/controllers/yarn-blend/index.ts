@@ -146,7 +146,7 @@ const createYarnBlend = async (req: Request, res: Response) => {
             !cotton_blend_percentage ||
             !brand_id || brand_id.length === 0
         ) {
-            return res.sendError(res, "MISSING_FIELDS");
+            return res.sendError(res, "MISSING FIELDS");
         }
 
         if (
@@ -154,11 +154,11 @@ const createYarnBlend = async (req: Request, res: Response) => {
             !Array.isArray(cotton_blend_percentage) ||
             !Array.isArray(brand_id)
         ) {
-            return res.sendError(res, "FIELDS_MUST_BE_ARRAY");
+            return res.sendError(res, "FIELDS MUST BE ARRAY");
         }
 
         if (cotton_blend.length !== cotton_blend_percentage.length) {
-            return res.sendError(res, "COTTON_BLEND_AND_COTTON_BLEND_PERCENTAGE_ARRAY_NOT_EQUAL");
+            return res.sendError(res, "COTTON BLEND AND COTTON BLEND PERCENTAGE ARRAY NOT EQUAL");
         }
 
         let result = await YarnBlend.findOne({
@@ -171,7 +171,7 @@ const createYarnBlend = async (req: Request, res: Response) => {
         }
 
         if (cotton_percentage === 100) {
-            return res.sendError(res, "COTTON_PERCENTAGE_CANNOT_EMPTY");
+            return res.sendError(res, "COTTON PERCENTAGE CANNOT BE 100%");
         }
 
         const data = {
