@@ -38,6 +38,7 @@ import LintPricing from "../../models/lint-pricings.model";
 import YarnPricing from "../../models/yarn-pricings.model";
 import SpinSales from "../../models/spin-sales.model";
 import GinSales from "../../models/gin-sales.model";
+import Spinner from "../../models/spinner.model";
 
 const uploadGinnerOrder = async (req: Request, res: Response) => {
     try {
@@ -3381,13 +3382,21 @@ const uploadPriceMapping = async (req: Request, res: Response) => {
                                     date: {
                                         [Op.between]: [priceData.startDate, priceData.endDate]
                                     },
-                                    brand_id: priceData.brand_id,
-                                    country_id: priceData.country_id,
-                                    district_id: priceData.district_id,
-                                    state_id: priceData.state_id
-                                }
+                                    "$ginner.brand$": {
+                                        [Op.contains]: [priceData.brand_id] 
+                                      },
+                                    ["$ginner.country_id$"] : priceData.country_id ,
+                                    ["$ginner.district_id$"] :  priceData.district_id ,
+                                    ["$ginner.state_id$"] : priceData.state_id ,
+                                },
+                                include: [
+                                    {
+                                        model: Ginner,
+                                        as: "ginner",
+                                        attributes: ["id", "name"],
+                                      },
+                                ]
                             });
-                        
                             if (!lintTransactionExists) {
                                 fail.push({
                                     success: false,
@@ -3406,11 +3415,20 @@ const uploadPriceMapping = async (req: Request, res: Response) => {
                                     date: {
                                         [Op.between]: [priceData.startDate, priceData.endDate]
                                     },
-                                    brand_id: priceData.brand_id,
-                                    country_id: priceData.country_id,
-                                    district_id: priceData.district_id,
-                                    state_id: priceData.state_id
-                                }
+                                "$spinner.brand$": {
+                                    [Op.contains]: [priceData.brand_id] 
+                                  },
+                                ["$spinner.country_id$"] : priceData.country_id ,
+                                ["$spinner.district_id$"] :  priceData.district_id ,
+                                ["$spinner.state_id$"] : priceData.state_id ,
+                            },
+                            include: [
+                                {
+                                    model: Spinner,
+                                    as: "spinner",
+                                    attributes: ["id", "name"],
+                                  },
+                            ]
                             });
                         
                             if (!yarnTransactionExists) {
