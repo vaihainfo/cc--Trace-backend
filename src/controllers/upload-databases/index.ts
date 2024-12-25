@@ -2280,6 +2280,7 @@ const uploadIntegrityTest = async (req: Request, res: Response) => {
                 const brand = await Brand.findOne({ where: { brand_name: data.brand } });
                 const farmer = await Farmer.findOne({ where: { tracenet_id: data.tracenetId,brand_id:brand.id} });
                 const season = await Season.findOne({ where: { name: data.season}});
+                const ics = await ICS.findOne({ where: { ics_name: data.icsName}});
 
                 if (!brand) {
                     fail.push({
@@ -2303,7 +2304,7 @@ const uploadIntegrityTest = async (req: Request, res: Response) => {
                             success: false,
                             message: "Brand is not associated with the Organic Programme"
                         });
-                        return res.sendSuccess(res, { pass, fail });
+                       
                     }
                 }
 
@@ -2321,7 +2322,7 @@ const uploadIntegrityTest = async (req: Request, res: Response) => {
                         data: { brand: data.brand ? data.brand : '', farmerName: data.farmer ? data.farmer : '', farmGroupName: data.farmGroup ? data.farmGroup : '', icsName: data.icsName ? data.icsName : '' },
                         message: "Farmer with mentioned Tracenet Id "+ data.tracenetId +" does not exists"
                     });
-                    return res.sendSuccess(res, { pass, fail });
+                   
                 }
 
                 else if(farmer || brand || season ) {
@@ -2329,7 +2330,7 @@ const uploadIntegrityTest = async (req: Request, res: Response) => {
                         date: data.date,
                         brand_id: brand.id,
                         farmGroup_id: farmer.farmGroup_id,
-                        ics_id: farmer.ics_id,
+                        ics_id: ics.id,
                         ginner_id: 0,
                         test_stage: data.stageOfTesting,
                         farmer: farmer.id,
