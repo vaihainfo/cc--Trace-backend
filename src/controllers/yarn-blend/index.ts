@@ -5,9 +5,10 @@ import SpinProcess from "../../models/spin-process.model";
 import sequelize from "../../util/dbConn";
 import * as path from "path";
 import * as ExcelJS from "exceljs";
+import CottonMix from "../../models/cotton-mix.model";
 
 const fetchYarnBlendPagination = async (req: Request, res: Response) => {
-    const sortOrder = req.query.sort || "asc";
+    const sortOrder = req.query.sort || "desc";
     const status = req.query.status || "";
     const page = Number(req.query.page) || 1;
     const limit = Number(req.query.limit) || 10;
@@ -53,7 +54,7 @@ const fetchYarnBlendPagination = async (req: Request, res: Response) => {
                 yb.cotton_blend,
                 yb.cotton_blend_percentage,
                 yb.status
-            ORDER BY yb.cotton_name ${sortOrder}
+            ORDER BY yb.id ${sortOrder}
             ${req.query.pagination === "true" ? 'LIMIT :limit OFFSET :offset' : ''};
         `;
 
@@ -129,6 +130,27 @@ const fetchYarnBlendPagination = async (req: Request, res: Response) => {
         return res.sendError(res, "ERR_INTERNAL_SERVER_ERROR");
     }
 };
+
+
+const fetchSingleYarn = async (req: Request, res: Response) => {
+    const id = req.query.id;
+
+    try {
+      if (!id) {
+        return res.sendError(res, "need id");
+      }
+  
+      let rows = await YarnBlend.findOne({
+        where: {
+            id: id
+        }
+      });
+      return res.sendSuccess(res, rows);
+    } catch (error: any) {
+      return res.sendError(res, error.message);
+    }
+};
+
 
 const createYarnBlend = async (req: Request, res: Response) => {
     try {
@@ -449,6 +471,7 @@ const exportYarnBlend = async (req: Request, res: Response) => {
 
 export {
     fetchYarnBlendPagination,
+    fetchSingleYarn,
     createYarnBlend,
     updateYarnBlend,
     updateYarnBlendStatus,
