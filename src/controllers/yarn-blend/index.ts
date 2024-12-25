@@ -144,7 +144,7 @@ const createYarnBlend = async (req: Request, res: Response) => {
             !cotton_percentage ||
             !cotton_blend ||
             !cotton_blend_percentage ||
-            !brand_id
+            !brand_id || brand_id.length === 0
         ) {
             return res.sendError(res, "MISSING_FIELDS");
         }
@@ -169,6 +169,11 @@ const createYarnBlend = async (req: Request, res: Response) => {
         if (result) {
             return res.sendError(res, "ALREADY_EXITS");
         }
+
+        if (cotton_percentage === 100) {
+            return res.sendError(res, "COTTON_PERCENTAGE_CANNOT_EMPTY");
+        }
+
         const data = {
             cotton_name,
             cotton_percentage,
