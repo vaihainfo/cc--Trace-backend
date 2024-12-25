@@ -161,14 +161,14 @@ const createYarnBlend = async (req: Request, res: Response) => {
             return res.sendError(res, "COTTON BLEND AND COTTON BLEND PERCENTAGE ARRAY NOT EQUAL");
         }
 
-        let result = await YarnBlend.findOne({
-            where: {
-                brand_id,
-            },
-        });
-        if (result) {
-            return res.sendError(res, "ALREADY_EXITS");
-        }
+        // let result = await YarnBlend.findOne({
+        //     where: {
+        //         brand_id,
+        //     },
+        // });
+        // if (result) {
+        //     return res.sendError(res, "ALREADY_EXITS");
+        // }
 
         if (cotton_percentage === 100) {
             return res.sendError(res, "COTTON PERCENTAGE CANNOT BE 100%");
