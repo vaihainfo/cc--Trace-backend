@@ -375,10 +375,8 @@ const fetchGinHeapPagination = async (req: Request, res: Response) => {
     if (searchTerm) {
       whereCondition[Op.or] = [
         { "$season.name$": { [Op.iLike]: `%${searchTerm}%` } },
-        { lot_no: { [Op.iLike]: `%${searchTerm}%` } },
-        { reel_lot_no: { [Op.iLike]: `%${searchTerm}%` } },
-        { press_no: { [Op.iLike]: `%${searchTerm}%` } },
-        { heap_number: { [Op.iLike]: `%${searchTerm}%` } },
+        { ginner_heap_no: { [Op.iLike]: `%${searchTerm}%` } },
+        { reel_heap_no: { [Op.iLike]: `%${searchTerm}%` } },
       ];
     }
     if (ginnerId) {
