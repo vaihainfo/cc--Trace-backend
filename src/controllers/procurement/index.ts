@@ -65,27 +65,27 @@ const createTransaction = async (req: Request, res: Response) => {
       }
 
       let available_cotton = 0;
-            if(!farm.available_cotton){
-              if(farm.cotton_transacted == 0 || !farm.cotton_transacted){
-                data.available_cotton =Number(farm.total_estimated_cotton) + (0.15 * Number(farm.total_estimated_cotton));
-                available_cotton =Number(farm.total_estimated_cotton) + (0.15 * Number(farm.total_estimated_cotton));
-              }else{
-                let maxCotton = Number(farm.total_estimated_cotton) + (0.15 * Number(farm.total_estimated_cotton))
-                available_cotton = Number(maxCotton)-Number(farm.cotton_transacted);
-              }
-            }else{
-              if(Number(farm.available_cotton) <= Number(farm.total_estimated_cotton)){
-                let maxCotton = Number(farm.total_estimated_cotton) + (0.15 * Number(farm.total_estimated_cotton))
-                available_cotton = Number(maxCotton)-Number(farm.cotton_transacted);
-              }else{
-                available_cotton = Number(farm.available_cotton) - Number(farm.cotton_transacted);
-              }
-            }
+      if (!farm.available_cotton) {
+        if (farm.cotton_transacted == 0 || !farm.cotton_transacted) {
+          data.available_cotton = Number(farm.total_estimated_cotton) + (0.15 * Number(farm.total_estimated_cotton));
+          available_cotton = Number(farm.total_estimated_cotton) + (0.15 * Number(farm.total_estimated_cotton));
+        } else {
+          let maxCotton = Number(farm.total_estimated_cotton) + (0.15 * Number(farm.total_estimated_cotton))
+          available_cotton = Number(maxCotton) - Number(farm.cotton_transacted);
+        }
+      } else {
+        if (Number(farm.available_cotton) <= Number(farm.total_estimated_cotton)) {
+          let maxCotton = Number(farm.total_estimated_cotton) + (0.15 * Number(farm.total_estimated_cotton))
+          available_cotton = Number(maxCotton) - Number(farm.cotton_transacted);
+        } else {
+          available_cotton = Number(farm.available_cotton) - Number(farm.cotton_transacted);
+        }
+      }
 
-            data.estimated_cotton = Number(farm.total_estimated_cotton);
-            data.available_cotton = available_cotton;
+      data.estimated_cotton = Number(farm.total_estimated_cotton);
+      data.available_cotton = available_cotton;
     }
- 
+
     const transaction = await Transaction.create(data);
     const s = await Farm.update({
       cotton_transacted: Number(farm.cotton_transacted || 0) + Number(req.body.qtyPurchased),
@@ -491,12 +491,12 @@ const updateTransaction = async (req: Request, res: Response) => {
     }
 
     const transactionExist = await Transaction.findOne({
-      where:{
+      where: {
         id: req.body.id,
       }
     });
 
-    if(!transactionExist){
+    if (!transactionExist) {
       return res.sendError(res, 'Transaction not exist')
     }
 
@@ -533,19 +533,19 @@ const updateTransaction = async (req: Request, res: Response) => {
       }
 
       let available_cotton = 0;
-      if(!farm.available_cotton){
-        if(farm.cotton_transacted == 0 || !farm.cotton_transacted){
-          data.available_cotton =Number(farm.total_estimated_cotton) + (0.15 * Number(farm.total_estimated_cotton));
-          available_cotton =Number(farm.total_estimated_cotton) + (0.15 * Number(farm.total_estimated_cotton));
-        }else{
+      if (!farm.available_cotton) {
+        if (farm.cotton_transacted == 0 || !farm.cotton_transacted) {
+          data.available_cotton = Number(farm.total_estimated_cotton) + (0.15 * Number(farm.total_estimated_cotton));
+          available_cotton = Number(farm.total_estimated_cotton) + (0.15 * Number(farm.total_estimated_cotton));
+        } else {
           let maxCotton = Number(farm.total_estimated_cotton) + (0.15 * Number(farm.total_estimated_cotton))
-          available_cotton = Number(maxCotton)-Number(farm.cotton_transacted);
+          available_cotton = Number(maxCotton) - Number(farm.cotton_transacted);
         }
-      }else{
-        if(Number(farm.available_cotton) <= Number(farm.total_estimated_cotton)){
+      } else {
+        if (Number(farm.available_cotton) <= Number(farm.total_estimated_cotton)) {
           let maxCotton = Number(farm.total_estimated_cotton) + (0.15 * Number(farm.total_estimated_cotton))
-          available_cotton = Number(maxCotton)-Number(farm.cotton_transacted);
-        }else{
+          available_cotton = Number(maxCotton) - Number(farm.cotton_transacted);
+        } else {
           available_cotton = Number(farm.available_cotton) - Number(farm.cotton_transacted);
         }
       }
@@ -710,7 +710,7 @@ const deleteTransaction = async (req: Request, res: Response) => {
     }
 
     if (trans.dataValues.farm_id) {
-      if (trans.dataValues){
+      if (trans.dataValues) {
         const mappedTransactions = await Transaction.findAll({
           where: {
             farm_id: trans.dataValues.farm_id,
@@ -723,15 +723,15 @@ const deleteTransaction = async (req: Request, res: Response) => {
           ]
         })
 
-        if(mappedTransactions && mappedTransactions.length > 0){
+        if (mappedTransactions && mappedTransactions.length > 0) {
           const soldStatus = mappedTransactions[0].dataValues.status === 'Sold';
-          const latestTransaction  = mappedTransactions[0].dataValues.id === trans.dataValues.id;
-          if(soldStatus === true){
+          const latestTransaction = mappedTransactions[0].dataValues.id === trans.dataValues.id;
+          if (soldStatus === true) {
             return res.sendError(res, 'Cannot Delete this transaction as latest transaction associated with this farm is already sold')
           }
-          else if (latestTransaction && soldStatus === false){
-            let farm = await Farm.findOne({ where: { id: trans.dataValues.farm_id } }) 
-            if(farm && Number(farm.dataValues.cotton_transacted) >= Number(trans.dataValues.qty_purchased)){
+          else if (latestTransaction && soldStatus === false) {
+            let farm = await Farm.findOne({ where: { id: trans.dataValues.farm_id } })
+            if (farm && Number(farm.dataValues.cotton_transacted) >= Number(trans.dataValues.qty_purchased)) {
               const updatedCottonTransacted = Math.max(
                 0,
                 Number(farm.dataValues.cotton_transacted || 0) - Number(trans.dataValues.qty_purchased || 0)
@@ -740,7 +740,7 @@ const deleteTransaction = async (req: Request, res: Response) => {
                 cotton_transacted: updatedCottonTransacted
               }, { where: { id: trans.dataValues.farm_id } });
             }
-            else{
+            else {
               await Farm.update({
                 cotton_transacted: 0
               }, { where: { id: trans.dataValues.farm_id } });
@@ -751,7 +751,7 @@ const deleteTransaction = async (req: Request, res: Response) => {
           }
         }
       }
-  
+
     }
 
     const transaction = await Transaction.destroy({
@@ -780,18 +780,57 @@ const deleteBulkTransactions = async (req: Request, res: Response) => {
       })
       if (!trans) {
         fail.push({ id: i, message: 'No transaction found' })
-      } else {
+      } 
+      else {
         if (trans.dataValues.status !== 'Pending') {
           fail.push({ id: i, message: 'Transaction is not in pending state' })
-        } else {
-          if (trans.dataValues.farm_id) {
-            let farm = await Farm.findOne({ where: { id: trans.dataValues.farm_id } })
-            if (farm) {
-              let s = await Farm.update({
-                cotton_transacted: (Number(farm.cotton_transacted) || 0) + (Number(trans.dataValues.qty_purchased) || 0)
-              }, { where: { id: trans.dataValues.farm_id } });
+        }
+
+        if (trans.dataValues.farm_id) {
+          if (trans.dataValues) {
+            const mappedTransactions = await Transaction.findAll({
+              where: {
+                farm_id: trans.dataValues.farm_id,
+                farmer_id: trans.dataValues.farmer_id
+              },
+              order: [
+                [
+                  'id', 'desc'
+                ]
+              ]
+            })
+
+            if (mappedTransactions && mappedTransactions.length > 0) {
+              const soldStatus = mappedTransactions[0].dataValues.status === 'Sold';
+              const latestTransaction = mappedTransactions[0].dataValues.id === trans.dataValues.id;
+              if (soldStatus === true) {
+                fail.push({ id: i, message: 'Cannot Delete this transaction as latest transaction associated with this farm is already sold' })
+              }
+              else if (latestTransaction && soldStatus === false) {
+                let farm = await Farm.findOne({ where: { id: trans.dataValues.farm_id } })
+                if (farm && Number(farm.dataValues.cotton_transacted) >= Number(trans.dataValues.qty_purchased)) {
+                  const updatedCottonTransacted = Math.max(
+                    0,
+                    Number(farm.dataValues.cotton_transacted || 0) - Number(trans.dataValues.qty_purchased || 0)
+                  );
+                  let s = await Farm.update({
+                    cotton_transacted: updatedCottonTransacted
+                  }, { where: { id: trans.dataValues.farm_id } });
+                }
+                else {
+                  await Farm.update({
+                    cotton_transacted: 0
+                  }, { where: { id: trans.dataValues.farm_id } });
+                }
+              }
+              else {
+                fail.push({ id: i, message: 'Only latest transaction can be deleted first from this farmer and farm' })
+              }
             }
           }
+
+        }
+        else {
           const transaction = await Transaction.destroy({
             where: {
               id: i,
@@ -1029,113 +1068,143 @@ const uploadTransactionBulk = async (req: Request, res: Response) => {
               reason: "Season not found"
             }
             saveFailedRecord(failedRecord)
-          }  else if (data.country) {
-              country = await Country.findOne({
-                where: {
-                  county_name: { [Op.iLike]: data.country },
-                },
+          } else if (data.country) {
+            country = await Country.findOne({
+              where: {
+                county_name: { [Op.iLike]: data.country },
+              },
+            });
+
+            if (!country) {
+              fail.push({
+                success: false,
+                data: { farmerName: data.farmerName ? data.farmerName : '', farmerCode: data.farmerCode ? data.farmerCode : '' },
+                message: "Country not found",
               });
-
-              if (!country) {
-                fail.push({
-                  success: false,
-                  data: { farmerName: data.farmerName ? data.farmerName : '', farmerCode: data.farmerCode ? data.farmerCode : '' },
-                  message: "Country not found",
+              let failedRecord = {
+                type: 'Procurement',
+                season: season,
+                farmerCode: data.farmerCode ? data.farmerCode : '',
+                farmerName: data.farmerName ? data.farmerName : '',
+                body: { ...data },
+                reason: "Country not found"
+              }
+              saveFailedRecord(failedRecord)
+            } else {
+              if (data.state) {
+                state = await State.findOne({
+                  where: {
+                    country_id: country.id,
+                    state_name: { [Op.iLike]: data.state },
+                  },
                 });
-                let failedRecord = {
-                  type: 'Procurement',
-                  season: season,
-                  farmerCode: data.farmerCode ? data.farmerCode : '',
-                  farmerName: data.farmerName ? data.farmerName : '',
-                  body: { ...data },
-                  reason: "Country not found"
-                }
-                saveFailedRecord(failedRecord)
-              } else {
-                if (data.state) {
-                  state = await State.findOne({
-                    where: {
-                      country_id: country.id,
-                      state_name: { [Op.iLike]: data.state },
-                    },
+                if (!state) {
+                  fail.push({
+                    success: false,
+                    data: { farmerName: data.farmerName ? data.farmerName : '', farmerCode: data.farmerCode ? data.farmerCode : '' },
+                    message: "State is not associated with the entered Country",
                   });
-                  if (!state) {
-                    fail.push({
-                      success: false,
-                      data: { farmerName: data.farmerName ? data.farmerName : '', farmerCode: data.farmerCode ? data.farmerCode : '' },
-                      message: "State is not associated with the entered Country",
+                  let failedRecord = {
+                    type: 'Procurement',
+                    season: season,
+                    farmerCode: data.farmerCode ? data.farmerCode : '',
+                    farmerName: data.farmerName ? data.farmerName : '',
+                    body: { ...data },
+                    reason: "State is not associated with the entered Country"
+                  }
+                  saveFailedRecord(failedRecord)
+                } else {
+                  if (data.district) {
+                    district = await District.findOne({
+                      where: {
+                        state_id: state.id,
+                        district_name: { [Op.iLike]: data.district },
+                      },
                     });
-                    let failedRecord = {
-                      type: 'Procurement',
-                      season: season,
-                      farmerCode: data.farmerCode ? data.farmerCode : '',
-                      farmerName: data.farmerName ? data.farmerName : '',
-                      body: { ...data },
-                      reason: "State is not associated with the entered Country"
-                    }
-                    saveFailedRecord(failedRecord)
-                  } else {
-                    if (data.district) {
-                      district = await District.findOne({
-                        where: {
-                          state_id: state.id,
-                          district_name: { [Op.iLike]: data.district },
-                        },
+
+                    if (!district) {
+                      fail.push({
+                        success: false,
+                        data: { farmerName: data.farmerName ? data.farmerName : '', farmerCode: data.farmerCode ? data.farmerCode : '' },
+                        message: "District is not associated with entered State",
                       });
-
-                      if (!district) {
-                        fail.push({
-                          success: false,
-                          data: { farmerName: data.farmerName ? data.farmerName : '', farmerCode: data.farmerCode ? data.farmerCode : '' },
-                          message: "District is not associated with entered State",
+                      let failedRecord = {
+                        type: 'Procurement',
+                        season: season,
+                        farmerCode: data.farmerCode ? data.farmerCode : '',
+                        farmerName: data.farmerName ? data.farmerName : '',
+                        body: { ...data },
+                        reason: "District is not associated with entered State"
+                      }
+                      saveFailedRecord(failedRecord)
+                    } else {
+                      if (data.block) {
+                        block = await Block.findOne({
+                          where: {
+                            district_id: district.id,
+                            block_name: { [Op.iLike]: data.block },
+                          },
                         });
-                        let failedRecord = {
-                          type: 'Procurement',
-                          season: season,
-                          farmerCode: data.farmerCode ? data.farmerCode : '',
-                          farmerName: data.farmerName ? data.farmerName : '',
-                          body: { ...data },
-                          reason: "District is not associated with entered State"
-                        }
-                        saveFailedRecord(failedRecord)
-                      } else {
-                        if (data.block) {
-                          block = await Block.findOne({
-                            where: {
-                              district_id: district.id,
-                              block_name: { [Op.iLike]: data.block },
-                            },
+
+                        if (!block) {
+                          fail.push({
+                            success: false,
+                            data: { farmerName: data.farmerName ? data.farmerName : '', farmerCode: data.farmerCode ? data.farmerCode : '' },
+                            message: "Block is not associated with entered District",
                           });
-
-                          if (!block) {
-                            fail.push({
-                              success: false,
-                              data: { farmerName: data.farmerName ? data.farmerName : '', farmerCode: data.farmerCode ? data.farmerCode : '' },
-                              message: "Block is not associated with entered District",
+                          let failedRecord = {
+                            type: 'Procurement',
+                            season: season,
+                            farmerCode: data.farmerCode ? data.farmerCode : '',
+                            farmerName: data.farmerName ? data.farmerName : '',
+                            body: { ...data },
+                            reason: "Block is not associated with entered District"
+                          }
+                          saveFailedRecord(failedRecord)
+                        } else {
+                          if (data.village) {
+                            village = await Village.findOne({
+                              where: {
+                                block_id: block.id,
+                                village_name: { [Op.iLike]: data.village },
+                              },
                             });
-                            let failedRecord = {
-                              type: 'Procurement',
-                              season: season,
-                              farmerCode: data.farmerCode ? data.farmerCode : '',
-                              farmerName: data.farmerName ? data.farmerName : '',
-                              body: { ...data },
-                              reason: "Block is not associated with entered District"
-                            }
-                            saveFailedRecord(failedRecord)
-                          } else {
-                            if (data.village) {
-                              village = await Village.findOne({
-                                where: {
-                                  block_id: block.id,
-                                  village_name: { [Op.iLike]: data.village },
-                                },
-                              });
 
-                              if (!village) {
+                            if (!village) {
+                              fail.push({
+                                success: false,
+                                data: { farmerName: data.farmerName ? data.farmerName : '', farmerCode: data.farmerCode ? data.farmerCode : '' },
+                                message: "Village is not associated with entered Taluk/Block",
+                              });
+                              let failedRecord = {
+                                type: 'Procurement',
+                                season: season,
+                                farmerCode: data.farmerCode ? data.farmerCode : '',
+                                farmerName: data.farmerName ? data.farmerName : '',
+                                body: { ...data },
+                                reason: "Village is not associated with entered Taluk/Block"
+                              }
+                              saveFailedRecord(failedRecord)
+                            } else if (data.ginner) {
+
+                              let gin = await await GinnerAllocatedVillage.findOne({
+                                attributes: ['ginner_id'],
+                                where: {
+                                  village_id: village.id,
+                                  season_id: season.id,
+                                  '$ginner.name$': data.ginner,
+                                  '$ginner.status$': true
+                                },
+                                include: [
+                                  { model: Ginner, as: "ginner", attributes: ['id', 'name'] },
+                                ]
+                              })
+                              ginner = gin ? gin?.ginner : null;
+                              if (!ginner) {
                                 fail.push({
                                   success: false,
                                   data: { farmerName: data.farmerName ? data.farmerName : '', farmerCode: data.farmerCode ? data.farmerCode : '' },
-                                  message: "Village is not associated with entered Taluk/Block",
+                                  message: "This village is not allocated to the mentioned ginner for the season",
                                 });
                                 let failedRecord = {
                                   type: 'Procurement',
@@ -1143,40 +1212,10 @@ const uploadTransactionBulk = async (req: Request, res: Response) => {
                                   farmerCode: data.farmerCode ? data.farmerCode : '',
                                   farmerName: data.farmerName ? data.farmerName : '',
                                   body: { ...data },
-                                  reason: "Village is not associated with entered Taluk/Block"
+                                  reason: "This village is not allocated to the mentioned ginner for the season"
                                 }
                                 saveFailedRecord(failedRecord)
-                              } else if (data.ginner) {                
-                                
-                                let gin = await await GinnerAllocatedVillage.findOne({
-                                  attributes: ['ginner_id'],
-                                  where:{
-                                    village_id: village.id,
-                                    season_id: season.id,
-                                    '$ginner.name$': data.ginner,
-                                    '$ginner.status$': true
-                                  },
-                                  include: [
-                                    { model: Ginner, as: "ginner", attributes: ['id','name'] },
-                                  ]
-                                })
-                                ginner = gin ? gin?.ginner : null;
-                                if (!ginner) {
-                                  fail.push({
-                                    success: false,
-                                    data: { farmerName: data.farmerName ? data.farmerName : '', farmerCode: data.farmerCode ? data.farmerCode : '' },
-                                    message: "This village is not allocated to the mentioned ginner for the season",
-                                  });
-                                  let failedRecord = {
-                                    type: 'Procurement',
-                                    season: season,
-                                    farmerCode: data.farmerCode ? data.farmerCode : '',
-                                    farmerName: data.farmerName ? data.farmerName : '',
-                                    body: { ...data },
-                                    reason: "This village is not allocated to the mentioned ginner for the season"
-                                  }
-                                  saveFailedRecord(failedRecord)
-                                } else if (data.farmerCode) {
+                              } else if (data.farmerCode) {
                                 farmer = await Farmer.findOne({
                                   where: {
                                     village_id: village.id,
@@ -1373,19 +1412,19 @@ const uploadTransactionBulk = async (req: Request, res: Response) => {
             };
             // let available_cotton = Number(farm.available_cotton) - Number(farm.cotton_transacted);
             let available_cotton = 0;
-            if(!farm.available_cotton){
-              if(farm.cotton_transacted == 0 || !farm.cotton_transacted){
-                transactionData.available_cotton =Number(farm.total_estimated_cotton) + (0.15 * Number(farm.total_estimated_cotton));
-                available_cotton =Number(farm.total_estimated_cotton) + (0.15 * Number(farm.total_estimated_cotton));
-              }else{
+            if (!farm.available_cotton) {
+              if (farm.cotton_transacted == 0 || !farm.cotton_transacted) {
+                transactionData.available_cotton = Number(farm.total_estimated_cotton) + (0.15 * Number(farm.total_estimated_cotton));
+                available_cotton = Number(farm.total_estimated_cotton) + (0.15 * Number(farm.total_estimated_cotton));
+              } else {
                 let maxCotton = Number(farm.total_estimated_cotton) + (0.15 * Number(farm.total_estimated_cotton))
-                available_cotton = Number(maxCotton)-Number(farm.cotton_transacted);
+                available_cotton = Number(maxCotton) - Number(farm.cotton_transacted);
               }
-            }else{
-              if(Number(farm.available_cotton) <= Number(farm.total_estimated_cotton)){
+            } else {
+              if (Number(farm.available_cotton) <= Number(farm.total_estimated_cotton)) {
                 let maxCotton = Number(farm.total_estimated_cotton) + (0.15 * Number(farm.total_estimated_cotton))
-                available_cotton = Number(maxCotton)-Number(farm.cotton_transacted);
-              }else{
+                available_cotton = Number(maxCotton) - Number(farm.cotton_transacted);
+              } else {
                 available_cotton = Number(farm.available_cotton) - Number(farm.cotton_transacted);
               }
             }
@@ -1393,7 +1432,7 @@ const uploadTransactionBulk = async (req: Request, res: Response) => {
             transactionData.estimated_cotton = Number(farm.total_estimated_cotton);
             transactionData.available_cotton = available_cotton;
 
-            if(available_cotton <= 0){
+            if (available_cotton <= 0) {
               fail.push({
                 success: false,
                 data: { farmerName: data.farmerName ? data.farmerName : '', farmerCode: data.farmerCode ? data.farmerCode : '' },
@@ -1408,14 +1447,14 @@ const uploadTransactionBulk = async (req: Request, res: Response) => {
                 reason: "This season used all the cotton"
               }
               saveFailedRecord(failedRecord)
-            }else{
+            } else {
               if (available_cotton && data.qtyPurchased > available_cotton) {
                 transactionData.qty_purchased = available_cotton;
                 transactionData.qty_stock = available_cotton;
                 transactionData.total_amount = available_cotton * data.rate;
               }
-              
-          
+
+
               const result = await Transaction.create(transactionData);
               let s = await Farm.update({
                 cotton_transacted: (Number(farm.cotton_transacted) || 0) + (Number(transactionData.qty_purchased) || 0)
@@ -1491,8 +1530,8 @@ const exportProcurement = async (req: Request, res: Response) => {
       whereCondition.mapped_ginner = { [Op.in]: idArray };
     }
     if (status) {
-      const statuses = status.split(',').map((s:any) => s.trim()); 
-      whereCondition.status = statuses.length === 1 ? statuses[0] : { [Op.in]: statuses }; 
+      const statuses = status.split(',').map((s: any) => s.trim());
+      whereCondition.status = statuses.length === 1 ? statuses[0] : { [Op.in]: statuses };
     }
     if (startDate && endDate) {
       const startOfDay = new Date(startDate);
@@ -1789,14 +1828,14 @@ const fetchGinnerByVillage = async (req: Request, res: Response) => {
     //fetch ginners
     const allocatedGinner = await GinnerAllocatedVillage.findAll({
       attributes: ['ginner_id'],
-      where:{
+      where: {
         village_id: villageId,
         season_id: seasonId,
         brand_id: brandId,
         '$ginner.status$': true
       },
       include: [
-        { model: Ginner, as: "ginner", attributes: ['id','name'] },
+        { model: Ginner, as: "ginner", attributes: ['id', 'name'] },
       ]
     })
     return res.sendSuccess(res, allocatedGinner);
