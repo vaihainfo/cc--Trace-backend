@@ -18,45 +18,49 @@ const fetchYarnBlendPagination = async (req: Request, res: Response) => {
 
     try {
         const query = `
-            SELECT 
-                yb.id,
-                yb.cotton_name,
-                yb.cotton_percentage,
-                yb.cotton_blend,
-                yb.cotton_blend_percentage,
-                array_agg(DISTINCT b.brand_name) AS brands,
-                yb.status,
-                array_agg(DISTINCT cm."cottonMix_name") AS cotton_mix_names
-            FROM "yarn-blends" AS yb
-            JOIN "cotton_mixes" AS cm
-                ON cm.id = ANY(yb.cotton_blend)        
-            JOIN "brands" AS b
-                ON b.id = ANY(yb.brand_id)
-            ${searchTerm &&
-            ` WHERE
-                (yb.brand_id @> ARRAY(
-                    SELECT id FROM "brands" WHERE "brand_name" ILIKE :searchTerm
-                ) 
-                AND
-                yb.cotton_blend @> ARRAY(
-                    SELECT id FROM "cotton_mixes" WHERE "cottonMix_name" ILIKE :searchTerm
-                ))`
-            }
-
-            ${status && `${searchTerm ? ' AND ' : ' WHERE '} status = true`}
-
-            ${brandId.length > 0 ? `${(searchTerm || status) ? ' AND ' : ' WHERE '} yb.brand_id @> ARRAY[:brandId]::integer[]` : ''}
-
-            GROUP BY
-                yb.id,
-                yb.cotton_name,
-                yb.cotton_percentage,
-                yb.cotton_blend,
-                yb.cotton_blend_percentage,
-                yb.status
-            ORDER BY yb.id ${sortOrder}
-            ${req.query.pagination === "true" ? 'LIMIT :limit OFFSET :offset' : ''};
-        `;
+        SELECT 
+            yb.id,
+            yb.cotton_name,
+            yb.cotton_percentage,
+            yb.cotton_blend,
+            yb.cotton_blend_percentage,
+            array_agg(DISTINCT b.brand_name) AS brands,
+            yb.status,
+            array_agg(DISTINCT cm."cottonMix_name") AS cotton_mix_names,
+            sp.yarn_blend_id IS NOT NULL AS is_used_in_spin_process -- Added this line to check if the yarn_blend_id is used
+        FROM "yarn-blends" AS yb
+        JOIN "cotton_mixes" AS cm
+            ON cm.id = ANY(yb.cotton_blend)        
+        JOIN "brands" AS b
+            ON b.id = ANY(yb.brand_id)
+        LEFT JOIN "spin_processes" AS sp
+            ON sp.yarn_blend_id = yb.id -- Check if yarn_blend_id exists in spin_processes
+        ${searchTerm &&
+        ` WHERE
+            (yb.brand_id @> ARRAY(
+                SELECT id FROM "brands" WHERE "brand_name" ILIKE :searchTerm
+            ) 
+            AND
+            yb.cotton_blend @> ARRAY(
+                SELECT id FROM "cotton_mixes" WHERE "cottonMix_name" ILIKE :searchTerm
+            ))`
+        }
+    
+        ${status && `${searchTerm ? ' AND ' : ' WHERE '} status = true`}
+    
+        ${brandId.length > 0 ? `${(searchTerm || status) ? ' AND ' : ' WHERE '} yb.brand_id @> ARRAY[:brandId]::integer[]` : ''}
+    
+        GROUP BY
+            yb.id,
+            yb.cotton_name,
+            yb.cotton_percentage,
+            yb.cotton_blend,
+            yb.cotton_blend_percentage,
+            yb.status,
+            sp.yarn_blend_id -- Include the yarn_blend_id in the GROUP BY
+        ORDER BY yb.id ${sortOrder}
+        ${req.query.pagination === "true" ? 'LIMIT :limit OFFSET :offset' : ''};
+    `;
 
         let replacements: any = {
             limit: limit,
