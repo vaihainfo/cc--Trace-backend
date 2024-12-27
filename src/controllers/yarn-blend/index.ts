@@ -7,6 +7,7 @@ import * as path from "path";
 import * as ExcelJS from "exceljs";
 import CottonMix from "../../models/cotton-mix.model";
 
+
 const fetchYarnBlendPagination = async (req: Request, res: Response) => {
     const sortOrder = req.query.sort || "desc";
     const status = req.query.status || "";
@@ -27,16 +28,16 @@ const fetchYarnBlendPagination = async (req: Request, res: Response) => {
             array_agg(DISTINCT b.brand_name) AS brands,
             yb.status,
             array_agg(DISTINCT cm."cottonMix_name") AS cotton_mix_names,
-            sp.yarn_blend_id IS NOT NULL AS is_used_in_spin_process -- Added this line to check if the yarn_blend_id is used
+            sp.yarn_blend_id IS NOT NULL AS is_used_in_spin_process
         FROM "yarn-blends" AS yb
         JOIN "cotton_mixes" AS cm
             ON cm.id = ANY(yb.cotton_blend)        
         JOIN "brands" AS b
             ON b.id = ANY(yb.brand_id)
         LEFT JOIN "spin_processes" AS sp
-            ON sp.yarn_blend_id = yb.id -- Check if yarn_blend_id exists in spin_processes
+            ON sp.yarn_blend_id = yb.id
         ${searchTerm &&
-        ` WHERE
+            ` WHERE
             (yb.brand_id @> ARRAY(
                 SELECT id FROM "brands" WHERE "brand_name" ILIKE :searchTerm
             ) 
@@ -44,7 +45,7 @@ const fetchYarnBlendPagination = async (req: Request, res: Response) => {
             yb.cotton_blend @> ARRAY(
                 SELECT id FROM "cotton_mixes" WHERE "cottonMix_name" ILIKE :searchTerm
             ))`
-        }
+            }
     
         ${status && `${searchTerm ? ' AND ' : ' WHERE '} status = true`}
     
@@ -135,26 +136,37 @@ const fetchYarnBlendPagination = async (req: Request, res: Response) => {
     }
 };
 
-
 const fetchSingleYarn = async (req: Request, res: Response) => {
     const id = req.query.id;
 
     try {
-      if (!id) {
-        return res.sendError(res, "need id");
-      }
-  
-      let rows = await YarnBlend.findOne({
-        where: {
-            id: id
+        if (!id) {
+            return res.sendError(res, "need id");
         }
-      });
-      return res.sendSuccess(res, rows);
+
+        let rows = await YarnBlend.findOne({
+            where: {
+                id: id
+            }
+        });
+        if (!rows) {
+            return res.sendError(res, "Yarn blend does not exist");
+        }
+
+        let response = await SpinProcess.findOne({
+            where: {
+                yarn_blend_id: id
+            }
+        });
+        let data = {
+            rows,
+            is_used_in_spin_process: response ? true : false
+        }
+        return res.sendSuccess(res, data);
     } catch (error: any) {
-      return res.sendError(res, error.message);
+        return res.sendError(res, error.message);
     }
 };
-
 
 const createYarnBlend = async (req: Request, res: Response) => {
     try {
@@ -182,9 +194,25 @@ const createYarnBlend = async (req: Request, res: Response) => {
         ) {
             return res.sendError(res, "FIELDS MUST BE ARRAY");
         }
+        if (cotton_blend.length < 2) {
+            return res.sendError(res, "MINIMUM 2 COTTON MIXES REQUIRED");
+        }
 
         if (cotton_blend.length !== cotton_blend_percentage.length) {
             return res.sendError(res, "COTTON BLEND AND COTTON BLEND PERCENTAGE ARRAY NOT EQUAL");
+        }
+
+        if (cotton_percentage === 100) {
+            return res.sendError(res, "COTTON PERCENTAGE CANNOT BE 100%");
+        }
+
+        let total = 0;
+        for (let i = 0; i < 3; i++) {
+            total = total + cotton_blend_percentage[i]
+        }
+
+        if (total + cotton_percentage !== 100) {
+            return res.sendError(res, "COTTON + COTTON MIX TOTAL PERCENTAGE MUST BE 100%");
         }
 
         // let result = await YarnBlend.findOne({
@@ -196,8 +224,29 @@ const createYarnBlend = async (req: Request, res: Response) => {
         //     return res.sendError(res, "ALREADY_EXITS");
         // }
 
-        if (cotton_percentage === 100) {
-            return res.sendError(res, "COTTON PERCENTAGE CANNOT BE 100%");
+        let result = await YarnBlend.findOne({
+            where: {
+                cotton_name,
+                cotton_percentage,
+                cotton_blend,
+                cotton_blend_percentage,
+                brand_id,
+            },
+        });
+        if (result) {
+            return res.sendError(res, "ALREADY_EXITS");
+        }
+
+        let result2 = await YarnBlend.findOne({
+            where: {
+                cotton_name,
+                cotton_percentage,
+                cotton_blend,
+                cotton_blend_percentage,
+            },
+        });
+        if (result2) {
+            return res.sendError(res, "THIS VALUE CAN ONLY BE UPDATED");
         }
 
         const data = {
@@ -224,7 +273,12 @@ const updateYarnBlend = async (req: Request, res: Response) => {
             cotton_blend,
             cotton_blend_percentage,
             brand_id,
+            id
         } = req.body;
+
+        if (cotton_blend.length < 2) {
+            return res.sendError(res, "MINIMUM 2 COTTON MIXES REQUIRED");
+        }
 
         if (cotton_blend.length !== cotton_blend_percentage.length) {
             return res.sendError(res, "COTTON_BLEND_AND_COTTON_BLEND_PERCENTAGE_ARRAY_NOT_EQUAL");
@@ -232,38 +286,52 @@ const updateYarnBlend = async (req: Request, res: Response) => {
 
         const checkAssociation = await SpinProcess.findOne({
             where: {
-                yarn_blend_id: req.body.id,
+                yarn_blend_id: id,
             },
         });
+
+        let checkAllBrands;
+        let isValid = true;
+        let isValid2 = true;
         if (checkAssociation) {
-            res.sendError(
-                res,
-                "Unable to edit this blend as it is already used by spinner"
-            );
+            checkAllBrands = await YarnBlend.findOne({
+                where: {
+                    id
+                }
+            });
+            isValid = checkAllBrands.cotton_blend.every((item: number) => cotton_blend.includes(item));
+            isValid2 = checkAllBrands.brand_id.every((item: number) => brand_id.includes(item));
         }
 
-        let updateData: any = {};
-        if (cotton_name) {
-            updateData.cotton_name = cotton_name;
+        if (!isValid || !isValid2) {
+            res.sendError(
+                res,
+                "Cannot change existing brands, only add new ones"
+            );
+        } else {
+            let updateData: any = {};
+            if (cotton_name) {
+                updateData.cotton_name = cotton_name;
+            }
+            if (cotton_percentage) {
+                updateData.cotton_percentage = cotton_percentage;
+            }
+            if (cotton_blend) {
+                updateData.cotton_blend = cotton_blend;
+            }
+            if (cotton_blend_percentage) {
+                updateData.cotton_blend_percentage = cotton_blend_percentage;
+            }
+            if (brand_id) {
+                updateData.brand_id = brand_id;
+            }
+            const cottonMix = await YarnBlend.update(updateData, {
+                where: {
+                    id: req.body.id,
+                },
+            });
+            res.sendSuccess(res, cottonMix);
         }
-        if (cotton_percentage) {
-            updateData.cotton_percentage = cotton_percentage;
-        }
-        if (cotton_blend) {
-            updateData.cotton_blend = cotton_blend;
-        }
-        if (cotton_blend_percentage) {
-            updateData.cotton_blend_percentage = cotton_blend_percentage;
-        }
-        if (brand_id) {
-            updateData.brand_id = brand_id;
-        }
-        const cottonMix = await YarnBlend.update(updateData, {
-            where: {
-                id: req.body.id,
-            },
-        });
-        res.sendSuccess(res, cottonMix);
     } catch (error: any) {
         return res.sendError(res, error.message);
     }
