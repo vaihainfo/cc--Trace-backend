@@ -161,6 +161,11 @@ const Transaction = db.define('transactions', {
   longitude: {
     type: DataTypes.DOUBLE,
   },
+  old_data: {
+    type: DataTypes.STRING,
+    allowNull: true,
+    defaultValue: null
+  }
 });
 
 

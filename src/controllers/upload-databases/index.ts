@@ -2501,7 +2501,15 @@ const uploadOrganicFarmer = async (req: Request, res: Response) => {
                     data: { farmerCode: data.farmerCode, farmerName: data.firstName },
                     message: "Cert Status is only for Organic Programme"
                 });
-            } else {
+            } 
+            else if (program.program_name !== "Organic" && data.old_data) {
+                fail.push({
+                    success: false,
+                    data: { farmerCode: data.farmerCode, farmerName: data.firstName },
+                    message: "Old entry is allowed for Organic brand Only"
+                });
+            } 
+            else {
                 let country;
                 let state;
                 let district;
@@ -2651,7 +2659,8 @@ const uploadOrganicFarmer = async (req: Request, res: Response) => {
                                 variety: data.variety ? data.variety : null,
                                 lot_no: data.lotNo ? data.lotNo : null,
                                 distribution_date: data.dateOfDistibution ? data.dateOfDistibution : null,
-                                source_of_seed: data.sourceOfSeedSeedCompanyProducerAnyOtherSpecify ? data.sourceOfSeedSeedCompanyProducerAnyOtherSpecify : null
+                                source_of_seed: data.sourceOfSeedSeedCompanyProducerAnyOtherSpecify ? data.sourceOfSeedSeedCompanyProducerAnyOtherSpecify : null,
+                                old_data:data.oldData
                             };
                             await Farm.update(farmData, {
                                 where: { id: farm.id }
@@ -2677,7 +2686,8 @@ const uploadOrganicFarmer = async (req: Request, res: Response) => {
                                 variety: data.variety ? data.variety : null,
                                 lot_no: data.lotNo ? data.lotNo : null,
                                 distribution_date: data.dateOfDistibution ? data.dateOfDistibution : null,
-                                source_of_seed: data.sourceOfSeedSeedCompanyProducerAnyOtherSpecify ? data.sourceOfSeedSeedCompanyProducerAnyOtherSpecify : null
+                                source_of_seed: data.sourceOfSeedSeedCompanyProducerAnyOtherSpecify ? data.sourceOfSeedSeedCompanyProducerAnyOtherSpecify : null,
+                                old_data:data.oldData
                             };
                             await Farm.create(farmData);
 
@@ -2726,7 +2736,8 @@ const uploadOrganicFarmer = async (req: Request, res: Response) => {
                             variety: data.variety ? data.variety : null,
                             lot_no: data.lotNo ? data.lotNo : null,
                             distribution_date: data.dateOfDistibution ? data.dateOfDistibution : null,
-                            source_of_seed: data.sourceOfSeedSeedCompanyProducerAnyOtherSpecify ? data.sourceOfSeedSeedCompanyProducerAnyOtherSpecify : null
+                            source_of_seed: data.sourceOfSeedSeedCompanyProducerAnyOtherSpecify ? data.sourceOfSeedSeedCompanyProducerAnyOtherSpecify : null,
+                            old_data:data.oldData
                         };
                         await Farm.create(farmData);
 
