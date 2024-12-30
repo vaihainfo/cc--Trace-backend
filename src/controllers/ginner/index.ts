@@ -970,25 +970,25 @@ const chooseBale = async (req: Request, res: Response) => {
                   'scd_verified_bales', combined_data.scd_verified_bales
               ),
              'weight', SUM(CAST(combined_data.weight AS DOUBLE PRECISION)),
-              'bales', jsonb_agg(jsonb_build_object(
-                  'id', combined_data.bale_id,
-                  'process_id', combined_data.process_id,
-                  'bale_no', combined_data.bale_no,
-                  'weight', combined_data.weight,
-                  'is_all_rejected', combined_data.is_all_rejected,
-                  'sold_status', combined_data.sold_status,
-                  'greyout_status', combined_data.greyout_status,
-                  'sales_id', combined_data.sales_id,
-                  'is_gin_to_gin', combined_data.is_gin_to_gin,
-                  'te_verified_status', combined_data.te_verified_status,
-                  'te_verified_weight', combined_data.te_verified_weight,
-                  'gin_verified_status', combined_data.gin_verified_status,
-                  'gin_verified_weight', combined_data.gin_verified_weight,
-                  'scm_verified_status', combined_data.scm_verified_status,
-                  'scm_verified_weight', combined_data.scm_verified_weight,
-                  'scd_verified_status', combined_data.scd_verified_status,
-                  'scd_verified_weight', combined_data.scd_verified_weight
-              ) ORDER BY combined_data.bale_id ASC)
+            'bales', jsonb_agg(jsonb_build_object(
+                'id', combined_data.bale_id,
+                'process_id', combined_data.process_id,
+                'bale_no', combined_data.bale_no,
+                'weight', combined_data.weight,
+                'is_all_rejected', combined_data.is_all_rejected,
+                'sold_status', combined_data.sold_status,
+                'greyout_status', combined_data.greyout_status,
+                'sales_id', combined_data.sales_id,
+                'is_gin_to_gin', combined_data.is_gin_to_gin,
+                'te_verified_status', combined_data.te_verified_status,
+                'te_verified_weight', combined_data.te_verified_weight,
+                'gin_verified_status', combined_data.gin_verified_status,
+                'gin_verified_weight', combined_data.gin_verified_weight,
+                'scm_verified_status', combined_data.scm_verified_status,
+                'scm_verified_weight', combined_data.scm_verified_weight,
+                'scd_verified_status', combined_data.scd_verified_status,
+                'scd_verified_weight', combined_data.scd_verified_weight
+            ) ORDER BY combined_data.bale_id ASC)
           ) AS result
       FROM (
           -- First Query: Direct gin-bales
