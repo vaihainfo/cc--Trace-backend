@@ -1225,7 +1225,7 @@ const generateProcurementReport = async () => {
           transaction.vehicle ? transaction.vehicle : '',
           transaction.payment_method ? transaction.payment_method : '',
           transaction.ginner_name ? transaction.ginner_name : '',
-          transaction.agent_name ? transaction.agent_name : "",
+          transaction?.agent_first_name && ( transaction?.agent_last_name ? transaction?.agent_first_name + " " + transaction?.agent_last_name+ "-" + transaction?.agent_access_level : transaction?.agent_first_name+ "-" + transaction?.agent_access_level),
         ]).commit();
       }
       offset += batchSize
@@ -1257,7 +1257,9 @@ const generateProcurementReport = async () => {
           s.name AS season_name,
           fm.total_estimated_cotton,
           fm.cotton_transacted,
-          "ag"."firstName" AS agent_name
+          "ag"."firstName" AS agent_first_name,
+          "ag"."lastName" AS agent_last_name,
+          "ag"."access_level" AS agent_access_level
       FROM
           transactions tr
       LEFT JOIN programs pr ON tr.program_id = pr.id
@@ -1325,7 +1327,7 @@ const generateProcurementReport = async () => {
           "Transport Vehicle No",
           "Payment Method",
           "Ginner Name",
-          "Agent",
+          "Transaction User Details",
         ]);
       }
 
@@ -2099,7 +2101,9 @@ const generateAgentTransactions = async () => {
             s.name AS season_name,
             fm.total_estimated_cotton,
             fm.cotton_transacted,
-            "ag"."firstName" AS agent_name
+            "ag"."firstName" AS agent_first_name,
+            "ag"."lastName" AS agent_last_name,
+            "ag"."access_level" AS agent_access_level
         FROM
             transactions tr
         LEFT JOIN programs pr ON tr.program_id = pr.id
@@ -2147,7 +2151,7 @@ const generateAgentTransactions = async () => {
         const headerRow = currentWorksheet.addRow([
           "Sr No.", 'Date', 'Farmer Code', 'Farmer Name', 'Season', 'Country',
           'State', 'District', 'Block', 'Village', 'Transaction Id', 'Quantity Purchased (Kgs)',
-          'Available Cotton (Kgs)', 'Price/KG(Local Currency)', 'Programme', 'Transport Vehicle No', 'Payment Method', 'Ginner Name', 'Agent'
+          'Available Cotton (Kgs)', 'Price/KG(Local Currency)', 'Programme', 'Transport Vehicle No', 'Payment Method', 'Ginner Name', 'Transaction User Details'
         ]);
         headerRow.font = { bold: true };
       }
@@ -2173,7 +2177,7 @@ const generateAgentTransactions = async () => {
           vehicle: item.vehicle ? item.vehicle : "",
           payment_method: item.payment_method ? item.payment_method : "",
           ginner: item.ginner_name ? item.ginner_name : "",
-          agent: item.agent_name ? item.agent_name : "",
+          agent: item?.agent_first_name && ( item?.agent_last_name ? item?.agent_first_name + " " + item?.agent_last_name+ "-" + item?.agent_access_level : item?.agent_first_name+ "-" + item?.agent_access_level),
         });
         currentWorksheet.addRow(rowValues).commit();
       }
@@ -2974,7 +2978,7 @@ const generateGinnerSales = async () => {
         const headerRow = currentWorksheet.addRow([
           "Sr No.", "Process Date", "Data Entry Date", "Lint Process Season", "Lint sale chosen season", "Ginner Name",
           "Invoice No", "Sold To", "Bale Lot No", "REEL Lot No", "No of Bales", "Press/Bale No", "Rate/Kg",
-          "Total Quantity", "Sales Value", "Vehicle No", "Transporter Name", "Programme", "Agent Detials", "Status"
+          "Total Quantity", "Sales Value", "Vehicle No", "Transporter Name", "Programme", "Agent Details", "Status"
         ]);
         headerRow.font = { bold: true };
       }
