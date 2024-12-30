@@ -1163,6 +1163,7 @@ const fetchCountryByGinner = async (req: Request, res: Response) => {
 
   const fetchStateByCountry = async (req: Request, res: Response) => {
     let countryId: any = req.query.countryId;
+    let ginnerId: any = req.query.ginnerId;
 
     try {
       if (!countryId) {
@@ -1172,7 +1173,8 @@ const fetchCountryByGinner = async (req: Request, res: Response) => {
       const allocatedState = await GinnerAllocatedVillage.findAll({
         attributes: ['state_id'],
         where:{
-          country_id: countryId
+          country_id: countryId,
+          ginner_id: ginnerId
         },
         include: [
           { model: State, as: "state", attributes: ['id','state_name'] },
@@ -1188,6 +1190,7 @@ const fetchCountryByGinner = async (req: Request, res: Response) => {
 
   const fetchDistrictByState = async (req: Request, res: Response) => {
     let stateId: any = req.query.stateId;
+    let ginnerId: any = req.query.ginnerId;
 
     try {
       if (!stateId) {
@@ -1197,7 +1200,8 @@ const fetchCountryByGinner = async (req: Request, res: Response) => {
       const allocatedDistrict = await GinnerAllocatedVillage.findAll({
         attributes: ['district_id'],
         where:{
-          state_id: stateId
+          state_id: stateId,
+          ginner_id: ginnerId
         },
         include: [
           { model: District, as: "district", attributes: ['id','district_name'] },
@@ -1213,6 +1217,7 @@ const fetchCountryByGinner = async (req: Request, res: Response) => {
 
   const fetchBlockByDistrict = async (req: Request, res: Response) => {
     let districtId: any = req.query.districtId;
+    let ginnerId: any = req.query.ginnerId;
 
     try {
       if (!districtId) {
@@ -1222,7 +1227,8 @@ const fetchCountryByGinner = async (req: Request, res: Response) => {
       const allocatedBlock= await GinnerAllocatedVillage.findAll({
         attributes: ['block_id'],
         where:{
-          district_id: districtId
+          district_id: districtId,
+            ginner_id: ginnerId
         },
         include: [
           { model: Block, as: "block", attributes: ['id','block_name'] },
@@ -1238,6 +1244,7 @@ const fetchCountryByGinner = async (req: Request, res: Response) => {
 
   const fetchVillageByBlock = async (req: Request, res: Response) => {
     let blockId: any = req.query.blockId;
+    let ginnerId: any = req.query.ginnerId;
 
     try {
       if (!blockId) {
@@ -1247,7 +1254,8 @@ const fetchCountryByGinner = async (req: Request, res: Response) => {
       const allocatedVillage = await GinnerAllocatedVillage.findAll({
         attributes: ['village_id'],
         where:{
-            block_id: blockId
+            block_id: blockId,
+            ginner_id: ginnerId
         },
         include: [
           { model: Village, as: "village", attributes: ['id','village_name'] },
