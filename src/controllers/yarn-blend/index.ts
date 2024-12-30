@@ -313,6 +313,18 @@ const updateYarnBlend = async (req: Request, res: Response) => {
             return res.sendError(res, "ALREADY_EXITS");
         }
 
+        let result2 = await YarnBlend.findOne({
+            where: {
+                cotton_name,
+                cotton_percentage,
+                cotton_blend,
+                cotton_blend_percentage,
+            },
+        });
+        if (result2) {
+            return res.sendError(res, "THIS VALUE CAN ONLY BE UPDATED");
+        }
+
         let checkAllBrands;
         let isValid = true;
         let isValid2 = true;
