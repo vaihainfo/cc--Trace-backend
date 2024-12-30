@@ -376,10 +376,8 @@ const fetchGinHeapPagination = async (req: Request, res: Response) => {
     if (searchTerm) {
       whereCondition[Op.or] = [
         { "$season.name$": { [Op.iLike]: `%${searchTerm}%` } },
-        { lot_no: { [Op.iLike]: `%${searchTerm}%` } },
-        { reel_lot_no: { [Op.iLike]: `%${searchTerm}%` } },
-        { press_no: { [Op.iLike]: `%${searchTerm}%` } },
-        { heap_number: { [Op.iLike]: `%${searchTerm}%` } },
+        { ginner_heap_no: { [Op.iLike]: `%${searchTerm}%` } },
+        { reel_heap_no: { [Op.iLike]: `%${searchTerm}%` } },
       ];
     }
     if (ginnerId) {
@@ -971,61 +969,26 @@ const chooseBale = async (req: Request, res: Response) => {
                   'scd_verified_total_qty', combined_data.scd_verified_total_qty,
                   'scd_verified_bales', combined_data.scd_verified_bales
               ),
-              'weight', SUM(
-                  CASE 
-                      WHEN (combined_data.verification_status = 'Completed' AND combined_data.scd_verified_status = true) THEN CAST(combined_data.weight AS DOUBLE PRECISION)
-                      WHEN (combined_data.verification_status != 'Completed' OR  combined_data.verification_status IS NULL) THEN CAST(combined_data.weight AS DOUBLE PRECISION)
-                      ELSE 0
-                  END
-              ),
-              'bales', jsonb_agg(
-                      CASE 
-                          WHEN (combined_data.verification_status = 'Completed' AND combined_data.scd_verified_status = true) THEN 
-                              jsonb_build_object(
-                                  'id', combined_data.bale_id,
-                                  'process_id', combined_data.process_id,
-                                  'bale_no', combined_data.bale_no,
-                                  'weight', combined_data.weight,
-                                  'is_all_rejected', combined_data.is_all_rejected,
-                                  'greyout_status', combined_data.greyout_status,
-                                  'sales_id', combined_data.sales_id,
-                                  'is_gin_to_gin', combined_data.is_gin_to_gin,
-                                  'te_verified_status', combined_data.te_verified_status,
-                                  'te_verified_weight', combined_data.te_verified_weight,
-                                  'gin_verified_status', combined_data.gin_verified_status,
-                                  'gin_verified_weight', combined_data.gin_verified_weight,
-                                  'scm_verified_status', combined_data.scm_verified_status,
-                                  'scm_verified_weight', combined_data.scm_verified_weight,
-                                  'scd_verified_status', combined_data.scd_verified_status,
-                                  'scd_verified_weight', combined_data.scd_verified_weight
-                              )
-                          WHEN (combined_data.verification_status != 'Completed' OR  combined_data.verification_status IS NULL) THEN 
-                              jsonb_build_object(
-                                  'id', combined_data.bale_id,
-                                  'process_id', combined_data.process_id,
-                                  'bale_no', combined_data.bale_no,
-                                  'weight', combined_data.weight,
-                                  'is_all_rejected', combined_data.is_all_rejected,
-                                  'greyout_status', combined_data.greyout_status,
-                                  'sales_id', combined_data.sales_id,
-                                  'is_gin_to_gin', combined_data.is_gin_to_gin,
-                                  'te_verified_status', combined_data.te_verified_status,
-                                  'te_verified_weight', combined_data.te_verified_weight,
-                                  'gin_verified_status', combined_data.gin_verified_status,
-                                  'gin_verified_weight', combined_data.gin_verified_weight,
-                                  'scm_verified_status', combined_data.scm_verified_status,
-                                  'scm_verified_weight', combined_data.scm_verified_weight,
-                                  'scd_verified_status', combined_data.scd_verified_status,
-                                  'scd_verified_weight', combined_data.scd_verified_weight
-                              )
-                          ELSE NULL
-                      END
-                  ORDER BY combined_data.bale_id ASC ) 
-                  FILTER (
-                  WHERE CASE 
-                      WHEN combined_data.verification_status = 'Completed' THEN combined_data.scd_verified_status = true
-                      ELSE TRUE
-                  END)
+             'weight', SUM(CAST(combined_data.weight AS DOUBLE PRECISION)),
+              'bales', jsonb_agg(jsonb_build_object(
+                  'id', combined_data.bale_id,
+                  'process_id', combined_data.process_id,
+                  'bale_no', combined_data.bale_no,
+                  'weight', combined_data.weight,
+                  'is_all_rejected', combined_data.is_all_rejected,
+                  'sold_status', combined_data.sold_status,
+                  'greyout_status', combined_data.greyout_status,
+                  'sales_id', combined_data.sales_id,
+                  'is_gin_to_gin', combined_data.is_gin_to_gin,
+                  'te_verified_status', combined_data.te_verified_status,
+                  'te_verified_weight', combined_data.te_verified_weight,
+                  'gin_verified_status', combined_data.gin_verified_status,
+                  'gin_verified_weight', combined_data.gin_verified_weight,
+                  'scm_verified_status', combined_data.scm_verified_status,
+                  'scm_verified_weight', combined_data.scm_verified_weight,
+                  'scd_verified_status', combined_data.scd_verified_status,
+                  'scd_verified_weight', combined_data.scd_verified_weight
+              ) ORDER BY combined_data.bale_id ASC)
           ) AS result
       FROM (
           -- First Query: Direct gin-bales
