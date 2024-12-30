@@ -234,7 +234,7 @@ const createYarnBlend = async (req: Request, res: Response) => {
             },
         });
         if (result) {
-            return res.sendError(res, "ALREADY_EXITS");
+            return res.sendError(res, "ALREADY EXITS");
         }
 
         let result2 = await YarnBlend.findOne({
@@ -310,7 +310,7 @@ const updateYarnBlend = async (req: Request, res: Response) => {
         });
 
         if (result && result.id !== id) {
-            return res.sendError(res, "ALREADY_EXITS");
+            return res.sendError(res, "ALREADY EXITS");
         }
 
         let result2 = await YarnBlend.findOne({
