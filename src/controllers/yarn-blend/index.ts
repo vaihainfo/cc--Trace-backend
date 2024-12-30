@@ -207,7 +207,7 @@ const createYarnBlend = async (req: Request, res: Response) => {
         }
 
         let total = 0;
-        for (let i = 0; i < 3; i++) {
+        for (let i = 0; i < cotton_blend.length; i++) {
             total = total + cotton_blend_percentage[i]
         }
 
@@ -284,11 +284,34 @@ const updateYarnBlend = async (req: Request, res: Response) => {
             return res.sendError(res, "COTTON_BLEND_AND_COTTON_BLEND_PERCENTAGE_ARRAY_NOT_EQUAL");
         }
 
+        let total = 0;
+        for (let i = 0; i < cotton_blend.length; i++) {
+            total = total + cotton_blend_percentage[i]
+        }
+
+        if (total + cotton_percentage !== 100) {
+            return res.sendError(res, "COTTON + COTTON MIX TOTAL PERCENTAGE MUST BE 100%");
+        }
+
         const checkAssociation = await SpinProcess.findOne({
             where: {
                 yarn_blend_id: id,
             },
         });
+
+        let result = await YarnBlend.findOne({
+            where: {
+                cotton_name,
+                cotton_percentage,
+                cotton_blend,
+                cotton_blend_percentage,
+                brand_id,
+            },
+        });
+
+        if (result && result.id !== id) {
+            return res.sendError(res, "ALREADY_EXITS");
+        }
 
         let checkAllBrands;
         let isValid = true;
