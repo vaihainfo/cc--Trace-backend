@@ -2417,7 +2417,7 @@ const getBMVerifiedStocks = async (req: Request, res: Response) => {
       whereCondition.status_bm = 'Accepted'
     }
     
-    whereCondition.status = 'Accepted'
+    whereCondition.status = { [Op.in]: ['Accepted', 'Rejected'] };
     whereCondition.processor_type = 'Spinner';
 
     let include = [
@@ -2608,8 +2608,8 @@ const getPSVerifiedStocks = async (req: Request, res: Response) => {
       whereCondition.status_ps = 'Accepted'
     }
 
-    whereCondition.status_bm = 'Accepted'
-    whereCondition.status = 'Accepted'
+    whereCondition.status_bm = { [Op.in]: ['Accepted', 'Rejected'] };
+    whereCondition.status = { [Op.in]: ['Accepted', 'Rejected'] };
     whereCondition.processor_type = 'Spinner';
 
     let include = [

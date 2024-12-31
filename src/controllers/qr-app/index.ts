@@ -26,7 +26,6 @@ import Knitter from "../../models/knitter.model";
 import Weaver from "../../models/weaver.model";
 import Garment from "../../models/garment.model";
 import moment from "moment";
-import GinnerAllocatedVillage from "../../models/ginner-allocated-vilage.model";
 
 const getRegisteredDevices = async (req: Request, res: Response) => {
     try {
@@ -1136,6 +1135,8 @@ const fetchAgentList = async (req: Request, res: Response) => {
         return res.sendError(res, error.message);
     }
 }
+
+
 
 const fetchCountryByGinner = async (req: Request, res: Response) => {
     let ginnerId: any = req.query.ginnerId;
