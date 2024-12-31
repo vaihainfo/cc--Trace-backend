@@ -205,8 +205,8 @@ const createYarnBlend = async (req: Request, res: Response) => {
         ) {
             return res.sendError(res, "FIELDS MUST BE ARRAY");
         }
-        if (cotton_blend.length < 2) {
-            return res.sendError(res, "MINIMUM 2 COTTON MIXES REQUIRED");
+        if (cotton_blend.length < 1) {
+            return res.sendError(res, "MINIMUM 1 COTTON MIX REQUIRED");
         }
 
         if (cotton_blend.length !== cotton_blend_percentage.length) {
@@ -287,8 +287,8 @@ const updateYarnBlend = async (req: Request, res: Response) => {
             id
         } = req.body;
 
-        if (cotton_blend.length < 2) {
-            return res.sendError(res, "MINIMUM 2 COTTON MIXES REQUIRED");
+        if (cotton_blend.length < 1) {
+            return res.sendError(res, "MINIMUM 1 COTTON MIX REQUIRED");
         }
 
         if (cotton_blend.length !== cotton_blend_percentage.length) {
