@@ -498,13 +498,18 @@ const exportYarnBlend = async (req: Request, res: Response) => {
                 ON b.id = ANY(yb.brand_id)
 
             WHERE
-                (yb.brand_id @> ARRAY(
-                    SELECT id FROM "brands" WHERE "brand_name" ILIKE :searchTerm
-                ) 
-                AND
-                yb.cotton_blend @> ARRAY(
-                    SELECT id FROM "cotton_mixes" WHERE "cottonMix_name" ILIKE :searchTerm
-                ))
+            EXISTS (
+                SELECT 1
+                FROM cotton_mixes cm
+                WHERE cm.id = ANY(yb.cotton_blend)
+                AND cm."cottonMix_name" ILIKE '%${searchTerm}%'
+            )
+            OR EXISTS (
+                SELECT 1
+                FROM brands b
+                WHERE b.id = ANY(yb.brand_id)
+                AND b."brand_name" ILIKE '%${searchTerm}%'
+            )
 
             GROUP BY
                 yb.id,
