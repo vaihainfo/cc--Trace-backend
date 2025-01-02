@@ -4117,8 +4117,12 @@ const getCOCDocumentData = async (
       cocRes.fbrcNetWeight = fbrcNetWeight.length ? fbrcNetWeight?.join(', ') : '';
     }
 
+    const weaverProcessId = wProcessIds.flatMap((id: any) => id.split(',').map((str: string) => str.trim()))
+      .filter(id => id !== '')
+      .map(Number)
+      .filter(id => !isNaN(id));
 
-    if (wProcessIds.length) {
+    if (weaverProcessId.length) {
       const WeaverProcess = await sequelize.query(`
         select wp.id, array_to_string(array_agg(distinct ys.yarn_id), ',') as spin_sale_ids
         from weaver_processes wp
@@ -4126,7 +4130,7 @@ const getCOCDocumentData = async (
         where wp.id in (:ids)
         group by wp.id;
       `, {
-        replacements: { ids: wProcessIds },
+        replacements: { ids: weaverProcessId },
         type: sequelize.QueryTypes.SELECT
       });
 
@@ -4136,7 +4140,12 @@ const getCOCDocumentData = async (
       });
     }
 
-    if (kProcessIds.length) {
+    const knitterProcessId = kProcessIds.flatMap((id: any) => id.split(',').map((str: string) => str.trim()))
+      .filter(id => id !== '')
+      .map(Number)
+      .filter(id => !isNaN(id));
+
+    if (knitterProcessId.length) {
       const KnitProcess = await sequelize.query(`
       select  kp.id, 
               array_to_string(array_agg(distinct kys.yarn_id), ',') as spin_sale_ids
@@ -4145,7 +4154,7 @@ const getCOCDocumentData = async (
       where kp.id in (:ids)
       group by kp.id;
     `, {
-        replacements: { ids: kProcessIds },
+        replacements: { ids: knitterProcessId },
         type: sequelize.QueryTypes.SELECT
       });
 
@@ -4155,9 +4164,13 @@ const getCOCDocumentData = async (
       });
     }
 
+    const spinnerSalesId = spinSalesIds.flatMap((id: any) => id.split(',').map((str: string) => str.trim()))
+      .filter(id => id !== '')
+      .map(Number)
+      .filter(id => !isNaN(id));
 
     let spinSales: any[] = [];
-    if (spinSalesIds.length) {
+    if (spinnerSalesId.length) {
       spinSales = await sequelize.query(`
       select  ss.id                                                 as id,
               sr.name                                               as spnr_name,
@@ -4173,7 +4186,7 @@ const getCOCDocumentData = async (
       group by ss.id, sr.name;
       `, {
         replacements: {
-          ids: spinSalesIds
+          ids: spinnerSalesId
         },
         type: sequelize.QueryTypes.SELECT
       });
@@ -4198,7 +4211,12 @@ const getCOCDocumentData = async (
         });
       }
 
-      if (processIds.length) {
+      const spinnerProcessId = processIds.flatMap((id: any) => id.split(',').map((str: string) => str.trim()))
+        .filter(id => id !== '')
+        .map(Number)
+        .filter(id => !isNaN(id));
+
+      if (spinnerProcessId.length) {
         const spinProcess: any[] = await sequelize.query(`
         select  sp.id,
                 sp.reel_lot_no,
@@ -4208,7 +4226,7 @@ const getCOCDocumentData = async (
         where sp.id in (:ids)
         group by sp.id;
       `, {
-          replacements: { ids: processIds },
+          replacements: { ids: spinnerProcessId },
           type: sequelize.QueryTypes.SELECT
         });
 
@@ -4227,7 +4245,12 @@ const getCOCDocumentData = async (
     }
 
     let ginners: any[] = [];
-    if (lintIds.length) {
+    const ginnerLintIds = lintIds.flatMap((id: any) => id.split(',').map((str: string) => str.trim()))
+    .filter(id => id !== '')
+    .map(Number)
+    .filter(id => !isNaN(id));
+
+    if (ginnerLintIds.length) {
       ginners = await sequelize.query(`
       select  gs.id                                                   as id,
               gs.reel_lot_no                                          as reel_lotno,
@@ -4244,7 +4267,7 @@ const getCOCDocumentData = async (
       group by bs.sales_id, gs.id, gnr.id;
       `, {
         replacements: {
-          ids: lintIds
+          ids: ginnerLintIds
         },
         type: sequelize.QueryTypes.SELECT
       });
@@ -4275,8 +4298,12 @@ const getCOCDocumentData = async (
       cocRes.reelLotno = ginLotNo.length ? ginLotNo.join(', ') : '';
       cocRes.gnrName = ginName.length ? ginName.join(', ') : '';
     }
+    const ginnerProcessIds = processIds.flatMap((id: any) => id.split(',').map((str: string) => str.trim()))
+    .filter(id => id !== '')
+    .map(Number)
+    .filter(id => !isNaN(id));
 
-    if (processIds.length) {
+    if (ginnerProcessIds.length) {
       const ginProcess = await sequelize.query(`
       select  gp.id,
               array_to_string(array_agg(distinct cs.transaction_id), ',') as transaction_ids
@@ -4287,7 +4314,7 @@ const getCOCDocumentData = async (
       group by gp.id;
       `, {
         replacements: {
-          ids: processIds
+          ids: ginnerProcessIds
         },
         type: sequelize.QueryTypes.SELECT
       });
@@ -4297,6 +4324,12 @@ const getCOCDocumentData = async (
         transaction_ids.push(...process.transaction_ids.split(','));
       })
 
+      const transIds = transaction_ids.flatMap((id: any) => id.split(',').map((str: string) => str.trim()))
+      .filter(id => id !== '')
+      .map(Number)
+      .filter(id => !isNaN(id));
+
+      if (transIds.length) {
       const transactions = await sequelize.query(`
       select  tr.qty_purchased as frmr_qty,
               tr.id            as frmr_transaction_id,
@@ -4308,10 +4341,11 @@ const getCOCDocumentData = async (
       group by tr.id,fg.name;
       `, {
         replacements: {
-          ids: transaction_ids
+          ids: transIds
         },
         type: sequelize.QueryTypes.SELECT
       });
+    
 
       const farmGroupNames: any = [];
       for (const transaction of transactions) {
@@ -4319,6 +4353,7 @@ const getCOCDocumentData = async (
           farmGroupNames.push(transaction.frmr_farm_group);
       }
       cocRes.frmrFarmGroup = farmGroupNames.length ? farmGroupNames.join(', ') : '';
+    }
     }
     cocRes.date = moment(new Date()).format('DD-MM-YYYY');
 
