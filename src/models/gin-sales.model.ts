@@ -154,6 +154,9 @@ const GinSales = db.define('gin_sales', {
   accepted_bales_weight: {
     type: DataTypes.DOUBLE
   },
+  coc_doc: {
+    type: DataTypes.STRING
+  },
 });
 
 GinSales.belongsTo(Ginner, {
