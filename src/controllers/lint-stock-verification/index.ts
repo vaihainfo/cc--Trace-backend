@@ -262,6 +262,7 @@ const getGinSalesLotDetials = async (req: Request, res: Response) => {
 };
 
 const createVerifiedLintStock = async (req: Request, res: Response) => {
+  const transaction = await sequelize.transaction()
   try {
     if(!req.body.processorType){
       return res.sendError(res, 'Processor Type is needed either Ginner/Spinner');
@@ -289,7 +290,7 @@ const createVerifiedLintStock = async (req: Request, res: Response) => {
       uploaded_photos_be: req.body.beId ? req.body.uploadedPhotos : null,
       status: "Pending",
     };
-    const lintVerified = await LintStockVerified.create(data);
+    const lintVerified = await LintStockVerified.create(data,{transaction});
 
     if (lintVerified) {
       if(req.body.processorType == 'Ginner' || req.body.processorType == 'ginner'){
@@ -303,6 +304,7 @@ const createVerifiedLintStock = async (req: Request, res: Response) => {
             where: {
               id: bale.id,
             },
+            transaction
           });
         }
   
@@ -317,6 +319,7 @@ const createVerifiedLintStock = async (req: Request, res: Response) => {
             where: {
               id: req.body.processId,
             },
+            transaction
           }
         );
       }
@@ -351,14 +354,17 @@ const createVerifiedLintStock = async (req: Request, res: Response) => {
             where: {
               id: req.body.salesId,
             },
+            transaction
           }
         );
       }
     }
 
+    await transaction.commit();
     return res.sendSuccess(res, lintVerified);
   } catch (error: any) {
     console.log(error);
+    await transaction.rollback();
     return res.sendError(res, error?.message);
   }
 };
@@ -1931,6 +1937,7 @@ const updateSpinVerifiedStockConfirm = async (
   req: Request,
   res: Response
 ) => {
+  const transaction = await sequelize.transaction()
   try {
     const data = {
       bm_id: req.body.bmId,
@@ -1945,6 +1952,7 @@ const updateSpinVerifiedStockConfirm = async (
 
     const lintVerified = await LintStockVerified.update(data, {
       where: { id: req.body.id },
+      transaction
     });
 
     if (lintVerified) {
@@ -1958,13 +1966,16 @@ const updateSpinVerifiedStockConfirm = async (
           where: {
             id: req.body.salesId,
           },
+          transaction
         }
       );
     }
 
+    await transaction.commit();
     return res.sendSuccess(res, lintVerified);
   } catch (error: any) {
     console.log(error);
+    await transaction.rollback();
     return res.sendError(res, error?.message);
   }
 };
@@ -1973,6 +1984,7 @@ const updateBMVerifiedStockConfirm = async (
   req: Request,
   res: Response
 ) => {
+  const transaction = await sequelize.transaction()
   try {
     const data = {
       ps_id: req.body.psId,
@@ -1987,6 +1999,7 @@ const updateBMVerifiedStockConfirm = async (
 
     const lintVerified = await LintStockVerified.update(data, {
       where: { id: req.body.id },
+      transaction
     });
 
     if (lintVerified) {
@@ -2000,13 +2013,16 @@ const updateBMVerifiedStockConfirm = async (
           where: {
             id: req.body.salesId,
           },
+          transaction
         }
       );
     }
 
+    await transaction.commit();
     return res.sendSuccess(res, lintVerified);
   } catch (error: any) {
     console.log(error);
+    await transaction.rollback();
     return res.sendError(res, error?.message);
   }
 };
@@ -2015,6 +2031,7 @@ const updatePSVerifiedStockConfirm = async (
   req: Request,
   res: Response
 ) => {
+  const transaction = await sequelize.transaction();
   try {
     const data = {
       confirmed_ps_total_qty: req.body.confirmedTotalQty,
@@ -2027,27 +2044,60 @@ const updatePSVerifiedStockConfirm = async (
 
     const lintVerified = await LintStockVerified.update(data, {
       where: { id: req.body.id },
+      transaction
     });
 
     if (lintVerified) {
-      const gin = await GinSales.update(
-        {
-          ps_verified_status: req.body.status === "Accepted" ? true : false,
-          ps_verified_total_qty: req.body.confirmedTotalQty,
-          ps_verified_bales: req.body.confirmedNoOfBales,
-          verification_status: 'Completed',
+      let qtyStock =0;
+      let greyOutQty = 0;
+      let qtyStockBeforeVerification = 0;
+
+      const ginsales = await GinSales.findOne({
+        where:{
+          id: req.body.salesId,
         },
-        {
-          where: {
-            id: req.body.salesId,
-          },
+        transaction
+      })
+
+      if(ginsales){
+        qtyStockBeforeVerification =  ginsales?.qty_stock;
+        if(req.body.status === "Accepted"){
+          if(ginsales?.qty_stock > Number(req.body.confirmedTotalQty)){
+            greyOutQty = ginsales?.qty_stock - Number(req.body.confirmedTotalQty);
+          }
+          qtyStock = Number(req.body.confirmedTotalQty);
+        }else{
+          if(ginsales?.qty_stock > Number(req.body.confirmedTotalQty)){
+            qtyStock = ginsales?.qty_stock - Number(req.body.confirmedTotalQty);
+          }
+          greyOutQty = Number(req.body.confirmedTotalQty);
         }
-      );
+
+        const gin = await GinSales.update(
+          {
+            ps_verified_status: req.body.status === "Accepted" ? true : false,
+            ps_verified_total_qty: req.body.confirmedTotalQty,
+            ps_verified_bales: req.body.confirmedNoOfBales,
+            verification_status: 'Completed',
+            qty_stock: qtyStock,
+            greyed_out_qty: greyOutQty,
+            qty_stock_before_verification: qtyStockBeforeVerification,
+          },
+          {
+            where: {
+              id: req.body.salesId,
+            },
+            transaction
+          }
+        );
+      }
     }
 
+    await transaction.commit();
     return res.sendSuccess(res, lintVerified);
   } catch (error: any) {
     console.log(error);
+    await transaction.rollback();
     return res.sendError(res, error?.message);
   }
 };
