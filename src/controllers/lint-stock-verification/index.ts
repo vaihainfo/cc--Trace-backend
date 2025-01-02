@@ -59,7 +59,7 @@ const getGinSaleLotNo = async (req: Request, res: Response) => {
     whereCondition.push(`gs.greyout_status IS FALSE`)
     whereCondition.push(`gs.te_verified_status IS NOT TRUE`)
     whereCondition.push(`gs.be_verified_status IS NOT TRUE`)
-    whereCondition.push(`gs.qty_stock > 0`)
+    whereCondition.push(`gs.qty_stock > 1`)
 
 
     const whereClause = whereCondition.length > 0 ? `WHERE ${whereCondition.join(' AND ')} AND bd.total_qty > 0` : 'WHERE bd.total_qty > 0';
