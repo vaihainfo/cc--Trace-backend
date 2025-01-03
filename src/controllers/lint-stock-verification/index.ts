@@ -55,11 +55,11 @@ const getGinSaleLotNo = async (req: Request, res: Response) => {
     const whereCondition: any = [];
 
     whereCondition.push(`gs.buyer = ${spinnerId}`)
-    whereCondition.push(`gs.status IN ('Sold', 'Partially Accepted', 'Partially Rejected')`)
+    whereCondition.push(`gs.status IN ('Sold')`)
     whereCondition.push(`gs.greyout_status IS FALSE`)
     whereCondition.push(`gs.te_verified_status IS NOT TRUE`)
     whereCondition.push(`gs.be_verified_status IS NOT TRUE`)
-    whereCondition.push(`gs.qty_stock > 0`)
+    whereCondition.push(`gs.qty_stock > 1`)
 
 
     const whereClause = whereCondition.length > 0 ? `WHERE ${whereCondition.join(' AND ')} AND bd.total_qty > 0` : 'WHERE bd.total_qty > 0';
@@ -83,13 +83,13 @@ const getGinSaleLotNo = async (req: Request, res: Response) => {
                     LEFT JOIN 
                         "gin-bales" gb ON bs.bale_id = gb.id
                     WHERE 
-                        gs.status IN ('Sold', 'Partially Accepted', 'Partially Rejected')
+                        gs.status IN ('Sold')
                         AND (bs.spinner_status = true OR gs.status = 'Sold')
                     GROUP BY 
                         bs.sales_id
                 )
                 SELECT 
-                    gs.id, gs.lot_no,gs.reel_lot_no,gs.invoice_no
+                    gs.id, gs.lot_no,gs.reel_lot_no,gs.invoice_no, gs.status
                 FROM 
                     gin_sales gs
                 LEFT JOIN 
@@ -262,6 +262,7 @@ const getGinSalesLotDetials = async (req: Request, res: Response) => {
 };
 
 const createVerifiedLintStock = async (req: Request, res: Response) => {
+  const transaction = await sequelize.transaction()
   try {
     if(!req.body.processorType){
       return res.sendError(res, 'Processor Type is needed either Ginner/Spinner');
@@ -289,7 +290,7 @@ const createVerifiedLintStock = async (req: Request, res: Response) => {
       uploaded_photos_be: req.body.beId ? req.body.uploadedPhotos : null,
       status: "Pending",
     };
-    const lintVerified = await LintStockVerified.create(data);
+    const lintVerified = await LintStockVerified.create(data,{transaction});
 
     if (lintVerified) {
       if(req.body.processorType == 'Ginner' || req.body.processorType == 'ginner'){
@@ -303,6 +304,7 @@ const createVerifiedLintStock = async (req: Request, res: Response) => {
             where: {
               id: bale.id,
             },
+            transaction
           });
         }
   
@@ -317,25 +319,26 @@ const createVerifiedLintStock = async (req: Request, res: Response) => {
             where: {
               id: req.body.processId,
             },
+            transaction
           }
         );
       }
 
       if(req.body.processorType == 'Spinner' || req.body.processorType == 'spinner'){
-        for await (const bale of req.body.bales) {
-          let baleData = {
-            spin_level_verify: true,
-            te_sale_verified_weight: req.body.teId ? bale.actualWeight : null,
-            te_sale_verified_status:  req.body.teId ? bale.verifiedStatus : null,
-            be_verified_weight: req.body.beId ? bale.actualWeight : null,
-            be_verified_status:  req.body.beId ? bale.verifiedStatus : null
-          };
-          const gin = await GinBale.update(baleData, {
-            where: {
-              id: bale.id,
-            },
-          });
-        }
+        // for await (const bale of req.body.bales) {
+        //   let baleData = {
+        //     spin_level_verify: true,
+        //     te_sale_verified_weight: req.body.teId ? bale.actualWeight : null,
+        //     te_sale_verified_status:  req.body.teId ? bale.verifiedStatus : null,
+        //     be_verified_weight: req.body.beId ? bale.actualWeight : null,
+        //     be_verified_status:  req.body.beId ? bale.verifiedStatus : null
+        //   };
+        //   const gin = await GinBale.update(baleData, {
+        //     where: {
+        //       id: bale.id,
+        //     },
+        //   });
+        // }
   
         const gin = await GinSales.update(
           {
@@ -351,14 +354,17 @@ const createVerifiedLintStock = async (req: Request, res: Response) => {
             where: {
               id: req.body.salesId,
             },
+            transaction
           }
         );
       }
     }
 
+    await transaction.commit();
     return res.sendSuccess(res, lintVerified);
   } catch (error: any) {
     console.log(error);
+    await transaction.rollback();
     return res.sendError(res, error?.message);
   }
 };
@@ -595,48 +601,6 @@ const getLintVerifiedStock = async (req: Request, res: Response) => {
           where: { process_id: stock?.dataValues?.process_id, sold_status: false },
           order: [['id','asc']]
         });
-        if (bales && bales.length > 0) {
-          stock = {
-            ...stock?.dataValues,
-            bales,
-          };
-        }
-      }else if(stock?.dataValues?.processor_type === 'Spinner' && stock?.dataValues.sales_id){
-        let [bales] = await sequelize.query(`
-          SELECT 
-            gb.id,
-            gb.bale_no,
-            gb.process_id,
-            gb.weight,
-            gb.old_weight,
-            gb.sold_status,
-            gb.te_verified_status,
-            gb.te_verified_weight,
-            gb."gin_verified_status",
-            gb."gin_verified_weight",
-            gb."scm_verified_status",
-            gb."scm_verified_weight",
-            gb."scd_verified_status",
-            gb."scd_verified_weight",
-            gb."te_sale_verified_status",
-            gb."te_sale_verified_weight",
-            gb."be_verified_status",
-            gb."be_verified_weight",
-            gb."spin_verified_weight",
-            gb."spin_verified_status",
-            gb."bm_verified_status",
-            gb."bm_verified_weight",
-            gb."ps_verified_status",
-            gb."ps_verified_weight",
-            gb."gin_level_verify",
-            gb."spin_level_verify"
-          FROM gin_sales gs
-          JOIN bale_selections bs ON gs.id = bs.sales_id
-          JOIN "gin-bales" gb ON bs.bale_id = gb.id AND (bs.spinner_status = true OR gs.status = 'Sold')
-          WHERE gs.id = ${stock?.dataValues.sales_id}
-          AND gs.status IN ('Sold', 'Partially Accepted', 'Partially Rejected')
-          `);
-
         if (bales && bales.length > 0) {
           stock = {
             ...stock?.dataValues,
@@ -1973,6 +1937,7 @@ const updateSpinVerifiedStockConfirm = async (
   req: Request,
   res: Response
 ) => {
+  const transaction = await sequelize.transaction()
   try {
     const data = {
       bm_id: req.body.bmId,
@@ -1987,21 +1952,10 @@ const updateSpinVerifiedStockConfirm = async (
 
     const lintVerified = await LintStockVerified.update(data, {
       where: { id: req.body.id },
+      transaction
     });
 
     if (lintVerified) {
-      for await (const bale of req.body.bales) {
-        let baleData = {
-          spin_verified_weight: bale.actualWeight,
-          spin_verified_status: bale.verifiedStatus,
-        };
-        const gin = await GinBale.update(baleData, {
-          where: {
-            id: bale.id,
-          },
-        });
-      }
-
       const gin = await GinSales.update(
         {
           spin_verified_status: req.body.status === "Accepted" ? true : false,
@@ -2012,13 +1966,16 @@ const updateSpinVerifiedStockConfirm = async (
           where: {
             id: req.body.salesId,
           },
+          transaction
         }
       );
     }
 
+    await transaction.commit();
     return res.sendSuccess(res, lintVerified);
   } catch (error: any) {
     console.log(error);
+    await transaction.rollback();
     return res.sendError(res, error?.message);
   }
 };
@@ -2027,6 +1984,7 @@ const updateBMVerifiedStockConfirm = async (
   req: Request,
   res: Response
 ) => {
+  const transaction = await sequelize.transaction()
   try {
     const data = {
       ps_id: req.body.psId,
@@ -2041,21 +1999,10 @@ const updateBMVerifiedStockConfirm = async (
 
     const lintVerified = await LintStockVerified.update(data, {
       where: { id: req.body.id },
+      transaction
     });
 
     if (lintVerified) {
-      for await (const bale of req.body.bales) {
-        let baleData = {
-          bm_verified_weight: bale.actualWeight,
-          bm_verified_status: bale.verifiedStatus,
-        };
-        const gin = await GinBale.update(baleData, {
-          where: {
-            id: bale.id,
-          },
-        });
-      }
-
       const gin = await GinSales.update(
         {
           bm_verified_status: req.body.status === "Accepted" ? true : false,
@@ -2066,13 +2013,16 @@ const updateBMVerifiedStockConfirm = async (
           where: {
             id: req.body.salesId,
           },
+          transaction
         }
       );
     }
 
+    await transaction.commit();
     return res.sendSuccess(res, lintVerified);
   } catch (error: any) {
     console.log(error);
+    await transaction.rollback();
     return res.sendError(res, error?.message);
   }
 };
@@ -2081,6 +2031,7 @@ const updatePSVerifiedStockConfirm = async (
   req: Request,
   res: Response
 ) => {
+  const transaction = await sequelize.transaction();
   try {
     const data = {
       confirmed_ps_total_qty: req.body.confirmedTotalQty,
@@ -2093,39 +2044,60 @@ const updatePSVerifiedStockConfirm = async (
 
     const lintVerified = await LintStockVerified.update(data, {
       where: { id: req.body.id },
+      transaction
     });
 
     if (lintVerified) {
-      for await (const bale of req.body.bales) {
-        let baleData = {
-          ps_verified_weight: bale.actualWeight,
-          ps_verified_status: bale.verifiedStatus,
-        };
-        const gin = await GinBale.update(baleData, {
-          where: {
-            id: bale.id,
-          },
-        });
-      }
+      let qtyStock =0;
+      let greyOutQty = 0;
+      let qtyStockBeforeVerification = 0;
 
-      const gin = await GinSales.update(
-        {
-          ps_verified_status: req.body.status === "Accepted" ? true : false,
-          ps_verified_total_qty: req.body.confirmedTotalQty,
-          ps_verified_bales: req.body.confirmedNoOfBales,
-          verification_status: 'Completed',
+      const ginsales = await GinSales.findOne({
+        where:{
+          id: req.body.salesId,
         },
-        {
-          where: {
-            id: req.body.salesId,
-          },
+        transaction
+      })
+
+      if(ginsales){
+        qtyStockBeforeVerification =  ginsales?.qty_stock;
+        if(req.body.status === "Accepted"){
+          if(ginsales?.qty_stock > Number(req.body.confirmedTotalQty)){
+            greyOutQty = ginsales?.qty_stock - Number(req.body.confirmedTotalQty);
+          }
+          qtyStock = Number(req.body.confirmedTotalQty);
+        }else{
+          if(ginsales?.qty_stock > Number(req.body.confirmedTotalQty)){
+            qtyStock = ginsales?.qty_stock - Number(req.body.confirmedTotalQty);
+          }
+          greyOutQty = Number(req.body.confirmedTotalQty);
         }
-      );
+
+        const gin = await GinSales.update(
+          {
+            ps_verified_status: req.body.status === "Accepted" ? true : false,
+            ps_verified_total_qty: req.body.confirmedTotalQty,
+            ps_verified_bales: req.body.confirmedNoOfBales,
+            verification_status: 'Completed',
+            qty_stock: qtyStock,
+            greyed_out_qty: greyOutQty,
+            qty_stock_before_verification: qtyStockBeforeVerification,
+          },
+          {
+            where: {
+              id: req.body.salesId,
+            },
+            transaction
+          }
+        );
+      }
     }
 
+    await transaction.commit();
     return res.sendSuccess(res, lintVerified);
   } catch (error: any) {
     console.log(error);
+    await transaction.rollback();
     return res.sendError(res, error?.message);
   }
 };
