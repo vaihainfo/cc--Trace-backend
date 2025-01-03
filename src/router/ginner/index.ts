@@ -32,6 +32,9 @@ import {
     fetchGinHeapPagination,
     getReelHeapId,
     fetchGinSaleAllBales,
+    getCOCDocumentData,
+    updateCOCDoc,
+    getBrands,
     fetchGinLintAlert,
     fetchGinLintList,
     updateStatusLintSales
@@ -68,6 +71,8 @@ router.delete('/sales', deleteGinSales);
 router.get('/sales/export', exportGinnerSales);
 router.get('/sales/bale', fetchGinSaleBale);
 router.get('/sales/all-bales', fetchGinSaleAllBales);
+router.get('/coc/document', getCOCDocumentData);
+router.put('/coc/doc/update', updateCOCDoc);
 
 // router.post('/sales/spinner', createSpinnerProcess);
 router.put('/update-status-transaction', updateTransactionStatus);
@@ -82,6 +87,7 @@ router.get('/get-village-farmer', getVillageAndFarmer);
 router.get('/export-ginner-transactions', exportGinnerProcurement);
 router.get('/tracing/chart', getGinnerProcessTracingChartData);
 router.get('/check-report', checkReport);
+router.get('/get-brand', getBrands);
 
 router.get('/lint-transaction-alert', fetchGinLintAlert);
 router.get('/lint-transaction-list', fetchGinLintList);

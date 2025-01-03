@@ -153,6 +153,9 @@ const GinSales = db.define('gin_sales', {
   accepted_bales_weight: {
     type: DataTypes.DOUBLE
   },
+  coc_doc: {
+    type: DataTypes.STRING
+  },
   letter_of_credit: {
     type: DataTypes.ARRAY(DataTypes.TEXT)
   },
@@ -212,6 +215,12 @@ const GinSales = db.define('gin_sales', {
   },
   verification_status: {
     type: DataTypes.STRING
+  },
+  greyed_out_qty: {
+    type: DataTypes.DOUBLE,
+  },
+  qty_stock_before_verification: {
+    type: DataTypes.DOUBLE,
   },
 });
 
