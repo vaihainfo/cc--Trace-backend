@@ -305,113 +305,138 @@ const exportGinHeapReport = async () => {
 }
 
 const exportGinnerProcessGreyOutReport = async () => {
-  // spinner_bale_receipt_load
-  const excelFilePath = path.join(
-    "./upload",
-    "ginner-process-grey-out-report.xlsx"
-  );
+  const maxRowsPerWorksheet = 500000; // Maximum number of rows per worksheet in Excel
 
-  let include = [
-    {
-      model: Ginner,
-      as: "ginner",
-      attributes: [],
-    },
-    {
-      model: Season,
-      as: "season",
-      attributes: [],
-    },
-    {
-      model: Program,
-      as: "program",
-      attributes: [],
-    }
-  ];
+  try {
+    const workbook = new ExcelJS.stream.xlsx.WorkbookWriter({
+      stream: fs.createWriteStream("./upload/ginner-process-grey-out-report-test.xlsx")
+    });
+    let worksheetIndex = 0;
+    const batchSize = 5000;
+    let offset = 0;
 
-  // Create the excel workbook file
-  const workbook = new ExcelJS.Workbook();
-  const worksheet = workbook.addWorksheet("Sheet1");
-  worksheet.mergeCells("A1:G1");
-  const mergedCell = worksheet.getCell("A1");
-  mergedCell.value = "CottonConnect | Ginner Process Grey Out Report";
-  mergedCell.font = { bold: true };
-  mergedCell.alignment = { horizontal: "center", vertical: "middle" };
-  // Set bold font for header row
-  const headerRow = worksheet.addRow([
-    "Sr No.",
-    "Season",
-    "Ginner Name",
-    "REEL Lot No",
-    "Press Number",
-    "Bale Lot No",
-    "Total Lint Greyout Quantity (Kgs)",
-  ]);
-  headerRow.font = { bold: true };
-
-  // //fetch data with pagination
-
-  const { count, rows }: any = await GinProcess.findAndCountAll({
-    where: { greyout_status: true },
-    include: include,
-    attributes: [
-      "id",
-      [Sequelize.col('"season"."name"'), 'season_name'],
-      [Sequelize.literal('"ginner"."name"'), "ginner_name"],
-      [Sequelize.col('press_no'), 'press_no'],
-      [Sequelize.col('lot_no'), 'lot_no'],
-      [Sequelize.col('reel_lot_no'), 'reel_lot_no'],
-      [Sequelize.col('total_qty'), 'total_qty'],
-    ],
-    //  group: ['season.id', 'ginner.id'], 
-  });
-
-  // // Append data to worksheet
-  for await (const [index, item] of rows.entries()) {
-    let bale = await GinBale.findOne({
-      attributes: [
-        [
-          Sequelize.fn(
-            "SUM",
-            Sequelize.literal(`
+  let hasNextBatch = true;
+  while (hasNextBatch) {
+    let dataQuery = `
+        SELECT 
+          gp.id, 
+          gp.ginner_id, 
+          gp.season_id, 
+          s.name AS season_name, 
+          g.name AS ginner_name, 
+          gp.lot_no, 
+          gp.reel_lot_no, 
+          gp.press_no, 
+          gp.no_of_bales,
+          gp.greyout_status, 
+          gp.scd_verified_status,
+          gp.verification_status,
+          COALESCE(
+            SUM(
               CASE
-                WHEN old_weight IS NOT NULL THEN CAST(old_weight AS DOUBLE PRECISION)
-                ELSE CAST(weight AS DOUBLE PRECISION)
+                WHEN gb.old_weight IS NOT NULL THEN CAST(gb.old_weight AS DOUBLE PRECISION)
+                ELSE CAST(gb.weight AS DOUBLE PRECISION)
               END
-            `)
-          ),
-          "lint_quantity",
-        ],
+              ), 0
+            ) AS lint_quantity,
+          COALESCE(
+              SUM(
+                CAST(gb.old_weight AS DOUBLE PRECISION)
+              ), 0
+            ) AS old_weight_total,
+          MIN(gb.bale_no) AS pressno_from,
+          MAX(LPAD(gb.bale_no, 10, ' ')) AS pressno_to
+        FROM gin_processes gp
+        LEFT JOIN "gin-bales" gb ON gb.process_id = gp.id AND gb.sold_status = false
+        LEFT JOIN seasons s ON gp.season_id = s.id
+        LEFT JOIN ginners g ON gp.ginner_id = g.id
+        WHERE
+          (
+            gp.greyout_status = true
+            OR
+            (
+              gp.scd_verified_status = true AND gb.scd_verified_status IS NOT TRUE
+            )
+            OR
+            (
+              gp.scd_verified_status = false AND gb.scd_verified_status IS FALSE
+            )
+          )
+        GROUP BY gp.id, gp.ginner_id, gp.season_id, gp.lot_no, gp.reel_lot_no, gp.press_no, s.name, g.name, gp.no_of_bales,gp.greyout_status, gp.scd_verified_status,gp.verification_status
+        ORDER BY gp.id ASC
+        LIMIT :limit OFFSET :offset
+    `;
 
-        [sequelize.fn("min", sequelize.col("bale_no")), "pressno_from"],
-        [sequelize.fn("max", Sequelize.literal("LPAD(bale_no, 10, ' ')")), "pressno_to"],
-      ],
-      where: { process_id: item.dataValues.id, sold_status: false, is_all_rejected: null },
-    });
-    const rowValues = Object.values({
-      index: index + 1,
-      season: item.dataValues.season_name ? item.dataValues.season_name : "",
-      ginner: item.dataValues.ginner_name ? item.dataValues.ginner_name : "",
-      reel_lot_no: item.dataValues.reel_lot_no ? item.dataValues.reel_lot_no : "",
-      press: item.dataValues.press_no ? item.dataValues.press_no : "",
-      lot_no: item.dataValues.lot_no ? item.dataValues.lot_no : "",
-      lint_quantity: bale.dataValues.lint_quantity ? bale.dataValues.lint_quantity : 0,
-    });
-    worksheet.addRow(rowValues);
+    const [rows] = await Promise.all([
+      sequelize.query(dataQuery, {
+        replacements: { limit: batchSize, offset },
+        type: sequelize.QueryTypes.SELECT,
+      })
+    ]);
+
+
+    if (rows.length === 0) {
+      hasNextBatch = false;
+      break;
+    }
+
+    if (offset % maxRowsPerWorksheet === 0) {
+      worksheetIndex++;
+    }
+
+
+    for await (const [index, item] of rows.entries()) {
+
+      const rowValues = [
+        offset + index + 1,
+        item?.season_name ? item?.season_name : "",
+        item?.ginner_name ? item?.ginner_name : "",
+        item.reel_lot_no ? item.reel_lot_no : "",
+        item.press_no ? item.press_no : "",
+        item?.lot_no ? item?.lot_no : "",
+        item.lint_quantity ? Number(formatDecimal( item.lint_quantity)) : 0
+      ];
+
+      let currentWorksheet = workbook.getWorksheet(`Ginner Process Grey Out Report ${worksheetIndex}`);
+      if (!currentWorksheet) {
+        currentWorksheet = workbook.addWorksheet(`Ginner Process Grey Out Report ${worksheetIndex}`);
+        if (worksheetIndex == 1) {
+          currentWorksheet.mergeCells("A1:G1");
+          const mergedCell = currentWorksheet.getCell("A1");
+          mergedCell.value = "CottonConnect | Ginner Process Grey Out Report";
+          mergedCell.font = { bold: true };
+          mergedCell.alignment = { horizontal: "center", vertical: "middle" };
+        }
+        // Set bold font for header row
+        const headerRow = currentWorksheet.addRow([
+          "Sr No.",
+          "Season",
+          "Ginner Name",
+          "REEL Lot No",
+          "Press Number",
+          "Bale Lot No",
+          "Total Lint Greyout Quantity (Kgs)",
+        ]);
+        headerRow.font = { bold: true };
+      }
+      currentWorksheet.addRow(rowValues).commit();
+    }
+    offset += batchSize;
   }
 
-  // Auto-adjust column widths based on content
-  worksheet.columns.forEach((column: any) => {
-    let maxCellLength = 0;
-    column.eachCell({ includeEmpty: true }, (cell: any) => {
-      const cellLength = (cell.value ? cell.value.toString() : "").length;
-      maxCellLength = Math.max(maxCellLength, cellLength);
-    });
-    column.width = Math.min(14, maxCellLength + 2); // Limit width to 30 characters
+  await workbook.commit()
+  .then(() => {
+    // Rename the temporary file to the final filename
+    fs.renameSync("./upload/ginner-process-grey-out-report-test.xlsx", './upload/ginner-process-grey-out-report.xlsx');
+    console.log('ginner-process-grey-out report generation completed.');
+  })
+  .catch(error => {
+    console.log('Failed generation?.');
+    throw error;
   });
-
-  // Save the workbook
-  await workbook.xlsx.writeFile(excelFilePath);
+  } catch (error) {
+    console.error('Error appending data:', error);
+  }
 };
 
 const exportSpinnerProcessGreyOutReport = async () => {
