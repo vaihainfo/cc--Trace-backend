@@ -1679,6 +1679,7 @@ const fetchSpinnerProcessGreyOutReport = async (req: Request, res: Response) => 
       include: include,
       offset: offset,
       limit: limit,
+      order: [['id', 'desc']]
     });
     return res.sendPaginationSuccess(res, rows, count);
   } catch (error: any) {
@@ -2682,6 +2683,7 @@ const exportSpinnerProcessGreyOutReport = async (req: Request, res: Response) =>
         // group: ['season.id', 'spinner.id'],
         offset: offset,
         limit: limit,
+        order: [['id', 'desc']]
       });
 
       // // Append data to worksheet
