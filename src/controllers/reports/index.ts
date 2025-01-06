@@ -1697,15 +1697,17 @@ const fetchSpinnerGreyOutReport = async (req: Request, res: Response) => {
     req.query;
   const offset = (page - 1) * limit;
   const whereCondition: any = {};
+  const searchCondition: any = {};
   try {
     if (searchTerm) {
-      whereCondition[Op.or] = [
+      searchCondition[Op.or] = [
         { "$season.name$": { [Op.iLike]: `%${searchTerm}%` } },
         { "$buyerdata.name$": { [Op.iLike]: `%${searchTerm}%` } },
         { "$ginner.name$": { [Op.iLike]: `%${searchTerm}%` } },
         { lot_no: { [Op.iLike]: `%${searchTerm}%` } },
         { reel_lot_no: { [Op.iLike]: `%${searchTerm}%` } },
         { press_no: { [Op.iLike]: `%${searchTerm}%` } },
+        { invoice_no: { [Op.iLike]: `%${searchTerm}%` } },
       ];
     }
     if (spinnerId) {
@@ -1747,17 +1749,21 @@ const fetchSpinnerGreyOutReport = async (req: Request, res: Response) => {
       whereCondition.season_id = { [Op.in]: idArray };
     }
 
-    // whereCondition.total_qty = {
-    //   [Op.gt]: 0,
-    // };
-    whereCondition.greyout_status = true;
-
     if (programId) {
       const idArray: number[] = programId
         .split(",")
         .map((id: any) => parseInt(id, 10));
       whereCondition.program_id = { [Op.in]: idArray };
     }
+
+    whereCondition[Op.or] = [
+      { greyout_status: true, ...searchCondition },
+      {
+        greyout_status: false,
+        greyed_out_qty: { [Op.ne]: null },
+        ...searchCondition
+      },
+    ];
 
     let include = [
       {
@@ -1783,12 +1789,46 @@ const fetchSpinnerGreyOutReport = async (req: Request, res: Response) => {
     ];
     //fetch data with pagination
 
+     // Add the conditional attribute using Sequelize.literal
+     const attributes = [
+      "id",
+      "date",
+      'season_id',
+      'ginner_id',
+      'buyer',
+      "lot_no",
+      "invoice_no",
+      "reel_lot_no",
+      "press_no",
+      "accepted_bales_weight",
+      "no_of_bales",
+      "total_qty",
+      "qty_stock",
+      "greyed_out_qty",
+      "ps_verified_status",
+      "ps_verified_total_qty",
+      "qty_stock_before_verification",
+      "verification_status",
+      "greyout_status",
+      "status",
+      [
+        Sequelize.literal(`
+          CASE 
+            WHEN greyout_status = true THEN qty_stock
+            ELSE greyed_out_qty
+          END
+        `),
+        "lint_greyout_qty",
+      ],
+    ];
+
     const { count, rows } = await GinSales.findAndCountAll({
       where: whereCondition,
       include: include,
-      // attributes: ['id', 'lot_no', 'invoice_no', 'reel_lot_no', 'qty_stock'],
+      attributes: attributes,
       offset: offset,
       limit: limit,
+      order: [['id', 'desc']]
     });
     return res.sendPaginationSuccess(res, rows, count);
   } catch (error: any) {
@@ -2696,6 +2736,8 @@ const exportSpinnerGreyOutReport = async (req: Request, res: Response) => {
     req.query;
   const offset = (page - 1) * limit;
   const whereCondition: any = {};
+  const searchCondition: any = {};
+
   try {
 
     if (exportType === "all") {
@@ -2707,13 +2749,14 @@ const exportSpinnerGreyOutReport = async (req: Request, res: Response) => {
     } else {
 
       if (searchTerm) {
-        whereCondition[Op.or] = [
+        searchCondition[Op.or] = [
           { "$season.name$": { [Op.iLike]: `%${searchTerm}%` } },
           { "$buyerdata.name$": { [Op.iLike]: `%${searchTerm}%` } },
           { "$ginner.name$": { [Op.iLike]: `%${searchTerm}%` } },
           { lot_no: { [Op.iLike]: `%${searchTerm}%` } },
           { reel_lot_no: { [Op.iLike]: `%${searchTerm}%` } },
           { press_no: { [Op.iLike]: `%${searchTerm}%` } },
+          { invoice_no: { [Op.iLike]: `%${searchTerm}%` } },
         ];
       }
       if (spinnerId) {
@@ -2751,14 +2794,21 @@ const exportSpinnerGreyOutReport = async (req: Request, res: Response) => {
         whereCondition["$season_id$"] = { [Op.in]: idArray };
       }
 
-      whereCondition.greyout_status = true;
-
       if (programId) {
         const idArray: number[] = programId
           .split(",")
           .map((id: any) => parseInt(id, 10));
         whereCondition["$program_id$"] = { [Op.in]: idArray };
       }
+
+      whereCondition[Op.or] = [
+        { greyout_status: true, ...searchCondition },
+        {
+          greyout_status: false,
+          greyed_out_qty: { [Op.ne]: null },
+          ...searchCondition
+        },
+      ];
 
       let include = [
         {
@@ -2786,7 +2836,7 @@ const exportSpinnerGreyOutReport = async (req: Request, res: Response) => {
       // Create the excel workbook file
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet("Sheet1");
-      worksheet.mergeCells("A1:G1");
+      worksheet.mergeCells("A1:H1");
       const mergedCell = worksheet.getCell("A1");
       mergedCell.value = "CottonConnect | Spinner Lint Process Greyout Report";
       mergedCell.font = { bold: true };
@@ -2805,7 +2855,6 @@ const exportSpinnerGreyOutReport = async (req: Request, res: Response) => {
       headerRow.font = { bold: true };
 
       // //fetch data with pagination
-
       const { count, rows }: any = await GinSales.findAndCountAll({
         where: whereCondition,
         include: include,
@@ -2817,10 +2866,23 @@ const exportSpinnerGreyOutReport = async (req: Request, res: Response) => {
           [Sequelize.col('lot_no'), 'lot_no'],
           [Sequelize.col('reel_lot_no'), 'reel_lot_no'],
           [Sequelize.col('qty_stock'), 'qty_stock'],
+          [Sequelize.col('greyed_out_qty'), 'greyed_out_qty'],
+          [Sequelize.col('greyout_status'), 'greyout_status'],
+          'status',
+          [
+            Sequelize.literal(`
+              CASE 
+                WHEN greyout_status = true THEN qty_stock
+                ELSE greyed_out_qty
+              END
+            `),
+            "lint_greyout_qty",
+          ],
         ],
         // group: ['season.id', 'ginner.id', 'buyerdata.id'],
         offset: offset,
         limit: limit,
+        order: [['id', 'desc']]
       });
 
       // // Append data to worksheet
@@ -2833,7 +2895,7 @@ const exportSpinnerGreyOutReport = async (req: Request, res: Response) => {
           reel_lot_no: item.dataValues.reel_lot_no ? item.dataValues.reel_lot_no : "",
           invoice: item.dataValues.invoice_no ? item.dataValues.invoice_no : "",
           lot_no: item.dataValues.lot_no ? item.dataValues.lot_no : "",
-          lint_quantity: item.dataValues.qty_stock ? item.dataValues.qty_stock : 0,
+          lint_quantity: item.dataValues.lint_greyout_qty ? item.dataValues.lint_greyout_qty : 0,
         });
         worksheet.addRow(rowValues);
       }

@@ -125,100 +125,145 @@ const exportReportsOnebyOne = async () => {
 //----------------------------------------- Spinner Reports ------------------------//
 
 const exportSpinnerGreyOutReport = async () => {
-  // spinner_bale_receipt_load
-  const excelFilePath = path.join(
-    "./upload",
-    "spinner-grey-out-report.xlsx"
-  );
+  const maxRowsPerWorksheet = 500000; // Maximum number of rows per worksheet in Excel
 
-  let include = [
-    {
-      model: Ginner,
-      as: "ginner",
-      attributes: [],
-    },
-    {
-      model: Season,
-      as: "season",
-      attributes: [],
-    },
-    {
-      model: Program,
-      as: "program",
-      attributes: [],
-    },
-    {
-      model: Spinner,
-      as: "buyerdata",
-      attributes: [],
-    },
-  ];
-
-  // Create the excel workbook file
-  const workbook = new ExcelJS.Workbook();
-  const worksheet = workbook.addWorksheet("Sheet1");
-  worksheet.mergeCells("A1:G1");
-  const mergedCell = worksheet.getCell("A1");
-  mergedCell.value = "CottonConnect | Spinner Lint Process Greyout Report";
-  mergedCell.font = { bold: true };
-  mergedCell.alignment = { horizontal: "center", vertical: "middle" };
-  // Set bold font for header row
-  const headerRow = worksheet.addRow([
-    "Sr No.",
-    "Season",
-    "Ginner Name",
-    "Spinner Name",
-    "REEL Lot No",
-    "Invoice Number",
-    "Bale Lot No",
-    "Total Lint Greyout Quantity (KGs)",
-  ]);
-  headerRow.font = { bold: true };
-
-  // //fetch data with pagination
-
-  const { count, rows }: any = await GinSales.findAndCountAll({
-    where: { greyout_status: true },
-    include: include,
-    attributes: [
-      [Sequelize.col('"season"."name"'), 'season_name'],
-      [Sequelize.literal('"ginner"."name"'), "ginner_name"],
-      [Sequelize.col('"buyerdata"."name"'), 'spinner'],
-      [Sequelize.col('invoice_no'), 'invoice_no'],
-      [Sequelize.col('lot_no'), 'lot_no'],
-      [Sequelize.col('reel_lot_no'), 'reel_lot_no'],
-      [Sequelize.col('qty_stock'), 'qty_stock'],
-    ],
-    //  group: ['season.id', 'ginner.id', 'buyerdata.id'], 
-  });
-
-  // // Append data to worksheet
-  for await (const [index, item] of rows.entries()) {
-    const rowValues = Object.values({
-      index: index + 1,
-      season: item.dataValues.season_name ? item.dataValues.season_name : "",
-      ginner: item.dataValues.ginner_name ? item.dataValues.ginner_name : "",
-      spinner: item.dataValues.spinner ? item.dataValues.spinner : "",
-      reel_lot_no: item.dataValues.reel_lot_no ? item.dataValues.reel_lot_no : "",
-      invoice: item.dataValues.invoice_no ? item.dataValues.invoice_no : "",
-      lot_no: item.dataValues.lot_no ? item.dataValues.lot_no : "",
-      lint_quantity: item.dataValues.qty_stock ? Number(item.dataValues.qty_stock) : 0,
+  try {
+    const workbook = new ExcelJS.stream.xlsx.WorkbookWriter({
+      stream: fs.createWriteStream("./upload/spinner-grey-out-report-test.xlsx")
     });
-    worksheet.addRow(rowValues);
+    let worksheetIndex = 0;
+    const batchSize = 5000;
+    let offset = 0;
+    const whereCondition: any = {};
+
+    let include = [
+      {
+        model: Ginner,
+        as: "ginner",
+        attributes: [],
+      },
+      {
+        model: Season,
+        as: "season",
+        attributes: [],
+      },
+      {
+        model: Program,
+        as: "program",
+        attributes: [],
+      },
+      {
+        model: Spinner,
+        as: "buyerdata",
+        attributes: [],
+      },
+    ];
+
+    whereCondition[Op.or] = [
+      { greyout_status: true},
+      {
+        greyout_status: false,
+        greyed_out_qty: { [Op.ne]: null }
+      },
+    ];
+
+  let hasNextBatch = true;
+  while (hasNextBatch) {
+    const rows  = await GinSales.findAll({
+      where: whereCondition,
+      include: include,
+      attributes: [
+        [Sequelize.col('"season"."name"'), 'season_name'],
+        [Sequelize.literal('"ginner"."name"'), "ginner_name"],
+        [Sequelize.col('"buyerdata"."name"'), 'spinner'],
+        [Sequelize.col('invoice_no'), 'invoice_no'],
+        [Sequelize.col('lot_no'), 'lot_no'],
+        [Sequelize.col('reel_lot_no'), 'reel_lot_no'],
+        [Sequelize.col('qty_stock'), 'qty_stock'],
+        [Sequelize.col('greyed_out_qty'), 'greyed_out_qty'],
+        [Sequelize.col('greyout_status'), 'greyout_status'],
+        'status',
+        [
+          Sequelize.literal(`
+            CASE 
+              WHEN greyout_status = true THEN qty_stock
+              ELSE greyed_out_qty
+            END
+          `),
+          "lint_greyout_qty",
+        ],
+      ],
+      raw: true,
+      offset: offset,
+      limit: batchSize,
+      order: [['id', 'asc']]
+    });
+
+
+    if (rows.length === 0) {
+      hasNextBatch = false;
+      break;
+    }
+
+    if (offset % maxRowsPerWorksheet === 0) {
+      worksheetIndex++;
+    }
+
+
+    for await (const [index, item] of rows.entries()) {
+
+      const rowValues = [
+        offset + index + 1,
+        item?.season_name ? item?.season_name : "",
+        item?.ginner_name ? item?.ginner_name : "",
+        item.spinner ? item.spinner : "",
+        item.reel_lot_no ? item.reel_lot_no : "",
+        item.invoice_no ? item.invoice_no : "",
+        item?.lot_no ? item?.lot_no : "",
+        item.lint_greyout_qty ? Number(formatDecimal( item.lint_greyout_qty)) : 0
+      ];
+
+      let currentWorksheet = workbook.getWorksheet(`Spinner Lint Process Greyout Report ${worksheetIndex}`);
+      if (!currentWorksheet) {
+        currentWorksheet = workbook.addWorksheet(`Spinner Lint Process Greyout Report ${worksheetIndex}`);
+        if (worksheetIndex == 1) {
+          currentWorksheet.mergeCells("A1:H1");
+          const mergedCell = currentWorksheet.getCell("A1");
+          mergedCell.value = "CottonConnect | Spinner Lint Process Greyout Report";
+          mergedCell.font = { bold: true };
+          mergedCell.alignment = { horizontal: "center", vertical: "middle" };
+        }
+        // Set bold font for header row
+        const headerRow = currentWorksheet.addRow([
+          "Sr No.",
+          "Season",
+          "Ginner Name",
+          "Spinner Name",
+          "REEL Lot No",
+          "Invoice Number",
+          "Bale Lot No",
+          "Total Lint Greyout Quantity (KGs)",
+        ]);
+        headerRow.font = { bold: true };
+      }
+      currentWorksheet.addRow(rowValues).commit();
+    }
+    offset += batchSize;
   }
 
-  // Auto-adjust column widths based on content
-  worksheet.columns.forEach((column: any) => {
-    let maxCellLength = 0;
-    column.eachCell({ includeEmpty: true }, (cell: any) => {
-      const cellLength = (cell.value ? cell.value.toString() : "").length;
-      maxCellLength = Math.max(maxCellLength, cellLength);
-    });
-    column.width = Math.min(14, maxCellLength + 2); // Limit width to 30 characters
+  await workbook.commit()
+  .then(() => {
+    // Rename the temporary file to the final filename
+    fs.renameSync("./upload/spinner-grey-out-report-test.xlsx", './upload/spinner-grey-out-report.xlsx');
+    console.log('spinner-grey-out report generation completed.');
+  })
+  .catch(error => {
+    console.log('Failed generation?.');
+    throw error;
   });
-
-  // Save the workbook
-  await workbook.xlsx.writeFile(excelFilePath);
+  } catch (error) {
+    console.error('Error appending data:', error);
+  }
 };
 
 
