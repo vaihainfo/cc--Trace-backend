@@ -2273,6 +2273,7 @@ const updateGinnerSales = async (req: Request, res: Response) => {
       tc_file: req.body.tcFile,
       contract_file: req.body.contractFile,
       invoice_file: req.body.invoiceFile,
+      approval_doc: req.body.approval_doc,
       delivery_notes: req.body.deliveryNotes,
       transporter_name: req.body.transporterName,
       vehicle_no: req.body.vehicleNo,
@@ -2363,7 +2364,7 @@ const fetchGinSalesPagination = async (req: Request, res: Response) => {
   const searchTerm = req.query.search || "";
   const page = Number(req.query.page) || 1;
   const limit = Number(req.query.limit) || 10;
-  const { ginnerId, seasonId, programId }: any = req.query;
+  const { ginnerId, seasonId, programId, buyerType }: any = req.query;
   const offset = (page - 1) * limit;
   const whereCondition: any = {};
   try {
@@ -2394,6 +2395,11 @@ const fetchGinSalesPagination = async (req: Request, res: Response) => {
         .split(",")
         .map((id: any) => parseInt(id, 10));
       whereCondition.program_id = { [Op.in]: idArray };
+    }
+
+    if(buyerType){
+
+      whereCondition.buyer_type = buyerType;
     }
 
     let include = [
@@ -3520,6 +3526,14 @@ const fetchGinLintList = async (req: Request, res: Response) => {
                   'received_total_qty', gs.total_qty,
                   'received_no_of_bales', gs.no_of_bales,
                   'buyer_type', gs.buyer_type,
+                  'tc_file',gs.tc_file,
+                  'rate',gs.rate,
+                  'contract_file',gs.contract_file,
+                  'invoice_file',gs.invoice_file,
+                  'delivery_notes',gs.delivery_notes,
+                  'letter_of_credit',gs.letter_of_credit,
+                  'logistics_documents',gs.logistics_documents,
+                  'approval_doc',gs.approval_doc,
                   'ginner_id', g.id,
                   'ginner_name', g.name,
                   'buyer_ginner_id', buyer.id,
