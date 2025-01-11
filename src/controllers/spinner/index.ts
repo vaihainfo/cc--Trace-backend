@@ -35,6 +35,8 @@ import GinBale from "../../models/gin-bale.model";
 import { _getGinnerProcessTracingChartData } from "../ginner";
 import GinToGinSale from "../../models/gin-to-gin-sale.model";
 import SpinSelectedBlend from "../../models/spin_selected_blend";
+import CombernoilGeneration from "../../models/combernoil_generation.model";
+import SpinCombernoilSale from "../../models/spin_combernoil_sale.model";
 
 //create Spinner Process
 const createSpinnerProcess = async (req: Request, res: Response) => {
@@ -88,6 +90,12 @@ const createSpinnerProcess = async (req: Request, res: Response) => {
             yarn_blend_id: req.body.yarnBlendId
         };
         const spin = await SpinProcess.create(data);
+        await CombernoilGeneration.create({
+            spinner_id: req.body.spinnerId,
+            process_id: spin.id,
+            total_qty: req.body.comber_noil,
+            qty_stock: req.body.comber_noil
+        });
         let uniqueFilename = `spin_procees_qrcode_${Date.now()}.png`;
         let da = encrypt(`Spinner,Process,${spin.id}`);
         let aa = await generateOnlyQrCode(da, uniqueFilename);
@@ -136,6 +144,7 @@ const createSpinnerProcess = async (req: Request, res: Response) => {
             for await (let obj of req.body.chooseComberNoil) {
                 let update = await SpinProcess.update({ comber_noil_stock: obj.totalQty - obj.qtyUsed }, { where: { id: obj.id } })
                 let create = await ComberSelection.create({ qty_used: obj.qtyUsed, process_id: spin.id, yarn_id: obj.id })
+                await CombernoilGeneration.update({ qty_stock: obj.totalQty - obj.qtyUsed }, { where: { id: obj.id } })
             }
         }
 
@@ -540,6 +549,29 @@ const deleteSpinnerProcess = async (req: Request, res: Response) => {
     }
 }
 
+const getSpinners = async (req: Request, res: Response) => {
+    let spinnerId = req.query.spinnerId;
+    let whereCondition: any = {};
+
+    if (!spinnerId) {
+        return res.sendError(res, "Need Spinner Id ");
+    }
+    if (req.query.status == 'true') {
+        whereCondition.status = true
+    }
+
+    let spinner = await Spinner.findOne({ where: { id: spinnerId } });
+    if (!spinner) {
+      return res.sendError(res, "No Spinner Found ");
+    }
+    let result = await Spinner.findAll({
+      attributes: ["id", "name"],
+      where: { ...whereCondition, brand: { [Op.overlap]: spinner.dataValues.brand }, id: { [Op.ne]: spinnerId } },
+    });
+    res.sendSuccess(res, result);
+
+}
+
 const fetchComberNoilPagination = async (req: Request, res: Response) => {
     const searchTerm = req.query.search || "";
     const page = Number(req.query.page) || 1;
@@ -547,6 +579,8 @@ const fetchComberNoilPagination = async (req: Request, res: Response) => {
     const { spinnerId, programId }: any = req.query;
     const offset = (page - 1) * limit;
     const whereCondition: any = {};
+    const combernoilGenerationWhereCondition: any = {};
+
     try {
         if (searchTerm) {
             whereCondition[Op.or] = [
@@ -563,7 +597,7 @@ const fetchComberNoilPagination = async (req: Request, res: Response) => {
                 .map((id: any) => parseInt(id, 10));
             whereCondition.program_id = { [Op.in]: idArray };
         }
-        whereCondition.comber_noil_stock = { [Op.gt]: 0 }
+        combernoilGenerationWhereCondition.qty_stock = { [Op.gt]: 0 }
         let include = [
             {
                 model: Program,
@@ -572,31 +606,74 @@ const fetchComberNoilPagination = async (req: Request, res: Response) => {
         ];
         //fetch data with pagination
         if (req.query.pagination === "true") {
-            const { count, rows } = await SpinProcess.findAndCountAll({
-                attributes: ['id', 'batch_lot_no', 'comber_noil_stock', 'comber_noil', 'program_id'],
-                where: whereCondition,
-                include: include,
-                order: [
-                    [
-                        'comber_noil_stock', 'desc'
-                    ]
+            const { count, rows } = await CombernoilGeneration.findAndCountAll({
+                include: [
+                    {
+                        model: SpinProcess,
+                        as: "spinProcess",
+                        where: whereCondition,
+                        attributes: ['id', 'batch_lot_no', 'program_id']
+                    },
+                    { 
+                        model: Spinner, 
+                        as: "spinner", 
+                        attributes: ['id', 'name'] 
+                    }
                 ],
+                order: [['qty_stock', 'desc']],
+                attributes: [
+                    'id', 
+                    'process_id',
+                    ['total_qty', 'comber_noil'],
+                    ['qty_stock', 'comber_noil_stock']
+                ],
+                where: combernoilGenerationWhereCondition,
                 offset: offset,
                 limit: limit,
             });
-            return res.sendPaginationSuccess(res, rows, count);
+
+             // Transform the rows to match expected format
+             const transformedRows = rows.map((row: any) => ({
+                ...row.toJSON(),
+                batch_lot_no: row.spinProcess.batch_lot_no, 
+                program_id: row.spinProcess.program_id
+            }));
+
+            return res.sendPaginationSuccess(res, transformedRows, count);
         } else {
-            const gin = await SpinProcess.findAll({
-                attributes: ['id', 'batch_lot_no', 'comber_noil_stock', 'comber_noil', 'program_id'],
-                where: whereCondition,
-                include: include,
-                order: [
-                    [
-                        'comber_noil_stock', 'desc'
-                    ]
+            console.log(whereCondition);
+            const comberData = await CombernoilGeneration.findAll({
+                include: [
+                    {
+                        model: SpinProcess,
+                        as: "spinProcess",
+                        where: whereCondition,
+                        attributes: ['id', 'batch_lot_no', 'program_id']
+                    },
+                    { 
+                        model: Spinner, 
+                        as: "spinner", 
+                        attributes: ['id', 'name'] 
+                    }
+                ],
+                order: [['qty_stock', 'desc']],
+                attributes: [
+                    'id', 
+                    'process_id',
+                    ['total_qty', 'comber_noil'],
+                    ['qty_stock', 'comber_noil_stock']
                 ]
             });
-            return res.sendSuccess(res, gin);
+
+            // Transform the data to match expected format
+            const transformedData = comberData.map((item: any) => ({
+                ...item.toJSON(),
+                batch_lot_no: item.spinProcess.batch_lot_no,
+                program_id: item.spinProcess.program_id
+            }));
+
+
+            return res.sendSuccess(res, transformedData);
         }
     } catch (error: any) {
         return res.sendError(res, error.message);
@@ -836,7 +913,7 @@ const chooseYarnProcess = async (req: Request, res: Response) => {
 const createSpinnerSales = async (req: Request, res: Response) => {
     try {
 
-        const data = {
+        const data: any = {
             spinner_id: req.body.spinnerId,
             program_id: req.body.programId,
             season_id: req.body.seasonId,
@@ -873,53 +950,94 @@ const createSpinnerSales = async (req: Request, res: Response) => {
             status: 'Pending for QR scanning'
         };
 
-        if (req.body.chooseYarn && req.body.chooseYarn.length > 0) {
-            for await (let obj of req.body.chooseYarn) {
-                const spinYarnData = await SpinYarn.findOne({ where: { id: obj.id }, raw: true });
-                console.log(spinYarnData)
-                if (obj.qtyUsed > spinYarnData.yarn_qty_stock) {
-                    return res.sendError(res, 'Requested quantity exceeds available stock')
+        if(req.body.buyerType === "Spinner") {
+            data.status = 'Pending';
+            data.total_qty = req.body.chooseComberNoil.totalQuantityUsed;
+            data.qty_stock = req.body.chooseComberNoil.totalQuantityUsed;
+            data.sale_type = 'Spinner';
+            data.buyer_id = req.body.buyer;
+            data.comber_ids = req.body.chooseComberNoil.chooseComberNoil.map((comber: any) => comber.id);
+            const spinCombernoilSales = await SpinCombernoilSale.create(data);
+             // Update existing CombernoilGeneration records
+            for (const comber of req.body.chooseComberNoil.chooseComberNoil) {
+                const existingComber = await CombernoilGeneration.findByPk(comber.id);
+                if (existingComber) {
+                    // Update existing record's qty_stock
+                    await existingComber.update({
+                        qty_stock: existingComber.qty_stock - comber.qtyUsed
+                    });
+
+                    // Create new CombernoilGeneration record for buyer
+                    await CombernoilGeneration.create({
+                        spinner_id: req.body.buyer, // buyer's spinner id
+                        sales_id: spinCombernoilSales.id,
+                        total_qty: comber.qtyUsed,
+                        qty_stock: comber.qtyUsed,
+                        old_combernoil_id: comber.id
+                    });
                 }
             }
-        }
 
-        const spinSales = await SpinSales.create(data);
-        let uniqueFilename = `spin_sales_qrcode_${Date.now()}.png`;
-        let da = encrypt(`Spinner,Sale,${spinSales.id}`);
-        let aa = await generateOnlyQrCode(da, uniqueFilename);
-        const gin = await SpinSales.update({ qr: uniqueFilename }, {
-            where: {
-                id: spinSales.id
-            }
-        });
-
-        if (req.body.chooseYarn && req.body.chooseYarn.length > 0) {
-            for await (let obj of req.body.chooseYarn) {
-                const spinProcessData = await SpinProcess.findOne({ where: { id: obj.process_id } });
-                let update = await SpinProcess.update({ qty_stock: spinProcessData.qty_stock - obj.qtyUsed, status: 'Sold' }, { where: { id: obj.process_id } });
-                const spinYarnData = await SpinYarn.findOne({ where: { id: obj.id } });
-
-                let updateyarns = {}
-                if (spinYarnData.yarn_qty_stock - obj.qtyUsed <= 0) {
-                    updateyarns = {
-                        sold_status: true,
-                        yarn_qty_stock: 0
-                    }
-                } else {
-                    updateyarns = {
-                        yarn_qty_stock: spinYarnData.yarn_qty_stock - obj.qtyUsed
+            let uniqueFilename = `spin_sales_qrcode_${Date.now()}.png`;
+            let da = encrypt(`Spinner,Sale,${spinCombernoilSales.id}`);
+            let aa = await generateOnlyQrCode(da, uniqueFilename);
+            await SpinCombernoilSale.update({ qr: uniqueFilename }, {
+                where: {
+                    id: spinCombernoilSales.id
+                }
+            });
+            res.sendSuccess(res, { data });
+        } else {
+            if (req.body.chooseYarn && req.body.chooseYarn.length > 0) {
+                for await (let obj of req.body.chooseYarn) {
+                    const spinYarnData = await SpinYarn.findOne({ where: { id: obj.id }, raw: true });
+                    console.log(spinYarnData)
+                    if (obj.qtyUsed > spinYarnData.yarn_qty_stock) {
+                        return res.sendError(res, 'Requested quantity exceeds available stock')
                     }
                 }
-                const spinYarnStatus = await SpinYarn.update(updateyarns, { where: { id: obj.id } });
-                await SpinProcessYarnSelection.create({ spin_process_id: obj.process_id, yarn_id: obj.id, sales_id: spinSales.id, qty_used: obj.qtyUsed })
             }
+    
+            const spinSales = await SpinSales.create(data);
+            let uniqueFilename = `spin_sales_qrcode_${Date.now()}.png`;
+            let da = encrypt(`Spinner,Sale,${spinSales.id}`);
+            let aa = await generateOnlyQrCode(da, uniqueFilename);
+            const gin = await SpinSales.update({ qr: uniqueFilename }, {
+                where: {
+                    id: spinSales.id
+                }
+            });
+    
+            if (req.body.chooseYarn && req.body.chooseYarn.length > 0) {
+                for await (let obj of req.body.chooseYarn) {
+                    const spinProcessData = await SpinProcess.findOne({ where: { id: obj.process_id } });
+                    let update = await SpinProcess.update({ qty_stock: spinProcessData.qty_stock - obj.qtyUsed, status: 'Sold' }, { where: { id: obj.process_id } });
+                    const spinYarnData = await SpinYarn.findOne({ where: { id: obj.id } });
+    
+                    let updateyarns = {}
+                    if (spinYarnData.yarn_qty_stock - obj.qtyUsed <= 0) {
+                        updateyarns = {
+                            sold_status: true,
+                            yarn_qty_stock: 0
+                        }
+                    } else {
+                        updateyarns = {
+                            yarn_qty_stock: spinYarnData.yarn_qty_stock - obj.qtyUsed
+                        }
+                    }
+                    const spinYarnStatus = await SpinYarn.update(updateyarns, { where: { id: obj.id } });
+                    await SpinProcessYarnSelection.create({ spin_process_id: obj.process_id, yarn_id: obj.id, sales_id: spinSales.id, qty_used: obj.qtyUsed })
+                }
+            }
+    
+            if (spinSales) {
+                await send_spin_mail(spinSales.id);
+            }
+    
+            res.sendSuccess(res, { spinSales });
         }
 
-        if (spinSales) {
-            await send_spin_mail(spinSales.id);
-        }
-
-        res.sendSuccess(res, { spinSales });
+       
     } catch (error: any) {
         console.error(error)
         return res.sendError(res, error.meessage);
@@ -1176,6 +1294,7 @@ const fetchSpinSalesPagination = async (req: Request, res: Response) => {
             return res.sendSuccess(res, data);
         }
     } catch (error: any) {
+        console.error(error)
         return res.sendError(res, error.message);
     }
 };
@@ -1417,6 +1536,161 @@ const deleteSpinnerSales = async (req: Request, res: Response) => {
     } catch (error: any) {
         return res.sendError(res, error.message);
     }
+}
+
+const fetchComberNoilTransactionList = async (req: Request, res: Response) => {
+    try {
+        const searchTerm = req.query.search || "";
+        const page = Number(req.query.page) || 1;
+        const limit = Number(req.query.limit) || 10;
+        const { ginnerId, status, filter, programId, spinnerId, seasonId }: any = req.query;
+        const offset = (page - 1) * limit;
+        const whereCondition: any = {};
+
+
+        whereCondition.buyer_id = spinnerId;
+        whereCondition.buyer_type = 'Spinner';
+        whereCondition.status = {
+            [Op.in]: ["Accepted"],
+        };
+
+        const includes = [
+            {
+                model: CombernoilGeneration,
+                as: 'combernoilGeneration',
+            },  {
+                model: Season,
+                as: "season",
+                attributes: ['id', 'name'],
+            },
+            {
+                model: Program,
+                as: "program",
+                attributes: ['id', 'program_name'],
+            },
+            {
+                model: Spinner,
+                as: "spinner",
+                attributes: ['id', 'name'],
+            }
+        ];
+        const spinnerComberNoil = await SpinCombernoilSale.findAndCountAll({
+            where: whereCondition,
+            include: includes,
+            order: [["createdAt", "desc"]],
+          });
+        return res.sendPaginationSuccess(res, spinnerComberNoil.rows, spinnerComberNoil.count);
+
+    } catch (error: any) {
+        console.log(error);
+        return res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+
+}
+
+const updateStatusComberNoil = async (req: Request, res: Response) => {
+    try {
+        const items = req.body.items;
+        for (const item of items) {
+             // Update SpinCombernoilSale status
+             await SpinCombernoilSale.update(
+                { status: item.status },
+                { where: { id: item.id } }
+            );
+
+            if (item.status === 'Rejected') {
+                const originalComber = await CombernoilGeneration.findAll({
+                    where: {
+                        sales_id: item.id
+                    }
+                });
+                // Restore original combernoil qty_stock
+                // and delete current combernoil generations
+                for (const comber of originalComber) {
+                    if (comber.old_combernoil_id) {
+                        const originalComber = await CombernoilGeneration.findOne({
+                            where: {
+                                id: comber.old_combernoil_id
+                            }
+                        });
+                        if (originalComber) {
+                            // Increase qty_stock of original combernoil
+                            await CombernoilGeneration.update(
+                                { qty_stock: originalComber.qty_stock + comber.qty_stock },
+                                { where: { id: originalComber.id } }
+                            );
+                        }
+                    }
+                    // Delete current combernoil generation
+                    await CombernoilGeneration.destroy({
+                        where: {
+                            id: comber.id
+                        }
+                    });
+                }
+            }
+
+        }
+        res.sendSuccess(res, { items });
+    } catch (error: any) {
+        return res.sendError(res, error.meessage);
+    }
+}
+
+const fetchTransactionAlertForComberNoil = async (req: Request, res: Response) => {
+
+    try {
+        const {
+            spinnerId,
+            status,
+          }: any = req.query;
+        const whereCondition: any = {};
+        const include: any = [];
+        if (status === "Pending") {
+            whereCondition.buyer_id = spinnerId;
+            whereCondition.buyer_type = 'Spinner';
+            whereCondition.status = {
+              [Op.in]: ["Pending"],
+            };
+          }
+
+        const includes = [{
+            model: CombernoilGeneration,
+            as: 'combernoilGeneration',
+            required: false
+        },  {
+            model: Season,
+            as: "season",
+            attributes: ['id', 'name'],
+        },
+        {
+            model: Program,
+            as: "program",
+            attributes: ['id', 'program_name'],
+        },
+        {
+            model: Spinner,
+            as: "spinner",
+            attributes: ['id', 'name'],
+        }
+    ];
+        const spinnerComberNoil = await SpinCombernoilSale.findAll({
+            where: whereCondition,
+            include: includes,
+            order: [["createdAt", "desc"]],
+          });
+          return res.sendSuccess(res, spinnerComberNoil);
+    } catch (error: any) {
+        console.error("Error appending data:", error);
+        return res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+
 }
 
 //fetch Spinner transaction with filters
@@ -2939,8 +3213,12 @@ export {
     chooseLint,
     getSalesInvoice,
     chooseYarn,
+    getSpinners,
     getInvoiceAndReelLotNo,
     getYarnReelLotNo,
     getSpinnerProcessTracingChartData,
+    fetchTransactionAlertForComberNoil,
+    updateStatusComberNoil,
+    fetchComberNoilTransactionList,
     _getSpinnerProcessTracingChartData
 }
