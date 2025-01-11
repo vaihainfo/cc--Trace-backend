@@ -576,7 +576,7 @@ const fetchComberNoilPagination = async (req: Request, res: Response) => {
     const searchTerm = req.query.search || "";
     const page = Number(req.query.page) || 1;
     const limit = Number(req.query.limit) || 10;
-    const { spinnerId, programId }: any = req.query;
+    const { spinnerId, programId,from }: any = req.query;
     const offset = (page - 1) * limit;
     const whereCondition: any = {};
     const combernoilGenerationWhereCondition: any = {};
@@ -588,7 +588,13 @@ const fetchComberNoilPagination = async (req: Request, res: Response) => {
             ]
         }
         if (spinnerId) {
-            whereCondition.spinner_id = spinnerId;
+            combernoilGenerationWhereCondition.spinner_id = spinnerId;
+        }
+
+        if (from && from == 'sales') {
+            combernoilGenerationWhereCondition.sales_id = {
+                [Op.is]: null  // This will fetch only records where sales_id is NULL
+            };
         }
 
         if (programId) {
@@ -612,6 +618,7 @@ const fetchComberNoilPagination = async (req: Request, res: Response) => {
                         model: SpinProcess,
                         as: "spinProcess",
                         where: whereCondition,
+                        required: false,
                         attributes: ['id', 'batch_lot_no', 'program_id']
                     },
                     { 
@@ -635,20 +642,20 @@ const fetchComberNoilPagination = async (req: Request, res: Response) => {
              // Transform the rows to match expected format
              const transformedRows = rows.map((row: any) => ({
                 ...row.toJSON(),
-                batch_lot_no: row.spinProcess.batch_lot_no, 
-                program_id: row.spinProcess.program_id
+                 batch_lot_no: row.spinProcess && row.spinProcess.batch_lot_no,
+                program_id: row.spinProcess && row.spinProcess.program_id
             }));
 
             return res.sendPaginationSuccess(res, transformedRows, count);
         } else {
-            console.log(whereCondition);
             const comberData = await CombernoilGeneration.findAll({
                 include: [
                     {
                         model: SpinProcess,
                         as: "spinProcess",
                         where: whereCondition,
-                        attributes: ['id', 'batch_lot_no', 'program_id']
+                        attributes: ['id', 'batch_lot_no', 'program_id'],
+                        required: false
                     },
                     { 
                         model: Spinner, 
@@ -657,6 +664,7 @@ const fetchComberNoilPagination = async (req: Request, res: Response) => {
                     }
                 ],
                 order: [['qty_stock', 'desc']],
+                where: combernoilGenerationWhereCondition,
                 attributes: [
                     'id', 
                     'process_id',
@@ -668,8 +676,8 @@ const fetchComberNoilPagination = async (req: Request, res: Response) => {
             // Transform the data to match expected format
             const transformedData = comberData.map((item: any) => ({
                 ...item.toJSON(),
-                batch_lot_no: item.spinProcess.batch_lot_no,
-                program_id: item.spinProcess.program_id
+                batch_lot_no: item.spinProcess && item.spinProcess.batch_lot_no,
+                program_id: item.spinProcess && item.spinProcess.program_id
             }));
 
 
@@ -1554,6 +1562,22 @@ const fetchComberNoilTransactionList = async (req: Request, res: Response) => {
             [Op.in]: ["Accepted"],
         };
 
+         // Add season filter if seasonId is provided
+         if (seasonId) {
+            const seasonIds = seasonId.split(',').map(Number); 
+            whereCondition.season_id = {
+                [Op.in]: seasonIds
+            };
+        }
+
+        // Add program filter if programId is provided
+        if (programId) {
+            const programIds = programId.toString().split(',').map(Number);
+            whereCondition.program_id = {
+                [Op.in]: programIds
+            };
+        }
+
         const includes = [
             {
                 model: CombernoilGeneration,
@@ -1566,17 +1590,24 @@ const fetchComberNoilTransactionList = async (req: Request, res: Response) => {
             {
                 model: Program,
                 as: "program",
-                attributes: ['id', 'program_name'],
+                attributes: ['id', 'program_name']
             },
             {
                 model: Spinner,
                 as: "spinner",
                 attributes: ['id', 'name'],
+                where: searchTerm ? {
+                    name: {
+                        [Op.iLike]: `%${searchTerm}%`
+                    }
+                } : undefined,
             }
         ];
         const spinnerComberNoil = await SpinCombernoilSale.findAndCountAll({
             where: whereCondition,
             include: includes,
+            offset: offset,
+            limit: limit,
             order: [["createdAt", "desc"]],
           });
         return res.sendPaginationSuccess(res, spinnerComberNoil.rows, spinnerComberNoil.count);
@@ -1646,6 +1677,8 @@ const fetchTransactionAlertForComberNoil = async (req: Request, res: Response) =
         const {
             spinnerId,
             status,
+            programId,
+            seasonId
           }: any = req.query;
         const whereCondition: any = {};
         const include: any = [];
@@ -1655,7 +1688,23 @@ const fetchTransactionAlertForComberNoil = async (req: Request, res: Response) =
             whereCondition.status = {
               [Op.in]: ["Pending"],
             };
-          }
+        }
+
+          // Add season filter if seasonId is provided
+        if (seasonId) {
+            const seasonIds = seasonId.split(',').map(Number); 
+            whereCondition.season_id = {
+                [Op.in]: seasonIds
+            };
+        }
+
+        // Add program filter if programId is provided
+        if (programId) {
+            const programIds = programId.toString().split(',').map(Number);
+            whereCondition.program_id = {
+                [Op.in]: programIds
+            };
+        }
 
         const includes = [{
             model: CombernoilGeneration,
