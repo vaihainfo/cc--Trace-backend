@@ -26,7 +26,11 @@ import {
     updateSpinnerSales,
     fetchSpinnerSale,
     fetchTransactionList,
-    fetchTransactionAlert
+    fetchTransactionAlert,
+    getSpinners,
+    fetchTransactionAlertForComberNoil,
+    updateStatusComberNoil,
+    fetchComberNoilTransactionList
 } from "../../controllers/spinner";
 import accessControl from "../../middleware/access-control";
 import { Router } from "express";
@@ -48,8 +52,12 @@ router.put('/sales', updateSpinnerSales);
 router.get('/sales/get-sale', fetchSpinnerSale);
 router.delete('/sales', deleteSpinnerSales);
 router.get('/comber-noil', fetchComberNoilPagination);
+router.get('/get-spinner', getSpinners);
 router.post('/sales', createSpinnerSales);
 router.get('/sales/export', exportSpinnerSale);
+router.get('/transaction-comber-noil', fetchTransactionAlertForComberNoil);
+router.put('/transaction-comber-noil', updateStatusComberNoil);
+router.get('/transaction-list-comber-noil', fetchComberNoilTransactionList);
 router.get('/transaction', fetchTransactionAlert);
 router.get('/transaction-list', fetchTransactionList);
 router.put('/transaction', updateStatusSales);
