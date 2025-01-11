@@ -28,6 +28,7 @@ import Brand from "../../models/brand.model";
 import PhysicalTraceabilityDataGinner from "../../models/physical-traceability-data-ginner.model";
 import PhysicalTraceabilityDataGinnerSample from "../../models/physical-traceability-data-ginner-sample.model";
 import GinnerAllocatedVillage from "../../models/ginner-allocated-vilage.model";
+import moment from "moment";
 import GinToGinSale from "../../models/gin-to-gin-sale.model";
 
 //create Ginner Process
@@ -1794,6 +1795,195 @@ const createGinnerSales = async (req: Request, res: Response) => {
   }
 };
 
+const getCOCDocumentData = async (
+  req: Request, res: Response
+) => {
+  try {
+    const id = req.query.id;
+    if (!id)
+      return res.sendError(res, "Need Ginner Sales Id");
+
+    const cocRes = {
+      ginnerName: '',
+      address: '',
+      brandName: '',
+      brandLogo: '',
+      reelAuthorizationCode: '',
+      garmentItemDescription: '',
+      frmrFarmGroup: '',
+      gnrName: '',
+      reelLotno: '',
+      gnrTotalQty: '',
+      date: '',
+    };
+
+    let [result] = await sequelize.query(`
+      select  gs.id                                                   as id,
+              gs.reel_lot_no                                          as reel_lotno,
+              gs.date                                                 as gnr_sales_date,
+              gnr.name                                                as ginner_name,
+              gnr.id                                                  as ginner_id,
+              gnr.address                                             as address,
+              gs.total_qty                                            as gnr_total_qty,
+              array_to_string(array_agg(distinct gb.process_id), ',') as process_ids,
+              ''                                                      as reel_authorization_code,
+              case
+                  when br.brand_name is not null
+                      then br.brand_name
+                  else gnr.name
+                  end                                        as brand_name,
+              case
+                  when br.logo is not null
+                      then br.logo
+                  end                                        as brand_logo
+              from gin_sales gs
+              left join ginners gnr on gnr.id = gs.ginner_id
+              left join brands br on  br.id =ANY(gnr.brand)
+              left join spinners prg on prg.id = gs.buyer
+              left join bale_selections bs on bs.sales_id = gs.id
+              left join "gin-bales" gb on gb.id = bs.bale_id
+      where gs.id in (:ids)
+      group by bs.sales_id, gs.id, gnr.id, br.id;
+    `, {
+      replacements: {ids : id },
+      type: sequelize.QueryTypes.SELECT,
+      raw: true
+    });
+    if (result) {
+      cocRes.gnrName = result.ginner_name;
+      cocRes.address = result.address;
+      cocRes.brandName = result.brand_name;
+      cocRes.brandLogo = result.brand_logo;
+      
+      cocRes.gnrTotalQty = result.gnr_total_qty;
+      cocRes.reelLotno = result.reel_lotno;
+      
+    }
+    
+    if (result.ginner_id) {
+      const ginsaleTotal = await sequelize.query(`
+      select  (count(coc_doc)+1) as sequence_no
+      from gin_sales 
+      where ginner_id in (:ids);      
+      `, {
+        replacements: {ids: result.ginner_id},
+        type: sequelize.QueryTypes.SELECT
+      });
+      console.log('ginsaleTotal',ginsaleTotal);
+      cocRes.reelAuthorizationCode = 'REELRegenerative'+ result.brand_name + ginsaleTotal[0].sequence_no;
+    }
+    
+
+    if (result.process_ids) {
+      const ginProcess = await sequelize.query(`
+      select  gp.id,
+              array_to_string(array_agg(distinct cs.transaction_id), ',') as transaction_ids
+      from gin_processes gp
+              left join "gin-bales" gb on gp.id = gb.process_id
+              left join "heap_selections" hs on hs.process_id = gp.id
+              left join cotton_selections cs on hs.heap_id = cs.heap_id
+      where gp.id in (:ids)
+      group by gp.id;
+      `, {
+        replacements: {
+          ids: result.process_ids
+        },
+        type: sequelize.QueryTypes.SELECT
+      });
+
+      const transaction_ids: any[] = [];
+      ginProcess?.forEach((process: any) => {
+        transaction_ids.push(...process.transaction_ids.split(','));
+      })
+
+      const transIds = transaction_ids.flatMap((id: any) => id.split(',').map((str: string) => str.trim()))
+      .filter(id => id !== '')
+      .map(Number)
+      .filter(id => !isNaN(id));
+
+      if (transIds.length) {
+      const transactions = await sequelize.query(`
+      select  tr.qty_purchased as frmr_qty,
+              tr.id            as frmr_transaction_id,
+              fg.name          as frmr_farm_group
+      from transactions tr
+              left join farmers fr on tr.farmer_id = fr.id
+              left join farm_groups fg on fg.id = fr."farmGroup_id"
+      where tr.id in (:ids)
+      group by tr.id,fg.name;
+      `, {
+        replacements: {
+          ids: transIds
+        },
+        type: sequelize.QueryTypes.SELECT
+      });
+    
+
+      const farmGroupNames: any = [];
+      for (const transaction of transactions) {
+        if (transaction.frmr_farm_group && !farmGroupNames.includes(transaction.frmr_farm_group))
+          farmGroupNames.push(transaction.frmr_farm_group);
+      }
+      cocRes.frmrFarmGroup = farmGroupNames.length ? farmGroupNames.join(', ') : '';
+    }
+    }
+    cocRes.date = moment(new Date()).format('DD-MM-YYYY');
+
+    return res.sendSuccess(res, cocRes);
+  } catch (error: any) {
+    console.error("Error appending data:", error);
+    return res.sendError(res, error.message);
+  }
+
+}
+
+
+const updateCOCDoc = async (
+  req: Request, res: Response
+) => {
+
+  try {
+
+    const { id, cocDoc } = req.body;
+    if (!id) {
+      return res.sendError(res, "need sales id");
+    }
+    if (!cocDoc) {
+      return res.sendError(res, "need COC Document id");
+    }
+    const ginSale = await GinSales.update(
+      {
+        coc_doc: cocDoc
+      },
+      {
+        where: {
+          id
+        },
+      }
+    );
+
+
+    return res.sendSuccess(res, ginSale);
+  } catch (error: any) {
+    console.log(error);
+    return res.sendError(res, error.meessage);
+  }
+}
+const getBrands = async (req: Request, res: Response) => {
+  let ginnerId = req.query.ginnerId;
+  if (!ginnerId) {
+    return res.sendError(res, "Need Garment Id ");
+  }
+  let ginner = await Ginner.findOne({ where: { id: ginnerId } });
+  if (!ginner) {
+    return res.sendError(res, "No Ginner Found ");
+  }
+  let brand = await Brand.findAll({
+    where: { id: { [Op.in]: ginner.dataValues.brand } },
+  });
+  res.sendSuccess(res, brand);
+};
+
 //update Ginner Sale
 // const updateGinnerSales = async (req: Request, res: Response) => {
 //   try {
@@ -1869,6 +2059,7 @@ const updateGinnerSales = async (req: Request, res: Response) => {
       tc_file: req.body.tcFile,
       contract_file: req.body.contractFile,
       invoice_file: req.body.invoiceFile,
+      approval_doc: req.body.approval_doc,
       delivery_notes: req.body.deliveryNotes,
       transporter_name: req.body.transporterName,
       vehicle_no: req.body.vehicleNo,
@@ -1958,7 +2149,7 @@ const fetchGinSalesPagination = async (req: Request, res: Response) => {
   const searchTerm = req.query.search || "";
   const page = Number(req.query.page) || 1;
   const limit = Number(req.query.limit) || 10;
-  const { ginnerId, seasonId, programId }: any = req.query;
+  const { ginnerId, seasonId, programId, buyerType }: any = req.query;
   const offset = (page - 1) * limit;
   const whereCondition: any = {};
   try {
@@ -1989,6 +2180,11 @@ const fetchGinSalesPagination = async (req: Request, res: Response) => {
         .split(",")
         .map((id: any) => parseInt(id, 10));
       whereCondition.program_id = { [Op.in]: idArray };
+    }
+
+    if(buyerType){
+
+      whereCondition.buyer_type = buyerType;
     }
 
     let include = [
@@ -3115,6 +3311,14 @@ const fetchGinLintList = async (req: Request, res: Response) => {
                   'received_total_qty', gs.total_qty,
                   'received_no_of_bales', gs.no_of_bales,
                   'buyer_type', gs.buyer_type,
+                  'tc_file',gs.tc_file,
+                  'rate',gs.rate,
+                  'contract_file',gs.contract_file,
+                  'invoice_file',gs.invoice_file,
+                  'delivery_notes',gs.delivery_notes,
+                  'letter_of_credit',gs.letter_of_credit,
+                  'logistics_documents',gs.logistics_documents,
+                  'approval_doc',gs.approval_doc,
                   'ginner_id', g.id,
                   'ginner_name', g.name,
                   'buyer_ginner_id', buyer.id,
@@ -3355,6 +3559,9 @@ export {
   exportGinnerProcess,
   checkReport,
   _getGinnerProcessTracingChartData,
+  getCOCDocumentData,
+  updateCOCDoc,
+  getBrands,
   fetchGinLintAlert,
   fetchGinLintList,
   updateStatusLintSales

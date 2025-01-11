@@ -1462,145 +1462,132 @@ const fetchGinnerProcessGreyOutReport = async (req: Request, res: Response) => {
   const { ginnerId, seasonId, programId, brandId, countryId }: any =
     req.query;
   const offset = (page - 1) * limit;
-  const whereCondition: any = {};
+  const whereCondition: any = [];
   try {
     if (searchTerm) {
-      whereCondition[Op.or] = [
-        { "$season.name$": { [Op.iLike]: `%${searchTerm}%` } },
-        { "$ginner.name$": { [Op.iLike]: `%${searchTerm}%` } },
-        { lot_no: { [Op.iLike]: `%${searchTerm}%` } },
-        { reel_lot_no: { [Op.iLike]: `%${searchTerm}%` } },
-        { press_no: { [Op.iLike]: `%${searchTerm}%` } },
-      ];
-    }
-    if (ginnerId) {
-      const idArray: number[] = ginnerId
-        .split(",")
-        .map((id: any) => parseInt(id, 10));
-      whereCondition.ginner_id = { [Op.in]: idArray };
+      whereCondition.push(`
+        (
+          g.name ILIKE '%${searchTerm}%' OR
+          s.name ILIKE '%${searchTerm}%' OR
+          gp.lot_no ILIKE '%${searchTerm}%' OR
+          gp.reel_lot_no ILIKE '%${searchTerm}%' OR
+          gp.press_no ILIKE '%${searchTerm}%'
+        )
+      `);
     }
 
     if (brandId) {
-      const idArray: number[] = brandId
-        .split(",")
-        .map((id: any) => parseInt(id, 10));
-      whereCondition["$ginner.brand$"] = { [Op.overlap]: idArray };
-    }
-
-    if (countryId) {
-      const idArray: number[] = countryId
-        .split(",")
-        .map((id: any) => parseInt(id, 10));
-      whereCondition["$ginner.country_id$"] = { [Op.in]: idArray };
+      const idArray = brandId.split(",").map((id: any) => parseInt(id, 10));
+      whereCondition.push(`g.brand && ARRAY[${idArray.join(',')}]`);
     }
 
     if (seasonId) {
-      const idArray: number[] = seasonId
-        .split(",")
-        .map((id: any) => parseInt(id, 10));
-      whereCondition.season_id = { [Op.in]: idArray };
+      const idArray = seasonId.split(",").map((id: any) => parseInt(id, 10));
+      whereCondition.push(`gp.season_id IN (${idArray.join(',')})`);
     }
 
-    // whereCondition.total_qty = {
-    //   [Op.gt]: 0,
-    // };
-    whereCondition.greyout_status = true;
+    if (ginnerId) {
+      const idArray = ginnerId.split(",").map((id: any) => parseInt(id, 10));
+      whereCondition.push(`gp.ginner_id IN (${idArray.join(',')})`);
+    }
+
+    if (countryId) {
+      const idArray = countryId.split(",").map((id: any) => parseInt(id, 10));
+      whereCondition.push(`g.country_id IN (${idArray.join(',')})`);
+    }
 
     if (programId) {
-      const idArray: number[] = programId
-        .split(",")
-        .map((id: any) => parseInt(id, 10));
-      whereCondition.program_id = { [Op.in]: idArray };
+      const idArray = programId.split(",").map((id: any) => parseInt(id, 10));
+      whereCondition.push(`gp.program_id IN (${idArray.join(',')})`);
     }
 
-    let include = [
-      {
-        model: Ginner,
-        as: "ginner",
-        attributes: ["id", "name"],
-      },
-      {
-        model: Season,
-        as: "season",
-        attributes: ["id", "name"],
-      },
-      {
-        model: Program,
-        as: "program",
-        attributes: ["id", "program_name"],
-      }
-    ];
 
-    const { count, rows } = await GinProcess.findAndCountAll({
-      where: whereCondition,
-      include: include,
-      offset: offset,
-      limit: limit,
-      order: [["id", "asc"]],
-    });
-    let sendData: any = [];
-    for await (let row of rows) {
-      let cotton = await CottonSelection.findAll({
-        attributes: ["transaction_id"],
-        where: { process_id: row.dataValues.id },
-      });
-      let village = [];
-      if (cotton.length > 0) {
-        village = await Transaction.findAll({
-          attributes: ["village_id"],
-          where: {
-            id: cotton.map((obj: any) => obj.dataValues.transaction_id),
-          },
-          include: [
-            {
-              model: Village,
-              as: "village",
-              attributes: ["id", "village_name"],
-            },
-          ],
-          group: ["village_id", "village.id"],
-        });
-      }
-      let bale = await GinBale.findOne({
-        attributes: [
-          [
-            Sequelize.fn(
-              "SUM",
-              Sequelize.literal(`
-                CASE
-                  WHEN old_weight IS NOT NULL THEN CAST(old_weight AS DOUBLE PRECISION)
-                  ELSE CAST(weight AS DOUBLE PRECISION)
-                END
-              `)
-            ),
-            "lint_quantity",
-          ],
+    const whereClause = whereCondition.length > 0 ? `AND ${whereCondition.join(' AND ')}` : '';
 
-          [sequelize.fn("min", sequelize.col("bale_no")), "pressno_from"],
-          [sequelize.fn("max", Sequelize.literal("LPAD(bale_no, 10, ' ')")), "pressno_to"],
-        ],
-        where: { process_id: row.dataValues.id, sold_status: false, is_all_rejected: null },
-      });
-      sendData.push({
-        ...row.dataValues,
-        village: village,
-        gin_press_no:
-          (bale.dataValues.pressno_from || "") +
-          "-" +
-          (bale.dataValues.pressno_to || "").trim(),
-        lint_quantity: bale.dataValues.lint_quantity,
-        reel_press_no:
-          row.dataValues.no_of_bales === 0
-            ? ""
-            : `001-${row.dataValues.no_of_bales < 9
-              ? `00${row.dataValues.no_of_bales}`
-              : row.dataValues.no_of_bales < 99
-                ? `0${row.dataValues.no_of_bales}`
-                : row.dataValues.no_of_bales
-            }`,
-      });
-    }
-    return res.sendPaginationSuccess(res, sendData, count);
+    const countQuery = `
+      SELECT COUNT(*) AS total_count
+      FROM gin_processes gp
+      LEFT JOIN "gin-bales" gb ON gb.process_id = gp.id AND gb.sold_status = false
+      LEFT JOIN seasons s ON gp.season_id = s.id
+      LEFT JOIN ginners g ON gp.ginner_id = g.id
+      WHERE
+        (
+          gp.greyout_status = true
+          OR
+          (
+            gp.scd_verified_status = true AND gb.scd_verified_status IS NOT TRUE
+          )
+          OR
+          (
+            gp.scd_verified_status = false AND gb.scd_verified_status IS FALSE
+          )
+        )
+        ${whereClause}
+      GROUP BY gp.id, gp.ginner_id, gp.season_id, gp.lot_no, gp.reel_lot_no, gp.press_no, s.name, g.name, gp.no_of_bales,gp.greyout_status, gp.scd_verified_status,gp.verification_status`;
+
+    const dataQuery = `
+      SELECT 
+          gp.id, 
+          gp.ginner_id, 
+          gp.season_id, 
+          s.name AS season_name, 
+          g.name AS ginner_name, 
+          gp.lot_no, 
+          gp.reel_lot_no, 
+          gp.press_no, 
+          gp.no_of_bales,
+          gp.greyout_status, 
+          gp.scd_verified_status,
+          gp.verification_status,
+          COALESCE(
+            SUM(
+              CASE
+              WHEN gb.old_weight IS NOT NULL THEN CAST(gb.old_weight AS DOUBLE PRECISION)
+              ELSE CAST(gb.weight AS DOUBLE PRECISION)
+              END
+              ), 0
+              ) AS lint_quantity,
+          COALESCE(
+              SUM(
+                CAST(gb.old_weight AS DOUBLE PRECISION)
+              ), 0
+              ) AS old_weight_total,
+          MIN(gb.bale_no) AS pressno_from,
+          MAX(LPAD(gb.bale_no, 10, ' ')) AS pressno_to
+        FROM gin_processes gp
+        LEFT JOIN "gin-bales" gb ON gb.process_id = gp.id AND gb.sold_status = false
+        LEFT JOIN seasons s ON gp.season_id = s.id
+        LEFT JOIN ginners g ON gp.ginner_id = g.id
+        WHERE
+          (
+            gp.greyout_status = true
+            OR
+            (
+              gp.scd_verified_status = true AND gb.scd_verified_status IS NOT TRUE
+            )
+            OR
+            (
+              gp.scd_verified_status = false AND gb.scd_verified_status IS FALSE
+            )
+          )
+          ${whereClause}
+        GROUP BY gp.id, gp.ginner_id, gp.season_id, gp.lot_no, gp.reel_lot_no, gp.press_no, s.name, g.name, gp.no_of_bales,gp.greyout_status, gp.scd_verified_status,gp.verification_status
+        ORDER BY gp.id DESC
+        LIMIT ${limit} OFFSET ${offset}
+  ;`
+
+  const [countResult, rows] = await Promise.all([
+    sequelize.query(countQuery, {
+      type: sequelize.QueryTypes.SELECT,
+    }),
+    sequelize.query(dataQuery, {
+      type: sequelize.QueryTypes.SELECT,
+    })
+  ]);
+
+  const totalCount = countResult && countResult.length > 0 ? Number(countResult.length) : 0;
+
+    return res.sendPaginationSuccess(res, rows, totalCount);
   } catch (error: any) {
     console.log(error)
     return res.sendError(res, error.message);
@@ -1692,6 +1679,7 @@ const fetchSpinnerProcessGreyOutReport = async (req: Request, res: Response) => 
       include: include,
       offset: offset,
       limit: limit,
+      order: [['id', 'desc']]
     });
     return res.sendPaginationSuccess(res, rows, count);
   } catch (error: any) {
@@ -1710,15 +1698,17 @@ const fetchSpinnerGreyOutReport = async (req: Request, res: Response) => {
     req.query;
   const offset = (page - 1) * limit;
   const whereCondition: any = {};
+  const searchCondition: any = {};
   try {
     if (searchTerm) {
-      whereCondition[Op.or] = [
+      searchCondition[Op.or] = [
         { "$season.name$": { [Op.iLike]: `%${searchTerm}%` } },
         { "$buyerdata.name$": { [Op.iLike]: `%${searchTerm}%` } },
         { "$ginner.name$": { [Op.iLike]: `%${searchTerm}%` } },
         { lot_no: { [Op.iLike]: `%${searchTerm}%` } },
         { reel_lot_no: { [Op.iLike]: `%${searchTerm}%` } },
         { press_no: { [Op.iLike]: `%${searchTerm}%` } },
+        { invoice_no: { [Op.iLike]: `%${searchTerm}%` } },
       ];
     }
     if (spinnerId) {
@@ -1760,17 +1750,21 @@ const fetchSpinnerGreyOutReport = async (req: Request, res: Response) => {
       whereCondition.season_id = { [Op.in]: idArray };
     }
 
-    // whereCondition.total_qty = {
-    //   [Op.gt]: 0,
-    // };
-    whereCondition.greyout_status = true;
-
     if (programId) {
       const idArray: number[] = programId
         .split(",")
         .map((id: any) => parseInt(id, 10));
       whereCondition.program_id = { [Op.in]: idArray };
     }
+
+    whereCondition[Op.or] = [
+      { greyout_status: true, ...searchCondition },
+      {
+        greyout_status: false,
+        greyed_out_qty: { [Op.ne]: null },
+        ...searchCondition
+      },
+    ];
 
     let include = [
       {
@@ -1796,12 +1790,46 @@ const fetchSpinnerGreyOutReport = async (req: Request, res: Response) => {
     ];
     //fetch data with pagination
 
+     // Add the conditional attribute using Sequelize.literal
+     const attributes = [
+      "id",
+      "date",
+      'season_id',
+      'ginner_id',
+      'buyer',
+      "lot_no",
+      "invoice_no",
+      "reel_lot_no",
+      "press_no",
+      "accepted_bales_weight",
+      "no_of_bales",
+      "total_qty",
+      "qty_stock",
+      "greyed_out_qty",
+      "ps_verified_status",
+      "ps_verified_total_qty",
+      "qty_stock_before_verification",
+      "verification_status",
+      "greyout_status",
+      "status",
+      [
+        Sequelize.literal(`
+          CASE 
+            WHEN greyout_status = true THEN qty_stock
+            ELSE greyed_out_qty
+          END
+        `),
+        "lint_greyout_qty",
+      ],
+    ];
+
     const { count, rows } = await GinSales.findAndCountAll({
       where: whereCondition,
       include: include,
-      // attributes: ['id', 'lot_no', 'invoice_no', 'reel_lot_no', 'qty_stock'],
+      attributes: attributes,
       offset: offset,
       limit: limit,
+      order: [['id', 'desc']]
     });
     return res.sendPaginationSuccess(res, rows, count);
   } catch (error: any) {
@@ -2369,7 +2397,7 @@ const exportGinnerProcessGreyOutReport = async (req: Request, res: Response) => 
   const { exportType, ginnerId, seasonId, programId, brandId, countryId }: any =
     req.query;
   const offset = (page - 1) * limit;
-  const whereCondition: any = {};
+  const whereCondition: any = [];
   try {
 
     if (exportType === "all") {
@@ -2380,69 +2408,44 @@ const exportGinnerProcessGreyOutReport = async (req: Request, res: Response) => 
       });
     } else {
       if (searchTerm) {
-        whereCondition[Op.or] = [
-          { "$season.name$": { [Op.iLike]: `%${searchTerm}%` } },
-          { "$ginner.name$": { [Op.iLike]: `%${searchTerm}%` } },
-          { lot_no: { [Op.iLike]: `%${searchTerm}%` } },
-          { reel_lot_no: { [Op.iLike]: `%${searchTerm}%` } },
-          { press_no: { [Op.iLike]: `%${searchTerm}%` } },
-        ];
+        whereCondition.push(`
+          (
+            g.name ILIKE '%${searchTerm}%' OR
+            s.name ILIKE '%${searchTerm}%' OR
+            gp.lot_no ILIKE '%${searchTerm}%' OR
+            gp.reel_lot_no ILIKE '%${searchTerm}%' OR
+            gp.press_no ILIKE '%${searchTerm}%'
+          )
+        `);
       }
-
-      if (ginnerId) {
-        const idArray: number[] = ginnerId
-          .split(",")
-          .map((id: any) => parseInt(id, 10));
-        whereCondition["$ginner_id$"] = { [Op.in]: idArray };
-      }
-
+  
       if (brandId) {
-        const idArray: number[] = brandId
-          .split(",")
-          .map((id: any) => parseInt(id, 10));
-        whereCondition["$ginner.brand$"] = { [Op.overlap]: idArray };
+        const idArray = brandId.split(",").map((id: any) => parseInt(id, 10));
+        whereCondition.push(`g.brand && ARRAY[${idArray.join(',')}]`);
       }
-
-      if (countryId) {
-        const idArray: number[] = countryId
-          .split(",")
-          .map((id: any) => parseInt(id, 10));
-        whereCondition["$ginner.country_id$"] = { [Op.in]: idArray };
-      }
-
+  
       if (seasonId) {
-        const idArray: number[] = seasonId
-          .split(",")
-          .map((id: any) => parseInt(id, 10));
-        whereCondition["$season_id$"] = { [Op.in]: idArray };
+        const idArray = seasonId.split(",").map((id: any) => parseInt(id, 10));
+        whereCondition.push(`gp.season_id IN (${idArray.join(',')})`);
       }
-
-      whereCondition.greyout_status = true;
-
+  
+      if (ginnerId) {
+        const idArray = ginnerId.split(",").map((id: any) => parseInt(id, 10));
+        whereCondition.push(`gp.ginner_id IN (${idArray.join(',')})`);
+      }
+  
+      if (countryId) {
+        const idArray = countryId.split(",").map((id: any) => parseInt(id, 10));
+        whereCondition.push(`g.country_id IN (${idArray.join(',')})`);
+      }
+  
       if (programId) {
-        const idArray: number[] = programId
-          .split(",")
-          .map((id: any) => parseInt(id, 10));
-        whereCondition.program_id = { [Op.in]: idArray };
+        const idArray = programId.split(",").map((id: any) => parseInt(id, 10));
+        whereCondition.push(`gp.program_id IN (${idArray.join(',')})`);
       }
-
-      let include = [
-        {
-          model: Ginner,
-          as: "ginner",
-          attributes: [],
-        },
-        {
-          model: Season,
-          as: "season",
-          attributes: [],
-        },
-        {
-          model: Program,
-          as: "program",
-          attributes: [],
-        }
-      ];
+  
+  
+      const whereClause = whereCondition.length > 0 ? `AND ${whereCondition.join(' AND ')}` : '';
 
       // Create the excel workbook file
       const workbook = new ExcelJS.Workbook();
@@ -2464,60 +2467,73 @@ const exportGinnerProcessGreyOutReport = async (req: Request, res: Response) => 
       ]);
       headerRow.font = { bold: true };
 
-      const gin = await GinProcess.findAll({
-        where: whereCondition,
-        include: include,
-        attributes: [
-          "id",
-          [Sequelize.col('"season"."name"'), 'season_name'],
-          [Sequelize.literal('"ginner"."name"'), "ginner_name"],
-          [Sequelize.literal('press_no'), 'press_no'],
-          [Sequelize.literal('lot_no'), 'lot_no'],
-          [Sequelize.literal('reel_lot_no'), 'reel_lot_no'],
-          [Sequelize.literal('total_qty'), 'total_qty'],
-        ],
-        order: [["id", "asc"]],
-        offset: offset,
-        limit: limit,
+      const dataQuery = `
+      SELECT 
+          gp.id, 
+          gp.ginner_id, 
+          gp.season_id, 
+          s.name AS season_name, 
+          g.name AS ginner_name, 
+          gp.lot_no, 
+          gp.reel_lot_no, 
+          gp.press_no, 
+          gp.no_of_bales,
+          gp.greyout_status, 
+          gp.scd_verified_status,
+          gp.verification_status,
+          COALESCE(
+            SUM(
+              CASE
+                WHEN gb.old_weight IS NOT NULL THEN CAST(gb.old_weight AS DOUBLE PRECISION)
+                ELSE CAST(gb.weight AS DOUBLE PRECISION)
+              END
+              ), 0
+            ) AS lint_quantity,
+          COALESCE(
+              SUM(
+                CAST(gb.old_weight AS DOUBLE PRECISION)
+              ), 0
+            ) AS old_weight_total,
+          MIN(gb.bale_no) AS pressno_from,
+          MAX(LPAD(gb.bale_no, 10, ' ')) AS pressno_to
+        FROM gin_processes gp
+        LEFT JOIN "gin-bales" gb ON gb.process_id = gp.id AND gb.sold_status = false
+        LEFT JOIN seasons s ON gp.season_id = s.id
+        LEFT JOIN ginners g ON gp.ginner_id = g.id
+        WHERE
+          (
+            gp.greyout_status = true
+            OR
+            (
+              gp.scd_verified_status = true AND gb.scd_verified_status IS NOT TRUE
+            )
+            OR
+            (
+              gp.scd_verified_status = false AND gb.scd_verified_status IS FALSE
+            )
+          )
+          ${whereClause}
+        GROUP BY gp.id, gp.ginner_id, gp.season_id, gp.lot_no, gp.reel_lot_no, gp.press_no, s.name, g.name, gp.no_of_bales,gp.greyout_status, gp.scd_verified_status,gp.verification_status
+        ORDER BY gp.id DESC
+        LIMIT ${limit} OFFSET ${offset}
+    ;`
 
-      });
-
-      const processIds = gin.map((process: any) => process.id);
-
-      const ginBales = await GinBale.findAll({
-        attributes: [
-          [
-            Sequelize.fn(
-              "SUM",
-              Sequelize.literal(`
-                CASE
-                  WHEN old_weight IS NOT NULL THEN CAST(old_weight AS DOUBLE PRECISION)
-                  ELSE CAST(weight AS DOUBLE PRECISION)
-                END
-              `)
-            ),
-            "lint_quantity",
-          ],
-          "process_id",
-        ],
-        raw: true,
-        where: { process_id: { [Op.in]: processIds }, sold_status: false, is_all_rejected: null },
-        group: ["process_id"],
-      });
+    const [rows] = await Promise.all([
+      sequelize.query(dataQuery, {
+        type: sequelize.QueryTypes.SELECT,
+      })
+    ]);
 
       // Append data to worksheet
-      for await (const [index, item] of gin.entries()) {
-        let bale = ginBales.find((obj: any) => obj.process_id == item.id);
-        let lint_quantity = bale?.lint_quantity ?? 0;
-
+      for await (const [index, item] of rows.entries()) {
         const rowValues = Object.values({
           index: index + 1,
-          season: item.dataValues.season_name ? item.dataValues.season_name : "",
-          ginner: item.dataValues.ginner_name ? item.dataValues.ginner_name : "",
+          season: item.season_name ? item.season_name : "",
+          ginner: item.ginner_name ? item.ginner_name : "",
           reel_lot_no: item.reel_lot_no ? item.reel_lot_no : "",
-          press: item.dataValues.press_no ? item.dataValues.press_no : "",
-          lot_no: item.dataValues.lot_no ? item.dataValues.lot_no : "",
-          lint_quantity: lint_quantity ? lint_quantity : 0,
+          press: item.press_no ? item.press_no : "",
+          lot_no: item.lot_no ? item.lot_no : "",
+          lint_quantity: item.lint_quantity ? item.lint_quantity : 0,
         });
         worksheet.addRow(rowValues);
       }
@@ -2667,6 +2683,7 @@ const exportSpinnerProcessGreyOutReport = async (req: Request, res: Response) =>
         // group: ['season.id', 'spinner.id'],
         offset: offset,
         limit: limit,
+        order: [['id', 'desc']]
       });
 
       // // Append data to worksheet
@@ -2721,6 +2738,8 @@ const exportSpinnerGreyOutReport = async (req: Request, res: Response) => {
     req.query;
   const offset = (page - 1) * limit;
   const whereCondition: any = {};
+  const searchCondition: any = {};
+
   try {
 
     if (exportType === "all") {
@@ -2732,13 +2751,14 @@ const exportSpinnerGreyOutReport = async (req: Request, res: Response) => {
     } else {
 
       if (searchTerm) {
-        whereCondition[Op.or] = [
+        searchCondition[Op.or] = [
           { "$season.name$": { [Op.iLike]: `%${searchTerm}%` } },
           { "$buyerdata.name$": { [Op.iLike]: `%${searchTerm}%` } },
           { "$ginner.name$": { [Op.iLike]: `%${searchTerm}%` } },
           { lot_no: { [Op.iLike]: `%${searchTerm}%` } },
           { reel_lot_no: { [Op.iLike]: `%${searchTerm}%` } },
           { press_no: { [Op.iLike]: `%${searchTerm}%` } },
+          { invoice_no: { [Op.iLike]: `%${searchTerm}%` } },
         ];
       }
       if (spinnerId) {
@@ -2776,14 +2796,21 @@ const exportSpinnerGreyOutReport = async (req: Request, res: Response) => {
         whereCondition["$season_id$"] = { [Op.in]: idArray };
       }
 
-      whereCondition.greyout_status = true;
-
       if (programId) {
         const idArray: number[] = programId
           .split(",")
           .map((id: any) => parseInt(id, 10));
         whereCondition["$program_id$"] = { [Op.in]: idArray };
       }
+
+      whereCondition[Op.or] = [
+        { greyout_status: true, ...searchCondition },
+        {
+          greyout_status: false,
+          greyed_out_qty: { [Op.ne]: null },
+          ...searchCondition
+        },
+      ];
 
       let include = [
         {
@@ -2811,7 +2838,7 @@ const exportSpinnerGreyOutReport = async (req: Request, res: Response) => {
       // Create the excel workbook file
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet("Sheet1");
-      worksheet.mergeCells("A1:G1");
+      worksheet.mergeCells("A1:H1");
       const mergedCell = worksheet.getCell("A1");
       mergedCell.value = "CottonConnect | Spinner Lint Process Greyout Report";
       mergedCell.font = { bold: true };
@@ -2830,7 +2857,6 @@ const exportSpinnerGreyOutReport = async (req: Request, res: Response) => {
       headerRow.font = { bold: true };
 
       // //fetch data with pagination
-
       const { count, rows }: any = await GinSales.findAndCountAll({
         where: whereCondition,
         include: include,
@@ -2842,10 +2868,23 @@ const exportSpinnerGreyOutReport = async (req: Request, res: Response) => {
           [Sequelize.col('lot_no'), 'lot_no'],
           [Sequelize.col('reel_lot_no'), 'reel_lot_no'],
           [Sequelize.col('qty_stock'), 'qty_stock'],
+          [Sequelize.col('greyed_out_qty'), 'greyed_out_qty'],
+          [Sequelize.col('greyout_status'), 'greyout_status'],
+          'status',
+          [
+            Sequelize.literal(`
+              CASE 
+                WHEN greyout_status = true THEN qty_stock
+                ELSE greyed_out_qty
+              END
+            `),
+            "lint_greyout_qty",
+          ],
         ],
         // group: ['season.id', 'ginner.id', 'buyerdata.id'],
         offset: offset,
         limit: limit,
+        order: [['id', 'desc']]
       });
 
       // // Append data to worksheet
@@ -2858,7 +2897,7 @@ const exportSpinnerGreyOutReport = async (req: Request, res: Response) => {
           reel_lot_no: item.dataValues.reel_lot_no ? item.dataValues.reel_lot_no : "",
           invoice: item.dataValues.invoice_no ? item.dataValues.invoice_no : "",
           lot_no: item.dataValues.lot_no ? item.dataValues.lot_no : "",
-          lint_quantity: item.dataValues.qty_stock ? item.dataValues.qty_stock : 0,
+          lint_quantity: item.dataValues.lint_greyout_qty ? item.dataValues.lint_greyout_qty : 0,
         });
         worksheet.addRow(rowValues);
       }
