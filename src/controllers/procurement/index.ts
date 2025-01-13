@@ -1409,6 +1409,7 @@ const uploadTransactionBulk = async (req: Request, res: Response) => {
               payment_method: data.paymentMethod ? data.paymentMethod : "",
               proof: data.proof ? data.proof : "",
               status: 'Pending',
+              old_data:data.oldData ? data.oldData : "",
             };
             // let available_cotton = Number(farm.available_cotton) - Number(farm.cotton_transacted);
             let available_cotton = 0;
