@@ -104,6 +104,7 @@ import moment from "moment";
 import 'moment-timezone';
 import GinProcess from "./models/gin-process.model";
 import YarnBlendRouter from './router/master/yarnblend';
+import { setupAssociations } from "./models/associations";
 
 
 const app = express();
@@ -132,6 +133,7 @@ const connectToDb = async () => {
       console.log("Current Server Time", moment());
       console.log("Time Zone", serverTimezone);
       console.log("Offset IST", differenceInMinutes);
+      setupAssociations();
     } catch (error) {
     console.error("Unable to connect to the database:", error);
   }
