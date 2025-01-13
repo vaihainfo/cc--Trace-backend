@@ -280,6 +280,8 @@ const createVerifiedLintStock = async (req: Request, res: Response) => {
       processor_type: req.body.processorType,
       total_qty: req.body.totalQty,
       no_of_bales: req.body.noOfBales,
+      date_initiated_te: req.body.date_initiated_te,
+      date_initiated_be: req.body.date_initiated_be,
       lot_no: req.body.lotNo,
       reel_lot_no: req.body.reelLotNo,
       actual_total_qty: req.body.actualTotalQty,
