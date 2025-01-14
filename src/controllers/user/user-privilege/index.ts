@@ -15,6 +15,8 @@ const getBrandPrivileges = async (req: Request, res: Response) => {
         }
 
         let role;
+        let menuList;
+        let privileges;
         role = await UserRole.findOne({
             where:{brand_id: brandId},
             include: [
@@ -31,9 +33,8 @@ const getBrandPrivileges = async (req: Request, res: Response) => {
             ],
         });
 
-        console.log(role)
-
-        let menuList = await MenuList.findAll(
+        if(role){
+        menuList = await MenuList.findAll(
             {
                 where: {
                     categories_allowed: {
@@ -47,7 +48,7 @@ const getBrandPrivileges = async (req: Request, res: Response) => {
             }
         );
 
-        let privileges = await UserPrivilege.findAll({
+        privileges = await UserPrivilege.findAll({
             where: {
                 userRole_id: role.id,
             },
@@ -59,6 +60,8 @@ const getBrandPrivileges = async (req: Request, res: Response) => {
                 },
             ],
         });
+
+        }
 
         return res.sendSuccess(res, { ...role.dataValues, menuList, privileges});
     } catch (error: any) {
