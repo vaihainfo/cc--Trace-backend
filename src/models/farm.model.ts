@@ -83,6 +83,11 @@ const Farm = db.define('farms', {
         type: DataTypes.STRING,
         allowNull: true,
         defaultValue: null
+    },
+    old_data: {
+        type: DataTypes.STRING,
+        allowNull: true,
+        defaultValue: null
     }
 });
 
