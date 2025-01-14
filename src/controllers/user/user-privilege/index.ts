@@ -14,9 +14,9 @@ const getBrandPrivileges = async (req: Request, res: Response) => {
             return res.sendError(res, 'Brand Id is required')
         }
 
-        let role;
-        let menuList;
-        let privileges;
+        let role = null;
+        let menuList = null;
+        let privileges = null;
         role = await UserRole.findOne({
             where:{brand_id: brandId},
             include: [
@@ -61,9 +61,13 @@ const getBrandPrivileges = async (req: Request, res: Response) => {
             ],
         });
 
+        return res.sendSuccess(res, { ...role.dataValues, menuList, privileges});
+        }else{
+            return res.sendSuccess(res, {
+                role, privileges, menuList
+            });
         }
 
-        return res.sendSuccess(res, { ...role.dataValues, menuList, privileges});
     } catch (error: any) {
         console.log(error)
         return res.sendError(res, error.message);
