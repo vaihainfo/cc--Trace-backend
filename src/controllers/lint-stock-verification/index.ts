@@ -1589,7 +1589,7 @@ const fetchTeGinner = async (req: Request, res: Response) => {
     try {
         const result = await TraceabilityExecutive.findOne({
             where: {
-                id: req.query.teId 
+                id: req.query.teId,
             }
         });
         
@@ -1599,6 +1599,7 @@ const fetchTeGinner = async (req: Request, res: Response) => {
            ginners = await Ginner.findAll({
             where: {
                 id: mappedGinners,
+                state_id: req.query.stateId
             },
         });
       }
@@ -1624,6 +1625,7 @@ const fetchTeSpinner = async (req: Request, res: Response) => {
          spinners = await Spinner.findAll({
           where: {
               id: mappedspinners,
+              state_id: req.query.stateId
           },
       });
     }
@@ -1649,6 +1651,7 @@ const fetchBeSpinner = async (req: Request, res: Response) => {
          spinners = await Spinner.findAll({
           where: {
               id: mappedspinners,
+              state_id: req.query.stateId
           },
       });
     }
