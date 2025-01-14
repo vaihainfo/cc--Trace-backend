@@ -1046,7 +1046,6 @@ const chooseBale = async (req: Request, res: Response) => {
               gp.ginner_id = ${ginnerId}
               AND gp.program_id IN (${programId})
               AND gb.sold_status = false
-          
           UNION ALL
 
           -- Second Query: Gin-to-Gin sales
