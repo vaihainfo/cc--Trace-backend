@@ -3984,6 +3984,8 @@ const getCOCDocumentData = async (
               grm.name                                       as garment_name,
               grm.address                                    as address,
               ''                                             as reel_authorization_code,
+              br.garment_auth_code_count                     as auth_code_count,
+              br.id                                          as brand_id,
               case
                   when br.brand_name is not null
                       then br.brand_name
@@ -4013,8 +4015,17 @@ const getCOCDocumentData = async (
       cocRes.address = result.address;
       cocRes.brandName = result.brand_name;
       cocRes.brandLogo = result.brand_logo;
-      cocRes.reelAuthorizationCode = result.reel_authorization_code;
       cocRes.garmentItemDescription = result.garment_item_description;
+
+      if(result.auth_code_count !== null && result.auth_code_count !== undefined){
+        let count = result.auth_code_count || 0;
+
+        cocRes.reelAuthorizationCode = 'REEL'+ result.brand_name + "00" + (count + 1);
+        await Brand.update(
+          { garment_auth_code_count: count + 1 },
+          { where: { id: result.brand_id } }
+        );
+      }
     }
 
     let knitOrWeaData: any;

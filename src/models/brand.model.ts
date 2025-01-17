@@ -60,6 +60,14 @@ const Brand = db.define('brands', {
   count: {
     type: DataTypes.INTEGER,
     defaultValue: 0
+  },
+  gin_auth_code_count: {
+    type: DataTypes.INTEGER,
+    defaultValue: 0
+  },
+  garment_auth_code_count: {
+    type: DataTypes.INTEGER,
+    defaultValue: 0
   }
 });
 

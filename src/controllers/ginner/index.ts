@@ -1571,8 +1571,10 @@ const getCOCDocumentData = async (
               gnr.id                                                  as ginner_id,
               gnr.address                                             as address,
               gs.total_qty                                            as gnr_total_qty,
-              array_to_string(array_agg(distinct gb.process_id), ',') as process_ids,
+              array_agg(distinct gb.process_id) as process_ids,
               ''                                                      as reel_authorization_code,
+              br.gin_auth_code_count                                  as auth_code_count,
+              br.id                                                   as brand_id,
               case
                   when br.brand_name is not null
                       then br.brand_name
@@ -1597,80 +1599,81 @@ const getCOCDocumentData = async (
     });
     if (result) {
       cocRes.gnrName = result.ginner_name;
+      cocRes.ginnerName = result.ginner_name;
       cocRes.address = result.address;
       cocRes.brandName = result.brand_name;
       cocRes.brandLogo = result.brand_logo;
-      
       cocRes.gnrTotalQty = result.gnr_total_qty;
       cocRes.reelLotno = result.reel_lotno;
-      
+
+      if(result.auth_code_count !== null && result.auth_code_count !== undefined){
+        let count = result.auth_code_count || 0;
+
+        cocRes.reelAuthorizationCode = 'REELRegenerative'+ result.brand_name + "00" + (count + 1);
+        await Brand.update(
+          { gin_auth_code_count: count + 1 },
+          { where: { id: result.brand_id } }
+        );
+      }  
     }
-    
-    if (result.ginner_id) {
-      const ginsaleTotal = await sequelize.query(`
-      select  (count(coc_doc)+1) as sequence_no
-      from gin_sales 
-      where ginner_id in (:ids);      
-      `, {
-        replacements: {ids: result.ginner_id},
-        type: sequelize.QueryTypes.SELECT
-      });
-      console.log('ginsaleTotal',ginsaleTotal);
-      cocRes.reelAuthorizationCode = 'REELRegenerative'+ result.brand_name + ginsaleTotal[0].sequence_no;
-    }
-    
+  
 
     if (result.process_ids) {
-      const ginProcess = await sequelize.query(`
-      select  gp.id,
-              array_to_string(array_agg(distinct cs.transaction_id), ',') as transaction_ids
-      from gin_processes gp
-              left join "gin-bales" gb on gp.id = gb.process_id
-              left join "heap_selections" hs on hs.process_id = gp.id
-              left join cotton_selections cs on hs.heap_id = cs.heap_id
-      where gp.id in (:ids)
-      group by gp.id;
-      `, {
-        replacements: {
-          ids: result.process_ids
-        },
-        type: sequelize.QueryTypes.SELECT
-      });
+      const [ginProcess] = await sequelize.query(`
+        SELECT
+                ARRAY_AGG(DISTINCT subquery.transaction_id) AS transaction_ids
+            FROM (
+                SELECT
+                    UNNEST(cs.transactions) AS transaction_id
+                FROM (
+                    SELECT
+                        ARRAY_AGG(DISTINCT cs.transaction_id) AS transactions
+                    FROM
+                        cotton_selections cs
+					          WHERE cs.process_id in (:ids)
+                ) cs
+                UNION ALL
+                SELECT
+                    UNNEST(hs.transactions) AS transaction_id
+                FROM (
+                    SELECT
+                      ARRAY_AGG(DISTINCT unnest_transaction_id) AS transactions
+                    FROM (
+                      SELECT 
+                        UNNEST(hs.transaction_id) AS unnest_transaction_id  -- Unnest the array of village_id
+                      FROM
+                        heap_selections hs
+					            WHERE hs.process_id in (:ids)
+                    ) unnest_data
+                ) hs
+          ) subquery
+        `, {
+          replacements: {
+            ids: result.process_ids
+          },
+          type: sequelize.QueryTypes.SELECT
+        });
 
-      const transaction_ids: any[] = [];
-      ginProcess?.forEach((process: any) => {
-        transaction_ids.push(...process.transaction_ids.split(','));
-      })
 
-      const transIds = transaction_ids.flatMap((id: any) => id.split(',').map((str: string) => str.trim()))
-      .filter(id => id !== '')
-      .map(Number)
-      .filter(id => !isNaN(id));
+      const transIds = ginProcess ? ginProcess.transaction_ids : []
 
       if (transIds.length) {
-      const transactions = await sequelize.query(`
-      select  tr.qty_purchased as frmr_qty,
-              tr.id            as frmr_transaction_id,
-              fg.name          as frmr_farm_group
-      from transactions tr
-              left join farmers fr on tr.farmer_id = fr.id
-              left join farm_groups fg on fg.id = fr."farmGroup_id"
-      where tr.id in (:ids)
-      group by tr.id,fg.name;
-      `, {
-        replacements: {
-          ids: transIds
-        },
-        type: sequelize.QueryTypes.SELECT
-      });
-    
+      const [transactions] = await sequelize.query(`
+        select  
+                ARRAY_AGG(DISTINCT fg.name) AS frmr_farm_group
+        from transactions tr
+                left join farmers fr on tr.farmer_id = fr.id
+                left join farm_groups fg on fg.id = fr."farmGroup_id"
+        where tr.id in (:ids);
+        `, {
+          replacements: {
+            ids: transIds
+          },
+          type: sequelize.QueryTypes.SELECT
+        });
 
-      const farmGroupNames: any = [];
-      for (const transaction of transactions) {
-        if (transaction.frmr_farm_group && !farmGroupNames.includes(transaction.frmr_farm_group))
-          farmGroupNames.push(transaction.frmr_farm_group);
-      }
-      cocRes.frmrFarmGroup = farmGroupNames.length ? farmGroupNames.join(', ') : '';
+        console.log(transactions)
+      cocRes.frmrFarmGroup = transactions && transactions.frmr_farm_group.length > 0 ? transactions.frmr_farm_group.join(', ') : '';
     }
     }
     cocRes.date = moment(new Date()).format('DD-MM-YYYY');
