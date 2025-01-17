@@ -72,5 +72,4 @@ router.get('/export/transaction', exportGarmentTransactionList);
 router.get('/coc/document', getCOCDocumentData);
 router.put('/coc/doc/update', updateCOCDoc);
 
-
 export default router;
