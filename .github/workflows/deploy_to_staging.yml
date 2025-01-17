@@ -16,17 +16,20 @@ jobs:
 
       - name: Set up SSH for Deployment
         run: |
-          # Ensure the .ssh directory exists for the current user
+          # Create the .ssh directory with the correct permissions
           mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
 
-          # Remove any old keys for the hostname (if exists)
-          ssh-keygen -R ${{ secrets.SSH_HOST }}
+          # Create known_hosts if it doesn't exist, and set permissions
+          touch ~/.ssh/known_hosts
+          chmod 644 ~/.ssh/known_hosts
 
           # Add EC2 server to known hosts (to prevent prompt)
           ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
 
-          # Debug: Verify known_hosts file has the right key
-          cat ~/.ssh/known_hosts || echo "known_hosts file not found or empty"
+          # Debug: Output the contents of known_hosts to ensure it's correct
+          echo "Contents of known_hosts:"
+          cat ~/.ssh/known_hosts
 
           # Add the private key to SSH agent
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
@@ -68,7 +71,7 @@ jobs:
           ' || {
 
             # Fallback to password-based SSH authentication if key-based fails
-            echo "Key-based authentication failed. Trying password authentication..." &&
+            echo "Key-based authentication failed. Trying password authentication..."
 
             sshpass -p "${{ secrets.SSH_PASSWORD }}" ssh -o StrictHostKeyChecking=no ${USER_NAME}@${HOSTNAME} '
               # Navigate to the correct backend directory
