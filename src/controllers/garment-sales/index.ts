@@ -4398,7 +4398,6 @@ const updateCOCDoc = async (
       }
     );
 
-
     return res.sendSuccess(res, garmentSale);
   } catch (error: any) {
     console.log(error);
