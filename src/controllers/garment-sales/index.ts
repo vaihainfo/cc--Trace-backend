@@ -4027,7 +4027,6 @@ const getCOCDocumentData = async (
         );
       }
     }
-
     let knitOrWeaData: any;
     if (result.process_ids) {
       [knitOrWeaData] = await sequelize.query(`
