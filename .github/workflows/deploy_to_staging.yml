@@ -3,7 +3,7 @@ name: Deploy to AlmaLinux EC2
 on:
   push:
     branches:
-      - development  
+      - staging1  
 
 jobs:
   Deploy:
@@ -37,10 +37,10 @@ jobs:
               # Configure Git to use SSH instead of HTTPS
               git config --global url."git@github.com:".insteadOf "https://github.com/" &&
 
-              # Fetch the latest code from the development branch
+              # Fetch the latest code from the staging1 branch
               git fetch --all &&
-              git reset --hard origin/development &&
-              git pull origin development &&
+              git reset --hard origin/staging1 &&  # Change from 'development' to 'staging1'
+              git pull origin staging1 &&          # Change from 'development' to 'staging1'
 
               # Install dependencies
               npm install --legacy-peer-deps && 
