@@ -91,9 +91,15 @@ const getGinnerAllocationQuery = (
       [Op.contains]: Sequelize.literal(`ARRAY [${reqData.brand}]`)
     };
 
-  if (reqData?.season)
-    where.season_id = reqData.season;
-
+  if (reqData?.season) {
+    if (Array.isArray(reqData.season)) {
+      where.season_id = {
+        [Op.in]: reqData.season
+      };
+    } else {
+      where.season_id = reqData.season;
+    }
+  }
   if (reqData?.country)
     where['$ginner_expected_cotton.country_id$'] = reqData.country;
 
@@ -137,8 +143,15 @@ const getTransactionDataQuery = (
   //   where.brand_id = reqData.brand;
 
 
-  if (reqData?.season)
-    where.season_id = reqData.season;
+  if (reqData?.season) {
+    if (Array.isArray(reqData.season)) {
+      where.season_id = {
+        [Op.in]: reqData.season
+      };
+    } else {
+      where.season_id = reqData.season;
+    }
+  }
 
   if (reqData?.country)
     where['$ginner.country_id$'] = reqData.country;
@@ -188,12 +201,19 @@ const getGinBaleQuery = (
       [Op.contains]: Sequelize.literal(`ARRAY [${reqData.brand}]`)
     };
 
-  if (reqData?.season)
-    where['$ginprocess.season_id$'] = reqData.season;
-  else
+  if (reqData?.season) {
+    if (Array.isArray(reqData.season)) {
+      where['$ginprocess.season_id$'] = {
+        [Op.in]: reqData.season
+      };
+    } else {
+      where['$ginprocess.season_id$'] = reqData.season;
+    }
+  } else {
     where['$ginprocess.season_id$'] = {
       [Op.not]: null,
     };
+  }
 
   if (reqData?.country)
     where['$ginprocess.ginner.country_id$'] = reqData.country;
@@ -235,12 +255,19 @@ const getBaleProducedQuery = (
       [Op.contains]: Sequelize.literal(`ARRAY [${reqData.brand}]`)
     };
 
-  if (reqData?.season)
-    where['$season_id$'] = reqData.season;
-  else
+  if (reqData?.season) {
+    if (Array.isArray(reqData.season)) {
+      where['$season_id$'] = {
+        [Op.in]: reqData.season
+      };
+    } else {
+      where['$season_id$'] = reqData.season;
+    }
+  } else {
     where['$season_id$'] = {
       [Op.not]: null,
     };
+  }
 
   if (reqData?.country)
     where['$ginner.country_id$'] = reqData.country;
@@ -369,11 +396,15 @@ const getBaleSelLintSoldQuery = (
   if (reqData?.brand)
       where.push(`g.brand && ARRAY[${reqData.brand}]`)
 
-  if (reqData?.season){
-    where.push(`gp.season_id IN (${reqData.season})`)
-  }
-  else
+  if (reqData?.season) {
+    if (Array.isArray(reqData.season)) {
+      where.push(`gp.season_id IN (${reqData.season.join(',')})`)
+    } else {
+      where.push(`gp.season_id IN (${reqData.season})`)
+    }
+  } else {
     where.push(`gp.season_id IS NOT NULL`)
+  }
   
   if (reqData?.country)
     where.push(`g.country_id IN (${reqData.country})`)
@@ -444,7 +475,8 @@ const getQueryParams = async (
       village,
       ginner,
       fromDate,
-      toDate
+      toDate,
+      seasonLimit
     } = req.query;
     const validator = yup.string()
       .notRequired()
@@ -473,7 +505,8 @@ const getQueryParams = async (
       village,
       ginner,
       fromDate,
-      toDate
+      toDate,
+      seasonLimit
     };
 
   } catch (error: any) {
@@ -759,18 +792,31 @@ const getLintProcuredSold = async (
 ) => {
   try {
     const reqData = await getQueryParams(req, res);
-    const procuredWhere = await getGinBaleQuery(reqData);
-    const baleSel = getBaleSelLintSoldQuery(reqData);
+    const seasonLimit = reqData.seasonLimit ? parseInt(reqData.seasonLimit.toString()) : 3;
+    const seasons = reqData.seasonLimit ? await getLastSeasons(seasonLimit) : null;
+    const procuredWhere = await getGinBaleQuery({...reqData, season: seasons!.ids});
+    const baleSel = getBaleSelLintSoldQuery({...reqData, season: seasons!.ids});
     const procuredData = await getBaleProcuredData(procuredWhere);
     const soldData = await getBaleSoldData(baleSel);
-    const data = await getLintProcuredSoldRes(
+    let data = await getLintProcuredSoldRes(
       procuredData,
       soldData,
       reqData.season
     );
+    if(reqData.seasonLimit) {
+      seasons!.names.forEach((season: any) => { 
+        if(data.season.indexOf(season.name) == -1) {
+          data.season.push(season.name);
+          data.procured.push(0);
+          data.sold.push(0);
+          data.stock.push(0);
+        }
+      });
+    }
     return res.sendSuccess(res, data);
 
   } catch (error: any) {
+    console.log(error);
     const code = error.errCode
       ? error.errCode
       : "ERR_INTERNAL_SERVER_ERROR";
@@ -1185,19 +1231,34 @@ const getBaleComparison = async (
 ) => {
   try {
     const reqData = await getQueryParams(req, res);
+    const seasonLimit = reqData.seasonLimit ? parseInt(reqData.seasonLimit.toString()) : 3;
+    const seasons = reqData.seasonLimit ? await getLastSeasons(seasonLimit) : null;
+   
     const ginBale = getGinBaleQuery(reqData);
-    const ginBaleProduce = await getBaleProducedQuery(reqData);
-    const baleSel = getBaleSelLintSoldQuery(reqData);
+    const ginBaleProduce = await getBaleProducedQuery({...reqData, season: seasons!.ids});
+    const baleSel = getBaleSelLintSoldQuery({...reqData, season: seasons!.ids});
     const procuredData = await getBaleNewProducedData(ginBaleProduce);
     const soldData = await getBaleSoldData(baleSel);
-    const data = await getBaleComparisonRes(
+    let data = await getBaleComparisonRes(
       procuredData,
       soldData,
       reqData.season
     );
+
+    if(reqData.seasonLimit) {
+      seasons!.names.forEach((season: any) => { 
+        if(data.season.indexOf(season.name) == -1) {
+          data.season.push(season.name);
+          data.procured.push(0);
+          data.sold.push(0);
+          data.stock.push(0);
+        }
+      });
+    }
     return res.sendSuccess(res, data);
 
   } catch (error: any) {
+    console.log(error)
     const code = error.errCode
       ? error.errCode
       : "ERR_INTERNAL_SERVER_ERROR";
@@ -2074,22 +2135,51 @@ const getLintSoldRes = async (
   };
 };
 
+const getLastSeasons = async (limit: number = 3) => {
+  const currentDate = new Date();
+  
+  const seasons = await Season.findAll({
+    where: {
+      status: true, // Only get active seasons
+      from: {
+        [Op.lte]: currentDate.toISOString() // Get seasons that have started
+      }
+    },
+    order: [['from', 'DESC']], // Order by from date descending
+    limit: parseInt(limit.toString())
+  });
+  
+  return {ids: seasons.map((season: any) => season.id), names: seasons.map((season: any) => ({name: season.name, id: season.id}))};
+};
+
+
 
 const getProcuredAllocated = async (
   req: Request, res: Response
 ) => {
   try {
     const reqData = await getQueryParams(req, res);
+    const seasonLimit = reqData.seasonLimit ? parseInt(reqData.seasonLimit.toString()) : 3;
+    const seasons = reqData.seasonLimit ? await getLastSeasons(seasonLimit) : null;
     const where = getTransactionDataQuery(reqData);
-    const allocationWhere = getGinnerAllocationQuery(reqData);
-    const transactionWhere = getTransactionDataQuery(reqData);
+    const allocationWhere = getGinnerAllocationQuery({...reqData, season: seasons!.ids});
+    const transactionWhere = getTransactionDataQuery({...reqData, season: seasons!.ids});
     const procuredData = await getProcuredProcessedData(transactionWhere);
     const allocatedData = await getAllocatedData(allocationWhere);
-    const data = await getProcuredAllocatedRes(
+    let data = await getProcuredAllocatedRes(
       procuredData,
       allocatedData,
       reqData.season
     );
+    if(reqData.seasonLimit) {
+      seasons!.names.forEach((season: any) => { 
+        if(data.season.indexOf(season.name) == -1) {
+          data.season.push(season.name);
+          data.allocated.push(0);
+          data.procured.push(0);
+        }
+      });
+    }
     return res.sendSuccess(res, data);
 
   } catch (error: any) {
