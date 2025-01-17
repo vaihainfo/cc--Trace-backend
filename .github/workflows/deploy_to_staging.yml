@@ -16,14 +16,20 @@ jobs:
 
       - name: Set up SSH for Deployment
         run: |
-          # Ensure the .ssh directory exists
+          # Ensure the .ssh directory exists for the current user
           mkdir -p ~/.ssh
+
+          # Set proper permissions for the .ssh directory
+          chmod 700 ~/.ssh
 
           # Remove any old keys for the hostname (if exists)
           ssh-keygen -R ${{ secrets.SSH_HOST }}
 
           # Add EC2 server to known hosts (to prevent prompt)
           ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
+
+          # Set proper permissions for the known_hosts file
+          chmod 644 ~/.ssh/known_hosts
           
           # Debug: Verify known_hosts file has the right key
           cat ~/.ssh/known_hosts
@@ -31,6 +37,9 @@ jobs:
           # Add the private key to SSH agent
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
+
+          # Ensure the private key has the correct permissions
+          ls -l ~/.ssh/id_rsa
 
       - name: Deploy to Backend Directory
         env:
