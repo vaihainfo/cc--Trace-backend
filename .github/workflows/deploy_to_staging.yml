@@ -16,63 +16,53 @@ jobs:
 
       - name: Set up SSH for Deployment
         run: |
-          # Create .ssh directory with appropriate permissions
+          # Ensure the .ssh directory exists and has appropriate permissions
           mkdir -p ~/.ssh
           chmod 700 ~/.ssh
 
-          # Clear existing known_hosts and rescan the server to prevent SSH issues
-          echo "" > ~/.ssh/known_hosts
-          ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
+          # Remove any old known_hosts and rescan the server to prevent SSH issues
+          ssh-keygen -R 52.66.31.248 # Assuming 52.66.31.248 is your instance IP
+          ssh-keyscan -H 52.66.31.248 >> ~/.ssh/known_hosts
           chmod 644 ~/.ssh/known_hosts
 
-          # Output the contents of known_hosts to check if key was added correctly
-          cat ~/.ssh/known_hosts
-
-          # Set up SSH key
+          # Add the SSH private key to handle authentication
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
 
+          # Debug: Output the contents of known_hosts to check if key was added correctly
+          cat ~/.ssh/known_hosts
+
       - name: Deploy to Backend Directory
         env:
-          HOSTNAME: ${{ secrets.SSH_HOST }}
-          USER_NAME: ${{ secrets.EC2_USER }}
+          HOSTNAME: 52.66.31.248
+          USER_NAME: ubuntu
         run: |
-          # Establish SSH connection and run deployment commands
+          # Try key-based SSH authentication
           ssh -o StrictHostKeyChecking=no ${USER_NAME}@${HOSTNAME} '
-              # Navigate to the correct backend directory
+              # Navigate to the backend directory
               cd /home/ubuntu/tracebalebackend-staging &&
 
-              # Ensure git is configured to use SSH
-              git config --global url."git@github.com:".insteadOf "https://github.com/"
-
-              # Sync repository
-              git fetch --all &&
-              git reset --hard origin/staging1 &&
-              git pull origin staging1 &&
-
-              # Install dependencies and build the project
-              npm install --legacy-peer-deps && 
-              chmod +x ./node_modules/.bin/tsc &&
-              npm run build &&
-
-              # Manage running process
-              sudo lsof -t -i:5000 | xargs kill -9 &&
-              pm2 delete backend &&
-              pm2 start npm --name "backend" -- start
-          ' || {
-            # Fallback for password-based authentication
-            echo "Key-based authentication failed. Trying password authentication..." &&
-            sshpass -p "${{ secrets.SSH_PASSWORD }}" ssh -o StrictHostKeyChecking=no ${USER_NAME}@${HOSTNAME} '
-              cd /home/ubuntu/tracebalebackend-staging &&
+              # Configure Git to use SSH for GitHub operations
               git config --global url."git@github.com:".insteadOf "https://github.com/" &&
+
+              # Fetch the latest updates from the staging1 branch
               git fetch --all &&
               git reset --hard origin/staging1 &&
               git pull origin staging1 &&
-              npm install --legacy-peer-deps &&
+
+              # Install project dependencies
+              npm install --legacy-peer-deps && 
+
+              # Grant execute permissions to the TypeScript compiler
               chmod +x ./node_modules/.bin/tsc &&
+
+              # Build the application
               npm run build &&
+
+              # Terminate any process using port 5000 and manage PM2 process
               sudo lsof -t -i:5000 | xargs kill -9 &&
               pm2 delete backend &&
+
+              # Restart the application using PM2
               pm2 start npm --name "backend" -- start
-            '
-          }
+          '
