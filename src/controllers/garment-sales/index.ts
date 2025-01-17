@@ -4379,7 +4379,6 @@ const updateCOCDoc = async (
 ) => {
 
   try {
-
     const { id, cocDoc } = req.body;
     if (!id) {
       return res.sendError(res, "need sales id");
