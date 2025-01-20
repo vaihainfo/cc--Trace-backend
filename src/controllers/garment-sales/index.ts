@@ -4040,7 +4040,7 @@ const getCOCDocumentData = async (
                   end), ',') as weaver_sale_ids
       FROM garment_processes gp
               LEFT JOIN fabric_selections fs on gp.id = fs.sales_id
-      where gp.id = :ids;
+      where gp.id IN (:ids);
     `, {
         replacements: { ids: result.process_ids.split(',') },
         type: sequelize.QueryTypes.SELECT,
@@ -4379,7 +4379,6 @@ const updateCOCDoc = async (
 ) => {
 
   try {
-
     const { id, cocDoc } = req.body;
     if (!id) {
       return res.sendError(res, "need sales id");
