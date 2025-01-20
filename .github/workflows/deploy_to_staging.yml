@@ -3,7 +3,7 @@ name: Deploy to AlmaLinux EC2
 on:
   push:
     branches:
-      - staging1  
+      - development  
 
 jobs:
   Deploy:
