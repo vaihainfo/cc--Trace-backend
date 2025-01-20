@@ -1,4 +1,4 @@
-name: Deploy to AlmaLinux EC2
+name: Deploy to AlmaLinux EC2 staging1
 
 on:
   push:
