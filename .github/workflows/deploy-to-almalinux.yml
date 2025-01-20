@@ -22,20 +22,20 @@ jobs:
 
           # Reset the known_hosts file and scan the server key
           echo "" > ~/.ssh/known_hosts
-          ssh-keyscan -H 52.66.31.248 >> ~/.ssh/known_hosts
+          ssh-keyscan -H ${{ secrets.SSH_HOST_STAGING }} >> ~/.ssh/known_hosts
           chmod 644 ~/.ssh/known_hosts
 
           # Output known_hosts to verify the correct key is stored
           cat ~/.ssh/known_hosts
 
           # Setup the private key
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          echo "${{ secrets.SSH_PRIVATE_KEY_STAGING }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
 
       - name: Deploy to Backend Directory
         env:
-          HOSTNAME: 52.66.31.248
-          USER_NAME: ubuntu
+          HOSTNAME: ${{ secrets.SSH_HOST_STAGING }}
+          USER_NAME: ${{ secrets.EC2_USER_STAGING }}
         run: |
           # Try key-based SSH authentication
           ssh -o StrictHostKeyChecking=no ${USER_NAME}@${HOSTNAME} '
@@ -60,4 +60,3 @@ jobs:
               pm2 delete backend
               pm2 start npm --name "backend" -- start
           '
-          
