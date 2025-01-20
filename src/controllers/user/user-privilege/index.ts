@@ -9,7 +9,6 @@ import Brand from "../../../models/brand.model";
 const getBrandPrivileges = async (req: Request, res: Response) => {
     const { brandId}: any = req.query;
     try {
-
         if (!brandId) {
             return res.sendError(res, 'Brand Id is required')
         }
