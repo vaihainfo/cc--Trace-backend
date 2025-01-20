@@ -1200,11 +1200,13 @@ const fetchCountryByGinner = async (req: Request, res: Response) => {
       if (!districtId) {
         return res.sendError(res, "Need district Id");
       }
-
+      const districtIds = typeof districtId === "string" ? districtId.split(",").map(id => id.trim()) : [districtId];
       const allocatedBlock= await GinnerAllocatedVillage.findAll({
         attributes: ['block_id'],
         where:{
-          district_id: districtId,
+          district_id: {
+            [Op.in]: districtIds, 
+          },
             ginner_id: ginnerId
         },
         include: [
@@ -1227,22 +1229,25 @@ const fetchCountryByGinner = async (req: Request, res: Response) => {
       if (!blockId) {
         return res.sendError(res, "Need block Id");
       }
+      const blockIds = typeof blockId === "string" ? blockId.split(",").map(id => id.trim()) : [blockId];
 
       const allocatedVillage = await GinnerAllocatedVillage.findAll({
-        attributes: ['village_id'],
-        where:{
-            block_id: blockId,
-            ginner_id: ginnerId
+        attributes: ["village_id"],
+        where: {
+          block_id: {
+            [Op.in]: blockIds, 
+          },
+          ginner_id: ginnerId,
         },
         include: [
-          { model: Village, as: "village", attributes: ['id','village_name'] },
+          { model: Village, as: "village", attributes: ["id", "village_name"] },
         ],
-        group: ['village_id', 'village.id']
-      })
+        group: ["village_id", "village.id"],
+      });
       return res.sendSuccess(res, allocatedVillage);
     } catch (error: any) {
       console.error(error);
-      return res.sendError(res, error.meessage);
+      return res.sendError(res, error.message);
     }
   };
 
