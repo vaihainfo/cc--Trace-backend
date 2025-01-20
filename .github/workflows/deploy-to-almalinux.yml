@@ -47,8 +47,8 @@ jobs:
 
               # Synchronize the latest source
               git fetch --all &&
-              git reset --hard origin/staging1 &&
-              git pull origin staging1 &&
+              git reset --hard origin/staging &&
+              git pull origin staging &&
 
               # Install dependencies and prepare the application
               npm install --legacy-peer-deps && 
