@@ -867,6 +867,9 @@ const createSpinnerSales = async (req: Request, res: Response) => {
             delivery_notes: req.body.deliveryNotes,
             qty_stock: req.body.totalQty,
             price: req.body.price,
+            letter_of_credit: req.body.letterOfCredit,
+            logistics_documents: req.body.logisticsDocuments,
+            yarn_quality_test_reports: req.body.yarnQualityTestReports,
             status: 'Pending for QR scanning'
         };
 

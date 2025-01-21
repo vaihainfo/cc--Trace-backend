@@ -153,6 +153,12 @@ const GinSales = db.define('gin_sales', {
   accepted_bales_weight: {
     type: DataTypes.DOUBLE
   },
+  letter_of_credit: {
+    type: DataTypes.ARRAY(DataTypes.TEXT)
+  },
+  logistics_documents: {
+    type: DataTypes.ARRAY(DataTypes.TEXT)
+  },
   coc_doc: {
     type: DataTypes.STRING
   },

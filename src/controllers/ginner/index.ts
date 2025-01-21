@@ -2000,7 +2000,9 @@ const updateGinnerSales = async (req: Request, res: Response) => {
       delivery_notes: req.body.deliveryNotes,
       transporter_name: req.body.transporterName,
       vehicle_no: req.body.vehicleNo,
-      lrbl_no: req.body.lrblNo
+      lrbl_no: req.body.lrblNo,
+      letter_of_credit: req.body.letterOfCredit,
+      logistics_documents: req.body.logisticsDocuments,
     };
 
     if (req.body.weightLoss) {
