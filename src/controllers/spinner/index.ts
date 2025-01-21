@@ -34,6 +34,7 @@ import BaleSelection from "../../models/bale-selection.model";
 import GinBale from "../../models/gin-bale.model";
 import { _getGinnerProcessTracingChartData } from "../ginner";
 import GinToGinSale from "../../models/gin-to-gin-sale.model";
+import SpinSelectedBlend from "../../models/spin_selected_blend";
 
 //create Spinner Process
 const createSpinnerProcess = async (req: Request, res: Response) => {
@@ -84,6 +85,7 @@ const createSpinnerProcess = async (req: Request, res: Response) => {
             status: 'Pending',
             from_date: req.body.from_date,
             to_date: req.body.to_date,
+            yarn_blend_id: req.body.yarnBlendId
         };
         const spin = await SpinProcess.create(data);
         let uniqueFilename = `spin_procees_qrcode_${Date.now()}.png`;
@@ -113,6 +115,18 @@ const createSpinnerProcess = async (req: Request, res: Response) => {
                 }
             });
         }
+
+        for await (let data of req.body.cotton_mixes) {
+            let newData = {
+                process_id: spin.id,
+                brand_ids: req.body.brandIds,
+                yarn_blend_id: data.yarn_blend_id,
+                cotton_mix_id: data.cotton_mix_id,
+                cotton_mix_qty: data.cotton_mix_qty
+            }
+            await SpinSelectedBlend.create(newData);
+        }
+
 
         for await (let obj of req.body.chooseLint) {
             let update = await GinSales.update({ qty_stock: obj.totalQty - obj.qtyUsed }, { where: { id: obj.id } });
@@ -1713,23 +1727,23 @@ const updateStatusSales = async (req: Request, res: Response) => {
                         rejectedBalesId = balesToUpdate;
                         let notGintoGinBalesId = obj.bales.filter((bale: any) => !bale.is_gin_to_gin_sale)?.map((bale: any) => bale.id);
                         let GintoGinBalesId = obj.bales.filter((bale: any) => bale.is_gin_to_gin_sale)?.map((bale: any) => bale.id);
-                        if(GintoGinBalesId && GintoGinBalesId.length > 0){
-                            for await(let id of GintoGinBalesId){
+                        if (GintoGinBalesId && GintoGinBalesId.length > 0) {
+                            for await (let id of GintoGinBalesId) {
                                 let oldSale = await GinToGinSale.findOne({
-                                    where: {bale_id: id},
-                                    order:[['sales_id','desc']],
-                                    transaction: t 
+                                    where: { bale_id: id },
+                                    order: [['sales_id', 'desc']],
+                                    transaction: t
                                 });
-                                if(oldSale){
+                                if (oldSale) {
                                     await GinToGinSale.update(
-                                      { gin_sold_status: null },
-                                      { where: { bale_id: id, sales_id: oldSale?.dataValues?.sales_id}, transaction: t }
+                                        { gin_sold_status: null },
+                                        { where: { bale_id: id, sales_id: oldSale?.dataValues?.sales_id }, transaction: t }
                                     );
                                     await GinBale.update({ is_all_rejected: false }, { where: { id }, transaction: t });
                                 }
 
                             }
-                        }else if(notGintoGinBalesId && notGintoGinBalesId.length > 0){
+                        } else if (notGintoGinBalesId && notGintoGinBalesId.length > 0) {
                             await GinBale.update({ sold_status: false, is_all_rejected: false }, { where: { id: notGintoGinBalesId }, transaction: t });
                         }
                     }
@@ -1752,7 +1766,7 @@ const updateStatusSales = async (req: Request, res: Response) => {
                 else if (rejectedCount === bales.length) status = 'Rejected';
                 else if (soldCount > rejectedCount) status = 'Partially Accepted';
 
-                if(status === 'Rejected'){
+                if (status === 'Rejected') {
                     console.log("==== Completely Rejected ====")
                     // await GinBale.update({ is_all_rejected: true }, { where: { id: rejectedBalesId } });
                     await sequelize.query(
@@ -1768,13 +1782,13 @@ const updateStatusSales = async (req: Request, res: Response) => {
                             AND bs.sales_id = :rejectedId
                         `,
                         {
-                          replacements: { rejectedId: obj.id },
-                          transaction: t,
-                          type: sequelize.QueryTypes.UPDATE,
+                            replacements: { rejectedId: obj.id },
+                            transaction: t,
+                            type: sequelize.QueryTypes.UPDATE,
                         }
-                      );
-                    
-                      console.log("==== GinBale Updated for Rejected Sales ====");
+                    );
+
+                    console.log("==== GinBale Updated for Rejected Sales ====");
                 }
 
                 data.status = status;

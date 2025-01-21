@@ -25,8 +25,8 @@ import Spinner from "../../models/spinner.model";
 import Knitter from "../../models/knitter.model";
 import Weaver from "../../models/weaver.model";
 import Garment from "../../models/garment.model";
-import GinnerAllocatedVillage from "../../models/ginner-allocated-vilage.model";
 import moment from "moment";
+import GinnerAllocatedVillage from "../../models/ginner-allocated-vilage.model";
 
 const getRegisteredDevices = async (req: Request, res: Response) => {
     try {

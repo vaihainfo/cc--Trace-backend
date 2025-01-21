@@ -103,6 +103,7 @@ import updateGreyoutData from "./router/update-greyout/";
 import moment from "moment";
 import 'moment-timezone';
 import GinProcess from "./models/gin-process.model";
+import YarnBlendRouter from './router/master/yarnblend';
 
 
 const app = express();
@@ -240,6 +241,7 @@ app.use("/loom-type", loomTypeRouter);
 app.use("/production-capacity", productionCapacityRouter);
 app.use("/user", userRouter);
 app.use("/cottonmix", cottonmixRouter);
+app.use("/yarnblend", YarnBlendRouter);
 app.use("/yarncount", yarnCountRouter);
 app.use("/cooperative", cooperativeRouter);
 app.use("/linen-variety", linenVarietyRouter);
