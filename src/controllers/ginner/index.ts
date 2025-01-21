@@ -27,6 +27,8 @@ import QualityParameter from "../../models/quality-parameter.model";
 import Brand from "../../models/brand.model";
 import PhysicalTraceabilityDataGinner from "../../models/physical-traceability-data-ginner.model";
 import PhysicalTraceabilityDataGinnerSample from "../../models/physical-traceability-data-ginner-sample.model";
+import GinnerAllocatedVillage from "../../models/ginner-allocated-vilage.model";
+import moment from "moment";
 
 //create Ginner Process
 const createGinnerProcess = async (req: Request, res: Response) => {
@@ -62,6 +64,8 @@ const createGinnerProcess = async (req: Request, res: Response) => {
       weigh_bridge: req.body.weighBridge,
       delivery_challan: req.body.deliveryChallan,
       bale_process: req.body.baleProcess,
+      from_date: req.body.from_date,
+      to_date: req.body.to_date,
     };
     const ginprocess = await GinProcess.create(data);
 
@@ -106,7 +110,11 @@ const createGinnerProcess = async (req: Request, res: Response) => {
     for await (const heap of req.body.chooseHeap) {
       let val = await GinHeap.findOne({ where: { id: heap.id } });
       if (val) {
-        let update = await GinHeap.update({ qty_stock: isNaN(val.dataValues.qty_stock - heap.qtyUsed) ? 0 : val.dataValues.qty_stock - heap.qtyUsed }, { where: { id: heap.id } });
+        if (Number(val.dataValues.qty_stock) >= Number(heap.qtyUsed)) {
+          let update = await GinHeap.update({ qty_stock: isNaN(val.dataValues.qty_stock - heap.qtyUsed) ? 0 : val.dataValues.qty_stock - heap.qtyUsed }, { where: { id: heap.id } });
+        } else {
+          let update = await GinHeap.update({ qty_stock: 0 }, { where: { id: heap.id } });
+        }
       }
 
       let transaction = await CottonSelection.findAll({
@@ -268,6 +276,7 @@ const fetchGinProcessPagination = async (req: Request, res: Response) => {
         limit: limit,
         order: [["id", "desc"]],
       });
+     
       let sendData: any = [];
       for await (let row of rows) {
         let cotton = await CottonSelection.findAll({
@@ -279,10 +288,10 @@ const fetchGinProcessPagination = async (req: Request, res: Response) => {
           attributes: ["transaction_id"],
           where: { process_id: row.dataValues.id },
         });
-        
-        let transactionIds = heap.flatMap((item: any)=> item?.dataValues?.transaction_id || []).filter((id:any)=> id !== undefined);
-        
-        let cottonHeap = [...cotton.map((item: any) => item?.dataValues?.transaction_id).filter((id:any) => id !== undefined), ...transactionIds];
+
+        let transactionIds = heap.flatMap((item: any) => item?.dataValues?.transaction_id || []).filter((id: any) => id !== undefined);
+
+        let cottonHeap = [...cotton.map((item: any) => item?.dataValues?.transaction_id).filter((id: any) => id !== undefined), ...transactionIds];
 
         let village = [];
         if (cottonHeap.length > 0) {
@@ -301,7 +310,7 @@ const fetchGinProcessPagination = async (req: Request, res: Response) => {
             group: ["village_id", "village.id"],
           });
         }
-        
+
         let bale = await GinBale.findOne({
           attributes: [
             [
@@ -367,10 +376,8 @@ const fetchGinHeapPagination = async (req: Request, res: Response) => {
     if (searchTerm) {
       whereCondition[Op.or] = [
         { "$season.name$": { [Op.iLike]: `%${searchTerm}%` } },
-        { lot_no: { [Op.iLike]: `%${searchTerm}%` } },
-        { reel_lot_no: { [Op.iLike]: `%${searchTerm}%` } },
-        { press_no: { [Op.iLike]: `%${searchTerm}%` } },
-        { heap_number: { [Op.iLike]: `%${searchTerm}%` } },
+        { ginner_heap_no: { [Op.iLike]: `%${searchTerm}%` } },
+        { reel_heap_no: { [Op.iLike]: `%${searchTerm}%` } },
       ];
     }
     if (ginnerId) {
@@ -631,7 +638,7 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
     // Create the excel workbook file
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet("Sheet1");
-    worksheet.mergeCells("A1:O1");
+    worksheet.mergeCells("A1:R1");
     const mergedCell = worksheet.getCell("A1");
     mergedCell.value = "CottonConnect | Ginner Process";
     mergedCell.font = { bold: true };
@@ -641,6 +648,8 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
       "Sr No.",
       "Created Date",
       "Date",
+      "Lint Production Start Date",
+      "Lint Production End Date",
       "Season",
       "Gin Lot No",
       "Gin Press No",
@@ -652,7 +661,6 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
       "Programme",
       "Got",
       "Total Seed Cotton Consumed(kgs)",
-      "Village",
       "Grey Out Status"
     ]);
     headerRow.font = { bold: true };
@@ -694,23 +702,23 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
         attributes: ["transaction_id"],
         where: { process_id: item.dataValues.id },
       });
-      
+
       let b = await heapSelection.findAll({
         attributes: ["transaction_id"],
         where: { process_id: item.dataValues.id },
       });
 
       let cotton = [
-        ...a.map((item:any) => item?.dataValues?.transaction_id).flat(),
-        ...b.map((item:any) => item?.dataValues?.transaction_id).flat()
+        ...a.map((item: any) => item?.dataValues?.transaction_id).flat(),
+        ...b.map((item: any) => item?.dataValues?.transaction_id).flat()
       ];
-      
+
       let village = [];
       if (cotton.length > 0) {
         village = await Transaction.findAll({
           attributes: ["village_id"],
           where: {
-            id: cotton, 
+            id: cotton,
           },
           include: [
             {
@@ -722,7 +730,7 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
           group: ["village_id", "village.id"],
         });
       }
-      
+
       let bale = ginBales.find((obj: any) => obj.process_id == item.id);
       let gin_press_no =
         (bale?.pressno_from || "") + "-" + (bale?.pressno_to || "").trim();
@@ -740,6 +748,8 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
         index: index + 1,
         createdDate: item.createdAt ? item.createdAt : "",
         date: item.date ? item.date : "",
+        from: item.from_date ? item.from_date : "",
+        to: item.to_date ? item.to_date : "",
         season: item.season ? item.season.name : "",
         lot: item.lot_no ? item.lot_no : "",
         gin_press_no: gin_press_no ? gin_press_no : "",
@@ -751,7 +761,7 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
         program: item.program ? item.program.program_name : "",
         gin_out_turn: item.gin_out_turn ? item.gin_out_turn : "",
         total_qty: item.total_qty ? item.total_qty : "",
-        a: village.map((obj: any) => obj?.dataValues?.village?.village_name)?.toString() ?? '',
+        // a: village.map((obj: any) => obj?.dataValues?.village?.village_name)?.toString() ?? '',
         greyout_status: item.greyout_status ? "Yes" : "No",
       });
       worksheet.addRow(rowValues);
@@ -966,6 +976,14 @@ const deleteGinnerProcess = async (req: Request, res: Response) => {
             },
           }
         );
+        await GinHeap.update(
+          { status: true },
+          {
+            where: {
+              id: heap.dataValues.heap_id,
+            },
+          }
+        );
       }
       await heapSelection.destroy({
         where: {
@@ -1062,7 +1080,9 @@ const chooseCotton = async (req: Request, res: Response) => {
     }
     let villageId: any = req.query.villageId;
     let seasonId: any = req.query.seasonId;
-    let whereCondition: any = {
+    let whereCondition: any = {};
+
+    let transactionCondition: any = {
       status: "Sold",
       heap_status: {
         [Op.or]: [null, "Pending"],
@@ -1093,88 +1113,94 @@ const chooseCotton = async (req: Request, res: Response) => {
       whereCondition["$season.name$"] = { [Op.gte]: "2024-25" };
     }
 
-    const results = await Transaction.findAll({
-      // attributes: [
-      // [Sequelize.fn("SUM", Sequelize.col("qty_stock")), "qty_stock"],
-      // [Sequelize.fn("SUM", Sequelize.col("qty_stock")), "qty_used"],
-      // [
-      //   sequelize.fn(
-      //     "COALESCE",
-      //     sequelize.fn(
-      //       "SUM",
-      //       Sequelize.literal('CAST("qty_purchased" AS DOUBLE PRECISION)')
-      //     ),
-      //     0
-      //   ),
-      //   "estimated_qty",
-      // ],
-      // ],
-      attributes: ["id", "qty_stock", "qty_purchased", "village_id", "vehicle", "date"],
+    const allocated = await GinnerAllocatedVillage.findAll({
+      where: {
+        ginner_id: ginnerid,
+        program_id: programId,
+        ...whereCondition
+      },
       include: [
         { model: Village, as: "village" },
         { model: Program, as: "program" },
         { model: Season, as: "season" },
-      ],
-      where: whereCondition,
-      // group: ["transactions.village_id, transactions.id"],
-      order: [
-        ["id", "DESC"],
-        [Sequelize.col("accept_date"), "DESC"],
-      ],
-    });
+      ]
+    })
     const summedData: any = {};
 
-    results.forEach((result: any) => {
-      const villageId = result.dataValues.village_id;
-      // if (summedData[villageId]) {
-      //   summedData[villageId].qty_stock += result.dataValues.qty_stock;
-      //   summedData[villageId].qty_used += result.dataValues.qty_used;
-      //   summedData[villageId].estimated_qty += result.dataValues.estimated_qty;
-      // } else {
-      //   summedData[villageId] = {
-      //     qty_stock: result.dataValues.qty_stock,
-      //     qty_used: result.dataValues.qty_used,
-      //     estimated_qty: result.dataValues.estimated_qty,
-      //     vlg_id: villageId,
-      //     village: result.village,
-      //     program: result.program,
-      //     season: result.season,
-      //   };
-      // }
-      if (summedData[villageId]) {
-        summedData[villageId].qty_stock += result.dataValues.qty_stock;
-        summedData[villageId].vehicle = [
-          ...summedData[villageId].vehicle,
-          {
-            tran_id: result.dataValues.id,
-            village_id: villageId,
+    for await (let row of allocated) {
+
+      const results = await Transaction.findAll({
+        // attributes: [
+        // [Sequelize.fn("SUM", Sequelize.col("qty_stock")), "qty_stock"],
+        // [Sequelize.fn("SUM", Sequelize.col("qty_stock")), "qty_used"],
+        // [
+        //   sequelize.fn(
+        //     "COALESCE",
+        //     sequelize.fn(
+        //       "SUM",
+        //       Sequelize.literal('CAST("qty_purchased" AS DOUBLE PRECISION)')
+        //     ),
+        //     0
+        //   ),
+        //   "estimated_qty",
+        // ],
+        // ],
+        attributes: ["id", "qty_stock", "qty_purchased", "village_id", "vehicle", "date"],
+        include: [
+          { model: Village, as: "village" },
+          { model: Program, as: "program" },
+          { model: Season, as: "season" },
+        ],
+        where: {
+          ...transactionCondition,
+          village_id: row?.dataValues?.village_id,
+          season_id: row?.dataValues?.season_id,
+        },
+        // group: ["transactions.village_id, transactions.id"],
+        order: [
+          ["id", "DESC"],
+          [Sequelize.col("accept_date"), "DESC"],
+        ],
+      });
+
+
+      results.forEach((result: any) => {
+        const villageId = result.dataValues.village_id;
+        if (summedData[villageId]) {
+          summedData[villageId].qty_stock += result.dataValues.qty_stock;
+          summedData[villageId].vehicle = [
+            ...summedData[villageId].vehicle,
+            {
+              tran_id: result.dataValues.id,
+              village_id: villageId,
+              qty_stock: result.dataValues.qty_stock,
+              qty_used: result.dataValues.qty_stock,
+              estimated_qty: result.dataValues.qty_purchased,
+              date_of_procurement: result.dataValues.date,
+              vehicle_no: result.dataValues.vehicle
+            }
+          ]
+        }
+        else {
+          summedData[villageId] = {
+            ...result.village.dataValues,
             qty_stock: result.dataValues.qty_stock,
-            qty_used: result.dataValues.qty_stock,
-            estimated_qty: result.dataValues.qty_purchased,
-            date_of_procurement: result.dataValues.date,
-            vehicle_no: result.dataValues.vehicle
-          }
-        ]
-      }
-      else {
-        summedData[villageId] = {
-          ...result.village.dataValues,
-          qty_stock: result.dataValues.qty_stock,
-          vehicle: [{
-            tran_id: result.dataValues.id,
-            village_id: villageId,
-            qty_stock: result.dataValues.qty_stock,
-            qty_used: result.dataValues.qty_stock,
-            estimated_qty: result.dataValues.qty_purchased,
-            date_of_procurement: result.dataValues.date,
-            vehicle_no: result.dataValues.vehicle
-          }],
-          vlg_id: villageId,
-          program: result.program,
-          season: result.season,
-        };
-      }
-    });
+            vehicle: [{
+              tran_id: result.dataValues.id,
+              village_id: villageId,
+              qty_stock: result.dataValues.qty_stock,
+              qty_used: result.dataValues.qty_stock,
+              estimated_qty: result.dataValues.qty_purchased,
+              date_of_procurement: result.dataValues.date,
+              vehicle_no: result.dataValues.vehicle
+            }],
+            vlg_id: villageId,
+            program: result.program,
+            season: result.season,
+          };
+        }
+      });
+    }
 
     const finalResult = Object.values(summedData);
     res.sendSuccess(res, finalResult);
@@ -1515,6 +1541,198 @@ const createGinnerSales = async (req: Request, res: Response) => {
   }
 };
 
+const getCOCDocumentData = async (
+  req: Request, res: Response
+) => {
+  try {
+    const id = req.query.id;
+    if (!id)
+      return res.sendError(res, "Need Ginner Sales Id");
+
+    const cocRes = {
+      ginnerName: '',
+      address: '',
+      brandName: '',
+      brandLogo: '',
+      reelAuthorizationCode: '',
+      garmentItemDescription: '',
+      frmrFarmGroup: '',
+      gnrName: '',
+      reelLotno: '',
+      gnrTotalQty: '',
+      date: '',
+    };
+
+    let [result] = await sequelize.query(`
+      select  gs.id                                                   as id,
+              gs.reel_lot_no                                          as reel_lotno,
+              gs.date                                                 as gnr_sales_date,
+              gnr.name                                                as ginner_name,
+              gnr.id                                                  as ginner_id,
+              gnr.address                                             as address,
+              gs.total_qty                                            as gnr_total_qty,
+              array_agg(distinct gb.process_id) as process_ids,
+              ''                                                      as reel_authorization_code,
+              br.gin_auth_code_count                                  as auth_code_count,
+              br.id                                                   as brand_id,
+              case
+                  when br.brand_name is not null
+                      then br.brand_name
+                  else gnr.name
+                  end                                        as brand_name,
+              case
+                  when br.logo is not null
+                      then br.logo
+                  end                                        as brand_logo
+              from gin_sales gs
+              left join ginners gnr on gnr.id = gs.ginner_id
+              left join brands br on  br.id =ANY(gnr.brand)
+              left join spinners prg on prg.id = gs.buyer
+              left join bale_selections bs on bs.sales_id = gs.id
+              left join "gin-bales" gb on gb.id = bs.bale_id
+      where gs.id in (:ids)
+      group by bs.sales_id, gs.id, gnr.id, br.id;
+    `, {
+      replacements: {ids : id },
+      type: sequelize.QueryTypes.SELECT,
+      raw: true
+    });
+    if (result) {
+      cocRes.gnrName = result.ginner_name;
+      cocRes.ginnerName = result.ginner_name;
+      cocRes.address = result.address;
+      cocRes.brandName = result.brand_name;
+      cocRes.brandLogo = result.brand_logo;
+      cocRes.gnrTotalQty = result.gnr_total_qty;
+      cocRes.reelLotno = result.reel_lotno;
+
+      if(result.auth_code_count !== null && result.auth_code_count !== undefined){
+        let count = result.auth_code_count || 0;
+
+        cocRes.reelAuthorizationCode = 'REELRegenerative'+ result.brand_name + "00" + (count + 1);
+        await Brand.update(
+          { gin_auth_code_count: count + 1 },
+          { where: { id: result.brand_id } }
+        );
+      }  
+    }
+  
+
+    if (result.process_ids) {
+      const [ginProcess] = await sequelize.query(`
+        SELECT
+                ARRAY_AGG(DISTINCT subquery.transaction_id) AS transaction_ids
+            FROM (
+                SELECT
+                    UNNEST(cs.transactions) AS transaction_id
+                FROM (
+                    SELECT
+                        ARRAY_AGG(DISTINCT cs.transaction_id) AS transactions
+                    FROM
+                        cotton_selections cs
+					          WHERE cs.process_id in (:ids)
+                ) cs
+                UNION ALL
+                SELECT
+                    UNNEST(hs.transactions) AS transaction_id
+                FROM (
+                    SELECT
+                      ARRAY_AGG(DISTINCT unnest_transaction_id) AS transactions
+                    FROM (
+                      SELECT 
+                        UNNEST(hs.transaction_id) AS unnest_transaction_id  -- Unnest the array of village_id
+                      FROM
+                        heap_selections hs
+					            WHERE hs.process_id in (:ids)
+                    ) unnest_data
+                ) hs
+          ) subquery
+        `, {
+          replacements: {
+            ids: result.process_ids
+          },
+          type: sequelize.QueryTypes.SELECT
+        });
+
+
+      const transIds = ginProcess ? ginProcess.transaction_ids : []
+
+      if (transIds.length) {
+      const [transactions] = await sequelize.query(`
+        select  
+                ARRAY_AGG(DISTINCT fg.name) AS frmr_farm_group
+        from transactions tr
+                left join farmers fr on tr.farmer_id = fr.id
+                left join farm_groups fg on fg.id = fr."farmGroup_id"
+        where tr.id in (:ids);
+        `, {
+          replacements: {
+            ids: transIds
+          },
+          type: sequelize.QueryTypes.SELECT
+        });
+
+        console.log(transactions)
+      cocRes.frmrFarmGroup = transactions && transactions.frmr_farm_group.length > 0 ? transactions.frmr_farm_group.join(', ') : '';
+    }
+    }
+    cocRes.date = moment(new Date()).format('DD-MM-YYYY');
+
+    return res.sendSuccess(res, cocRes);
+  } catch (error: any) {
+    console.error("Error appending data:", error);
+    return res.sendError(res, error.message);
+  }
+
+}
+
+
+const updateCOCDoc = async (
+  req: Request, res: Response
+) => {
+
+  try {
+
+    const { id, cocDoc } = req.body;
+    if (!id) {
+      return res.sendError(res, "need sales id");
+    }
+    if (!cocDoc) {
+      return res.sendError(res, "need COC Document id");
+    }
+    const ginSale = await GinSales.update(
+      {
+        coc_doc: cocDoc
+      },
+      {
+        where: {
+          id
+        },
+      }
+    );
+
+
+    return res.sendSuccess(res, ginSale);
+  } catch (error: any) {
+    console.log(error);
+    return res.sendError(res, error.meessage);
+  }
+}
+const getBrands = async (req: Request, res: Response) => {
+  let ginnerId = req.query.ginnerId;
+  if (!ginnerId) {
+    return res.sendError(res, "Need Garment Id ");
+  }
+  let ginner = await Ginner.findOne({ where: { id: ginnerId } });
+  if (!ginner) {
+    return res.sendError(res, "No Ginner Found ");
+  }
+  let brand = await Brand.findAll({
+    where: { id: { [Op.in]: ginner.dataValues.brand } },
+  });
+  res.sendSuccess(res, brand);
+};
+
 //update Ginner Sale
 const updateGinnerSales = async (req: Request, res: Response) => {
   try {
@@ -1538,8 +1756,16 @@ const updateGinnerSales = async (req: Request, res: Response) => {
       for await (let obj of req.body.lossData) {
         let bale = await GinBale.findOne({
           where: {
-            "$ginprocess.reel_lot_no$": String(obj.reelLotNo),
-            bale_no: String(obj.baleNo),
+            [Op.and]: [
+              Sequelize.where(
+                Sequelize.fn('TRIM', Sequelize.col('ginprocess.reel_lot_no')),
+                String(obj.reelLotNo)
+              ),
+              Sequelize.where(
+                Sequelize.fn('TRIM', Sequelize.col('bale_no')),
+                String(obj.baleNo)
+              )
+            ]
           },
           include: [{ model: GinProcess, as: "ginprocess" }],
         });
@@ -1562,13 +1788,13 @@ const updateGinnerSales = async (req: Request, res: Response) => {
         LEFT JOIN gin_sales gs ON bs.sales_id = gs.id
         WHERE bs.sales_id = ${req.body.id}`);
 
-        if(newSum && newSum[0]){
-          let newQuantity = newSum[0]?.lint_quantity;
-          data.total_qty = newQuantity;
-        }
+      if (newSum && newSum[0]) {
+        let newQuantity = newSum[0]?.lint_quantity;
+        data.total_qty = newQuantity;
+      }
     }
 
-        const ginSales = await GinSales.update(data, {
+    const ginSales = await GinSales.update(data, {
       where: { id: req.body.id },
     });
 
@@ -1751,9 +1977,9 @@ const fetchGinSale = async (req: Request, res: Response) => {
         sales_id: gin.id,
       },
       include: [
-        { 
-          model: GinBale, 
-          as: "bale" ,
+        {
+          model: GinBale,
+          as: "bale",
           include: [
             {
               model: GinProcess,
@@ -1807,7 +2033,7 @@ const fetchGinSaleBale = async (req: Request, res: Response) => {
             {
               model: GinProcess,
               as: "ginprocess",
-              attributes: ["date","lot_no", "reel_lot_no"],
+              attributes: ["date", "lot_no", "reel_lot_no"],
             },
           ],
         },
@@ -1860,7 +2086,7 @@ const fetchGinSaleAllBales = async (req: Request, res: Response) => {
             {
               model: GinProcess,
               as: "ginprocess",
-              attributes: ["date","lot_no", "reel_lot_no"],
+              attributes: ["date", "lot_no", "reel_lot_no"],
             },
           ],
         },
@@ -2430,5 +2656,8 @@ export {
   fetchGinProcess,
   exportGinnerProcess,
   checkReport,
-  _getGinnerProcessTracingChartData
+  _getGinnerProcessTracingChartData,
+  getCOCDocumentData,
+  updateCOCDoc,
+  getBrands
 };

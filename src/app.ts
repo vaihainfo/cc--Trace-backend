@@ -86,6 +86,10 @@ import dashboardKnitterRouter from './router/dashboard/knitter';
 import dashboardFabricRouter from './router/dashboard/fabric';
 import dashboardGarmentRouter from './router/dashboard/garment';
 import dashboardWeaverRouter from './router/dashboard/weaver';
+import dashboardSeedCottonPricingRouter from './router/dashboard/seed-cotton-pricing';
+import dashboardLintPricingRouter from './router/dashboard/lint-pricing';
+import dashboardYarnPricingRouter from './router/dashboard/yarn-pricing';
+
 import labMasterRouter from './router/master/lab-master';
 import seedCompanyRouter from './router/master/seed-company';
 import cropCurrentSeasonRouter from './router/master/crop-current-season';
@@ -94,8 +98,10 @@ import dataMonitorRouter from './router/data-monitoring';
 import { sendScheduledEmails } from "./controllers/email-management/scheduled-email.controller";
 import ExportData from "./models/export-data-check.model";
 import { exportReportsTameTaking, exportReportsOnebyOne } from "./controllers/reports/export-cron";
+import updateGreyoutData from "./router/update-greyout/";
 import moment from "moment";
 import 'moment-timezone';
+import GinProcess from "./models/gin-process.model";
 
 
 const app = express();
@@ -117,12 +123,13 @@ const connectToDb = async () => {
   const data = await sequelize.sync({ force: false })
   try {
     await sequelize.authenticate();
-      console.log("Database Connected successfully.");
-      const used = process.memoryUsage();
-      console.log(`Memory usage: ${JSON.stringify(used)}`);
-      console.log("Current Server Time", moment());
-      console.log("Time Zone", serverTimezone);
-      console.log("Offset IST", differenceInMinutes);
+    console.log("Database Connected successfully.");
+    const used = process.memoryUsage();
+    // exportReportsOnebyOne();
+    console.log(`Memory usage: ${JSON.stringify(used)}`);
+    console.log("Current Server Time", moment());
+    console.log("Time Zone", serverTimezone);
+    console.log("Offset IST", differenceInMinutes);
   } catch (error) {
     console.error("Unable to connect to the database:", error);
   }
@@ -153,43 +160,43 @@ const IST = 'Asia/Kolkata';
 
 const IST_to_Denver_offset = moment().tz(serverTimezone).utcOffset();
 const IST_to_India_offset = moment().tz(IST).utcOffset();
-const differenceInMinutes = IST_to_Denver_offset-IST_to_India_offset;
+const differenceInMinutes = IST_to_Denver_offset - IST_to_India_offset;
 const differenceInHours = Math.round(differenceInMinutes / 60);
-  
-const checkTimeDiff = (cronTime:number,differenceInHours:number) => {
+
+const checkTimeDiff = (cronTime: number, differenceInHours: number) => {
   let newCronTime;
-  if (differenceInHours<0) {
+  if (differenceInHours < 0) {
     newCronTime = (cronTime + differenceInHours) % 24;
     newCronTime = newCronTime > 0 ? newCronTime : 24 + newCronTime;
-  }else{
+  } else {
     newCronTime = (cronTime - differenceInHours) % 24;
     newCronTime = newCronTime > 0 ? newCronTime : 24 + newCronTime;
   }
-  return newCronTime>=24?0:newCronTime;
+  return newCronTime >= 24 ? 0 : newCronTime;
 }
 
 
-cron.schedule(`0 ${checkTimeDiff(23,differenceInHours)} * * *`, async () => {
+cron.schedule(`0 ${checkTimeDiff(23, differenceInHours)} * * *`, async () => {
   console.log('running a task once a day at 11 pm');
   sendScheduledEmails();
 });
 
-cron.schedule(`0 ${checkTimeDiff(8,differenceInHours)} * * *`, async () => {
-  console.log('Running a task at 8 am IST');
+cron.schedule(`0 ${checkTimeDiff(7, differenceInHours)} * * *`, async () => {
+  console.log('Running a task at 7 am IST');
   // Add your task for 8 am IST here
   exportReportsOnebyOne();
   // cronWorker.stdin.write('exportReportsOnebyOne\n');
 });
 // Schedule cron job for 4 pm in India time (UTC+5:30)
-cron.schedule(`0 ${checkTimeDiff(16,differenceInHours)} * * *`, async () => {
-  console.log('Running a task at 4 pm IST');
+cron.schedule(`0 ${checkTimeDiff(20, differenceInHours)} * * *`, async () => {
+  console.log('Running a task at 8 pm IST');
   // Add your task for 4 pm IST here
   exportReportsOnebyOne();
   //  cronWorker.stdin.write('exportReportsOnebyOne\n');
 });
 
 // Schedule cron job for 12 am (midnight) in India time (UTC+5:30)
-cron.schedule(`0 ${checkTimeDiff(0,differenceInHours)} * * *`, async () => {
+cron.schedule(`0 ${checkTimeDiff(0, differenceInHours)} * * *`, async () => {
   console.log('Running a task at 12 am IST');
   // Add your task for 12 am IST here
   exportReportsOnebyOne();
@@ -197,8 +204,8 @@ cron.schedule(`0 ${checkTimeDiff(0,differenceInHours)} * * *`, async () => {
 });
 
 // Schedule cron job for 2 am in India time (UTC+5:30)
-cron.schedule(`0 ${checkTimeDiff(2,differenceInHours)} * * *`, async () => {
-  console.log('Running a task at 2 am IST');
+cron.schedule(`0 ${checkTimeDiff(3, differenceInHours)} * * *`, async () => {
+  console.log('Running a task at 3 am IST');
   // Add your task for 2 am IST here
   exportReportsTameTaking();
   // cronWorker.stdin.write('exportReportsTameTaking\n');
@@ -288,11 +295,16 @@ app.use("/dashboard/knitter", dashboardKnitterRouter)
 app.use("/dashboard/fabric", dashboardFabricRouter)
 app.use("/dashboard/garment", dashboardGarmentRouter)
 app.use("/dashboard/weaver", dashboardWeaverRouter)
+app.use("/dashboard/seed-cotton-pricing", dashboardSeedCottonPricingRouter)
+app.use("/dashboard/lint-pricing", dashboardLintPricingRouter)
+app.use("/dashboard/yarn-pricing", dashboardYarnPricingRouter)
+
 app.use("/lab-master", labMasterRouter);
 app.use("/seed-company", seedCompanyRouter);
 app.use("/crop-current-season", cropCurrentSeasonRouter);
 app.use("/organic-program-data-digitization", organicProgramDataDigitizationRouter);
 app.use("/data-monitoring", dataMonitorRouter);
+app.use("/update-greyout", updateGreyoutData);
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument, { customCss }));
 
 app.use(errorMiddleware);

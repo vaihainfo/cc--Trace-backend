@@ -26,6 +26,7 @@ import Knitter from "../../models/knitter.model";
 import Weaver from "../../models/weaver.model";
 import Garment from "../../models/garment.model";
 import moment from "moment";
+import GinnerAllocatedVillage from "../../models/ginner-allocated-vilage.model";
 
 const getRegisteredDevices = async (req: Request, res: Response) => {
     try {
@@ -500,7 +501,7 @@ const exportAgentTransactions = async (req: Request, res: Response) => {
             // Create the excel workbook file
             const workbook = new ExcelJS.Workbook();
             const worksheet = workbook.addWorksheet("Sheet1");
-            worksheet.mergeCells('A1:S1');
+            worksheet.mergeCells('A1:V1');
             const mergedCell = worksheet.getCell('A1');
             mergedCell.value = 'CottonConnect | QR App Procurement Report';
             mergedCell.font = { bold: true };
@@ -509,7 +510,7 @@ const exportAgentTransactions = async (req: Request, res: Response) => {
             const headerRow = worksheet.addRow([
                 "Sr No.", 'Date', 'Farmer Code', 'Farmer Name', 'Season', 'Country',
                 'State', 'District', 'Block', 'Village', 'Transaction Id', 'Quantity Purchased (Kgs)',
-                'Available Cotton (Kgs)', 'Price/KG(Local Currency)', 'Programme', 'Transport Vehicle No', 'Payment Method', 'Ginner Name', 'Agent'
+                'Available Cotton (Kgs)', 'Price/KG(Local Currency)', 'Programme', 'Transport Vehicle No', 'Payment Method', 'Ginner Name', 'Transaction User Details', 'Latitude', 'longitude', 'Status'
             ]);
             headerRow.font = { bold: true };
             const whereCondition: any = {}
@@ -716,7 +717,10 @@ const exportAgentTransactions = async (req: Request, res: Response) => {
                     vehicle: item.vehicle ? item.vehicle : "",
                     payment_method: item.payment_method ? item.payment_method : "",
                     ginner: item.ginner ? item.ginner.name : "",
-                    agent: item.agent ? item.agent.firstName : "",
+                    agent: item?.agent && ( item?.agent?.lastName ? item?.agent?.firstName + " " + item?.agent?.lastName+ "-" + item?.agent?.access_level : item?.agent?.firstName+ "-" + item?.agent?.access_level),
+                    latitude: item.latitude ? item.latitude : "-",
+                    longitude: item.longitude ? item.longitude : "-",
+                    status: item.status ? item.status : ''
                 });
                 worksheet.addRow(rowValues);
             }
@@ -1109,6 +1113,145 @@ const fetchAgentList = async (req: Request, res: Response) => {
     }
 }
 
+const fetchCountryByGinner = async (req: Request, res: Response) => {
+    let ginnerId: any = req.query.ginnerId;
+
+    try {
+      if (!ginnerId) {
+        return res.sendError(res, "Need ginner Id");
+      }
+
+      const allocatedCountry = await GinnerAllocatedVillage.findAll({
+        attributes: ['country_id'],
+        where:{
+          ginner_id: ginnerId
+        },
+        include: [
+          { model: Country, as: "country", attributes: ['id','county_name'] },
+        ],
+        group: ['country_id', 'country.id']
+      })
+      return res.sendSuccess(res, allocatedCountry);
+    } catch (error: any) {
+      console.error(error);
+      return res.sendError(res, error.meessage);
+    }
+  };
+
+  const fetchStateByCountry = async (req: Request, res: Response) => {
+    let countryId: any = req.query.countryId;
+    let ginnerId: any = req.query.ginnerId;
+
+    try {
+      if (!countryId) {
+        return res.sendError(res, "Need country Id");
+      }
+
+      const allocatedState = await GinnerAllocatedVillage.findAll({
+        attributes: ['state_id'],
+        where:{
+          country_id: countryId,
+          ginner_id: ginnerId
+        },
+        include: [
+          { model: State, as: "state", attributes: ['id','state_name'] },
+        ],
+        group: ['state_id', 'state.id']
+      })
+      return res.sendSuccess(res, allocatedState);
+    } catch (error: any) {
+      console.error(error);
+      return res.sendError(res, error.meessage);
+    }
+  };
+
+  const fetchDistrictByState = async (req: Request, res: Response) => {
+    let stateId: any = req.query.stateId;
+    let ginnerId: any = req.query.ginnerId;
+
+    try {
+      if (!stateId) {
+        return res.sendError(res, "Need state Id");
+      }
+
+      const allocatedDistrict = await GinnerAllocatedVillage.findAll({
+        attributes: ['district_id'],
+        where:{
+          state_id: stateId,
+          ginner_id: ginnerId
+        },
+        include: [
+          { model: District, as: "district", attributes: ['id','district_name'] },
+        ],
+        group: ['district_id', 'district.id']
+      })
+      return res.sendSuccess(res, allocatedDistrict);
+    } catch (error: any) {
+      console.error(error);
+      return res.sendError(res, error.meessage);
+    }
+  };
+
+  const fetchBlockByDistrict = async (req: Request, res: Response) => {
+    let districtId: any = req.query.districtId;
+    let ginnerId: any = req.query.ginnerId;
+
+    try {
+      if (!districtId) {
+        return res.sendError(res, "Need district Id");
+      }
+      const districtIds = typeof districtId === "string" ? districtId.split(",").map(id => id.trim()) : [districtId];
+      const allocatedBlock= await GinnerAllocatedVillage.findAll({
+        attributes: ['block_id'],
+        where:{
+          district_id: {
+            [Op.in]: districtIds, 
+          },
+            ginner_id: ginnerId
+        },
+        include: [
+          { model: Block, as: "block", attributes: ['id','block_name'] },
+        ],
+        group: ['block_id', 'block.id']
+      })
+      return res.sendSuccess(res, allocatedBlock);
+    } catch (error: any) {
+      console.error(error);
+      return res.sendError(res, error.meessage);
+    }
+  };
+
+  const fetchVillageByBlock = async (req: Request, res: Response) => {
+    let blockId: any = req.query.blockId;
+    let ginnerId: any = req.query.ginnerId;
+
+    try {
+      if (!blockId) {
+        return res.sendError(res, "Need block Id");
+      }
+      const blockIds = typeof blockId === "string" ? blockId.split(",").map(id => id.trim()) : [blockId];
+
+      const allocatedVillage = await GinnerAllocatedVillage.findAll({
+        attributes: ["village_id"],
+        where: {
+          block_id: {
+            [Op.in]: blockIds, 
+          },
+          ginner_id: ginnerId,
+        },
+        include: [
+          { model: Village, as: "village", attributes: ["id", "village_name"] },
+        ],
+        group: ["village_id", "village.id"],
+      });
+      return res.sendSuccess(res, allocatedVillage);
+    } catch (error: any) {
+      console.error(error);
+      return res.sendError(res, error.message);
+    }
+  };
+
+
 
 
 export {
@@ -1126,5 +1269,10 @@ export {
     updateUserApp,
     deleteUserApp,
     findUser,
-    fetchAgentList
+    fetchAgentList,
+    fetchCountryByGinner,
+    fetchStateByCountry,
+    fetchDistrictByState,
+    fetchBlockByDistrict,
+    fetchVillageByBlock
 }

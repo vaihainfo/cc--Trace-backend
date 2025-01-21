@@ -11,7 +11,12 @@ import {
     profile,
     findUser,
     fetchAgentList,
-    exportAgentTransactions
+    exportAgentTransactions,
+    fetchCountryByGinner,
+    fetchStateByCountry,
+    fetchDistrictByState,
+    fetchBlockByDistrict,
+    fetchVillageByBlock
 } from "../../controllers/qr-app";
 
 const router = Router();
@@ -33,5 +38,11 @@ router.put('/update-user-app', updateUserApp);
 router.delete('/delete-user-app', deleteUserApp);
 router.post('/find-user', findUser);
 router.get('/get-agent-list', fetchAgentList);
+router.get('/get-seed-country', fetchCountryByGinner);
+router.get('/get-seed-state', fetchStateByCountry);
+router.get('/get-seed-district', fetchDistrictByState);
+router.get('/get-seed-block', fetchBlockByDistrict);
+router.get('/get-seed-village', fetchVillageByBlock);
+
 
 export default router;   

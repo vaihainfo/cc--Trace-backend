@@ -930,56 +930,91 @@ const getLintProcuredDataByMonth = async (
 const getLintSoldDataByMonth = async (
   where: any
 ) => {
-  const result = await BaleSelection.findAll({
-    attributes: [
-      [
-        sequelize.fn(
-          "COALESCE",
-          sequelize.fn(
-            "SUM",
-            Sequelize.literal(`
-              CASE
-                WHEN "bale"."old_weight" IS NOT NULL THEN CAST("bale"."old_weight" AS DOUBLE PRECISION)
-                ELSE CAST("bale"."weight" AS DOUBLE PRECISION)
-              END
-            `)
-          ),
-          0
-        ),
-        "lintSold",
-      ],
-      [
-        sequelize.fn("COUNT", Sequelize.literal("DISTINCT bale_id")),
-        "sold",
-      ],
-      [Sequelize.literal("date_part('Month', sales.date)"), 'month'],
-      [Sequelize.literal("date_part('Year', sales.date)"), 'year']
-    ],
-    include: [
-      {
-        model: GinSales,
-        as: "sales",
-        attributes: [],
-        include: [{
-          model: Season,
-          as: 'season',
-          attributes: []
-        }, {
-          model: Ginner,
-          as: 'ginner',
-          attributes: []
-        }
-        ],
-      },
-      {
-        model: GinBale,
-        as: "bale",
-        attributes: [],
-      },
-    ],
-    where,
-    group: ['month', 'year']
-  });
+
+  // const result = await BaleSelection.findAll({
+  //   attributes: [
+  //     [
+  //       sequelize.fn(
+  //         "COALESCE",
+  //         sequelize.fn(
+  //           "SUM",
+  //           Sequelize.literal(`
+  //             CASE
+  //               WHEN "bale"."old_weight" IS NOT NULL THEN CAST("bale"."old_weight" AS DOUBLE PRECISION)
+  //               ELSE CAST("bale"."weight" AS DOUBLE PRECISION)
+  //             END
+  //           `)
+  //         ),
+  //         0
+  //       ),
+  //       "lintSold",
+  //     ],
+  //     [
+  //       sequelize.fn("COUNT", Sequelize.literal("DISTINCT bale_id")),
+  //       "sold",
+  //     ],
+  //     [Sequelize.literal("date_part('Month', sales.date)"), 'month'],
+  //     [Sequelize.literal("date_part('Year', sales.date)"), 'year']
+  //   ],
+  //   include: [
+  //     {
+  //       model: GinSales,
+  //       as: "sales",
+  //       attributes: [],
+  //       include: [{
+  //         model: Season,
+  //         as: 'season',
+  //         attributes: []
+  //       }, {
+  //         model: Ginner,
+  //         as: 'ginner',
+  //         attributes: []
+  //       }
+  //       ],
+  //     },
+  //     {
+  //       model: GinBale,
+  //       as: "bale",
+  //       attributes: [],
+  //     },
+  //   ],
+  //   where,
+  //   group: ['month', 'year']
+  // });
+
+  where.push(`gs.status in ('Pending', 'Pending for QR scanning', 'Partially Accepted', 'Partially Rejected','Sold')`)
+
+  const whereClause = where.length > 0 ? `WHERE ${where.join(' AND ')}` : '';
+
+  const [result] = await sequelize.query(`
+    SELECT
+        date_part('Month', gp.date) AS "month",
+        date_part('Year', gp.date) AS "year",
+        COUNT(gb.id) AS sold,
+        COALESCE(
+          SUM(
+            CASE
+              WHEN gb.old_weight IS NOT NULL THEN CAST(gb.old_weight AS DOUBLE PRECISION)
+              ELSE CAST(gb.weight AS DOUBLE PRECISION)
+            END
+          ), 0
+      ) AS "lintSold"
+    FROM
+        "gin-bales" gb
+    LEFT JOIN 
+        bale_selections bs ON gb.id = bs.bale_id
+    LEFT JOIN 
+        gin_sales gs ON gs.id = bs.sales_id
+    LEFT JOIN 
+        gin_processes gp ON gb.process_id = gp.id
+    LEFT JOIN
+        ginners g ON gp.ginner_id = g.id
+    LEFT JOIN
+        seasons s ON gp.season_id = s.id
+    LEFT JOIN
+        programs pr ON gp.program_id = pr.id
+    ${whereClause}
+    GROUP BY "month", "year"`)
 
   return result;
 
@@ -1050,11 +1085,12 @@ const getDataAll = async (
     // reqData.season = seasonOne.id;
     const procuredWhere = await getGinBaleQuery(reqData); //yes
     const baleSel = getBaleSelectionQuery(reqData);
+    const lintSel = getBaleSelLintSoldQuery(reqData);
     const transactionWhere = getTransactionDataQuery(reqData);
     const processedWhere = getOverAllDataQuery(reqData); //yes
     const procuredData = await getLintProcuredDataByMonth(procuredWhere); //yes
     const processedData = await getProcessedDataByMonth(processedWhere); //yes
-    const soldData = await getLintSoldDataByMonth(baleSel);
+    const soldData = await getLintSoldDataByMonth(lintSel);
     const procuredProcessedData = await getProcuredDataByMonth(transactionWhere); 
 
     const data = await getDataAllRes(
@@ -1101,8 +1137,8 @@ const getDataAllRes = (
       production.dataValues.year == month.year
     );
     const fSold = soldList.find((estimate: any) =>
-      (estimate.dataValues.month - 1) == month.month &&
-      estimate.dataValues.year == month.year
+      (estimate.month - 1) == month.month &&
+      estimate.year == month.year
     );
     const fCotton = cottonList.find((cotton: any) =>
       (cotton.dataValues.month - 1) == month.month &&
@@ -1127,7 +1163,7 @@ const getDataAllRes = (
     }
 
     if (fSold) {
-      data.sold = mtConversion(fSold.dataValues.lintSold);
+      data.sold = mtConversion(fSold.lintSold);
     }
     if (fCotton) {
       data.cottonProcured = (mtConversion(fCotton.dataValues.procured));

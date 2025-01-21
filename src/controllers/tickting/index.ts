@@ -15,24 +15,24 @@ import * as path from "path";
 const createTicketTracker = async (req: Request, res: Response) => {
     try {
         // Check if a ticket already exists with the same criteria
-        const existingTicket = await TicketTracker.findOne({
-            where: {
-                process_id: req.body.processorId,
-                processor_name: req.body.processorName,
-                processor_type: req.body.processorType,
-                style_mark_no: req.body.styleMarkNo,
-                ticket_type: req.body.ticketType,
-                process_or_sales: req.body.processOrSales,
-                status: {
-                    [Op.notIn]: ['Resolved', 'Rejected']
-                }
-            }
-        });
+        // const existingTicket = await TicketTracker.findOne({
+        //     where: {
+        //         process_id: req.body.processorId,
+        //         processor_name: req.body.processorName,
+        //         processor_type: req.body.processorType,
+        //         style_mark_no: req.body.styleMarkNo,
+        //         ticket_type: req.body.ticketType,
+        //         process_or_sales: req.body.processOrSales,
+        //         status: {
+        //             [Op.notIn]: ['Resolved', 'Rejected']
+        //         }
+        //     }
+        // });
 
-        if (existingTicket) {
-            // Ticket already exists
-            return res.sendError(res, 'Ticket already exists with the same Lot Number, Data correction Type and Ticket Type');
-        }
+        // if (existingTicket) {
+        //     // Ticket already exists
+        //     return res.sendError(res, 'Ticket already exists with the same Lot Number, Data correction Type and Ticket Type');
+        // }
 
         const lastTicket = await TicketTracker.findOne({
             order: [['ticket_no', 'DESC']],
@@ -170,10 +170,10 @@ const fetchTicketTracker = async (req: Request, res: Response) => {
             whereCondition.process_or_sales = processSale;
         }
 
-
         if (searchTerm) {
             const searchConditions = [
                 { ticket_type: { [Op.iLike]: `%${searchTerm}%` } },
+                { ticket_no: { [Op.eq]: `${searchTerm}` } },
                 { processor_name: { [Op.iLike]: `%${searchTerm}%` } },
                 { processor_type: { [Op.iLike]: `%${searchTerm}%` } },
                 { process_or_sales: { [Op.iLike]: `%${searchTerm}%` } },

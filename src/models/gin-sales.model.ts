@@ -160,6 +160,9 @@ const GinSales = db.define('gin_sales', {
   logistics_documents: {
     type: DataTypes.ARRAY(DataTypes.TEXT)
   },
+  coc_doc: {
+    type: DataTypes.STRING
+  },
 });
 
 GinSales.belongsTo(Ginner, {

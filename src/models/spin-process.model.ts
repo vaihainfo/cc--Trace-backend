@@ -118,6 +118,16 @@ const SpinProcess = db.define('spin_processes', {
     type: DataTypes.BOOLEAN,
     defaultValue: false,
   },
+  from_date: {
+    type: DataTypes.DATE,
+    allowNull: true,
+    defaultValue: null,
+  },
+  to_date: {
+    type: DataTypes.DATE,
+    allowNull: true,
+    defaultValue: null,
+  },
 });
 
 

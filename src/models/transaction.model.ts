@@ -155,6 +155,17 @@ const Transaction = db.define('transactions', {
     type: DataTypes.BOOLEAN,
     defaultValue: false,
   },
+  latitude: {
+    type: DataTypes.DOUBLE,
+  },
+  longitude: {
+    type: DataTypes.DOUBLE,
+  },
+  old_data: {
+    type: DataTypes.STRING,
+    allowNull: true,
+    defaultValue: null
+  }
 });
 
 

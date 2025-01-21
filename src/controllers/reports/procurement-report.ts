@@ -17,6 +17,7 @@ import * as ExcelJS from "exceljs";
 import * as path from "path";
 import UserApp from "../../models/users-app.model";
 import sequelize from "../../util/dbConn";
+import moment from "moment";
 
 
 const fetchTransactionsReport = async (req: Request, res: Response) => {
@@ -89,12 +90,10 @@ const fetchTransactionsReport = async (req: Request, res: Response) => {
     }
 
     if (startDate && endDate) {
-      const startOfDay = new Date(startDate);
-      startOfDay.setUTCHours(0, 0, 0, 0);
-      const endOfDay = new Date(endDate);
-      endOfDay.setUTCHours(23, 59, 59, 999);
+      const startOfDay = moment(startDate).utc().startOf('day').toDate();
+      const endOfDay = moment(endDate).utc().endOf('day').toDate();
       whereCondition.date = { [Op.between]: [startOfDay, endOfDay] }
-  }
+    }
     // apply search
     if (searchTerm) {
       whereCondition[Op.or] = [
@@ -367,9 +366,9 @@ const exportProcurementReport = async (req: Request, res: Response) => {
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet("Sheet1");
     if(isBrand === 'true'){
-      worksheet.mergeCells('A1:R1');
+      worksheet.mergeCells('A1:T1');
     }else{
-      worksheet.mergeCells('A1:S1');
+      worksheet.mergeCells('A1:U1');
     }
     
     const mergedCell = worksheet.getCell('A1');
@@ -393,13 +392,14 @@ const exportProcurementReport = async (req: Request, res: Response) => {
           "Village",
           "Transaction Id",
           "Quantity Purchased (Kgs)",
+          "Quantity Stock (Kgs)",
           "Available Cotton(Kgs)",
           "Price/Kg (Local Currency)",
           "Programme",
           "Transport Vehicle No",
           "Payment Method",
           "Ginner Name",
-          "Agent",
+          "Transaction User Details",
         ]);
       }else{
         headerRow = worksheet.addRow([
@@ -416,13 +416,14 @@ const exportProcurementReport = async (req: Request, res: Response) => {
           "Village",
           "Transaction Id",
           "Quantity Purchased (Kgs)",
+          "Quantity Stock (Kgs)",
           "Available Cotton(Kgs)",
           "Price/Kg (Local Currency)",
           "Programme",
           "Transport Vehicle No",
           "Payment Method",
           "Ginner Name",
-          "Agent",
+          "Transaction User Details",
         ]);
     }
     headerRow.font = { bold: true };
@@ -518,13 +519,14 @@ const exportProcurementReport = async (req: Request, res: Response) => {
             village: item.dataValues.village ? item.dataValues.village.village_name : '',
             id: item.dataValues.id ? item.dataValues.id : '',
             qty_purchased: item.dataValues.qty_purchased ? Number(item.dataValues.qty_purchased) : 0,
+            qty_stock: item.dataValues.qty_stock ? Number(item.dataValues.qty_stock) : 0,
             available_cotton: item.dataValues.farm ? (Number(item.dataValues.farm.total_estimated_cotton) > Number(item.dataValues.farm.cotton_transacted) ? Number(item.dataValues.farm.total_estimated_cotton) - Number(item.dataValues.farm.cotton_transacted) : 0) : 0,
             rate: item.dataValues.rate ? Number(item.dataValues.rate) : 0,
             program: item.dataValues.program ? item.dataValues.program.program_name : '',
             vehicle: item.dataValues.vehicle ? item.dataValues.vehicle : '',
             payment_method: item.dataValues.payment_method ? item.dataValues.payment_method : '',
             ginner: item.dataValues.ginner ? item.dataValues.ginner.name : '',
-            agent: item.dataValues.agent ? item.dataValues.agent.firstName : "",
+            agent: item?.dataValues?.agent && ( item?.dataValues?.agent?.lastName ? item?.dataValues?.agent?.firstName + " " + item?.dataValues?.agent?.lastName+ "-" + item?.dataValues?.agent?.access_level : item?.dataValues?.agent?.firstName+ "-" + item?.dataValues?.agent?.access_level),
           });
         }else{
         rowValues = Object.values({
@@ -541,13 +543,14 @@ const exportProcurementReport = async (req: Request, res: Response) => {
           village: item.dataValues.village ? item.dataValues.village.village_name : '',
           id: item.dataValues.id ? item.dataValues.id : '',
           qty_purchased: item.dataValues.qty_purchased ? Number(item.dataValues.qty_purchased) : 0,
+          qty_stock: item.dataValues.qty_stock ? Number(item.dataValues.qty_stock) : 0,
           available_cotton: item.dataValues.farm ? (Number(item.dataValues.farm.total_estimated_cotton) > Number(item.dataValues.farm.cotton_transacted) ? Number(item.dataValues.farm.total_estimated_cotton) - Number(item.dataValues.farm.cotton_transacted) : 0) : 0,
           rate: item.dataValues.rate ? Number(item.dataValues.rate) : 0,
           program: item.dataValues.program ? item.dataValues.program.program_name : '',
           vehicle: item.dataValues.vehicle ? item.dataValues.vehicle : '',
           payment_method: item.dataValues.payment_method ? item.dataValues.payment_method : '',
           ginner: item.dataValues.ginner ? item.dataValues.ginner.name : '',
-          agent: item.dataValues.agent ? item.dataValues.agent.firstName : "",
+          agent: item?.dataValues?.agent && ( item?.dataValues?.agent?.lastName ? item?.dataValues?.agent?.firstName + " " + item?.dataValues?.agent?.lastName+ "-" + item?.dataValues?.agent?.access_level : item?.dataValues?.agent?.firstName+ "-" + item?.dataValues?.agent?.access_level),
         });
       }
       worksheet.addRow(rowValues);

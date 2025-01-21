@@ -80,7 +80,9 @@ const createSpinnerProcess = async (req: Request, res: Response) => {
             qty_stock: req.body.netYarnQty,
             dyeing_id: dyeing ? dyeing.id : null,
             tot_box_user: req.body.noOfBox,
-            status: 'Pending'
+            status: 'Pending',
+            from_date: req.body.from_date,
+            to_date: req.body.to_date,
         };
         const spin = await SpinProcess.create(data);
         let uniqueFilename = `spin_procees_qrcode_${Date.now()}.png`;
@@ -257,16 +259,16 @@ const yarnId = async (id: any, date: any) => {
 
     let count = 0;
 
-    if(spinLatest){
+    if (spinLatest) {
         let reelLot = spinLatest?.dataValues?.reel_lot_no;
         let split = reelLot ? reelLot.split('/') : [];
         count = split && split.length > 0 ? Number(split[1]) : 0;
     }
 
     let currentDate = date ? new Date(date) : new Date();
-    let day = String(currentDate.getDate()).padStart(2, "0"); 
+    let day = String(currentDate.getDate()).padStart(2, "0");
     let month = String(currentDate.getMonth() + 1).padStart(2, "0"); // Local month, zero-indexed, so add 1
-    let year = String(currentDate.getFullYear()); 
+    let year = String(currentDate.getFullYear());
 
     let prcs_date = day + month + year;
 
@@ -354,7 +356,7 @@ const fetchSpinnerProcessPagination = async (req: Request, res: Response) => {
 
             let data = [];
 
-            for await (let row of rows) {   
+            for await (let row of rows) {
                 let yarncount = [];
 
                 if (row.dataValues?.yarn_count.length > 0) {
@@ -644,14 +646,14 @@ const exportSpinnerProcess = async (req: Request, res: Response) => {
         // Create the excel workbook file
         const workbook = new ExcelJS.Workbook();
         const worksheet = workbook.addWorksheet("Sheet1");
-        worksheet.mergeCells('A1:L1');
+        worksheet.mergeCells('A1:O1');
         const mergedCell = worksheet.getCell('A1');
         mergedCell.value = 'CottonConnect | Process';
         mergedCell.font = { bold: true };
         mergedCell.alignment = { horizontal: 'center', vertical: 'middle' };
         // Set bold font for header row
         const headerRow = worksheet.addRow([
-            "Sr No.", "Date", "Season",
+            "Sr No.", "Date", "Yarn Production Start Date", "Yarn Production End Date", "Season",
             "Spin Lot No", "Yarn Type", "Yarn Count", "Yarn Realisation %", "No of Boxes",
             "Box ID", "Blend", "Blend Qty", "Total Yarn weight (Kgs)", "Grey Out Status"
         ]);
@@ -706,6 +708,8 @@ const exportSpinnerProcess = async (req: Request, res: Response) => {
             const rowValues = Object.values({
                 index: index + 1,
                 date: item.date ? item.date : '',
+                from: item.from_date ? item.from_date : "",
+                to: item.to_date ? item.to_date : "",
                 season: item.season ? item.season.name : '',
                 lotNo: item.batch_lot_no ? item.batch_lot_no : '',
                 yarnType: item.yarn_type ? item.yarn_type : '',
@@ -878,7 +882,7 @@ const createSpinnerSales = async (req: Request, res: Response) => {
             for await (let obj of req.body.chooseYarn) {
                 const spinProcessData = await SpinProcess.findOne({ where: { id: obj.process_id } });
                 let update = await SpinProcess.update({ qty_stock: spinProcessData.qty_stock - obj.qtyUsed, status: 'Sold' }, { where: { id: obj.process_id } });
-                 const spinYarnData = await SpinYarn.findOne({ where: { id: obj.id } });
+                const spinYarnData = await SpinYarn.findOne({ where: { id: obj.id } });
 
                 let updateyarns = {}
                 if (spinYarnData.yarn_qty_stock - obj.qtyUsed <= 0) {
@@ -1422,7 +1426,7 @@ const fetchTransactionAlert = async (req: Request, res: Response) => {
                 { '$season.name$': { [Op.iLike]: `%${searchTerm}%` } }, // Search by crop Type
             ];
         }
-        
+
         if (status === 'Pending') {
             whereCondition.buyer = spinnerId
             whereCondition.status = { [Op.in]: ['Pending', 'Pending for QR scanning', 'Partially Accepted', 'Partially Rejected'] }
@@ -1464,16 +1468,19 @@ const fetchTransactionAlert = async (req: Request, res: Response) => {
                 attributes: ['id', 'name'],
                 include: [{
                     model: State,
-                    as: "state"
+                    as: "state",
+                    attributes: ['id', 'state_name'],
                 }]
             },
             {
                 model: Season,
                 as: "season",
+                attributes: ['id', 'name'],
             },
             {
                 model: Program,
                 as: "program",
+                attributes: ['id', 'program_name'],
             },
             {
                 model: Spinner,
@@ -1551,119 +1558,254 @@ const fetchTransactionAlert = async (req: Request, res: Response) => {
 };
 
 //update spinner transactions to accept and reject
+// const updateStatusSales = async (req: Request, res: Response) => {
+//     try {
+//         let update = []
+//         await GinSales.update({visible_flag: false}, { where: { id: req.body.items?.map((obj: any) => obj.id) } });
+//         for (const obj of req.body.items) {
+//             let result;
+//             let soldCount = 0;
+//             let rejectedCount = 0;
+//             let nullCount = 0;
+
+//             let data: any = {
+//                 accept_date: obj.status === 'Sold' ? new Date().toISOString() : null
+//             };
+
+//             let rejectedBalesId = [];
+
+//             for await (const bale of obj.bales) {
+//                 const isNotUpdated = await BaleSelection.findOne({ where: { bale_id: bale.id, sales_id: obj.id, spinner_status: null } });
+//                 if(isNotUpdated){
+//                     if (obj.status !== 'Sold') {
+//                         rejectedBalesId.push(bale.id);
+//                         // await GinBale.update({ sold_status: false }, { where: { id: bale.id } });
+//                     }
+
+//                     if (obj.status === 'Sold') {
+//                         await GinBale.update({ accepted_weight: bale.qtyUsed ? Number(bale.qtyUsed).toFixed(2) : 0 }, { where: { id: bale.id } });
+//                     }
+//                     await BaleSelection.update({ spinner_status: obj.status === 'Sold' ? true : false }, { where: { bale_id: bale.id, sales_id: obj.id } });
+//                 }
+//             }
+
+//             let bales = await BaleSelection.findAll({ where: { sales_id: obj.id } });
+
+//             for (const bale of bales) {
+//                 if (bale.spinner_status === true) {
+//                     soldCount++;
+//                 } else if (bale.spinner_status === false) {
+//                     rejectedCount++;
+//                 }
+//             }
+
+//             // Update status based on counts
+//             let status;
+//             if (soldCount === bales.length) {
+//                 status = 'Sold';
+//             } else if (rejectedCount === bales.length) {
+//                 status = 'Rejected';
+//             } else if (soldCount > rejectedCount) {
+//                 status = 'Partially Accepted';
+//             } else {
+//                 status = 'Partially Rejected';
+//             }
+
+//             if(obj.status !== 'Sold' && rejectedBalesId && rejectedBalesId.length > 0){
+//                 console.log("Rejected Bales", rejectedBalesId)
+//                 if(status === 'Rejected'){
+//                     console.log("==== Completely Rejected ====")
+//                     await GinBale.update({ sold_status: false, is_all_rejected: true }, { where: { id: rejectedBalesId } });
+//                 }else if(status === 'Partially Accepted' || status === 'Partially Rejected'){
+//                     console.log("===== Not Completely Rejected =====")
+//                     await GinBale.update({ sold_status: false, is_all_rejected: false }, { where: { id: rejectedBalesId } });
+//                 }
+//             }
+
+//             data = { ...data, status: status }
+
+//             const ginSale = await GinSales.findOne({ where: { id: obj.id } });
+//             const lintSale = await LintSelections.findAll({ where: { lint_id: obj.id } });
+//             const [total] = await sequelize.query(`SELECT 
+//                         COALESCE(
+//                             SUM(
+//                                 CASE
+//                                 WHEN gb.accepted_weight IS NOT NULL THEN gb.accepted_weight
+//                                 ELSE CAST(gb.weight AS DOUBLE PRECISION)
+//                                 END
+//                             ), 0
+//                         ) AS total_qty
+//                     FROM 
+//                         bale_selections bs
+//                     LEFT JOIN 
+//                         "gin-bales" gb ON bs.bale_id = gb.id
+//                     WHERE 
+//                         bs.sales_id = ${obj.id}
+//                         AND bs.spinner_status = true`, {
+//                             type: sequelize.QueryTypes.SELECT,
+//                         })
+
+//                         console.log("max qty stock to be in gin sales=============",total, Math.ceil(Number(total.total_qty)), ginSale.qty_stock + Number(obj.qtyStock))
+
+//             if (ginSale) {
+//                 // Increment qty_stock by obj.qtyStock
+//                 if (obj.status === 'Sold' && (ginSale.qty_stock + Number(obj.qtyStock) <= Math.ceil(Number(total.total_qty)))) {
+//                     data.qty_stock = Number(ginSale.qty_stock) + Number(obj.qtyStock);
+//                     if(lintSale && lintSale?.length > 0){
+//                         let sum = lintSale?.reduce((acc: any, value:any) => Number(value?.qty_used) + acc,0);
+
+//                         data.accepted_bales_weight = Number(ginSale.qty_stock) + Number(obj.qtyStock) + sum;  
+//                     }else{
+//                         data.accepted_bales_weight = Number(ginSale.qty_stock) + Number(obj.qtyStock);
+//                     }
+//                 }
+//                 result = await GinSales.update({...data, visible_flag: true}, { where: { id: obj.id } });
+//             }
+
+//             update.push(result);
+//         }
+//         res.sendSuccess(res, { update });
+//     } catch (error: any) {
+//         await GinSales.update({visible_flag: true}, { where: { id: req.body.items?.map((obj: any) => obj.id) } });
+//         console.log(error)
+//         return res.sendError(res, error.meessage);
+//     }
+// }
+
 const updateStatusSales = async (req: Request, res: Response) => {
     try {
-        let update = []
-        await GinSales.update({visible_flag: false}, { where: { id: req.body.items?.map((obj: any) => obj.id) } });
-        for (const obj of req.body.items) {
-            let result;
-            let soldCount = 0;
-            let rejectedCount = 0;
-            let nullCount = 0;
+        let update: any = [];
 
-            let data: any = {
-                accept_date: obj.status === 'Sold' ? new Date().toISOString() : null
-            };
+        // Begin transaction to manage multiple operations as a single unit
+        await sequelize.transaction(async (t: any) => {
+            // Update visibility flag for all items in bulk
+            await GinSales.update({ visible_flag: false }, {
+                where: { id: req.body.items?.map((obj: any) => obj.id) },
+                transaction: t
+            });
 
-            let rejectedBalesId = [];
+            // Loop through items in request body to process each one
+            for (const obj of req.body.items) {
+                let soldCount = 0;
+                let rejectedCount = 0;
+                let rejectedBalesId = [];
 
-            for await (const bale of obj.bales) {
-                const isNotUpdated = await BaleSelection.findOne({ where: { bale_id: bale.id, sales_id: obj.id, spinner_status: null } });
-                if(isNotUpdated){
-                    if (obj.status !== 'Sold') {
-                        rejectedBalesId.push(bale.id);
-                        // await GinBale.update({ sold_status: false }, { where: { id: bale.id } });
-                    }
-    
+                let data: any = {
+                    accept_date: obj.status === 'Sold' ? new Date().toISOString() : null,
+                };
+
+                // Batch update for bales
+                const balesToUpdate = obj.bales.map((bale: any) => bale.id);
+                if (balesToUpdate.length > 0) {
+                    await BaleSelection.update(
+                        { spinner_status: obj.status === 'Sold' ? true : false },
+                        { where: { bale_id: balesToUpdate, sales_id: obj.id, spinner_status: null }, transaction: t }
+                    );
+
                     if (obj.status === 'Sold') {
-                        await GinBale.update({ accepted_weight: bale.qtyUsed ? Number(bale.qtyUsed).toFixed(2) : 0 }, { where: { id: bale.id } });
+                        for (const bale of obj.bales) {
+                            const acceptedWeight = bale.qtyUsed ? Number(bale.qtyUsed).toFixed(2) : 0;
+
+                            await GinBale.update(
+                                { accepted_weight: acceptedWeight },
+                                { where: { id: bale.id }, transaction: t }
+                            );
+                        }
+                    } else {
+                        rejectedBalesId = balesToUpdate;
+                        await GinBale.update({ sold_status: false, is_all_rejected: false }, { where: { id: rejectedBalesId }, transaction: t });
                     }
-                    await BaleSelection.update({ spinner_status: obj.status === 'Sold' ? true : false }, { where: { bale_id: bale.id, sales_id: obj.id } });
                 }
-            }
 
-            let bales = await BaleSelection.findAll({ where: { sales_id: obj.id } });
+                // Retrieve bale data for status calculation
+                const bales = await BaleSelection.findAll({
+                    where: { sales_id: obj.id },
+                    attributes: ['spinner_status'],
+                    transaction: t
+                });
 
-            for (const bale of bales) {
-                if (bale.spinner_status === true) {
-                    soldCount++;
-                } else if (bale.spinner_status === false) {
-                    rejectedCount++;
-                }
-            }
+                // Count status types in bales
+                soldCount = bales.filter((bale: any) => bale.spinner_status === true).length;
+                rejectedCount = bales.filter((bale: any) => bale.spinner_status === false).length;
 
-            // Update status based on counts
-            let status;
-            if (soldCount === bales.length) {
-                status = 'Sold';
-            } else if (rejectedCount === bales.length) {
-                status = 'Rejected';
-            } else if (soldCount > rejectedCount) {
-                status = 'Partially Accepted';
-            } else {
-                status = 'Partially Rejected';
-            }
+                // Determine the status
+                let status = 'Partially Rejected';
+                if (soldCount === bales.length) status = 'Sold';
+                else if (rejectedCount === bales.length) status = 'Rejected';
+                else if (soldCount > rejectedCount) status = 'Partially Accepted';
 
-            if(obj.status !== 'Sold' && rejectedBalesId && rejectedBalesId.length > 0){
-                console.log("Rejected Bales", rejectedBalesId)
                 if(status === 'Rejected'){
                     console.log("==== Completely Rejected ====")
-                    await GinBale.update({ sold_status: false, is_all_rejected: true }, { where: { id: rejectedBalesId } });
-                }else if(status === 'Partially Accepted' || status === 'Partially Rejected'){
-                    console.log("===== Not Completely Rejected =====")
-                    await GinBale.update({ sold_status: false, is_all_rejected: false }, { where: { id: rejectedBalesId } });
+                    // await GinBale.update({ is_all_rejected: true }, { where: { id: rejectedBalesId } });
+                    await sequelize.query(
+                        `
+                        UPDATE 
+                            "gin-bales" gb
+                        SET 
+                            is_all_rejected = true
+                        FROM 
+                            bale_selections bs
+                        WHERE 
+                            gb.id = bs.bale_id
+                            AND bs.sales_id = :rejectedId
+                        `,
+                        {
+                          replacements: { rejectedId: obj.id },
+                          transaction: t,
+                          type: sequelize.QueryTypes.UPDATE,
+                        }
+                      );
+                    
+                      console.log("==== GinBale Updated for Rejected Sales ====");
                 }
-            }
 
-            data = { ...data, status: status }
+                data.status = status;
 
-            const ginSale = await GinSales.findOne({ where: { id: obj.id } });
-            const lintSale = await LintSelections.findAll({ where: { lint_id: obj.id } });
-            const [total] = await sequelize.query(`SELECT 
-                        COALESCE(
-                            SUM(
-                                CASE
-                                WHEN gb.accepted_weight IS NOT NULL THEN gb.accepted_weight
-                                ELSE CAST(gb.weight AS DOUBLE PRECISION)
-                                END
-                            ), 0
-                        ) AS total_qty
-                    FROM 
-                        bale_selections bs
-                    LEFT JOIN 
-                        "gin-bales" gb ON bs.bale_id = gb.id
-                    WHERE 
-                        bs.sales_id = ${obj.id}
-                        AND bs.spinner_status = true`, {
-                            type: sequelize.QueryTypes.SELECT,
-                        })
+                // Calculate total quantity
+                const [total] = await sequelize.query(`
+                    SELECT COALESCE(SUM(CASE WHEN gb.accepted_weight IS NOT NULL 
+                        THEN gb.accepted_weight ELSE CAST(gb.weight AS DOUBLE PRECISION) END), 0) AS total_qty
+                    FROM bale_selections bs
+                    LEFT JOIN "gin-bales" gb ON bs.bale_id = gb.id
+                    WHERE bs.sales_id = :sales_id AND bs.spinner_status = true`,
+                    { replacements: { sales_id: obj.id }, type: sequelize.QueryTypes.SELECT, transaction: t });
 
-                        console.log("max qty stock to be in gin sales=============",total, Math.ceil(Number(total.total_qty)), ginSale.qty_stock + Number(obj.qtyStock))
+                const ginSale = await GinSales.findOne({ where: { id: obj.id }, transaction: t });
+                const lintSale = await LintSelections.findAll({ where: { lint_id: obj.id }, transaction: t });
 
-            if (ginSale) {
-                // Increment qty_stock by obj.qtyStock
-                if (obj.status === 'Sold' && (ginSale.qty_stock + Number(obj.qtyStock) <= Math.ceil(Number(total.total_qty)))) {
+                console.log("max qty stock to be in gin sales=============", total, Math.ceil(Number(total.total_qty)), ginSale.qty_stock + Number(obj.qtyStock))
+
+                if (ginSale && obj.status === 'Sold' && (ginSale.qty_stock + Number(obj.qtyStock)) <= Math.ceil(Number(total.total_qty))) {
                     data.qty_stock = Number(ginSale.qty_stock) + Number(obj.qtyStock);
-                    if(lintSale && lintSale?.length > 0){
-                        let sum = lintSale?.reduce((acc: any, value:any) => Number(value?.qty_used) + acc,0);
+                    if (lintSale && lintSale?.length > 0) {
+                        let sum = lintSale?.reduce((acc: any, value: any) => Number(value?.qty_used) + acc, 0);
 
-                        data.accepted_bales_weight = Number(ginSale.qty_stock) + Number(obj.qtyStock) + sum;  
-                    }else{
+                        data.accepted_bales_weight = Number(ginSale.qty_stock) + Number(obj.qtyStock) + sum;
+                    } else {
                         data.accepted_bales_weight = Number(ginSale.qty_stock) + Number(obj.qtyStock);
                     }
                 }
-                result = await GinSales.update({...data, visible_flag: true}, { where: { id: obj.id } });
-            }
 
-            update.push(result);
-        }
+                // Update GinSales with calculated data
+                const result = await GinSales.update({ ...data, visible_flag: true }, {
+                    where: { id: obj.id },
+                    transaction: t
+                });
+
+                // Store result data
+                update.push({ id: obj.id, status: data.status, qty_stock: data.qty_stock, visible_flag: true });
+            }
+        });
+
+        // Send combined response with all updates
         res.sendSuccess(res, { update });
     } catch (error: any) {
-        await GinSales.update({visible_flag: true}, { where: { id: req.body.items?.map((obj: any) => obj.id) } });
-        console.log(error)
-        return res.sendError(res, error.meessage);
+        console.log(error);
+        await GinSales.update({ visible_flag: true }, { where: { id: req.body.items?.map((obj: any) => obj.id) } });
+        return res.sendError(res, error.message);
     }
-}
+};
+
 
 const fetchTransactionList = async (req: Request, res: Response) => {
     const searchTerm = req.query.search || "";
@@ -1705,22 +1847,63 @@ const fetchTransactionList = async (req: Request, res: Response) => {
         whereCondition.push(`gs.status IN ('Sold', 'Partially Accepted', 'Partially Rejected')`)
 
 
-        const whereClause = whereCondition.length > 0 ? `WHERE ${whereCondition.join(' AND ')}` : '';
+        // const whereClause = whereCondition.length > 0 ? `WHERE ${whereCondition.join(' AND ')}` : '';
+        const whereClause = whereCondition.length > 0 ? `WHERE ${whereCondition.join(' AND ')} AND bd.total_qty > 0` : 'WHERE bd.total_qty > 0';
 
         // Count query
+        // const countQuery = `
+        //     SELECT COUNT(*) AS total_count
+        //     FROM 
+        //             gin_sales gs
+        //         LEFT JOIN 
+        //             ginners g ON gs.ginner_id = g.id
+        //         LEFT JOIN 
+        //             seasons s ON gs.season_id = s.id
+        //         LEFT JOIN 
+        //             programs p ON gs.program_id = p.id
+        //         LEFT JOIN 
+        //             spinners sp ON gs.buyer = sp.id
+        //     ${whereClause}`;
+
         const countQuery = `
+            WITH bale_details AS (
+                SELECT 
+                    bs.sales_id,
+                    COALESCE(
+                        SUM(
+                            CASE
+                            WHEN gb.accepted_weight IS NOT NULL THEN gb.accepted_weight
+                            ELSE CAST(gb.weight AS DOUBLE PRECISION)
+                            END
+                        ), 0
+                    ) AS total_qty
+                FROM 
+                    bale_selections bs
+                JOIN 
+                    gin_sales gs ON bs.sales_id = gs.id
+                LEFT JOIN 
+                    "gin-bales" gb ON bs.bale_id = gb.id
+                WHERE 
+                    gs.status IN ('Sold', 'Partially Accepted', 'Partially Rejected')
+                    AND (bs.spinner_status = true OR gs.status = 'Sold')
+                GROUP BY 
+                    bs.sales_id
+            )
             SELECT COUNT(*) AS total_count
             FROM 
-                    gin_sales gs
-                LEFT JOIN 
-                    ginners g ON gs.ginner_id = g.id
-                LEFT JOIN 
-                    seasons s ON gs.season_id = s.id
-                LEFT JOIN 
-                    programs p ON gs.program_id = p.id
-                LEFT JOIN 
-                    spinners sp ON gs.buyer = sp.id
-            ${whereClause}`;
+                gin_sales gs
+            LEFT JOIN 
+                ginners g ON gs.ginner_id = g.id
+            LEFT JOIN 
+                seasons s ON gs.season_id = s.id
+            LEFT JOIN 
+                programs p ON gs.program_id = p.id
+            LEFT JOIN 
+                spinners sp ON gs.buyer = sp.id
+            LEFT JOIN 
+                bale_details bd ON gs.id = bd.sales_id
+            ${whereClause};
+        `;
 
 
         let dataQuery = `
@@ -1780,7 +1963,7 @@ const fetchTransactionList = async (req: Request, res: Response) => {
                     gs."updatedAt" DESC
                 LIMIT 
                     :limit OFFSET :offset;`
-                    
+
 
         const [countResult, rows] = await Promise.all([
             sequelize.query(countQuery, {
@@ -2454,7 +2637,7 @@ const chooseYarn = async (req: Request, res: Response) => {
                             as: 'spinprocess',
                             attributes: ['greyout_status'],
                         }
-                    ],
+                        ],
                         order: [["id", "desc"]],
                         where: {
                             process_id: row?.dataValues?.id,
@@ -2552,94 +2735,94 @@ const getYarnReelLotNo = async (req: Request, res: Response) => {
     }
 };
 
-const _getSpinnerProcessTracingChartData = async (reelLotNo:any) => {
+const _getSpinnerProcessTracingChartData = async (reelLotNo: any) => {
     let offset = 0;
-    let allSpinData:any = [];
-  
+    let allSpinData: any = [];
+
     let include = [{ model: Spinner, as: "spinner", attributes: ['id', 'name'] }];
-    let whereCondition:any = {};
-  
-    if (reelLotNo!==null) {
-      const idArray = reelLotNo.split(",");
-      whereCondition.reel_lot_no = { [Op.in]: idArray };
+    let whereCondition: any = {};
+
+    if (reelLotNo !== null) {
+        const idArray = reelLotNo.split(",");
+        whereCondition.reel_lot_no = { [Op.in]: idArray };
     }
-    
+
     // const BATCH_SIZE = 10;
     // while (true) {
-      let batchSpinData = await queryWithRetry(() =>
+    let batchSpinData = await queryWithRetry(() =>
         SpinProcess.findAll({
-          where: whereCondition,
-          include: include,
-          order: [['id', 'desc']],
-        //   limit: BATCH_SIZE,
-        //   offset: offset,
-          attributes: ['id', 'reel_lot_no']
+            where: whereCondition,
+            include: include,
+            order: [['id', 'desc']],
+            //   limit: BATCH_SIZE,
+            //   offset: offset,
+            attributes: ['id', 'reel_lot_no']
         })
-      );
-  
-    //   if (batchSpinData.length === 0) break;
-  
-    //   offset += BATCH_SIZE;
-  
-      let spinWithGinSales = await Promise.all(
-        batchSpinData.map(async (spin:any) => {
-          spin = spin.toJSON();
-  
-          // Fetch lintSele for spin
-          spin.lintSele = await LintSelections.findAll({
-            where: {
-              process_id: spin.id,
-            }
-          });
-  
-          // Fetch ginSales for spin
-          spin.ginSales = await Promise.all(
-            spin.lintSele.map(async (lintSeleItem: any) => {
-              let ginSales = await GinSales.findAll({
-                where: { id: lintSeleItem.lint_id },
-                include: [{ model: Ginner, as: "ginner", attributes: ['id', 'name'] }],
-                attributes: ['id', 'ginner_id','reel_lot_no']
-              });
-              return ginSales;
-            })
-          );
-  
-          // Process ginSales and transactions
-          spin.ginSales = await Promise.all(
-            spin.ginSales.map(async (sales: any) => {
-              return await Promise.all(
-                sales.map(async (sale: any) => {
-                  // Assuming _getGinnerProcessTracingChartData returns data or handles async operations correctly
-                  return await _getGinnerProcessTracingChartData(sale.reel_lot_no);
-                })
-              );
-            })
-          );
-          
-          return spin;
-        })
-      );
-  
-      allSpinData = allSpinData.concat(spinWithGinSales);
-    // }
-  
-    return formatDataForSpinnerProcess(reelLotNo, allSpinData);
-  };
+    );
 
-  async function queryWithRetry(queryFunction:any, retries = 0) {
+    //   if (batchSpinData.length === 0) break;
+
+    //   offset += BATCH_SIZE;
+
+    let spinWithGinSales = await Promise.all(
+        batchSpinData.map(async (spin: any) => {
+            spin = spin.toJSON();
+
+            // Fetch lintSele for spin
+            spin.lintSele = await LintSelections.findAll({
+                where: {
+                    process_id: spin.id,
+                }
+            });
+
+            // Fetch ginSales for spin
+            spin.ginSales = await Promise.all(
+                spin.lintSele.map(async (lintSeleItem: any) => {
+                    let ginSales = await GinSales.findAll({
+                        where: { id: lintSeleItem.lint_id },
+                        include: [{ model: Ginner, as: "ginner", attributes: ['id', 'name'] }],
+                        attributes: ['id', 'ginner_id', 'reel_lot_no']
+                    });
+                    return ginSales;
+                })
+            );
+
+            // Process ginSales and transactions
+            spin.ginSales = await Promise.all(
+                spin.ginSales.map(async (sales: any) => {
+                    return await Promise.all(
+                        sales.map(async (sale: any) => {
+                            // Assuming _getGinnerProcessTracingChartData returns data or handles async operations correctly
+                            return await _getGinnerProcessTracingChartData(sale.reel_lot_no);
+                        })
+                    );
+                })
+            );
+
+            return spin;
+        })
+    );
+
+    allSpinData = allSpinData.concat(spinWithGinSales);
+    // }
+
+    return formatDataForSpinnerProcess(reelLotNo, allSpinData);
+};
+
+async function queryWithRetry(queryFunction: any, retries = 0) {
     try {
-      return await queryFunction();
+        return await queryFunction();
     } catch (error) {
-      if (error instanceof sequelize.ConnectionAcquireTimeoutError && retries < 3) {
-        console.error(`Connection timeout, retrying... (attempt ${retries + 1}/3)`);
-        await new Promise(resolve => setTimeout(resolve, 1000)); // Retry after 1 second
-        return await queryWithRetry(queryFunction, retries + 1);
-      }
-      throw error; // Propagate other errors
+        if (error instanceof sequelize.ConnectionAcquireTimeoutError && retries < 3) {
+            console.error(`Connection timeout, retrying... (attempt ${retries + 1}/3)`);
+            await new Promise(resolve => setTimeout(resolve, 1000)); // Retry after 1 second
+            return await queryWithRetry(queryFunction, retries + 1);
+        }
+        throw error; // Propagate other errors
     }
-  }
-  
-  const getSpinnerProcessTracingChartData = async (req: Request, res: Response) => {
+}
+
+const getSpinnerProcessTracingChartData = async (req: Request, res: Response) => {
     const { reelLotNo } = req.query;
 
     // await createIndexes();
@@ -2648,8 +2831,8 @@ const _getSpinnerProcessTracingChartData = async (reelLotNo:any) => {
 
     // await createIndexes();
     res.sendSuccess(res, data);
-  }
-  const createIndexIfNotExists= async (tableName:any, indexName:any, fields:any) => {
+}
+const createIndexIfNotExists = async (tableName: any, indexName: any, fields: any) => {
     try {
         const indexExistsQuery = `
             SELECT indexname
@@ -2661,7 +2844,7 @@ const _getSpinnerProcessTracingChartData = async (reelLotNo:any) => {
 
         if (!existingIndex || existingIndex.length === 0) {
             const createIndexQuery = `
-                CREATE INDEX CONCURRENTLY ${indexName} ON "${tableName}" (${fields.map((field:any) => `"${field}"`).join(', ')});
+                CREATE INDEX CONCURRENTLY ${indexName} ON "${tableName}" (${fields.map((field: any) => `"${field}"`).join(', ')});
             `;
             await sequelize.query(createIndexQuery);
             console.log(`Index ${indexName} created successfully on ${tableName} table.`);
