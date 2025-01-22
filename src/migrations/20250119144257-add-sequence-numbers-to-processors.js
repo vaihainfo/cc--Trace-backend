@@ -3,12 +3,12 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
-    // Array of processor types
-    const processors = ['spinner', 'knitter', 'weaver'];
+    // Array of all tables that need sequences
+    const tables = ['spinner', 'knitter', 'weaver', 'garment', 'fabric'];
 
-    for (const processor of processors) {
-      const tableName = `${processor}s`;
-      const seqName = `${processor}_seq`;
+    for (const table of tables) {
+      const tableName = `${table}s`;
+      const seqName = `${table}_seq`;
 
       // Create sequence
       await queryInterface.sequelize.query(`
@@ -23,13 +23,13 @@ module.exports = {
 
       // Update existing records with sequence numbers
       await queryInterface.sequelize.query(`
-        WITH numbered_${processor}s AS (
+        WITH numbered_${table}s AS (
           SELECT id, ROW_NUMBER() OVER (ORDER BY "createdAt") as rnum
           FROM ${tableName}
         )
         UPDATE ${tableName} p
         SET sequence_no = np.rnum
-        FROM numbered_${processor}s np
+        FROM numbered_${table}s np
         WHERE p.id = np.id;
       `);
 
@@ -54,11 +54,11 @@ module.exports = {
   },
 
   async down(queryInterface, Sequelize) {
-    const processors = ['spinner', 'knitter', 'weaver'];
+    const tables = ['spinner', 'knitter', 'weaver', 'garment', 'fabric'];
 
-    for (const processor of processors) {
-      const tableName = `${processor}s`;
-      const seqName = `${processor}_seq`;
+    for (const table of tables) {
+      const tableName = `${table}s`;
+      const seqName = `${table}_seq`;
 
       // Drop the unique constraint
       await queryInterface.sequelize.query(`

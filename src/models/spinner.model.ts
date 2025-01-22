@@ -12,6 +12,12 @@ const Spinner = db.define('spinners', {
     allowNull: false,
     primaryKey: true
   },
+  sequence_no: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    defaultValue: db.literal("nextval('spinner_seq')"),
+    unique: true
+  },
   name: {
     allowNull: false,
     type: DataTypes.STRING
