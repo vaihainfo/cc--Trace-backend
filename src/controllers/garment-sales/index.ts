@@ -3959,6 +3959,7 @@ const getCOCDocumentData = async (
       return res.sendError(res, "Need Garment Sales Id");
 
     const cocRes = {
+      season: '',
       garmentName: '',
       address: '',
       brandName: '',
@@ -3977,11 +3978,13 @@ const getCOCDocumentData = async (
       reelLotno: '',
       gnrTotalQty: '',
       date: '',
+      seedCottonQty: 0,
     };
 
     let [result] = await sequelize.query(`
       SELECT  gts.id                                         as id,
               grm.name                                       as garment_name,
+              ss.name                                       as season_name,
               grm.address                                    as address,
               ''                                             as reel_authorization_code,
               br.garment_auth_code_count                     as auth_code_count,
@@ -4000,17 +4003,19 @@ const getCOCDocumentData = async (
               gts.no_of_pieces                               as garment_no_of_pcs,
               array_to_string(array_agg(gs.garment_id), ',') as process_ids
       FROM garment_sales gts
+              LEFT JOIN seasons ss on gts.season_id = ss.id
               LEFT JOIN garments grm on gts.garment_id = grm.id
               LEFT JOIN garment_selections gs on gts.id = gs.sales_id
               LEFT JOIN brands br on gts.buyer_id = br.id
       where gts.id = :id
-      group by gts.id, grm.id, br.id;
+      group by gts.id, grm.id, br.id, ss.id;
     `, {
       replacements: { id },
       type: sequelize.QueryTypes.SELECT,
       raw: true
     });
     if (result) {
+      cocRes.season = result.season_name;
       cocRes.garmentName = result.garment_name;
       cocRes.address = result.address;
       cocRes.brandName = result.brand_name;
@@ -4020,7 +4025,7 @@ const getCOCDocumentData = async (
       if(result.auth_code_count !== null && result.auth_code_count !== undefined){
         let count = result.auth_code_count || 0;
 
-        cocRes.reelAuthorizationCode = 'REEL'+ result.brand_name + "00" + (count + 1);
+        cocRes.reelAuthorizationCode = 'REEL'+ result.brand_name + "-00" + (count + 1);
         await Brand.update(
           { garment_auth_code_count: count + 1 },
           { where: { id: result.brand_id } }
@@ -4316,6 +4321,7 @@ const getCOCDocumentData = async (
     if (ginnerProcessIds.length) {
       const ginProcess = await sequelize.query(`
       select  gp.id,
+       gp.total_qty as seed_cotton_qty,
               array_to_string(array_agg(distinct cs.transaction_id), ',') as transaction_ids
       from gin_processes gp
               left join "gin-bales" gb on gp.id = gb.process_id
@@ -4328,6 +4334,13 @@ const getCOCDocumentData = async (
         },
         type: sequelize.QueryTypes.SELECT
       });
+
+      let totalSeedCottonQty = 0;
+
+        for (const process of ginProcess) {
+          totalSeedCottonQty += process.seed_cotton_qty || 0;
+        }
+      cocRes.seedCottonQty = totalSeedCottonQty;
 
       const transaction_ids: any[] = [];
       ginProcess?.forEach((process: any) => {
