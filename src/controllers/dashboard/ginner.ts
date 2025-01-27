@@ -793,7 +793,7 @@ const getLintProcuredSold = async (
   try {
     const reqData = await getQueryParams(req, res);
     const seasonLimit = reqData.seasonLimit ? parseInt(reqData.seasonLimit.toString()) : 3;
-    const seasons = reqData.seasonLimit ? await getLastSeasons(seasonLimit) : null;
+    const seasons: any = reqData.seasonLimit ? await getLastSeasons(seasonLimit) : {};
     const procuredWhere = await getGinBaleQuery({...reqData, season: seasons!.ids});
     const baleSel = getBaleSelLintSoldQuery({...reqData, season: seasons!.ids});
     const procuredData = await getBaleProcuredData(procuredWhere);
@@ -803,7 +803,7 @@ const getLintProcuredSold = async (
       soldData,
       reqData.season
     );
-    if(reqData.seasonLimit) {
+    if(reqData.seasonLimit && seasons!.names) {
       seasons!.names.forEach((season: any) => { 
         if(data.season.indexOf(season.name) == -1) {
           data.season.push(season.name);
@@ -812,6 +812,16 @@ const getLintProcuredSold = async (
           data.stock.push(0);
         }
       });
+      const indices = data.season.map((_: any, index: any) => index);
+      indices.sort((a: any, b: any) => {
+        const seasonA = parseInt(data.season[a].split('-')[0]);
+        const seasonB = parseInt(data.season[b].split('-')[0]);
+        return seasonA - seasonB;
+      });
+      data.season = indices.map((i: any) => data.season[i]);
+      data.procured = indices.map((i: any) => data.procured[i]);
+      data.sold = indices.map((i: any) => data.sold[i]);
+      data.stock = indices.map((i: any) => data.stock[i]);
     }
     return res.sendSuccess(res, data);
 
@@ -1122,11 +1132,17 @@ const getDataAll = async (
 ) => {
   try {
     const reqData = await getQueryParams(req, res);
-    const seasonOne = await Season.findOne({
-      where: {
-        id: reqData.season ? reqData.season : '9'
-      }
-    });
+    let seasonOne;
+    if (reqData.season) {
+      seasonOne = await Season.findOne({
+        where: { id: reqData.season }
+      });
+    } else {
+      seasonOne = await Season.findOne({
+        order: [['id', 'DESC']],  // This will get the latest season (e.g., '2024-25' instead of '2023-24')
+        limit: 1
+      });
+    }
     // reqData.season = seasonOne.id;
     const procuredWhere = await getGinBaleQuery(reqData); //yes
     const baleSel = getBaleSelectionQuery(reqData);
@@ -1232,8 +1248,7 @@ const getBaleComparison = async (
   try {
     const reqData = await getQueryParams(req, res);
     const seasonLimit = reqData.seasonLimit ? parseInt(reqData.seasonLimit.toString()) : 3;
-    const seasons = reqData.seasonLimit ? await getLastSeasons(seasonLimit) : null;
-   
+    const seasons: any = reqData.seasonLimit ? await getLastSeasons(seasonLimit) : {};
     const ginBale = getGinBaleQuery(reqData);
     const ginBaleProduce = await getBaleProducedQuery({...reqData, season: seasons!.ids});
     const baleSel = getBaleSelLintSoldQuery({...reqData, season: seasons!.ids});
@@ -1245,7 +1260,7 @@ const getBaleComparison = async (
       reqData.season
     );
 
-    if(reqData.seasonLimit) {
+    if(reqData.seasonLimit && seasons!.names) {
       seasons!.names.forEach((season: any) => { 
         if(data.season.indexOf(season.name) == -1) {
           data.season.push(season.name);
@@ -1254,6 +1269,16 @@ const getBaleComparison = async (
           data.stock.push(0);
         }
       });
+      const indices = data.season.map((_: any, index: any) => index);
+      indices.sort((a: any, b: any) => {
+        const seasonA = parseInt(data.season[a].split('-')[0]);
+        const seasonB = parseInt(data.season[b].split('-')[0]);
+        return seasonA - seasonB;
+      });
+      data.season = indices.map((i: any) => data.season[i]);
+      data.procured = indices.map((i: any) => data.procured[i]);
+      data.sold = indices.map((i: any) => data.sold[i]);
+      if (data.stock) data.stock = indices.map((i: any) => data.stock[i]);
     }
     return res.sendSuccess(res, data);
 
@@ -2160,9 +2185,9 @@ const getProcuredAllocated = async (
   try {
     const reqData = await getQueryParams(req, res);
     const seasonLimit = reqData.seasonLimit ? parseInt(reqData.seasonLimit.toString()) : 3;
-    const seasons = reqData.seasonLimit ? await getLastSeasons(seasonLimit) : null;
+    const seasons: any = reqData.seasonLimit ? await getLastSeasons(seasonLimit) : {};
     const where = getTransactionDataQuery(reqData);
-    const allocationWhere = getGinnerAllocationQuery({...reqData, season: seasons!.ids});
+    const allocationWhere = getGinnerAllocationQuery({...reqData, season: seasons?.ids});
     const transactionWhere = getTransactionDataQuery({...reqData, season: seasons!.ids});
     const procuredData = await getProcuredProcessedData(transactionWhere);
     const allocatedData = await getAllocatedData(allocationWhere);
@@ -2171,7 +2196,7 @@ const getProcuredAllocated = async (
       allocatedData,
       reqData.season
     );
-    if(reqData.seasonLimit) {
+    if(reqData.seasonLimit && seasons!.names) {
       seasons!.names.forEach((season: any) => { 
         if(data.season.indexOf(season.name) == -1) {
           data.season.push(season.name);
@@ -2179,10 +2204,20 @@ const getProcuredAllocated = async (
           data.procured.push(0);
         }
       });
+      const indices = data.season.map((_: any, index: any) => index);
+      indices.sort((a: any, b: any) => {
+        const seasonA = parseInt(data.season[a].split('-')[0]);
+        const seasonB = parseInt(data.season[b].split('-')[0]);
+        return seasonA - seasonB;
+      });
+      data.season = indices.map((i: any) => data.season[i]);
+      data.procured = indices.map((i: any) => data.procured[i]);
+      data.allocated = indices.map((i: any) => data.allocated[i]);
     }
     return res.sendSuccess(res, data);
 
   } catch (error: any) {
+    console.log(error);
     const code = error.errCode
       ? error.errCode
       : "ERR_INTERNAL_SERVER_ERROR";
