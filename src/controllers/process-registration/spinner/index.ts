@@ -11,6 +11,8 @@ import Brand from "../../../models/brand.model";
 import YarnCount from "../../../models/yarn-count.model";
 import UserRole from "../../../models/user-role.model";
 import District from "../../../models/district.model";
+import * as ExcelJS from "exceljs";
+import * as path from "path";
 
 
 const createSpinner = async (req: Request, res: Response) => {
@@ -70,13 +72,16 @@ const createSpinner = async (req: Request, res: Response) => {
 const fetchSpinnerPagination = async (req: Request, res: Response) => {
     const searchTerm = req.query.search || '';
     const sortOrder = req.query.sort || 'asc';
+    const status = req.query.status || '';
     const page = Number(req.query.page) || 1;
     const limit = Number(req.query.limit) || 10;
     const countryId: any = req.query.countryId;
     const stateId: any = req.query.stateId;
     const brandId: any = req.query.brandId;
     const offset = (page - 1) * limit;
+    const all = req.query.all || '';
     const whereCondition: any = {}
+
     try {
         if (searchTerm) {
             whereCondition[Op.or] = [
@@ -108,8 +113,14 @@ const fetchSpinnerPagination = async (req: Request, res: Response) => {
                 .map((id: any) => parseInt(id, 10));
             whereCondition.brand = { [Op.overlap]: idArray }
         }
+
+        if (status == 'true') {
+            whereCondition.status = true;
+        }
+
         //fetch data with pagination
         if (req.query.pagination === "true") {
+            let data: any = [];
             const { count, rows } = await Spinner.findAndCountAll({
                 where: whereCondition,
                 order: [
@@ -129,9 +140,24 @@ const fetchSpinnerPagination = async (req: Request, res: Response) => {
                 offset: offset,
                 limit: limit
             });
-            return res.sendPaginationSuccess(res, rows, count);
+            for await (let item of rows) {
+                let users = await User.findAll({
+                    where: {
+                        id: item?.dataValues?.spinnerUser_id
+                    }
+                });
+
+                let newStatus = users.some((user: any) => user.status === true);
+
+                data.push({
+                    ...item?.dataValues,
+                    status: newStatus ? 'Active' : 'Inactive'
+                });
+            }
+            return res.sendPaginationSuccess(res, data, count);
         } else {
-            const cooperative = await Spinner.findAll({
+            let dataAll: any = [];
+            const spinner = await Spinner.findAll({
                 where: whereCondition,
                 include: [
                     {
@@ -148,7 +174,22 @@ const fetchSpinnerPagination = async (req: Request, res: Response) => {
                     ['id', 'desc'], // Sort the results based on the 'name' field and the specified order
                 ]
             });
-            return res.sendSuccess(res, cooperative);
+            for await (let item of spinner) {
+                let users = await User.findAll({
+                    where: {
+                        id: item?.dataValues?.spinnerUser_id
+                    }
+                });
+
+                let newStatus = users.some((user: any) => user.status === true);
+
+                dataAll.push({
+                    ...item?.dataValues,
+                    status: newStatus ? 'Active' : 'Inactive'
+                });
+            }
+            const activeUsers = dataAll.filter((item:any)=> item.status === 'Active');
+            return res.sendSuccess(res, all === 'true' ? activeUsers : dataAll);
         }
     } catch (error: any) {
         console.log(error);
@@ -279,6 +320,36 @@ const updateSpinner = async (req: Request, res: Response) => {
 
 const deleteSpinner = async (req: Request, res: Response) => {
     try {
+        const sinn = await Spinner.findOne({
+            where: {
+                id: req.body.id
+            },
+        });
+
+        const user = await User.findOne({
+            where: {
+                id: sinn.spinnerUser_id
+            },
+        });
+
+        const userRole = await UserRole.findOne({
+            where: Sequelize.where(
+                Sequelize.fn('LOWER', Sequelize.col('user_role')),
+                'spinner'
+            )
+        });
+
+
+        const updatedProcessRole = user.process_role.filter((roleId: any) => roleId !== userRole.id);
+
+        if (updatedProcessRole.length > 0) {
+            const updatedUser = await await user.update({
+                process_role: updatedProcessRole,
+                role: updatedProcessRole[0]
+            });
+        } else {
+            await user.destroy();
+        }
         const spinner = await Spinner.destroy({
             where: {
                 id: req.body.id
@@ -312,6 +383,129 @@ const checkSpinner = async (req: Request, res: Response) => {
     }
 }
 
+const exportSpinnerRegistrationList = async (req: Request, res: Response) => {
+    const excelFilePath = path.join("./upload", "Spinner_registration_list.xlsx");
+
+    try {
+        // Create the excel workbook file
+        const {
+            countryId,
+            stateId,
+            brandId,
+            status,
+        }: any = req.query;
+
+        const workbook = new ExcelJS.Workbook();
+        const worksheet = workbook.addWorksheet("Sheet1");
+        worksheet.mergeCells('A1:U1');
+        const mergedCell = worksheet.getCell('A1');
+        mergedCell.value = 'CottonConnect | Spinner Registration List';
+        mergedCell.font = { bold: true };
+        mergedCell.alignment = { horizontal: 'center', vertical: 'middle' };
+        // Set bold font for header row
+        const headerRow = worksheet.addRow([
+            "Sr No.", 'Registration Date', 'Spinner Name', 'Address', 'Website',
+            'Contact Person Name', 'Mobile No', 'Land Line No', 'Email', 'Status'
+        ]);
+        headerRow.font = { bold: true };
+        const whereCondition: any = {}
+        if (countryId) {
+            const idArray: number[] = countryId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition.country_id = { [Op.in]: idArray };
+        }
+        if (stateId) {
+            const idArray: number[] = stateId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition.state_id = { [Op.in]: idArray };
+        }
+        if (brandId) {
+            const idArray: number[] = brandId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition.brand = { [Op.overlap]: idArray }
+        }
+
+        if (status == 'true') {
+            whereCondition.status = true;
+        }
+
+        let include = [
+            {
+                model: Country, as: 'country'
+            },
+            {
+                model: State, as: 'state'
+            },
+            {
+                model: District, as: 'district'
+            },
+        ]
+
+        let ginner: any = [];
+        const rows = await Spinner.findAll({
+            where: whereCondition,
+            order: [
+                ['id', 'desc'], // Sort the results based on the 'name' field and the specified order
+            ],
+            ...include
+        });
+        for await (let item of rows) {
+            let users = await User.findAll({
+                where: {
+                    id: item?.dataValues?.spinnerUser_id
+                }
+            });
+
+            let newStatus = users.some((user: any) => user.status === true);
+
+            ginner.push({
+                ...item?.dataValues,
+                status: newStatus ? 'Active' : 'Inactive'
+            });
+        }
+        // Append data to worksheet
+        ginner.forEach((item: any, index: number) => {
+            const rowValues = Object.values({
+                index: index + 1,
+                date: item.createdAt,
+                ginner_name: item.name,
+                address: item.address,
+                website: item.website,
+                contact_person_name: item.contact_person,
+                mobile_no: item.mobile,
+                lang_line_no: item.landline,
+                email: item.email,
+                status: item.status,
+            });
+            worksheet.addRow(rowValues);
+        });
+        // Auto-adjust column widths based on content
+        worksheet.columns.forEach((column: any) => {
+            let maxCellLength = 0;
+            column.eachCell({ includeEmpty: true }, (cell: any) => {
+                const cellLength = (cell.value ? cell.value.toString() : '').length;
+                maxCellLength = Math.max(maxCellLength, cellLength);
+            });
+            column.width = Math.min(14, maxCellLength + 2); // Limit width to 30 characters
+        });
+
+        // Save the workbook
+        await workbook.xlsx.writeFile(excelFilePath);
+        res.status(200).send({
+            success: true,
+            messgage: "File successfully Generated",
+            data: process.env.BASE_URL + "Spinner_registration_list.xlsx",
+        });
+    } catch (error: any) {
+        console.error("Error appending data:", error);
+        return res.sendError(res, error.message);
+
+    }
+};
+
 
 export {
     createSpinner,
@@ -319,5 +513,6 @@ export {
     fetchSpinner,
     updateSpinner,
     deleteSpinner,
-    checkSpinner
+    checkSpinner,
+    exportSpinnerRegistrationList
 };

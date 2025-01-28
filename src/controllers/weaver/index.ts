@@ -48,6 +48,8 @@ const createWeaverProcess = async (req: Request, res: Response) => {
       program_id: req.body.programId,
       season_id: req.body.seasonId,
       date: req.body.date,
+      from_date: req.body.from_date,
+      to_date: req.body.to_date,
       garment_order_ref: req.body.garmentOrderRef,
       brand_order_ref: req.body.brandOrderRef,
       other_mix: req.body.blendChoosen,
@@ -201,7 +203,7 @@ const fetchWeaverProcessPagination = async (req: Request, res: Response) => {
         { blend_material: { [Op.iLike]: `%${searchTerm}%` } },
         { blend_vendor: { [Op.iLike]: `%${searchTerm}%` } },
         { "$program.program_name$": { [Op.iLike]: `%${searchTerm}%` } },
-        { "$yarncount.yarnCount_name$": { [Op.iLike]: `%${searchTerm}%` } },
+        // { "$yarncount.yarnCount_name$": { [Op.iLike]: `%${searchTerm}%` } },
         { "$weaver.name$": { [Op.iLike]: `%${searchTerm}%` } },
         { "$dyeing.processor_name$": { [Op.iLike]: `%${searchTerm}%` } },
         { "$dyeing.process_name$": { [Op.iLike]: `%${searchTerm}%` } },
@@ -261,11 +263,11 @@ const fetchWeaverProcessPagination = async (req: Request, res: Response) => {
         model: Dyeing,
         as: "dyeing",
       },
-      {
-        model: YarnCount,
-        as: "yarncount",
-        attributes: ["id", "yarnCount_name"],
-      },
+      // {
+      //   model: YarnCount,
+      //   as: "yarncount",
+      //   attributes: ["id", "yarnCount_name"],
+      // },
     ];
     //fetch data with pagination
     if (req.query.pagination === "true") {
@@ -355,11 +357,11 @@ const fetchWeaverProcess = async (req: Request, res: Response) => {
         model: Dyeing,
         as: "dyeing",
       },
-      {
-        model: YarnCount,
-        as: "yarncount",
-        attributes: ['id', 'yarnCount_name']
-      }
+      // {
+      //   model: YarnCount,
+      //   as: "yarncount",
+      //   attributes: ['id', 'yarnCount_name']
+      // }
     ];
     //fetch data with pagination
     let rows = await WeaverProcess.findOne({
@@ -617,9 +619,10 @@ const fetchFabricReelLotNo = async (req: Request, res: Response) => {
 
     let prcs_date = new Date().toLocaleDateString().replace(/\//g, '');
     let number = count + 1;
+    const random_number = +performance.now().toString().replace('.', '7').substring(0, 4)
     let prcs_name = rows ? rows?.name.substring(0, 3).toUpperCase() : '';
 
-    let reelLotNo = "REEL-WEA-" + prcs_name + "-" + prcs_date + number;
+    let reelLotNo = "REEL-WEA-" + prcs_name + "-" + prcs_date + random_number;
 
     return res.sendSuccess(res, { reelLotNo })
 
@@ -681,7 +684,7 @@ const exportWeaverSale = async (req: Request, res: Response) => {
     mergedCell.alignment = { horizontal: 'center', vertical: 'middle' };
     // Set bold font for header row
     const headerRow = worksheet.addRow([
-      "Sr No.", "Date", "Season", "Sold To", "Program", "Garment Order Reference", "Brand Order Reference",
+      "Sr No.", "Date", "Season", "Sold To", "Programme", "Garment Order Reference", "Brand Order Reference",
       "Invoice No", "Batch Lot No", "Quanitity in Mts",
       "Vehicle No", "Transcation via trader", "Agent Details"
     ]);
@@ -813,7 +816,7 @@ const exportWeaverProcess = async (req: Request, res: Response) => {
         { blend_material: { [Op.iLike]: `%${searchTerm}%` } },
         { blend_vendor: { [Op.iLike]: `%${searchTerm}%` } },
         { '$program.program_name$': { [Op.iLike]: `%${searchTerm}%` } },
-        { '$yarncount.yarnCount_name$': { [Op.iLike]: `%${searchTerm}%` } },
+        // { '$yarncount.yarnCount_name$': { [Op.iLike]: `%${searchTerm}%` } },
         { '$weaver.name$': { [Op.iLike]: `%${searchTerm}%` } },
         { '$dyeing.processor_name$': { [Op.iLike]: `%${searchTerm}%` } },
         { '$dyeing.process_name$': { [Op.iLike]: `%${searchTerm}%` } },
@@ -838,14 +841,14 @@ const exportWeaverProcess = async (req: Request, res: Response) => {
     // Create the excel workbook file
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet("Sheet1");
-    worksheet.mergeCells('A1:N1');
+    worksheet.mergeCells('A1:P1');
     const mergedCell = worksheet.getCell('A1');
     mergedCell.value = 'CottonConnect | Process';
     mergedCell.font = { bold: true };
     mergedCell.alignment = { horizontal: 'center', vertical: 'middle' };
     // Set bold font for header row
     const headerRow = worksheet.addRow([
-      "Sr No.", "Date", "Season", "Finished Batch Lot No", "Fabric Reel Lot No", "Garment Order Reference", "Brand Order Reference", "Program",
+      "Sr No.", "Date", "Fabric Production Start Date", "Fabric Production End Date", "Season", "Finished Batch Lot No", "Fabric Reel Lot No", "Garment Order Reference", "Brand Order Reference", "Programme",
       "Job Details from garment", "Knit Fabric Type", "Fabric Length in Mts", "Fabric GSM", "Total Finished Fabric Length in Mts", "Total Yarn Utilized"
     ]);
     headerRow.font = { bold: true };
@@ -869,11 +872,11 @@ const exportWeaverProcess = async (req: Request, res: Response) => {
         model: Dyeing,
         as: "dyeing",
       },
-      {
-        model: YarnCount,
-        as: "yarncount",
-        attributes: ['id', 'yarnCount_name']
-      }
+      // {
+      //   model: YarnCount,
+      //   as: "yarncount",
+      //   attributes: ['id', 'yarnCount_name']
+      // }
     ];;
 
 
@@ -906,6 +909,8 @@ const exportWeaverProcess = async (req: Request, res: Response) => {
       const rowValues = Object.values({
         index: index + 1,
         date: item.date ? item.date : '',
+        from_date: item.from_date ? item.from_date : '',
+        to_date: item.to_date ? item.to_date : '',
         season: item.season ? item.season.name : '',
         lotNo: item.batch_lot_no ? item.batch_lot_no : '',
         reelLotNo: item.reel_lot_no ? item.reel_lot_no : '',
@@ -955,7 +960,7 @@ const deleteWeaverSales = async (req: Request, res: Response) => {
         sales_id: req.body.id,
       },
     });
-    yarn_selections.forEach((yarn: any) => {
+    for await (let yarn of yarn_selections) {
       WeaverProcess.update(
         {
           qty_stock: sequelize.literal(`qty_stock + ${yarn.qty_used}`),
@@ -966,10 +971,10 @@ const deleteWeaverSales = async (req: Request, res: Response) => {
           },
         }
       );
-      const fabrics = WeaverFabric.findOne({ where: { id: yarn.yarn_id } });
+      const fabrics = await WeaverFabric.findOne({ where: { id: yarn.weaver_fabric } });
       if (fabrics) {
-        WeaverFabric.update(
-          { sold_status: false, fabric_length_stock: +fabrics.fabric_length_stock + +yarn.qty_used },
+       WeaverFabric.update(
+          { sold_status: false, fabric_length_stock: Number(fabrics.fabric_length_stock) + Number(yarn.qty_used)},
           { where: { id: yarn.weaver_fabric } }
         );
       }
@@ -977,7 +982,7 @@ const deleteWeaverSales = async (req: Request, res: Response) => {
       //   { sold_status: false },
       //   { where: { id: yarn.weaver_fabric } }
       // );
-    });
+    };
 
     WeaverSales.destroy({
       where: {
@@ -1000,12 +1005,17 @@ const deleteWeaverSales = async (req: Request, res: Response) => {
 
 const getWeaverDyeing = async (req: Request, res: Response) => {
   try {
+    let whereCondition: any = {};
     if (!req.query.id) {
       return res.sendError(res, "Need Id");
     }
 
+    if (req.query.status == 'true') {
+      whereCondition.status = true
+    }
+
     let id = req.query.id;
-    let weaver = await Dyeing.findOne({ where: { id: id } });
+    let weaver = await Dyeing.findOne({ where: { id: id, ...whereCondition, } });
 
     res.sendSuccess(res, weaver);
   } catch (error: any) {
@@ -1075,9 +1085,10 @@ const fetchWeaverDashBoard = async (req: Request, res: Response) => {
   const searchTerm = req.query.search || "";
   const page = Number(req.query.page) || 1;
   const limit = Number(req.query.limit) || 10;
-  const { weaverId, status, filter, programId, spinnerId, invoice, lotNo, yarnCount, yarnType, reelLotNo }: any = req.query;
+  const { seasonId, weaverId, status, filter, programId, spinnerId, invoice, lotNo, yarnCount, yarnType, reelLotNo }: any = req.query;
   const offset = (page - 1) * limit;
   const whereCondition: any = {};
+  const yarnTypeArray = yarnType?.split(',')?.map((item: any) => item.trim());
   try {
     if (!weaverId) {
       return res.sendError(res, 'Need Weaver Id ');
@@ -1092,12 +1103,12 @@ const fetchWeaverDashBoard = async (req: Request, res: Response) => {
         { box_ids: { [Op.iLike]: `%${searchTerm}%` } }, // Search by batch lot number
         { batch_lot_no: { [Op.iLike]: `%${searchTerm}%` } }, // Search by batch lot number
         { invoice_no: { [Op.iLike]: `%${searchTerm}%` } }, // Search by invoice number
-        { yarn_type: { [Op.iLike]: `%${searchTerm}%` } }, // Search by invoice number
+        // { yarn_type: { [Op.iLike]: `%${searchTerm}%` } }, 
         { vehicle_no: { [Op.iLike]: `%${searchTerm}%` } }, // Search by invoice number
         { '$program.program_name$': { [Op.iLike]: `%${searchTerm}%` } }, // Search by program
         { '$season.name$': { [Op.iLike]: `%${searchTerm}%` } }, // Search season name
         { '$spinner.name$': { [Op.iLike]: `%${searchTerm}%` } },// Search season spinner name
-        { '$yarncount.yarnCount_name$': { [Op.iLike]: `%${searchTerm}%` } },// Search season spinner name
+        // { '$yarncount.yarnCount_name$': { [Op.iLike]: `%${searchTerm}%` } },
       ];
     }
     if (status === 'Pending') {
@@ -1108,7 +1119,12 @@ const fetchWeaverDashBoard = async (req: Request, res: Response) => {
       whereCondition.buyer_id = weaverId
       whereCondition.status = 'Sold';
     }
-
+    if (seasonId) {
+      const idArray: number[] = seasonId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.season_id = { [Op.in]: idArray };
+    }
     if (spinnerId) {
       const idArray: number[] = spinnerId
         .split(",")
@@ -1150,14 +1166,12 @@ const fetchWeaverDashBoard = async (req: Request, res: Response) => {
       const idArray: number[] = yarnCount
         .split(",")
         .map((id: any) => parseInt(id, 10));
-      whereCondition.yarn_count = { [Op.in]: idArray };
+      whereCondition.yarn_count = { [Op.contains]: idArray };
     }
     if (yarnType) {
-      const idArray: any[] = yarnType
-        .split(",")
-        .map((id: any) => id);
-      whereCondition.yarn_type = { [Op.in]: idArray };
+      whereCondition.yarn_type = { [Op.contains]: yarnTypeArray };
     }
+
 
     let include = [
       {
@@ -1172,11 +1186,11 @@ const fetchWeaverDashBoard = async (req: Request, res: Response) => {
         model: Program,
         as: "program",
       },
-      {
-        model: YarnCount,
-        as: 'yarncount',
-        attributes: ['id', 'yarnCount_name']
-      },
+      // {
+      //   model: YarnCount,
+      //   as: 'yarncount',
+      //   attributes: ['id', 'yarnCount_name']
+      // },
     ];
     //fetch data with pagination
     if (req.query.pagination === "true") {
@@ -1185,24 +1199,58 @@ const fetchWeaverDashBoard = async (req: Request, res: Response) => {
         include: include,
         order: [
           [
-            'id', 'asc'
+            'id', 'desc'
           ]
         ],
         offset: offset,
         limit: limit,
       });
-      return res.sendPaginationSuccess(res, rows, count);
+      let data = [];
+
+      for await (let row of rows) {
+        let yarncount = [];
+
+        if (row.dataValues?.yarn_count.length > 0) {
+          yarncount = await YarnCount.findAll({
+            attributes: ["id", "yarnCount_name"],
+            where: { id: { [Op.in]: row.dataValues?.yarn_count } }
+          });
+        }
+
+        data.push({
+          ...row.dataValues,
+          yarncount
+        })
+      }
+      return res.sendPaginationSuccess(res, data, count);
     } else {
       const gin = await SpinSales.findAll({
         where: whereCondition,
         include: include,
         order: [
           [
-            'id', 'asc'
+            'id', 'desc'
           ]
         ]
       });
-      return res.sendSuccess(res, gin);
+      let data = [];
+
+      for await (let row of gin) {
+        let yarncount = [];
+
+        if (row.dataValues?.yarn_count.length > 0) {
+          yarncount = await YarnCount.findAll({
+            attributes: ["id", "yarnCount_name"],
+            where: { id: { [Op.in]: row.dataValues?.yarn_count } }
+          });
+        }
+
+        data.push({
+          ...row.dataValues,
+          yarncount
+        })
+      }
+      return res.sendSuccess(res, data);
     }
   } catch (error: any) {
     console.log(error)
@@ -1412,24 +1460,32 @@ const getInvoiceAndyarnType = async (req: Request, res: Response) => {
       group: ['process.reel_lot_no']
     });
 
-    const yarncount = await SpinSales.findAll({
+    const yarncountData = await SpinSales.findAll({
       attributes: ['yarn_count'],
       where: whereCondition,
-      include: [
-        {
-          model: YarnCount,
-          as: 'yarncount',
-          attributes: ['id', 'yarnCount_name']
+      group: ['yarn_count'],
+    });
+
+    const checkyarnData = yarncountData.map((item: any) => item.yarn_count).flat();
+    const yarnCounts = await YarnCount.findAll({
+      attributes: ["id", "yarnCount_name"],
+      where: {
+        id: {
+          [Op.in]: checkyarnData
         }
-      ],
-      group: ['yarn_count', 'yarncount.id']
+      },
     });
-    const yarn_type = await SpinSales.findAll({
-      attributes: ['yarn_type'],
+
+    const yarn_type_fetch = await SpinSales.findAll({
+      attributes: ["yarn_type"],
       where: whereCondition,
-      group: ['yarn_type']
+      group: ["yarn_type"],
     });
-    res.sendSuccess(res, { invoice, reelLot, yarn_type, yarncount });
+    const yarn_type = yarn_type_fetch.map((item: any, i: any) => {
+      return { yarn_type: [...new Set(item.yarn_type)] }
+    })
+
+    res.sendSuccess(res, { invoice, reelLot, yarn_type, yarncount: yarnCounts });
   } catch (error: any) {
     return res.sendError(res, error.message);
   }
@@ -1478,8 +1534,14 @@ const getChooseFabricFilters = async (req: Request, res: Response) => {
 
 const getGarments = async (req: Request, res: Response) => {
   let weaverId = req.query.weaverId;
+  let whereCondition: any = {};
+
   if (!weaverId) {
     return res.sendError(res, "Need Weaver Id ");
+  }
+
+  if (req.query.status == 'true') {
+    whereCondition.status = true
   }
   let weaver = await Weaver.findOne({ where: { id: weaverId } });
   if (!weaver) {
@@ -1487,13 +1549,19 @@ const getGarments = async (req: Request, res: Response) => {
   }
   let garment = await Garment.findAll({
     attributes: ["id", "name"],
-    where: { brand: { [Op.overlap]: weaver.dataValues.brand } },
+    where: { ...whereCondition, brand: { [Op.overlap]: weaver.dataValues.brand } },
   });
   res.sendSuccess(res, garment);
 };
 
 const getFabrics = async (req: Request, res: Response) => {
   let weaverId = req.query.weaverId;
+  let whereCondition: any = {};
+
+  if (req.query.status == 'true') {
+    whereCondition.status = true
+  }
+
   if (!weaverId) {
     return res.sendError(res, "Need Weaver Id ");
   }
@@ -1505,6 +1573,7 @@ const getFabrics = async (req: Request, res: Response) => {
   let fabric = await Fabric.findAll({
     attributes: ["id", "name"],
     where: {
+      ...whereCondition,
       brand: { [Op.overlap]: weaver.dataValues.brand },
       fabric_processor_type: { [Op.overlap]: [req.query.type] },
     },
@@ -1513,7 +1582,7 @@ const getFabrics = async (req: Request, res: Response) => {
 };
 
 const chooseWeaverFabric = async (req: Request, res: Response) => {
-  const { weaverId, programId, lotNo, reelLotNo, noOfRolls, fabricType }: any =
+  const { weaverId, programId, lotNo, reelLotNo, noOfRolls, fabricType, seasonId }: any =
     req.query;
 
   const whereCondition: any = {};
@@ -1542,6 +1611,13 @@ const chooseWeaverFabric = async (req: Request, res: Response) => {
         .split(",")
         .map((id: any) => parseInt(id, 10));
       whereCondition.fabric_type = { [Op.overlap]: idArray };
+    }
+
+    if (seasonId) {
+      const idArray: any[] = seasonId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.season_id = { [Op.in]: idArray };
     }
 
     let include = [
@@ -1600,17 +1676,16 @@ const chooseWeaverFabric = async (req: Request, res: Response) => {
   }
 };
 
-const getWeaverProcessTracingChartData = async (
-  req: Request,
-  res: Response
+const _getWeaverProcessTracingChartData = async (
+  query: any
 ) => {
-  let query = req.query;
   let include = [
     {
       model: Weaver,
       as: "weaver",
     },
   ];
+
   let weavers = await WeaverProcess.findAll({
     where: query,
     include,
@@ -1619,25 +1694,216 @@ const getWeaverProcessTracingChartData = async (
   weavers = await Promise.all(
     weavers.map(async (el: any) => {
       el = el.toJSON();
-      el.spin = await SpinSales.findAll({
+
+      el.WeavSele = await YarnSelection.findAll({
         where: {
-          buyer_id: el.weaver.id,
-        },
+          sales_id: el.id,
+        }
       });
-      el.spinsCount = el.spin.length;
-      el.spinskIds = el.spin.map((el: any) => el.knitter_id);
-      console.log("spins received ", el.spin.length);
+
       el.spin = await Promise.all(
-        el.spin.map(async (el: any) => {
-          console.log("getting data for ", el.reel_lot_no);
-          return _getSpinnerProcessTracingChartData(el.reel_lot_no);
+        el.WeavSele.map(async (weavSeleItem: any) => {
+          let spinSales = await SpinSales.findAll({
+            where: {
+              id: weavSeleItem.yarn_id, // Use yarn_id from KnitYarnSelection
+            },
+          });
+          return {
+            yarn_id: weavSeleItem.yarn_id,
+            spinSales: spinSales,
+          };
+        }));
+
+      el.spinsCount = el.spin.reduce((total: number, item: any) => total + item.spinSales.length, 0);
+      el.spinskIds = el.spin.map((el: any) => el.buyer_id);
+
+      el.spin = await Promise.all(
+        el.spin.map(async (spinItem: any) => {
+          // if(el.reel_lot_no) return _getSpinnerProcessTracingChartData(el.reel_lot_no);
+          return await Promise.all(
+            spinItem.spinSales.map(async (sale: any) => {
+              if (sale.dataValues.reel_lot_no) {
+                return _getSpinnerProcessTracingChartData(sale.dataValues.reel_lot_no);
+              }
+              // Handle cases where reel_lot_no might be undefined/null
+              return null;
+            })
+          );
         })
       );
       return el;
     })
   );
-  let key = Object.keys(req.query)[0];
-  res.sendSuccess(res, formatDataFromWeaver(req.query[key], weavers));
+  let key = Object.keys(query)[0];
+  return formatDataFromWeaver(query[key], weavers);
+};
+
+const getWeaverProcessTracingChartData = async (
+  req: Request,
+  res: Response
+) => {
+  let query = req.query;
+  let weavers = await _getWeaverProcessTracingChartData(query);
+  res.sendSuccess(res, weavers);
+};
+
+const exportWeaverTransactionList = async (req: Request, res: Response) => {
+  const excelFilePath = path.join("./upload", "Weaver_transaction_list.xlsx");
+
+  try {
+    const searchTerm = req.query.search || "";
+    // Create the excel workbook file
+    const { seasonId, weaverId, status, filter, programId, spinnerId, invoice, lotNo, yarnCount, yarnType, reelLotNo }: any = req.query;
+    const yarnTypeArray = yarnType?.split(',')?.map((item: any) => item.trim());
+
+    if (!weaverId) {
+      return res.sendError(res, 'Need Weaver Id ');
+    }
+    if (!status) {
+      return res.sendError(res, 'Need  status');
+    }
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet("Sheet1");
+    worksheet.mergeCells('A1:U1');
+    const mergedCell = worksheet.getCell('A1');
+    mergedCell.value = 'CottonConnect | Cotton Transaction List';
+    mergedCell.font = { bold: true };
+    mergedCell.alignment = { horizontal: 'center', vertical: 'middle' };
+    // Set bold font for header row
+    const headerRow = worksheet.addRow([
+      "Sr No.", 'Date', 'Season', 'Spinner Name', 'Order Reference', 'Invoice Number',
+      'Spin Lot No', 'Yarn REEL Lot No', 'Yarn Type', 'Yarn Count', 'No of Boxes', 'Box Id',
+      'Total Weight (Kgs)', 'Program', 'Vehicle No', 'Transaction Via Trader', 'Agent Details'
+    ]);
+    headerRow.font = { bold: true };
+    const whereCondition: any = {}
+    if (status === 'Pending') {
+      whereCondition.buyer_id = weaverId
+      whereCondition.status = { [Op.in]: ['Pending', 'Pending for QR scanning'] }
+    }
+    if (status === 'Sold') {
+      whereCondition.buyer_id = weaverId
+      whereCondition.status = 'Sold';
+    }
+    if (seasonId) {
+      const idArray: number[] = seasonId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.season_id = { [Op.in]: idArray };
+    }
+    if (spinnerId) {
+      const idArray: number[] = spinnerId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.spinner_id = { [Op.in]: idArray };
+    }
+    if (filter === 'Quantity') {
+      whereCondition.qty_stock = { [Op.gt]: 0 }
+    }
+    if (programId) {
+      const idArray: number[] = programId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.program_id = { [Op.in]: idArray };
+    }
+
+    if (invoice) {
+      const idArray: any[] = invoice
+        .split(",")
+        .map((id: any) => id);
+      whereCondition.invoice_no = { [Op.in]: idArray };
+    }
+    if (lotNo) {
+      const idArray: any[] = lotNo
+        .split(",")
+        .map((id: any) => id);
+      whereCondition.batch_lot_no = { [Op.in]: idArray };
+    }
+    if (reelLotNo) {
+      const filterValues: any[] = reelLotNo
+        .split(",")
+        .map((value: any) => value.trim());
+
+      whereCondition[Op.or] = filterValues.map((value) => ({
+        reel_lot_no: { [Op.iLike]: `%${value}%` }
+      }))
+    }
+    if (yarnCount) {
+      const idArray: number[] = yarnCount
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.yarn_count = { [Op.contains]: idArray };
+    }
+    if (yarnType) {
+      whereCondition.yarn_type = { [Op.contains]: yarnTypeArray };
+    }
+
+
+    let include = [
+      {
+        model: Spinner,
+        as: "spinner",
+      },
+      {
+        model: Season,
+        as: "season",
+      },
+      {
+        model: Program,
+        as: "program",
+      }
+    ];
+
+    const eaver = await SpinSales.findAll({
+      where: whereCondition,
+      order: [["id", "desc"]],
+      include: include,
+    });
+    // Append data to worksheet
+    for await (const [index, item] of eaver.entries()) {
+      const rowValues = Object.values({
+        index: index + 1,
+        date: item.date ? item.date : '',
+        season: item.season ? item.season.name : item.season.name,
+        spinner_name: item.spinner ? item.spinner.name : item.spinner.name,
+        order_ref: item.order_ref ? item.order_ref : '',
+        invoice_no: item.invoice_no ? item.invoice_no : '',
+        batch_lot_no: item.batch_lot_no ? item.batch_lot_no : '',
+        reel_lot_no: item.reel_lot_no ? item.reel_lot_no : 'N/A',
+        yarn_type: item.yarn_type ? item.yarn_type.map((item: any) => item)?.join(',') : '',
+        yarn_count: item.yarn_count ? item.yarn_count.map((item: any) => item.yarnCount_name)?.join(',') : '',
+        no_of_boxes: item.no_of_boxes,
+        box_ids: item.box_ids,
+        total_qty: item.total_qty,
+        program: item.program?.program_name,
+        vehicle_no: item.vehicle_no ? item.vehicle_no : '',
+        transaction_via_trader: item.transaction_via_trader === true ? "Yes" : "No",
+        agent_details: item.agent_details ? item.agent_details : 'N/A',
+      });
+      worksheet.addRow(rowValues);
+    }
+    // Auto-adjust column widths based on content
+    worksheet.columns.forEach((column: any) => {
+      let maxCellLength = 0;
+      column.eachCell({ includeEmpty: true }, (cell: any) => {
+        const cellLength = (cell.value ? cell.value.toString() : '').length;
+        maxCellLength = Math.max(maxCellLength, cellLength);
+      });
+      column.width = Math.min(14, maxCellLength + 2); // Limit width to 30 characters
+    });
+
+    // Save the workbook
+    await workbook.xlsx.writeFile(excelFilePath);
+    res.status(200).send({
+      success: true,
+      messgage: "File successfully Generated",
+      data: process.env.BASE_URL + "Weaver_transaction_list.xlsx",
+    });
+  } catch (error: any) {
+    console.error("Error appending data:", error);
+    return res.sendError(res, error.message);
+
+  }
 };
 
 export {
@@ -1665,4 +1931,6 @@ export {
   fetchWeaverSale,
   chooseWeaverFabric,
   getWeaverProcessTracingChartData,
+  exportWeaverTransactionList,
+  _getWeaverProcessTracingChartData
 };

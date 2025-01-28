@@ -22,6 +22,10 @@ import Weaver from "../../models/weaver.model";
 import GarmentSales from "../../models/garment-sales.model";
 import Garment from "../../models/garment.model";
 import FabricSelection from "../../models/fabric-selections.model";
+import GinProcess from "../../models/gin-process.model";
+import SpinProcess from "../../models/spin-process.model";
+import BaleSelection from "../../models/bale-selection.model";
+import GinBale from "../../models/gin-bale.model";
 
 const createBrand = async (req: Request, res: Response) => {
     try {
@@ -119,7 +123,7 @@ const fetchBrandPagination = async (req: Request, res: Response) => {
         }
         //fetch data with pagination
         if (req.query.pagination === "true") {
-            const { count, rows } = await Brand.findAndCountAll({
+            const { count, rows: brands } = await Brand.findAndCountAll({
                 where: whereCondition,
                 order: [
                     ["brand_name", sortOrder], // Sort the results based on the 'name' field and the specified order
@@ -127,15 +131,53 @@ const fetchBrandPagination = async (req: Request, res: Response) => {
                 offset: offset,
                 limit: limit,
             });
-            return res.sendPaginationSuccess(res, rows, count);
+             // Get all unique program IDs from all brands
+                const allProgramIds = [...new Set(brands.flatMap((brand: any) => brand.programs_id || []))];
+                
+                // Fetch all required programs in one query
+                const programs = await Program.findAll({
+                    where: {
+                        id: { [Op.in]: allProgramIds }
+                    },
+                    attributes: ['id', 'program_name']
+                });
+
+                // Create programs lookup map
+                const programsMap = new Map(programs.map((p: any) => [p.id, p]));
+
+                // Map programs to brands
+                const brandsWithPrograms = brands.map((brand: any) => ({
+                    ...brand.toJSON(),
+                    programs: (brand.programs_id || []).map((id: any) => programsMap.get(id))
+                }));
+            return res.sendPaginationSuccess(res, brandsWithPrograms, count);
         } else {
-            const cooperative = await Brand.findAll({
+            const brands = await Brand.findAll({
                 where: whereCondition,
                 order: [
                     ["brand_name", sortOrder], // Sort the results based on the 'name' field and the specified order
                 ],
             });
-            return res.sendSuccess(res, cooperative);
+            // Get all unique program IDs from all brands
+            const allProgramIds = [...new Set(brands.flatMap((brand: any) => brand.programs_id || []))];
+            
+            // Fetch all required programs in one query
+            const programs = await Program.findAll({
+                where: {
+                    id: { [Op.in]: allProgramIds }
+                },
+                attributes: ['id', 'program_name']
+            });
+
+            // Create programs lookup map
+            const programsMap = new Map(programs.map((p: any) => [p.id, p]));
+
+            // Map programs to brands
+            const brandsWithPrograms = brands.map((brand: any) => ({
+                ...brand.toJSON(),
+                programs: (brand.programs_id || []).map((id: any) => programsMap.get(id))
+            }));
+            return res.sendSuccess(res, brandsWithPrograms);
         }
     } catch (error: any) {
         console.log(error);
@@ -161,6 +203,13 @@ const fetchBrandById = async (req: Request, res: Response) => {
                 {
                     model: UserRole,
                     as: "user_role",
+                    include: [
+                        {
+                            model: Brand,
+                            as: 'brand',
+                            attributes: ['id', 'brand_name'],
+                        }
+                    ]
                 },
             ],
         });
@@ -304,16 +353,16 @@ const organicCottonOverview = async (req: Request, res: Response) => {
             ],
             group: ['farmer.brand_id']
         });
-        const trans = await Transaction.findOne({
-            attributes: [
-                [sequelize.fn('sum', Sequelize.literal("CAST(qty_purchased AS DOUBLE PRECISION)")), 'total_procured']
-            ],
-            where: {
-                ...whereCondition,
-                brand_id: brandId,
-                status: 'Sold'
-            }
-        })
+        // const trans = await Transaction.findOne({
+        //     attributes: [
+        //         [sequelize.fn('sum', Sequelize.literal("CAST(qty_purchased AS DOUBLE PRECISION)")), 'total_procured']
+        //     ],
+        //     where: {
+        //         ...whereCondition,
+        //         brand_id: brandId,
+        //         status: 'Sold'
+        //     }
+        // })
 
         const graph = await Farm.findAll({
             where: { '$farmer.brand_id$': brandId },
@@ -343,7 +392,7 @@ const organicCottonOverview = async (req: Request, res: Response) => {
         let total_garment = await sumbrandgarmentFabricSales(brandId, seasonId);
         res.sendSuccess(res, {
             total_farmers: result?.dataValues.total_farmers ? result?.dataValues.total_farmers : 0,
-            total_procured: trans?.dataValues.total_procured ? trans?.dataValues.total_procured : 0,
+            total_procured: result?.dataValues.total_expected_yield ? result?.dataValues.total_expected_yield : 0,
             total_knit: total_knit ? total_knit : 0,
             total_weave: total_weave ? total_weave : 0,
             total_lint: total_lint ? total_lint : 0,
@@ -355,36 +404,357 @@ const organicCottonOverview = async (req: Request, res: Response) => {
         return res.sendError(res, error.message);
     }
 }
+
+const organicCottonSpecialUsersOverview = async (req: Request, res: Response) => {
+    try {
+        let brandId = req.query.brandId;
+        let seasonId = req.query.seasonId;
+        if (!brandId) {
+            return res.sendError(res, 'NEED_BRAND_ID')
+        }
+        let whereCondition: any = {};
+        if (req.query.seasonId) {
+            whereCondition.season_id = req.query.seasonId
+        }
+
+        let total_lint_procured = await sumbrandginnerProcured(brandId, seasonId);
+        let total_lint_sold = await sumbrandginnerSales(brandId, seasonId);
+        // let total_lint_stock = await sumbrandginnerStock(brandId, seasonId);
+        let total_lint_stock = Number(total_lint_procured) > Number(total_lint_sold) ?Number(total_lint_procured) - Number(total_lint_sold) : 0;
+        
+        let total_yarn_procured = await sumbrandspinnerYarnProcured(brandId, seasonId);
+        let total_yarn_sold = await sumbrandspinnerYarnSales(brandId, seasonId);
+        // let total_yarn_stock = await sumbrandspinnerYarnStock(brandId, seasonId);
+        let total_yarn_stock = Number(total_yarn_procured) > Number(total_yarn_sold) ? Number(total_yarn_procured) - Number(total_yarn_sold) : 0;
+
+        res.sendSuccess(res, {
+            total_lint_procured: total_lint_procured ? total_lint_procured : 0,
+            total_lint_sold: total_lint_sold ? total_lint_sold : 0,
+            total_lint_stock: total_lint_stock ? total_lint_stock : 0,
+            total_yarn_procured: total_yarn_procured ? total_yarn_procured : 0,
+            total_yarn_sold: total_yarn_sold ? total_yarn_sold : 0,
+            total_yarn_stock: total_yarn_stock ? total_yarn_stock : 0,
+        });
+    } catch (error: any) {
+        return res.sendError(res, error.message);
+    }
+}
+
+const sumbrandginnerProcured = async (brandId: any, seasonId: any) => {
+    try {
+        let cottonQty = 0;
+
+        const [result] = await sequelize.query(
+           `SELECT 
+                COUNT(DISTINCT "gin-bales"."id") AS "procured",
+                COALESCE(
+                    SUM(
+                    CASE
+                        WHEN "gin-bales"."old_weight" IS NOT NULL THEN CAST("gin-bales"."old_weight" AS DOUBLE PRECISION)
+                        ELSE CAST("gin-bales"."weight" AS DOUBLE PRECISION)
+                    END
+                    ),
+                    0
+                ) AS "lintProcured"
+                FROM "gin-bales" AS "gin-bales"
+                LEFT OUTER JOIN "gin_processes" AS "ginprocess" 
+                ON "gin-bales"."process_id" = "ginprocess"."id"
+                LEFT OUTER JOIN "seasons" AS "ginprocess->season" 
+                ON "ginprocess"."season_id" = "ginprocess->season"."id"
+                LEFT OUTER JOIN "ginners" AS "ginprocess->ginner" 
+                ON "ginprocess"."ginner_id" = "ginprocess->ginner"."id"
+                WHERE "ginprocess->ginner"."brand" && ARRAY[${Number(brandId)}]
+                    ${seasonId ? `AND "ginprocess"."season_id" IN (${seasonId})` : `AND "ginprocess"."season_id" NOT IN (2,3)`}
+                ;
+        `)
+
+          cottonQty = result && result.length > 0 ? result[0].lintProcured : 0
+ 
+        return cottonQty / 1000;
+    } catch (error) {
+        console.log(error);
+    }
+}
+
+
 const sumbrandginnerSales = async (brandId: any, seasonId: any) => {
     try {
-        let whereCondition: any = {}
+        const whereCondition: any = [];
+
+        if (brandId) {
+            const idArray: number[] = brandId
+              .split(",")
+              .map((id: any) => parseInt(id, 10));
+            whereCondition.push(`g.brand && ARRAY[${idArray.join(',')}]`);
+          }
+
+          if (seasonId) {
+            const idArray = seasonId.split(",").map((id: any) => parseInt(id, 10));
+            whereCondition.push(`gs.season_id IN (${idArray.join(',')})`);
+          }
+          else {
+            whereCondition.push(`gs.season_id NOT IN (2,3)`);
+          }
+
+          whereCondition.push(`gs.status <> 'To be Submitted'`);
+          whereCondition.push(`gs.id IS NOT NULL`);
+    
+          const whereClause = whereCondition.length > 0 ? `WHERE ${whereCondition.join(' AND ')}` : '';
+
+        const [result] = await sequelize.query(`
+            SELECT 
+                SUM(gs.total_qty) AS total_qty
+            FROM gin_sales gs
+            LEFT JOIN ginners g ON gs.ginner_id = g.id
+            LEFT JOIN (
+                SELECT DISTINCT sales_id FROM bale_selections
+            ) bs ON gs.id = bs.sales_id
+            ${whereClause}`)
+
+        let cottonQty = result && result.length > 0 ? result[0].total_qty : 0
+ 
+        return cottonQty / 1000;
+    } catch (error) {
+        console.log(error);
+    }
+}
+
+function convert_kg_to_mt(number: any) {
+    return (number / 1000).toFixed(2);
+  }
+  const sumBrandginnerStock = async (brandId: any, seasonId: any) => {
+    try {
+        let whereCondition: any = {};
+        const ginBaleWhere: any = {};
+        const baleSelectionWhere: any = {};
         if (seasonId) {
-            whereCondition.season_id = seasonId
-        }
-        const ginnerList = await GinSales.findAll({
+            const idArray: number[] = seasonId
+              .split(",")
+              .map((id: any) => parseInt(id, 10));
+            ginBaleWhere["$ginprocess.season_id$"] = { [Op.in]: idArray };
+            baleSelectionWhere["$sales.season_id$"] = { [Op.in]: idArray };
+          }
+
+        const { count, rows } = await Ginner.findAndCountAll({
             where: {
                 ...whereCondition,
-                status: 'Sold',
-                '$ginner.brand$': { [Op.contains]: [Number(brandId)] }
+                brand: { [Op.contains]: [Number(brandId)] }
             },
-            attributes: [
-                [Sequelize.fn('COALESCE', Sequelize.fn('SUM', Sequelize.col('total_qty')), 0), 'total_lint_mt'],
-            ],
-            include: [
-                {
-                    model: Ginner,
-                    as: 'ginner',
-                    attributes: [],
-                }
-            ],
-            group: ['ginner_id', "ginner.id"]
-        });
-        let cottonQty = 0;
-        ginnerList.forEach((value: any) => {
-            cottonQty = value.dataValues.total_lint_mt;
         });
 
-        return cottonQty / 1000;
+        let result: any[] = [];
+
+        for await (const ginner of rows) {
+            const [lintProcured, lintSold]: any = await Promise.all([
+                GinBale.findOne({
+                    attributes: [
+                        [
+                            sequelize.fn(
+                                "COALESCE",
+                                sequelize.fn(
+                                    "SUM",
+                                    sequelize.literal(
+                                        'CAST("gin-bales"."weight" AS DOUBLE PRECISION)'
+                                    )
+                                ),
+                                0
+                            ),
+                            "qty",
+                        ],
+                        [
+                            sequelize.fn(
+                                "COUNT",
+                                Sequelize.literal('DISTINCT "gin-bales"."id"')
+                            ),
+                            "bales_procured",
+                        ],
+                    ],
+                    include: [
+                        {
+                            model: GinProcess,
+                            as: "ginprocess",
+                            attributes: [],
+                        },
+                    ],
+                    where: {
+                        ...ginBaleWhere,
+                        "$ginprocess.ginner_id$": ginner.id,
+                    },
+                    group: ["ginprocess.ginner_id"],
+                }),
+                BaleSelection.findOne({
+                    attributes: [
+                        [
+                            sequelize.fn(
+                                "COALESCE",
+                                sequelize.fn(
+                                    "SUM",
+                                    sequelize.literal(
+                                        'CAST("bale"."weight" AS DOUBLE PRECISION)'
+                                    )
+                                ),
+                                0
+                            ),
+                            "qty",
+                        ],
+                        [
+                            sequelize.fn("COUNT", Sequelize.literal("DISTINCT bale_id")),
+                            "bales_sold",
+                        ],
+                    ],
+                    include: [
+                        {
+                            model: GinSales,
+                            as: "sales",
+                            attributes: [],
+                        },
+                        {
+                            model: GinBale,
+                            as: "bale",
+                            attributes: [],
+                        },
+                    ],
+                    where: {
+                        ...baleSelectionWhere,
+                        "$sales.ginner_id$": ginner.id,
+                    },
+                    group: ["sales.ginner_id"],
+                }),
+            ]);
+
+            const obj: any = {
+                lintProcuredMt: convert_kg_to_mt(lintProcured?.dataValues.qty ?? 0),
+                lintSoldMt: convert_kg_to_mt(lintSold?.dataValues.qty ?? 0),
+            };
+
+            obj.lintStockMt =
+                Number(obj.lintProcuredMt) > Number(obj.lintSoldMt)
+                    ? Number(obj.lintProcuredMt) - Number(obj.lintSoldMt)
+                    : 0;
+
+            result.push({ ...obj, ginner });
+        }
+
+        let cottonQty = 0;
+
+        result.forEach((value: any) => {
+            cottonQty += value.lintStockMt;
+        });
+
+        return cottonQty;
+    } catch (error:any) {
+        throw new Error('Error in sumbrandginnerStock function: ' + error.message);
+    }
+};
+
+const sumbrandginnerStock = async (brandId: any, seasonId: any | null) => {
+    try {
+      const query = `
+        WITH
+          filtered_ginners AS (
+            SELECT
+              g.id AS ginner_id
+            FROM
+              ginners g
+            WHERE
+              g.brand @> ARRAY[:brandId]::int[]
+          ),
+          gin_bale_data AS (
+            SELECT
+              gp.ginner_id,
+              SUM(CAST(gb.weight AS DOUBLE PRECISION)) AS total_qty_procured
+            FROM
+              "gin-bales" gb
+              JOIN gin_processes gp ON gb.process_id = gp.id
+              JOIN filtered_ginners fg ON gp.ginner_id = fg.ginner_id
+            WHERE
+              (:seasonId IS NULL OR gp.season_id = ANY(string_to_array(:seasonId, ',')::int[]))
+            GROUP BY
+              gp.ginner_id
+          ),
+          bale_selection_data AS (
+            SELECT
+              gs.ginner_id,
+              SUM(CAST(gb.weight AS DOUBLE PRECISION)) AS total_qty_sold
+            FROM
+              bale_selections bs
+              JOIN gin_sales gs ON bs.sales_id = gs.id
+              JOIN "gin-bales" gb ON bs.bale_id = gb.id
+              JOIN filtered_ginners fg ON gs.ginner_id = fg.ginner_id
+            WHERE
+              (:seasonId IS NULL OR gs.season_id = ANY(string_to_array(:seasonId, ',')::int[]))
+            GROUP BY
+              gs.ginner_id
+          )
+        SELECT
+          fg.ginner_id,
+          COALESCE(gb.total_qty_procured, 0) / 1000 AS lint_procured_mt,
+          COALESCE(bs.total_qty_sold, 0) / 1000 AS lint_sold_mt,
+          CASE
+            WHEN COALESCE(gb.total_qty_procured, 0) > COALESCE(bs.total_qty_sold, 0)
+            THEN COALESCE(gb.total_qty_procured, 0) / 1000 - COALESCE(bs.total_qty_sold, 0) / 1000
+            ELSE 0
+          END AS lint_stock_mt
+        FROM
+          filtered_ginners fg
+          LEFT JOIN gin_bale_data gb ON fg.ginner_id = gb.ginner_id
+          LEFT JOIN bale_selection_data bs ON fg.ginner_id = bs.ginner_id;
+      `;
+  
+      const data = await sequelize.query(query, {
+        replacements: {
+          brandId: Number(brandId),
+          seasonId: seasonId || null
+        },
+        type: sequelize.QueryTypes.SELECT
+      });
+  
+      // Sum the lint stock from all ginners
+      let cottonQty = 0;
+      data.forEach((row: any) => {
+        cottonQty += Number(row.lint_stock_mt);
+      });
+  
+      return cottonQty;
+    } catch (error:any) {
+      throw new Error('Error in sumBrandGinnerStock function: ' + error.message);
+    }
+  };
+const sumbrandspinnerYarnProcured = async (brandId: any, seasonId: any) => {
+    try {
+        let whereCondition:any = {};
+        
+        
+        if(seasonId){
+            whereCondition.season_id = seasonId
+        }
+        else
+        {
+           whereCondition.season_id = { [Op.notIn]: [2,3] };
+
+        }
+        const data = await SpinProcess.findOne({
+            attributes: [
+              [Sequelize.literal('COALESCE(SUM(net_yarn_qty), 0)'), 'total_yarn_procured_mt']
+            ],
+            include: [
+              {
+                model: Spinner,
+                as: 'spinner',
+                attributes: [],
+              },
+            ],
+            where: {
+              '$spinner.brand$': { [Op.contains]: [Number(brandId)] }, // Check if brandId is in ginner.brand array
+              ...whereCondition,
+            },
+            raw: true, // Ensures only the raw result is returned
+          });
+
+        let cottonQty = 0;
+            cottonQty = data ? data.total_yarn_procured_mt : 0;
+
+        return cottonQty / 1000
     } catch (error) {
         console.log(error);
     }
@@ -392,8 +762,16 @@ const sumbrandginnerSales = async (brandId: any, seasonId: any) => {
 
 const sumbrandspinnerYarnSales = async (brandId: any, seasonId: any) => {
     try {
+        let whereCondition: any = {}
+        if(seasonId){
+            whereCondition.season_id = seasonId
+        }
+        else
+        {
+           whereCondition.season_id = { [Op.notIn]: [2,3] };
 
-        let data = await SpinSales.findAll({
+        }
+        let data = await SpinSales.findOne({
             attributes: [
                 [Sequelize.literal('COALESCE(SUM(total_qty), 0)'), 'total_yarn_mt']
             ],
@@ -401,13 +779,50 @@ const sumbrandspinnerYarnSales = async (brandId: any, seasonId: any) => {
                 { model: Spinner, as: 'spinner', attributes: [] },
             ],
             where: {
+                id: {
+                    [Op.in]: Sequelize.literal(`(
+                      SELECT DISTINCT sales_id
+                      FROM spin_process_yarn_selections
+                    )`)
+                  },
+                ...whereCondition,
+                '$spinner.brand$': { [Op.contains]: [Number(brandId)] }
+            },
+            raw: true, // Ensures only the raw result is returned
+        })
+
+        let cottonQty = 0;
+            cottonQty = data ? data.total_yarn_mt : 0;
+
+        return cottonQty / 1000
+    } catch (error) {
+        console.log(error);
+    }
+}
+
+const sumbrandspinnerYarnStock = async (brandId: any, seasonId: any) => {
+    try {
+        let whereCondition: any = {}
+        if (seasonId) {
+            whereCondition.season_id = seasonId
+        }
+
+        let data = await SpinProcess.findAll({
+            attributes: [
+                [Sequelize.literal('COALESCE(SUM(qty_stock), 0)'), 'qty_stock_yarn_mt']
+            ],
+            include: [
+                { model: Spinner, as: 'spinner', attributes: [] },
+            ],
+            where: {
+                ...whereCondition,
                 '$spinner.brand$': { [Op.contains]: [Number(brandId)] }
             },
             group: ['spinner.brand']
         })
         let cottonQty = 0;
         data.forEach((value: any) => {
-            cottonQty = value.dataValues.total_yarn_mt;
+            cottonQty = value.dataValues.qty_stock_yarn_mt;
         });
 
         return cottonQty / 1000
@@ -415,6 +830,7 @@ const sumbrandspinnerYarnSales = async (brandId: any, seasonId: any) => {
         console.log(error);
     }
 }
+
 const sumbrandknitterFabricSales = async (brandId: any, seasonId: any) => {
     try {
 
@@ -1012,6 +1428,7 @@ export {
     updateBrand,
     checkBrand,
     organicCottonOverview,
+    organicCottonSpecialUsersOverview,
     fetchBrandTransactionsPagination,
     updateStatusBrandSale,
     productionUpdate,

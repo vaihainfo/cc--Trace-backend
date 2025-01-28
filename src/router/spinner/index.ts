@@ -4,10 +4,8 @@ import {
     createSpinnerSales,
     exportSpinnerProcess,
     exportSpinnerSale,
-    fetchSpinSalesDashBoard,
     fetchSpinSalesPagination,
     fetchSpinnerProcessPagination,
-    updateSpinnerProcess,
     updateStatusSales,
     exportSpinnerTransaction,
     getProgram,
@@ -26,7 +24,9 @@ import {
     getSpinnerProcessTracingChartData,
     updateSpinProcess,
     updateSpinnerSales,
-    fetchSpinnerSale
+    fetchSpinnerSale,
+    fetchTransactionList,
+    fetchTransactionAlert
 } from "../../controllers/spinner";
 import accessControl from "../../middleware/access-control";
 import { Router } from "express";
@@ -34,6 +34,7 @@ import { Router } from "express";
 const router = Router();
 
 router.use(accessControl);
+
 
 // Spinner Routes
 router.get('/', fetchSpinnerProcessPagination);
@@ -49,7 +50,8 @@ router.delete('/sales', deleteSpinnerSales);
 router.get('/comber-noil', fetchComberNoilPagination);
 router.post('/sales', createSpinnerSales);
 router.get('/sales/export', exportSpinnerSale);
-router.get('/transaction', fetchSpinSalesDashBoard);
+router.get('/transaction', fetchTransactionAlert);
+router.get('/transaction-list', fetchTransactionList);
 router.put('/transaction', updateStatusSales);
 router.get('/transaction/count', countCottonBaleWithProgram);
 router.get('/transaction/export', exportSpinnerTransaction);

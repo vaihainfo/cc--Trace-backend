@@ -6,6 +6,7 @@ import FarmGroup from './farm-group.model';
 import ICS from './ics.model'
 import Ginner from './ginner.model';
 import Farmer from './farmer.model';
+import Season from './season.model';
 
 const OrganicIntegrity = db.define('organic_integrities', {
   id: {
@@ -24,6 +25,10 @@ const OrganicIntegrity = db.define('organic_integrities', {
     references: { model: 'brands', key: 'id' },
     onDelete: 'CASCADE',
     allowNull: false,
+  },
+  season_id: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
   },
   farmGroup_id: {
     type: DataTypes.INTEGER
@@ -58,11 +63,19 @@ const OrganicIntegrity = db.define('organic_integrities', {
     allowNull: false,
     type: DataTypes.STRING
   },
+  uploaded_reports: {
+    type: DataTypes.ARRAY(DataTypes.TEXT)
+  },
 });
 
 OrganicIntegrity.belongsTo(Brand, {
   foreignKey: "brand_id",
   as: "brand",
+});
+
+OrganicIntegrity.belongsTo(Season, {
+  foreignKey: "season_id",
+  as: "season",
 });
 
 OrganicIntegrity.belongsTo(Ginner, {

@@ -140,10 +140,10 @@ WeaverSales.belongsTo(Fabric, {
   as: "dyingwashing",
 });
 
-// WeaverSales.belongsTo(FabricType, {
-//   foreignKey: "fabric_type",
-//   as: "fabric",
-// });
+WeaverSales.belongsTo(FabricType, {
+  foreignKey: "fabric_type",
+  as: "fabric",
+});
 
 WeaverSales.belongsTo(Season, {
   foreignKey: "season_id",

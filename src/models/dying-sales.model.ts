@@ -109,7 +109,7 @@ const DyingSales = db.define('dying_sales', {
   accept_date: {
     type: DataTypes.DATE
   },
-  sales_type : {
+  sales_type: {
     type: DataTypes.STRING
   },
   qr: {
@@ -123,7 +123,17 @@ const DyingSales = db.define('dying_sales', {
   },
   other_docs: {
     type: DataTypes.ARRAY(DataTypes.STRING)
-  }
+  },
+  from_date: {
+    type: DataTypes.DATE,
+    allowNull: true,
+    defaultValue: null,
+  },
+  to_date: {
+    type: DataTypes.DATE,
+    allowNull: true,
+    defaultValue: null,
+  },
 });
 
 DyingSales.belongsTo(Fabric, {

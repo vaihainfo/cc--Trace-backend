@@ -3,6 +3,7 @@ import db from '../util/dbConn';
 import Program from './program.model';
 import Season from './season.model';
 import Brand from './brand.model';
+import Garment from './garment.model';
 
 const OldGarmentSales = db.define('old_garment_sales', {
     id: {
@@ -145,6 +146,10 @@ const OldGarmentSales = db.define('old_garment_sales', {
     physical_traceability_process: {
         type: DataTypes.SMALLINT,
         defaultValue: "0"
+    },
+    garment_name: {
+        type: DataTypes.STRING,
+        defaultValue: null
     }
 }, {
     timestamps: false
@@ -163,6 +168,11 @@ OldGarmentSales.belongsTo(Brand, {
 OldGarmentSales.belongsTo(Season, {
     foreignKey: "season_id",
     as: "season"
+});
+
+OldGarmentSales.belongsTo(Garment, {
+    foreignKey: "garment_id",
+    as: "garment"
 });
 
 OldGarmentSales.sync();

@@ -41,6 +41,15 @@ const GinBale = db.define('gin-bales', {
   sold_status: {
     type: DataTypes.BOOLEAN,
     defaultValue: false
+  },
+  old_weight: {
+    type: DataTypes.STRING
+  },
+  is_all_rejected: {
+    type: DataTypes.BOOLEAN,
+  },
+  accepted_weight: {
+    type: DataTypes.DOUBLE
   }
 });
 

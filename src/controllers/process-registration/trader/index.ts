@@ -101,12 +101,14 @@ const fetchTrader = async (req: Request, res: Response) => {
 
 const fetchTraderPagination = async (req: Request, res: Response) => {
     const searchTerm = req.query.search || '';
+    const status = req.query.status || '';
     const sortOrder = req.query.sort || 'asc';
     const page = Number(req.query.page) || 1;
     const limit = Number(req.query.limit) || 10;
     const countryId: any = req.query.countryId;
     const brandId: any = req.query.brandId;
     const stateId: any = req.query.stateId;
+    const all = req.query.all || '';
     const offset = (page - 1) * limit;
     const whereCondition: any = {}
     try {
@@ -141,8 +143,14 @@ const fetchTraderPagination = async (req: Request, res: Response) => {
                 .map((id: any) => parseInt(id, 10));
             whereCondition.brand = { [Op.overlap]: idArray }
         }
+
+        if(status=='true'){
+            whereCondition.status = true;
+        }
+        
         //fetch data with pagination
         if (req.query.pagination === "true") {
+            let data: any = [];
             const { count, rows } = await Trader.findAndCountAll({
                 where: whereCondition,
                 order: [
@@ -162,8 +170,23 @@ const fetchTraderPagination = async (req: Request, res: Response) => {
                 offset: offset,
                 limit: limit
             });
-            return res.sendPaginationSuccess(res, rows, count);
+            for await (let item of rows){
+                let users = await User.findAll({
+                    where: {
+                        id: item?.dataValues?.traderUser_id
+                    }
+                });
+
+                let newStatus = users.some((user: any) => user.status === true);
+
+                data.push({
+                    ...item?.dataValues,
+                    status: newStatus ? 'Active' : 'Inactive'
+                });
+            }
+            return res.sendPaginationSuccess(res, data, count);
         } else {
+            let dataAll: any = [];
             const result = await Trader.findAll({
                 where: whereCondition,
                 include: [
@@ -180,13 +203,28 @@ const fetchTraderPagination = async (req: Request, res: Response) => {
                 order: [
                     ['id', 'desc'], // Sort the results based on the 'name' field and the specified order
                 ]
-            });
-            return res.sendSuccess(res, result);
+            }); 
+            for await (let item of result) {
+                let users = await User.findAll({
+                    where: {
+                        id: item?.dataValues?.traderUser_id
+                    }
+                });
+
+                let newStatus = users.some((user: any) => user.status === true);
+
+                dataAll.push({
+                    ...item?.dataValues,
+                    status: newStatus ? 'Active' : 'Inactive'
+                });
+            }
+            const activeUsers = dataAll.filter((item:any)=> item.status === 'Active');
+            return res.sendSuccess(res, all === 'true' ? activeUsers : dataAll);
         }
-    } catch (error) {
+    } catch (error: any) {
         console.log(error);
-        return res.sendError(res, "ERR_INTERNAL_SERVER_ERROR");
-    }
+        return res.sendError(res, error.message);
+      }
 }
 
 const updateTrader = async (req: Request, res: Response) => {
@@ -235,14 +273,44 @@ const updateTrader = async (req: Request, res: Response) => {
         }
         const trader = await Trader.update(data, { where: { id: req.body.id } });
         res.sendSuccess(res, trader);
-    } catch (error) {
+    } catch (error: any) {
         console.log(error);
-        return res.sendError(res, "ERR_INTERNAL_SERVER_ERROR");
-    }
+        return res.sendError(res, error.message);
+      }
 }
 
 const deleteTrader = async (req: Request, res: Response) => {
     try {
+        const trade = await Trader.findOne({
+            where: {
+                id: req.body.id
+            },
+        });
+
+        const user = await User.findOne({
+            where: {
+                id: trade.traderUser_id
+            },
+        });
+
+        const userRole = await UserRole.findOne({
+            where: Sequelize.where(
+                Sequelize.fn('LOWER', Sequelize.col('user_role')),
+                'trader'
+            )
+        });
+
+
+        const updatedProcessRole = user.process_role.filter((roleId: any) => roleId !== userRole.id);
+
+        if (updatedProcessRole.length > 0) {
+            const updatedUser = await await user.update({
+                process_role: updatedProcessRole,
+                role: updatedProcessRole[0]
+            });
+        } else {
+            await user.destroy();
+        }
         const trader = await Trader.destroy({
             where: {
                 id: req.body.id

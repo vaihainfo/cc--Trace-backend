@@ -15,6 +15,8 @@ import PhysicalPartner from "../../../models/physical-partner.model";
 const createProcessor = async (req: Request, res: Response) => {
     try {
         let userIds = [];
+        let allUserInactive = false; 
+
         for await (let user of req.body.userData) {
             const userData = {
                 firstname: user.firstname,
@@ -30,6 +32,9 @@ const createProcessor = async (req: Request, res: Response) => {
             };
             const result = await User.create(userData);
             userIds.push(result.id);
+            if (user.status) {
+                allUserInactive = true;
+            }
         }
 
         let mainData: any = [];
@@ -65,7 +70,8 @@ const createProcessor = async (req: Request, res: Response) => {
                 bale_weight_from: req.body.baleWeightFrom,
                 bale_weight_to: req.body.baleWeightTo,
                 gin_type: req.body.ginType,
-                ginnerUser_id: userIds
+                ginnerUser_id: userIds,
+                status: allUserInactive
             }
 
             const result = await Ginner.create(obj);
@@ -80,6 +86,7 @@ const createProcessor = async (req: Request, res: Response) => {
                 realisation_range_to: req.body.rangeTo,
                 yarn_type: req.body.yarnType,
                 spinnerUser_id: userIds,
+                status: allUserInactive
             }
 
             const result = await Spinner.create(obj);
@@ -95,6 +102,7 @@ const createProcessor = async (req: Request, res: Response) => {
                 prod_cap: req.body.KnitProdCap,
                 loss_from: req.body.KnitLossFrom,
                 loss_to: req.body.KnitLossTo,
+                status: allUserInactive
             }
 
             const result = await Knitter.create(obj);
@@ -111,6 +119,7 @@ const createProcessor = async (req: Request, res: Response) => {
                 prod_cap: req.body.weaverProdCap,
                 loss_from: req.body.weaverLossFrom,
                 loss_to: req.body.weaverLossTo,
+                status: allUserInactive
             }
 
             const result = await Weaver.create(obj);
@@ -122,6 +131,7 @@ const createProcessor = async (req: Request, res: Response) => {
                 ...data,
                 traderUser_id: userIds,
                 material_trading: req.body.materialTrading,
+                status: allUserInactive
             }
 
             const result = await Trader.create(obj);
@@ -137,6 +147,7 @@ const createProcessor = async (req: Request, res: Response) => {
                 prod_cap: req.body.garmentProdCap,
                 loss_from: req.body.garmentLossFrom,
                 loss_to: req.body.garmentLossTo,
+                status: allUserInactive
             }
 
             const result = await Garment.create(obj);
@@ -152,6 +163,7 @@ const createProcessor = async (req: Request, res: Response) => {
                 prod_capt: req.body.fabricProdCap,
                 loss_from: req.body.fabricLossFrom,
                 loss_to: req.body.fabricLossTo,
+                status: allUserInactive
             }
 
             const result = await Fabric.create(obj);
@@ -161,7 +173,8 @@ const createProcessor = async (req: Request, res: Response) => {
         if (req.body.processType.includes('Physical_Partner')) {
             let obj = {
                 ...data,
-                physicalPartnerUser_id: userIds
+                physicalPartnerUser_id: userIds,
+                status: allUserInactive
             }
 
             const result = await PhysicalPartner.create(obj);
@@ -310,6 +323,8 @@ const fetchAllProcessor = async (req: Request, res: Response) => {
 const updateProcessor = async (req: Request, res: Response) => {
     try {
         let userIds = [];
+        let allUserInactive = false; 
+
         for await (let user of req.body.userData) {
             const userData = {
                 firstname: user.firstname,
@@ -323,11 +338,14 @@ const updateProcessor = async (req: Request, res: Response) => {
                 id: user.id
             };
             if (user.id) {
-                const result = await User.update(userData, { where: { id: user.id } });
+                const result = await User.update({...userData, username: user.username, email: user.email }, { where: { id: user.id } });
                 userIds.push(user.id);
             } else {
                 const result = await User.create({ ...userData, username: user.username, email: user.email });
                 userIds.push(result.id);
+            }
+            if (user.status) {
+                allUserInactive = true;
             }
         }
 
@@ -364,7 +382,8 @@ const updateProcessor = async (req: Request, res: Response) => {
                 bale_weight_from: req.body.baleWeightFrom,
                 bale_weight_to: req.body.baleWeightTo,
                 gin_type: req.body.ginType,
-                ginnerUser_id: userIds
+                ginnerUser_id: userIds,
+                status: allUserInactive 
             }
             if (req.body.ginnerId) {
                 const result = await Ginner.update(obj, { where: { id: req.body.ginnerId } });
@@ -383,6 +402,7 @@ const updateProcessor = async (req: Request, res: Response) => {
                 realisation_range_to: req.body.rangeTo,
                 yarn_type: req.body.yarnType,
                 spinnerUser_id: userIds,
+                status: allUserInactive
             }
             if (req.body.spinnerId) {
                 const result = await Spinner.update(obj, { where: { id: req.body.spinnerId } });
@@ -402,6 +422,7 @@ const updateProcessor = async (req: Request, res: Response) => {
                 prod_cap: req.body.KnitProdCap,
                 loss_from: req.body.KnitLossFrom,
                 loss_to: req.body.KnitLossTo,
+                status: allUserInactive
             }
             if (req.body.knitterId) {
                 const result = await Knitter.update(obj, { where: { id: req.body.knitterId } });
@@ -422,6 +443,7 @@ const updateProcessor = async (req: Request, res: Response) => {
                 prod_cap: req.body.weaverProdCap,
                 loss_from: req.body.weaverLossFrom,
                 loss_to: req.body.weaverLossTo,
+                status: allUserInactive
             }
             if (req.body.weaverId) {
                 const result = await Weaver.update(obj, { where: { id: req.body.weaverId } });
@@ -437,6 +459,7 @@ const updateProcessor = async (req: Request, res: Response) => {
                 ...data,
                 traderUser_id: userIds,
                 material_trading: req.body.materialTrading,
+                status: allUserInactive
             }
             if (req.body.traderId) {
                 const result = await Trader.update(obj, { where: { id: req.body.traderId } });
@@ -456,6 +479,7 @@ const updateProcessor = async (req: Request, res: Response) => {
                 prod_cap: req.body.garmentProdCap,
                 loss_from: req.body.garmentLossFrom,
                 loss_to: req.body.garmentLossTo,
+                status: allUserInactive
             }
             if (req.body.garmentId) {
                 const result = await Garment.update(obj, { where: { id: req.body.garmentId } });
@@ -475,6 +499,7 @@ const updateProcessor = async (req: Request, res: Response) => {
                 prod_capt: req.body.fabricProdCap,
                 loss_from: req.body.fabricLossFrom,
                 loss_to: req.body.fabricLossTo,
+                status: allUserInactive
             }
             if (req.body.fabricId) {
                 const result = await Fabric.update(obj, { where: { id: req.body.fabricId } });
@@ -488,7 +513,8 @@ const updateProcessor = async (req: Request, res: Response) => {
         if (req.body.processType.includes('Physical_Partner')) {
             let obj = {
                 ...data,
-                physicalPartnerUser_id: userIds
+                physicalPartnerUser_id: userIds,
+                status: allUserInactive
             }
             if (req.body.physicalPartnerId) {
                 const result = await PhysicalPartner.update(obj, { where: { id: req.body.physicalPartnerId } });

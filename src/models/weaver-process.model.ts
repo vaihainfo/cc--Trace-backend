@@ -124,6 +124,16 @@ const WeaverProcess = db.define('weaver_processes', {
   status: {
     type: DataTypes.STRING
   },
+  from_date: {
+    type: DataTypes.DATE,
+    allowNull: true,
+    defaultValue: null,
+  },
+  to_date: {
+    type: DataTypes.DATE,
+    allowNull: true,
+    defaultValue: null,
+  },
 });
 
 

@@ -109,6 +109,11 @@ const Garment = db.define('garments', {
   short_name: {
     type: DataTypes.STRING
   },
+  status: {
+    allowNull: false,
+    defaultValue: true,
+    type: DataTypes.BOOLEAN
+  },
 });
 
 Garment.belongsTo(Country, {

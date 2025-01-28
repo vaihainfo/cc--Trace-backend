@@ -7,7 +7,17 @@ import {
     uploadFarmer,
     uploadProcessorList,
     uploadProcurementPrice,
-    uploadImpactData
+    uploadImpactData,
+    uploadSeedAvailability,
+    uploadSeedDemand,
+    uploadSeedTestingAndLinkage,
+    uploadIcsQuantityEstimation,
+    uploadIcsName,
+    uploadFarmGroupEvaluationData,
+    uploadIntegrityTest,
+    uploadOrganicFarmer,
+    uploadPriceMapping,
+    uploadAllocatedGinnerVillage
 } from "../../controllers/upload-databases";
 import accessControl from "../../middleware/access-control";
 import { Router } from "express";
@@ -24,6 +34,16 @@ router.post('/village', uploadVillage);
 router.post('/farmer', uploadFarmer);
 router.post('/processor-list', uploadProcessorList);
 router.post('/procurement-price', uploadProcurementPrice);
-router.post('/impact/data', uploadImpactData)
+router.post('/impact/data', uploadImpactData);
+router.post('/seed-availability', uploadSeedAvailability);
+router.post('/seed-demand', uploadSeedDemand);
+router.post('/seed-testing-linkage', uploadSeedTestingAndLinkage);
+router.post('/ics-quantity-estimation', uploadIcsQuantityEstimation);
+router.post('/ics-name', uploadIcsName);
+router.post('/farm-group-evaluation-data', uploadFarmGroupEvaluationData);
+router.post('/integrity-test', uploadIntegrityTest);
+router.post('/organic-farmer', uploadOrganicFarmer);
+router.post('/upload-pricing', uploadPriceMapping);
+router.post('/allocated-village-ginner', uploadAllocatedGinnerVillage);
 
-export default router;  
+export default router;

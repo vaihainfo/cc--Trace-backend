@@ -1,8 +1,8 @@
-import { DataTypes  } from 'sequelize';
-import db  from '../util/dbConn';
+import { DataTypes } from 'sequelize';
+import db from '../util/dbConn';
 import Fabric from './fabric.model';
 
-const FabricPrintingProcess = db.define('fabric_printing_processes',{
+const FabricPrintingProcess = db.define('fabric_printing_processes', {
   id: {
     type: DataTypes.INTEGER,
     autoIncrement: true,
@@ -104,7 +104,7 @@ const FabricPrintingProcess = db.define('fabric_printing_processes',{
   },
   status: {
     type: DataTypes.STRING
-  },
+  }
 });
 
 FabricPrintingProcess.belongsTo(Fabric, {

@@ -19,6 +19,7 @@ import archiver from 'archiver';
 import ICS from "../../models/ics.model";
 import Transaction from "../../models/transaction.model";
 import sequelize from "../../util/dbConn";
+import moment from "moment";
 
 //create farmer
 const createFarmer = async (req: Request, res: Response) => {
@@ -51,8 +52,8 @@ const createFarmer = async (req: Request, res: Response) => {
     };
     const farmer = await Farmer.create(data);
     let village = await Village.findOne({ where: { id: Number(req.body.villageId) } })
-    let uniqueFilename = `qrcode_${Date.now()}.png`;
-    let name = farmer.firstName + " " + farmer.lastName
+    let name = farmer.lastName ? farmer.firstName + " " + farmer.lastName : farmer.firstName
+    let uniqueFilename = `qrcode_${name.replace(/\//g, '-')}_${farmer.code.replace(/\//g, '-')}.png`;
     let aa = await generateQrCode(`${farmer.id}`,
       name, uniqueFilename, farmer.code, village ? village.village_name : '');
     const farmerPLace = await Farmer.update({ qrUrl: uniqueFilename }, {
@@ -68,7 +69,8 @@ const createFarmer = async (req: Request, res: Response) => {
       agri_estimated_yeld: req.body.agriEstimatedYield,
       agri_estimated_prod: req.body.agriEstimatedProd,
       cotton_total_area: req.body.cottonTotalArea,
-      total_estimated_cotton: req.body.totalEstimatedCotton
+      total_estimated_cotton: req.body.totalEstimatedCotton,
+      available_cotton: Number(req.body.totalEstimatedCotton) + (0.15 * Number(req.body.totalEstimatedCotton))
     };
     const farm = await Farm.create(farmData);
     res.sendSuccess(res, { farmer, farm });
@@ -376,18 +378,19 @@ const updateFarmer = async (req: Request, res: Response) => {
         id: req.body.id,
       },
     });
-    if(farmer && (farmer[0] === 1)){
+    if (farmer && (farmer[0] === 1)) {
       let village = await Village.findOne({ where: { id: Number(req.body.villageId) } })
-      let uniqueFilename = `qrcode_${Date.now()}.png`;
-      let name = req.body.firstName + " " + req.body.lastName
-      let aa = await generateQrCode(`${farmer.id}`,
+      let name = req.body.lastName ? req.body.firstName  + " " + req.body.lastName : req.body.firstName 
+      let uniqueFilename = `qrcode_${name.replace(/\//g, '-')}_${req.body.code.replace(/\//g, '-')}.png`;
+      const farmerId = req.body.id?.toString()
+      let aa = await generateQrCode(farmerId,
         name, uniqueFilename, req.body.code, village ? village.village_name : '');
       const farmerPLace = await Farmer.update({ qrUrl: uniqueFilename }, {
-          where: {
-              id: req.body.id
-            }
-          });
-      }
+        where: {
+          id: req.body.id
+        }
+      });
+    }
     if (req.body.farmId) {
       let farmer = await Farm.update({
         program_id: Number(req.body.programId),
@@ -395,7 +398,8 @@ const updateFarmer = async (req: Request, res: Response) => {
         agri_estimated_yeld: req.body.agriEstimatedYield,
         agri_estimated_prod: req.body.agriEstimatedProd,
         cotton_total_area: req.body.cottonTotalArea,
-        total_estimated_cotton: req.body.totalEstimatedCotton
+        total_estimated_cotton: req.body.totalEstimatedCotton,
+        available_cotton: Number(req.body.totalEstimatedCotton) + (0.15 * Number(req.body.totalEstimatedCotton))
       }, { where: { id: req.body.farmId } })
     }
 
@@ -433,7 +437,8 @@ const createFarmerFarm = async (req: Request, res: Response) => {
       agri_estimated_yeld: req.body.agriEstimatedYield,
       agri_estimated_prod: req.body.agriEstimatedProd,
       cotton_total_area: req.body.cottonTotalArea,
-      total_estimated_cotton: req.body.totalEstimatedCotton
+      total_estimated_cotton: req.body.totalEstimatedCotton,
+      available_cotton: Number(req.body.totalEstimatedCotton) + (0.15 * Number(req.body.totalEstimatedCotton))
     };
     const farm = await Farm.create(data);
     res.sendSuccess(res, { farm });
@@ -457,7 +462,8 @@ const updateFarmerFarm = async (req: Request, res: Response) => {
       agri_estimated_yeld: req.body.agriEstimatedYield,
       agri_estimated_prod: req.body.agriEstimatedProd,
       cotton_total_area: req.body.cottonTotalArea,
-      total_estimated_cotton: req.body.totalEstimatedCotton
+      total_estimated_cotton: req.body.totalEstimatedCotton,
+      available_cotton: Number(req.body.totalEstimatedCotton) + (0.15 * Number(req.body.totalEstimatedCotton))
     };
     const farm = await Farm.update(data, {
       where: {
@@ -510,8 +516,8 @@ const fetchFarmPagination = async (req: Request, res: Response) => {
       const { count, rows } = await Farm.findAndCountAll({
         where: whereCondition,
         include: include,
-        order :[
-          ['season_id',"desc"]
+        order: [
+          ['season_id', "desc"]
         ],
         offset: offset,
         limit: limit,
@@ -646,17 +652,23 @@ const exportFarmer = async (req: Request, res: Response) => {
   const programId: string = req.query.programId as string;
   const brandId: string = req.query.brandId as string;
   const { icsId, farmGroupId, countryId, stateId, villageId, cert, seasonId }: any = req.query;
+  const maxRowsPerWorksheet = 500000;
+  const batchSize = 100000;
+  let offset = 0;
+  let worksheetIndex = 0;
+  let hasNextBatch = true;
+
   const whereCondition: any = {};
   try {
     if (searchTerm) {
       whereCondition[Op.or] = [
-        { '$farmer.firstName$': { [Op.iLike]: `%${searchTerm}%` } }, // Search by first name
-        { '$farmer.code$': { [Op.iLike]: `%${searchTerm}%` } }, // Search by code
-        { '$farmer.program.program_name$': { [Op.iLike]: `%${searchTerm}%` } }, // Search by program
-        { '$farmer.country.county_name$': { [Op.iLike]: `%${searchTerm}%` } }, // Search by country
-        { '$farmer.village.village_name$': { [Op.iLike]: `%${searchTerm}%` } }, // Search by village
-        { '$farmer.brand.brand_name$': { [Op.iLike]: `%${searchTerm}%` } }, // Search by brand
-        { '$farmer.cert_status$': { [Op.iLike]: `%${searchTerm}%` } }, // Search by cert status
+        { '$farmer.firstName$': { [Op.iLike]: `%${searchTerm}%` } }, 
+        { '$farmer.code$': { [Op.iLike]: `%${searchTerm}%` } }, 
+        { '$farmer.program.program_name$': { [Op.iLike]: `%${searchTerm}%` } }, 
+        { '$farmer.country.county_name$': { [Op.iLike]: `%${searchTerm}%` } }, 
+        { '$farmer.village.village_name$': { [Op.iLike]: `%${searchTerm}%` } }, 
+        { '$farmer.brand.brand_name$': { [Op.iLike]: `%${searchTerm}%` } }, 
+        { '$farmer.cert_status$': { [Op.iLike]: `%${searchTerm}%` } }, 
       ];
     }
 
@@ -718,138 +730,178 @@ const exportFarmer = async (req: Request, res: Response) => {
       whereCondition.season_id = { [Op.in]: idArray };
     }
 
-    // Create the excel workbook file
     const workbook = new ExcelJS.Workbook();
-    const worksheet = workbook.addWorksheet("Sheet1");
 
-    // Set bold font for header row
-    worksheet.columns = [
-      { header: 'Farmer Name', key: 'farmerName', width: 25 },
-      { header: 'Farmer Code', key: 'fatherCode', width: 25 },
-      { header: 'Country', key: 'country', width: 10 },
-      { header: 'State', key: 'state', width: 10 },
-      { header: 'District', key: 'district', width: 10 },
-      { header: 'Block', key: 'block', width: 10 },
-      { header: 'Village', key: 'village', width: 10 },
-      { header: 'Season', key: 'seasons', width: 10 },
-      { header: 'FarmGroup', key: 'farmGroup', width: 25 },
-      { header: 'Brand', key: 'brand', width: 15 },
-      { header: 'Program', key: 'program', width: 10 },
-      { header: 'Total Agriculture Area', key: 'agriTotalArea', width: 10 },
-      { header: 'Estimated Yield (Kg/Ac)', key: 'agriEstimatedYield', width: 10 },
-      { header: 'Total estimated Production', key: 'agriEstimatedProd', width: 10 },
-      { header: 'Cotton Total Area', key: 'totalEstimatedCotton', width: 10 },
-      { header: 'Total EstimatedCotton', key: 'cottonTotalArea', width: 10 },
-      { header: 'Tracenet Id', key: 'tracenetId', width: 15 },
-      { header: 'ICS Name', key: 'iscName', width: 15 },
-      { header: 'Certification Status', key: 'cert', width: 15 }
-    ];
-    let row: any = worksheet.findRow(1);
-    row.font = { bold: true };
-    const farmer = await Farm.findAll({
-      where: whereCondition,
-      attributes: [
-        [Sequelize.fn("concat", Sequelize.col("firstName"), Sequelize.col("lastName")), "farmerName"],
-        [Sequelize.col('"farmer"."code"'), 'fatherCode'],
-        [Sequelize.col('"farmer"."country"."county_name"'), 'country'],
-        [Sequelize.col('"farmer"."state"."state_name"'), 'state'],
-        [Sequelize.col('"farmer"."district"."district_name"'), 'district'],
-        [Sequelize.col('"farmer"."block"."block_name"'), 'block'],
-        [Sequelize.col('"farmer"."village"."village_name"'), 'village'],
-        [Sequelize.col('"season"."name"'), 'seasons'],
-        [Sequelize.col('"farmer"."farmGroup"."name"'), 'farmGroup'],
-        [Sequelize.col('"farmer"."brand"."brand_name"'), 'brand'],
-        [Sequelize.col('"farmer"."program"."program_name"'), 'program'],
-        [Sequelize.col('"farms"."agri_total_area"'), 'agriTotalArea'],
-        [Sequelize.col('"farms"."agri_estimated_yeld"'), 'agriEstimatedYield'],
-        [Sequelize.col('"farms"."agri_estimated_prod"'), 'agriEstimatedProd'],
-        [Sequelize.col('"farms"."total_estimated_cotton"'), 'totalEstimatedCotton'],
-        [Sequelize.col('"farms"."cotton_total_area"'), 'cottonTotalArea'],
-        [Sequelize.col('"farmer"."tracenet_id"'), 'tracenetId'],
-        [Sequelize.col('"farmer"."ics"."ics_name"'), 'iscName'],
-        [Sequelize.col('"farmer"."cert_status"'), 'cert'],
-      ],
-      include: [
-        {
-          model: Farmer,
-          as: "farmer",
-          attributes: [],
-          include: [
-            {
-              model: Program,
-              as: "program",
-              attributes: [],
-            },
-            {
-              model: Brand,
-              as: "brand",
-              attributes: [],
-            },
-            {
-              model: FarmGroup,
-              as: "farmGroup",
-              attributes: [],
-            },
-            {
-              model: Country,
-              as: "country",
-              attributes: [],
-            },
-            {
-              model: Village,
-              as: "village",
-              attributes: [],
-            },
-            {
-              model: State,
-              as: "state",
-              attributes: [],
-            },
-            {
-              model: District,
-              as: "district",
-              attributes: [],
-            },
-            {
-              model: Block,
-              as: "block",
-              attributes: [],
-            },
-            {
-              model: Block,
-              as: "block",
-              attributes: [],
-            },
-            {
-              model: ICS,
-              as: "ics",
-              attributes: [],
-            },
-          ]
-        },
-        {
-          model: Season,
-          as: "season",
-          attributes: [],
+      while (hasNextBatch) {
+      const farmers = await Farm.findAll({
+        where: whereCondition,
+        attributes: [
+          [Sequelize.fn("concat", Sequelize.col("firstName"), Sequelize.col("lastName")), "farmerName"],
+          [Sequelize.col('"farmer"."code"'), 'fatherCode'],
+          [Sequelize.col('"farmer"."country"."county_name"'), 'country'],
+          [Sequelize.col('"farmer"."state"."state_name"'), 'state'],
+          [Sequelize.col('"farmer"."district"."district_name"'), 'district'],
+          [Sequelize.col('"farmer"."block"."block_name"'), 'block'],
+          [Sequelize.col('"farmer"."village"."village_name"'), 'village'],
+          [Sequelize.col('"season"."name"'), 'seasons'],
+          [Sequelize.col('"farmer"."farmGroup"."name"'), 'farmGroup'],
+          [Sequelize.col('"farmer"."brand"."brand_name"'), 'brand'],
+          [Sequelize.col('"farmer"."program"."program_name"'), 'program'],
+          [Sequelize.col('"farms"."agri_total_area"'), 'agriTotalArea'],
+          [Sequelize.col('"farms"."agri_estimated_yeld"'), 'agriEstimatedYield'],
+          [Sequelize.col('"farms"."agri_estimated_prod"'), 'agriEstimatedProd'],
+          [Sequelize.col('"farms"."total_estimated_cotton"'), 'totalEstimatedCotton'],
+          [Sequelize.col('"farms"."cotton_total_area"'), 'cottonTotalArea'],
+          [Sequelize.col('"farmer"."tracenet_id"'), 'tracenetId'],
+          [Sequelize.col('"farmer"."ics"."ics_name"'), 'iscName'],
+          [Sequelize.col('"farmer"."cert_status"'), 'cert'],
+        ],
+        include: [
+          {
+            model: Farmer,
+            as: "farmer",
+            attributes: [],
+            include: [
+              {
+                model: Program,
+                as: "program",
+                attributes: [],
+              },
+              {
+                model: Brand,
+                as: "brand",
+                attributes: [],
+              },
+              {
+                model: FarmGroup,
+                as: "farmGroup",
+                attributes: [],
+              },
+              {
+                model: Country,
+                as: "country",
+                attributes: [],
+              },
+              {
+                model: Village,
+                as: "village",
+                attributes: [],
+              },
+              {
+                model: State,
+                as: "state",
+                attributes: [],
+              },
+              {
+                model: District,
+                as: "district",
+                attributes: [],
+              },
+              {
+                model: Block,
+                as: "block",
+                attributes: [],
+              },
+              {
+                model: ICS,
+                as: "ics",
+                attributes: [],
+              },
+            ]
+          },
+          {
+            model: Season,
+            as: "season",
+            attributes: [],
+          }
+        ],
+        raw: true,
+        offset,
+        limit: batchSize,
+        order: [['id', 'asc']],
+      });
+
+      if (farmers.length === 0) {
+        hasNextBatch = false;
+        break;
+      }
+
+      if (offset % maxRowsPerWorksheet === 0) {
+        worksheetIndex++;
+      }
+
+      for await (const [index,item] of farmers.entries()) {
+        let currentWorksheet = workbook.getWorksheet(`Farmer Report ${worksheetIndex}`);
+        if (!currentWorksheet) {
+          currentWorksheet = workbook.addWorksheet(`Farmer Report ${worksheetIndex}`);
+          // Set bold font for header row
+          const headerRow = currentWorksheet.addRow([
+            'S.No', 'Farmer Name', 'Farmer Code','Country', 'State', 'District', 'Block', 'Village',
+            'Seasons', 'Farm Group', 'Brand Name', 'Programme Name', 'Total Agriculture Area', 'Estimated Yield (Kg/Ac)',
+            'Total estimated Production','Cotton Total Area', 'Total Estimated Cotton', 'Tracenet Id', 'ICS Name', 'Certification Status'
+          ]);
+          headerRow.font = { bold: true };
         }
-      ],
-      raw: true
-    });
-    worksheet.addRows(farmer);
+        const rowValues = Object.values({
+          index: (offset + index + 1),
+          farmerName: item.farmerName ? item.farmerName : "",
+          code: item.fatherCode ? item.fatherCode : '',
+          country: item.country,
+          state: item.state,
+          district: item.district,
+          block: item.block,
+          village: item.village,
+          seasons: item.seasons,
+          farmGroup: item.farmGroup,
+          brand: item.brand,
+          program:item.program,
+          agriTotalArea: item.agriTotalArea ? Number(item.agriTotalArea)?.toFixed(2) : 0,
+          agriEstimatedYield: item.agriEstimatedYield ? Number(item.agriEstimatedYield)?.toFixed(2) : 0,
+          agriEstimatedProd: item.agriEstimatedProd ? Number(item.agriEstimatedProd)?.toFixed(2) : 0,
+          cottonTotalArea: item.cottonTotalArea ? Number(item.cottonTotalArea)?.toFixed(2) : 0,
+          totalEstimatedCotton: item.totalEstimatedCotton ? Number(item.totalEstimatedCotton)?.toFixed(2) : 0,
+          tracenetId: item.tracenetId,
+          iscName: item.icsName ? item.icsName : '',
+          cert: item.cert ? item.cert : '',
+        });
+
+        currentWorksheet.addRow(rowValues).commit();
+      }
+      
+      offset += batchSize;
+    }
+
     // Save the workbook
     await workbook.xlsx.writeFile(excelFilePath);
+    console.log("File saved to:", excelFilePath);
     res.status(200).send({
       success: true,
-      messgage: "File successfully Generated",
+      message: "File successfully Generated",
       data: process.env.BASE_URL + "farmer.xlsx",
     });
   } catch (error: any) {
-    console.error("Error appending data:", error);
-    return res.sendError(res, error.message);
+    console.error("Error exporting farmer data:", error);
+    res.status(500).send({ success: false, message: "Failed to generate file" });
   }
 };
 
-//generate Qr for villages 
+//cron job for farmer export
+
+
+// const exportFarmer = async (req: Request, res: Response) => {
+//   try {
+//   return res.status(200).send({
+//     success: true,
+//     messgage: "File successfully Generated",
+//     data: process.env.BASE_URL + "farmer-data.xlsx",
+//   });
+// } catch (error: any) {
+//   console.log(error);
+//   return res.sendError(res, error.message);
+// }
+// };
+
+
 const generateQrCodeVillage = async (req: Request, res: Response) => {
   try {
     if (!req.query.villageId) {
@@ -869,8 +921,8 @@ const generateQrCodeVillage = async (req: Request, res: Response) => {
     for await (const farmer of farmers) {
       if (!farmer.qrUrl) {
         count = count + 1;
-        let uniqueFilename = `qrcode_${Date.now()}.png`;
-        let name = farmer.firstName + " " + farmer.lastName
+        let name = farmer?.lastName ? farmer?.firstName + " " + farmer?.lastName : farmer?.firstName
+        let uniqueFilename = `qrcode_${name?.replace(/\//g, '-')}_${farmer?.code?.replace(/\//g, '-')}.png`;
         let data = await generateQrCode(`${farmer.id}`,
           name, uniqueFilename, farmer.code, farmer.village.village_name);
         const farmerPLace = await Farmer.update({ qrUrl: uniqueFilename }, {
@@ -890,52 +942,191 @@ const generateQrCodeVillage = async (req: Request, res: Response) => {
 }
 
 //Export Qr code for villages  extracting the zip file
+// const exportQrCode = async (req: Request, res: Response) => {
+//   try {
+//     if (!req.query.villageId) {
+//       return res.sendError(res, "Need Village id");
+//     }
+
+//     const currentDate = moment().format('YYYY-MM-DD'); // get current date in YYYY-MM-DD format
+
+//     const season = await Season.findOne({
+//       where: {
+//         from: {
+//           [Op.lte]: currentDate // from_date should be less than or equal to current date
+//         },
+//         to: {
+//           [Op.gte]: currentDate // to_date should be greater than or equal to current date
+//         }
+//       }
+//     });
+
+//     const villageId = Number(req.query.villageId);
+//     const currentSeason = season ? season?.dataValues?.id : 10;
+
+//     const farmers = await sequelize.query(
+//       `SELECT f.id,
+//               f.code,
+//               "f"."firstName",
+//               "f"."lastName",
+//               fr.season_id,
+//               "f"."qrUrl",
+//               v.id as village_id,
+//               v.village_name as village_name
+//         FROM farmers f
+//         JOIN farms fr ON f.id = fr.farmer_id
+//         JOIN villages v ON f.village_id = v.id
+//         WHERE 
+//           fr.season_id = ${currentSeason}
+//           AND f.village_id = :villageId
+//       `,
+//       {
+//         replacements: { villageId }, // using parameter binding
+//         type: sequelize.QueryTypes.SELECT // ensure you're fetching data (not just metadata)
+//       }
+//     )
+
+//     if (farmers.length === 0) {
+//       return res.sendError(res, "NO_FARMER_FOUND");
+//     }
+    
+//     let destinationFolder = path.join('./qrCode');
+//     let sourceFolder = path.join('./upload');
+//     if (!fs.existsSync(destinationFolder)) {
+//       fs.mkdirSync(destinationFolder);
+//     }
+//     for await (const farmer of farmers) {
+//       if (farmer.qrUrl) {
+//         const sourcePath = `${sourceFolder}/${farmer.qrUrl}`;
+//         const destinationPath = `${destinationFolder}/${farmer.qrUrl}`;
+//         fs.copyFileSync(sourcePath, destinationPath);
+//       }  else {       
+//         let name = farmer.lastName ? farmer.firstName + " " + farmer.lastName : farmer.firstName
+//         let uniqueFilename = `qrcode_${name}_${farmer.code.replace(/\//g, '-')}.png`; 
+//         let data = await generateQrCode(`${farmer.id}`,
+//           name, uniqueFilename, farmer.code, farmer.village_name);
+//         console.log(data);
+//         const farmerPLace = await Farmer.update({ qrUrl: uniqueFilename }, {
+//           where: {
+//             id: farmer.id
+//           },
+//         });
+//         const sourcePath = `${sourceFolder}/${uniqueFilename}`;
+//         const destinationPath = `${destinationFolder}/${uniqueFilename}`;
+//         fs.copyFileSync(sourcePath, destinationPath);
+//       }
+//     }
+//     const zipFileName = path.join('./upload', 'qrCode.zip');
+//     const output = fs.createWriteStream(zipFileName);
+//     const archive = archiver('zip', {
+//       zlib: { level: 9 } // Compression level (0 to 9)
+//     });
+
+//     output.on('close', () => {
+//       console.log(`${zipFileName} created: ${archive.pointer()} total bytes`);
+//     });
+
+//     archive.on('warning', (err: any) => {
+//       if (err.code === 'ENOENT') {
+//         console.warn(err);
+//       } else {
+//         throw err;
+//       }
+//     });
+
+//     archive.on('error', (err: any) => {
+//       throw err;
+//     });
+
+//     archive.pipe(output);
+//     archive.directory(destinationFolder, false);
+//     archive.finalize();
+//     res.sendSuccess(res, {
+//       link: process.env.BASE_URL + 'qrCode.zip'
+//     });
+//     setTimeout(() => {
+//       fs.rmdir(destinationFolder, { recursive: true }, (err) => {
+//         console.log(err);
+//       })
+//     }, 2000);
+//   } catch (error: any) {
+//     console.log(error)
+//     return res.sendError(res, error.message);
+//   }
+// }
+
 const exportQrCode = async (req: Request, res: Response) => {
   try {
     if (!req.query.villageId) {
       return res.sendError(res, "Need Village id");
     }
-    const farmers = await Farmer.findAll({
-      where: { village_id: Number(req.query.villageId) },
-      include: [{
-        model: Village,
-        as: "village",
-      }]
+
+    const currentDate = moment().format('YYYY-MM-DD');
+    const season = await Season.findOne({
+      where: {
+        from: { [Op.lte]: currentDate },
+        to: { [Op.gte]: currentDate }
+      }
     });
+
+    const villageId = Number(req.query.villageId);
+    const currentSeason = season ? season.dataValues.id : 10;
+
+    const farmers = await sequelize.query(
+      `SELECT f.id,
+              f.code,
+              "f"."firstName",
+              "f"."lastName",
+              fr.season_id,
+              "f"."qrUrl",
+              v.id as village_id,
+              v.village_name as village_name
+        FROM farmers f
+        JOIN farms fr ON f.id = fr.farmer_id
+        JOIN villages v ON f.village_id = v.id
+        WHERE 
+          fr.season_id = ${currentSeason}
+          AND f.village_id = :villageId
+      `,
+      {
+        replacements: { villageId },
+        type: sequelize.QueryTypes.SELECT
+      }
+    );
+
     if (farmers.length === 0) {
-      return res.sendError(res, "NO_FAMRER_FOUND");
+      return res.sendError(res, "NO_FARMER_FOUND");
     }
-    let destinationFolder = path.join('./qrCode');
+
+    // Create a unique folder for this request based on villageId and timestamp
+    const uniqueFolderName = `qrCode_${villageId}_${Date.now()}`;
+    let destinationFolder = path.join('./qrCode', uniqueFolderName);
     let sourceFolder = path.join('./upload');
+
     if (!fs.existsSync(destinationFolder)) {
-      fs.mkdirSync(destinationFolder);
+      fs.mkdirSync(destinationFolder, { recursive: true });
     }
+
     for await (const farmer of farmers) {
       if (farmer.qrUrl) {
         const sourcePath = `${sourceFolder}/${farmer.qrUrl}`;
         const destinationPath = `${destinationFolder}/${farmer.qrUrl}`;
         fs.copyFileSync(sourcePath, destinationPath);
       } else {
-        let uniqueFilename = `qrcode_${Date.now()}.png`;
-        let name = farmer.firstName + " " + farmer.lastName
-        let data = await generateQrCode(`${farmer.id}`,
-          name, uniqueFilename, farmer.code, farmer.village.village_name);
-        console.log(data);
-        const farmerPLace = await Farmer.update({ qrUrl: uniqueFilename }, {
-          where: {
-            id: farmer.id
-          },
-        });
+        let name = farmer.lastName ? farmer.firstName + " " + farmer.lastName : farmer.firstName;
+        let uniqueFilename = `qrcode_${name.replace(/\//g, '-')}_${farmer.code.replace(/\//g, '-')}.png`;
+        let data = await generateQrCode(`${farmer.id}`, name, uniqueFilename, farmer.code, farmer.village_name);
+        await Farmer.update({ qrUrl: uniqueFilename }, { where: { id: farmer.id } });
         const sourcePath = `${sourceFolder}/${uniqueFilename}`;
         const destinationPath = `${destinationFolder}/${uniqueFilename}`;
         fs.copyFileSync(sourcePath, destinationPath);
       }
     }
-    const zipFileName = path.join('./upload', 'qrCode.zip');
+
+    // Zip the contents of the unique folder
+    const zipFileName = path.join('./upload', `${uniqueFolderName}.zip`);
     const output = fs.createWriteStream(zipFileName);
-    const archive = archiver('zip', {
-      zlib: { level: 9 } // Compression level (0 to 9)
-    });
+    const archive = archiver('zip', { zlib: { level: 9 } });
 
     output.on('close', () => {
       console.log(`${zipFileName} created: ${archive.pointer()} total bytes`);
@@ -956,19 +1147,22 @@ const exportQrCode = async (req: Request, res: Response) => {
     archive.pipe(output);
     archive.directory(destinationFolder, false);
     archive.finalize();
+
     res.sendSuccess(res, {
-      link: process.env.BASE_URL + 'qrCode.zip'
+      link: `${process.env.BASE_URL}${uniqueFolderName}.zip`
     });
+
     setTimeout(() => {
       fs.rmdir(destinationFolder, { recursive: true }, (err) => {
-        console.log(err);
-      })
+        if (err) console.error(err);
+      });
     }, 2000);
   } catch (error: any) {
-    console.log(error)
+    console.error(error);
     return res.sendError(res, error.message);
   }
-}
+};
+
 
 const dashboardGraph = async (req: Request, res: Response) => {
   try {
@@ -1017,7 +1211,7 @@ const dashboardGraph = async (req: Request, res: Response) => {
 
 const fetchFarmerPecurement = async (req: Request, res: Response) => {
   const searchTerm = req.query.search || "";
-  const { icsId, farmGroupId, countryId, stateId, villageId,brandId, cert, seasonId }: any = req.query;
+  const { icsId, farmGroupId, countryId, stateId, villageId, brandId, cert, seasonId }: any = req.query;
   const page = Number(req.query.page) || 1;
   const limit = Number(req.query.limit) || 10;
   const offset = (page - 1) * limit;

@@ -8,6 +8,7 @@ console.log(process.env.NODE_ENV);
 import express, { Request, Response } from "express";
 import sequelize from "./util/dbConn";
 import cors from "cors";
+import * as path from "path";
 
 const fs = require("fs");
 const swaggerUi = require("swagger-ui-express");
@@ -81,14 +82,27 @@ import dashboardGinnerRouter from './router/dashboard/ginner';
 import dashboardSpinnerRouter from './router/dashboard/spinner';
 import dashboardProcurementRouter from './router/dashboard/procurement';
 import dashboardProcessorRouter from './router/dashboard/processor';
+import dashboardKnitterRouter from './router/dashboard/knitter';
+import dashboardFabricRouter from './router/dashboard/fabric';
+import dashboardGarmentRouter from './router/dashboard/garment';
+import dashboardWeaverRouter from './router/dashboard/weaver';
+import dashboardSeedCottonPricingRouter from './router/dashboard/seed-cotton-pricing';
+import dashboardLintPricingRouter from './router/dashboard/lint-pricing';
+import dashboardYarnPricingRouter from './router/dashboard/yarn-pricing';
+
 import labMasterRouter from './router/master/lab-master';
 import seedCompanyRouter from './router/master/seed-company';
 import cropCurrentSeasonRouter from './router/master/crop-current-season';
 import organicProgramDataDigitizationRouter from './router/services/organic-program-data-digitization';
+import dataMonitorRouter from './router/data-monitoring';
 import { sendScheduledEmails } from "./controllers/email-management/scheduled-email.controller";
 import ExportData from "./models/export-data-check.model";
-import { exportGinnerPendingSchedule, exportGinnerProcessSchedule, exportGinnerSalesSchedule, exportGinnerSeedCottonSchedule, exportGinnerySummarySchedule, exportSpinnerBaleReceiptSchedule, exportSpinnerLintCottonStockSchedule, exportSpinnerPendingBaleSchedule, exportSpinnerSummarySchedule, exportSpinnerYarnProcessSchedule, exportSpinnerYarnSalesSchedule } from "./controllers/reports";
-import { generateSpinnerLintCottonStock } from "./controllers/reports/export-cron";
+import { exportReportsTameTaking, exportReportsOnebyOne } from "./controllers/reports/export-cron";
+import updateGreyoutData from "./router/update-greyout/";
+import moment from "moment";
+import 'moment-timezone';
+import GinProcess from "./models/gin-process.model";
+
 
 const app = express();
 
@@ -107,147 +121,110 @@ app.use(setInterface);
 //check connection to database
 const connectToDb = async () => {
   const data = await sequelize.sync({ force: false })
-  console.log("data", data);
-
   try {
     await sequelize.authenticate();
-
-
     console.log("Database Connected successfully.");
-
-    try {
-      // Insert seed data into the User table
-
-      const data = await ExportData.findAll();
-      if (data?.length) {
-        console.log("Seed data already fetched ");
-        const usersSeedData = {
-          ginner_lint_bale_process_load: false,
-          ginner_summary_load: false,
-          ginner_lint_bale_sale_load: false,
-          ginner_pending_sales_load: false,
-          ginner_seed_cotton_load: false,
-          spinner_summary_load: false,
-          spinner_bale_receipt_load: false,
-          spinner_yarn_process_load: false,
-          spinner_yarn_sales_load: false,
-          spinner_yarn_bales_load: false,
-          spinner_lint_cotton_stock_load: false,
-          knitter_yarn_receipt_load: false,
-          knitter_yarn_process_load: false,
-          knitter_fabric_sales_load: false,
-          weaver_yarn_receipt_load: false,
-          weaver_yarn_process_load: false,
-          weaver_yarn_sales_load: false,
-          garment_fabric_receipt_load: false,
-          garment_fabric_process_load: false,
-          garment_fabric_sales_load: false,
-          qr_code_tracker_load: false,
-          consolidated_tracebality_load: false,
-          spinner_backward_tracebality_load: false,
-          village_seed_cotton_load: false,
-          premium_validation_load: false,
-          procurement_load: false,
-          failes_procurement_load: false,
-          procurement_tracker_load: false,
-          procurement_sell_live_tracker_load: false,
-          qr_app_procurement_load: false,
-          organic_farmer_load: false,
-          non_organic_farmer_load: false,
-          failed_farmer_load: false,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        };
-
-        //   await ExportData.update(usersSeedData,where:{id:1});
-        const updateResult = await ExportData.update(usersSeedData, { where: { id: 1 } });
-
-      } else {
-        const usersSeedData = {
-          ginner_lint_bale_process_load: false,
-          ginner_summary_load: false,
-          ginner_lint_bale_sale_load: false,
-          ginner_pending_sales_load: false,
-          ginner_seed_cotton_load: false,
-          spinner_summary_load: false,
-          spinner_bale_receipt_load: false,
-          spinner_yarn_process_load: false,
-          spinner_yarn_sales_load: false,
-          spinner_yarn_bales_load: false,
-          spinner_lint_cotton_stock_load: false,
-          knitter_yarn_receipt_load: false,
-          knitter_yarn_process_load: false,
-          knitter_fabric_sales_load: false,
-          weaver_yarn_receipt_load: false,
-          weaver_yarn_process_load: false,
-          weaver_yarn_sales_load: false,
-          garment_fabric_receipt_load: false,
-          garment_fabric_process_load: false,
-          garment_fabric_sales_load: false,
-          qr_code_tracker_load: false,
-          consolidated_tracebality_load: false,
-          spinner_backward_tracebality_load: false,
-          village_seed_cotton_load: false,
-          premium_validation_load: false,
-          procurement_load: false,
-          failes_procurement_load: false,
-          procurement_tracker_load: false,
-          procurement_sell_live_tracker_load: false,
-          qr_app_procurement_load: false,
-          organic_farmer_load: false,
-          non_organic_farmer_load: false,
-          failed_farmer_load: false,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        };
-
-        await ExportData.create(usersSeedData);
-        console.log("Seed data create  successfully ");
-      }
-      // generateSpinnerLintCottonStock();
-    } catch (error) {
-      console.error("Error seeding data:", error);
-    }
+    const used = process.memoryUsage();
+    // exportReportsOnebyOne();
+    console.log(`Memory usage: ${JSON.stringify(used)}`);
+    console.log("Current Server Time", moment());
+    console.log("Time Zone", serverTimezone);
+    console.log("Offset IST", differenceInMinutes);
   } catch (error) {
     console.error("Unable to connect to the database:", error);
   }
 };
 
+// const { spawn } = require('child_process');
+
+// const cronWorkerPath = path.join(__dirname, 'util', 'cron_worker.js');
+
+// const cronWorker = spawn('node', [cronWorkerPath]);
+
+// cronWorker.stdout.on('data', (data:any) => {
+//   console.log(`Cron Worker stdout: ${data}`);
+// });
+
+// cronWorker.stderr.on('data', (data:any) => {
+//   console.error(`Cron Worker stderr: ${data}`);
+// });
+
+// cronWorker.on('close', (code:any) => {
+//   console.log(`Cron Worker process exited with code ${code}`);
+// });
+
 var cron = require('node-cron');
 
-cron.schedule('0 23 * * *', async () => {
+const serverTimezone = moment.tz.guess();
+const IST = 'Asia/Kolkata';
+
+const IST_to_Denver_offset = moment().tz(serverTimezone).utcOffset();
+const IST_to_India_offset = moment().tz(IST).utcOffset();
+const differenceInMinutes = IST_to_Denver_offset - IST_to_India_offset;
+const differenceInHours = Math.round(differenceInMinutes / 60);
+
+const checkTimeDiff = (cronTime: number, differenceInHours: number) => {
+  let newCronTime;
+  if (differenceInHours < 0) {
+    newCronTime = (cronTime + differenceInHours) % 24;
+    newCronTime = newCronTime > 0 ? newCronTime : 24 + newCronTime;
+  } else {
+    newCronTime = (cronTime - differenceInHours) % 24;
+    newCronTime = newCronTime > 0 ? newCronTime : 24 + newCronTime;
+  }
+  return newCronTime >= 24 ? 0 : newCronTime;
+}
+
+
+cron.schedule(`0 ${checkTimeDiff(23, differenceInHours)} * * *`, async () => {
   console.log('running a task once a day at 11 pm');
   sendScheduledEmails();
 });
 
-cron.schedule('0 */3 * * *', async () => {
-  console.log('running a task for export after 3 Hours');
-  // sendScheduledEmails();
-  generateSpinnerLintCottonStock()
+cron.schedule(`0 ${checkTimeDiff(7, differenceInHours)} * * *`, async () => {
+  console.log('Running a task at 7 am IST');
+  // Add your task for 8 am IST here
+  exportReportsOnebyOne();
+  // cronWorker.stdin.write('exportReportsOnebyOne\n');
+});
+// Schedule cron job for 4 pm in India time (UTC+5:30)
+cron.schedule(`0 ${checkTimeDiff(20, differenceInHours)} * * *`, async () => {
+  console.log('Running a task at 8 pm IST');
+  // Add your task for 4 pm IST here
+  exportReportsOnebyOne();
+  //  cronWorker.stdin.write('exportReportsOnebyOne\n');
 });
 
-// cron.schedule("1 * * * * *", async () => {
-    cron.schedule("*/3 * * * *", async () => {
-  exportGinnerProcessSchedule();
-exportGinnerySummarySchedule()
-exportGinnerSalesSchedule()
-exportGinnerPendingSchedule()
-exportGinnerSeedCottonSchedule()
-
-// // //spinner
-exportSpinnerSummarySchedule()
-exportSpinnerBaleReceiptSchedule()
-exportSpinnerYarnProcessSchedule()
-exportSpinnerYarnSalesSchedule()
-exportSpinnerPendingBaleSchedule()
-exportSpinnerLintCottonStockSchedule()
+// Schedule cron job for 12 am (midnight) in India time (UTC+5:30)
+cron.schedule(`0 ${checkTimeDiff(0, differenceInHours)} * * *`, async () => {
+  console.log('Running a task at 12 am IST');
+  // Add your task for 12 am IST here
+  exportReportsOnebyOne();
+  //  cronWorker.stdin.write('exportReportsOnebyOne\n');
 });
 
+// Schedule cron job for 2 am in India time (UTC+5:30)
+cron.schedule(`0 ${checkTimeDiff(3, differenceInHours)} * * *`, async () => {
+  console.log('Running a task at 3 am IST');
+  // Add your task for 2 am IST here
+  exportReportsTameTaking();
+  // cronWorker.stdin.write('exportReportsTameTaking\n');
+});
 
-// app.use("/", (req: Request, res: Response) =>{
-//     console.log("object");
-//     res.json("ressss")
-// })
+// ---------------------hostinger--------------------------------//
+
+// cron.schedule( `0 ${checkTimeDiff(13,differenceInHours)} * * *`, async () => {
+//   console.log('Running a task at 1 pm IST');
+//   // Add your task for 1 am IST here
+//   exportReportsTameTaking();
+// });
+
+// cron.schedule('* * * * * *', async () => {
+//   console.log('Running a task at 2 am IST');
+//   // Add your task for 2 am IST here
+//   // exportReportsTameTaking();
+//   cronWorker.stdin.write('executeCronJob\n');
+// });
 
 app.use("/auth", authRouter);
 app.use("/location", locationRouter);
@@ -314,10 +291,20 @@ app.use("/dashboard/ginner", dashboardGinnerRouter)
 app.use("/dashboard/spinner", dashboardSpinnerRouter)
 app.use("/dashboard/procurement", dashboardProcurementRouter)
 app.use("/dashboard/processor", dashboardProcessorRouter)
+app.use("/dashboard/knitter", dashboardKnitterRouter)
+app.use("/dashboard/fabric", dashboardFabricRouter)
+app.use("/dashboard/garment", dashboardGarmentRouter)
+app.use("/dashboard/weaver", dashboardWeaverRouter)
+app.use("/dashboard/seed-cotton-pricing", dashboardSeedCottonPricingRouter)
+app.use("/dashboard/lint-pricing", dashboardLintPricingRouter)
+app.use("/dashboard/yarn-pricing", dashboardYarnPricingRouter)
+
 app.use("/lab-master", labMasterRouter);
 app.use("/seed-company", seedCompanyRouter);
 app.use("/crop-current-season", cropCurrentSeasonRouter);
 app.use("/organic-program-data-digitization", organicProgramDataDigitizationRouter);
+app.use("/data-monitoring", dataMonitorRouter);
+app.use("/update-greyout", updateGreyoutData);
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument, { customCss }));
 
 app.use(errorMiddleware);

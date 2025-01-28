@@ -1,4 +1,4 @@
-import { fetchValidationProjectReport } from "../../controllers/reports/validation-project-report";
+import { exportValidationProjectReport, fetchValidationProjectReport, fetchValidationProjectReportTemplate } from "../../controllers/reports/validation-project-report";
 import { getOrganicIntegrityReport } from "../../controllers/reports/integrity-report";
 import { fetchTransactionsReport, fetchSumOfQtyPurchasedByProgram, exportProcurementReport } from "../../controllers/reports/procurement-report";
 import { Router } from "express";
@@ -57,15 +57,31 @@ import {
     exportConsolidatedTraceability,
     villageSeedCottonReport,
     exportVillageSeedCotton,
+    villageSeedCottonAllocationReport,
+    exportVillageSeedCottonAllocation,
     spinnerBackwardTraceabiltyReport,
     exportSpinnerBackwardTraceability,
-    exportLoad
+    exportLoad,
+    fetchSpinnerGreyOutReport,
+    exportSpinnerGreyOutReport,
+    spinnerProcessBackwardTraceabiltyReport,
+    exportSpinProcessBackwardfTraceabilty,
+    brandWiseDataReport,
+    exportBrandWiseDataReport,
+    fetchDataEntryMonitorDashboardPagination,
+    fetchGinHeapReport,
+    exportGinHeapReport,
+    fetchGinnerProcessGreyOutReport,
+    fetchSpinnerProcessGreyOutReport,
+    exportGinnerProcessGreyOutReport,
+    exportSpinnerProcessGreyOutReport,
 } from "../../controllers/reports";
 import accessControl from "../../middleware/access-control";
+import { fetchPriceComparisonLint, fetchPriceComparisonSeedCotton, fetchPriceComparisonYarn } from "../../controllers/reports/price-comparison-report";
 
 const router = Router();
 
-router.use(accessControl);
+// router.use(accessControl);
 
 // Transaction Report Route
 router.get('/get-transactions', fetchTransactionsReport);
@@ -76,17 +92,29 @@ router.get('/get-procured-quantities', fetchSumOfQtyPurchasedByProgram);
 router.get('/get-organic-integrity-report', getOrganicIntegrityReport);
 
 router.get('/get-validation-project-report', fetchValidationProjectReport);
+router.get('/export-validation-project-report', exportValidationProjectReport);
+router.get('/get-validation-project-report-template', fetchValidationProjectReportTemplate);
 //farmer Report for Organic and Non Organic
 router.get('/get-farmer-report', fetchFarmerReportPagination);
 router.get('/export-non-farmer-report', exportNonOrganicFarmerReport);
 router.get('/export-organic-farmer-report', exportOrganicFarmerReport);
 router.get('/get-bale-process-report', fetchBaleProcess);
 router.get('/export-bale-process-report', exportGinnerProcess);
-router.post("/check-export-load",exportLoad)
+router.post("/check-export-load", exportLoad)
 router.get('/get-gin-sales-report', fetchGinSalesPagination);
 router.get('/get-gin-pending-sales-report', fetchPendingGinnerSales);
 router.get('/export-pending-sales-report', exportPendingGinnerSales);
 router.get('/export-gin-sales-report', exportGinnerSales);
+
+// Grey Out Report
+
+router.get('/get-gin-process-grey-out-report', fetchGinnerProcessGreyOutReport);
+router.get('/get-spin-process-grey-out-report', fetchSpinnerProcessGreyOutReport);
+router.get('/get-spin-grey-out-report', fetchSpinnerGreyOutReport);
+router.get('/export-spin-grey-out-report', exportSpinnerGreyOutReport);
+router.get('/export-gin-process-grey-out-report', exportGinnerProcessGreyOutReport);
+router.get('/export-spin-process-grey-out-report', exportSpinnerProcessGreyOutReport);
+
 router.get('/get-spinner-bale-report', fetchSpinnerBalePagination);
 router.get('/get-spinner-pending-bale-report', fetchSpinnerPendingBale);
 router.get('/export-spinner-pending-bale-report', exportPendingSpinnerBale);
@@ -140,4 +168,20 @@ router.get('/export-spinner-traceability-report', exportSpinnerBackwardTraceabil
 router.get('/get-village-seed-cotton-report', villageSeedCottonReport);
 router.get('/export-village-seed-cotton-report', exportVillageSeedCotton);
 
-export default router;  
+router.get('/get-village-seed-cotton-allocation-report', villageSeedCottonAllocationReport);
+router.get('/export-village-seed-cotton-allocation-report', exportVillageSeedCottonAllocation);
+
+router.get('/get-spin-process-backward-traceability-report', spinnerProcessBackwardTraceabiltyReport);
+router.get('/export-spin-process-backward-traceability-report', exportSpinProcessBackwardfTraceabilty);
+
+router.get('/get-brand-wise-data-report', brandWiseDataReport);
+router.get('/export-brand-wise-data-report', exportBrandWiseDataReport);
+router.get('/entry/data/monitoring/dashboard', fetchDataEntryMonitorDashboardPagination);
+router.get('/get-gin-heap-report', fetchGinHeapReport);
+router.get('/export-gin-heap-report', exportGinHeapReport);
+
+router.get('/get-pricing-comparison-report-seed', fetchPriceComparisonSeedCotton);
+router.get('/get-pricing-comparison-report-lint', fetchPriceComparisonLint);
+router.get('/get-pricing-comparison-report-yarn', fetchPriceComparisonYarn);
+
+export default router;

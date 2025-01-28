@@ -4,6 +4,7 @@ import Season from './season.model';
 import FabricType from './fabric-type.model';
 import Program from './program.model';
 import Garment from './garment.model';
+import Knitter from './knitter.model';
 
 const OldKnitterSales = db.define('old_knitter_sales', {
     id: {
@@ -156,6 +157,14 @@ const OldKnitterSales = db.define('old_knitter_sales', {
         type: DataTypes.SMALLINT,
         defaultValue: "0"
     },
+    knitter_name: {
+        type: DataTypes.STRING,
+        defaultValue: null
+    },
+    brand_name: {
+        type: DataTypes.STRING,
+        defaultValue: null
+    },
 }, {
     timestamps: false
 });
@@ -178,6 +187,11 @@ OldKnitterSales.belongsTo(FabricType, {
 OldKnitterSales.belongsTo(Season, {
     foreignKey: "season_id",
     as: "season"
+});
+
+OldKnitterSales.belongsTo(Knitter, {
+    foreignKey: "knitter_id",
+    as: "knitter"
 });
 
 OldKnitterSales.sync();

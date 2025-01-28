@@ -1,4 +1,4 @@
-import { checkFabric, createFabric, deleteFabric, fetchFabric, fetchFabricPagination, updateFabric } from "../../controllers/process-registration/fabric";
+import { checkFabric, createFabric, deleteFabric, exportFabricRegistrationList, fetchFabric, fetchFabricPagination, updateFabric } from "../../controllers/process-registration/fabric";
 import accessControl from "../../middleware/access-control";
 import { Router } from "express";
 const router = Router();
@@ -11,5 +11,6 @@ router.post('/', createFabric);
 router.put('/', updateFabric);
 router.delete('/', deleteFabric);
 router.post('/check-fabric', checkFabric);
+router.get('/export/registration', exportFabricRegistrationList);
 
 export default router;  

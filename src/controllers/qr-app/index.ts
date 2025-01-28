@@ -25,6 +25,8 @@ import Spinner from "../../models/spinner.model";
 import Knitter from "../../models/knitter.model";
 import Weaver from "../../models/weaver.model";
 import Garment from "../../models/garment.model";
+import moment from "moment";
+import GinnerAllocatedVillage from "../../models/ginner-allocated-vilage.model";
 
 const getRegisteredDevices = async (req: Request, res: Response) => {
     try {
@@ -134,7 +136,7 @@ const getRegisteredOne = async (req: Request, res: Response) => {
                 model: State,
                 as: 'acsstate'
             },
-        ],
+            ],
             where: { id: req.query.id }
         });
         res.sendSuccess(res, data)
@@ -170,16 +172,16 @@ const getUnRegisteredDevices = async (req: Request, res: Response) => {
                 offset: offset
             });
             return res.sendPaginationSuccess(res, rows, count);
-        }else{
-        const data = await UserRegistrations.findAll({
-            where: whereCondition,
-            order: [
-                ['id', 'desc']
-            ],
-        });
-        return res.sendSuccess(res, data)
+        } else {
+            const data = await UserRegistrations.findAll({
+                where: whereCondition,
+                order: [
+                    ['id', 'desc']
+                ],
+            });
+            return res.sendSuccess(res, data)
         }
-    }  catch (error: any) {
+    } catch (error: any) {
         console.error("Error appending data:", error);
         return res.sendError(res, error.message);
     }
@@ -227,7 +229,7 @@ const agentLogin = async (req: Request, res: Response) => {
         if (!verifyPassword) { return res.sendError(res, "Invalid Password"); };
         var { accessToken } = await generateTokens(user.dataValues.id, user.dataValues.access_level);
         return res.sendSuccess(res, { accessToken, user })
-    }  catch (error: any) {
+    } catch (error: any) {
         console.error("Error appending data:", error);
         return res.sendError(res, error.message);
     }
@@ -247,7 +249,7 @@ const profile = async (req: Request, res: Response) => {
             where: { id: req.query.id }
         });
         res.sendSuccess(res, data)
-    }  catch (error: any) {
+    } catch (error: any) {
         console.error("Error appending data:", error);
         return res.sendError(res, error.message);
     }
@@ -328,7 +330,8 @@ const fetchAgentTransactions = async (req: Request, res: Response) => {
                 .map((id) => parseInt(id, 10));
             whereCondition.mapped_ginner = { [Op.in]: idArray };
         }
-        whereCondition.agent_id = { [Op.not]: null };
+       
+        whereCondition.agent_id = { [Op.not]: null, [Op.ne]: 0 };
 
         if (agentId) {
             const idArray: number[] = agentId
@@ -457,7 +460,7 @@ const fetchAgentTransactions = async (req: Request, res: Response) => {
             const transaction = await Transaction.findAll(queryOptions);
             return res.sendSuccess(res, transaction);
         }
-    }  catch (error: any) {
+    } catch (error: any) {
         console.error("Error appending data:", error);
         return res.sendError(res, error.message);
     }
@@ -465,7 +468,7 @@ const fetchAgentTransactions = async (req: Request, res: Response) => {
 
 //Export the agent transactions details through excel file
 const exportAgentTransactions = async (req: Request, res: Response) => {
-    const excelFilePath = path.join("./upload", "agent-transactions.xlsx");
+    const excelFilePath = path.join("./upload", "excel-agent-transactions.xlsx");
 
     try {
         const searchTerm = req.query.search || "";
@@ -484,248 +487,261 @@ const exportAgentTransactions = async (req: Request, res: Response) => {
         const farmerId: string = req.query.farmerId as string;
         const villageId: string = req.query.villageId as string;
         const agentId: string = req.query.agentId as string;
-        const { endDate, startDate, transactionVia }: any = req.query;
+        const { endDate, startDate, transactionVia, exportType }: any = req.query;
 
-        // Create the excel workbook file
-        const workbook = new ExcelJS.Workbook();
-        const worksheet = workbook.addWorksheet("Sheet1");
-        worksheet.mergeCells('A1:S1');
-        const mergedCell = worksheet.getCell('A1');
-        mergedCell.value = 'CottonConnect | QR App Procurement Report';
-        mergedCell.font = { bold: true };
-        mergedCell.alignment = { horizontal: 'center', vertical: 'middle' };
-        // Set bold font for header row
-        const headerRow = worksheet.addRow([
-            "Sr No.", 'Date', 'Farmer Code', 'Farmer Name', 'Season', 'Country',
-            'State', 'District', 'Block', 'Village', 'Transaction Id', 'Quantity Purchased (Kgs)',
-            'Available Cotton (Kgs)', 'Price/KG(Local Currency)', 'Program', 'Transport Vehicle No', 'Payment Method', 'Ginner Name', 'Agent'
-        ]);
-        headerRow.font = { bold: true };
-        const whereCondition: any = {}
-        if (searchTerm) {
-            whereCondition[Op.or] = [
-                { farmer_code: { [Op.iLike]: `%${searchTerm}%` } },
-                { farmer_name: { [Op.iLike]: `%${searchTerm}%` } },
-                { total_amount: { [Op.iLike]: `%${searchTerm}%` } },
-                { rate: { [Op.iLike]: `%${searchTerm}%` } },
-                { qty_purchased: { [Op.iLike]: `%${searchTerm}%` } },
-                { vehicle: { [Op.iLike]: `%${searchTerm}%` } },
-                { payment_method: { [Op.iLike]: `%${searchTerm}%` } },
-                { "$block.block_name$": { [Op.iLike]: `%${searchTerm}%` } },
-                { "$country.county_name$": { [Op.iLike]: `%${searchTerm}%` } },
-                { "$state.state_name$": { [Op.iLike]: `%${searchTerm}%` } },
-                { "$village.village_name$": { [Op.iLike]: `%${searchTerm}%` } },
-                { "$district.district_name$": { [Op.iLike]: `%${searchTerm}%` } },
-                { "$farmer.firstName$": { [Op.iLike]: `%${searchTerm}%` } },
-                { "$program.program_name$": { [Op.iLike]: `%${searchTerm}%` } },
-                { "$ginner.name$": { [Op.iLike]: `%${searchTerm}%` } },
-                { "$agent.firstName$": { [Op.iLike]: `%${searchTerm}%` } },
-                { "$season.name$": { [Op.iLike]: `%${searchTerm}%` } },
-            ];
-        }
-// apply filters
-        if (countryId) {
-            const idArray: number[] = countryId
-                .split(",")
-                .map((id) => parseInt(id, 10));
-            whereCondition.country_id = { [Op.in]: idArray };
-        }
+        if (exportType === "all") {
 
-        if (villageId) {
-            const idArray: number[] = villageId
-                .split(",")
-                .map((id) => parseInt(id, 10));
-            whereCondition.village_id = { [Op.in]: idArray };
-        }
+            return res.status(200).send({
+                success: true,
+                messgage: "File successfully Generated",
+                data: process.env.BASE_URL + "agent-transactions.xlsx",
+            });
 
-        if (brandId) {
-            const idArray: number[] = brandId
-                .split(",")
-                .map((id) => parseInt(id, 10));
-            whereCondition.brand_id = { [Op.in]: idArray };
-        }
-        if (farmGroupId) {
-            const idArray: number[] = farmGroupId
-                .split(",")
-                .map((id) => parseInt(id, 10));
-            whereCondition["$farmer.farmGroup_id$"] = { [Op.in]: idArray };
-        }
-        if (seasonId) {
-            const idArray: number[] = seasonId
-                .split(",")
-                .map((id) => parseInt(id, 10));
-            whereCondition.season_id = { [Op.in]: idArray };
-        }
-
-        if (farmerId) {
-            const idArray: number[] = farmerId
-                .split(",")
-                .map((id) => parseInt(id, 10));
-            whereCondition.farmer_id = { [Op.in]: idArray };
-        }
-
-        if (programId) {
-            const idArray: number[] = programId
-                .split(",")
-                .map((id) => parseInt(id, 10));
-            whereCondition.program_id = { [Op.in]: idArray };
-        }
-
-        if (ginnerId) {
-            const idArray: number[] = ginnerId
-                .split(",")
-                .map((id) => parseInt(id, 10));
-            whereCondition.mapped_ginner = { [Op.in]: idArray };
-        }
-        whereCondition.agent_id = { [Op.not]: null };
-
-
-        if (agentId) {
-            const idArray: number[] = agentId
-                .split(",")
-                .map((id) => parseInt(id, 10));
-            whereCondition.agent_id = { [Op.in]: idArray };
-        }
-        if (startDate && endDate) {
-            const startOfDay = new Date(startDate);
-            startOfDay.setUTCHours(0, 0, 0, 0);
-            const endOfDay = new Date(endDate);
-            endOfDay.setUTCHours(23, 59, 59, 999);
-            whereCondition.date = { [Op.between]: [startOfDay, endOfDay] }
-        }
-
-        if (status) {
-            whereCondition.status = status;
-        }
-
-        let queryOptions: any = {
-            where: whereCondition,
-            include: [
-                {
-                    model: Village,
-                    as: "village",
-                    attributes: ['id', 'village_name']
-                },
-                {
-                    model: Block,
-                    as: "block",
-                    attributes: ['id', 'block_name']
-                },
-                {
-                    model: District,
-                    as: "district",
-                    attributes: ['id', 'district_name']
-                },
-                {
-                    model: State,
-                    as: "state",
-                    attributes: ['id', 'state_name']
-                },
-                {
-                    model: Country,
-                    as: "country",
-                    attributes: ['id', 'county_name']
-                },
-                {
-                    model: Farmer,
-                    as: "farmer",
-                },
-                {
-                    model: Program,
-                    as: "program",
-                    attributes: ['id', 'program_name']
-                },
-                {
-                    model: Brand,
-                    as: "brand",
-                    attributes: ['id', 'brand_name']
-                },
-                {
-                    model: Ginner,
-                    as: "ginner",
-                    attributes: ['id', 'name', 'address']
-                },
-                {
-                    model: CropGrade,
-                    as: "grade",
-                    attributes: ['id', 'cropGrade']
-                },
-                {
-                    model: Season,
-                    as: "season",
-                    attributes: ['id', 'name']
-                },
-                {
-                    model: Farm,
-                    as: "farm"
-                },
-                {
-                    model: UserApp,
-                    as: "agent"
-                },
-            ],
-        };
-
-        if (sortOrder === "asc" || sortOrder === "desc") {
-            queryOptions.order = [["id", sortOrder]];
-        }
-
-        let transactions: any;
-
-        if (req.query.pagination === "true") {
-            queryOptions.offset = offset;
-            queryOptions.limit = limit;
-
-            const { count, rows } = await Transaction.findAndCountAll(queryOptions);
-
-            transactions = rows;
         } else {
-            // fetch without filters
-            transactions = await Transaction.findAll(queryOptions);
-        }
-        
-        // Append data to worksheet
-        for await (const [index, item] of transactions.entries()) {
-            const rowValues = Object.values({
-                index: index + 1,
-                date: item.date,
-                farmerCode: item.farmer ? item.farmer?.code : "",
-                farmerName: item.farmer ? item.farmer?.firstName + ' ' + item.farmer?.lastName : "",
-                season: item.season ? item.season.name : "",
-                country: item.country ? item.country.county_name : "",
-                state: item.state ? item.state.state_name : "",
-                district: item.district ? item.district.district_name : "",
-                block: item.block ? item.block.block_name : "",
-                village: item.village ? item.village.village_name : "",
-                transactionId: item.id,
-                qty_purchased: item.qty_purchased,
-                available_cotton: item.farm ? (Number(item.farm.total_estimated_cotton) > Number(item.farm.cotton_transacted) ? Number(item.farm.total_estimated_cotton) - Number(item.farm.cotton_transacted) : 0) : 0,
-                rate: item.rate,
-                program: item.program ? item.program.program_name : "",
-                vehicle: item.vehicle ? item.vehicle : "",
-                payment_method: item.payment_method ? item.payment_method : "",
-                ginner: item.ginner ? item.ginner.name : "",
-                agent: item.agent ? item.agent.firstName : "",
-            });
-            worksheet.addRow(rowValues);
-        }
-        // Auto-adjust column widths based on content
-        worksheet.columns.forEach((column: any) => {
-            let maxCellLength = 0;
-            column.eachCell({ includeEmpty: true }, (cell: any) => {
-                const cellLength = (cell.value ? cell.value.toString() : '').length;
-                maxCellLength = Math.max(maxCellLength, cellLength);
-            });
-            column.width = Math.min(14, maxCellLength + 2); // Limit width to 30 characters
-        });
+            // Create the excel workbook file
+            const workbook = new ExcelJS.Workbook();
+            const worksheet = workbook.addWorksheet("Sheet1");
+            worksheet.mergeCells('A1:V1');
+            const mergedCell = worksheet.getCell('A1');
+            mergedCell.value = 'CottonConnect | QR App Procurement Report';
+            mergedCell.font = { bold: true };
+            mergedCell.alignment = { horizontal: 'center', vertical: 'middle' };
+            // Set bold font for header row
+            const headerRow = worksheet.addRow([
+                "Sr No.", 'Date', 'Farmer Code', 'Farmer Name', 'Season', 'Country',
+                'State', 'District', 'Block', 'Village', 'Transaction Id', 'Quantity Purchased (Kgs)',
+                'Available Cotton (Kgs)', 'Price/KG(Local Currency)', 'Programme', 'Transport Vehicle No', 'Payment Method', 'Ginner Name', 'Transaction User Details', 'Latitude', 'longitude', 'Status'
+            ]);
+            headerRow.font = { bold: true };
+            const whereCondition: any = {}
+            if (searchTerm) {
+                whereCondition[Op.or] = [
+                    { farmer_code: { [Op.iLike]: `%${searchTerm}%` } },
+                    { farmer_name: { [Op.iLike]: `%${searchTerm}%` } },
+                    { total_amount: { [Op.iLike]: `%${searchTerm}%` } },
+                    { rate: { [Op.iLike]: `%${searchTerm}%` } },
+                    { qty_purchased: { [Op.iLike]: `%${searchTerm}%` } },
+                    { vehicle: { [Op.iLike]: `%${searchTerm}%` } },
+                    { payment_method: { [Op.iLike]: `%${searchTerm}%` } },
+                    { "$block.block_name$": { [Op.iLike]: `%${searchTerm}%` } },
+                    { "$country.county_name$": { [Op.iLike]: `%${searchTerm}%` } },
+                    { "$state.state_name$": { [Op.iLike]: `%${searchTerm}%` } },
+                    { "$village.village_name$": { [Op.iLike]: `%${searchTerm}%` } },
+                    { "$district.district_name$": { [Op.iLike]: `%${searchTerm}%` } },
+                    { "$farmer.firstName$": { [Op.iLike]: `%${searchTerm}%` } },
+                    { "$program.program_name$": { [Op.iLike]: `%${searchTerm}%` } },
+                    { "$ginner.name$": { [Op.iLike]: `%${searchTerm}%` } },
+                    { "$agent.firstName$": { [Op.iLike]: `%${searchTerm}%` } },
+                    { "$season.name$": { [Op.iLike]: `%${searchTerm}%` } },
+                ];
+            }
+            // apply filters
+            if (countryId) {
+                const idArray: number[] = countryId
+                    .split(",")
+                    .map((id) => parseInt(id, 10));
+                whereCondition.country_id = { [Op.in]: idArray };
+            }
 
-        // Save the workbook
-        await workbook.xlsx.writeFile(excelFilePath);
-        res.status(200).send({
-            success: true,
-            messgage: "File successfully Generated",
-            data: process.env.BASE_URL + "agent-transactions.xlsx",
-        });
+            if (villageId) {
+                const idArray: number[] = villageId
+                    .split(",")
+                    .map((id) => parseInt(id, 10));
+                whereCondition.village_id = { [Op.in]: idArray };
+            }
+
+            if (brandId) {
+                const idArray: number[] = brandId
+                    .split(",")
+                    .map((id) => parseInt(id, 10));
+                whereCondition.brand_id = { [Op.in]: idArray };
+            }
+            if (farmGroupId) {
+                const idArray: number[] = farmGroupId
+                    .split(",")
+                    .map((id) => parseInt(id, 10));
+                whereCondition["$farmer.farmGroup_id$"] = { [Op.in]: idArray };
+            }
+            if (seasonId) {
+                const idArray: number[] = seasonId
+                    .split(",")
+                    .map((id) => parseInt(id, 10));
+                whereCondition.season_id = { [Op.in]: idArray };
+            }
+
+            if (farmerId) {
+                const idArray: number[] = farmerId
+                    .split(",")
+                    .map((id) => parseInt(id, 10));
+                whereCondition.farmer_id = { [Op.in]: idArray };
+            }
+
+            if (programId) {
+                const idArray: number[] = programId
+                    .split(",")
+                    .map((id) => parseInt(id, 10));
+                whereCondition.program_id = { [Op.in]: idArray };
+            }
+
+            if (ginnerId) {
+                const idArray: number[] = ginnerId
+                    .split(",")
+                    .map((id) => parseInt(id, 10));
+                whereCondition.mapped_ginner = { [Op.in]: idArray };
+            }
+            whereCondition.agent_id = { [Op.not]: null, [Op.ne]: 0 };
+
+
+            if (agentId) {
+                const idArray: number[] = agentId
+                    .split(",")
+                    .map((id) => parseInt(id, 10));
+                whereCondition.agent_id = { [Op.in]: idArray };
+            }
+            if (startDate && endDate) {
+                const startOfDay = new Date(startDate);
+                startOfDay.setUTCHours(0, 0, 0, 0);
+                const endOfDay = new Date(endDate);
+                endOfDay.setUTCHours(23, 59, 59, 999);
+                whereCondition.date = { [Op.between]: [startOfDay, endOfDay] }
+            }
+
+            if (status) {
+                whereCondition.status = status;
+            }
+
+            let queryOptions: any = {
+                where: whereCondition,
+                include: [
+                    {
+                        model: Village,
+                        as: "village",
+                        attributes: ['id', 'village_name']
+                    },
+                    {
+                        model: Block,
+                        as: "block",
+                        attributes: ['id', 'block_name']
+                    },
+                    {
+                        model: District,
+                        as: "district",
+                        attributes: ['id', 'district_name']
+                    },
+                    {
+                        model: State,
+                        as: "state",
+                        attributes: ['id', 'state_name']
+                    },
+                    {
+                        model: Country,
+                        as: "country",
+                        attributes: ['id', 'county_name']
+                    },
+                    {
+                        model: Farmer,
+                        as: "farmer",
+                    },
+                    {
+                        model: Program,
+                        as: "program",
+                        attributes: ['id', 'program_name']
+                    },
+                    {
+                        model: Brand,
+                        as: "brand",
+                        attributes: ['id', 'brand_name']
+                    },
+                    {
+                        model: Ginner,
+                        as: "ginner",
+                        attributes: ['id', 'name', 'address']
+                    },
+                    {
+                        model: CropGrade,
+                        as: "grade",
+                        attributes: ['id', 'cropGrade']
+                    },
+                    {
+                        model: Season,
+                        as: "season",
+                        attributes: ['id', 'name']
+                    },
+                    {
+                        model: Farm,
+                        as: "farm"
+                    },
+                    {
+                        model: UserApp,
+                        as: "agent"
+                    },
+                ],
+            };
+
+            if (sortOrder === "asc" || sortOrder === "desc") {
+                queryOptions.order = [["id", sortOrder]];
+            }
+
+            let transactions: any;
+
+            if (req.query.pagination === "true") {
+                queryOptions.offset = offset;
+                queryOptions.limit = limit;
+
+                const { count, rows } = await Transaction.findAndCountAll(queryOptions);
+
+                transactions = rows;
+            } else {
+                // fetch without filters
+                transactions = await Transaction.findAll(queryOptions);
+            }
+
+            // Append data to worksheet
+            for await (const [index, item] of transactions.entries()) {
+                const rowValues = Object.values({
+                    index: index + 1,
+                    date: moment(item.date).format('DD/MM/YYYY'),
+                    farmerCode: item.farmer ? item.farmer?.code : "",
+                    farmerName: item.farmer ? item.farmer?.firstName + ' ' + item.farmer?.lastName : "",
+                    season: item.season ? item.season.name : "",
+                    country: item.country ? item.country.county_name : "",
+                    state: item.state ? item.state.state_name : "",
+                    district: item.district ? item.district.district_name : "",
+                    block: item.block ? item.block.block_name : "",
+                    village: item.village ? item.village.village_name : "",
+                    transactionId: item.id,
+                    qty_purchased: item.qty_purchased ? Number(item.qty_purchased) : 0,
+                    available_cotton: item.farm ? (Number(item.farm.total_estimated_cotton) > Number(item.farm.cotton_transacted) ? Number(item.farm.total_estimated_cotton) - Number(item.farm.cotton_transacted) : 0) : 0,
+                    rate: item.rate ? Number(item.rate) : 0,
+                    program: item.program ? item.program.program_name : "",
+                    vehicle: item.vehicle ? item.vehicle : "",
+                    payment_method: item.payment_method ? item.payment_method : "",
+                    ginner: item.ginner ? item.ginner.name : "",
+                    agent: item?.agent && ( item?.agent?.lastName ? item?.agent?.firstName + " " + item?.agent?.lastName+ "-" + item?.agent?.access_level : item?.agent?.firstName+ "-" + item?.agent?.access_level),
+                    latitude: item.latitude ? item.latitude : "-",
+                    longitude: item.longitude ? item.longitude : "-",
+                    status: item.status ? item.status : ''
+                });
+                worksheet.addRow(rowValues);
+            }
+            // Auto-adjust column widths based on content
+            worksheet.columns.forEach((column: any) => {
+                let maxCellLength = 0;
+                column.eachCell({ includeEmpty: true }, (cell: any) => {
+                    const cellLength = (cell.value ? cell.value.toString() : '').length;
+                    maxCellLength = Math.max(maxCellLength, cellLength);
+                });
+                column.width = Math.min(14, maxCellLength + 2); // Limit width to 30 characters
+            });
+
+            // Save the workbook
+            await workbook.xlsx.writeFile(excelFilePath);
+            res.status(200).send({
+                success: true,
+                messgage: "File successfully Generated",
+                data: process.env.BASE_URL + "excel-agent-transactions.xlsx",
+            });
+        }
     } catch (error: any) {
         console.error("Error appending data:", error);
         return res.sendError(res, error.message);
@@ -763,7 +779,7 @@ const fetchQrDashboard = async (req: Request, res: Response) => {
             const idArray: number[] = countryId
                 .split(",")
                 .map((id: any) => parseInt(id, 10));
-            whereCondition.country_id =  idArray ;
+            whereCondition.country_id = idArray;
         }
         if (stateId) {
             const idArray: number[] = stateId
@@ -824,7 +840,7 @@ const fetchQrDashboard = async (req: Request, res: Response) => {
             FROM transactions 
             INNER JOIN farmers ON transactions.farmer_id=farmers.id
             INNER JOIN farms ON transactions.farm_id=farms.id
-            ${buildWhereClause(whereCondition, "transactions") ? buildWhereClause(whereCondition, "transactions") + " AND transactions.agent_id IS NOT NULL" : "where transactions.agent_id IS NOT NULL" }`,
+            ${buildWhereClause(whereCondition, "transactions") ? buildWhereClause(whereCondition, "transactions") + " AND transactions.agent_id IS NOT NULL AND transactions.agent_id != 0" : "where transactions.agent_id IS NOT NULL AND transactions.agent_id != 0"}`,
         ),
         sequelize.query(`SELECT count(*) as totalfarmer
         FROM farmers
@@ -835,27 +851,27 @@ const fetchQrDashboard = async (req: Request, res: Response) => {
         FROM farmers
         LEFT JOIN transactions ON transactions.farmer_id=farmers.id
         LEFT JOIN farms ON transactions.farm_id=farms.id
-        ${buildWhereClause(whereCondition, "transactions") ? buildWhereClause(whereCondition, "transactions") + " AND transactions.agent_id IS NOT NULL" : "where transactions.agent_id IS NOT NULL" }`),
+        ${buildWhereClause(whereCondition, "transactions") ? buildWhereClause(whereCondition, "transactions") + " AND transactions.agent_id IS NOT NULL AND transactions.agent_id != 0" : "where transactions.agent_id IS NOT NULL AND transactions.agent_id != 0"}`),
         sequelize.query(`SELECT COUNT(*) as third FROM (
             SELECT transactions.district_id, transactions.block_id, transactions.village_id, transactions.program_id, transactions.farmer_id, COUNT(transactions.farmer_id), farmers.brand_id, farms.season_id 
             FROM transactions
             LEFT JOIN farmers ON transactions.farmer_id=farmers.id
             LEFT JOIN farms ON transactions.farm_id=farms.id
-            ${buildWhereClause(whereCondition, "transactions") ? buildWhereClause(whereCondition, "transactions") + " AND transactions.agent_id IS NOT NULL" : "where transactions.agent_id IS NOT NULL" }
+            ${buildWhereClause(whereCondition, "transactions") ? buildWhereClause(whereCondition, "transactions") + " AND transactions.agent_id IS NOT NULL AND transactions.agent_id != 0" : "where transactions.agent_id IS NOT NULL AND transactions.agent_id != 0"}
             group by transactions.district_id, transactions.block_id, transactions.village_id, transactions.program_id, transactions.farmer_id, farmers.brand_id, farms.season_id having COUNT(transactions.farmer_id)=1 ) AS DerivedTableAlias`),
         sequelize.query(`SELECT COUNT(*) as fourth FROM (
                 SELECT transactions.district_id, transactions.block_id, transactions.village_id, transactions.program_id, transactions.farmer_id, COUNT(transactions.farmer_id), farmers.brand_id, farms.season_id 
                 FROM transactions
                 LEFT JOIN farmers ON transactions.farmer_id=farmers.id
                 LEFT JOIN farms ON transactions.farm_id=farms.id
-                ${buildWhereClause(whereCondition, "transactions") ? buildWhereClause(whereCondition, "transactions") + " AND transactions.agent_id IS NOT NULL" : "where transactions.agent_id IS NOT NULL" }
+                ${buildWhereClause(whereCondition, "transactions") ? buildWhereClause(whereCondition, "transactions") + " AND transactions.agent_id IS NOT NULL AND transactions.agent_id != 0" : "where transactions.agent_id IS NOT NULL AND transactions.agent_id != 0"}
                 group by transactions.district_id, transactions.block_id, transactions.village_id, transactions.program_id, transactions.farmer_id, farmers.brand_id, farms.season_id having COUNT(transactions.farmer_id)=2 ) AS DerivedTableAlias`),
         sequelize.query(`SELECT COUNT(*) as fifth FROM (
                     SELECT transactions.district_id, transactions.block_id, transactions.village_id, transactions.program_id, transactions.farmer_id, COUNT(transactions.farmer_id), farmers.brand_id, farms.season_id 
                     FROM transactions
                     LEFT JOIN farmers ON transactions.farmer_id=farmers.id
                     LEFT JOIN farms ON transactions.farm_id=farms.id
-                    ${buildWhereClause(whereCondition, "transactions") ? buildWhereClause(whereCondition, "transactions") + " AND transactions.agent_id IS NOT NULL" : "where transactions.agent_id IS NOT NULL" }
+                    ${buildWhereClause(whereCondition, "transactions") ? buildWhereClause(whereCondition, "transactions") + " AND transactions.agent_id IS NOT NULL AND transactions.agent_id != 0" : "where transactions.agent_id IS NOT NULL AND transactions.agent_id != 0"}
                     group by transactions.district_id, transactions.block_id, transactions.village_id, transactions.program_id, transactions.farmer_id, farmers.brand_id, farms.season_id having COUNT(transactions.farmer_id)=3 ) AS DerivedTableAlias`)
         ])
 
@@ -866,7 +882,7 @@ const fetchQrDashboard = async (req: Request, res: Response) => {
             ...fifth[0][0]
         })
 
-    }  catch (error: any) {
+    } catch (error: any) {
         console.error("Error appending data:", error);
         return res.sendError(res, error.message);
     }
@@ -923,7 +939,7 @@ const farmerByQrCode = async (req: Request, res: Response) => {
         }
         let farm = await Farm.findAll({ where: { farmer_id: farmer.dataValues.id } })
         return res.sendSuccess(res, { ...farmer.dataValues, farm });
-    }  catch (error: any) {
+    } catch (error: any) {
         console.error("Error appending data:", error);
         return res.sendError(res, error.message);
     }
@@ -932,7 +948,7 @@ const farmerByQrCode = async (req: Request, res: Response) => {
 const createUserApp = async (req: Request, res: Response) => {
     try {
         const data = {
-            username:req.body.username,
+            username: req.body.username,
             password: await hash.generate(req.body.password),
             firstName: req.body.firstName || "",
             lastName: req.body.lastName || "",
@@ -961,13 +977,15 @@ const createUserApp = async (req: Request, res: Response) => {
 
         const userApp = await UserApp.create(data);
 
-        if(userApp){
-            const userRegis = await UserRegistrations.update({status: true},{where: {
-                id: req.body.userRegId
-            }});
+        if (userApp) {
+            const userRegis = await UserRegistrations.update({ status: true }, {
+                where: {
+                    id: req.body.userRegId
+                }
+            });
         }
         return res.sendSuccess(res, userApp)
-    }  catch (error: any) {
+    } catch (error: any) {
         console.error("Error appending data:", error);
         return res.sendError(res, error.message);
     }
@@ -982,7 +1000,7 @@ const updateUserApp = async (req: Request, res: Response) => {
         }
 
         const data = {
-            username:req.body.username,
+            username: req.body.username,
             password: req.body.password !== "" ? await hash.generate(req.body.password) : userExist.password,
             firstName: req.body.firstName || "",
             lastName: req.body.lastName || "",
@@ -1009,9 +1027,9 @@ const updateUserApp = async (req: Request, res: Response) => {
             status: req.body.status,
         }
 
-        const userApp = await UserApp.update(data,{where:{id: req.body.id}});
+        const userApp = await UserApp.update(data, { where: { id: req.body.id } });
         return res.sendSuccess(res, userApp)
-    }  catch (error: any) {
+    } catch (error: any) {
         console.error("Error appending data:", error);
         return res.sendError(res, error.message);
     }
@@ -1026,15 +1044,17 @@ const deleteUserApp = async (req: Request, res: Response) => {
             return res.sendError(res, "APP USER NOT EXIST");
         }
 
-        if(userExist){
-            const userRegis = await UserRegistrations.destroy({where: {
-                id: userExist?.dataValues?.user_reg_id
-            }});
+        if (userExist) {
+            const userRegis = await UserRegistrations.destroy({
+                where: {
+                    id: userExist?.dataValues?.user_reg_id
+                }
+            });
         }
-        const userApp = await UserApp.destroy({where:{id: req.body.id}});
+        const userApp = await UserApp.destroy({ where: { id: req.body.id } });
 
         return res.sendSuccess(res, userApp)
-    }  catch (error: any) {
+    } catch (error: any) {
         console.error("Error appending data:", error);
         return res.sendError(res, error.message);
     }
@@ -1068,23 +1088,23 @@ const fetchAgentList = async (req: Request, res: Response) => {
     const { program }: any = req.query;
     const whereCondition: any = {};
     try {
-        if(program === 'REEL'){
+        if (program === 'REEL') {
             whereCondition.program_name = "REEL"
         }
 
         const data = await UserApp.findAll({
-          include: [
-            {
-              model: UserRegistrations,
-              as: "registrations",
-            },
-            {
-              model: Program,
-              as: "programs",
-              where: whereCondition,
-            },
-          ],
-          where: { access_level: "Agent" },
+            include: [
+                {
+                    model: UserRegistrations,
+                    as: "registrations",
+                },
+                {
+                    model: Program,
+                    as: "programs",
+                    where: whereCondition,
+                },
+            ],
+            where: { access_level: "Agent" },
         });
         return res.sendSuccess(res, data);
     } catch (error: any) {
@@ -1092,6 +1112,145 @@ const fetchAgentList = async (req: Request, res: Response) => {
         return res.sendError(res, error.message);
     }
 }
+
+const fetchCountryByGinner = async (req: Request, res: Response) => {
+    let ginnerId: any = req.query.ginnerId;
+
+    try {
+      if (!ginnerId) {
+        return res.sendError(res, "Need ginner Id");
+      }
+
+      const allocatedCountry = await GinnerAllocatedVillage.findAll({
+        attributes: ['country_id'],
+        where:{
+          ginner_id: ginnerId
+        },
+        include: [
+          { model: Country, as: "country", attributes: ['id','county_name'] },
+        ],
+        group: ['country_id', 'country.id']
+      })
+      return res.sendSuccess(res, allocatedCountry);
+    } catch (error: any) {
+      console.error(error);
+      return res.sendError(res, error.meessage);
+    }
+  };
+
+  const fetchStateByCountry = async (req: Request, res: Response) => {
+    let countryId: any = req.query.countryId;
+    let ginnerId: any = req.query.ginnerId;
+
+    try {
+      if (!countryId) {
+        return res.sendError(res, "Need country Id");
+      }
+
+      const allocatedState = await GinnerAllocatedVillage.findAll({
+        attributes: ['state_id'],
+        where:{
+          country_id: countryId,
+          ginner_id: ginnerId
+        },
+        include: [
+          { model: State, as: "state", attributes: ['id','state_name'] },
+        ],
+        group: ['state_id', 'state.id']
+      })
+      return res.sendSuccess(res, allocatedState);
+    } catch (error: any) {
+      console.error(error);
+      return res.sendError(res, error.meessage);
+    }
+  };
+
+  const fetchDistrictByState = async (req: Request, res: Response) => {
+    let stateId: any = req.query.stateId;
+    let ginnerId: any = req.query.ginnerId;
+
+    try {
+      if (!stateId) {
+        return res.sendError(res, "Need state Id");
+      }
+
+      const allocatedDistrict = await GinnerAllocatedVillage.findAll({
+        attributes: ['district_id'],
+        where:{
+          state_id: stateId,
+          ginner_id: ginnerId
+        },
+        include: [
+          { model: District, as: "district", attributes: ['id','district_name'] },
+        ],
+        group: ['district_id', 'district.id']
+      })
+      return res.sendSuccess(res, allocatedDistrict);
+    } catch (error: any) {
+      console.error(error);
+      return res.sendError(res, error.meessage);
+    }
+  };
+
+  const fetchBlockByDistrict = async (req: Request, res: Response) => {
+    let districtId: any = req.query.districtId;
+    let ginnerId: any = req.query.ginnerId;
+
+    try {
+      if (!districtId) {
+        return res.sendError(res, "Need district Id");
+      }
+      const districtIds = typeof districtId === "string" ? districtId.split(",").map(id => id.trim()) : [districtId];
+      const allocatedBlock= await GinnerAllocatedVillage.findAll({
+        attributes: ['block_id'],
+        where:{
+          district_id: {
+            [Op.in]: districtIds, 
+          },
+            ginner_id: ginnerId
+        },
+        include: [
+          { model: Block, as: "block", attributes: ['id','block_name'] },
+        ],
+        group: ['block_id', 'block.id']
+      })
+      return res.sendSuccess(res, allocatedBlock);
+    } catch (error: any) {
+      console.error(error);
+      return res.sendError(res, error.meessage);
+    }
+  };
+
+  const fetchVillageByBlock = async (req: Request, res: Response) => {
+    let blockId: any = req.query.blockId;
+    let ginnerId: any = req.query.ginnerId;
+
+    try {
+      if (!blockId) {
+        return res.sendError(res, "Need block Id");
+      }
+      const blockIds = typeof blockId === "string" ? blockId.split(",").map(id => id.trim()) : [blockId];
+
+      const allocatedVillage = await GinnerAllocatedVillage.findAll({
+        attributes: ["village_id"],
+        where: {
+          block_id: {
+            [Op.in]: blockIds, 
+          },
+          ginner_id: ginnerId,
+        },
+        include: [
+          { model: Village, as: "village", attributes: ["id", "village_name"] },
+        ],
+        group: ["village_id", "village.id"],
+      });
+      return res.sendSuccess(res, allocatedVillage);
+    } catch (error: any) {
+      console.error(error);
+      return res.sendError(res, error.message);
+    }
+  };
+
 
 
 
@@ -1110,5 +1269,10 @@ export {
     updateUserApp,
     deleteUserApp,
     findUser,
-    fetchAgentList
+    fetchAgentList,
+    fetchCountryByGinner,
+    fetchStateByCountry,
+    fetchDistrictByState,
+    fetchBlockByDistrict,
+    fetchVillageByBlock
 }

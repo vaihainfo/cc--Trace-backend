@@ -4,7 +4,8 @@ import {
     updateWeaver,
     deleteWeaver,
     fetchWeaver,
-    checkWeaver
+    checkWeaver,
+    exportWeaverRegistrationList
 } from "../../controllers/process-registration/weaver";
 import accessControl from "../../middleware/access-control";
 import { Router } from "express";
@@ -19,5 +20,6 @@ router.post('/', createWeaver);
 router.put('/', updateWeaver);
 router.delete('/', deleteWeaver);
 router.post('/check-weaver', checkWeaver);
+router.get('/export/registration', exportWeaverRegistrationList);
 
 export default router;  

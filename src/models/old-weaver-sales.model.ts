@@ -4,6 +4,7 @@ import Season from './season.model';
 import FabricType from './fabric-type.model';
 import Program from './program.model';
 import Garment from './garment.model';
+import Weaver from './weaver.model';
 
 const OldWeaverSales = db.define('old_weaver_sales', {
     id: {
@@ -159,6 +160,14 @@ const OldWeaverSales = db.define('old_weaver_sales', {
     physical_traceability_process: {
         type: DataTypes.SMALLINT,
         defaultValue: "0"
+    },
+    weaver_name: {
+        type: DataTypes.STRING,
+        defaultValue: null
+    },
+    brand_name: {
+        type: DataTypes.STRING,
+        defaultValue: null
     }
 }, {
     timestamps: false
@@ -182,6 +191,11 @@ OldWeaverSales.belongsTo(FabricType, {
 OldWeaverSales.belongsTo(Season, {
     foreignKey: "season_id",
     as: "season"
+});
+
+OldWeaverSales.belongsTo(Weaver, {
+    foreignKey: "weaver_id",
+    as: "weaver"
 });
 
 OldWeaverSales.sync();

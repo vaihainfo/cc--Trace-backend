@@ -40,7 +40,7 @@ const SpinProcess = db.define('spin_processes', {
     type: DataTypes.ARRAY(DataTypes.INTEGER)
   },
   cottonmix_qty: {
-    type: DataTypes.ARRAY(DataTypes.INTEGER)
+    type: DataTypes.ARRAY(DataTypes.DOUBLE)
   },
   yarn_type: {
     allowNull: false,
@@ -113,6 +113,20 @@ const SpinProcess = db.define('spin_processes', {
   },
   comber_noil_stock: {
     type: DataTypes.DOUBLE
+  },
+  greyout_status: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+  },
+  from_date: {
+    type: DataTypes.DATE,
+    allowNull: true,
+    defaultValue: null,
+  },
+  to_date: {
+    type: DataTypes.DATE,
+    allowNull: true,
+    defaultValue: null,
   },
 });
 

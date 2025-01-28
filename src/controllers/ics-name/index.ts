@@ -2,11 +2,13 @@ import { Request, Response } from "express";
 import { Sequelize, Op } from "sequelize";
 import FarmGroup from "../../models/farm-group.model";
 import ICS from "../../models/ics.model";
+import Season from "../../models/season.model";
 
 const createIcsName = async (req: Request, res: Response) => {
     try {
         const data = {
             farmGroup_id: req.body.farmGroupId,
+            season_id: req.body.seasonId,
             ics_name: req.body.icsName,
             ics_latitude: req.body.icsLatitude,
             ics_longitude: req.body.icsLongitude,
@@ -25,12 +27,13 @@ const createIcsNames = async (req: Request, res: Response) => {
         let pass = [];
         let fail = [];
         for await (const obj of req.body.ics) {
-            let result = await ICS.findOne({ where: { farmGroup_id: req.body.farmGroupId, ics_name: { [Op.iLike]: obj.icsName } } })
+            let result = await ICS.findOne({ where: { farmGroup_id: req.body.farmGroupId,season_id: req.body.seasonId, ics_name: { [Op.iLike]: obj.icsName } } })
             if (result) {
                 fail.push({ data: result });
             } else {
                 const result = await ICS.create({
                     farmGroup_id: req.body.farmGroupId,
+                    season_id: req.body.seasonId,
                     ics_name: obj.icsName,
                     ics_latitude: obj.icsLatitude,
                     ics_longitude: obj.icsLongitude,
@@ -52,6 +55,7 @@ const fetchIcsNamePagination = async (req: Request, res: Response) => {
     const page = Number(req.query.page) || 1;
     const limit = Number(req.query.limit) || 10;
     const farmGroupId: any = req.query.farmGroupId || '';
+    const seasonId: any = req.query.seasonId || '';
     const offset = (page - 1) * limit;
     const status = req.query.status || '';
     const whereCondition: any = {}
@@ -72,6 +76,14 @@ const fetchIcsNamePagination = async (req: Request, res: Response) => {
                 .map((id: any) => parseInt(id, 10));
             whereCondition.farmGroup_id = { [Op.in]: idArray };
         }
+
+        if (seasonId) {
+            const idArray: number[] = seasonId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition.season_id = { [Op.in]: idArray };
+        }
+
         //fetch data with pagination
         if (req.query.pagination === 'true') {
             const { count, rows } = await ICS.findAndCountAll({
@@ -79,7 +91,12 @@ const fetchIcsNamePagination = async (req: Request, res: Response) => {
                 include: [
                     {
                         model: FarmGroup, as: 'farmGroup'
-                    }],
+                    },
+                    {
+                        model: Season, as: 'season',
+                        attribute: ['id', 'name']
+                    }
+                ],
                 order: [
                     ['id', sortOrder], // Sort the results based on the 'ics name' field and the specified order
                 ],
@@ -93,7 +110,13 @@ const fetchIcsNamePagination = async (req: Request, res: Response) => {
                 include: [
                     {
                         model: FarmGroup, as: 'farmGroup'
-                    }],
+                    },
+                    {
+                        model: Season, as: 'season',
+                        attribute: ['id', 'name']
+
+                    }
+                ],
                 order: [
                     ['id', sortOrder], // Sort the results based on the 'name' field and the specified order
                 ],
@@ -112,6 +135,7 @@ const updateIcsName = async (req: Request, res: Response) => {
         let resul = await ICS.findOne({
             where: {
                 farmGroup_id: req.body.formGroupId,
+                season_id: req.body.seasonId,
                 ics_name: { [Op.iLike]: req.body.icsName }, id: { [Op.ne]: req.body.id }
             }
         })
@@ -120,6 +144,7 @@ const updateIcsName = async (req: Request, res: Response) => {
         }
         const result = await ICS.update({
             farmGroup_id: req.body.formGroupId,
+            season_id: req.body.seasonId,
             ics_name: req.body.icsName,
             ics_latitude: req.body.icsLatitude,
             ics_longitude: req.body.icsLongitude,
@@ -181,6 +206,28 @@ const checkIcsNames = async (req: Request, res: Response) => {
     }
 }
 
+const getSeason = async (req: Request, res: Response) => {
+    let farmGroupId = req.query.farmGroupId;
+    if (!farmGroupId) {
+      return res.sendError(res, "Need farmGroup Id ");
+    }
+    let farmGroup = await FarmGroup.findAll({
+        where: { id: farmGroupId },
+        include: [
+            {
+                model: Season, as: 'season'
+            }
+        ],
+      attributes: ["season_id"],
+      group:['season_id',"season.id",'farm_groups.id'],
+    });
+
+    const seasonIds = farmGroup.filter(Boolean) 
+        .map((farmGroup:any) => farmGroup.season).filter(Boolean); 
+
+    res.sendSuccess(res, seasonIds);
+};
+
 
 export {
     createIcsName,
@@ -189,5 +236,6 @@ export {
     fetchIcsNamePagination,
     updateIcsName,
     updateIcsNameStatus,
-    deleteIcsName
+    deleteIcsName,
+    getSeason
 };

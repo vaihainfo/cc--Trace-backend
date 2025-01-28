@@ -24,12 +24,13 @@ const createSeason = async (req: Request, res: Response) => {
 }
 
 
-const fetchSeasonPagination = async (req: Request, res: Response) => {
+const fetchAllSeasonPagination = async (req: Request, res: Response) => {
     const searchTerm = req.query.search || '';
     const sortOrder = req.query.sort || 'asc';
     const sortName = req.query.sortName || 'name';
     const page = Number(req.query.page) || 1;
     const limit = Number(req.query.limit) || 10;
+    const brandId = Number(req.query.brandId);
     const offset = (page - 1) * limit;
 
     try {
@@ -38,6 +39,7 @@ const fetchSeasonPagination = async (req: Request, res: Response) => {
             const { count, rows } = await Season.findAndCountAll({
                 where: {
                     name: { [Op.iLike]: `%${searchTerm}%` },
+
                 },
                 order: [
                     [sortName, sortOrder], // Sort the results based on the 'username' field and the specified order
@@ -55,13 +57,74 @@ const fetchSeasonPagination = async (req: Request, res: Response) => {
                     [sortName, sortOrder], // Sort the results based on the 'username' field and the specified order
                 ],
             });
-            return res.sendSuccess(res, season);
+            if(brandId){
+                const seasonData:any = season.map((item:any)=> item.dataValues)
+                return res.sendSuccess(res, seasonData?.slice(-3))
+            }
+            else{
+                return res.sendSuccess(res, season);
+            }
         }
 
     } catch (error) {
         return res.sendError(res, "ERR_INTERNAL_SERVER_ERROR");
     }
 }
+
+const fetchSeasonPagination = async (req: Request, res: Response) => {
+    const searchTerm = req.query.search || '';
+    const sortOrder = req.query.sort || 'asc';
+    const sortName = req.query.sortName || 'name';
+    const page = Number(req.query.page) || 1;
+    const limit = Number(req.query.limit) || 10;
+    const brandId = Number(req.query.brandId);
+    const offset = (page - 1) * limit;
+    
+    try {
+        const allSeasons = await Season.findAll({
+            where: {
+                name: { [Op.iLike]: `%${searchTerm}%` }
+            },
+            order: [
+                [sortName, sortOrder] 
+            ],
+        });
+        const normalizeDate = (date: Date) => {
+            return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+        };
+        const currentDate = normalizeDate(new Date());
+          
+        let currentSeasonIndex = allSeasons.findIndex((season: any) => {
+            const fromDate = normalizeDate(new Date(season.from));
+            const toDate = normalizeDate(new Date(season.to));
+            return currentDate >= fromDate && currentDate <= toDate;
+        });
+
+        if (currentSeasonIndex === -1) {
+            currentSeasonIndex = allSeasons.length - 1;
+        }
+
+        const validSeasons = allSeasons.slice(0, currentSeasonIndex + 1);
+
+
+        if (req.query.pagination === "true") {
+            const paginatedSeasons = validSeasons.slice(offset, offset + limit);
+            return res.sendPaginationSuccess(res, paginatedSeasons, validSeasons.length);
+        } else {
+            if (brandId) {
+                const seasonData: any = validSeasons.map((item: any) => item.dataValues);
+                return res.sendSuccess(res, seasonData.slice(-3));
+            } else {
+                return res.sendSuccess(res, validSeasons);
+            }
+        }
+
+    } catch (error) {
+        return res.sendError(res, "ERR_INTERNAL_SERVER_ERROR");
+    }
+};
+
+
 
 
 const updateSeason = async (req: Request, res: Response) => {
@@ -133,6 +196,7 @@ const checkSeasons = async (req: Request, res: Response) => {
 export {
     createSeason,
     checkSeasons,
+    fetchAllSeasonPagination,
     fetchSeasonPagination,
     updateSeason,
     updateSeasonStatus,

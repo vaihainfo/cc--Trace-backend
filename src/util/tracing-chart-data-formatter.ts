@@ -10,25 +10,25 @@ export const formatDataForGinnerProcess = (reelLotNo: any, data: any): any => {
                 name: el.farm_name,
                 type: 'farm',
                 width: 300,
-                height: 40,
-                children: [
-                    {
-                        name: el.farm_name,
-                        type: 'village_image',
-                        width: 50,
-                        height: 50,
-                        children: [
-                            {
-                                name: 'Village',
-                                type: 'village',
-                                list: el.villages,
-                                intro: `${el.villages.length > 1 ? 'Multiple' : 'Single'} Village${el.villages.length > 1 ? 's' : ''} Seed Cotton Consumption for REEL Bale Lot`,
-                                width: 300,
-                                height: el.villages.length * 40 + 60,
-                            }
-                        ]
-                    }
-                ]
+                height: 100,
+                // children: [
+                //     {
+                //         name: el.farm_name,
+                //         type: 'village_image',
+                //         width: 50,
+                //         height: 50,
+                //         children: [
+                //             {
+                //                 name: 'Village',
+                //                 type: 'village',
+                //                 list: el.villages,
+                //                 intro: `${el.villages.length > 1 ? 'Multiple' : 'Single'} Village${el.villages.length > 1 ? 's' : ''} Seed Cotton Consumption for REEL Bale Lot`,
+                //                 width: 300,
+                //                 height: el.villages.length * 40 + 60,
+                //             }
+                //         ]
+                //     }
+                // ]
 
             }
         })
@@ -47,135 +47,169 @@ const getVillagesForGinSales = (sales: any) => {
 }
 
 export const formatDataForSpinnerProcess = (reelLotNo: any, data: any): any => {
-    if (data.length == 0) return {
-        name: reelLotNo,
-        type: 'spinner_image',
-        width: 300,
-        height: 100,
-        isRoot: true,
-    };
-
-    const groupData: any = {
-
-    };
-
-    data[0].ginSales.forEach((el: any) => {
-        const ginner_name = el.ginner.name;
-        const reel = el.reel_lot_no?.split(',').map((el: any) => el.trim());
-        const villages = getVillagesForGinSales(el);
-        if (!groupData[ginner_name]) {
-            groupData[ginner_name] = {
-                ginner_name,
-                reels: [],
-                villages: []
-            }
-        };
-        reel?.forEach((el:any) => {
-            if (!groupData[ginner_name].reels.includes(el)) {
-                groupData[ginner_name].reels.push(el)
-            }
-        })
-
-        villages?.forEach((el:any) => {
-            if (!groupData[ginner_name].villages.includes(el)) {
-                groupData[ginner_name].villages.push(el)
-            }
-        })
-    });
-
-    // console.log(groupData);
-
+   let flattenedArray = data[0].ginSales.flat(); // Using flat()
     let treeData = {
         name: reelLotNo,
         type: 'spinner_image',
         width: 300,
         height: 100,
         isRoot: true,
-        groupData,
-        children: Object.keys(groupData).map((el: any) => {
-            return {
-                name: el,
-                type: 'farm',
-                width: 300,
-                height: 40,
-                children: [
-                    {
-                        name: el,
-                        type: 'cotton_image',
-                        width: 50,
-                        height: 50,
-                        children: [
-                            {
-                                name: 'Ginner',
-                                type: 'ginner',
-                                list: groupData[el].reels,
-                                intro: ``,
-                                width: 300,
-                                height: groupData[el].reels.length * 20 + 20,
-                                children: [
-                                    {
-                                        name: el,
-                                        type: 'village_image',
-                                        width: 50,
-                                        height: 50,
-                                        children: [
-                                            {
-                                                name: 'Village',
-                                                type: 'village',
-                                                list: groupData[el].villages,
-                                                intro: `${groupData[el].villages.length > 1 ? 'Multiple' : 'Single'} Village${groupData[el].villages.length > 1 ? 's' : ''} Seed Cotton Consumption for REEL Bale Lot`,
-                                                width: 300,
-                                                height: groupData[el].villages.length * 20 + 60,
-                                            }
-                                        ]
-                                    }
-                                ]
-                            }
-                        ]
-                    }
-                ]
+        children: flattenedArray? flattenedArray.filter((el: any) =>{
+            if(el && el){
+                return el
             }
-        })
+        }) : []
     };
     return treeData;
+    // const groupData: any = {
+
+    // };
+
+    // data[0].ginSales[0].forEach((el: any) => {
+    //     const ginner_name = el.ginner.name;
+    //     const reel = el.reel_lot_no?.split(',').map((el: any) => el.trim());
+    //     const villages = getVillagesForGinSales(el);
+    //     if (!groupData[ginner_name]) {
+    //         groupData[ginner_name] = {
+    //             ginner_name,
+    //             reels: [],
+    //             villages: []
+    //         }
+    //     };
+    //     reel?.forEach((el:any) => {
+    //         if (!groupData[ginner_name].reels.includes(el)) {
+    //             groupData[ginner_name].reels.push(el)
+    //         }
+    //     })
+
+    //     villages?.forEach((el:any) => {
+    //         if (!groupData[ginner_name].villages.includes(el)) {
+    //             groupData[ginner_name].villages.push(el)
+    //         }
+    //     })
+    // });
+
+    // // console.log(groupData);
+
+    // let treeData = {
+    //     name: reelLotNo,
+    //     type: 'spinner_image',
+    //     width: 300,
+    //     height: 100,
+    //     isRoot: true,
+    //     groupData,
+    //     children: Object.keys(groupData).map((el: any) => {
+    //         return {
+    //             name: el,
+    //             type: 'farm',
+    //             width: 300,
+    //             height: 40,
+    //             children: [
+    //                 {
+    //                     name: el,
+    //                     type: 'cotton_image',
+    //                     width: 50,
+    //                     height: 50,
+    //                     children: [
+    //                         {
+    //                             name: 'Ginner',
+    //                             type: 'ginner',
+    //                             list: groupData[el].reels,
+    //                             intro: ``,
+    //                             width: 300,
+    //                             height: groupData[el].reels.length * 20 + 20,
+    //                             children: [
+    //                                 {
+    //                                     name: el,
+    //                                     type: 'village_image',
+    //                                     width: 50,
+    //                                     height: 50,
+    //                                     children: [
+    //                                         {
+    //                                             name: 'Village',
+    //                                             type: 'village',
+    //                                             list: groupData[el].villages,
+    //                                             intro: `${groupData[el].villages.length > 1 ? 'Multiple' : 'Single'} Village${groupData[el].villages.length > 1 ? 's' : ''} Seed Cotton Consumption for REEL Bale Lot`,
+    //                                             width: 300,
+    //                                             height: groupData[el].villages.length * 20 + 60,
+    //                                         }
+    //                                     ]
+    //                                 }
+    //                             ]
+    //                         }
+    //                     ]
+    //                 }
+    //             ]
+    //         }
+    //     })
+    // };
+    // return treeData;
 }
 
-export const formatDataFromKnitter = (title: any, data: any) : any => {
+export const formatDataFromKnitter = (title: any, data: any, width: number = 300, height: number =100,type?: any) : any => {
+    let flattenedArray;
+    let name;
+    if(type=='fabric'){
+      flattenedArray = data?.spin?.flat();
+      name=title
+    }else{
+      flattenedArray = data[0]?.spin?.flat();
+      name=data[0]?.reel_lot_no
+    }
+     let treeData = {
+         name: name,
+         type: 'knitter_image',
+         width: width,
+         height: height,
+         isRoot: true,
+         children: flattenedArray? flattenedArray.filter((el: any) =>{
+             if(el && el.children){
+                 return el.children
+             }
+         }) : []
+     };
+     return treeData;
+ }
+ 
+ 
+ export const formatDataFromWeaver = (title: any, data: any, width: number = 300, height: number =100,type?: any) : any => {
+
+    let flattenedArray;
+    if (data?.spin) {
+        flattenedArray = data.spin.flat();
+    } else if (data[0]?.spin) {
+        flattenedArray = data[0].spin.flat();
+    } else {
+        flattenedArray = [];
+    }
+
     let treeData = {
-        name: title,
-        type: 'knitter_image',
-        width: 300,
-        height: 100,
-        isRoot: true,
-        children: data[0].spin.filter((el: any) => el.children)
-    };
-    return treeData;
-}
-
-
-export const formatDataFromWeaver = (title: any, data: any) : any => {
-    let treeData = {
-        name: title,
-        type: 'weaver_image',
-        width: 300,
-        height: 100,
-        isRoot: true,
-        children: data[0].spin.filter((el: any) => el.children)
-    };
-    return treeData;
-}
-
-export const formartDataForFabric = (title: any, data: any) : any => {
-    let treeData = {
-        name: title,
-        type: 'fabric_image',
-        width: 300,
-        height: 100,
-        isRoot: true,
-        children: data.filter((el: any) => el.weavKnit.length > 0).map((el: any) => el.weavKnitChart)
-    };
-    return treeData;
-}
+         name: title,
+         type: 'weaver_image',
+         width: width,
+         height: height,
+         isRoot: true,
+         children: flattenedArray? flattenedArray.filter((el: any) =>{
+            
+            if(el && el.children){
+                return el.children
+            }
+        }) : []
+     };
+     return treeData;
+ }
+ 
+ export const formartDataForFabric = (title: any, data: any, width: number = 300, height: number =100) : any => {
+     let treeData = {
+         name: title,
+         type: 'fabric_image',
+         width: width,
+         height: height,
+         isRoot: true,
+         children: data[0] ? data[0].weavKnitChart : []
+     };
+     return treeData;
+ }
 
 export const formatDataForGarment = (title: any, data: any) : any => {
     let treeData = {
@@ -184,7 +218,7 @@ export const formatDataForGarment = (title: any, data: any) : any => {
         width: 300,
         height: 100,
         isRoot: true,
-        children: data.map((el:any) => el.fabricChart)
+        children: data?.map((el:any) => el.fabricChart??[])
     };
     return treeData;
 }

@@ -1,6 +1,7 @@
 import { DataTypes } from "sequelize";
 import db from "../util/dbConn";
 import FarmGroup from "./farm-group.model";
+import Season from "./season.model";
 
 const ICS = db.define("ics", {
   id: {
@@ -8,6 +9,10 @@ const ICS = db.define("ics", {
     autoIncrement: true,
     allowNull: false,
     primaryKey: true,
+  },
+  season_id: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
   },
   ics_name: {
     type: DataTypes.STRING,
@@ -30,6 +35,11 @@ ICS.belongsTo(FarmGroup, {
   foreignKey: "farmGroup_id",
   as: "farmGroup",
 });
+
+ICS.belongsTo(Season, {
+  foreignKey: "season_id",
+  as: "season",
+})
 
 ICS.associate = (models: any) => {
   ICS.hasMany(models.ScopeCert, {

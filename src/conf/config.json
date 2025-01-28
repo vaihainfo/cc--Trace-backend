@@ -2,7 +2,7 @@
   "development": {
     "username": "postgres",
     "password": "root",
-    "database": "tracebale_dev",
+    "database": "staging_db",
     "host": "localhost",
     "dialect": "postgres"
   },

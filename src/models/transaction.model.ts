@@ -129,6 +129,10 @@ const Transaction = db.define('transactions', {
     allowNull: false,
     type: DataTypes.STRING
   },
+  heap_status: {
+    type: DataTypes.STRING,
+    defaultValue:null
+  },
   accept_date: {
     type: DataTypes.DATE
   },
@@ -146,6 +150,21 @@ const Transaction = db.define('transactions', {
   },
   agent_id: {
     type: DataTypes.INTEGER
+  },
+  greyout_status: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+  },
+  latitude: {
+    type: DataTypes.DOUBLE,
+  },
+  longitude: {
+    type: DataTypes.DOUBLE,
+  },
+  old_data: {
+    type: DataTypes.STRING,
+    allowNull: true,
+    defaultValue: null
   }
 });
 
@@ -181,7 +200,7 @@ Transaction.belongsTo(Farmer, {
 });
 
 Transaction.belongsTo(CropGrade, {
-  foreignKey: "grade_id",
+  foreignKey: "grade_id", 
   as: "grade",
 });
 
