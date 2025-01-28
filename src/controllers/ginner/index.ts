@@ -40,7 +40,6 @@ import GinToGinSale from "../../models/gin-to-gin-sale.model";
 //         return res.sendError(res, "Lot No already Exists");
 //       }
 //     }
-
 //     if (!req.body.ginnerId) {
 //       return res.sendError(res, "need ginner id");
 //     }
