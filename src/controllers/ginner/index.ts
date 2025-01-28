@@ -32,24 +32,193 @@ import moment from "moment";
 import GinToGinSale from "../../models/gin-to-gin-sale.model";
 
 //create Ginner Process
+// const createGinnerProcess = async (req: Request, res: Response) => {
+//   try {
+//     if (req.body.lotNo) {
+//       let lot = await GinProcess.findOne({ where: { lot_no: req.body.lotNo } });
+//       if (lot) {
+//         return res.sendError(res, "Lot No already Exists");
+//       }
+//     }
+
+//     if (!req.body.ginnerId) {
+//       return res.sendError(res, "need ginner id");
+//     }
+
+//     // if(!req.body.programId){
+//     //   return res.sendError(res, "need program id");
+//     // }
+
+//     const data = {
+//       ginner_id: req.body.ginnerId,
+//       program_id: req.body.programId,
+//       season_id: req.body.seasonId,
+//       date: req.body.date,
+//       total_qty: req.body.totalQty,
+//       no_of_bales: req.body.noOfBales,
+//       gin_out_turn: req.body.got,
+//       lot_no: req.body.lotNo,
+//       reel_lot_no: req.body.reelLotNno,
+//       press_no: req.body.pressNo,
+//       heap_number: req.body.heapNumber,
+//       heap_register: req.body.heapRegister,
+//       weigh_bridge: req.body.weighBridge,
+//       delivery_challan: req.body.deliveryChallan,
+//       bale_process: req.body.baleProcess,
+//       from_date: req.body.from_date,
+//       to_date: req.body.to_date,
+//     };
+//     const ginprocess = await GinProcess.create(data);
+
+//     let uniqueFilename = `gin_procees_qrcode_${Date.now()}.png`;
+//     let da = encrypt(`Ginner,Process,${ginprocess.id}`);
+//     let aa = await generateOnlyQrCode(da, uniqueFilename);
+//     const gin = await GinProcess.update(
+//       { qr: uniqueFilename },
+//       {
+//         where: {
+//           id: ginprocess.id,
+//         },
+//       }
+//     );
+
+//     for await (const bale of req.body.bales) {
+//       let baleData = {
+//         process_id: ginprocess.id,
+//         bale_no: String(bale.baleNo),
+//         weight: bale.weight,
+//         staple: bale.staple,
+//         mic: bale.mic,
+//         strength: bale.strength,
+//         trash: bale.trash,
+//         color_grade: bale.colorGrade
+//       };
+//       const bales = await GinBale.create(baleData);
+
+//       let uniqueFilename = `gin_bale_qrcode_${Date.now()}.png`;
+//       let da = encrypt(`Ginner,Bale, ${bales.id}`);
+//       let aa = await generateOnlyQrCode(da, uniqueFilename);
+//       const gin = await GinBale.update(
+//         { qr: uniqueFilename },
+//         {
+//           where: {
+//             id: bales.id,
+//           }
+//         }
+//       );
+//     }
+
+//     for await (const heap of req.body.chooseHeap) {
+//       let val = await GinHeap.findOne({ where: { id: heap.id } });
+//       if (val) {
+//         if (Number(val.dataValues.qty_stock) >= Number(heap.qtyUsed)) {
+//           let update = await GinHeap.update({ qty_stock: isNaN(val.dataValues.qty_stock - heap.qtyUsed) ? 0 : val.dataValues.qty_stock - heap.qtyUsed }, { where: { id: heap.id } });
+//         } else {
+//           let update = await GinHeap.update({ qty_stock: 0 }, { where: { id: heap.id } });
+//         }
+//       }
+
+//       let transaction = await CottonSelection.findAll({
+//         where: {
+//           heap_id: heap.id
+//         }
+//       })
+
+//       let village = await Transaction.findAll({
+//         where: {
+//           id: { [Op.in]: transaction?.map((obj: any) => obj.transaction_id) }
+//         }
+//       })
+
+//       let cot = await heapSelection.create({
+//         process_id: ginprocess.id,
+//         heap_id: heap.id,
+//         transaction_id: transaction?.map((obj: any) => obj.transaction_id),
+//         village_id: village?.map((obj: any) => obj.village_id),
+//         qty_used: heap.qty_used,
+//       });
+
+//       let updateFabric = {}
+//       if (val.dataValues.qty_stock - heap.qty_used <= 0) {
+//         updateFabric = {
+//           status: false,
+//           qty_stock: val.dataValues.qty_stock - heap.qty_used
+//         }
+//       } else {
+//         updateFabric = {
+//           qty_stock: val.dataValues.qty_stock - heap.qty_used
+//         }
+//       }
+
+//       let update = await GinHeap.update(updateFabric, { where: { id: heap.id } });
+//     }
+
+//     if (req.body.enterPhysicalTraceability) {
+//       const physicalTraceabilityData = {
+//         end_date_of_DNA_marker_application: req.body.endDateOfDNAMarkerApplication,
+//         date_sample_collection: req.body.dateSampleCollection,
+//         data_of_sample_dispatch: req.body.dataOfSampleDispatch,
+//         operator_name: req.body.operatorName,
+//         cotton_connect_executive_name: req.body.cottonConnectExecutiveName,
+//         expected_date_of_lint_sale: req.body.expectedDateOfLintSale,
+//         physical_traceability_partner_id: req.body.physicalTraceabilityPartnerId,
+//         gin_process_id: ginprocess.id,
+//         ginner_id: req.body.ginnerId
+//       };
+//       const physicalTraceabilityDataGinner = await PhysicalTraceabilityDataGinner.create(physicalTraceabilityData);
+
+//       for await (const weightAndBaleNumber of req.body.weightAndBaleNumber) {
+//         let brand = await Brand.findOne({
+//           where: { id: req.body.brandId }
+//         });
+
+//         const updatedCount = brand.dataValues.count + 1;
+//         let physicalTraceabilityDataGinnerSampleData = {
+//           physical_traceability_data_ginner_id: physicalTraceabilityDataGinner.id,
+//           weight: weightAndBaleNumber.weight,
+//           bale_no: weightAndBaleNumber.baleNumber,
+//           original_sample_status: weightAndBaleNumber.originalSampleStatus,
+//           code: `DNA${req.body.ginnerShortname}-${req.body.reelLotNno || ''}-${updatedCount}`,
+//           sample_result: 0
+//         };
+//         await PhysicalTraceabilityDataGinnerSample.create(physicalTraceabilityDataGinnerSampleData);
+
+//         await Brand.update(
+//           { count: updatedCount },
+//           { where: { id: brand.id } }
+//         );
+//       }
+//     }
+
+//     res.sendSuccess(res, { ginprocess });
+//   } catch (error: any) {
+//     console.error(error);
+//     return res.sendError(res, error.meessage);
+//   }
+// };
+
+
 const createGinnerProcess = async (req: Request, res: Response) => {
+  const transaction = await sequelize.transaction();
   try {
+    // Check if Lot No exists
     if (req.body.lotNo) {
-      let lot = await GinProcess.findOne({ where: { lot_no: req.body.lotNo } });
+      let lot = await GinProcess.findOne(
+        { where: { lot_no: req.body.lotNo } },
+        { transaction }
+      );
       if (lot) {
-        return res.sendError(res, "Lot No already Exists");
+        return res.sendError(res, "Lot No already exists");
       }
     }
 
+    // Validate required fields
     if (!req.body.ginnerId) {
-      return res.sendError(res, "need ginner id");
+      return res.sendError(res, "Need ginner ID");
     }
 
-    // if(!req.body.programId){
-    //   return res.sendError(res, "need program id");
-    // }
-
-    const data = {
+    // Create Gin Process
+    const ginProcessData = {
       ginner_id: req.body.ginnerId,
       program_id: req.body.programId,
       season_id: req.body.seasonId,
@@ -68,22 +237,20 @@ const createGinnerProcess = async (req: Request, res: Response) => {
       from_date: req.body.from_date,
       to_date: req.body.to_date,
     };
-    const ginprocess = await GinProcess.create(data);
+    const ginprocess = await GinProcess.create(ginProcessData, { transaction });
 
-    let uniqueFilename = `gin_procees_qrcode_${Date.now()}.png`;
-    let da = encrypt(`Ginner,Process,${ginprocess.id}`);
-    let aa = await generateOnlyQrCode(da, uniqueFilename);
-    const gin = await GinProcess.update(
+    // Generate QR code for the Gin Process
+    let uniqueFilename = `gin_process_qrcode_${Date.now()}.png`;
+    let qrData = encrypt(`Ginner,Process,${ginprocess.id}`);
+    await generateOnlyQrCode(qrData, uniqueFilename);
+    await GinProcess.update(
       { qr: uniqueFilename },
-      {
-        where: {
-          id: ginprocess.id,
-        },
-      }
+      { where: { id: ginprocess.id }, transaction }
     );
 
-    for await (const bale of req.body.bales) {
-      let baleData = {
+    // Create Bales
+    for (const bale of req.body.bales) {
+      const baleData = {
         process_id: ginprocess.id,
         bale_no: String(bale.baleNo),
         weight: bale.weight,
@@ -91,109 +258,124 @@ const createGinnerProcess = async (req: Request, res: Response) => {
         mic: bale.mic,
         strength: bale.strength,
         trash: bale.trash,
-        color_grade: bale.colorGrade
+        color_grade: bale.colorGrade,
       };
-      const bales = await GinBale.create(baleData);
+      const createdBale = await GinBale.create(baleData, { transaction });
 
-      let uniqueFilename = `gin_bale_qrcode_${Date.now()}.png`;
-      let da = encrypt(`Ginner,Bale, ${bales.id}`);
-      let aa = await generateOnlyQrCode(da, uniqueFilename);
-      const gin = await GinBale.update(
-        { qr: uniqueFilename },
-        {
-          where: {
-            id: bales.id,
-          }
-        }
+      let uniqueBaleFilename = `gin_bale_qrcode_${Date.now()}.png`;
+      let baleQrData = encrypt(`Ginner,Bale,${createdBale.id}`);
+      await generateOnlyQrCode(baleQrData, uniqueBaleFilename);
+      await GinBale.update(
+        { qr: uniqueBaleFilename },
+        { where: { id: createdBale.id }, transaction }
       );
     }
 
-    for await (const heap of req.body.chooseHeap) {
-      let val = await GinHeap.findOne({ where: { id: heap.id } });
+    // Process Heaps
+    for (const heap of req.body.chooseHeap) {
+      const val = await GinHeap.findOne({ where: { id: heap.id },
+transaction });
       if (val) {
-        if (Number(val.dataValues.qty_stock) >= Number(heap.qtyUsed)) {
-          let update = await GinHeap.update({ qty_stock: isNaN(val.dataValues.qty_stock - heap.qtyUsed) ? 0 : val.dataValues.qty_stock - heap.qtyUsed }, { where: { id: heap.id } });
+        let updateFabric: any = {};
+        const updatedQtyStock =
+          Number(val.dataValues.qty_stock) - Number(heap.qty_used);
+
+        if (updatedQtyStock <= 0) {
+          updateFabric = {
+            status: false,
+            qty_stock: 0,
+          };
         } else {
-          let update = await GinHeap.update({ qty_stock: 0 }, { where: { id: heap.id } });
+          updateFabric = {
+            qty_stock: updatedQtyStock,
+          };
         }
+        await GinHeap.update(updateFabric, { where: { id: heap.id }, transaction });
+
+        const transactions = await CottonSelection.findAll({
+          where: { heap_id: heap.id },
+          transaction,
+        });
+
+        const uniqueTransactionIds = [
+          ...new Set(transactions.map((obj: any) => obj.transaction_id)),
+        ];
+
+        const villages = await Transaction.findAll({
+          where: { id: { [Op.in]: uniqueTransactionIds } },
+          transaction,
+        });
+
+        await heapSelection.create(
+          {
+            process_id: ginprocess.id,
+            heap_id: heap.id,
+            transaction_id: uniqueTransactionIds,
+            village_id: [...new Set(villages.map((obj: any) =>
+obj.village_id))],
+            qty_used: heap.qty_used,
+          },
+          { transaction }
+        );
       }
-
-      let transaction = await CottonSelection.findAll({
-        where: {
-          heap_id: heap.id
-        }
-      })
-
-      let village = await Transaction.findAll({
-        where: {
-          id: { [Op.in]: transaction?.map((obj: any) => obj.transaction_id) }
-        }
-      })
-
-      let cot = await heapSelection.create({
-        process_id: ginprocess.id,
-        heap_id: heap.id,
-        transaction_id: transaction?.map((obj: any) => obj.transaction_id),
-        village_id: village?.map((obj: any) => obj.village_id),
-        qty_used: heap.qty_used,
-      });
-
-      let updateFabric = {}
-      if (val.dataValues.qty_stock - heap.qty_used <= 0) {
-        updateFabric = {
-          status: false,
-          qty_stock: val.dataValues.qty_stock - heap.qty_used
-        }
-      } else {
-        updateFabric = {
-          qty_stock: val.dataValues.qty_stock - heap.qty_used
-        }
-      }
-
-      let update = await GinHeap.update(updateFabric, { where: { id: heap.id } });
     }
 
+    // Handle Physical Traceability (if applicable)
     if (req.body.enterPhysicalTraceability) {
       const physicalTraceabilityData = {
-        end_date_of_DNA_marker_application: req.body.endDateOfDNAMarkerApplication,
+        end_date_of_DNA_marker_application:
+req.body.endDateOfDNAMarkerApplication,
         date_sample_collection: req.body.dateSampleCollection,
         data_of_sample_dispatch: req.body.dataOfSampleDispatch,
         operator_name: req.body.operatorName,
         cotton_connect_executive_name: req.body.cottonConnectExecutiveName,
         expected_date_of_lint_sale: req.body.expectedDateOfLintSale,
-        physical_traceability_partner_id: req.body.physicalTraceabilityPartnerId,
+        physical_traceability_partner_id:
+req.body.physicalTraceabilityPartnerId,
         gin_process_id: ginprocess.id,
-        ginner_id: req.body.ginnerId
+        ginner_id: req.body.ginnerId,
       };
-      const physicalTraceabilityDataGinner = await PhysicalTraceabilityDataGinner.create(physicalTraceabilityData);
 
-      for await (const weightAndBaleNumber of req.body.weightAndBaleNumber) {
-        let brand = await Brand.findOne({
-          where: { id: req.body.brandId }
-        });
+      const physicalTraceability = await PhysicalTraceabilityDataGinner.create(
+        physicalTraceabilityData,
+        { transaction }
+      );
 
-        const updatedCount = brand.dataValues.count + 1;
-        let physicalTraceabilityDataGinnerSampleData = {
-          physical_traceability_data_ginner_id: physicalTraceabilityDataGinner.id,
-          weight: weightAndBaleNumber.weight,
-          bale_no: weightAndBaleNumber.baleNumber,
-          original_sample_status: weightAndBaleNumber.originalSampleStatus,
-          code: `DNA${req.body.ginnerShortname}-${req.body.reelLotNno || ''}-${updatedCount}`,
-          sample_result: 0
-        };
-        await PhysicalTraceabilityDataGinnerSample.create(physicalTraceabilityDataGinnerSampleData);
+      for (const item of req.body.weightAndBaleNumber) {
+        const brand = await Brand.findOne({ where: { id:
+req.body.brandId }, transaction });
+        const updatedCount = (brand?.dataValues.count || 0) + 1;
+
+        await PhysicalTraceabilityDataGinnerSample.create(
+          {
+            physical_traceability_data_ginner_id: physicalTraceability.id,
+            weight: item.weight,
+            bale_no: item.baleNumber,
+            original_sample_status: item.originalSampleStatus,
+            code:
+`DNA${req.body.ginnerShortname}-${req.body.reelLotNno ||
+""}-${updatedCount}`,
+            sample_result: 0,
+          },
+          { transaction }
+        );
 
         await Brand.update(
           { count: updatedCount },
-          { where: { id: brand.id } }
+          { where: { id: brand.id }, transaction }
         );
       }
     }
 
+    // Commit transaction
+    await transaction.commit();
+
     res.sendSuccess(res, { ginprocess });
   } catch (error: any) {
+    // Rollback transaction in case of error
+    await transaction.rollback();
     console.error(error);
-    return res.sendError(res, error.meessage);
+    res.sendError(res, error.message || "An error occurred");
   }
 };
 
@@ -1134,41 +1316,113 @@ const chooseBale = async (req: Request, res: Response) => {
   }
 };
 
+// const deleteGinnerProcess = async (req: Request, res: Response) => {
+//   try {
+//     let ids = await BaleSelection.count({
+//       where: { "$bale.process_id$": req.body.id },
+//       include: [{ model: GinBale, as: "bale" }],
+//     });
+
+//     if (ids > 0) {
+//       return res.sendError(res, "Unable to delete this process since some bales of this process was sold");
+//     } else {
+//       // let cotton = await CottonSelection.findAll({
+//       //   where: { process_id: req.body.id },
+//       // });
+//       // for await (let cs of cotton) {
+//       //   await Transaction.update(
+//       //     {
+//       //       qty_stock: Sequelize.literal(
+//       //         `qty_stock + ${cs.dataValues.qty_used}`
+//       //       ),
+//       //     },
+//       //     {
+//       //       where: {
+//       //         id: cs.dataValues.transaction_id,
+//       //       },
+//       //     }
+//       //   );
+//       // }
+//       // await CottonSelection.destroy({
+//       //   where: {
+//       //     process_id: req.body.id,
+//       //   },
+//       // });
+
+//       let selectedHeap = await heapSelection.findAll({ where: { process_id: req.body.id } });
+
+//       for await (let heap of selectedHeap) {
+//         await GinHeap.increment(
+//           { qty_stock: heap.dataValues.qty_used ?? 0 },
+//           {
+//             where: {
+//               id: heap.dataValues.heap_id,
+//             },
+//           }
+//         );
+//         await GinHeap.update(
+//           { status: true },
+//           {
+//             where: {
+//               id: heap.dataValues.heap_id,
+//             },
+//           }
+//         );
+//       }
+//       await heapSelection.destroy({
+//         where: {
+//           process_id: req.body.id,
+//         },
+//       });
+
+//       const physicalTraceabilityDataGinner = await PhysicalTraceabilityDataGinner.findOne({ where: { gin_process_id: req.body.id } });
+//       if (physicalTraceabilityDataGinner) {
+//         await PhysicalTraceabilityDataGinnerSample.destroy({
+//           where: { physical_traceability_data_ginner_id: physicalTraceabilityDataGinner.id }
+//         });
+//         await PhysicalTraceabilityDataGinner.destroy({
+//           where: { gin_process_id: req.body.id }
+//         });
+//       }
+//       await GinBale.destroy({
+//         where: {
+//           process_id: req.body.id,
+//         },
+//       });
+//       await GinProcess.destroy({
+//         where: {
+//           id: req.body.id,
+//         },
+//       });
+
+//       return res.sendSuccess(res, {
+//         message: "Successfully deleted this process",
+//       });
+//     }
+//   } catch (error: any) {
+//     console.log(error);
+//     return res.sendError(res, error.message);
+//   }
+// };
+
 
 const deleteGinnerProcess = async (req: Request, res: Response) => {
+  const transaction = await sequelize.transaction(); 
   try {
     let ids = await BaleSelection.count({
       where: { "$bale.process_id$": req.body.id },
       include: [{ model: GinBale, as: "bale" }],
+      transaction, 
     });
 
     if (ids > 0) {
-      return res.sendError(res, "Unable to delete this process since some bales of this process was sold");
+      await transaction.rollback(); 
+      return res.sendError(res, "Unable to delete this process since some bales of this process were sold");
     } else {
-      // let cotton = await CottonSelection.findAll({
-      //   where: { process_id: req.body.id },
-      // });
-      // for await (let cs of cotton) {
-      //   await Transaction.update(
-      //     {
-      //       qty_stock: Sequelize.literal(
-      //         `qty_stock + ${cs.dataValues.qty_used}`
-      //       ),
-      //     },
-      //     {
-      //       where: {
-      //         id: cs.dataValues.transaction_id,
-      //       },
-      //     }
-      //   );
-      // }
-      // await CottonSelection.destroy({
-      //   where: {
-      //     process_id: req.body.id,
-      //   },
-      // });
-
-      let selectedHeap = await heapSelection.findAll({ where: { process_id: req.body.id } });
+      let selectedHeap = await heapSelection.findAll({
+        where: { process_id: req.body.id },
+        transaction,
+      });
 
       for await (let heap of selectedHeap) {
         await GinHeap.increment(
@@ -1177,6 +1431,7 @@ const deleteGinnerProcess = async (req: Request, res: Response) => {
             where: {
               id: heap.dataValues.heap_id,
             },
+            transaction, 
           }
         );
         await GinHeap.update(
@@ -1185,38 +1440,57 @@ const deleteGinnerProcess = async (req: Request, res: Response) => {
             where: {
               id: heap.dataValues.heap_id,
             },
+            transaction, 
           }
         );
       }
+
       await heapSelection.destroy({
         where: {
           process_id: req.body.id,
         },
+        transaction, 
       });
 
-      const physicalTraceabilityDataGinner = await PhysicalTraceabilityDataGinner.findOne({ where: { gin_process_id: req.body.id } });
+      const physicalTraceabilityDataGinner = await PhysicalTraceabilityDataGinner.findOne({
+        where: { gin_process_id: req.body.id },
+        transaction, 
+      });
+
       if (physicalTraceabilityDataGinner) {
         await PhysicalTraceabilityDataGinnerSample.destroy({
-          where: { physical_traceability_data_ginner_id: physicalTraceabilityDataGinner.id }
+          where: { physical_traceability_data_ginner_id: physicalTraceabilityDataGinner.id },
+          transaction, 
         });
         await PhysicalTraceabilityDataGinner.destroy({
-          where: { gin_process_id: req.body.id }
+          where: { gin_process_id: req.body.id },
+          transaction,
         });
       }
+
+      await GinBale.destroy({
+        where: {
+          process_id: req.body.id,
+        },
+        transaction, 
+      });
 
       await GinProcess.destroy({
         where: {
           id: req.body.id,
         },
+        transaction, 
       });
 
+      await transaction.commit(); 
       return res.sendSuccess(res, {
         message: "Successfully deleted this process",
       });
     }
   } catch (error: any) {
-    console.log(error);
-    return res.sendError(res, error.message);
+    await transaction.rollback();
+    console.error(error);
+    return res.sendError(res, error.message || "An error occurred");
   }
 };
 
@@ -1862,7 +2136,7 @@ const getCOCDocumentData = async (
       if(result.auth_code_count !== null && result.auth_code_count !== undefined){
         let count = result.auth_code_count || 0;
 
-        cocRes.reelAuthorizationCode = 'REELRegenerative'+ result.brand_name + "00" + (count + 1);
+        cocRes.reelAuthorizationCode = 'REELRegenerative'+ result.brand_name + "-00" + (count + 1);
         await Brand.update(
           { gin_auth_code_count: count + 1 },
           { where: { id: result.brand_id } }
