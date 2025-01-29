@@ -3987,7 +3987,7 @@ const getCOCDocumentData = async (
               ss.name                                       as season_name,
               grm.address                                    as address,
               ''                                             as reel_authorization_code,
-              br.garment_auth_code_count                     as auth_code_count,
+              br.garment_auth_code_count                     as auth_code_count
               br.id                                          as brand_id,
               case
                   when br.brand_name is not null

@@ -1,0 +1,20 @@
+{
+    "keep": {
+        "days": true,
+        "amount": 14
+    },
+    "auditLog": "D:\\My Projects\\Tracebale\\tracebale-api-main\\logs\\combined\\.f3ad99e8665d9ece95beb0bc9c46ff76d69a6128-audit.json",
+    "files": [
+        {
+            "date": 1738062268603,
+            "name": "D:\\My Projects\\Tracebale\\tracebale-api-main\\logs\\combined\\combined-2025-01-28.log",
+            "hash": "322aba02637553d5a7a3be211d71831a1cdc3513a9229075cebc07fc22961bf6"
+        },
+        {
+            "date": 1738130213385,
+            "name": "D:\\My Projects\\Tracebale\\tracebale-api-main\\logs\\combined\\combined-2025-01-29.log",
+            "hash": "b553882c54f49dc82516c1f174f7770f658172a54de16445a65e0ad1b69ca886"
+        }
+    ],
+    "hashType": "sha256"
+}

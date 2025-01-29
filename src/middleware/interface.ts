@@ -1,4 +1,4 @@
-import { Response, Request, NextFunction } from "express";
+import { Response, Request, ErrorRequestHandler, NextFunction } from "express";
 import httpresponse from "../util/http-response";
 
 declare global {
@@ -12,10 +12,12 @@ declare global {
 }
 
 const setInterfaces = async (
+  err: ErrorRequestHandler,
   req: Request,
   res: Response,
   next: NextFunction
 ) => {
+  // res.err= err;
   res.sendSuccess = httpresponse.sendSuccess;
   res.sendPaginationSuccess = httpresponse.sendPaginationSuccess;
   res.sendError = httpresponse.sendError;
