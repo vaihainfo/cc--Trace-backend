@@ -1748,6 +1748,7 @@ const generatePscpProcurementLiveTracker = async () => {
             WHERE
               t.program_id = ANY (filtered_ginners.program_id)
               AND t.mapped_ginner IS NOT NULL
+              AND t.status = 'Sold'
             GROUP BY
               t.mapped_ginner
           ),

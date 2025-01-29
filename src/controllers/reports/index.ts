@@ -13995,6 +13995,7 @@ const fetchPscpProcurementLiveTracker = async (req: Request, res: Response) => {
             AND t.mapped_ginner IS NOT NULL
             AND ${seasonConditionSql}
             AND ${whereConditionSql}
+            AND t.status = 'Sold'
           GROUP BY
             t.mapped_ginner
         ),
@@ -14634,6 +14635,7 @@ const exportPscpProcurementLiveTracker = async (
               AND t.mapped_ginner IS NOT NULL
               AND ${seasonConditionSql}
               AND ${whereConditionSql}
+              AND t.status = 'Sold'
             GROUP BY
               t.mapped_ginner
           ),
