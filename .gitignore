@@ -5,6 +5,10 @@ node_modules/
 .next
 out
 
+
+*.log
+logs/
+
 # Nuxt.js build / generate output
 .nuxt
 dist
