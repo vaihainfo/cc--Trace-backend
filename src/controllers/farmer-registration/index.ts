@@ -76,7 +76,7 @@ const createFarmer = async (req: Request, res: Response) => {
     res.sendSuccess(res, { farmer, farm });
   } catch (error: any) {
     console.log(error)
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 }
 
@@ -284,7 +284,7 @@ const fetchFarmerPagination = async (req: Request, res: Response) => {
     }
   } catch (error: any) {
     console.log(error)
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -341,7 +341,7 @@ const fetchFarmer = async (req: Request, res: Response) => {
     return res.sendSuccess(res, { ...farmer.dataValues, season_id: farm.season_id });
   } catch (error: any) {
     console.log(error)
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -406,7 +406,7 @@ const updateFarmer = async (req: Request, res: Response) => {
     res.sendSuccess(res, { farmer });
   } catch (error: any) {
     console.log(error);
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -419,7 +419,7 @@ const deleteFarmer = async (req: Request, res: Response) => {
     });
     res.sendSuccess(res, farmer);
   } catch (error: any) {
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -444,7 +444,7 @@ const createFarmerFarm = async (req: Request, res: Response) => {
     res.sendSuccess(res, { farm });
   } catch (error: any) {
     console.log(error)
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -474,7 +474,7 @@ const updateFarmerFarm = async (req: Request, res: Response) => {
     res.sendSuccess(res, { farm });
   } catch (error: any) {
     console.log(error)
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -532,7 +532,7 @@ const fetchFarmPagination = async (req: Request, res: Response) => {
     }
   } catch (error: any) {
     console.log(error);
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -596,7 +596,7 @@ const fetchFarm = async (req: Request, res: Response) => {
 
   } catch (error: any) {
     console.log(error);
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -642,7 +642,7 @@ const countFarmWithProgram = async (req: Request, res: Response) => {
     });
     res.sendSuccess(res, farmer);
   } catch (error: any) {
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -897,7 +897,7 @@ const exportFarmer = async (req: Request, res: Response) => {
 //   });
 // } catch (error: any) {
 //   console.log(error);
-//   return res.sendError(res, error.message);
+//   return res.sendError(res, error.message, error);
 // }
 // };
 
@@ -936,7 +936,7 @@ const generateQrCodeVillage = async (req: Request, res: Response) => {
 
   } catch (error: any) {
     console.log(error)
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 
 }
@@ -1051,7 +1051,7 @@ const generateQrCodeVillage = async (req: Request, res: Response) => {
 //     }, 2000);
 //   } catch (error: any) {
 //     console.log(error)
-//     return res.sendError(res, error.message);
+//     return res.sendError(res, error.message, error);
 //   }
 // }
 
@@ -1159,7 +1159,7 @@ const exportQrCode = async (req: Request, res: Response) => {
     }, 2000);
   } catch (error: any) {
     console.error(error);
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -1205,7 +1205,7 @@ const dashboardGraph = async (req: Request, res: Response) => {
     res.sendSuccess(res, { ...result.dataValues, ...trans.dataValues, graph: graph });
   } catch (error: any) {
     console.log(error)
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 }
 
@@ -1281,7 +1281,7 @@ const fetchFarmerPecurement = async (req: Request, res: Response) => {
 
   } catch (error: any) {
     console.log(error)
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 

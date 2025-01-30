@@ -626,7 +626,7 @@ const allVillageCottonData = async (req: Request, res: Response) => {
 
   } catch (error: any) {
     console.log(error);
-    return res.sendError(res, error.meessage);
+    return res.sendError(res, error.message, error);
   }
 
 }
@@ -690,7 +690,7 @@ const cottonData = async (req: Request, res: Response) => {
 
   } catch (error: any) {
     console.log(error);
-    return res.sendError(res, error.meessage);
+    return res.sendError(res, error.message, error);
   }
 
 }

@@ -49,7 +49,7 @@ const createQualityParameter = async (req: Request, res: Response) => {
         res.sendSuccess(res, { result });
     } catch (error: any) {
         console.log(error)
-        return res.sendError(res, error.meessage);
+        return res.sendError(res, error.message, error);
     }
 }
 

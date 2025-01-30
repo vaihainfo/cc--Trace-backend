@@ -147,7 +147,7 @@ const createWeaverProcess = async (req: Request, res: Response) => {
     res.sendSuccess(res, { weaver });
   } catch (error: any) {
     console.log(error)
-    return res.sendError(res, error.meessage);
+    return res.sendError(res, error.message, error);
   }
 }
 
@@ -172,7 +172,7 @@ const updateWeaverProcess = async (req: Request, res: Response) => {
     res.sendSuccess(res, { weaver });
   } catch (error: any) {
     console.log(error);
-    return res.sendError(res, error.meessage);
+    return res.sendError(res, error.message, error);
   }
 };
 //fetch Weaver process by id
@@ -462,7 +462,7 @@ const createWeaverSales = async (req: Request, res: Response) => {
     return res.sendSuccess(res, { weaverSales });
   } catch (error: any) {
     console.error(error)
-    return res.sendError(res, error.meessage);
+    return res.sendError(res, error.message, error);
   }
 }
 
@@ -490,7 +490,7 @@ const updateWeaverSales = async (req: Request, res: Response) => {
     return res.sendSuccess(res, weaverSale);
   } catch (error: any) {
     console.log(error);
-    return res.sendError(res, error.meessage);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -1273,7 +1273,7 @@ const updateStatusWeaverSale = async (req: Request, res: Response) => {
 
     res.sendSuccess(res, { update });
   } catch (error: any) {
-    return res.sendError(res, error.meessage);
+    return res.sendError(res, error.message, error);
   }
 };
 

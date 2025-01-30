@@ -65,9 +65,9 @@ const createBrand = async (req: Request, res: Response) => {
         };
         const brand = await Brand.create(brandData);
         res.sendSuccess(res, brand);
-    } catch (error) {
+    } catch (error: any) {
         console.log(error);
-        return res.sendError(res, "NOT_ABLE_TO_CREATE_BRAND");
+        return res.sendError(res, error.message, error);
     }
 };
 
@@ -181,7 +181,7 @@ const fetchBrandPagination = async (req: Request, res: Response) => {
         }
     } catch (error: any) {
         console.log(error);
-        return res.sendError(res, error.meessage);
+        return res.sendError(res, error.message, error);
     }
 };
 
@@ -231,7 +231,7 @@ const fetchBrandById = async (req: Request, res: Response) => {
         return res.sendSuccess(res, brandInfo);
     } catch (error: any) {
         console.log(error);
-        return res.sendError(res, error.meessage);
+        return res.sendError(res, error.message, error);
     }
 };
 
@@ -286,7 +286,7 @@ const updateBrand = async (req: Request, res: Response) => {
         res.sendSuccess(res, result);
     } catch (error: any) {
         console.log(error);
-        return res.sendError(res, error.meessage);
+        return res.sendError(res, error.message, error);
     }
 };
 
@@ -1021,7 +1021,7 @@ const updateStatusBrandSale = async (req: Request, res: Response) => {
         res.sendSuccess(res, { update });
     } catch (error: any) {
         console.log(error);
-        return res.sendError(res, error.meessage);
+        return res.sendError(res, error.message, error);
     }
 }
 
@@ -1284,7 +1284,7 @@ const productionUpdate = async (req: Request, res: Response) => {
         return res.sendPaginationSuccess(res, ndata, data.length > 0 ? data.length : 0);
     } catch (error: any) {
         console.log(error);
-        res.sendError(res, error.message)
+        return res.sendError(res, error.message, error);
     }
 }
 
@@ -1319,7 +1319,7 @@ const productTracebility = async (req: Request, res: Response) => {
         res.sendSuccess(res, garments)
     } catch (error: any) {
         console.log(error);
-        res.sendError(res, error.message)
+        return res.sendError(res, error.message, error);
     }
 }
 
