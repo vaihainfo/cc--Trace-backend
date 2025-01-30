@@ -20,17 +20,12 @@ jobs:
           mkdir -p ~/.ssh
 
           # Add EC2 server to known hosts (to prevent prompt)
-          ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
+          ssh-keyscan -H 162.214.216.141 >> ~/.ssh/known_hosts
 
       - name: Deploy to Backend Directory
-        env:
-          HOSTNAME: ${{ secrets.SSH_HOST }}         
-          USER_NAME: ${{ secrets.EC2_USER }}        
-          PASSWORD: ${{ secrets.SSH_PASSWORD }}     
-          
         run: |
           # Connect via SSH using username and password
-          sshpass -p "$PASSWORD" ssh -o StrictHostKeyChecking=no ${USER_NAME}@${HOSTNAME} '
+          sshpass -p "Xc01mc--)s@d" ssh -o StrictHostKeyChecking=no root@162.214.216.141 '
               # Navigate to the backend directory
               cd /home/newtracebale/public_html/backend &&
 
