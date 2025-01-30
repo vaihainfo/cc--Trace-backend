@@ -369,12 +369,12 @@ req.body.brandId }, transaction });
     // Commit transaction
     await transaction.commit();
 
-    res.sendSuccess(res, { ginprocess });
+    return res.sendSuccess(res, { ginprocess });
   } catch (error: any) {
     // Rollback transaction in case of error
     await transaction.rollback();
     console.error(error);
-    res.sendError(res, error.message || "An error occurred");
+    return res.sendError(res, error.message || "An error occurred", error);
   }
 };
 
@@ -543,7 +543,7 @@ const fetchGinProcessPagination = async (req: Request, res: Response) => {
     }
   } catch (error: any) {
     console.error(error);
-    return res.sendError(res, error.meessage);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -614,7 +614,7 @@ const fetchGinHeapPagination = async (req: Request, res: Response) => {
     }
   } catch (error: any) {
     console.error(error);
-    return res.sendError(res, error.meessage);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -763,7 +763,7 @@ const exportGinHeapReport = async (req: Request, res: Response) => {
   }
   catch (error: any) {
     console.log(error);
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 

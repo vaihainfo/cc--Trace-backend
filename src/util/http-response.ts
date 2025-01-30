@@ -17,8 +17,7 @@ export default {
     }
     res.errorMessage = error;
 
-    const { method, originalUrl, body } = res.req;
-    const { sql } = errBody;
+    const { method, originalUrl, body } = res?.req;
 
     const ndata = {
             method,
@@ -27,7 +26,7 @@ export default {
             status_code: errors[error] ? errors[error].statusCode : 400,
             error_message: error,
             request_body: body ? body : null,
-            sql_query: sql ? sql : null,
+            sql_query: errBody && errBody.sql ? errBody.sql : null,
         };
     
     await saveErrorsToDb(ndata)
