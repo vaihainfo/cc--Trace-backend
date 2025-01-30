@@ -2087,6 +2087,7 @@ const getCOCDocumentData = async (
       reelLotno: '',
       gnrTotalQty: '',
       date: '',
+      seedCottonQty: 0,
     };
 
     let [result] = await sequelize.query(`
@@ -2142,69 +2143,70 @@ const getCOCDocumentData = async (
         );
       }  
     }
-  
+    
 
     if (result.process_ids) {
-      const [ginProcess] = await sequelize.query(`
-        SELECT
-                ARRAY_AGG(DISTINCT subquery.transaction_id) AS transaction_ids
-            FROM (
-                SELECT
-                    UNNEST(cs.transactions) AS transaction_id
-                FROM (
-                    SELECT
-                        ARRAY_AGG(DISTINCT cs.transaction_id) AS transactions
-                    FROM
-                        cotton_selections cs
-					          WHERE cs.process_id in (:ids)
-                ) cs
-                UNION ALL
-                SELECT
-                    UNNEST(hs.transactions) AS transaction_id
-                FROM (
-                    SELECT
-                      ARRAY_AGG(DISTINCT unnest_transaction_id) AS transactions
-                    FROM (
-                      SELECT 
-                        UNNEST(hs.transaction_id) AS unnest_transaction_id  -- Unnest the array of village_id
-                      FROM
-                        heap_selections hs
-					            WHERE hs.process_id in (:ids)
-                    ) unnest_data
-                ) hs
-          ) subquery
+      const ginProcess = await sequelize.query(`
+        select  gp.id,
+         gp.total_qty as seed_cotton_qty,
+                array_to_string(array_agg(distinct hp.transaction_id), ',') as transaction_ids
+        from gin_processes gp
+                left join "gin-bales" gb on gp.id = gb.process_id
+                left join heap_selections hp on gp.id = hp.process_id
+        where gp.id in (:ids)
+        group by gp.id;
         `, {
           replacements: {
             ids: result.process_ids
           },
           type: sequelize.QueryTypes.SELECT
         });
-
-
-      const transIds = ginProcess ? ginProcess.transaction_ids : []
+  
+        let totalSeedCottonQty = 0;
+  
+          for (const process of ginProcess) {
+            totalSeedCottonQty += process.seed_cotton_qty || 0;
+          }
+        cocRes.seedCottonQty = totalSeedCottonQty;
+  
+        const transaction_ids: any[] = [];
+        ginProcess?.forEach((process: any) => {
+          transaction_ids.push(...process.transaction_ids.split(','));
+        })
+  
+        const transIds = transaction_ids.flatMap((id: any) => id.split(',').map((str: string) => str.trim()))
+        .filter(id => id !== '')
+        .map(Number)
+        .filter(id => !isNaN(id));
 
       if (transIds.length) {
-      const [transactions] = await sequelize.query(`
-        select  
-                ARRAY_AGG(DISTINCT fg.name) AS frmr_farm_group
-        from transactions tr
-                left join farmers fr on tr.farmer_id = fr.id
-                left join farm_groups fg on fg.id = fr."farmGroup_id"
-        where tr.id in (:ids);
-        `, {
-          replacements: {
-            ids: transIds
-          },
-          type: sequelize.QueryTypes.SELECT
-        });
-
-        console.log(transactions)
-      cocRes.frmrFarmGroup = transactions && transactions.frmr_farm_group.length > 0 ? transactions.frmr_farm_group.join(', ') : '';
+        const transactions = await sequelize.query(`
+          select  tr.qty_purchased as frmr_qty,
+                  tr.id            as frmr_transaction_id,
+                  fg.name          as frmr_farm_group
+          from transactions tr
+                  left join farmers fr on tr.farmer_id = fr.id
+                  left join farm_groups fg on fg.id = fr."farmGroup_id"
+          where tr.id in (:ids)
+          group by tr.id,fg.name;
+          `, {
+            replacements: {
+              ids: transIds
+            },
+            type: sequelize.QueryTypes.SELECT
+          });
+        
+    
+          const farmGroupNames: any = [];
+          for (const transaction of transactions) {
+            if (transaction.frmr_farm_group && !farmGroupNames.includes(transaction.frmr_farm_group))
+              farmGroupNames.push(transaction.frmr_farm_group);
+          }
+          cocRes.frmrFarmGroup = farmGroupNames.length ? farmGroupNames.join(', ') : '';
     }
     }
     cocRes.date = moment(new Date()).format('DD-MM-YYYY');
-
-    return res.sendSuccess(res, cocRes);
+     return res.sendSuccess(res, cocRes);
   } catch (error: any) {
     console.error("Error appending data:", error);
     return res.sendError(res, error.message);
