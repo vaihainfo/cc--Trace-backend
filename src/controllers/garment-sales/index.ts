@@ -107,7 +107,7 @@ const fetchBrandQrGarmentSalesPagination = async (
     }
   } catch (error: any) {
     console.error("Error appending data:", error);
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -182,7 +182,7 @@ const exportBrandQrGarmentSales = async (req: Request, res: Response) => {
     });
   } catch (error: any) {
     console.error("Error appending data:", error);
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -443,7 +443,7 @@ const fetchTransactions = async (req: Request, res: Response) => {
     return res.sendPaginationSuccess(res, data, abc?.length);
   } catch (error: any) {
     console.error("Error appending data:", error);
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -643,7 +643,7 @@ const fetchTransactionsAll = async (req: Request, res: Response) => {
     return res.sendSuccess(res, abc);
   } catch (error: any) {
     console.error("Error appending data:", error);
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -703,7 +703,7 @@ const updateTransactionStatus = async (req: Request, res: Response) => {
     res.sendSuccess(res, trans);
   } catch (error: any) {
     console.log(error);
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -725,7 +725,7 @@ const getProgram = async (req: Request, res: Response) => {
     });
     res.sendSuccess(res, data);
   } catch (error: any) {
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -894,7 +894,7 @@ const createGarmentProcess = async (req: Request, res: Response) => {
     res.sendSuccess(res, garmentProcess);
   } catch (error: any) {
     console.log(error.message);
-    return res.sendError(res, error.meessage);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -936,7 +936,7 @@ const updateGarmentProcess = async (req: Request, res: Response) => {
     res.sendSuccess(res, garmentProcess);
   } catch (error: any) {
     console.log(error.message);
-    return res.sendError(res, error.meessage);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -1034,7 +1034,7 @@ const fetchGarmentProcessPagination = async (req: Request, res: Response) => {
       return res.sendSuccess(res, gin);
     }
   } catch (error: any) {
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -1079,7 +1079,7 @@ const fetchGarmentProcess = async (req: Request, res: Response) => {
 
     return res.sendSuccess(res, rows);
   } catch (error: any) {
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -1239,7 +1239,7 @@ const exportGarmentProcess = async (req: Request, res: Response) => {
     });
   } catch (error: any) {
     console.error("Error appending data:", error);
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -1436,7 +1436,7 @@ const chooseFabricProcess = async (req: Request, res: Response) => {
     return res.sendSuccess(res, abc);
   } catch (error: any) {
     console.error("Error appending data:", error);
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -1552,7 +1552,7 @@ const createGarmentSales = async (req: Request, res: Response) => {
     res.sendSuccess(res, garmentSales);
   } catch (error: any) {
     console.log(error.message);
-    return res.sendError(res, error.meessage);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -1581,7 +1581,7 @@ const updateGarmentSales = async (req: Request, res: Response) => {
     return res.sendSuccess(res, kniSale);
   } catch (error: any) {
     console.log(error);
-    return res.sendError(res, error.meessage);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -1704,7 +1704,7 @@ const fetchGarmentSalesPagination = async (req: Request, res: Response) => {
       return res.sendSuccess(res, data);
     }
   } catch (error: any) {
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -1743,7 +1743,7 @@ const fetchGarmentSale = async (req: Request, res: Response) => {
     });
     return res.sendSuccess(res, gin);
   } catch (error: any) {
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -1885,7 +1885,7 @@ const chooseGarmentSales = async (req: Request, res: Response) => {
 
     return res.sendSuccess(res, data);
   } catch (error: any) {
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -2010,7 +2010,7 @@ const exportGarmentSale = async (req: Request, res: Response) => {
     });
   } catch (error: any) {
     console.error("Error appending data:", error);
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -2020,7 +2020,7 @@ const getEmbroidering = async (req: Request, res: Response) => {
     return res.sendSuccess(res, data);
   } catch (error: any) {
     console.error("Error appending data:", error);
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -2101,7 +2101,7 @@ const dashboardGraph = async (req: Request, res: Response) => {
     return res.sendSuccess(res, resulting);
   } catch (error: any) {
     console.error("Error appending data:", error);
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -2146,7 +2146,7 @@ const getGarmentReelLotNo = async (req: Request, res: Response) => {
 
     return res.sendSuccess(res, { reelLotNo });
   } catch (error: any) {
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -2236,7 +2236,7 @@ const getprocessName = async (req: Request, res: Response) => {
 
     res.sendSuccess(res, response.flat());
   } catch (error: any) {
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -2434,7 +2434,7 @@ const getChooseFabricFilters = async (req: Request, res: Response) => {
 
     res.sendSuccess(res, result);
   } catch (error: any) {
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -2494,7 +2494,7 @@ const getChooseGarmentFilters = async (req: Request, res: Response) => {
 
     res.sendSuccess(res, result);
   } catch (error: any) {
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -2521,7 +2521,7 @@ const getBuyerProcessors = async (req: Request, res: Response) => {
     res.sendSuccess(res, list);
   } catch (error: any) {
     console.log(error);
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -3674,7 +3674,7 @@ const garmentTraceabilityMap = async (req: Request, res: Response) => {
     return res.sendSuccess(res, data);
   } catch (error: any) {
     console.log(error);
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -3945,7 +3945,7 @@ const exportGarmentTransactionList = async (req: Request, res: Response) => {
     });
   } catch (error: any) {
     console.error("Error appending data:", error);
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
 
   }
 };
@@ -3987,7 +3987,7 @@ const getCOCDocumentData = async (
               ss.name                                       as season_name,
               grm.address                                    as address,
               ''                                             as reel_authorization_code,
-              br.garment_auth_code_count                     as auth_code_count
+              br.garment_auth_code_count                     as auth_code_count,
               br.id                                          as brand_id,
               case
                   when br.brand_name is not null
@@ -4383,7 +4383,7 @@ const getCOCDocumentData = async (
     return res.sendSuccess(res, cocRes);
   } catch (error: any) {
     console.error("Error appending data:", error);
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 }
 
@@ -4413,7 +4413,7 @@ const updateCOCDoc = async (
     return res.sendSuccess(res, garmentSale);
   } catch (error: any) {
     console.log(error);
-    return res.sendError(res, error.meessage);
+    return res.sendError(res, error.message, error);
   }
 }
 
