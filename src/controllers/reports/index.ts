@@ -3449,6 +3449,7 @@ const fetchSpinnerBalePagination = async (req: Request, res: Response) => {
                         bs.sales_id,
                         COUNT(DISTINCT gb.id) AS no_of_bales,
                         ARRAY_AGG(DISTINCT gp.id) AS "process_ids",
+                        gp.season_id AS "bale_season_id",
                         COALESCE(SUM(CAST(gb.weight AS DOUBLE PRECISION)), 0) AS received_qty,
                         COALESCE(
                             SUM(
@@ -3470,7 +3471,7 @@ const fetchSpinnerBalePagination = async (req: Request, res: Response) => {
                         gs.status IN ('Sold', 'Partially Accepted', 'Partially Rejected')
                         AND (bs.spinner_status = true OR gs.status = 'Sold')
                     GROUP BY 
-                        bs.sales_id
+                        bs.sales_id, gp.season_id
                 )
                 SELECT 
                     gs.*, 
@@ -3483,6 +3484,7 @@ const fetchSpinnerBalePagination = async (req: Request, res: Response) => {
                     sp.id AS spinner_id, 
                     sp.name AS spinner, 
                     sp.address AS spinner_address, 
+                    bd.bale_season_id AS bale_season_id,
                     bd.no_of_bales AS accepted_no_of_bales, 
                     bd.process_ids AS process_ids, 
                     bd.total_qty AS accepted_total_qty,
