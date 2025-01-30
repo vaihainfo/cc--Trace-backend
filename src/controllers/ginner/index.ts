@@ -1135,6 +1135,8 @@ const chooseBale = async (req: Request, res: Response) => {
                   'id', combined_data.process_id,
                   'lot_no', combined_data.lot_no,
                   'date', combined_data.date,
+                  'season_id', combined_data.season_id,
+                  'season_name', combined_data.season_name,
                   'press_no', combined_data.press_no,
                   'reel_lot_no', combined_data.reel_lot_no,
                   'greyout_status', combined_data.greyout_status,
@@ -1212,6 +1214,7 @@ const chooseBale = async (req: Request, res: Response) => {
               g.id AS ginner_id,
               gp.program_id,
               gp.season_id,
+              s.name AS season_name,
               null AS sales_id,
               false AS is_gin_to_gin -- Add a flag to identify the source
           FROM 
@@ -1268,6 +1271,7 @@ const chooseBale = async (req: Request, res: Response) => {
               g.id AS ginner_id,
               gp.program_id,
               gp.season_id,
+              s.name AS season_name,
               gs.id AS sales_id,
               true AS is_gin_to_gin -- Add a flag to identify the source
           FROM 
@@ -1300,7 +1304,7 @@ const chooseBale = async (req: Request, res: Response) => {
            )
       ) combined_data
       GROUP BY 
-          combined_data.process_id, combined_data.lot_no, combined_data.date, combined_data.press_no, combined_data.reel_lot_no, combined_data.greyout_status,
+          combined_data.process_id, combined_data.season_name, combined_data.season_id, combined_data.lot_no, combined_data.date, combined_data.press_no, combined_data.reel_lot_no, combined_data.greyout_status,
           combined_data.te_process_verified_status, combined_data.te_verified_total_qty, combined_data.te_verified_bales, combined_data.gin_process_verified_status, combined_data.gin_verified_total_qty, combined_data.gin_verified_bales, 
           combined_data.scm_process_verified_status, combined_data.scm_verified_total_qty, combined_data.scm_verified_bales, combined_data.scd_process_verified_status, combined_data.scd_verified_total_qty, combined_data.scd_verified_bales, combined_data.verification_status
       ORDER BY 
