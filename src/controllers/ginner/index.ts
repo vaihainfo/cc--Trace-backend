@@ -193,7 +193,7 @@ import GinToGinSale from "../../models/gin-to-gin-sale.model";
 //     res.sendSuccess(res, { ginprocess });
 //   } catch (error: any) {
 //     console.error(error);
-//     return res.sendError(res, error.meessage);
+//     return res.sendError(res, error.message, error);
 //   }
 // };
 
@@ -370,12 +370,12 @@ req.body.brandId }, transaction });
     // Commit transaction
     await transaction.commit();
 
-    res.sendSuccess(res, { ginprocess });
+    return res.sendSuccess(res, { ginprocess });
   } catch (error: any) {
     // Rollback transaction in case of error
     await transaction.rollback();
     console.error(error);
-    res.sendError(res, error.message || "An error occurred");
+    return res.sendError(res, error.message || "An error occurred", error);
   }
 };
 
@@ -544,7 +544,7 @@ const fetchGinProcessPagination = async (req: Request, res: Response) => {
     }
   } catch (error: any) {
     console.error(error);
-    return res.sendError(res, error.meessage);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -615,7 +615,7 @@ const fetchGinHeapPagination = async (req: Request, res: Response) => {
     }
   } catch (error: any) {
     console.error(error);
-    return res.sendError(res, error.meessage);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -764,7 +764,7 @@ const exportGinHeapReport = async (req: Request, res: Response) => {
   }
   catch (error: any) {
     console.log(error);
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -968,7 +968,7 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
     });
   } catch (error: any) {
     console.error("Error appending data:", error);
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -1312,7 +1312,7 @@ const chooseBale = async (req: Request, res: Response) => {
     return res.sendSuccess(res, simplifiedResults); //bales_list
   } catch (error: any) {
     console.error(error);
-    return res.sendError(res, error.meessage);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -1490,7 +1490,7 @@ const deleteGinnerProcess = async (req: Request, res: Response) => {
   } catch (error: any) {
     await transaction.rollback();
     console.error(error);
-    return res.sendError(res, error.message || "An error occurred");
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -1520,7 +1520,7 @@ const fetchGinProcess = async (req: Request, res: Response) => {
     return res.sendSuccess(res, gin);
   } catch (error: any) {
     console.error(error);
-    return res.sendError(res, error.meessage);
+    return res.sendError(res, error.message, error);
   }
 };
 //fetch Ginner Bale
@@ -1541,7 +1541,7 @@ const fetchGinBale = async (req: Request, res: Response) => {
     return res.sendSuccess(res, gin);
   } catch (error: any) {
     console.error(error);
-    return res.sendError(res, error.meessage);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -1683,7 +1683,7 @@ const chooseCotton = async (req: Request, res: Response) => {
     res.sendSuccess(res, finalResult);
   } catch (error: any) {
     console.error("Error appending data:", error);
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -1767,7 +1767,7 @@ const createHeap = async (req: Request, res: Response) => {
     res.sendSuccess(res, { ginheap });
   } catch (error: any) {
     console.error(error);
-    return res.sendError(res, error.meessage);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -1815,7 +1815,7 @@ const chooseHeap = async (req: Request, res: Response) => {
     res.sendSuccess(res, finalResult);
   } catch (error: any) {
     console.error("Error appending data:", error);
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -1840,7 +1840,7 @@ const updateTransactionStatus = async (req: Request, res: Response) => {
     res.sendSuccess(res, trans);
   } catch (error: any) {
     console.error("Error appending data:", error);
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -1964,7 +1964,7 @@ const exportGinnerSales = async (req: Request, res: Response) => {
     });
   } catch (error: any) {
     console.error("Error appending data:", error);
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -2064,7 +2064,7 @@ const createGinnerSales = async (req: Request, res: Response) => {
     res.sendSuccess(res, { ginSales });
   } catch (error: any) {
     console.error(error);
-    return res.sendError(res, error.meessage);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -2210,7 +2210,7 @@ const getCOCDocumentData = async (
      return res.sendSuccess(res, cocRes);
   } catch (error: any) {
     console.error("Error appending data:", error);
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 
 }
@@ -2244,7 +2244,7 @@ const updateCOCDoc = async (
     return res.sendSuccess(res, ginSale);
   } catch (error: any) {
     console.log(error);
-    return res.sendError(res, error.meessage);
+    return res.sendError(res, error.message, error);
   }
 }
 const getBrands = async (req: Request, res: Response) => {
@@ -2333,7 +2333,7 @@ const updateGinnerSales = async (req: Request, res: Response) => {
     res.sendSuccess(res, { ginSales });
   } catch (error: any) {
     console.error(error);
-    return res.sendError(res, error.meessage);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -2354,7 +2354,7 @@ const updateGinnerSalesField = async (req: Request, res: Response) => {
     res.sendSuccess(res, { ginSales });
   } catch (error: any) {
     console.error(error);
-    return res.sendError(res, error.meessage);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -2438,7 +2438,7 @@ const fetchGinSalesPagination = async (req: Request, res: Response) => {
     }
   } catch (error: any) {
     console.error(error);
-    return res.sendError(res, error.meessage);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -2600,7 +2600,7 @@ const deleteGinSales = async (req: Request, res: Response) => {
   } catch (error: any) {
     console.error(error);
     await transaction.rollback();
-    return res.sendError(res, error.meessage);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -2662,7 +2662,7 @@ const fetchGinSale = async (req: Request, res: Response) => {
     return res.sendSuccess(res, response);
   } catch (error: any) {
     console.error(error);
-    return res.sendError(res, error.meessage);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -2729,7 +2729,7 @@ const fetchGinSaleBale = async (req: Request, res: Response) => {
     return res.sendPaginationSuccess(res, data, count);
   } catch (error: any) {
     console.error(error);
-    return res.sendError(res, error.meessage);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -2780,7 +2780,7 @@ const fetchGinSaleAllBales = async (req: Request, res: Response) => {
     return res.sendPaginationSuccess(res, data, count);
   } catch (error: any) {
     console.error(error);
-    return res.sendError(res, error.meessage);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -2806,7 +2806,7 @@ const updateGinSaleBale = async (req: Request, res: Response) => {
     return res.sendSuccess(res, gins);
   } catch (error: any) {
     console.error(error);
-    return res.sendError(res, error.meessage);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -2878,7 +2878,7 @@ const dashboardGraphWithProgram = async (req: Request, res: Response) => {
     res.sendSuccess(res, { transaction, ginner });
   } catch (error: any) {
     console.error(error);
-    return res.sendError(res, error.meessage);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -2950,7 +2950,7 @@ const getReelBaleId = async (req: Request, res: Response) => {
     res.sendSuccess(res, { id: reelbale_id });
   } catch (error: any) {
     console.error(error);
-    return res.sendError(res, error.meessage);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -3013,7 +3013,7 @@ const getReelHeapId = async (req: Request, res: Response) => {
     res.sendSuccess(res, { id: reelheap_id });
   } catch (error: any) {
     console.error(error);
-    return res.sendError(res, error.meessage);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -3036,7 +3036,7 @@ const getProgram = async (req: Request, res: Response) => {
     res.sendSuccess(res, data);
   } catch (error: any) {
     console.error(error);
-    return res.sendError(res, error.meessage);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -3283,7 +3283,7 @@ const checkReport = async (req: Request, res: Response) => {
     }
   } catch (error: any) {
     console.error(error);
-    return res.sendError(res, error.meessage);
+    return res.sendError(res, error.message, error);
   }
 };
 

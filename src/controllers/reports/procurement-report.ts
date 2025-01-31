@@ -229,7 +229,7 @@ const fetchTransactionsReport = async (req: Request, res: Response) => {
     }
   } catch (error: any) {
     console.log(error);
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -256,7 +256,7 @@ const fetchSumOfQtyPurchasedByProgram = async (req: Request, res: Response) => {
     return res.sendSuccess(res, sumByProgram);
   } catch (error: any) {
     console.log(error);
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -575,7 +575,7 @@ const exportProcurementReport = async (req: Request, res: Response) => {
   }
   } catch (error: any) {
     console.log(error)
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 

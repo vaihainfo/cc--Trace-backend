@@ -104,6 +104,7 @@ import moment from "moment";
 import 'moment-timezone';
 import GinProcess from "./models/gin-process.model";
 import YarnBlendRouter from './router/master/yarnblend';
+import logging from "./middleware/logging";
 
 
 const app = express();
@@ -120,6 +121,8 @@ var corsOptions = {
 
 app.use(cors(corsOptions));
 app.use(setInterface);
+app.use(logging);
+
 //check connection to database
 const connectToDb = async () => {
   const data = await sequelize.sync({ force: false })

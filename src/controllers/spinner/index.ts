@@ -177,7 +177,7 @@ const createSpinnerProcess = async (req: Request, res: Response) => {
         res.sendSuccess(res, { spin });
     } catch (error: any) {
         console.log(error);
-        return res.sendError(res, error.meessage);
+        return res.sendError(res, error.message, error);
     }
 }
 
@@ -224,7 +224,7 @@ const updateSpinProcess = async (req: Request, res: Response) => {
         res.sendSuccess(res, { spin });
     } catch (error: any) {
         console.log(error);
-        return res.sendError(res, error.meessage);
+        return res.sendError(res, error.message, error);
     }
 }
 
@@ -536,7 +536,7 @@ const deleteSpinnerProcess = async (req: Request, res: Response) => {
             return res.sendSuccess(res, { message: 'Successfully deleted this process' });
         }
     } catch (error: any) {
-        return res.sendError(res, error.message);
+        return res.sendError(res, error.message, error);
     }
 }
 
@@ -614,7 +614,7 @@ const updateSpinnerProcess = async (req: Request, res: Response) => {
         );
         res.sendSuccess(res, { spin });
     } catch (error: any) {
-        return res.sendError(res, error.meessage);
+        return res.sendError(res, error.message, error);
     }
 }
 
@@ -828,7 +828,7 @@ const chooseYarnProcess = async (req: Request, res: Response) => {
         return res.sendSuccess(res, data);
 
     } catch (error: any) {
-        return res.sendError(res, error.message);
+        return res.sendError(res, error.message, error);
     }
 };
 
@@ -922,7 +922,7 @@ const createSpinnerSales = async (req: Request, res: Response) => {
         res.sendSuccess(res, { spinSales });
     } catch (error: any) {
         console.error(error)
-        return res.sendError(res, error.meessage);
+        return res.sendError(res, error.message, error);
     }
 }
 
@@ -944,7 +944,7 @@ const updateSpinnerSales = async (req: Request, res: Response) => {
         res.sendSuccess(res, { spinSales });
     } catch (error: any) {
         console.error(error)
-        return res.sendError(res, error.meessage);
+        return res.sendError(res, error.message, error);
     }
 }
 
@@ -1415,7 +1415,7 @@ const deleteSpinnerSales = async (req: Request, res: Response) => {
         return res.sendSuccess(res, { message: 'Successfully deleted this process' });
 
     } catch (error: any) {
-        return res.sendError(res, error.message);
+        return res.sendError(res, error.message, error);
     }
 }
 
@@ -1568,7 +1568,7 @@ const fetchTransactionAlert = async (req: Request, res: Response) => {
 
         return res.sendSuccess(res, data);
     } catch (error: any) {
-        return res.sendError(res, error.message);
+        return res.sendError(res, error.message, error);
     }
 };
 
@@ -1683,7 +1683,7 @@ const fetchTransactionAlert = async (req: Request, res: Response) => {
 //     } catch (error: any) {
 //         await GinSales.update({visible_flag: true}, { where: { id: req.body.items?.map((obj: any) => obj.id) } });
 //         console.log(error)
-//         return res.sendError(res, error.meessage);
+//         return res.sendError(res, error.message, error);
 //     }
 // }
 
@@ -1837,7 +1837,7 @@ const updateStatusSales = async (req: Request, res: Response) => {
     } catch (error: any) {
         console.log(error);
         await GinSales.update({ visible_flag: true }, { where: { id: req.body.items?.map((obj: any) => obj.id) } });
-        return res.sendError(res, error.message);
+        return res.sendError(res, error.message, error);
     }
 };
 
@@ -2018,7 +2018,7 @@ const fetchTransactionList = async (req: Request, res: Response) => {
         return res.sendPaginationSuccess(res, rows, totalCount);
     } catch (error: any) {
         console.log(error)
-        return res.sendError(res, error.message);
+        return res.sendError(res, error.message, error);
     }
 };
 
@@ -2537,7 +2537,7 @@ const chooseLint = async (req: Request, res: Response) => {
         return res.sendSuccess(res, list);
 
     } catch (error: any) {
-        return res.sendError(res, error.message);
+        return res.sendError(res, error.message, error);
     }
 };
 
@@ -2695,7 +2695,7 @@ const chooseYarn = async (req: Request, res: Response) => {
 
     } catch (error: any) {
         console.log(error)
-        return res.sendError(res, error.message);
+        return res.sendError(res, error.message, error);
     }
 };
 
