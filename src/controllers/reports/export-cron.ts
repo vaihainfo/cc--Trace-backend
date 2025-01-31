@@ -1830,7 +1830,7 @@ const generatePscpProcurementLiveTracker = async () => {
                       LEFT JOIN 
                             "villages" AS "farmer->village" ON "gv"."village_id" = "farmer->village"."id" 
                       LEFT JOIN 
-                            "farmers" AS "farmer" ON "farmer->village"."id" = "farmer"."village_id" 
+                            "farmers" AS "farmer" ON "farmer->village"."id" = "farmer"."village_id" and "farmer"."brand_id" ="gv"."brand_id"
                       LEFT JOIN 
                             "farms" as "farms" on farms.farmer_id = "farmer".id and farms.season_id = gv.season_id
                       LEFT JOIN 
@@ -2051,7 +2051,7 @@ const exportVillageSeedCottonAllocation = async () => {
             LEFT JOIN 
                 "villages" AS "farmer->village" ON "gv"."village_id" = "farmer->village"."id" 
             LEFT JOIN 
-                "farmers" AS "farmer" ON "farmer->village"."id" = "farmer"."village_id" 
+                "farmers" AS "farmer" ON "farmer->village"."id" = "farmer"."village_id"  and "farmer"."brand_id" ="gv"."brand_id"
             LEFT JOIN 
                 "farms" as "farms" on farms.farmer_id = "farmer".id and farms.season_id = gv.season_id
             LEFT JOIN 
