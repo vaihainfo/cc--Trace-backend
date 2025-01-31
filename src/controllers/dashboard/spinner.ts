@@ -1076,11 +1076,17 @@ const getDataAll = async (
 ) => {
   try {
     const reqData = await getQueryParams(req, res);
-    const seasonOne = await Season.findOne({
-      where: {
-        id: reqData.season ? reqData.season : '9'
-      }
-    });
+    let seasonOne;
+    if (reqData.season) {
+      seasonOne = await Season.findOne({
+        where: { id: reqData.season }
+      });
+    } else {
+      seasonOne = await Season.findOne({
+        order: [['id', 'DESC']],  // This will get the latest season (e.g., '2024-25' instead of '2023-24')
+        limit: 1
+      });
+    }
     // reqData.season = seasonOne.id;
     const ginSaleWhere = getBaleSelWhereQuery(reqData);
     const lintWhere = getSpinnerLintQuery(reqData);
