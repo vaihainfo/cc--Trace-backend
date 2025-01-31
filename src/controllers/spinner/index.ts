@@ -38,12 +38,32 @@ import SpinSelectedBlend from "../../models/spin_selected_blend";
 
 //create Spinner Process
 const createSpinnerProcess = async (req: Request, res: Response) => {
+    const transaction = await sequelize.transaction();
     try {
-        let program = await Program.findOne({ where: { program_name: { [Op.iLike]: 'Reel' } } });
+        let program = await Program.findOne({ where: { program_name: { [Op.iLike]: 'Reel' } }, transaction });
         let abc;
         if (program.dataValues.id === req.body.programId) {
             abc = await yarnId(req.body.spinnerId, req.body.date);
         }
+
+        if (req.body.spinnerId && req.body.seasonId && req.body.programId && req.body.totalQty && req.body.batchLotNo) {
+            let ProcessExist = await SpinProcess.findOne(
+              { where: { 
+                spinner_id: req.body.spinnerId,
+                program_id: req.body.programId,
+                season_id: req.body.seasonId,
+                total_qty: Number(req.body.totalQty),
+                net_yarn_qty: req.body.netYarnQty,
+                batch_lot_no: req.body.batchLotNo,
+                yarn_type: req.body.yarnType,
+                yarn_realisation: req.body.yarnRealisation,
+              }, transaction },
+            );
+            if (ProcessExist) {
+              await transaction.rollback();
+              return res.sendError(res, "Process already exist with same Lot Number, Yarn Type, Yarn Realisation, Net Yarn Quantity (Kgs) and Total Quantity(Kg/MT) for this Season.");
+            }
+          }
 
         let dyeing;
         if (req.body.dyeingRequired) {
@@ -87,14 +107,15 @@ const createSpinnerProcess = async (req: Request, res: Response) => {
             to_date: req.body.to_date,
             yarn_blend_id: req.body.yarnBlendId
         };
-        const spin = await SpinProcess.create(data);
+        const spin = await SpinProcess.create(data, { transaction });
         let uniqueFilename = `spin_procees_qrcode_${Date.now()}.png`;
         let da = encrypt(`Spinner,Process,${spin.id}`);
         let aa = await generateOnlyQrCode(da, uniqueFilename);
         const gin = await SpinProcess.update({ qr: uniqueFilename }, {
             where: {
                 id: spin.id
-            }
+            },
+            transaction
         });
 
         for await (let yarn of req.body.yarns) {
@@ -105,14 +126,15 @@ const createSpinnerProcess = async (req: Request, res: Response) => {
                 yarn_qty_stock: yarn.yarnProduced
             }
 
-            const yarns = await SpinYarn.create(yarnData);
+            const yarns = await SpinYarn.create(yarnData, { transaction });
             let uniqueFilename = `spin_yarn_qrcode_${Date.now()}.png`;
             let da = encrypt(`Spinner,Yarn, ${yarns.id}`);
             let aa = await generateOnlyQrCode(da, uniqueFilename);
             const gin = await SpinYarn.update({ qr: uniqueFilename }, {
                 where: {
                     id: yarns.id
-                }
+                },
+                transaction
             });
         }
 
@@ -129,13 +151,13 @@ const createSpinnerProcess = async (req: Request, res: Response) => {
 
 
         for await (let obj of req.body.chooseLint) {
-            let update = await GinSales.update({ qty_stock: obj.totalQty - obj.qtyUsed }, { where: { id: obj.id } });
-            let create = await LintSelections.create({ qty_used: obj.qtyUsed, process_id: spin.id, lint_id: obj.id })
+            let update = await GinSales.update({ qty_stock: obj.totalQty - obj.qtyUsed }, { where: { id: obj.id }, transaction });
+            let create = await LintSelections.create({ qty_used: obj.qtyUsed, process_id: spin.id, lint_id: obj.id }, { transaction })
         }
         if (req.body.chooseComberNoil && req.body.chooseComberNoil.length > 0) {
             for await (let obj of req.body.chooseComberNoil) {
-                let update = await SpinProcess.update({ comber_noil_stock: obj.totalQty - obj.qtyUsed }, { where: { id: obj.id } })
-                let create = await ComberSelection.create({ qty_used: obj.qtyUsed, process_id: spin.id, yarn_id: obj.id })
+                let update = await SpinProcess.update({ comber_noil_stock: obj.totalQty - obj.qtyUsed }, { where: { id: obj.id }, transaction })
+                let create = await ComberSelection.create({ qty_used: obj.qtyUsed, process_id: spin.id, yarn_id: obj.id }, { transaction })
             }
         }
 
@@ -149,11 +171,12 @@ const createSpinnerProcess = async (req: Request, res: Response) => {
                 spin_process_id: spin.id,
                 spinner_id: req.body.spinnerId
             };
-            const physicalTraceabilityDataSpinner = await PhysicalTraceabilityDataSpinner.create(physicalTraceabilityData);
+            const physicalTraceabilityDataSpinner = await PhysicalTraceabilityDataSpinner.create(physicalTraceabilityData, { transaction });
 
             for await (const weightAndCone of req.body.weightAndCone) {
                 let brand = await Brand.findOne({
-                    where: { id: req.body.brandId }
+                    where: { id: req.body.brandId },
+                    transaction
                 });
 
                 const updatedCount = brand.dataValues.count + 1;
@@ -165,18 +188,20 @@ const createSpinnerProcess = async (req: Request, res: Response) => {
                     code: `DNA${req.body.spinnerShortname}${abc ? '-' + abc : ''}-${updatedCount}`,
                     sample_result: 0
                 };
-                await PhysicalTraceabilityDataSpinnerSample.create(physicalTraceabilityDataSpinnerSampleData);
+                await PhysicalTraceabilityDataSpinnerSample.create(physicalTraceabilityDataSpinnerSampleData, { transaction });
 
                 await Brand.update(
                     { count: updatedCount },
-                    { where: { id: brand.id } }
+                    { where: { id: brand.id }, transaction }
                 );
             }
         }
 
+        await transaction.commit();
         res.sendSuccess(res, { spin });
     } catch (error: any) {
         console.log(error);
+        await transaction.rollback();
         return res.sendError(res, error.message, error);
     }
 }
@@ -834,7 +859,31 @@ const chooseYarnProcess = async (req: Request, res: Response) => {
 
 //create Spinner Sale
 const createSpinnerSales = async (req: Request, res: Response) => {
+    const transaction = await sequelize.transaction();
     try {
+
+        if (req.body.spinnerId && req.body.seasonId && req.body.programId && req.body.totalQty && req.body.batchLotNo) {
+            let SalesExist = await SpinSales.findOne(
+              { where: { 
+                spinner_id: req.body.spinnerId,
+                program_id: req.body.programId,
+                season_id: req.body.seasonId,
+                order_ref: req.body.orderRef,
+                buyer_type: req.body.buyerType,
+                buyer_id: req.body.buyerId,
+                knitter_id: req.body.knitterId,
+                total_qty: Number(req.body.totalQty),
+                invoice_no: req.body.invoiceNo,
+                batch_lot_no: req.body.batchLotNo,
+                reel_lot_no: req.body.reelLotNno ? req.body.reelLotNno : null,
+                vehicle_no: req.body.vehicleNo,      
+              }, transaction },
+            );
+            if (SalesExist) {
+              await transaction.rollback();
+              return res.sendError(res, "Sales already exist with same Batch Lot Number, Invoice No., Vehicle No., Order Reference and Total Quantity(Kg/MT) for this Season.");
+            }
+          }
 
         const data = {
             spinner_id: req.body.spinnerId,
@@ -875,7 +924,7 @@ const createSpinnerSales = async (req: Request, res: Response) => {
 
         if (req.body.chooseYarn && req.body.chooseYarn.length > 0) {
             for await (let obj of req.body.chooseYarn) {
-                const spinYarnData = await SpinYarn.findOne({ where: { id: obj.id }, raw: true });
+                const spinYarnData = await SpinYarn.findOne({ where: { id: obj.id }, transaction, raw: true });
                 console.log(spinYarnData)
                 if (obj.qtyUsed > spinYarnData.yarn_qty_stock) {
                     return res.sendError(res, 'Requested quantity exceeds available stock')
@@ -890,14 +939,15 @@ const createSpinnerSales = async (req: Request, res: Response) => {
         const gin = await SpinSales.update({ qr: uniqueFilename }, {
             where: {
                 id: spinSales.id
-            }
+            },
+            transaction
         });
 
         if (req.body.chooseYarn && req.body.chooseYarn.length > 0) {
             for await (let obj of req.body.chooseYarn) {
-                const spinProcessData = await SpinProcess.findOne({ where: { id: obj.process_id } });
-                let update = await SpinProcess.update({ qty_stock: spinProcessData.qty_stock - obj.qtyUsed, status: 'Sold' }, { where: { id: obj.process_id } });
-                const spinYarnData = await SpinYarn.findOne({ where: { id: obj.id } });
+                const spinProcessData = await SpinProcess.findOne({ where: { id: obj.process_id }, transaction });
+                let update = await SpinProcess.update({ qty_stock: spinProcessData.qty_stock - obj.qtyUsed, status: 'Sold' }, { where: { id: obj.process_id }, transaction });
+                const spinYarnData = await SpinYarn.findOne({ where: { id: obj.id }, transaction });
 
                 let updateyarns = {}
                 if (spinYarnData.yarn_qty_stock - obj.qtyUsed <= 0) {
@@ -910,8 +960,8 @@ const createSpinnerSales = async (req: Request, res: Response) => {
                         yarn_qty_stock: spinYarnData.yarn_qty_stock - obj.qtyUsed
                     }
                 }
-                const spinYarnStatus = await SpinYarn.update(updateyarns, { where: { id: obj.id } });
-                await SpinProcessYarnSelection.create({ spin_process_id: obj.process_id, yarn_id: obj.id, sales_id: spinSales.id, qty_used: obj.qtyUsed })
+                const spinYarnStatus = await SpinYarn.update(updateyarns, { where: { id: obj.id }, transaction });
+                await SpinProcessYarnSelection.create({ spin_process_id: obj.process_id, yarn_id: obj.id, sales_id: spinSales.id, qty_used: obj.qtyUsed }, { transaction })
             }
         }
 
@@ -919,8 +969,11 @@ const createSpinnerSales = async (req: Request, res: Response) => {
             await send_spin_mail(spinSales.id);
         }
 
+         // Commit transaction
+        await transaction.commit();
         res.sendSuccess(res, { spinSales });
     } catch (error: any) {
+        await transaction.rollback();
         console.error(error)
         return res.sendError(res, error.message, error);
     }

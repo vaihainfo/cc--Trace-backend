@@ -201,19 +201,39 @@ import GinToGinSale from "../../models/gin-to-gin-sale.model";
 const createGinnerProcess = async (req: Request, res: Response) => {
   const transaction = await sequelize.transaction();
   try {
+
+    if (req.body.ginnerId && req.body.seasonId && req.body.programId && req.body.totalQty && req.body.noOfBales && req.body.lotNo) {
+      let processExist = await GinProcess.findOne(
+        { where: { 
+          ginner_id: req.body.ginnerId,
+          season_id: req.body.seasonId,
+          program_id: req.body.programId,
+          total_qty: req.body.totalQty,
+          no_of_bales: req.body.noOfBales,
+          lot_no: req.body.lotNo,
+          reel_lot_no: req.body.reelLotNno,
+        }, transaction },
+      );
+      if (processExist) {
+        await transaction.rollback();
+        return res.sendError(res, "Process already exist with same Lot Number, Reel Lot No., No. of Bales and Total Quantity(Kg/MT) for this Season.");
+      }
+    }
+
     // Check if Lot No exists
     if (req.body.lotNo) {
       let lot = await GinProcess.findOne(
-        { where: { lot_no: req.body.lotNo } },
-        { transaction }
+        { where: { lot_no: req.body.lotNo }, transaction },
       );
       if (lot) {
+        await transaction.rollback();
         return res.sendError(res, "Lot No already exists");
       }
     }
 
     // Validate required fields
     if (!req.body.ginnerId) {
+      await transaction.rollback();
       return res.sendError(res, "Need ginner ID");
     }
 
@@ -1688,7 +1708,26 @@ const chooseCotton = async (req: Request, res: Response) => {
 };
 
 const createHeap = async (req: Request, res: Response) => {
+  const transaction = await sequelize.transaction();
   try {
+
+    // Check if Lot No exists
+    if (req.body.ginnerId && req.body.seasonId && req.body.programId && req.body.total_qty_used && req.body.ginnerHeapNo) {
+      let heapExist = await GinHeap.findOne(
+        { where: { 
+          ginner_id: req.body.ginnerId,
+          season_id: req.body.seasonId,
+          program_id: req.body.programId,
+          reel_heap_no: req.body.REELHeapNo,
+          ginner_heap_no: req.body.ginnerHeapNo,
+          estimated_heap: req.body.total_qty_used,
+        }, transaction },
+      );
+      if (heapExist) {
+        return res.sendError(res, "Heap already exist with same Reel Heap Number, Ginner Heap No. and Total Quantity(Kg/MT) for this Season.");
+      }
+    }
+
     const data: any = {
       ginner_id: req.body.ginnerId,
       season_id: req.body.seasonId,
@@ -1709,7 +1748,7 @@ const createHeap = async (req: Request, res: Response) => {
       qty_stock: req.body.total_qty_used
     };
 
-    const ginheap = await GinHeap.create(data);
+    const ginheap = await GinHeap.create(data, { transaction });
     // const ginheap:any={};
 
     for await (const cotton of req.body.chooseCotton) {
@@ -1748,25 +1787,28 @@ const createHeap = async (req: Request, res: Response) => {
           id: cotton.tran_id,
           qty_stock: { [Op.gt]: 0 },
         },
+        transaction
       });
 
       let update = await Transaction.update(
-        { qty_stock: trans.dataValues.qty_stock - Number(cotton.qty_used), heap_status: "Sold" },
-        { where: { id: cotton.tran_id } }
+        { qty_stock: trans?.dataValues.qty_stock - Number(cotton.qty_used), heap_status: "Sold" },
+        { where: { id: cotton.tran_id }, transaction }
       );
       let cot = await CottonSelection.create({
         process_id: 0,
         heap_id: ginheap.id,
         transaction_id: cotton.tran_id,
         qty_used: cotton.qty_used,
-      });
+      }, { transaction });
       // }
       // }
     }
-
-    res.sendSuccess(res, { ginheap });
+    
+    await transaction.commit();
+    return res.sendSuccess(res, { ginheap });
   } catch (error: any) {
-    console.error(error);
+    console.log(error);
+    await transaction.rollback();
     return res.sendError(res, error.message, error);
   }
 };
@@ -1970,7 +2012,29 @@ const exportGinnerSales = async (req: Request, res: Response) => {
 
 //create Ginner Sale
 const createGinnerSales = async (req: Request, res: Response) => {
+  const transaction = await sequelize.transaction();
   try {
+    if (req.body.ginnerId && req.body.seasonId && req.body.programId && req.body.totalQty && req.body.noOfBales && req.body.lotNo) {
+      let SalesExist = await GinSales.findOne(
+        { where: { 
+          ginner_id: req.body.ginnerId,
+          season_id: req.body.seasonId,
+          program_id: req.body.programId,
+          total_qty: Number(req.body.totalQty),
+          no_of_bales: req.body.noOfBales,
+          lot_no: req.body.lotNo,
+          buyer: req.body.buyer,
+          reel_lot_no: req.body.reelLotNno ? req.body.reelLotNno : null,
+          despatch_from: req.body.despatchFrom,
+          press_no: req.body.pressNo
+        }, transaction },
+      );
+      if (SalesExist) {
+        await transaction.rollback();
+        return res.sendError(res, "Sales already exist with same Lot Number, Reel Lot No.,Dispatch from, No. of Bales and Total Quantity(Kg/MT) for this Season.");
+      }
+    }
+
     const data = {
       ginner_id: req.body.ginnerId,
       program_id: req.body.programId,
@@ -1994,7 +2058,7 @@ const createGinnerSales = async (req: Request, res: Response) => {
       buyer_type: req.body.buyerType?.toLowerCase() === 'ginner' ? 'Ginner' : 'Spinner',
       buyer_ginner: req.body.buyerGinner,
     };
-    const ginSales = await GinSales.create(data);
+    const ginSales = await GinSales.create(data, { transaction });
     let uniqueFilename = `gin_sales_qrcode_${Date.now()}.png`;
     let da = encrypt("Ginner,Sale," + ginSales.id);
     let aa = await generateOnlyQrCode(da, uniqueFilename);
@@ -2004,6 +2068,7 @@ const createGinnerSales = async (req: Request, res: Response) => {
         where: {
           id: ginSales.id,
         },
+        transaction
       }
     );
     for await (const bale of req.body.bales) {
@@ -2051,19 +2116,22 @@ const createGinnerSales = async (req: Request, res: Response) => {
         bale_id: bale.id,
         gin_to_gin_sale: req.body.buyerType?.toLowerCase() === 'ginner' ? true : false
       };
-      const bales = await BaleSelection.create(baleData);
+      const bales = await BaleSelection.create(baleData, { transaction });
       const ginbaleSatus = await GinBale.update(
         { sold_status: true, 
           is_gin_to_gin_sale: req.body.buyerType?.toLowerCase() === 'ginner' ? true : bale.is_gin_to_gin ? true : null, 
           gin_to_gin_sold_status:  bale.is_gin_to_gin ? true : null , 
           sold_by_sales_id: ginSales.id
         },
-        { where: { id: bale.id } }
+        { where: { id: bale.id }, transaction }
       );
     }
+
+    await transaction.commit();
     res.sendSuccess(res, { ginSales });
   } catch (error: any) {
     console.error(error);
+    await transaction.rollback();
     return res.sendError(res, error.message, error);
   }
 };
