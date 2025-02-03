@@ -1087,7 +1087,7 @@ const getDataAll = async (
         limit: 1
       });
     }
-    // reqData.season = seasonOne.id;
+    reqData.season = seasonOne.id;
     const ginSaleWhere = getBaleSelWhereQuery(reqData);
     const lintWhere = getSpinnerLintQuery(reqData);
     const spinProcessWhere = getSpinnerProcessWhereQuery(reqData);
