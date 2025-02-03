@@ -14029,6 +14029,14 @@ const fetchPscpProcurementLiveTracker = async (req: Request, res: Response) => {
           JOIN filtered_ginners ON gp.ginner_id = filtered_ginners.id
           WHERE
             gp.program_id = ANY (filtered_ginners.program_id)
+            AND 
+          (
+              gp.scd_verified_status = true AND gb.scd_verified_status IS NOT TRUE
+            )
+            OR
+            (
+              gp.scd_verified_status = false AND gb.scd_verified_status IS FALSE
+            )
             AND ${baleConditionSql}
           GROUP BY
             gp.ginner_id
