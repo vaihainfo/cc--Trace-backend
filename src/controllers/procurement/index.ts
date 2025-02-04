@@ -1386,7 +1386,7 @@ const uploadTransactionBulk = async (req: Request, res: Response) => {
             saveFailedRecord(failedRecord);
           } else {
             let transactionData: any = {
-              date: new Date(data.date).toISOString(),
+              date: data.date,
               country_id: country.id,
               state_id: state.id,
               district_id: district.id,
