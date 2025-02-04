@@ -13244,10 +13244,10 @@ const fetchPscpPrecurement = async (req: Request, res: Response) => {
       obj.total_qty_sold_lint =
         (processSale?.dataValues["total_qty"] ?? 0) / 1000;
       obj.balace_stock =
-        obj.no_of_bales > obj.sold_bales ? Number(obj.no_of_bales - obj.sold_bales) : 0;
+        (obj.no_of_bales + obj.total_bales_received) > (obj.sold_bales + obj.total_bales_transfered + obj.greyout_bales) ? Number((obj.no_of_bales + obj.total_bales_received) - (obj.sold_bales + obj.total_bales_transfered + obj.greyout_bales)) : 0;
       obj.balance_lint_quantity =
-        obj.total_qty_lint_produced > obj.total_qty_sold_lint
-          ? obj.total_qty_lint_produced - obj.total_qty_sold_lint
+        (obj.total_qty_lint_produced + obj.total_qty_lint_received) > (obj.total_qty_sold_lint + obj.total_qty_lint_transfered + obj.greyout_qty) 
+          ? (obj.total_qty_lint_produced + obj.total_qty_lint_received) - (obj.total_qty_sold_lint + obj.total_qty_lint_transfered + obj.greyout_qty)
           : 0;
 
       data.push({
