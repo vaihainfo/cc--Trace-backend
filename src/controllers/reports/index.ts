@@ -14056,8 +14056,6 @@ const fetchPscpProcurementLiveTracker = async (req: Request, res: Response) => {
             gp.program_id = ANY (filtered_ginners.program_id)
             AND
             (
-              gp.greyout_status = true
-              OR
               (
               gp.scd_verified_status = true AND gb.scd_verified_status IS NOT TRUE
               )
@@ -14252,7 +14250,7 @@ const fetchPscpProcurementLiveTracker = async (req: Request, res: Response) => {
         COALESCE(go.confirmed_lint_order, 0) AS order_in_hand,
         CAST((COALESCE(gp.no_of_bales, 0) + COALESCE(gtgr.no_of_bales, 0)) - (COALESCE(gs.no_of_bales, 0) + COALESCE(gbg.no_of_bales, 0) + COALESCE(gtg.no_of_bales, 0)) AS INTEGER) AS balace_stock,
         CAST(ROUND(
-            CAST((COALESCE(gb.total_qty, 0) / 1000 + COALESCE(gtgr.lint_qty, 0)) - (COALESCE(gs.total_qty, 0) / 1000 + COALESCE(gbg.total_qty, 0) / 1000 + COALESCE(gtg.lint_qty, 0) / 1000) AS NUMERIC), 
+            CAST((COALESCE(gb.total_qty, 0) / 1000 + COALESCE(gtgr.lint_qty, 0) / 1000) - (COALESCE(gs.total_qty, 0) / 1000 + COALESCE(gbg.total_qty, 0) / 1000 + COALESCE(gtg.lint_qty, 0) / 1000) AS NUMERIC), 
             2
         ) AS DOUBLE PRECISION) AS balance_lint_quantity,
         CASE
@@ -14568,6 +14566,7 @@ const exportPscpProcurementLiveTracker = async (
     let baleCondition: string[] = [];
     let baleSaleCondition: string[] = [];
     let seedAllocationCondition: string[] = [];
+    let ginToGinSaleCondition: string[] = [];
 
     if (exportType === "all") {
 
@@ -14601,6 +14600,7 @@ const exportPscpProcurementLiveTracker = async (
         baleCondition.push(`gp.season_id IN (:seasonIds)`);
         baleSaleCondition.push(`gp.season_id IN (:seasonIds)`);
         seedAllocationCondition.push(`gv.season_id IN (:seasonIds)`);
+        ginToGinSaleCondition.push(`gs.season_id IN (:seasonIds)`);
       }
 
       if (ginnerId) {
@@ -14614,6 +14614,7 @@ const exportPscpProcurementLiveTracker = async (
       const baleConditionSql = baleCondition.length ? `${baleCondition.join(' AND ')}` : '1=1';
       const baleSaleConditionSql = baleSaleCondition.length ? `${baleSaleCondition.join(' AND ')}` : '1=1';
       const seedAllocationConditionSql = seedAllocationCondition.length ? `${seedAllocationCondition.join(' AND ')}` : '1=1';
+      const ginToGinSaleConditionSql = ginToGinSaleCondition.length ? `${ginToGinSaleCondition.join(' AND ')}` : '1=1';
 
 
       const currentDate = new Date();
@@ -14638,9 +14639,9 @@ const exportPscpProcurementLiveTracker = async (
       const worksheet = workbook.addWorksheet("Sheet1");
 
       if (isBrand === 'true') {
-        worksheet.mergeCells('A1:Q1');
+        worksheet.mergeCells('A1:W1');
       } else {
-        worksheet.mergeCells("A1:R1");
+        worksheet.mergeCells("A1:X1");
       }
       const mergedCell = worksheet.getCell("A1");
       mergedCell.value = "CottonConnect | PSCP Procurement and Sell Live Tracker";
@@ -14666,6 +14667,12 @@ const exportPscpProcurementLiveTracker = async (
           "Lint Sold (MT)",
           "Balance stock at Ginner (Bales )",
           "Balance lint cotton stock at Ginner (MT)",
+          "No. of Bales Greyed Out",
+          "Lint Greyed Out (MT)",
+          "No. of Bales Received",
+          "Lint Received (MT)",
+          "No. of Bales Transfered",
+          "Lint Transfered (MT)",
           "Ginner Sale %",
         ]);
       } else {
@@ -14687,6 +14694,12 @@ const exportPscpProcurementLiveTracker = async (
           "Ginner Order in Hand (MT)",
           "Balance stock at Ginner (Bales )",
           "Balance lint cotton stock at Ginner (MT)",
+          "No. of Bales Greyed Out",
+          "Lint Greyed Out (MT)",
+          "No. of Bales Received",
+          "Lint Received (MT)",
+          "No. of Bales Transfered",
+          "Lint Transfered (MT)",
           "Ginner Sale %",
         ]);
       }
@@ -14762,6 +14775,38 @@ const exportPscpProcurementLiveTracker = async (
             GROUP BY
               gp.ginner_id
           ),
+          gin_bale_greyout_data AS (
+            SELECT
+              gp.ginner_id,
+              COUNT(gb.id) AS no_of_bales,
+              COALESCE(
+                    SUM(
+                      CASE
+                        WHEN gb.old_weight IS NOT NULL THEN CAST(gb.old_weight AS DOUBLE PRECISION)
+                        ELSE CAST(gb.weight AS DOUBLE PRECISION)
+                      END
+                    ), 0
+                ) AS total_qty
+            FROM
+              "gin-bales" gb
+            JOIN gin_processes gp ON gb.process_id = gp.id
+            JOIN filtered_ginners ON gp.ginner_id = filtered_ginners.id
+            WHERE
+              gp.program_id = ANY (filtered_ginners.program_id)
+              AND
+              (
+                (
+                gp.scd_verified_status = true AND gb.scd_verified_status IS NOT TRUE
+                )
+                OR
+                (
+                gp.scd_verified_status = false AND gb.scd_verified_status IS FALSE
+                )
+              )
+              AND ${baleConditionSql}
+            GROUP BY
+              gp.ginner_id
+          ),
           pending_seed_cotton_data AS (
             SELECT
               t.mapped_ginner,
@@ -14777,66 +14822,122 @@ const exportPscpProcurementLiveTracker = async (
             GROUP BY
               t.mapped_ginner
           ),
-        gin_sales_data AS (
-                SELECT
-                    gs.ginner_id,
+          gin_sales_data AS (
+                  SELECT
+                      gs.ginner_id,
+                      COUNT(gb.id) AS no_of_bales,
+                      COALESCE(
+                        SUM(
+                          CASE
+                            WHEN gb.old_weight IS NOT NULL THEN CAST(gb.old_weight AS DOUBLE PRECISION)
+                            ELSE CAST(gb.weight AS DOUBLE PRECISION)
+                          END
+                        ), 0
+                      ) AS total_qty
+                  FROM
+                      "gin-bales" gb
+                  LEFT JOIN 
+                    bale_selections bs ON gb.id = bs.bale_id
+                  LEFT JOIN 
+                      gin_sales gs ON gs.id = bs.sales_id
+                  JOIN filtered_ginners ON gs.ginner_id = filtered_ginners.id
+                  LEFT JOIN gin_processes gp ON gb.process_id = gp.id
+                  WHERE
+                      gs.program_id = ANY (filtered_ginners.program_id)
+                      AND ${baleSaleConditionSql}
+                      AND gs.status in ('Pending', 'Pending for QR scanning', 'Partially Accepted', 'Partially Rejected','Sold')
+                      AND buyer_ginner IS NULL
+                  GROUP BY
+                      gs.ginner_id
+              ),
+          gin_to_gin_sales_data AS (
+                  SELECT
+                      gs.ginner_id,
+                      COUNT(gb.id) AS no_of_bales,
+                      COALESCE(
+                        SUM(
+                          CASE
+                            WHEN gb.old_weight IS NOT NULL THEN CAST(gb.old_weight AS DOUBLE PRECISION)
+                            ELSE CAST(gb.weight AS DOUBLE PRECISION)
+                          END
+                        ), 0
+                      ) AS lint_qty
+                  FROM
+                      "gin-bales" gb
+                  LEFT JOIN 
+                    bale_selections bs ON gb.id = bs.bale_id
+                  LEFT JOIN 
+                      gin_sales gs ON gs.id = bs.sales_id
+                  JOIN filtered_ginners ON gs.ginner_id = filtered_ginners.id
+                  LEFT JOIN gin_processes gp ON gb.process_id = gp.id
+                  WHERE
+                      gs.program_id = ANY (filtered_ginners.program_id)
+                      AND ${baleSaleConditionSql}
+                      AND gs.status in ('Pending', 'Pending for QR scanning', 'Partially Accepted', 'Partially Rejected','Sold')
+                      AND gs.buyer_ginner IS NOT NULL
+                      AND gs.buyer_type = 'Ginner'
+                  GROUP BY
+                      gs.ginner_id
+              ),
+          gin_to_gin_recieved_data AS (
+                  SELECT 
+                    filtered_ginners.id AS ginner_id,
                     COUNT(gb.id) AS no_of_bales,
                     COALESCE(
                       SUM(
-                        CASE
-                          WHEN gb.old_weight IS NOT NULL THEN CAST(gb.old_weight AS DOUBLE PRECISION)
-                          ELSE CAST(gb.weight AS DOUBLE PRECISION)
-                        END
+                        CAST(gb.weight AS DOUBLE PRECISION)
                       ), 0
-                    ) AS total_qty
-                FROM
-                    "gin-bales" gb
-                LEFT JOIN 
-                  bale_selections bs ON gb.id = bs.bale_id
-                LEFT JOIN 
-                    gin_sales gs ON gs.id = bs.sales_id
-                JOIN filtered_ginners ON gs.ginner_id = filtered_ginners.id
-                LEFT JOIN gin_processes gp ON gb.process_id = gp.id
-                WHERE
+                    ) AS lint_qty
+                  FROM 
+                    gin_to_gin_sales gtg
+                  JOIN
+                    gin_sales gs ON gtg.sales_id = gs.id
+                  JOIN 
+                    "gin-bales" gb ON gtg.bale_id = gb.id
+                  JOIN 
+                    filtered_ginners ON gs.buyer_ginner = filtered_ginners.id
+                  WHERE
                     gs.program_id = ANY (filtered_ginners.program_id)
-                    AND ${baleSaleConditionSql}
-                    AND gs.status in ('Pending', 'Pending for QR scanning', 'Partially Accepted', 'Partially Rejected','Sold')
-                GROUP BY
-                    gs.ginner_id
-            ),
+                    AND ${ginToGinSaleConditionSql}
+                    AND gs.status IN ('Sold', 'Partially Accepted', 'Partially Rejected')
+                    AND gtg.gin_accepted_status = true
+                    AND gs.buyer_type ='Ginner'
+                  GROUP BY 
+                    gs.id, filtered_ginners.id
+              ),
           expected_cotton_data AS (
-          SELECT
-            gv.ginner_id,
-            COALESCE(SUM(CAST("farms"."total_estimated_cotton"AS DOUBLE PRECISION)), 0) AS expected_seed_cotton
-            FROM "ginner_allocated_villages" as gv
-                    LEFT JOIN 
-                          "villages" AS "farmer->village" ON "gv"."village_id" = "farmer->village"."id" 
-                     LEFT JOIN 
-                          "farmers" AS "farmer" ON "farmer->village"."id" = "farmer"."village_id" and "farmer"."brand_id" ="gv"."brand_id"
-                     LEFT JOIN 
-                          "farms" as "farms" on farms.farmer_id = "farmer".id and farms.season_id = gv.season_id
-                     LEFT JOIN 
-                          "seasons" AS "season" ON "gv"."season_id" = "season"."id"
-          LEFT JOIN filtered_ginners ON gv.ginner_id = filtered_ginners.id
-          WHERE
-            "farmer".program_id = ANY (filtered_ginners.program_id)
-           AND ${seedAllocationConditionSql} 
-          GROUP BY
-            gv.ginner_id
-        ),
-        expected_lint_cotton_data AS (
-          SELECT
-            gec.ginner_id,
-            SUM(CAST(gec.expected_lint AS DOUBLE PRECISION)) AS expected_lint
-          FROM
-            ginner_expected_cottons gec
-          LEFT JOIN filtered_ginners ON gec.ginner_id = filtered_ginners.id
-          WHERE
-            gec.program_id = ANY (filtered_ginners.program_id)
-            AND ${seasonConditionSql}
-          GROUP BY
-            gec.ginner_id
-        ),
+            SELECT
+              gv.ginner_id,
+              COALESCE(SUM(CAST("farms"."total_estimated_cotton"AS DOUBLE PRECISION)), 0) AS expected_seed_cotton
+              FROM "ginner_allocated_villages" as gv
+                      LEFT JOIN 
+                            "villages" AS "farmer->village" ON "gv"."village_id" = "farmer->village"."id" 
+                       LEFT JOIN 
+                            "farmers" AS "farmer" ON "farmer->village"."id" = "farmer"."village_id" and "farmer"."brand_id" ="gv"."brand_id"
+                       LEFT JOIN 
+                            "farms" as "farms" on farms.farmer_id = "farmer".id and farms.season_id = gv.season_id
+                       LEFT JOIN 
+                            "seasons" AS "season" ON "gv"."season_id" = "season"."id"
+            LEFT JOIN filtered_ginners ON gv.ginner_id = filtered_ginners.id
+            WHERE
+              "farmer".program_id = ANY (filtered_ginners.program_id)
+             AND ${seedAllocationConditionSql} 
+            GROUP BY
+              gv.ginner_id
+          ),
+          expected_lint_cotton_data AS (
+            SELECT
+              gec.ginner_id,
+              SUM(CAST(gec.expected_lint AS DOUBLE PRECISION)) AS expected_lint
+            FROM
+              ginner_expected_cottons gec
+            LEFT JOIN filtered_ginners ON gec.ginner_id = filtered_ginners.id
+            WHERE
+              gec.program_id = ANY (filtered_ginners.program_id)
+              AND ${seasonConditionSql}
+            GROUP BY
+              gec.ginner_id
+          ),
           ginner_order_data AS (
             SELECT
               go.ginner_id,
@@ -14851,6 +14952,7 @@ const exportPscpProcurementLiveTracker = async (
               go.ginner_id
           )
         SELECT
+          fg.id AS ginner_id,
           fg.name AS ginner_name,
           fg.state_name,
           fg.county_name,
@@ -14873,14 +14975,23 @@ const exportPscpProcurementLiveTracker = async (
           COALESCE(gp.no_of_bales, 0) AS no_of_bales,
           COALESCE(gb.total_qty, 0) / 1000 AS total_qty_lint_produced,
           COALESCE(gs.no_of_bales, 0) AS sold_bales,
+          COALESCE(gbg.no_of_bales, 0) AS greyout_bales,
+          COALESCE(gbg.total_qty, 0) / 1000 AS greyout_qty,
+          COALESCE(gtg.no_of_bales, 0) AS total_bales_transfered,
+          COALESCE(gtg.lint_qty, 0) / 1000 AS total_qty_lint_transfered,
+          COALESCE(gtgr.no_of_bales, 0) AS total_bales_received,
+          COALESCE(gtgr.lint_qty, 0) / 1000 AS total_qty_lint_received,
           CASE
             WHEN COALESCE(gp.no_of_bales, 0) != 0 THEN COALESCE(gb.total_qty, 0) / COALESCE(gp.no_of_bales, 0)
             ELSE 0
           END AS average_weight,
           COALESCE(gs.total_qty, 0) / 1000 AS total_qty_sold_lint,
           COALESCE(go.confirmed_lint_order, 0) AS order_in_hand,
-          CAST(COALESCE(gp.no_of_bales, 0) - COALESCE(gs.no_of_bales, 0) AS INTEGER) AS balace_stock,
-          COALESCE(gb.total_qty, 0) / 1000 - COALESCE(gs.total_qty, 0) / 1000 AS balance_lint_quantity,
+          CAST((COALESCE(gp.no_of_bales, 0) + COALESCE(gtgr.no_of_bales, 0)) - (COALESCE(gs.no_of_bales, 0) + COALESCE(gbg.no_of_bales, 0) + COALESCE(gtg.no_of_bales, 0)) AS INTEGER) AS balace_stock,
+          CAST(ROUND(
+              CAST((COALESCE(gb.total_qty, 0) / 1000 + COALESCE(gtgr.lint_qty, 0) / 1000) - (COALESCE(gs.total_qty, 0) / 1000 + COALESCE(gbg.total_qty, 0) / 1000 + COALESCE(gtg.lint_qty, 0) / 1000) AS NUMERIC), 
+              2
+          ) AS DOUBLE PRECISION) AS balance_lint_quantity,
           CASE
             WHEN COALESCE(gb.total_qty, 0) != 0 THEN
               CASE
@@ -14905,6 +15016,9 @@ const exportPscpProcurementLiveTracker = async (
           LEFT JOIN expected_cotton_data ec ON fg.id = ec.ginner_id
           LEFT JOIN expected_lint_cotton_data elc ON fg.id = elc.ginner_id
           LEFT JOIN ginner_order_data go ON fg.id = go.ginner_id
+          LEFT JOIN gin_bale_greyout_data gbg ON fg.id = gbg.ginner_id
+          LEFT JOIN gin_to_gin_sales_data gtg ON fg.id = gtg.ginner_id
+          LEFT JOIN gin_to_gin_recieved_data gtgr ON fg.id = gtgr.ginner_id
         ORDER BY
           fg.id DESC
         LIMIT :limit OFFSET :offset
@@ -14948,6 +15062,12 @@ const exportPscpProcurementLiveTracker = async (
               : 0,
             balace_stock: obj.balace_stock ? Number(obj.balace_stock) : 0,
             balance_lint_quantity: obj.balance_lint_quantity ? Number(formatDecimal(obj.balance_lint_quantity)) : 0,
+            greyout_bales: obj.greyout_bales ? Number(obj.greyout_bales) : 0,
+            greyout_qty: obj.greyout_qty ? Number(obj.greyout_qty) : 0,
+            total_bales_received: obj.total_bales_received ? Number(obj.total_bales_received) : 0,
+            total_qty_lint_received: obj.total_qty_lint_received ? Number(obj.total_qty_lint_received) : 0,
+            total_bales_transfered: obj.total_bales_transfered ? Number(obj.total_bales_transfered) : 0,
+            total_qty_lint_transfered: obj.total_qty_lint_transfered ? Number(obj.total_qty_lint_transfered) : 0,
             ginner_sale_percentage: Number(obj.ginner_sale_percentage),
           });
         } else {
@@ -14973,6 +15093,12 @@ const exportPscpProcurementLiveTracker = async (
             order_in_hand: obj.order_in_hand ? Number(formatDecimal(obj.order_in_hand)) : 0,
             balace_stock: obj.balace_stock ? Number(obj.balace_stock) : 0,
             balance_lint_quantity: obj.balance_lint_quantity ? Number(formatDecimal(obj.balance_lint_quantity)) : 0,
+            greyout_bales: obj.greyout_bales ? Number(obj.greyout_bales) : 0,
+            greyout_qty: obj.greyout_qty ? Number(formatDecimal(obj.greyout_qty)) : 0,
+            total_bales_received: obj.total_bales_received ? Number(obj.total_bales_received) : 0,
+            total_qty_lint_received: obj.total_qty_lint_received ? Number(formatDecimal(obj.total_qty_lint_received)) : 0,
+            total_bales_transfered: obj.total_bales_transfered ? Number(obj.total_bales_transfered) : 0,
+            total_qty_lint_transfered: obj.total_qty_lint_transfered ? Number(formatDecimal(obj.total_qty_lint_transfered)) : 0,
             ginner_sale_percentage: Number(obj.ginner_sale_percentage),
           });
         }
