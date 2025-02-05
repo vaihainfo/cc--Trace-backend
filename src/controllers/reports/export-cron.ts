@@ -70,16 +70,18 @@ import FailedRecords from "../../models/failed-records.model";
 import { NUMBER } from "sequelize";
 import GinHeap from "../../models/gin-heap.model";
 import ValidationProject from "../../models/validation-project.model";
+import GinToGinSale from "../../models/gin-to-gin-sale.model";
 
 
 const exportReportsTameTaking = async () => {
+  await generatePscpCottonProcurement();
   // //call all export reports one by one on every cron
-  await generateOrganicFarmerReport();
-  await generateNonOrganicFarmerReport();
-  await generateProcurementReport(); // taking time
-  await generateAgentTransactions(); // taking time
-  await generateGinnerSales();
-  await generateSpinProcessBackwardfTraceabilty();
+  // await generateOrganicFarmerReport();
+  // await generateNonOrganicFarmerReport();
+  // await generateProcurementReport(); // taking time
+  // await generateAgentTransactions(); // taking time
+  // await generateGinnerSales();
+  // await generateSpinProcessBackwardfTraceabilty();
 
   console.log('TameTaking Cron Job Completed to execute all reports.');
 }
@@ -1584,13 +1586,181 @@ const generatePscpCottonProcurement = async () => {
               model: GinBale,
               as: "bale",
               attributes: [],
+              include: [{
+                model: GinProcess,
+                as: "ginprocess",
+                attributes: [],
+              }]
             },
           ],
           where: {
-            "$sales.season_id$": farm.season_id,
-            "$sales.status$": { [Op.in]: ['Pending', 'Pending for QR scanning', 'Partially Accepted', 'Partially Rejected', 'Sold'] }
+            "$bale.ginprocess.season_id$": farm.season_id,
+            "$sales.status$": { [Op.in]: ['Pending', 'Pending for QR scanning', 'Partially Accepted', 'Partially Rejected', 'Sold'] },
+            "$sales.buyer_ginner$": { [Op.is]: null }
           },
-          group: ["sales.season_id"]
+          group: ["bale.ginprocess.season_id"]
+        })
+
+        let ginToGinSale = await BaleSelection.findOne({
+          attributes: [
+            [
+              sequelize.fn(
+                "COALESCE",
+                sequelize.fn(
+                  "SUM",
+                  sequelize.literal(`
+                    CASE
+                      WHEN "bale"."old_weight" IS NOT NULL THEN CAST("bale"."old_weight" AS DOUBLE PRECISION)
+                      ELSE CAST("bale"."weight" AS DOUBLE PRECISION)
+                    END
+                  `)
+                ),
+                0
+              ),
+              "total_qty",
+            ],
+            [
+              sequelize.fn("COUNT", Sequelize.literal("DISTINCT bale_id")),
+              "no_of_bales",
+            ],
+          ],
+          include: [
+            {
+              model: GinSales,
+              as: "sales",
+              attributes: [],
+              include: [{
+                model: Ginner,
+                as: "ginner",
+                attributes: [],
+              }]
+            },
+            {
+              model: GinBale,
+              as: "bale",
+              attributes: [],
+              include: [{
+                model: GinProcess,
+                as: "ginprocess",
+                attributes: [],
+              }]
+            },
+          ],
+          where: {
+            "$bale.ginprocess.season_id$": farm.season_id,
+            "$sales.status$": { [Op.in]: ['Pending', 'Pending for QR scanning', 'Partially Accepted', 'Partially Rejected', 'Sold'] },
+            "$sales.buyer_ginner$": { [Op.not]: null },
+            "$sales.buyer_type$": 'Ginner'
+          },
+          group: ["bale.ginprocess.season_id"]
+        })
+
+        let ginbaleGreyout= await GinBale.findOne({
+          attributes: [
+            [
+              sequelize.fn(
+                "COALESCE",
+                sequelize.fn(
+                  "SUM",
+                  sequelize.literal(`
+                    CASE
+                      WHEN "gin-bales"."old_weight" IS NOT NULL THEN CAST("gin-bales"."old_weight" AS DOUBLE PRECISION)
+                      ELSE CAST("gin-bales"."weight" AS DOUBLE PRECISION)
+                    END
+                  `)
+                ),
+                0
+              ),
+              "total_qty",
+            ],
+            [
+              sequelize.fn("COUNT", Sequelize.literal('DISTINCT "gin-bales"."id"')),
+              "no_of_bales",
+            ],
+          ],
+          include: [
+            {
+              model: GinProcess,
+              as: "ginprocess",
+              attributes: [],
+              include: [
+                {
+                  model: Ginner,
+                  as: "ginner",
+                  attributes: [],
+                },
+              ]
+            },
+          ],
+          where: {
+            "$ginprocess.season_id$": farm.season_id, 
+            [Op.or]: [
+              {
+                [Op.and]: [
+                  { "$ginprocess.scd_verified_status$": true },
+                  { "$gin-bales.scd_verified_status$": { [Op.not]: true } }
+                ]
+              },
+              {
+                [Op.and]: [
+                  { "$ginprocess.scd_verified_status$": false },
+                  { "$gin-bales.scd_verified_status$": { [Op.is]: false } }
+                ]
+              }
+            ]
+          },
+          group: ["ginprocess.season_id"],
+        });
+  
+        const ginToGinReceive = await GinToGinSale.findOne({
+          attributes: [
+            [
+              sequelize.fn(
+                "COALESCE",
+                sequelize.fn(
+                  "SUM",
+                  sequelize.literal(`
+                    CASE
+                      WHEN "bale"."old_weight" IS NOT NULL THEN CAST("bale"."old_weight" AS DOUBLE PRECISION)
+                      ELSE CAST("bale"."weight" AS DOUBLE PRECISION)
+                    END
+                  `)
+                ),
+                0
+              ),
+              "total_qty",
+            ],
+            [
+              sequelize.fn("COUNT", Sequelize.literal('DISTINCT "bale"."id"')),
+              "no_of_bales",
+            ],
+          ],
+          include: [
+            {
+              model: GinSales,
+              as: "ginsales",
+              attributes: [],
+              include: [
+                {
+                  model: Ginner,
+                  as: "ginner",
+                  attributes: [],
+                },
+              ]
+            },
+            {
+              model: GinBale,
+              as: "bale",
+              attributes: [],
+            },
+          ],
+          where: {
+            "$ginsales.season_id$": farm.season_id,
+            "$ginsales.status$": { [Op.in]: ['Partially Accepted', 'Partially Rejected', 'Sold'] },
+            gin_accepted_status: { [Op.is]: true },
+            "$ginsales.buyer_type$": 'Ginner'
+          },
+          group: ["ginsales.season_id"]
         })
 
         // Populate obj with calculated values based on retrieved data
@@ -1601,11 +1771,27 @@ const generatePscpCottonProcurement = async () => {
         obj.procured_lint_cotton = ((procurementRow?.dataValues?.procurement_seed_cotton ?? 0) * 35) / 100 / 1000;
         obj.no_of_bales = processGin?.dataValues?.no_of_bales ? Number(processGin?.dataValues?.no_of_bales) : 0;
         obj.total_qty_lint_produced = (ginBales ? ginBales?.dataValues?.total_qty / 1000 : 0);
+        obj.greyout_bales = ginbaleGreyout?.dataValues.no_of_bales ? Number(ginbaleGreyout?.dataValues.no_of_bales) : 0;
+        obj.greyout_qty = ginbaleGreyout
+          ? (ginbaleGreyout.dataValues.total_qty ?? 0) / 1000
+          : 0;
+        obj.total_bales_transfered = ginToGinSale?.dataValues.no_of_bales ? Number(ginToGinSale?.dataValues.no_of_bales) : 0;
+        obj.total_qty_lint_transfered = ginToGinSale
+          ? (ginToGinSale.dataValues.total_qty ?? 0) / 1000
+          : 0;
+        obj.total_bales_received = ginToGinReceive?.dataValues.no_of_bales ? Number(ginToGinReceive?.dataValues.no_of_bales) : 0;
+        obj.total_qty_lint_received = ginToGinReceive
+          ? (ginToGinReceive.dataValues.total_qty ?? 0) / 1000
+          : 0;
         obj.sold_bales = processSale?.dataValues?.no_of_bales ? Number(processSale?.dataValues?.no_of_bales) : 0;
         obj.average_weight = (ginBales?.dataValues?.total_qty ?? 0) / (obj.no_of_bales ?? 0);
         obj.total_qty_sold_lint = (processSale?.dataValues?.total_qty ?? 0) / 1000;
-        obj.balace_stock = (obj.no_of_bales > obj.sold_bales ? Number(obj.no_of_bales - obj.sold_bales) : 0);
-        obj.balance_lint_quantity = (obj.total_qty_lint_produced > obj.total_qty_sold_lint ? obj.total_qty_lint_produced - obj.total_qty_sold_lint : 0);
+        obj.balace_stock =
+          (obj.no_of_bales + obj.total_bales_received) > (obj.sold_bales + obj.total_bales_transfered + obj.greyout_bales) ? Number((obj.no_of_bales + obj.total_bales_received) - (obj.sold_bales + obj.total_bales_transfered + obj.greyout_bales)) : 0;
+        obj.balance_lint_quantity =
+          (obj.total_qty_lint_produced + obj.total_qty_lint_received) > (obj.total_qty_sold_lint + obj.total_qty_lint_transfered + obj.greyout_qty) 
+            ? (obj.total_qty_lint_produced + obj.total_qty_lint_received) - (obj.total_qty_sold_lint + obj.total_qty_lint_transfered + obj.greyout_qty)
+            : 0;
 
         // Add the row to the worksheet
         const rowValues = [
@@ -1622,14 +1808,20 @@ const generatePscpCottonProcurement = async () => {
           Number(formatDecimal(obj.average_weight)),
           Number(formatDecimal(obj.total_qty_sold_lint)),
           Number(obj.balace_stock),
-          Number(formatDecimal(obj.balance_lint_quantity))
+          Number(formatDecimal(obj.balance_lint_quantity)),
+          Number(obj.greyout_bales),
+          Number(formatDecimal(obj.greyout_qty)),
+          Number(obj.total_bales_received),
+          Number(formatDecimal(obj.total_qty_lint_received)),
+          Number(obj.total_bales_transfered),
+          Number(formatDecimal(obj.total_qty_lint_transfered))
         ];
 
         let currentWorksheet = workbook.getWorksheet(`Procurement Report ${worksheetIndex}`);
         if (!currentWorksheet) {
           currentWorksheet = workbook.addWorksheet(`Procurement Report ${worksheetIndex}`);
           if (worksheetIndex == 1) {
-            currentWorksheet.mergeCells('A1:O1');
+            currentWorksheet.mergeCells('A1:T1');
             const mergedCell = currentWorksheet.getCell('A1');
             mergedCell.value = 'Cotton Connect | PSCP Cotton Procurement Report';
             mergedCell.font = { bold: true };
@@ -1650,6 +1842,12 @@ const generatePscpCottonProcurement = async () => {
             "Total Quantity of Lint Sold (in MT)",
             "Balance Stock of Bales",
             "Balance Lint Quantity Stock (in MT)",
+            "No. of Bales Greyed Out",
+            "Total Quantity of Lint Greyed Out (MT)",
+            "No. of Bales Received",
+            "Total Quantity of Lint Received (MT)",
+            "No. of Bales Transfered",
+            "Total Quantity of Lint Transfered (MT)",
           ]);
           newHeaderRow.font = { bold: true };
         }
