@@ -27,7 +27,7 @@ module.exports = {
             `UPDATE comber_selections SET yarn_id = :yarnId WHERE id = :id`,
             {
               replacements: { 
-                yarnId: selection.yarn_id,
+                yarnId: exists[0].id,
                 id: selection.id 
               },
               type: Sequelize.QueryTypes.UPDATE
