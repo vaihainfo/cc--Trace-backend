@@ -44,5 +44,4 @@ router.get('/get-seed-district', fetchDistrictByState);
 router.get('/get-seed-block', fetchBlockByDistrict);
 router.get('/get-seed-village', fetchVillageByBlock);
 
-
 export default router;   

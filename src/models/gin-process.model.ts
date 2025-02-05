@@ -100,6 +100,45 @@ const GinProcess = db.define('gin_process', {
     allowNull: true,
     defaultValue: null,
   },
+  te_verified_status: {
+    type: DataTypes.BOOLEAN,
+  },
+  te_verified_total_qty: {
+    type: DataTypes.DOUBLE,
+  },
+  te_verified_bales: {
+    type: DataTypes.DOUBLE,
+  },
+  gin_verified_status: {
+    type: DataTypes.BOOLEAN,
+  },
+  gin_verified_total_qty: {
+    type: DataTypes.DOUBLE,
+  },
+  gin_verified_bales: {
+    type: DataTypes.DOUBLE,
+  },
+  scm_verified_status: {
+    type: DataTypes.BOOLEAN,
+  },
+  scm_verified_total_qty: {
+    type: DataTypes.DOUBLE,
+  },
+  scm_verified_bales: {
+    type: DataTypes.DOUBLE,
+  },
+  scd_verified_status: {
+    type: DataTypes.BOOLEAN,
+  },
+  scd_verified_total_qty: {
+    type: DataTypes.DOUBLE,
+  },
+  scd_verified_bales: {
+    type: DataTypes.DOUBLE,
+  },
+  verification_status: {
+    type: DataTypes.STRING
+  },
 });
 
 GinProcess.belongsTo(Season, {
