@@ -40,7 +40,7 @@ import { _getGinnerProcessTracingChartData } from "../ginner";
 import CombernoilGeneration from "../../models/combernoil_generation.model";
 import SpinCombernoilSale from "../../models/spin_combernoil_sale.model";
 import GinToGinSale from "../../models/gin-to-gin-sale.model";
-import SpinSelectedBlend from "../../models/spin_selected_blend";
+// import SpinSelectedBlend from "../../models/spin_selected_blend";
 
 //create Spinner Process
 const createSpinnerProcess = async (req: Request, res: Response) => {
@@ -93,7 +93,7 @@ const createSpinnerProcess = async (req: Request, res: Response) => {
       status: "Pending",
       from_date: req.body.from_date,
       to_date: req.body.to_date,
-      yarn_blend_id: req.body.yarnBlendId,
+      // yarn_blend_id: req.body.yarnBlendId,
     };
     const spin = await SpinProcess.create(data);
     await CombernoilGeneration.create({
@@ -136,16 +136,16 @@ const createSpinnerProcess = async (req: Request, res: Response) => {
       );
     }
 
-    for await (let data of req.body.cotton_mixes) {
-      let newData = {
-        process_id: spin.id,
-        brand_ids: req.body.brandIds,
-        yarn_blend_id: data.yarn_blend_id,
-        cotton_mix_id: data.cotton_mix_id,
-        cotton_mix_qty: data.cotton_mix_qty,
-      };
-      // await SpinSelectedBlend.create(newData);
-    }
+    // for await (let data of req.body.cotton_mixes) {
+    //   let newData = {
+    //     process_id: spin.id,
+    //     brand_ids: req.body.brandIds,
+    //     yarn_blend_id: data.yarn_blend_id,
+    //     cotton_mix_id: data.cotton_mix_id,
+    //     cotton_mix_qty: data.cotton_mix_qty,
+    //   };
+    //   // await SpinSelectedBlend.create(newData);
+    // }
 
     for await (let obj of req.body.chooseLint) {
       let update = await GinSales.update(
