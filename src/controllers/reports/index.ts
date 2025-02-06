@@ -1243,6 +1243,11 @@ const fetchPendingGinnerSales = async (req: Request, res: Response) => {
         as: "buyerdata",
         attributes: ["id", "name"],
       },
+      {
+        model: Ginner,
+        as: "buyerdata_ginner",
+        attributes: ["id", "name"],
+      },
     ];
     //fetch data with pagination
 
@@ -1256,6 +1261,8 @@ const fetchPendingGinnerSales = async (req: Request, res: Response) => {
         [Sequelize.col('"sales"."ginner"."name"'), "ginner"],
         [Sequelize.col('"sales"."program"."program_name"'), "program"],
         [Sequelize.col('"sales"."buyerdata"."name"'), "buyerdata"],
+        [Sequelize.col('"sales"."buyer_type"'), "buyer_type"],
+        [Sequelize.col('"sales"."buyerdata_ginner"."name"'), "buyer_ginner"],
         [Sequelize.literal('"sales"."total_qty"'), "total_qty"],
         [Sequelize.literal('"sales"."invoice_no"'), "invoice_no"],
         [Sequelize.col('"sales"."lot_no"'), "lot_no"],
@@ -1297,6 +1304,7 @@ const fetchPendingGinnerSales = async (req: Request, res: Response) => {
         "sales.ginner.id",
         "sales.buyerdata.id",
         "sales.program.id",
+        "sales.buyerdata_ginner.id",
       ],
       order: [["sales_id", "desc"]],
       offset: offset,
@@ -1394,9 +1402,9 @@ const exportPendingGinnerSales = async (req: Request, res: Response) => {
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet("Sheet1");
       if (isOrganic === 'true') {
-        worksheet.mergeCells('A1:M1');
+        worksheet.mergeCells('A1:N1');
       } else {
-        worksheet.mergeCells("A1:N1");
+        worksheet.mergeCells("A1:O1");
       }
       const mergedCell = worksheet.getCell("A1");
       mergedCell.value = "CottonConnect | Ginner Pending Sales Report";
@@ -1411,6 +1419,7 @@ const exportPendingGinnerSales = async (req: Request, res: Response) => {
           "Season",
           "Ginner Name",
           "Invoice No",
+          "Buyer Type",
           "Sold To",
           "Bale Lot No",
           "No of Bales",
@@ -1428,6 +1437,7 @@ const exportPendingGinnerSales = async (req: Request, res: Response) => {
         "Season",
         "Ginner Name",
         "Invoice No",
+        "Buyer Type",
         "Sold To",
         "Bale Lot No",
         "REEL Lot No",
@@ -1462,6 +1472,11 @@ const exportPendingGinnerSales = async (req: Request, res: Response) => {
           as: "buyerdata",
           attributes: ["id", "name"],
         },
+        {
+          model: Ginner,
+          as: "buyerdata_ginner",
+          attributes: ["id", "name"],
+        },
       ];
 
       const { count, rows }: any = await BaleSelection.findAndCountAll({
@@ -1474,6 +1489,8 @@ const exportPendingGinnerSales = async (req: Request, res: Response) => {
           [Sequelize.col('"sales"."ginner"."name"'), "ginner"],
           [Sequelize.col('"sales"."program"."program_name"'), "program"],
           [Sequelize.col('"sales"."buyerdata"."name"'), "buyerdata"],
+          [Sequelize.col('"sales"."buyer_type"'), "buyer_type"],
+          [Sequelize.col('"sales"."buyerdata_ginner"."name"'), "buyer_ginner"],
           [Sequelize.literal('"sales"."total_qty"'), "total_qty"],
           [Sequelize.literal('"sales"."invoice_no"'), "invoice_no"],
           [Sequelize.col('"sales"."lot_no"'), "lot_no"],
@@ -1515,6 +1532,7 @@ const exportPendingGinnerSales = async (req: Request, res: Response) => {
           "sales.ginner.id",
           "sales.buyerdata.id",
           "sales.program.id",
+          "sales.buyerdata_ginner.id",
         ],
         order: [["sales_id", "desc"]],
         offset: offset,
@@ -1531,7 +1549,8 @@ const exportPendingGinnerSales = async (req: Request, res: Response) => {
             season: item.dataValues.season_name ? item.dataValues.season_name : "",
             ginner: item.dataValues.ginner ? item.dataValues.ginner : "",
             invoice: item.dataValues.invoice_no ? item.dataValues.invoice_no : "",
-            buyer: item.dataValues.buyerdata ? item.dataValues.buyerdata : "",
+            buyer_type: item.dataValues.buyer_type === 'Ginner' ? 'Ginner' : 'Spinner',
+            buyer: item.dataValues.buyerdata ? item.dataValues.buyerdata : item.dataValues.buyer_ginner ? item.dataValues.buyer_ginner : '',
             lot_no: item.dataValues.lot_no ? item.dataValues.lot_no : "",
             no_of_bales: item.dataValues.no_of_bales ? item.dataValues.no_of_bales : "",
             press_no: item.dataValues.press_no ? item.dataValues.press_no : "",
@@ -1548,7 +1567,8 @@ const exportPendingGinnerSales = async (req: Request, res: Response) => {
           season: item.dataValues.season_name ? item.dataValues.season_name : "",
           ginner: item.dataValues.ginner ? item.dataValues.ginner : "",
           invoice: item.dataValues.invoice_no ? item.dataValues.invoice_no : "",
-          buyer: item.dataValues.buyerdata ? item.dataValues.buyerdata : "",
+          buyer_type: item.dataValues.buyer_type === 'Ginner' ? 'Ginner' : 'Spinner',
+          buyer: item.dataValues.buyerdata ? item.dataValues.buyerdata : item.dataValues.buyer_ginner ? item.dataValues.buyer_ginner : '',
           lot_no: item.dataValues.lot_no ? item.dataValues.lot_no : "",
           reel_lot_no: item.dataValues.reel_lot_no ? item.dataValues.reel_lot_no : "",
           no_of_bales: item.dataValues.no_of_bales ? item.dataValues.no_of_bales : "",
@@ -2168,6 +2188,9 @@ const fetchGinSalesPagination = async (req: Request, res: Response) => {
           gs.total_qty AS total_qty,
           spinner.id AS spinner_id,
           spinner.name AS buyerdata,
+          gs.buyer_type AS buyer_type,
+          buyerginner.id AS buyer_ginner_id,
+          buyerginner.name AS buyer_ginner,
           gs.qr AS qr,
           gs.invoice_no AS invoice_no,
           gs.lot_no AS lot_no,
@@ -2202,11 +2225,12 @@ const fetchGinSalesPagination = async (req: Request, res: Response) => {
       LEFT JOIN gin_processes gp ON gb.process_id = gp.id
       LEFT JOIN seasons ss ON gp.season_id = ss.id
       LEFT JOIN ginners ginner ON gs.ginner_id = ginner.id
+      LEFT JOIN ginners buyerginner ON gs.buyer_ginner = buyerginner.id
       LEFT JOIN spinners spinner ON gs.buyer = spinner.id
       LEFT JOIN programs program ON gs.program_id = program.id
       ${whereClause}
       GROUP BY 
-          gs.id, spinner.id, season.id, ginner.id, program.id
+          gs.id, spinner.id, season.id, ginner.id, program.id, buyerginner.id
       ORDER BY gs.id DESC
       LIMIT ${limit} OFFSET ${offset}
    ;`
@@ -3155,14 +3179,14 @@ const exportGinnerSales = async (req: Request, res: Response) => {
       if (isOrganic === 'true') {
         headerRow = worksheet.addRow([
           "Sr No.", "Process Date", "Data Entry Date", "Lint sale chosen season", "Ginner Name",
-          "Invoice No", "Sold To", "Bale Lot No", "No of Bales", "Press/Bale No", "Rate/Kg",
+          "Invoice No", "Buyer Type", "Sold To", "Bale Lot No", "No of Bales", "Press/Bale No", "Rate/Kg",
           "Total Quantity", "Vehicle No", "Transporter Name", "Programme", "Agent Detials"
         ]);
       }
       else if (isBrand === 'true') {
         headerRow = worksheet.addRow([
           "Sr No.", "Process Date", "Data Entry Date", "Lint sale chosen season", "Ginner Name",
-          "Invoice No", "Sold To", "Bale Lot No", "REEL Lot No", "No of Bales", "Press/Bale No", "Rate/Kg",
+          "Invoice No","Buyer Type", "Sold To", "Bale Lot No", "REEL Lot No", "No of Bales", "Press/Bale No", "Rate/Kg",
           "Total Quantity", "Vehicle No", "Transporter Name", "Programme", "Agent Detials"
         ]);
       } else {
@@ -3174,7 +3198,7 @@ const exportGinnerSales = async (req: Request, res: Response) => {
 
         headerRow = worksheet.addRow([
           "Sr No.", "Process Date", "Data Entry Date", "Lint Process Season", "Lint sale chosen season", "Ginner Name",
-          "Invoice No", "Sold To", "Bale Lot No", "REEL Lot No", "No of Bales", "Press/Bale No", "Rate/Kg",
+          "Invoice No","Buyer Type", "Sold To", "Bale Lot No", "REEL Lot No", "No of Bales", "Press/Bale No", "Rate/Kg",
           "Total Quantity", "Sales Value", "Vehicle No", "Transporter Name", "Programme", "Agent Detials", "Status"
         ]);
       }
@@ -3299,6 +3323,9 @@ const exportGinnerSales = async (req: Request, res: Response) => {
           gs.total_qty AS total_qty,
           spinner.id AS spinner_id,
           spinner.name AS buyerdata,
+          gs.buyer_type AS buyer_type,
+          buyerginner.id AS buyer_ginner_id,
+          buyerginner.name AS buyer_ginner,
           gs.qr AS qr,
           gs.invoice_no AS invoice_no,
           gs.lot_no AS lot_no,
@@ -3333,11 +3360,12 @@ const exportGinnerSales = async (req: Request, res: Response) => {
       LEFT JOIN gin_processes gp ON gb.process_id = gp.id
       LEFT JOIN seasons ss ON gp.season_id = ss.id
       LEFT JOIN ginners ginner ON gs.ginner_id = ginner.id
+      LEFT JOIN ginners buyerginner ON gs.buyer_ginner = buyerginner.id
       LEFT JOIN spinners spinner ON gs.buyer = spinner.id
       LEFT JOIN programs program ON gs.program_id = program.id
       ${whereClause}
       GROUP BY 
-          gs.id, spinner.id, season.id, ginner.id, program.id
+          gs.id, spinner.id, season.id, ginner.id, program.id, buyerginner.id
       ORDER BY gs.id DESC
       LIMIT ${limit} OFFSET ${offset}
    ;`
@@ -3357,7 +3385,8 @@ const exportGinnerSales = async (req: Request, res: Response) => {
             season: item.season_name ? item.season_name : '',
             ginner: item.ginner ? item.ginner : '',
             invoice: item.invoice_no ? item.invoice_no : '',
-            buyer: item.buyerdata ? item.buyerdata : '',
+            buyer_type: item.buyer_type === 'Ginner' ? 'Ginner' : 'Spinner',
+            buyer: item.buyerdata ? item.buyerdata : item.buyer_ginner ? item.buyer_ginner : '',
             lot_no: item.lot_no ? item.lot_no : '',
             no_of_bales: item.no_of_bales ? Number(item.no_of_bales) : 0,
             press_no: item.press_no ? item.press_no : '',
@@ -3377,7 +3406,8 @@ const exportGinnerSales = async (req: Request, res: Response) => {
             season: item.season_name ? item.season_name : '',
             ginner: item.ginner ? item.ginner : '',
             invoice: item.invoice_no ? item.invoice_no : '',
-            buyer: item.buyerdata ? item.buyerdata : '',
+            buyer_type: item.buyer_type === 'Ginner' ? 'Ginner' : 'Spinner',
+            buyer: item.buyerdata ? item.buyerdata : item.buyer_ginner ? item.buyer_ginner : '',
             lot_no: item.lot_no ? item.lot_no : '',
             reel_lot_no: item.reel_lot_no ? item.reel_lot_no : '',
             no_of_bales: item.no_of_bales ? Number(item.no_of_bales) : 0,
@@ -3400,7 +3430,8 @@ const exportGinnerSales = async (req: Request, res: Response) => {
             season: item.season_name ? item.season_name : '',
             ginner: item.ginner ? item.ginner : '',
             invoice: item.invoice_no ? item.invoice_no : '',
-            buyer: item.buyerdata ? item.buyerdata : '',
+            buyer_type: item.buyer_type === 'Ginner' ? 'Ginner' : 'Spinner',
+            buyer: item.buyerdata ? item.buyerdata : item.buyer_ginner ? item.buyer_ginner : '',
             // heap: '',
             lot_no: item.lot_no ? item.lot_no : '',
             reel_lot_no: item.reel_lot_no ? item.reel_lot_no : '',
