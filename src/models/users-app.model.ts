@@ -10,6 +10,12 @@ import Knitter from './knitter.model';
 import Country from './country.model';
 import State from './state.model';
 import Brand from './brand.model';
+import TraceabilityExecutive from './traceability-executive.model';
+import SupplyChainManager from './supply-chain-manager.model';
+import SupplyChainDirector from './supply-chain-director.model';
+import BrandExecutive from './brand-executive.model';
+import BrandManager from './brand-manager.model';
+import PSTeam from './ps-team.model';
 
 const UserApp = db.define('users_apps', {
   id: {
@@ -105,6 +111,42 @@ const UserApp = db.define('users_apps', {
   remember_me_token: {
     type: DataTypes.STRING
   },
+  lsv_country: {
+    type: DataTypes.INTEGER,
+  },
+    lsv_brand: {
+      type: DataTypes.ARRAY(DataTypes.INTEGER),
+    },
+    lsv_mapped_states: {
+      type: DataTypes.ARRAY(DataTypes.INTEGER),
+    },
+    lsv_mapped_ginners: {
+      type: DataTypes.ARRAY(DataTypes.INTEGER),
+    },
+    lsv_mapped_spinners: {
+      type: DataTypes.ARRAY(DataTypes.INTEGER),
+    },
+    lsv_mapped_to: {
+      type: DataTypes.STRING,
+    },
+    te_id: {
+      type: DataTypes.INTEGER
+    },
+    scm_id: {
+      type: DataTypes.INTEGER
+    },
+    scd_id: {
+      type: DataTypes.INTEGER
+    },
+    be_id: {
+      type: DataTypes.INTEGER
+    },
+    bm_id: {
+      type: DataTypes.INTEGER
+    },
+    ps_id: {
+      type: DataTypes.INTEGER
+    },
 });
 
 UserApp.belongsTo(UserRegistrations, {
@@ -155,6 +197,36 @@ UserApp.belongsTo(State, {
 UserApp.belongsTo(Brand, {
   foreignKey: "acs_brand",
   as: "acsbrand",
+});
+
+UserApp.belongsTo(TraceabilityExecutive, {
+  foreignKey: "te_id",
+  as: "traceability_executive",
+})
+
+UserApp.belongsTo(SupplyChainManager, {
+  foreignKey: "scm_id",
+  as: "supply_chain_manager",
+});
+
+UserApp.belongsTo(SupplyChainDirector, {
+  foreignKey: "scd_id",
+  as: "supply_chain_director",
+});
+
+UserApp.belongsTo(BrandExecutive, {
+  foreignKey: "be_id",
+  as: "brand_executive",
+})
+
+UserApp.belongsTo(BrandManager, {
+  foreignKey: "bm_id",
+  as: "brand_manager",
+});
+
+UserApp.belongsTo(PSTeam, {
+  foreignKey: "ps_id",
+  as: "ps_team",
 });
 
 UserApp.sync();

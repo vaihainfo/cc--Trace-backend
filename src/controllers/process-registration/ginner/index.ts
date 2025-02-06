@@ -331,31 +331,33 @@ const deleteGinner = async (req: Request, res: Response) => {
                 id: req.body.id
             },
         });
-
-        const user = await User.findOne({
+  
+        const users = await User.findAll({
             where: {
                 id: ginn.ginnerUser_id
             },
         });
-
+  
         const userRole = await UserRole.findOne({
             where: Sequelize.where(
                 Sequelize.fn('LOWER', Sequelize.col('user_role')),
                 'ginner'
             )
         });
-
-
-        const updatedProcessRole = user.process_role.filter((roleId: any) => roleId !== userRole.id);
-
-        if (updatedProcessRole.length > 0) {
-            const updatedUser = await await user.update({
-                process_role: updatedProcessRole,
-                role: updatedProcessRole[0]
-            });
-        } else {
-            await user.destroy();
+        for await (let user of users){
+          const updatedProcessRole = user.process_role.filter((roleId: any) => roleId !== userRole.id);
+    
+          if (updatedProcessRole && updatedProcessRole.length > 0) {
+              const updatedUser = await User.update({
+                  process_role: updatedProcessRole,
+                  role: updatedProcessRole[0]
+              }, { where: { id: user.id } });
+          } else {
+              await User.destroy({ where: { id: user.id }});
+          }
         }
+  
+  
         const ginner = await Ginner.destroy({
             where: {
                 id: req.body.id
@@ -365,7 +367,7 @@ const deleteGinner = async (req: Request, res: Response) => {
     } catch (error: any) {
         return res.sendError(res, error.message);
     }
-}
+  }
 
 
 const checkGinner = async (req: Request, res: Response) => {

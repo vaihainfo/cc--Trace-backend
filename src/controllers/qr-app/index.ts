@@ -964,6 +964,12 @@ const createUserApp = async (req: Request, res: Response) => {
             weaver_id: req.body.weaverId ? req.body.weaverId : null,
             knitter_id: req.body.knitterId ? req.body.knitterId : null,
             garment_id: req.body.garmentId ? req.body.garmentId : null,
+            te_id: req.body.teId ? req.body.teId : null,
+            scm_id: req.body.scmId ? req.body.scmId : null,
+            scd_id: req.body.scdId ? req.body.scdId : null,
+            be_id: req.body.beId ? req.body.beId : null,
+            bm_id: req.body.bmId ? req.body.bmId : null,
+            ps_id: req.body.psId ? req.body.psId : null,
             acs_country_id: req.body.countryId ? req.body.countryId : null,
             acs_state_id: req.body.stateId ? req.body.stateId : null,
             acs_district: req.body.districtsId ? req.body.districtsId : null,
@@ -974,6 +980,12 @@ const createUserApp = async (req: Request, res: Response) => {
             acs_brand: req.body.brandId ? req.body.brandId : null,
             platform: req.body.platform,
             status: req.body.status,
+            lsv_brand: req.body.lsvBrand && req.body.lsvBrand.length > 0 ? req.body.lsvBrand : null,
+            lsv_country: req.body.lsvCountry ? req.body.lsvCountry : null,
+            lsv_mapped_states: req.body.lsvState && req.body.lsvState.length > 0  ? req.body.lsvState : null,
+            lsv_mapped_ginners: req.body.lsvGinners && req.body.lsvGinners.length > 0 ? req.body.lsvGinners : null,
+            lsv_mapped_spinners: req.body.lsvSpinners && req.body.lsvSpinners.length > 0 ? req.body.lsvSpinners  : null,
+            lsv_mapped_to: req.body.lsvMappedTo ? req.body.lsvMappedTo : '',
         }
 
         const userApp = await UserApp.create(data);
@@ -1016,6 +1028,12 @@ const updateUserApp = async (req: Request, res: Response) => {
             weaver_id: req.body.weaverId ? req.body.weaverId : null,
             knitter_id: req.body.knitterId ? req.body.knitterId : null,
             garment_id: req.body.garmentId ? req.body.garmentId : null,
+            te_id: req.body.teId ? req.body.teId : null,
+            scm_id: req.body.scmId ? req.body.scmId : null,
+            scd_id: req.body.scdId ? req.body.scdId : null,
+            be_id: req.body.beId ? req.body.beId : null,
+            bm_id: req.body.bmId ? req.body.bmId : null,
+            ps_id: req.body.psId ? req.body.psId : null,
             acs_country_id: req.body.countryId ? req.body.countryId : null,
             acs_state_id: req.body.stateId ? req.body.stateId : null,
             acs_district: req.body.districtsId ? req.body.districtsId : null,
@@ -1026,6 +1044,12 @@ const updateUserApp = async (req: Request, res: Response) => {
             acs_brand: req.body.brandId ? req.body.brandId : null,
             platform: req.body.platform,
             status: req.body.status,
+            lsv_brand: req.body.lsvBrand && req.body.lsvBrand.length > 0 ? req.body.lsvBrand : null,
+            lsv_country: req.body.lsvCountry ? req.body.lsvCountry : null,
+            lsv_mapped_states: req.body.lsvState && req.body.lsvState.length > 0  ? req.body.lsvState : null,
+            lsv_mapped_ginners: req.body.lsvGinners && req.body.lsvGinners.length > 0 ? req.body.lsvGinners : null,
+            lsv_mapped_spinners: req.body.lsvSpinners && req.body.lsvSpinners.length > 0 ? req.body.lsvSpinners  : null,
+            lsv_mapped_to: req.body.lsvMappedTo ? req.body.lsvMappedTo : '',
         }
 
         const userApp = await UserApp.update(data, { where: { id: req.body.id } });
@@ -1113,6 +1137,8 @@ const fetchAgentList = async (req: Request, res: Response) => {
         return res.sendError(res, error.message);
     }
 }
+
+
 
 const fetchCountryByGinner = async (req: Request, res: Response) => {
     let ginnerId: any = req.query.ginnerId;
@@ -1251,9 +1277,6 @@ const fetchCountryByGinner = async (req: Request, res: Response) => {
       return res.sendError(res, error.message);
     }
   };
-
-
-
 
 export {
     getRegisteredDevices,

@@ -6,9 +6,12 @@ import hash from "../../../util/hash";
 import UserRegistrations from "../../../models/user-registrations.model";
 
 const createUser = async (req: Request, res: Response) => {
-  const userExist = await User.findAll({
+  const userExist = await User.findOne({
     where: {
-      $or: [{ username: req.body.username }, { email: req.body.email }],
+      [Op.or]: [
+        { username: req.body.username },
+        { email: req.body.email }
+      ]
     }
   })
 

@@ -39,6 +39,8 @@ import GinBale from "../../models/gin-bale.model";
 import { _getGinnerProcessTracingChartData } from "../ginner";
 import CombernoilGeneration from "../../models/combernoil_generation.model";
 import SpinCombernoilSale from "../../models/spin_combernoil_sale.model";
+import GinToGinSale from "../../models/gin-to-gin-sale.model";
+import SpinSelectedBlend from "../../models/spin_selected_blend";
 
 //create Spinner Process
 const createSpinnerProcess = async (req: Request, res: Response) => {

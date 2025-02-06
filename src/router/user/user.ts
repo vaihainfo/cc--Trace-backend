@@ -3,8 +3,9 @@ import { createUserCategory, getUserCategories } from "../../controllers/user/us
 import { createMenuItem, deleteMenuItem, getMenuList, updateMenuItem } from "../../controllers/user/user-menu";
 import { checkRoleExists, createUserRole, deleteUserRole, getUserRole, getUserRoles, updateUserRole } from "../../controllers/user/user-role";
 import accessControl from "../../middleware/access-control";
-import { getUserInfo, processorLoginAdmin } from "../../controllers/user/user-details";
+import { getMobileUserInfo, getUserInfo, processorLoginAdmin } from "../../controllers/user/user-details";
 import { createUser, createUserRegistration, deleteUser, fetchUser, fetchUsers, updateUser } from "../../controllers/user/user-management";
+import { getBrandPrivileges } from "../../controllers/user/user-privilege";
 
 const router = Router();
 
@@ -22,6 +23,7 @@ router.get("/get-user-role", getUserRole);
 router.put("/update-user-role", updateUserRole);
 router.delete("/delete-user-role", deleteUserRole);
 router.post("/check-role", checkRoleExists);
+router.get("/get-brand-privileges", getBrandPrivileges);
 
 router.post("/create-user", createUser);
 router.get("/get-users", fetchUsers);
@@ -35,5 +37,6 @@ router.use(accessControl)
 
 router.get("/my-details", getUserInfo)
 router.get("/processor-admin", processorLoginAdmin)
+router.get("/mobile-details", getMobileUserInfo)
 
 export default router;

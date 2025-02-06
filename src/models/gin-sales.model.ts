@@ -45,7 +45,6 @@ const GinSales = db.define('gin_sales', {
     type: DataTypes.STRING
   },
   buyer: {
-    allowNull: false,
     type: DataTypes.INTEGER
   },
   shipping_address: {
@@ -154,9 +153,81 @@ const GinSales = db.define('gin_sales', {
   accepted_bales_weight: {
     type: DataTypes.DOUBLE
   },
+  letter_of_credit: {
+    type: DataTypes.ARRAY(DataTypes.TEXT)
+  },
+  logistics_documents: {
+    type: DataTypes.ARRAY(DataTypes.TEXT)
+  },
   coc_doc: {
     type: DataTypes.STRING
   },
+  te_verified_status: {
+    type: DataTypes.BOOLEAN,
+  },
+  te_verified_total_qty: {
+    type: DataTypes.DOUBLE,
+  },
+  te_verified_bales: {
+    type: DataTypes.DOUBLE,
+  },
+  be_verified_status: {
+    type: DataTypes.BOOLEAN,
+  },
+  be_verified_total_qty: {
+    type: DataTypes.DOUBLE,
+  },
+  be_verified_bales: {
+    type: DataTypes.DOUBLE,
+  },
+  spin_verified_status: {
+    type: DataTypes.BOOLEAN,
+  },
+  spin_verified_total_qty: {
+    type: DataTypes.DOUBLE,
+  },
+  spin_verified_bales: {
+    type: DataTypes.DOUBLE,
+  },
+  bm_verified_status: {
+    type: DataTypes.BOOLEAN,
+  },
+  bm_verified_total_qty: {
+    type: DataTypes.DOUBLE,
+  },
+  bm_verified_bales: {
+    type: DataTypes.DOUBLE,
+  },
+  ps_verified_status: {
+    type: DataTypes.BOOLEAN,
+  },
+  ps_verified_total_qty: {
+    type: DataTypes.DOUBLE,
+  },
+  ps_verified_bales: {
+    type: DataTypes.DOUBLE,
+  },
+  buyer_type: {
+    type: DataTypes.STRING,
+  },
+  buyer_ginner: {
+    type: DataTypes.INTEGER,
+  },
+  verification_status: {
+    type: DataTypes.STRING
+  },
+
+  greyed_out_qty: {
+    type: DataTypes.DOUBLE,
+  },
+  qty_stock_before_verification: {
+    type: DataTypes.DOUBLE,
+  },
+  approval_doc: {
+    type: DataTypes.ARRAY(DataTypes.TEXT)
+
+  },
+ 
 });
 
 GinSales.belongsTo(Ginner, {
@@ -168,6 +239,12 @@ GinSales.belongsTo(Spinner, {
   foreignKey: "buyer",
   as: "buyerdata",
 });
+
+GinSales.belongsTo(Ginner, {
+  foreignKey: "buyer_ginner",
+  as: "buyerdata_ginner",
+});
+
 
 GinSales.belongsTo(Season, {
   foreignKey: "season_id",
