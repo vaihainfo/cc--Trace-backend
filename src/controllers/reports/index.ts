@@ -195,6 +195,34 @@ const fetchBaleProcess = async (req: Request, res: Response) => {
               GROUP BY
                   gb.process_id
           ),
+          gin_bale_greyout_data AS (
+            SELECT
+              gb.process_id,
+              COUNT(gb.id) AS no_of_bales,
+              COALESCE(
+                    SUM(
+                      CASE
+                        WHEN gb.old_weight IS NOT NULL THEN CAST(gb.old_weight AS DOUBLE PRECISION)
+                        ELSE CAST(gb.weight AS DOUBLE PRECISION)
+                      END
+                    ), 0
+                ) AS total_qty
+            FROM
+              "gin-bales" gb
+            JOIN gin_processes gp ON gb.process_id = gp.id
+            WHERE
+              (
+                (
+                  gp.scd_verified_status = true AND gb.scd_verified_status IS NOT TRUE
+                )
+                OR
+                (
+                  gp.scd_verified_status = false AND gb.scd_verified_status IS FALSE
+                )
+              )
+            GROUP BY
+              gb.process_id
+          ),
           cotton_selection_data AS (
             SELECT
                 cs.process_id,
@@ -269,9 +297,35 @@ const fetchBaleProcess = async (req: Request, res: Response) => {
                   gin_sales gs ON gs.id = bs.sales_id
               WHERE
                   gs.status in ('Pending', 'Pending for QR scanning', 'Partially Accepted', 'Partially Rejected','Sold')
+                  AND gs.buyer_ginner IS NULL
               GROUP BY
                   gb.process_id
-          )
+          ),
+          gin_to_gin_sales_data AS (
+                SELECT
+                    gb.process_id,
+                    COUNT(gb.id) AS no_of_bales,
+                    COALESCE(
+                      SUM(
+                        CASE
+                          WHEN gb.old_weight IS NOT NULL THEN CAST(gb.old_weight AS DOUBLE PRECISION)
+                          ELSE CAST(gb.weight AS DOUBLE PRECISION)
+                        END
+                      ), 0
+                    ) AS lint_qty
+                FROM
+                    "gin-bales" gb
+                LEFT JOIN 
+                  bale_selections bs ON gb.id = bs.bale_id
+                LEFT JOIN 
+                    gin_sales gs ON gs.id = bs.sales_id
+                WHERE
+                    gs.status in ('Pending', 'Pending for QR scanning', 'Partially Accepted', 'Partially Rejected','Sold')
+                    AND gs.buyer_ginner IS NOT NULL
+                    AND gs.buyer_type = 'Ginner'
+                GROUP BY
+                    gb.process_id
+            )
           SELECT
               gd.process_id,
               gd.date AS date,
@@ -295,8 +349,12 @@ const fetchBaleProcess = async (req: Request, res: Response) => {
               COALESCE(sd.lint_quantity_sold, 0) AS lint_quantity_sold,
               gb.old_weight_total AS old_weight_total,
               COALESCE(sd.sold_bales, 0) AS sold_bales,
-              (COALESCE(gb.lint_quantity, 0) - COALESCE(sd.lint_quantity_sold, 0)) AS lint_stock,
-              (COALESCE(gd.no_of_bales, 0) - COALESCE(sd.sold_bales, 0)) AS bale_stock,
+              COALESCE(gbg.no_of_bales, 0) AS greyout_bales,
+              COALESCE(gbg.total_qty, 0) AS lint_qty_greyout,
+              COALESCE(gtg.no_of_bales, 0) AS bales_transfered,
+              COALESCE(gtg.lint_qty, 0) AS lint_qty_transfered,
+              (COALESCE(gb.lint_quantity, 0) - (COALESCE(sd.lint_quantity_sold, 0) + COALESCE(gbg.total_qty, 0) + COALESCE(gtg.lint_qty, 0))) AS lint_stock,
+              (COALESCE(gd.no_of_bales, 0) - (COALESCE(sd.sold_bales, 0) + COALESCE(gbg.no_of_bales, 0) + COALESCE(gtg.no_of_bales, 0))) AS bale_stock,
               gd.program AS program,
               vnd.village_names AS village_names,
               gd.season_name AS seed_consumed_seasons,
@@ -312,6 +370,10 @@ const fetchBaleProcess = async (req: Request, res: Response) => {
               village_names_data vnd ON gd.process_id = vnd.process_id 
           LEFT JOIN
               sold_data sd ON gd.process_id = sd.process_id
+          LEFT JOIN 
+              gin_bale_greyout_data gbg ON gd.process_id = gbg.process_id
+          LEFT JOIN 
+              gin_to_gin_sales_data gtg ON gd.process_id = gtg.process_id
           ORDER BY gd.process_id DESC
           LIMIT :limit OFFSET :offset
           `, {
@@ -679,10 +741,10 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
         worksheet.mergeCells('A1:Q1');
       }
       else if(isAdmin === 'true') {
-        worksheet.mergeCells('A1:W1');
+        worksheet.mergeCells('A1:AA1');
       }
       else {
-        worksheet.mergeCells('A1:X1');
+        worksheet.mergeCells('A1:AB1');
       }
       const mergedCell = worksheet.getCell('A1');
       mergedCell.value = 'CottonConnect | Ginner Bale Process Report';
@@ -702,11 +764,11 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
       } 
       else if(isAdmin === 'true') {
         headerRow = worksheet.addRow([
-          "Sr No.", "Process Date", "Data Entry Date and Time", "Lint Production Start Date", "Lint Production End Date", "Seed Cotton Consumed Season", "Lint process Season choosen", "Ginner Name", "Heap Number", "Gin Lot No", "Gin Press No", "REEL Lot No", "REEL Press Nos", "No of Bales", "Lint Quantity(Kgs)", "Total Seed Cotton Consumed(Kgs)", "GOT", "Total lint cotton sold(Kgs)", "Total Bales Sold", "Total lint cotton in stock(Kgs)", "Total Bales in stock", "Programme","Grey Out Status"
+          "Sr No.", "Process Date", "Data Entry Date and Time", "Lint Production Start Date", "Lint Production End Date", "Seed Cotton Consumed Season", "Lint process Season choosen", "Ginner Name", "Heap Number", "Gin Lot No", "Gin Press No", "REEL Lot No", "REEL Press Nos", "No of Bales", "Lint Quantity(Kgs)", "Total Seed Cotton Consumed(Kgs)", "GOT", "Total lint cotton sold(Kgs)", "Total Bales Sold", "Total lint cotton rejected(Kgs)", "Total Bales Rejected", "Total lint cotton transfered(Kgs)", "Total Bales Transfered", "Total lint cotton in stock(Kgs)", "Total Bales in stock", "Programme","Grey Out Status"
         ]);
       }else {
         headerRow = worksheet.addRow([
-          "Sr No.", "Process Date", "Data Entry Date and Time", "Lint Production Start Date", "Lint Production End Date", "Seed Cotton Consumed Season", "Lint process Season choosen", "Ginner Name", "Heap Number", "Gin Lot No", "Gin Press No", "REEL Lot No", "REEL Press Nos", "No of Bales", "Lint Quantity(Kgs)", "Total Seed Cotton Consumed(Kgs)", "GOT", "Total lint cotton sold(Kgs)", "Total Bales Sold", "Total lint cotton in stock(Kgs)", "Total Bales in stock", "Programme", "Village", "Grey Out Status"
+          "Sr No.", "Process Date", "Data Entry Date and Time", "Lint Production Start Date", "Lint Production End Date", "Seed Cotton Consumed Season", "Lint process Season choosen", "Ginner Name", "Heap Number", "Gin Lot No", "Gin Press No", "REEL Lot No", "REEL Press Nos", "No of Bales", "Lint Quantity(Kgs)", "Total Seed Cotton Consumed(Kgs)", "GOT", "Total lint cotton sold(Kgs)", "Total Bales Sold", "Total lint cotton rejected(Kgs)", "Total Bales Rejected", "Total lint cotton transfered(Kgs)", "Total Bales Transfered", "Total lint cotton in stock(Kgs)", "Total Bales in stock", "Programme", "Village", "Grey Out Status"
         ]);
       }
       headerRow.font = { bold: true };
@@ -767,6 +829,34 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
                   "gin-bales" gb
               GROUP BY
                   gb.process_id
+          ),
+          gin_bale_greyout_data AS (
+            SELECT
+              gb.process_id,
+              COUNT(gb.id) AS no_of_bales,
+              COALESCE(
+                    SUM(
+                      CASE
+                        WHEN gb.old_weight IS NOT NULL THEN CAST(gb.old_weight AS DOUBLE PRECISION)
+                        ELSE CAST(gb.weight AS DOUBLE PRECISION)
+                      END
+                    ), 0
+                ) AS total_qty
+            FROM
+              "gin-bales" gb
+            JOIN gin_processes gp ON gb.process_id = gp.id
+            WHERE
+              (
+                (
+                  gp.scd_verified_status = true AND gb.scd_verified_status IS NOT TRUE
+                )
+                OR
+                (
+                  gp.scd_verified_status = false AND gb.scd_verified_status IS FALSE
+                )
+              )
+            GROUP BY
+              gb.process_id
           ),
           cotton_selection_data AS (
             SELECT
@@ -842,9 +932,35 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
                   gin_sales gs ON gs.id = bs.sales_id
               WHERE
                   gs.status in ('Pending', 'Pending for QR scanning', 'Partially Accepted', 'Partially Rejected','Sold')
+                  AND gs.buyer_ginner IS NULL
               GROUP BY
                   gb.process_id
-          )
+          ),
+          gin_to_gin_sales_data AS (
+              SELECT
+                  gb.process_id,
+                  COUNT(gb.id) AS no_of_bales,
+                  COALESCE(
+                    SUM(
+                      CASE
+                        WHEN gb.old_weight IS NOT NULL THEN CAST(gb.old_weight AS DOUBLE PRECISION)
+                        ELSE CAST(gb.weight AS DOUBLE PRECISION)
+                      END
+                    ), 0
+                  ) AS lint_qty
+              FROM
+                  "gin-bales" gb
+              LEFT JOIN 
+                bale_selections bs ON gb.id = bs.bale_id
+              LEFT JOIN 
+                  gin_sales gs ON gs.id = bs.sales_id
+              WHERE
+                  gs.status in ('Pending', 'Pending for QR scanning', 'Partially Accepted', 'Partially Rejected','Sold')
+                  AND gs.buyer_ginner IS NOT NULL
+                  AND gs.buyer_type = 'Ginner'
+              GROUP BY
+                  gb.process_id
+            )
           SELECT
               gd.process_id,
               gd.date AS date,
@@ -868,8 +984,12 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
               COALESCE(sd.lint_quantity_sold, 0) AS lint_quantity_sold,
               gb.old_weight_total AS old_weight_total,
               COALESCE(sd.sold_bales, 0) AS sold_bales,
-              (COALESCE(gb.lint_quantity, 0) - COALESCE(sd.lint_quantity_sold, 0)) AS lint_stock,
-              (COALESCE(gd.no_of_bales, 0) - COALESCE(sd.sold_bales, 0)) AS bale_stock,
+              COALESCE(gbg.no_of_bales, 0) AS greyout_bales,
+              COALESCE(gbg.total_qty, 0) AS lint_qty_greyout,
+              COALESCE(gtg.no_of_bales, 0) AS bales_transfered,
+              COALESCE(gtg.lint_qty, 0) AS lint_qty_transfered,
+              (COALESCE(gb.lint_quantity, 0) - (COALESCE(sd.lint_quantity_sold, 0) + COALESCE(gbg.total_qty, 0) + COALESCE(gtg.lint_qty, 0))) AS lint_stock,
+              (COALESCE(gd.no_of_bales, 0) - (COALESCE(sd.sold_bales, 0) + COALESCE(gbg.no_of_bales, 0) + COALESCE(gtg.no_of_bales, 0))) AS bale_stock,
               gd.program AS program,
               vnd.village_names AS village_names,
               gd.season_name AS seed_consumed_seasons,
@@ -885,6 +1005,10 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
               village_names_data vnd ON gd.process_id = vnd.process_id 
           LEFT JOIN
               sold_data sd ON gd.process_id = sd.process_id
+          LEFT JOIN 
+              gin_bale_greyout_data gbg ON gd.process_id = gbg.process_id
+          LEFT JOIN 
+              gin_to_gin_sales_data gtg ON gd.process_id = gtg.process_id
           ORDER BY gd.process_id DESC
           LIMIT :limit OFFSET :offset
             `, {
@@ -954,6 +1078,10 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
             got: item.gin_out_turn ? item.gin_out_turn : "",
             lint_quantity_sold: item.lint_quantity_sold ? Number(item.lint_quantity_sold) : 0,
             sold_bales: item.sold_bales ? Number(item.sold_bales) : 0,
+            lint_qty_greyout: item.lint_qty_greyout ? Number(formatDecimal(item.lint_qty_greyout)) : 0,
+            greyout_bales: item.greyout_bales ? Number(item.greyout_bales) : 0,
+            lint_qty_transfered: item.lint_qty_transfered ? Number(formatDecimal(item.lint_qty_transfered)) : 0,
+            bales_transfered: item.bales_transfered ? Number(item.bales_transfered) : 0,
             lint_stock: item.lint_stock && Number(item.lint_stock) > 0 ? Number(item.lint_stock) : 0,
             bale_stock: item.bale_stock && Number(item.bale_stock) > 0 ? Number(item.bale_stock) : 0,
             program: item.program ? item.program : "",
@@ -981,6 +1109,10 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
             got: item.gin_out_turn ? item.gin_out_turn : "",
             lint_quantity_sold: item.lint_quantity_sold ? Number(item.lint_quantity_sold) : 0,
             sold_bales: item.sold_bales ? Number(item.sold_bales) : 0,
+            lint_qty_greyout: item.lint_qty_greyout ? Number(formatDecimal(item.lint_qty_greyout)) : 0,
+            greyout_bales: item.greyout_bales ? Number(item.greyout_bales) : 0,
+            lint_qty_transfered: item.lint_qty_transfered ? Number(formatDecimal(item.lint_qty_transfered)) : 0,
+            bales_transfered: item.bales_transfered ? Number(item.bales_transfered) : 0,
             lint_stock: item.lint_stock && Number(item.lint_stock) > 0 ? Number(item.lint_stock) : 0,
             bale_stock: item.bale_stock && Number(item.bale_stock) > 0 ? Number(item.bale_stock) : 0,
             program: item.program ? item.program : "",
