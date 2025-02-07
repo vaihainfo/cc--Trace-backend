@@ -1733,7 +1733,8 @@ const exportGinnerProcurement = async (req: Request, res: Response) => {
       "Farmer Code",
       "Farmer Name",
       "Village",
-      "Quantity",
+      "Quantity Purchase",
+      "Quantity Stock",
       "Programme",
       "Vehicle Information",
     ]);
@@ -1745,6 +1746,7 @@ const exportGinnerProcurement = async (req: Request, res: Response) => {
         [Sequelize.fn("concat", Sequelize.col('"farmer"."firstName"'), Sequelize.col('"farmer"."lastName"')), "farmerName"],
         [Sequelize.col('"village"."village_name"'), 'villages'],
         [Sequelize.col('qty_purchased'), 'qty_purchased'],
+        [Sequelize.col('qty_stock'), 'qty_stock'],
         [Sequelize.col('"program"."program_name"'), 'programs'],
         [Sequelize.col('vehicle'), 'vehicle'],
       ],
