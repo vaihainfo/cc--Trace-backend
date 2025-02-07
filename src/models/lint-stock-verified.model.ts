@@ -200,6 +200,12 @@ const LintStockVerified = db.define('lint_stock_verifieds', {
   reason_ps: {
     type: DataTypes.STRING
   }, 
+  date_initiated_te:{
+    type:DataTypes.DATE
+  },
+  date_initiated_be:{
+    type:DataTypes.DATE
+  }
 });
 
 LintStockVerified.belongsTo(Country, {

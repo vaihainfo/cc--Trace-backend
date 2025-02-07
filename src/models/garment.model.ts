@@ -12,6 +12,12 @@ const Garment = db.define('garments', {
     allowNull: false,
     primaryKey: true
   },
+  sequence_no: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    defaultValue: db.literal("nextval('garment_seq')"),
+    unique: true
+  },
   name: {
     allowNull: false,
     type: DataTypes.STRING

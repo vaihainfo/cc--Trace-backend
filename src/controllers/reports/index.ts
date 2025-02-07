@@ -15127,13 +15127,28 @@ const fetchPscpProcurementLiveTracker = async (req: Request, res: Response) => {
             AND ${seasonConditionSql}
           GROUP BY
             go.ginner_id
-        )
+        ), 
+      season_data AS (
+        SELECT DISTINCT
+          t.mapped_ginner,
+          string_agg(DISTINCT s.name, ', ') as season_names
+        FROM
+          transactions t
+          JOIN seasons s ON t.season_id = s.id
+          JOIN filtered_ginners ON t.mapped_ginner = filtered_ginners.id
+        WHERE
+          t.program_id = ANY (filtered_ginners.program_id)
+          AND ${seasonConditionSql}
+        GROUP BY
+          t.mapped_ginner
+      )
       SELECT
         fg.id AS ginner_id,
         fg.name AS ginner_name,
         fg.state_name,
         fg.county_name,
         fg.program_name,
+        COALESCE(sd.season_names, '') AS season_name,
         COALESCE(ec.expected_seed_cotton, 0) / 1000 AS expected_seed_cotton,
         COALESCE(elc.expected_lint, 0) AS expected_lint,
         COALESCE(pd.procurement_seed_cotton, 0) / 1000 AS procurement_seed_cotton,
@@ -15193,6 +15208,7 @@ const fetchPscpProcurementLiveTracker = async (req: Request, res: Response) => {
         LEFT JOIN expected_cotton_data ec ON fg.id = ec.ginner_id
         LEFT JOIN expected_lint_cotton_data elc ON fg.id = elc.ginner_id
         LEFT JOIN ginner_order_data go ON fg.id = go.ginner_id
+        LEFT JOIN season_data sd ON fg.id = sd.mapped_ginner
         LEFT JOIN gin_bale_greyout_data gbg ON fg.id = gbg.ginner_id
         LEFT JOIN gin_to_gin_sales_data gtg ON fg.id = gtg.ginner_id
         LEFT JOIN gin_to_gin_recieved_data gtgr ON fg.id = gtgr.ginner_id
