@@ -2618,7 +2618,7 @@ const generateGinnerSummary = async () => {
       if (!currentWorksheet) {
         currentWorksheet = workbook.addWorksheet(`Sheet${worksheetIndex}`);
         if (worksheetIndex == 1) {
-          currentWorksheet.mergeCells('A1:M1');
+          currentWorksheet.mergeCells('A1:S1');
           const mergedCell = currentWorksheet.getCell('A1');
           mergedCell.value = 'CottonConnect | Ginner Summary Report';
           mergedCell.font = { bold: true };
@@ -2629,8 +2629,8 @@ const generateGinnerSummary = async () => {
         // Set bold font for header row
         const headerRow = currentWorksheet.addRow([
           "S. No.", "Ginner Name", "Total seed cotton procured (MT)", "Total seed cotton processed (MT)",
-          "Total seed cotton in stock (MT)", "Total lint produce (MT)", "Total lint sold (MT)", "Grey-Out Lint Quantity (MT)", "Actual lint in stock (MT)", "Total lint in stock (MT)",
-          "Total bales produce", "Total bales sold", "Total bales in stock"
+          "Total seed cotton in stock (MT)", "Total lint produce (MT)", "Total lint sold (MT)", "Grey-Out Lint Quantity (MT)", "Total Lint Received (MT)", "Total Lint Transfered (MT)", "Actual lint in stock (MT)", "Total lint in stock (MT)",
+          "Total bales produce", "Total bales sold", "Total Bales Greyout", "Total Bales Received", "Total Bales Transfered", "Actual Bales in stock", "Total bales in stock"
         ]);
         headerRow.font = { bold: true };
       }
@@ -2640,7 +2640,7 @@ const generateGinnerSummary = async () => {
         let obj: any = {};
 
 
-        let [cottonProcured, cottonProcessed, cottonProcessedByHeap, lintProcured, greyoutLint, lintSold]: any = await Promise.all([
+        let [cottonProcured, cottonProcessed, cottonProcessedByHeap, lintProcured, greyoutLint, lintSold, ginToGinSale, ginToGinReceive]: any = await Promise.all([
           // Transaction.findOne({
           //   attributes: [
           //     [sequelize.fn('COALESCE', sequelize.fn('SUM', Sequelize.literal("CAST(qty_purchased AS DOUBLE PRECISION)")), 0), 'qty']
@@ -2755,9 +2755,27 @@ const generateGinnerSummary = async () => {
             where: {
               ...ginBaleWhere,
               '$ginprocess.ginner_id$': item.id,
-              '$ginprocess.greyout_status$': true,
-              sold_status: false,
-              is_all_rejected: null,
+              [Op.or]: [
+                {
+                  [Op.and]: [
+                    { "$ginprocess.greyout_status$": true },
+                    { sold_status: false },
+                    { is_all_rejected: null }
+                  ]
+                },
+                {
+                  [Op.and]: [
+                    { "$ginprocess.scd_verified_status$": true },
+                    { "$gin-bales.scd_verified_status$": { [Op.not]: true } }
+                  ]
+                },
+                {
+                  [Op.and]: [
+                    { "$ginprocess.scd_verified_status$": false },
+                    { "$gin-bales.scd_verified_status$": { [Op.is]: false } }
+                  ]
+                }
+              ]
             },
             group: ["ginprocess.ginner_id"]
           }),
@@ -2797,10 +2815,115 @@ const generateGinnerSummary = async () => {
             where: {
               ...baleSelectionWhere,
               '$sales.ginner_id$': item.id,
-              "$sales.status$": { [Op.in]: ['Pending', 'Pending for QR scanning', 'Partially Accepted', 'Partially Rejected', 'Sold'] }
+              "$sales.status$": { [Op.in]: ['Pending', 'Pending for QR scanning', 'Partially Accepted', 'Partially Rejected', 'Sold'] },
+              "$sales.buyer_ginner$": { [Op.is]: null }
             },
             group: ["sales.ginner_id"]
           }),
+          BaleSelection.findOne({
+            attributes: [
+              [
+                sequelize.fn(
+                  "COALESCE",
+                  sequelize.fn(
+                    "SUM",
+                    sequelize.literal(`
+                      CASE
+                        WHEN "bale"."old_weight" IS NOT NULL THEN CAST("bale"."old_weight" AS DOUBLE PRECISION)
+                        ELSE CAST("bale"."weight" AS DOUBLE PRECISION)
+                      END
+                    `)
+                  ),
+                  0
+                ),
+                "total_qty",
+              ],
+              [
+                sequelize.fn("COUNT", Sequelize.literal("DISTINCT bale_id")),
+                "no_of_bales",
+              ],
+            ],
+            include: [
+              {
+                model: GinSales,
+                as: "sales",
+                attributes: [],
+                include: [{
+                  model: Ginner,
+                  as: "ginner",
+                  attributes: [],
+                }]
+              },
+              {
+                model: GinBale,
+                as: "bale",
+                attributes: [],
+                include: [{
+                  model: GinProcess,
+                  as: "ginprocess",
+                  attributes: [],
+                }]
+              },
+            ],
+            where: {
+              ...baleSelectionWhere,
+              "$sales.ginner_id$": item.id,
+              "$sales.status$": { [Op.in]: ['Pending', 'Pending for QR scanning', 'Partially Accepted', 'Partially Rejected', 'Sold'] },
+              "$sales.buyer_ginner$": { [Op.not]: null },
+              "$sales.buyer_type$": 'Ginner'
+            },
+            group: ["sales.ginner_id"]
+          }),
+          GinToGinSale.findOne({
+            attributes: [
+              [
+                sequelize.fn(
+                  "COALESCE",
+                  sequelize.fn(
+                    "SUM",
+                    sequelize.literal(`
+                      CASE
+                        WHEN "bale"."old_weight" IS NOT NULL THEN CAST("bale"."old_weight" AS DOUBLE PRECISION)
+                        ELSE CAST("bale"."weight" AS DOUBLE PRECISION)
+                      END
+                    `)
+                  ),
+                  0
+                ),
+                "total_qty",
+              ],
+              [
+                sequelize.fn("COUNT", Sequelize.literal('DISTINCT "bale"."id"')),
+                "no_of_bales",
+              ],
+            ],
+            include: [
+              {
+                model: GinSales,
+                as: "ginsales",
+                attributes: [],
+                include: [
+                  {
+                    model: Ginner,
+                    as: "ginner",
+                    attributes: [],
+                  },
+                ]
+              },
+              {
+                model: GinBale,
+                as: "bale",
+                attributes: [],
+              },
+            ],
+            where: {
+              "$ginsales.buyer_ginner$": item.id,
+              "$ginsales.status$": { [Op.in]: ['Partially Accepted', 'Partially Rejected', 'Sold'] },
+              gin_accepted_status: { [Op.is]: true },
+              "$ginsales.buyer_type$": 'Ginner'
+            },
+            group: ["ginsales.buyer_ginner"]
+          })
         ])
 
         const cottonProcessedQty = isNaN(cottonProcessed?.dataValues?.qty) ? 0 : cottonProcessed?.dataValues?.qty;
@@ -2819,16 +2942,28 @@ const generateGinnerSummary = async () => {
         obj.lintSoldMt = convert_kg_to_mt(lintSold?.dataValues.qty ?? 0);
         obj.lintGreyoutKg = greyoutLint?.dataValues.qty ?? 0;
         obj.lintGreyoutMT = convert_kg_to_mt(greyoutLint?.dataValues.qty ?? 0);
-        obj.lintActualStockMT = Number(obj.lintProcuredKg) > (Number(obj.lintSoldKg) + Number(obj.lintGreyoutKg))
-          ? Number(obj.lintProcuredKg) - (Number(obj.lintSoldKg) + Number(obj.lintGreyoutKg))
+        obj.total_bales_transfered = ginToGinSale?.dataValues.no_of_bales ? Number(ginToGinSale?.dataValues.no_of_bales) : 0;
+        obj.total_qty_lint_transfered = ginToGinSale
+          ? convert_kg_to_mt(ginToGinSale.dataValues.total_qty ?? 0)
           : 0;
-        obj.lintActualStockMT = Number(obj.lintProcuredKg) > (Number(obj.lintSoldKg) + Number(obj.lintGreyoutKg))
-          ? Number(obj.lintProcuredMt) - (Number(obj.lintSoldMt) + Number(obj.lintGreyoutMT))
+        obj.total_bales_received = ginToGinReceive?.dataValues.no_of_bales ? Number(ginToGinReceive?.dataValues.no_of_bales) : 0;
+        obj.total_qty_lint_received = ginToGinReceive
+          ? convert_kg_to_mt(ginToGinReceive.dataValues.total_qty ?? 0)
+          : 0;
+        obj.lintActualStockMT = (Number(obj.lintProcuredMt) + Number(obj.total_qty_lint_received)) > (Number(obj.lintSoldMt) + Number(obj.lintGreyoutMT) + Number(obj.total_qty_lint_transfered))
+          ? (Number(obj.lintProcuredMt) + Number(obj.total_qty_lint_received)) - (Number(obj.lintSoldMt) + Number(obj.lintGreyoutMT) + Number(obj.total_qty_lint_transfered))
           : 0;
         obj.lintStockKg = Number(obj.lintProcuredKg) > Number(obj.lintSoldKg) ? Number(obj.lintProcuredKg) - Number(obj.lintSoldKg) : 0;
         obj.lintStockMt = Number(obj.lintProcuredKg) > Number(obj.lintSoldKg) ? Number(obj.lintProcuredMt) - Number(obj.lintSoldMt) : 0;
         obj.balesProduced = lintProcured?.dataValues?.bales_procured ? Number(lintProcured?.dataValues?.bales_procured) : 0;
+        obj.balesGreyout = greyoutLint?.dataValues?.bales_procured
+        ? Number(greyoutLint?.dataValues?.bales_procured)
+        : 0;
         obj.balesSold = lintSold?.dataValues?.bales_sold ? Number(lintSold?.dataValues?.bales_sold) : 0;
+        obj.balesActualStock =
+        (obj.balesProduced + obj.total_bales_received) > (obj.balesSold + obj.total_bales_transfered + obj.balesGreyout)
+          ? (obj.balesProduced + obj.total_bales_received) - (obj.balesSold + obj.total_bales_transfered + obj.balesGreyout)
+          : 0;
         obj.balesStock = obj.balesProduced > obj.balesSold ? obj.balesProduced - obj.balesSold : 0;
 
         const rowValues = Object.values({
@@ -2840,10 +2975,16 @@ const generateGinnerSummary = async () => {
           lintProcuredMt: Number(obj.lintProcuredMt) ?? 0,
           lintSoldMt: Number(obj.lintSoldMt) ?? 0,
           lintGreyoutMT: obj.lintGreyoutMT ? Number(obj.lintGreyoutMT) : 0,
+          total_qty_lint_received: obj.total_qty_lint_received ? Number(obj.total_qty_lint_received) : 0,
+          total_qty_lint_transfered: obj.total_qty_lint_transfered ? Number(obj.total_qty_lint_transfered) : 0,
           lintActualStockMT: obj.lintActualStockMT ? Number(obj.lintActualStockMT) : 0,
           lintStockMt: Number(obj.lintStockMt) ?? 0,
           balesProduced: Number(obj.balesProduced) ?? 0,
           balesSold: Number(obj.balesSold) ?? 0,
+          balesGreyout: Number(obj.balesGreyout),
+          total_bales_received: Number(obj.total_bales_received),
+          total_bales_transfered: Number(obj.total_bales_transfered),
+          balesActualStock: Number(obj.balesActualStock),
           balesStock: Number(obj.balesStock) ?? 0
         });
         currentWorksheet.addRow(rowValues).commit();
