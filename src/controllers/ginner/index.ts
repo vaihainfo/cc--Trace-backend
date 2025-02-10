@@ -30,6 +30,7 @@ import PhysicalTraceabilityDataGinnerSample from "../../models/physical-traceabi
 import GinnerAllocatedVillage from "../../models/ginner-allocated-vilage.model";
 import moment from "moment";
 import GinToGinSale from "../../models/gin-to-gin-sale.model";
+import Block from "../../models/block.model";
 
 //create Ginner Process
 // const createGinnerProcess = async (req: Request, res: Response) => {
@@ -3099,14 +3100,22 @@ const getVillageAndFarmer = async (req: Request, res: Response) => {
         model: Village,
         as: "village",
         attributes: [],
+        include: [
+          {
+            model: Block,
+            as: 'block',
+            attributes: ["id", "block_name"],
+          },
+        ]
       },
     ],
     attributes: [
       [Sequelize.literal("village.id"), "id"],
       [Sequelize.literal('"village"."village_name"'), "village_name"],
+      [Sequelize.col("village.block.block_name"), "block_name"],
     ],
     where: whereCondition,
-    group: ["village_id", "village.id"],
+    group: ["village_id", "village.id", "village.block.id"],
   });
   res.sendSuccess(res, { farmers, village });
 };
