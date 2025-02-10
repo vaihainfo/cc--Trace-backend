@@ -604,15 +604,54 @@ const fetchGinHeapPagination = async (req: Request, res: Response) => {
         limit: limit,
         order: [["id", "desc"]],
       });
+      let data = [];
 
-      return res.sendPaginationSuccess(res, rows, count);
+      for await (let row of rows) {
+        if (row.dataValues?.weighbridge_village) {
+          const villageIds = row.dataValues.weighbridge_village
+            .split(",")
+            .map((id: string) => id.trim()) 
+            .filter((id: string) => id !== ""); 
+
+
+          const villages = await Village.findAll({
+            where: { id: { [Op.in]: villageIds } },
+            attributes: ["id", "village_name"],
+          });
+
+          const uniqueVillageNames = [...new Set(villages.map((v:any) => v.village_name))];
+          row.dataValues.village_names = uniqueVillageNames.join(", ");
+        }
+        data.push(row);
+      }
+      return res.sendPaginationSuccess(res, data, count);
     } else {
       const gin = await GinProcess.findAll({
         where: whereCondition,
         include: include,
         order: [["id", "desc"]],
       });
-      return res.sendSuccess(res, gin);
+      let data = [];
+
+      for await (let row of gin) {
+        if (row.dataValues?.weighbridge_village) {
+          const villageIds = row.dataValues.weighbridge_village
+            .split(",")
+            .map((id: string) => id.trim()) 
+            .filter((id: string) => id !== ""); 
+
+
+          const villages = await Village.findAll({
+            where: { id: { [Op.in]: villageIds } },
+            attributes: ["id", "village_name"],
+          });
+
+          const uniqueVillageNames = [...new Set(villages.map((v:any) => v.village_name))];
+          row.dataValues.village_names = uniqueVillageNames.join(", ");
+        }
+        data.push(row);
+      }
+      return res.sendSuccess(res, data);
     }
   } catch (error: any) {
     console.error(error);
@@ -710,6 +749,8 @@ const exportGinHeapReport = async (req: Request, res: Response) => {
       "Heap Ending Date",
       "Ginner heap no.",
       "REEL heap no.",
+      "Ginner Name",
+      "Village Name",
       "Quantity",
       "Vehicle no.",
     ]);
@@ -724,6 +765,26 @@ const exportGinHeapReport = async (req: Request, res: Response) => {
     });
     // // Append data to worksheet
     for await (const [index, item] of rows.entries()) {
+      let data = [];
+
+      for await (let row of rows) {
+        if (row.dataValues?.weighbridge_village) {
+          const villageIds = row.dataValues.weighbridge_village
+            .split(",")
+            .map((id: string) => id.trim()) 
+            .filter((id: string) => id !== ""); 
+
+
+          const villages = await Village.findAll({
+            where: { id: { [Op.in]: villageIds } },
+            attributes: ["id", "village_name"],
+          });
+
+          const uniqueVillageNames = [...new Set(villages.map((v:any) => v.village_name))];
+          row.dataValues.village_names = uniqueVillageNames.join(", ");
+        }
+        data.push(row);
+      }
       const rowValues = Object.values({
         index: index + 1,
         from_date: item.dataValues.from_date
@@ -738,6 +799,8 @@ const exportGinHeapReport = async (req: Request, res: Response) => {
         reel_heap_no: item.dataValues.reel_heap_no
           ? item.dataValues.reel_heap_no
           : "",
+          ginner_name: item.dataValues.ginner.name,
+          village_name: item.dataValues.village_names,
         heap_weight: item.dataValues.estimated_heap
           ? Number(item.dataValues.estimated_heap)
           : 0,
