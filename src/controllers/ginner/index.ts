@@ -1623,7 +1623,7 @@ const chooseCotton = async (req: Request, res: Response) => {
         //   "estimated_qty",
         // ],
         // ],
-        attributes: ["id", "qty_stock", "qty_purchased", "village_id", "vehicle", "date"],
+        attributes: ["id", "qty_stock", "qty_purchased", "village_id", "vehicle", "date", "farmer_code"],
         include: [
           { model: Village, as: "village" },
           { model: Program, as: "program" },
@@ -1650,6 +1650,7 @@ const chooseCotton = async (req: Request, res: Response) => {
             ...summedData[villageId].vehicle,
             {
               tran_id: result.dataValues.id,
+              farmer_code: result.dataValues.farmer_code,
               village_id: villageId,
               qty_stock: result.dataValues.qty_stock,
               qty_used: result.dataValues.qty_stock,
@@ -1665,6 +1666,7 @@ const chooseCotton = async (req: Request, res: Response) => {
             qty_stock: result.dataValues.qty_stock,
             vehicle: [{
               tran_id: result.dataValues.id,
+              farmer_code: result.dataValues.farmer_code,
               village_id: villageId,
               qty_stock: result.dataValues.qty_stock,
               qty_used: result.dataValues.qty_stock,
