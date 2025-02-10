@@ -4430,6 +4430,9 @@ const generateSpinnerBale = async () => {
           lint_quantity: Number(item.accepted_total_qty) ?? 0
             ? Number(item.accepted_total_qty)
             : 0,
+          greyed_out_qty: item.greyed_out_qty
+            ? Number(item.greyed_out_qty)
+            : 0,
           program: item.program ? item.program : "",
           greyout_status: item.greyout_status ? "Yes" : "No",
         });
@@ -4438,7 +4441,7 @@ const generateSpinnerBale = async () => {
         if (!currentWorksheet) {
           currentWorksheet = workbook.addWorksheet(`Spinner Bale Receipt ${worksheetIndex}`);
           if (worksheetIndex == 1) {
-            currentWorksheet.mergeCells("A1:N1");
+            currentWorksheet.mergeCells("A1:O1");
             const mergedCell = currentWorksheet.getCell("A1");
             mergedCell.value = "CottonConnect | Spinner Bale Receipt Report";
             mergedCell.alignment = { horizontal: "center", vertical: "middle" };
@@ -4458,6 +4461,7 @@ const generateSpinnerBale = async () => {
             "Press/Bale No",
             "No of Bales(Accepted)",
             "Total Lint Accepted Quantity(Kgs)",
+            "Lint Greyed Out After Verification(Kgs)",
             "Programme",
             "Grey Out Status",
           ]);

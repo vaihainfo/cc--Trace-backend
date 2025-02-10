@@ -3986,9 +3986,9 @@ const exportSpinnerBale = async (req: Request, res: Response) => {
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet("Sheet1");
       if (isOrganic === 'true') {
-        worksheet.mergeCells('A1:M1');
+        worksheet.mergeCells('A1:N1');
       } else{
-        worksheet.mergeCells("A1:N1");
+        worksheet.mergeCells("A1:O1");
       }
       const mergedCell = worksheet.getCell("A1");
       mergedCell.value = "CottonConnect | Spinner Bale Receipt Report";
@@ -4009,6 +4009,7 @@ const exportSpinnerBale = async (req: Request, res: Response) => {
           "Press/Bale No",
           "No of Bales(Accepted)",
           "Total Lint Accepted Quantity(Kgs)",
+          "Lint Greyout Quantity After Verification(Kgs)",
           "Programme",
           "Grey Out Status",
         ]);
@@ -4026,6 +4027,7 @@ const exportSpinnerBale = async (req: Request, res: Response) => {
         "Press/Bale No",
         "No of Bales(Accepted)",
         "Total Lint Accepted Quantity(Kgs)",
+        "Lint Greyout Quantity After Verification(Kgs)",
         "Programme",
         "Grey Out Status",
       ]);
@@ -4127,6 +4129,9 @@ const exportSpinnerBale = async (req: Request, res: Response) => {
           lint_quantity: item.accepted_total_qty
             ? Number(item.accepted_total_qty)
             : 0,
+          greyed_out_qty: item.greyed_out_qty
+            ? Number(item.greyed_out_qty)
+            : 0,
           program: item.program ? item.program : "",
           greyout_status: item.greyout_status ? "Yes" : "No",
         });
@@ -4152,6 +4157,9 @@ const exportSpinnerBale = async (req: Request, res: Response) => {
             : 0,
           lint_quantity: item.accepted_total_qty
             ? Number(item.accepted_total_qty)
+            : 0,
+          greyed_out_qty: item.greyed_out_qty
+            ? Number(item.greyed_out_qty)
             : 0,
           program: item.program ? item.program : "",
           greyout_status: item.greyout_status ? "Yes" : "No",
