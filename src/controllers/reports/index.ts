@@ -10722,9 +10722,9 @@ const fetchSpinnerSummaryPagination = async (req: Request, res: Response) => {
           ],
           where: {
             ...lintCondition,
-            "$ginsales.buyer$": spinner.id,
+            "$spinprocess.spinner_id$": spinner.id,
           },
-          group: ["ginsales.buyer"],
+          group: ["spinprocess.spinner_id"],
         }),
         GinSales.findOne({
           attributes: [
