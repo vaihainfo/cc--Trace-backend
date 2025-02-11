@@ -667,7 +667,7 @@ const generateSpinnerLintCottonStock = async () => {
 
 
       for await (const [index, spinner] of rows.entries()) {
-        let cotton_consumed = Number(spinner?.accepted_total_qty) > Number(spinner?.qty_stock) ? Number(formatDecimal(spinner?.accepted_total_qty)) - Number(formatDecimal(spinner?.qty_stock)) : 0;
+        let cotton_consumed = Number(spinner?.accepted_total_qty) > (Number(spinner?.qty_stock) + Number(spinner?.greyed_out_qty)) ? Number(formatDecimal(spinner?.accepted_total_qty)) - (Number(formatDecimal(spinner?.qty_stock)) + Number(formatDecimal(spinner?.greyed_out_qty))) : 0;
 
         const rowValues = [
           offset + index + 1,
@@ -680,6 +680,7 @@ const generateSpinnerLintCottonStock = async () => {
           spinner?.lot_no ? spinner?.lot_no : "",
           spinner?.accepted_total_qty ? Number(formatDecimal(spinner?.accepted_total_qty)) : 0,
           spinner?.qty_stock ? Number(formatDecimal(spinner?.qty_stock)) : 0,
+          spinner?.greyed_out_qty ? Number(formatDecimal(spinner?.greyed_out_qty)) : 0,
           cotton_consumed,
         ];
 
@@ -687,7 +688,7 @@ const generateSpinnerLintCottonStock = async () => {
         if (!currentWorksheet) {
           currentWorksheet = workbook.addWorksheet(`Lint Cotton Stock Report ${worksheetIndex}`);
           if (worksheetIndex == 1) {
-            currentWorksheet.mergeCells("A1:K1");
+            currentWorksheet.mergeCells("A1:L1");
             const mergedCell = currentWorksheet.getCell("A1");
             mergedCell.value = "CottonConnect | Spinner Lint Cotton Stock Report";
             mergedCell.font = { bold: true };
@@ -705,6 +706,7 @@ const generateSpinnerLintCottonStock = async () => {
             "Bale Lot No",
             "Total Lint Cotton Received (Kgs)",
             "Total Lint Cotton in Stock (Kgs)",
+            "Lint Cotton Greyed Out after Verification (Kgs)",
             "Total Lint Cotton Consumed (Kgs)",
           ]);
           headerRow.font = { bold: true };
@@ -4094,16 +4096,25 @@ const generateSpinnerSummary = async () => {
               },
             ],
             where: {
-              "$ginsales.buyer$": item.id,
+              "$spinprocess.spinner_id$": item.id,
             },
-            group: ["ginsales.buyer"],
+            group: ["spinprocess.spinner_id"],
           }),
           GinSales.findOne({
             attributes: [
               [
                 sequelize.fn(
                   "COALESCE",
-                  sequelize.fn("SUM", sequelize.col("qty_stock")),
+                  sequelize.fn(
+                    "SUM",
+                    sequelize.literal(`
+                      CASE 
+                        WHEN greyout_status = true THEN qty_stock 
+                        WHEN greyout_status = false AND greyed_out_qty IS NOT NULL THEN greyed_out_qty 
+                        ELSE 0 
+                      END
+                    `)
+                  ),
                   0
                 ),
                 "lint_greyout",
@@ -4113,7 +4124,10 @@ const generateSpinnerSummary = async () => {
               ...wheree,
               buyer: item.id,
               status: { [Op.in]: ['Sold', 'Partially Accepted', 'Partially Rejected'] },
-              greyout_status: true,
+              [Op.or]: [
+                { greyout_status: true },
+                { greyout_status: false, greyed_out_qty: { [Op.ne]: null } },
+              ],
             },
           }),
           GinSales.findOne({
