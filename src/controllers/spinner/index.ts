@@ -644,6 +644,8 @@ const fetchComberNoilPagination = async (req: Request, res: Response) => {
       whereCondition.program_id = { [Op.in]: idArray };
     }
     combernoilGenerationWhereCondition.qty_stock = { [Op.gt]: 0 };
+
+
     //fetch data with pagination
     if (req.query.pagination === "true") {
       const { count, rows } = await CombernoilGeneration.findAndCountAll({
@@ -654,11 +656,18 @@ const fetchComberNoilPagination = async (req: Request, res: Response) => {
             where: whereCondition,
             required: false,
             attributes: ["id", "batch_lot_no", "program_id"],
+            include: [
+              {
+                model : Program,
+                as : "program",
+                attributes: ["program_name"],
+              }
+            ]
           },
           {
             model: Spinner,
             as: "spinner",
-            attributes: ["id", "name"],
+            attributes: ["id", "name"]
           },
           {
             model: SpinCombernoilSale,
