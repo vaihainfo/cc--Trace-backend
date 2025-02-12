@@ -4583,9 +4583,9 @@ const generateSpinnerYarnProcess = async () => {
       FROM
         comber_selections cs
       LEFT JOIN
-        gin_sales gs ON cs.yarn_id = gs.id
+        spin_processes sp ON cs.yarn_id = sp.id
       LEFT JOIN
-        seasons s ON gs.season_id = s.id
+        seasons s ON sp.season_id = s.id
       GROUP BY
         process_id
     ),
