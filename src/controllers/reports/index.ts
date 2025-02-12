@@ -2294,10 +2294,17 @@ const fetchGinSalesPagination = async (req: Request, res: Response) => {
         STRING_AGG(DISTINCT ss.name, ',') AS lint_process_seasons,
         STRING_AGG(DISTINCT gp.reel_lot_no, ',') AS reel_lot_no,
         
-        COUNT(CASE WHEN gp.season_id < gs.season_id THEN gb.id END) AS previous_season_bales,
+          CASE 
+          WHEN COUNT(DISTINCT gp.season_id) > 1 THEN 
+              COUNT(CASE WHEN gp.season_id < gs.season_id THEN gb.id END) 
+          ELSE NULL  -- Set to NULL if only one season is used
+      END AS previous_season_bales,
 
-        -- Sum weight of bales from the previous season (CAST to numeric)
-        SUM(CASE WHEN gp.season_id < gs.season_id THEN COALESCE(CAST(gb.weight AS DOUBLE PRECISION), 0) ELSE 0 END) AS previous_season_quantity,
+      CASE 
+          WHEN COUNT(DISTINCT gp.season_id) > 1 THEN 
+              SUM(CASE WHEN gp.season_id < gs.season_id THEN COALESCE(CAST(gb.weight AS DOUBLE PRECISION), 0) ELSE 0 END) 
+          ELSE NULL  -- Set to NULL if only one season is used
+      END AS previous_season_quantity,
 
         -- Count bales from the current season
         COUNT(CASE WHEN gp.season_id = gs.season_id THEN gb.id END) AS current_season_bales,
