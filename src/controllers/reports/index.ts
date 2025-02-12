@@ -387,7 +387,7 @@ const fetchGinHeapReport = async (req: Request, res: Response) => {
       {
         model: Program,
         as: "program",
-      },
+      }
     ];
     //fetch data with pagination
     if (req.query.pagination === "true") {
@@ -398,15 +398,55 @@ const fetchGinHeapReport = async (req: Request, res: Response) => {
         limit: limit,
         order: [["id", "desc"]],
       });
+      let data = [];
 
-      return res.sendPaginationSuccess(res, rows, count);
+      for await (let row of rows) {
+        if (row.dataValues?.weighbridge_village) {
+          const villageIds = row.dataValues.weighbridge_village
+            .split(",")
+            .map((id: string) => id.trim()) 
+            .filter((id: string) => id !== ""); 
+
+
+          const villages = await Village.findAll({
+            where: { id: { [Op.in]: villageIds } },
+            attributes: ["id", "village_name"],
+          });
+
+          const uniqueVillageNames = [...new Set(villages.map((v:any) => v.village_name))];
+          row.dataValues.village_names = uniqueVillageNames.join(", ");
+        }
+        data.push(row);
+      }
+      return res.sendPaginationSuccess(res, data, count);
     } else {
       const gin = await GinHeap.findAll({
         where: whereCondition,
         include: include,
         order: [["id", "desc"]],
       });
-      return res.sendSuccess(res, gin);
+
+      let data = [];
+
+      for await (let row of gin) {
+        if (row.dataValues?.weighbridge_village) {
+          const villageIds = row.dataValues.weighbridge_village
+            .split(",")
+            .map((id: string) => id.trim()) 
+            .filter((id: string) => id !== ""); 
+
+
+          const villages = await Village.findAll({
+            where: { id: { [Op.in]: villageIds } },
+            attributes: ["id", "village_name"],
+          });
+
+          const uniqueVillageNames = [...new Set(villages.map((v:any) => v.village_name))];
+          row.dataValues.village_names = uniqueVillageNames.join(", ");
+        }
+        data.push(row);
+      }
+      return res.sendSuccess(res, data);
     }
   } catch (error: any) {
     console.error(error);
@@ -414,6 +454,7 @@ const fetchGinHeapReport = async (req: Request, res: Response) => {
   }
 };
 
+       
 
 const exportGinHeapReport = async (req: Request, res: Response) => {
   const excelFilePath = path.join(
@@ -516,6 +557,8 @@ const exportGinHeapReport = async (req: Request, res: Response) => {
         "Season",
         "Gin heap no.",
         "REEL heap no.",
+        "Ginner Name",
+        "Village Name",
         "Heap Weight",
         "Heap Stating Date",
         "Heap Ending Date",
@@ -532,6 +575,23 @@ const exportGinHeapReport = async (req: Request, res: Response) => {
       });
       // // Append data to worksheet
       for await (const [index, item] of rows.entries()) {
+        if (item.dataValues?.weighbridge_village) {
+          const villageIds = item.dataValues.weighbridge_village && item.dataValues.weighbridge_village
+            .split(",")
+            .map((id: string) => id.trim()) 
+            .filter((id: string) => id !== ""); 
+
+            if(villageIds.length > 0) {
+          const villages = await Village.findAll({
+            where: { id: { [Op.in]: villageIds } },
+            attributes: ["id", "village_name"],
+          });
+
+          const uniqueVillageNames = [...new Set(villages.map((v:any) => v.village_name))];
+          item.dataValues.village_names = uniqueVillageNames.join(", ");
+        }
+        }
+
         const rowValues = Object.values({
           index: index + 1,
           created_date: item.dataValues.createdAt
@@ -542,6 +602,8 @@ const exportGinHeapReport = async (req: Request, res: Response) => {
           reel_heap_no: item.dataValues.reel_heap_no
             ? item.dataValues.reel_heap_no
             : "",
+          ginner_name: item.dataValues.ginner.name,
+          village_name: item.dataValues.village_names,
           heap_weight: item.dataValues.estimated_heap
             ? Number(item.dataValues.estimated_heap)
             : 0,
@@ -10550,9 +10612,9 @@ const fetchSpinnerSummaryPagination = async (req: Request, res: Response) => {
           ],
           where: {
             ...lintCondition,
-            "$ginsales.buyer$": spinner.id,
+            "$spinprocess.spinner_id$": spinner.id,
           },
-          group: ["ginsales.buyer"],
+          group: ["spinprocess.spinner_id"],
         }),
         GinSales.findOne({
           attributes: [
@@ -14083,7 +14145,7 @@ const fetchPscpProcurementLiveTracker = async (req: Request, res: Response) => {
                     LEFT JOIN 
                           "villages" AS "farmer->village" ON "gv"."village_id" = "farmer->village"."id" 
                      LEFT JOIN 
-                          "farmers" AS "farmer" ON "farmer->village"."id" = "farmer"."village_id" 
+                          "farmers" AS "farmer" ON "farmer->village"."id" = "farmer"."village_id" and "farmer"."brand_id" ="gv"."brand_id"
                      LEFT JOIN 
                           "farms" as "farms" on farms.farmer_id = "farmer".id and farms.season_id = gv.season_id
                      LEFT JOIN 
@@ -14723,7 +14785,7 @@ const exportPscpProcurementLiveTracker = async (
                     LEFT JOIN 
                           "villages" AS "farmer->village" ON "gv"."village_id" = "farmer->village"."id" 
                      LEFT JOIN 
-                          "farmers" AS "farmer" ON "farmer->village"."id" = "farmer"."village_id" 
+                          "farmers" AS "farmer" ON "farmer->village"."id" = "farmer"."village_id" and "farmer"."brand_id" ="gv"."brand_id"
                      LEFT JOIN 
                           "farms" as "farms" on farms.farmer_id = "farmer".id and farms.season_id = gv.season_id
                      LEFT JOIN 
@@ -18727,7 +18789,7 @@ const villageSeedCottonAllocationReport = async (req: Request, res: Response) =>
                      LEFT JOIN 
                           "villages" AS "farmer->village" ON "gv"."village_id" = "farmer->village"."id" 
                      LEFT JOIN 
-                          "farmers" AS "farmer" ON "farmer->village"."id" = "farmer"."village_id" 
+                          "farmers" AS "farmer" ON "farmer->village"."id" = "farmer"."village_id" and "farmer"."brand_id" ="gv"."brand_id"
                      LEFT JOIN 
                           "farms" as "farms" on farms.farmer_id = "farmer".id and farms.season_id = gv.season_id
                      LEFT JOIN 
@@ -18749,7 +18811,7 @@ const villageSeedCottonAllocationReport = async (req: Request, res: Response) =>
                      LEFT JOIN 
                           "villages" AS "farmer->village" ON "gv"."village_id" = "farmer->village"."id" 
                      LEFT JOIN 
-                          "farmers" AS "farmer" ON "farmer->village"."id" = "farmer"."village_id" 
+                          "farmers" AS "farmer" ON "farmer->village"."id" = "farmer"."village_id" and "farmer"."brand_id" ="gv"."brand_id"
                      LEFT JOIN 
                           "farms" as "farms" on farms.farmer_id = "farmer".id and farms.season_id = gv.season_id
                      LEFT JOIN 
@@ -19119,7 +19181,7 @@ const exportVillageSeedCottonAllocation = async (req: Request, res: Response) =>
                      LEFT JOIN 
                           "villages" AS "farmer->village" ON "gv"."village_id" = "farmer->village"."id" 
                      LEFT JOIN 
-                          "farmers" AS "farmer" ON "farmer->village"."id" = "farmer"."village_id" 
+                          "farmers" AS "farmer" ON "farmer->village"."id" = "farmer"."village_id" and "farmer"."brand_id" ="gv"."brand_id"
                      LEFT JOIN 
                           "farms" as "farms" on farms.farmer_id = "farmer".id and farms.season_id = gv.season_id
                      LEFT JOIN 

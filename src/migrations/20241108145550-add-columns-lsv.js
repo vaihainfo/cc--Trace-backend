@@ -3,29 +3,29 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up (queryInterface, Sequelize) {
-    await queryInterface.addColumn('lint_stock_verifieds', 'confirmed_gin_total_qty', {
-      type: Sequelize.DOUBLE
-    });
+    // await queryInterface.addColumn('lint_stock_verifieds', 'confirmed_gin_total_qty', {
+    //   type: Sequelize.DOUBLE
+    // });
 
-    await queryInterface.addColumn('lint_stock_verifieds', 'confirmed_gin_no_of_bales', {
-      type: Sequelize.DOUBLE
-    });
+    // await queryInterface.addColumn('lint_stock_verifieds', 'confirmed_gin_no_of_bales', {
+    //   type: Sequelize.DOUBLE
+    // });
 
-    await queryInterface.addColumn('lint_stock_verifieds', 'confirmed_scm_total_qty', {
-      type: Sequelize.DOUBLE
-    });
+    // await queryInterface.addColumn('lint_stock_verifieds', 'confirmed_scm_total_qty', {
+    //   type: Sequelize.DOUBLE
+    // });
 
-    await queryInterface.addColumn('lint_stock_verifieds', 'confirmed_scm_no_of_bales', {
-      type: Sequelize.DOUBLE
-    });
+    // await queryInterface.addColumn('lint_stock_verifieds', 'confirmed_scm_no_of_bales', {
+    //   type: Sequelize.DOUBLE
+    // });
 
-    await queryInterface.addColumn('lint_stock_verifieds', 'confirmed_scd_total_qty', {
-      type: Sequelize.DOUBLE
-    });
+    // await queryInterface.addColumn('lint_stock_verifieds', 'confirmed_scd_total_qty', {
+    //   type: Sequelize.DOUBLE
+    // });
 
-    await queryInterface.addColumn('lint_stock_verifieds', 'confirmed_scd_no_of_bales', {
-      type: Sequelize.DOUBLE
-    });
+    // await queryInterface.addColumn('lint_stock_verifieds', 'confirmed_scd_no_of_bales', {
+    //   type: Sequelize.DOUBLE
+    // });
 
     await queryInterface.addColumn('gin-bales', 'gin_verified_weight', {
       type: Sequelize.DOUBLE

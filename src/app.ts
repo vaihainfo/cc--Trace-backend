@@ -103,8 +103,8 @@ import updateGreyoutData from "./router/update-greyout/";
 import moment from "moment";
 import 'moment-timezone';
 import GinProcess from "./models/gin-process.model";
-import YarnBlendRouter from './router/master/yarnblend';
 import { setupAssociations } from "./models/associations";
+import YarnBlendRouter from './router/master/yarnblend';
 
 
 const app = express();

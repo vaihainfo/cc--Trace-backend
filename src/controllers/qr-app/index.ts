@@ -613,6 +613,7 @@ const exportAgentTransactions = async (req: Request, res: Response) => {
 
             let queryOptions: any = {
                 where: whereCondition,
+                distinct: true,
                 include: [
                     {
                         model: Village,
