@@ -224,7 +224,7 @@ const createTraderSales = async (req: Request, res: Response) => {
         res.sendSuccess(res, garmentSales);
     } catch (error: any) {
         console.log(error.message);
-        return res.sendError(res, error.meessage);
+        return res.sendError(res, error.message, error);
     }
 }
 
