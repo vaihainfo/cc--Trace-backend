@@ -10825,16 +10825,25 @@ const fetchSpinnerSummaryPagination = async (req: Request, res: Response) => {
           ],
           where: {
             ...lintCondition,
-            "$ginsales.buyer$": spinner.id,
+            "$spinprocess.spinner_id$": spinner.id,
           },
-          group: ["ginsales.buyer"],
+          group: ["spinprocess.spinner_id"],
         }),
         GinSales.findOne({
           attributes: [
             [
               sequelize.fn(
                 "COALESCE",
-                sequelize.fn("SUM", sequelize.col("qty_stock")),
+                sequelize.fn(
+                  "SUM",
+                  sequelize.literal(`
+                    CASE 
+                      WHEN greyout_status = true THEN qty_stock 
+                      WHEN greyout_status = false AND greyed_out_qty IS NOT NULL THEN greyed_out_qty 
+                      ELSE 0 
+                    END
+                  `)
+                ),
                 0
               ),
               "lint_greyout",
@@ -10845,7 +10854,10 @@ const fetchSpinnerSummaryPagination = async (req: Request, res: Response) => {
             ...ginSalesCondition,
             buyer: spinner.id,
             status: { [Op.in]: ['Sold', 'Partially Accepted', 'Partially Rejected'] },
-            greyout_status: true,
+            [Op.or]: [
+              { greyout_status: true },
+              { greyout_status: false, greyed_out_qty: { [Op.ne]: null } },
+            ],
           },
         }),
         GinSales.findOne({
@@ -11199,16 +11211,25 @@ const exportSpinnerSummary = async (req: Request, res: Response) => {
             ],
             where: {
               ...lintCondition,
-              "$ginsales.buyer$": item.id,
+              "$spinprocess.spinner_id$": item.id,
             },
-            group: ["ginsales.buyer"],
+            group: ["spinprocess.spinner_id"],
           }),
           GinSales.findOne({
             attributes: [
               [
                 sequelize.fn(
                   "COALESCE",
-                  sequelize.fn("SUM", sequelize.col("qty_stock")),
+                  sequelize.fn(
+                    "SUM",
+                    sequelize.literal(`
+                      CASE 
+                        WHEN greyout_status = true THEN qty_stock 
+                        WHEN greyout_status = false AND greyed_out_qty IS NOT NULL THEN greyed_out_qty 
+                        ELSE 0 
+                      END
+                    `)
+                  ),
                   0
                 ),
                 "lint_greyout",
@@ -11219,7 +11240,10 @@ const exportSpinnerSummary = async (req: Request, res: Response) => {
               ...ginSalesCondition,
               buyer: item.id,
               status: { [Op.in]: ['Sold', 'Partially Accepted', 'Partially Rejected'] },
-              greyout_status: true,
+              [Op.or]: [
+                { greyout_status: true },
+                { greyout_status: false, greyed_out_qty: { [Op.ne]: null } },
+              ],
             },
           }),
           GinSales.findOne({
@@ -13099,7 +13123,7 @@ const exportSpinnerCottonStock = async (req: Request, res: Response) => {
       // Create the excel workbook file
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet("Sheet1");
-      worksheet.mergeCells("A1:K1");
+      worksheet.mergeCells("A1:L1");
       const mergedCell = worksheet.getCell("A1");
       mergedCell.value = "CottonConnect | Spinner Lint Cotton Stock Report";
       mergedCell.font = { bold: true };
@@ -13116,6 +13140,7 @@ const exportSpinnerCottonStock = async (req: Request, res: Response) => {
         "Bale Lot No",
         "Total Lint Cotton Received (Kgs)",
         "Total Lint Cotton in Stock (Kgs)",
+        "Lint Cotton Greyed Out after Verification (Kgs)",
         "Total Lint Cotton Consumed (Kgs)",
       ]);
       headerRow.font = { bold: true };
@@ -13214,7 +13239,8 @@ const exportSpinnerCottonStock = async (req: Request, res: Response) => {
           batch_lot_no: spinner?.lot_no ? spinner?.lot_no : "",
           cotton_procured: spinner?.accepted_total_qty ? Number(formatDecimal(spinner?.accepted_total_qty)) : 0,
           cotton_stock: spinner?.qty_stock ? Number(formatDecimal(spinner?.qty_stock)) : 0,
-          cotton_consumed: Number(spinner?.accepted_total_qty) > Number(spinner?.qty_stock) ? Number(formatDecimal(spinner?.accepted_total_qty)) - Number(formatDecimal(spinner?.qty_stock)) : 0,
+          greyed_out_qty: spinner?.greyed_out_qty ? Number(formatDecimal(spinner?.greyed_out_qty)) : 0,
+          cotton_consumed: Number(spinner?.accepted_total_qty) > (Number(spinner?.qty_stock) + Number(spinner?.greyed_out_qty)) ? Number(formatDecimal(spinner?.accepted_total_qty)) - (Number(formatDecimal(spinner?.qty_stock)) + Number(formatDecimal(spinner?.greyed_out_qty))) : 0,
         });
         worksheet.addRow(rowValues);
       }
