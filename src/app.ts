@@ -103,6 +103,7 @@ import updateGreyoutData from "./router/update-greyout/";
 import moment from "moment";
 import 'moment-timezone';
 import GinProcess from "./models/gin-process.model";
+import { setupAssociations } from "./models/associations";
 import YarnBlendRouter from './router/master/yarnblend';
 import logging from "./middleware/logging";
 
@@ -128,14 +129,15 @@ const connectToDb = async () => {
   const data = await sequelize.sync({ force: false })
   try {
     await sequelize.authenticate();
-    console.log("Database Connected successfully.");
-    const used = process.memoryUsage();
-    // exportReportsOnebyOne();
-    console.log(`Memory usage: ${JSON.stringify(used)}`);
-    console.log("Current Server Time", moment());
-    console.log("Time Zone", serverTimezone);
-    console.log("Offset IST", differenceInMinutes);
-  } catch (error) {
+      console.log("Database Connected successfully.");
+      
+      const used = process.memoryUsage();
+      console.log(`Memory usage: ${JSON.stringify(used)}`);
+      console.log("Current Server Time", moment());
+      console.log("Time Zone", serverTimezone);
+      console.log("Offset IST", differenceInMinutes);
+      setupAssociations();
+    } catch (error) {
     console.error("Unable to connect to the database:", error);
   }
 };

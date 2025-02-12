@@ -12,6 +12,12 @@ const Weaver = db.define('weavers', {
     allowNull: false,
     primaryKey: true
   },
+  sequence_no: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    defaultValue: db.literal("nextval('weaver_seq')"),
+    unique: true
+  },
   name: {
     allowNull: false,
     type: DataTypes.STRING

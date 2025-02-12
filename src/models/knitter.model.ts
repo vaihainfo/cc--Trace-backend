@@ -12,6 +12,12 @@ const Knitter = db.define('knitters', {
     allowNull: false,
     primaryKey: true
   },
+  sequence_no: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    defaultValue: db.literal("nextval('knitter_seq')"),
+    unique: true
+  },
   name: {
     allowNull: false,
     type: DataTypes.STRING

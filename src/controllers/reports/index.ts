@@ -387,7 +387,7 @@ const fetchGinHeapReport = async (req: Request, res: Response) => {
       {
         model: Program,
         as: "program",
-      },
+      }
     ];
     //fetch data with pagination
     if (req.query.pagination === "true") {
@@ -398,15 +398,55 @@ const fetchGinHeapReport = async (req: Request, res: Response) => {
         limit: limit,
         order: [["id", "desc"]],
       });
+      let data = [];
 
-      return res.sendPaginationSuccess(res, rows, count);
+      for await (let row of rows) {
+        if (row.dataValues?.weighbridge_village) {
+          const villageIds = row.dataValues.weighbridge_village
+            .split(",")
+            .map((id: string) => id.trim()) 
+            .filter((id: string) => id !== ""); 
+
+
+          const villages = await Village.findAll({
+            where: { id: { [Op.in]: villageIds } },
+            attributes: ["id", "village_name"],
+          });
+
+          const uniqueVillageNames = [...new Set(villages.map((v:any) => v.village_name))];
+          row.dataValues.village_names = uniqueVillageNames.join(", ");
+        }
+        data.push(row);
+      }
+      return res.sendPaginationSuccess(res, data, count);
     } else {
       const gin = await GinHeap.findAll({
         where: whereCondition,
         include: include,
         order: [["id", "desc"]],
       });
-      return res.sendSuccess(res, gin);
+
+      let data = [];
+
+      for await (let row of gin) {
+        if (row.dataValues?.weighbridge_village) {
+          const villageIds = row.dataValues.weighbridge_village
+            .split(",")
+            .map((id: string) => id.trim()) 
+            .filter((id: string) => id !== ""); 
+
+
+          const villages = await Village.findAll({
+            where: { id: { [Op.in]: villageIds } },
+            attributes: ["id", "village_name"],
+          });
+
+          const uniqueVillageNames = [...new Set(villages.map((v:any) => v.village_name))];
+          row.dataValues.village_names = uniqueVillageNames.join(", ");
+        }
+        data.push(row);
+      }
+      return res.sendSuccess(res, data);
     }
   } catch (error: any) {
     console.error(error);
@@ -414,6 +454,7 @@ const fetchGinHeapReport = async (req: Request, res: Response) => {
   }
 };
 
+       
 
 const exportGinHeapReport = async (req: Request, res: Response) => {
   const excelFilePath = path.join(
@@ -516,6 +557,8 @@ const exportGinHeapReport = async (req: Request, res: Response) => {
         "Season",
         "Gin heap no.",
         "REEL heap no.",
+        "Ginner Name",
+        "Village Name",
         "Heap Weight",
         "Heap Stating Date",
         "Heap Ending Date",
@@ -532,6 +575,23 @@ const exportGinHeapReport = async (req: Request, res: Response) => {
       });
       // // Append data to worksheet
       for await (const [index, item] of rows.entries()) {
+        if (item.dataValues?.weighbridge_village) {
+          const villageIds = item.dataValues.weighbridge_village && item.dataValues.weighbridge_village
+            .split(",")
+            .map((id: string) => id.trim()) 
+            .filter((id: string) => id !== ""); 
+
+            if(villageIds.length > 0) {
+          const villages = await Village.findAll({
+            where: { id: { [Op.in]: villageIds } },
+            attributes: ["id", "village_name"],
+          });
+
+          const uniqueVillageNames = [...new Set(villages.map((v:any) => v.village_name))];
+          item.dataValues.village_names = uniqueVillageNames.join(", ");
+        }
+        }
+
         const rowValues = Object.values({
           index: index + 1,
           created_date: item.dataValues.createdAt
@@ -542,6 +602,8 @@ const exportGinHeapReport = async (req: Request, res: Response) => {
           reel_heap_no: item.dataValues.reel_heap_no
             ? item.dataValues.reel_heap_no
             : "",
+          ginner_name: item.dataValues.ginner.name,
+          village_name: item.dataValues.village_names,
           heap_weight: item.dataValues.estimated_heap
             ? Number(item.dataValues.estimated_heap)
             : 0,
@@ -10548,9 +10610,9 @@ const fetchSpinnerSummaryPagination = async (req: Request, res: Response) => {
           ],
           where: {
             ...lintCondition,
-            "$ginsales.buyer$": spinner.id,
+            "$spinprocess.spinner_id$": spinner.id,
           },
-          group: ["ginsales.buyer"],
+          group: ["spinprocess.spinner_id"],
         }),
         GinSales.findOne({
           attributes: [
@@ -14118,13 +14180,28 @@ const fetchPscpProcurementLiveTracker = async (req: Request, res: Response) => {
             AND ${seasonConditionSql}
           GROUP BY
             go.ginner_id
-        )
+        ), 
+      season_data AS (
+        SELECT DISTINCT
+          t.mapped_ginner,
+          string_agg(DISTINCT s.name, ', ') as season_names
+        FROM
+          transactions t
+          JOIN seasons s ON t.season_id = s.id
+          JOIN filtered_ginners ON t.mapped_ginner = filtered_ginners.id
+        WHERE
+          t.program_id = ANY (filtered_ginners.program_id)
+          AND ${seasonConditionSql}
+        GROUP BY
+          t.mapped_ginner
+      )
       SELECT
         fg.id AS ginner_id,
         fg.name AS ginner_name,
         fg.state_name,
         fg.county_name,
         fg.program_name,
+        COALESCE(sd.season_names, '') AS season_name,
         COALESCE(ec.expected_seed_cotton, 0) / 1000 AS expected_seed_cotton,
         COALESCE(elc.expected_lint, 0) AS expected_lint,
         COALESCE(pd.procurement_seed_cotton, 0) / 1000 AS procurement_seed_cotton,
@@ -14175,6 +14252,7 @@ const fetchPscpProcurementLiveTracker = async (req: Request, res: Response) => {
         LEFT JOIN expected_cotton_data ec ON fg.id = ec.ginner_id
         LEFT JOIN expected_lint_cotton_data elc ON fg.id = elc.ginner_id
         LEFT JOIN ginner_order_data go ON fg.id = go.ginner_id
+        LEFT JOIN season_data sd ON fg.id = sd.mapped_ginner
       ORDER BY
         fg.id DESC
       LIMIT :limit OFFSET :offset

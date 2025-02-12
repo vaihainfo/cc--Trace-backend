@@ -127,9 +127,6 @@ const SpinProcess = db.define('spin_processes', {
     type: DataTypes.DATE,
     allowNull: true,
     defaultValue: null,
-  },
-  yarn_blend_id :{
-    type: DataTypes.INTEGER
   }
 });
 

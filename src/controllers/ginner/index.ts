@@ -30,6 +30,7 @@ import PhysicalTraceabilityDataGinnerSample from "../../models/physical-traceabi
 import GinnerAllocatedVillage from "../../models/ginner-allocated-vilage.model";
 import moment from "moment";
 import GinToGinSale from "../../models/gin-to-gin-sale.model";
+import Block from "../../models/block.model";
 
 //create Ginner Process
 // const createGinnerProcess = async (req: Request, res: Response) => {
@@ -623,15 +624,54 @@ const fetchGinHeapPagination = async (req: Request, res: Response) => {
         limit: limit,
         order: [["id", "desc"]],
       });
+      let data = [];
 
-      return res.sendPaginationSuccess(res, rows, count);
+      for await (let row of rows) {
+        if (row.dataValues?.weighbridge_village) {
+          const villageIds = row.dataValues.weighbridge_village
+            .split(",")
+            .map((id: string) => id.trim()) 
+            .filter((id: string) => id !== ""); 
+
+
+          const villages = await Village.findAll({
+            where: { id: { [Op.in]: villageIds } },
+            attributes: ["id", "village_name"],
+          });
+
+          const uniqueVillageNames = [...new Set(villages.map((v:any) => v.village_name))];
+          row.dataValues.village_names = uniqueVillageNames.join(", ");
+        }
+        data.push(row);
+      }
+      return res.sendPaginationSuccess(res, data, count);
     } else {
       const gin = await GinProcess.findAll({
         where: whereCondition,
         include: include,
         order: [["id", "desc"]],
       });
-      return res.sendSuccess(res, gin);
+      let data = [];
+
+      for await (let row of gin) {
+        if (row.dataValues?.weighbridge_village) {
+          const villageIds = row.dataValues.weighbridge_village
+            .split(",")
+            .map((id: string) => id.trim()) 
+            .filter((id: string) => id !== ""); 
+
+
+          const villages = await Village.findAll({
+            where: { id: { [Op.in]: villageIds } },
+            attributes: ["id", "village_name"],
+          });
+
+          const uniqueVillageNames = [...new Set(villages.map((v:any) => v.village_name))];
+          row.dataValues.village_names = uniqueVillageNames.join(", ");
+        }
+        data.push(row);
+      }
+      return res.sendSuccess(res, data);
     }
   } catch (error: any) {
     console.error(error);
@@ -729,6 +769,8 @@ const exportGinHeapReport = async (req: Request, res: Response) => {
       "Heap Ending Date",
       "Ginner heap no.",
       "REEL heap no.",
+      "Ginner Name",
+      "Village Name",
       "Quantity",
       "Vehicle no.",
     ]);
@@ -743,6 +785,26 @@ const exportGinHeapReport = async (req: Request, res: Response) => {
     });
     // // Append data to worksheet
     for await (const [index, item] of rows.entries()) {
+      let data = [];
+
+      for await (let row of rows) {
+        if (row.dataValues?.weighbridge_village) {
+          const villageIds = row.dataValues.weighbridge_village
+            .split(",")
+            .map((id: string) => id.trim()) 
+            .filter((id: string) => id !== ""); 
+
+
+          const villages = await Village.findAll({
+            where: { id: { [Op.in]: villageIds } },
+            attributes: ["id", "village_name"],
+          });
+
+          const uniqueVillageNames = [...new Set(villages.map((v:any) => v.village_name))];
+          row.dataValues.village_names = uniqueVillageNames.join(", ");
+        }
+        data.push(row);
+      }
       const rowValues = Object.values({
         index: index + 1,
         from_date: item.dataValues.from_date
@@ -757,6 +819,8 @@ const exportGinHeapReport = async (req: Request, res: Response) => {
         reel_heap_no: item.dataValues.reel_heap_no
           ? item.dataValues.reel_heap_no
           : "",
+          ginner_name: item.dataValues.ginner.name,
+          village_name: item.dataValues.village_names,
         heap_weight: item.dataValues.estimated_heap
           ? Number(item.dataValues.estimated_heap)
           : 0,
@@ -1642,7 +1706,7 @@ const chooseCotton = async (req: Request, res: Response) => {
         //   "estimated_qty",
         // ],
         // ],
-        attributes: ["id", "qty_stock", "qty_purchased", "village_id", "vehicle", "date"],
+        attributes: ["id", "qty_stock", "qty_purchased", "village_id", "vehicle", "date", "farmer_code"],
         include: [
           { model: Village, as: "village" },
           { model: Program, as: "program" },
@@ -1669,6 +1733,7 @@ const chooseCotton = async (req: Request, res: Response) => {
             ...summedData[villageId].vehicle,
             {
               tran_id: result.dataValues.id,
+              farmer_code: result.dataValues.farmer_code,
               village_id: villageId,
               qty_stock: result.dataValues.qty_stock,
               qty_used: result.dataValues.qty_stock,
@@ -1684,6 +1749,7 @@ const chooseCotton = async (req: Request, res: Response) => {
             qty_stock: result.dataValues.qty_stock,
             vehicle: [{
               tran_id: result.dataValues.id,
+              farmer_code: result.dataValues.farmer_code,
               village_id: villageId,
               qty_stock: result.dataValues.qty_stock,
               qty_used: result.dataValues.qty_stock,
@@ -2341,6 +2407,7 @@ const updateGinnerSales = async (req: Request, res: Response) => {
       tc_file: req.body.tcFile,
       contract_file: req.body.contractFile,
       invoice_file: req.body.invoiceFile,
+      approval_doc: req.body.approval_doc,
       delivery_notes: req.body.deliveryNotes,
       transporter_name: req.body.transporterName,
       vehicle_no: req.body.vehicleNo,
@@ -2431,7 +2498,7 @@ const fetchGinSalesPagination = async (req: Request, res: Response) => {
   const searchTerm = req.query.search || "";
   const page = Number(req.query.page) || 1;
   const limit = Number(req.query.limit) || 10;
-  const { ginnerId, seasonId, programId }: any = req.query;
+  const { ginnerId, seasonId, programId, buyerType }: any = req.query;
   const offset = (page - 1) * limit;
   const whereCondition: any = {};
   try {
@@ -2462,6 +2529,11 @@ const fetchGinSalesPagination = async (req: Request, res: Response) => {
         .split(",")
         .map((id: any) => parseInt(id, 10));
       whereCondition.program_id = { [Op.in]: idArray };
+    }
+
+    if(buyerType){
+
+      whereCondition.buyer_type = buyerType;
     }
 
     let include = [
@@ -3161,14 +3233,22 @@ const getVillageAndFarmer = async (req: Request, res: Response) => {
         model: Village,
         as: "village",
         attributes: [],
+        include: [
+          {
+            model: Block,
+            as: 'block',
+            attributes: ["id", "block_name"],
+          },
+        ]
       },
     ],
     attributes: [
       [Sequelize.literal("village.id"), "id"],
       [Sequelize.literal('"village"."village_name"'), "village_name"],
+      [Sequelize.col("village.block.block_name"), "block_name"],
     ],
     where: whereCondition,
-    group: ["village_id", "village.id"],
+    group: ["village_id", "village.id", "village.block.id"],
   });
   res.sendSuccess(res, { farmers, village });
 };
@@ -3588,6 +3668,14 @@ const fetchGinLintList = async (req: Request, res: Response) => {
                   'received_total_qty', gs.total_qty,
                   'received_no_of_bales', gs.no_of_bales,
                   'buyer_type', gs.buyer_type,
+                  'tc_file',gs.tc_file,
+                  'rate',gs.rate,
+                  'contract_file',gs.contract_file,
+                  'invoice_file',gs.invoice_file,
+                  'delivery_notes',gs.delivery_notes,
+                  'letter_of_credit',gs.letter_of_credit,
+                  'logistics_documents',gs.logistics_documents,
+                  'approval_doc',gs.approval_doc,
                   'ginner_id', g.id,
                   'ginner_name', g.name,
                   'buyer_ginner_id', buyer.id,
