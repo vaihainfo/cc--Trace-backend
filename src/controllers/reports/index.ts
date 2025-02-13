@@ -2293,25 +2293,32 @@ const fetchGinSalesPagination = async (req: Request, res: Response) => {
         ARRAY_AGG(DISTINCT gp.id) AS process_ids,
         STRING_AGG(DISTINCT ss.name, ',') AS lint_process_seasons,
         STRING_AGG(DISTINCT gp.reel_lot_no, ',') AS reel_lot_no,
-        
-          CASE 
-          WHEN COUNT(DISTINCT gp.season_id) > 1 THEN 
-              COUNT(CASE WHEN gp.season_id < gs.season_id THEN gb.id END) 
-          ELSE NULL  -- Set to NULL if only one season is used
-      END AS previous_season_bales,
+       CASE 
+            WHEN COUNT(DISTINCT gp.season_id) > 1 THEN 
+                NULLIF(COUNT(CASE WHEN gp.season_id <> gs.season_id THEN gb.id END), 0)
+            ELSE NULL  
+        END AS other_season_bales,
 
-      CASE 
-          WHEN COUNT(DISTINCT gp.season_id) > 1 THEN 
-              SUM(CASE WHEN gp.season_id < gs.season_id THEN COALESCE(CAST(gb.weight AS DOUBLE PRECISION), 0) ELSE 0 END) 
-          ELSE NULL  -- Set to NULL if only one season is used
-      END AS previous_season_quantity,
+        CASE 
+            WHEN COUNT(DISTINCT gp.season_id) > 1 THEN 
+                NULLIF(SUM(CASE WHEN gp.season_id <> gs.season_id THEN COALESCE(CAST(gb.weight AS DOUBLE PRECISION), 0) ELSE 0 END), 0) 
+            ELSE NULL  
+        END AS other_season_quantity,
 
-        -- Count bales from the current season
-        COUNT(CASE WHEN gp.season_id = gs.season_id THEN gb.id END) AS current_season_bales,
+        -- Only Previous Season Data
+        NULLIF(COUNT(CASE WHEN gp.season_id < gs.season_id THEN gb.id END), 0) AS previous_season_bales,
+        NULLIF(SUM(CASE WHEN gp.season_id < gs.season_id THEN COALESCE(CAST(gb.weight AS DOUBLE PRECISION), 0) ELSE 0 END), 0) AS previous_season_quantity,
 
-        -- Sum weight of bales from the current season (CAST to numeric)
-        SUM(CASE WHEN gp.season_id = gs.season_id THEN COALESCE(CAST(gb.weight AS DOUBLE PRECISION), 0) ELSE 0 END) AS current_season_quantity,
-  
+        -- Only Future Season Data
+        NULLIF(COUNT(CASE WHEN gp.season_id > gs.season_id THEN gb.id END), 0) AS future_season_bales,
+        NULLIF(SUM(CASE WHEN gp.season_id > gs.season_id THEN COALESCE(CAST(gb.weight AS DOUBLE PRECISION), 0) ELSE 0 END), 0) AS future_season_quantity,
+
+        -- Bales current season
+        NULLIF(COUNT(CASE WHEN gp.season_id = gs.season_id THEN gb.id END), 0) AS current_season_bales,
+
+        -- Current season
+        NULLIF(SUM(CASE WHEN gp.season_id = gs.season_id THEN COALESCE(CAST(gb.weight AS DOUBLE PRECISION), 0) ELSE 0 END), 0) AS current_season_quantity,
+
         COALESCE(
             SUM(
               CASE
@@ -3302,7 +3309,7 @@ const exportGinnerSales = async (req: Request, res: Response) => {
         headerRow = worksheet.addRow([
           "Sr No.", "Process Date", "Data Entry Date", "Lint Process Season", "Lint sale chosen season", "Ginner Name",
           "Invoice No","Buyer Type", "Sold To", "Bale Lot No", "REEL Lot No", "No of Bales", "Press/Bale No", "Rate/Kg",
-          "Total Quantity", "Sales Value", "Vehicle No", "Transporter Name", "Programme", "Agent Detials", "Status"
+          "Total Quantity", "Other Season Quantity (Kgs)", "Other Season Bales", "Sales Value", "Vehicle No", "Transporter Name", "Programme", "Agent Detials", "Status"
         ]);
       }
       headerRow.font = { bold: true };
@@ -3448,6 +3455,31 @@ const exportGinnerSales = async (req: Request, res: Response) => {
           ARRAY_AGG(DISTINCT gp.id) AS process_ids,
           STRING_AGG(DISTINCT ss.name, ',') AS lint_process_seasons,
           STRING_AGG(DISTINCT gp.reel_lot_no, ',') AS reel_lot_no,
+            CASE 
+            WHEN COUNT(DISTINCT gp.season_id) > 1 THEN 
+                NULLIF(COUNT(CASE WHEN gp.season_id <> gs.season_id THEN gb.id END), 0)
+            ELSE NULL  
+        END AS other_season_bales,
+
+        CASE 
+            WHEN COUNT(DISTINCT gp.season_id) > 1 THEN 
+                NULLIF(SUM(CASE WHEN gp.season_id <> gs.season_id THEN COALESCE(CAST(gb.weight AS DOUBLE PRECISION), 0) ELSE 0 END), 0) 
+            ELSE NULL  
+        END AS other_season_quantity,
+
+        -- Only Previous Season Data
+        NULLIF(COUNT(CASE WHEN gp.season_id < gs.season_id THEN gb.id END), 0) AS previous_season_bales,
+        NULLIF(SUM(CASE WHEN gp.season_id < gs.season_id THEN COALESCE(CAST(gb.weight AS DOUBLE PRECISION), 0) ELSE 0 END), 0) AS previous_season_quantity,
+
+        -- Only Future Season Data
+        NULLIF(COUNT(CASE WHEN gp.season_id > gs.season_id THEN gb.id END), 0) AS future_season_bales,
+        NULLIF(SUM(CASE WHEN gp.season_id > gs.season_id THEN COALESCE(CAST(gb.weight AS DOUBLE PRECISION), 0) ELSE 0 END), 0) AS future_season_quantity,
+
+        -- Bales current season
+        NULLIF(COUNT(CASE WHEN gp.season_id = gs.season_id THEN gb.id END), 0) AS current_season_bales,
+
+        -- Current season
+        NULLIF(SUM(CASE WHEN gp.season_id = gs.season_id THEN COALESCE(CAST(gb.weight AS DOUBLE PRECISION), 0) ELSE 0 END), 0) AS current_season_quantity,
           COALESCE(
               SUM(
                 CASE
@@ -3542,6 +3574,21 @@ const exportGinnerSales = async (req: Request, res: Response) => {
             press_no: item.press_no ? item.press_no : '',
             rate: item.rate ? item.rate : 0,
             lint_quantity: item.lint_quantity ? item.lint_quantity : '',
+            other_season_quantity: item.lint_process_seasons?.split(',').length > 1
+            ? Number(item.other_season_quantity || item.previous_season_quantity || item.future_season_quantity || null)
+            : item.previous_season_quantity
+            ? Number(item.previous_season_quantity)
+            : item.future_season_quantity
+            ? Number(item.future_season_quantity)
+            : '',
+        
+          other_season_bales: item.lint_process_seasons?.split(',').length > 1
+            ? Number(item.other_season_bales || item.previous_season_bales || item.future_season_bales || null)
+            : item.previous_season_bales
+            ? Number(item.previous_season_bales)
+            : item.future_season_bales
+            ? Number(item.future_season_bales)
+            : '',
             sales_value: item.sale_value ? Number(item.sale_value) : 0,
             vehicle_no: item.vehicle_no ? item.vehicle_no : '',
             transporter_name: item.transporter_name ? item.transporter_name : '',
