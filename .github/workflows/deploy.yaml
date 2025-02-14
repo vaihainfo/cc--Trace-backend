@@ -14,7 +14,8 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
         with:
-          fetch-depth: 0  # Fetch all history for proper git operations
+          fetch-depth: 0
+          token: ${{ secrets.TOKEN_STAGING }}
 
       - name: Set up SSH key for EC2
         uses: webfactory/ssh-agent@v0.5.3
@@ -22,40 +23,61 @@ jobs:
           ssh-private-key: ${{ secrets.EC2_SSH_KEY_STAGING }}
 
       - name: SSH into EC2 and deploy
+        env:
+          GH_TOKEN: ${{ secrets.TOKEN_STAGING }}
         run: |
-          ssh -o StrictHostKeyChecking=no ubuntu@3.110.178.245 << 'EOF'
+          ssh -o StrictHostKeyChecking=no ubuntu@3.110.178.245 << 'ENDSSH'
             echo "SSH Connection successful!"
             
             # Navigate to the application directory
             cd /home/ubuntu/tracebalebackend-staging
 
-            # Stash any local changes to avoid conflicts
-            sudo git stash
+            # Configure git credentials
+            sudo git config --global credential.helper store
+            echo "https://info.vaiha23@gmail.com:${{ secrets.TOKEN_STAGING }}@github.com" | sudo tee ~/.git-credentials
+            sudo git config --global user.email "info.vaiha23@gmail.com"
+            sudo git config --global user.name "info.vaiha23@gmail.com"
 
-            # Fetch all branches
-            sudo git fetch --all
+            # Update the remote URL with authentication
+            sudo git remote set-url origin "https://info.vaiha23%40gmail.com:${{ secrets.TOKEN_STAGING }}@github.com/vaihainfo/tracebalebackend.git"
 
-            # Force reset to match remote staging branch
+            # Fetch latest changes
+            echo "Fetching latest changes..."
+            sudo git fetch origin staging
+
+            # Reset to match remote staging branch
+            echo "Resetting to origin/staging..."
             sudo git reset --hard origin/staging
 
-            # Clean untracked files
+            # Clean any untracked files
+            echo "Cleaning untracked files..."
             sudo git clean -fd
 
+            # Show current commit to verify
+            echo "Current commit hash:"
+            sudo git rev-parse HEAD
+
             # Install dependencies
+            echo "Installing dependencies..."
             sudo npm install --legacy-peer-deps
 
             # Set execute permission for tsc
             sudo chmod +x ./node_modules/.bin/tsc
 
             # Build the project
+            echo "Building project..."
             sudo npm run build
 
             # Restart PM2 process
-            pm2 delete backend || true
-            pm2 start npm --name 'backend' -- start
+            echo "Restarting PM2 process..."
+            sudo pm2 delete backend || true
+            sudo pm2 start npm --name 'backend' -- start
 
+            # Clean up credentials
+            sudo rm -f ~/.git-credentials
+            
             echo 'Deployment completed successfully!'
-          EOF
+ENDSSH
 
       - name: Clean up and exit
         run: echo "Deployment process finished."
