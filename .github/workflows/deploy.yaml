@@ -26,24 +26,23 @@ jobs:
           ssh -o StrictHostKeyChecking=no -v -i "${{ secrets.EC2_SSH_KEY_STAGING }}" ubuntu@3.110.178.245 << 'EOF'
             echo "SSH Connection successful!"
 
-            # Navigate to the application directory on the EC2 instance
-            cd /home/ubuntu/tracebalebackend-staging || { echo "Directory not found!"; exit 1; }
+            # Navigate to the application directory on the EC2 instance (use sudo to handle permissions)
+            sudo su -c "cd /home/ubuntu/tracebalebackend-staging && \
+            
+            # Ensure we're on the 'staging' branch and pull the latest changes
+            current_branch=\$(git rev-parse --abbrev-ref HEAD)
+            echo 'Current branch: \$current_branch'
 
-            # Check the current branch
-            current_branch=$(git rev-parse --abbrev-ref HEAD)
-            echo "Current branch: $current_branch"
-
-            # Ensure we're on the 'staging' branch and reset if necessary
-            if [ "$current_branch" != "staging" ]; then
-              echo "Switching to staging branch"
-              sudo git checkout staging || { echo "Branch not found!"; exit 1; }
+            if [ \"\$current_branch\" != \"staging\" ]; then
+              echo 'Switching to staging branch'
+              git checkout staging || { echo 'Branch not found!'; exit 1; }
             fi
 
-            # Pull the latest changes from the 'staging' branch
-            sudo git pull origin staging
+            echo 'Pulling latest changes from staging...'
+            git pull origin staging
 
-            # Check the status after pulling
-            sudo git status
+            # Check status
+            git status
 
             # Install dependencies
             npm install --legacy-peer-deps
@@ -59,9 +58,11 @@ jobs:
             pm2 delete backend
 
             # Start the backend using PM2
-            pm2 start npm --name "backend" -- start
+            pm2 start npm --name 'backend' -- start
 
-            echo "Deployment completed successfully!"
+            echo 'Deployment completed successfully!'
+            " 
+
           EOF
 
       # Step 4: Clean up and exit
