@@ -1,3 +1,4 @@
+
 name: Deploy to EC2
 
 on:
@@ -25,14 +26,23 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.TOKEN_STAGING }}
         run: |
-          ssh -o StrictHostKeyChecking=no ubuntu@3.110.178.245 <<EOF
+          ssh -o StrictHostKeyChecking=no ubuntu@3.110.178.245 << 'EOF'
             echo "SSH Connection successful."
 
             # Navigate to the application directory
             cd /home/ubuntu/tracebalebackend-staging || exit 1
 
+            # Fix permissions for the entire directory
+            sudo chown -R ubuntu:ubuntu .
+            sudo chmod -R 775 .
+
+            # Configure git
+            git config --global --add safe.directory /home/ubuntu/tracebalebackend-staging
+            git config user.email "info.vaiha23@gmail.com"
+            git config user.name "info.vaiha23@gmail.com"
+
             # Update GitHub remote URL with token authentication
-            git remote set-url origin "https://${{ secrets.TOKEN_STAGING }}@github.com/vaihainfo/tracebalebackend.git"
+            git remote set-url origin "https://info.vaiha23:${{ secrets.TOKEN_STAGING }}@github.com/vaihainfo/tracebalebackend.git"
 
             # Fetch latest changes
             echo "Fetching latest changes..."
@@ -50,6 +60,10 @@ jobs:
             echo "Current commit hash:"
             git rev-parse HEAD || exit 1
 
+            # Fix permissions again after git operations
+            sudo chown -R ubuntu:ubuntu .
+            sudo chmod -R 775 .
+
             # Install dependencies
             echo "Installing dependencies..."
             npm install --legacy-peer-deps || exit 1
@@ -61,14 +75,13 @@ jobs:
             echo "Building project..."
             npm run build || exit 1
 
-            # Restart PM2 process
+            # Ensure PM2 runs as the correct user
             echo "Restarting PM2 process..."
             pm2 delete backend || true
-            pm2 start npm --name 'backend' -- start || exit 1
+            sudo -u ubuntu pm2 start npm --name 'backend' -- start || exit 1
 
             echo "Deployment completed successfully."
-          EOF
+EOF
 
       - name: Clean up and exit
         run: echo "Deployment process finished."
-        
