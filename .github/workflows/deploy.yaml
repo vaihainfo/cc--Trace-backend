@@ -3,7 +3,7 @@ name: Deploy to EC2
 on:
   push:
     branches:
-      - staging # Trigger deployment on changes to the 'staging1' branch
+      - staging # Trigger deployment on changes to the 'staging' branch
 
 jobs:
   deploy:
@@ -29,11 +29,18 @@ jobs:
             # Navigate to the application directory on the EC2 instance
             cd /home/ubuntu/tracebalebackend-staging || { echo "Directory not found!"; exit 1; }
 
-            # Fetch the latest changes from the GitHub repository
-            sudo git fetch origin
+            # Check the current branch
+            current_branch=$(git rev-parse --abbrev-ref HEAD)
+            echo "Current branch: $current_branch"
 
-            # Reset the local branch to match the remote branch
-            sudo git reset --hard origin/staging
+            # Ensure we're on the 'staging' branch and reset if necessary
+            if [ "$current_branch" != "staging" ]; then
+              echo "Switching to staging branch"
+              sudo git checkout staging || { echo "Branch not found!"; exit 1; }
+            fi
+
+            # Pull the latest changes from the 'staging' branch
+            sudo git pull origin staging
 
             # Check the status after pulling
             sudo git status
