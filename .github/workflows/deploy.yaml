@@ -1,70 +1,61 @@
+
 name: Deploy to EC2
 
 on:
   push:
     branches:
-      - staging # Trigger deployment on changes to the 'staging' branch
+      - staging
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest  # Use the latest Ubuntu runner from GitHub Actions
+    runs-on: ubuntu-latest
 
     steps:
-      # Step 1: Checkout the latest code from the 'staging' branch
       - name: Checkout code
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 0  # Fetch all history for proper git operations
 
-      # Step 2: Set up SSH key for EC2 access
       - name: Set up SSH key for EC2
         uses: webfactory/ssh-agent@v0.5.3
         with:
-          ssh-private-key: ${{ secrets.EC2_SSH_KEY_STAGING }}  # The private key stored in GitHub Secrets for EC2 access
+          ssh-private-key: ${{ secrets.EC2_SSH_KEY_STAGING }}
 
-      # Step 3: SSH into EC2 and deploy
       - name: SSH into EC2 and deploy
         run: |
-          ssh -o StrictHostKeyChecking=no -v -i "${{ secrets.EC2_SSH_KEY_STAGING }}" ubuntu@3.110.178.245 << 'EOF'
+          ssh -o StrictHostKeyChecking=no ubuntu@3.110.178.245 << 'EOF'
             echo "SSH Connection successful!"
-
-            # Navigate to the application directory on the EC2 instance (use sudo to handle permissions)
-            sudo su -c "cd /home/ubuntu/tracebalebackend-staging && \
             
-            # Ensure we're on the 'staging' branch and pull the latest changes
-            current_branch=\$(git rev-parse --abbrev-ref HEAD)
-            echo 'Current branch: \$current_branch'
+            # Navigate to the application directory
+            cd /home/ubuntu/tracebalebackend-staging
 
-            if [ \"\$current_branch\" != \"staging\" ]; then
-              echo 'Switching to staging branch'
-              git checkout staging || { echo 'Branch not found!'; exit 1; }
-            fi
+            # Stash any local changes to avoid conflicts
+            sudo git stash
 
-            echo 'Pulling latest changes from staging...'
-            git pull origin staging
+            # Fetch all branches
+            sudo git fetch --all
 
-            # Check status
-            git status
+            # Force reset to match remote staging branch
+            sudo git reset --hard origin/staging
+
+            # Clean untracked files
+            sudo git clean -fd
 
             # Install dependencies
-            npm install --legacy-peer-deps
+            sudo npm install --legacy-peer-deps
 
             # Set execute permission for tsc
-            chmod +x ./node_modules/.bin/tsc
+            sudo chmod +x ./node_modules/.bin/tsc
 
             # Build the project
-            npm run build
+            sudo npm run build
 
-            # Kill any process using port 5000 and delete the backend PM2 process
-            sudo lsof -t -i:5000 | xargs kill -9
-            pm2 delete backend
-
-            # Start the backend using PM2
+            # Restart PM2 process
+            pm2 delete backend || true
             pm2 start npm --name 'backend' -- start
 
             echo 'Deployment completed successfully!'
-            " 
-
           EOF
 
-      # Step 4: Clean up and exit
       - name: Clean up and exit
         run: echo "Deployment process finished."
