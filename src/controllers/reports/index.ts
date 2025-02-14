@@ -383,7 +383,7 @@ const fetchBaleProcess = async (req: Request, res: Response) => {
     return res.sendPaginationSuccess(res, rows, count);
   } catch (error: any) {
     console.log(error);
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -450,7 +450,7 @@ const fetchGinHeapReport = async (req: Request, res: Response) => {
       {
         model: Program,
         as: "program",
-      },
+      }
     ];
     //fetch data with pagination
     if (req.query.pagination === "true") {
@@ -461,22 +461,63 @@ const fetchGinHeapReport = async (req: Request, res: Response) => {
         limit: limit,
         order: [["id", "desc"]],
       });
+      let data = [];
 
-      return res.sendPaginationSuccess(res, rows, count);
+      for await (let row of rows) {
+        if (row.dataValues?.weighbridge_village) {
+          const villageIds = row.dataValues.weighbridge_village
+            .split(",")
+            .map((id: string) => id.trim()) 
+            .filter((id: string) => id !== ""); 
+
+
+          const villages = await Village.findAll({
+            where: { id: { [Op.in]: villageIds } },
+            attributes: ["id", "village_name"],
+          });
+
+          const uniqueVillageNames = [...new Set(villages.map((v:any) => v.village_name))];
+          row.dataValues.village_names = uniqueVillageNames.join(", ");
+        }
+        data.push(row);
+      }
+      return res.sendPaginationSuccess(res, data, count);
     } else {
       const gin = await GinHeap.findAll({
         where: whereCondition,
         include: include,
         order: [["id", "desc"]],
       });
-      return res.sendSuccess(res, gin);
+
+      let data = [];
+
+      for await (let row of gin) {
+        if (row.dataValues?.weighbridge_village) {
+          const villageIds = row.dataValues.weighbridge_village
+            .split(",")
+            .map((id: string) => id.trim()) 
+            .filter((id: string) => id !== ""); 
+
+
+          const villages = await Village.findAll({
+            where: { id: { [Op.in]: villageIds } },
+            attributes: ["id", "village_name"],
+          });
+
+          const uniqueVillageNames = [...new Set(villages.map((v:any) => v.village_name))];
+          row.dataValues.village_names = uniqueVillageNames.join(", ");
+        }
+        data.push(row);
+      }
+      return res.sendSuccess(res, data);
     }
   } catch (error: any) {
     console.error(error);
-    return res.sendError(res, error.meessage);
+    return res.sendError(res, error.message, error);
   }
 };
 
+       
 
 const exportGinHeapReport = async (req: Request, res: Response) => {
   const excelFilePath = path.join(
@@ -579,6 +620,8 @@ const exportGinHeapReport = async (req: Request, res: Response) => {
         "Season",
         "Gin heap no.",
         "REEL heap no.",
+        "Ginner Name",
+        "Village Name",
         "Heap Weight",
         "Heap Stating Date",
         "Heap Ending Date",
@@ -595,6 +638,23 @@ const exportGinHeapReport = async (req: Request, res: Response) => {
       });
       // // Append data to worksheet
       for await (const [index, item] of rows.entries()) {
+        if (item.dataValues?.weighbridge_village) {
+          const villageIds = item.dataValues.weighbridge_village && item.dataValues.weighbridge_village
+            .split(",")
+            .map((id: string) => id.trim()) 
+            .filter((id: string) => id !== ""); 
+
+            if(villageIds.length > 0) {
+          const villages = await Village.findAll({
+            where: { id: { [Op.in]: villageIds } },
+            attributes: ["id", "village_name"],
+          });
+
+          const uniqueVillageNames = [...new Set(villages.map((v:any) => v.village_name))];
+          item.dataValues.village_names = uniqueVillageNames.join(", ");
+        }
+        }
+
         const rowValues = Object.values({
           index: index + 1,
           created_date: item.dataValues.createdAt
@@ -605,6 +665,8 @@ const exportGinHeapReport = async (req: Request, res: Response) => {
           reel_heap_no: item.dataValues.reel_heap_no
             ? item.dataValues.reel_heap_no
             : "",
+          ginner_name: item.dataValues.ginner.name,
+          village_name: item.dataValues.village_names,
           heap_weight: item.dataValues.estimated_heap
             ? Number(item.dataValues.estimated_heap)
             : 0,
@@ -634,7 +696,7 @@ const exportGinHeapReport = async (req: Request, res: Response) => {
     }
   } catch (error: any) {
     console.log(error);
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -1142,7 +1204,7 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
     }
   } catch (error: any) {
     console.error("Error appending data:", error);
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
 
   }
 };
@@ -1313,7 +1375,7 @@ const fetchPendingGinnerSales = async (req: Request, res: Response) => {
 
     return res.sendPaginationSuccess(res, rows, count.length);
   } catch (error: any) {
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -1601,7 +1663,7 @@ const exportPendingGinnerSales = async (req: Request, res: Response) => {
     }
   } catch (error: any) {
     console.error("Error appending data:", error);
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
 
   }
 };
@@ -1743,7 +1805,7 @@ const fetchGinnerProcessGreyOutReport = async (req: Request, res: Response) => {
     return res.sendPaginationSuccess(res, rows, totalCount);
   } catch (error: any) {
     console.log(error)
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -1836,7 +1898,7 @@ const fetchSpinnerProcessGreyOutReport = async (req: Request, res: Response) => 
     return res.sendPaginationSuccess(res, rows, count);
   } catch (error: any) {
     console.log(error)
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -1986,7 +2048,7 @@ const fetchSpinnerGreyOutReport = async (req: Request, res: Response) => {
     return res.sendPaginationSuccess(res, rows, count);
   } catch (error: any) {
     console.log(error)
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -2277,7 +2339,7 @@ const fetchGinSalesPagination = async (req: Request, res: Response) => {
     return res.sendPaginationSuccess(res, rows, totalCount);
   } catch (error: any) {
     console.log(error);
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -2536,7 +2598,7 @@ const fetchGinSalesPagination = async (req: Request, res: Response) => {
 //     }
 //   } catch (error: any) {
 //     console.error("Error appending data:", error);
-//     return res.sendError(res, error.message);
+//     return res.sendError(res, error.message, error);
 //   }
 // };
 
@@ -2713,7 +2775,7 @@ const exportGinnerProcessGreyOutReport = async (req: Request, res: Response) => 
     }
   } catch (error: any) {
     console.log(error);
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -2874,7 +2936,7 @@ const exportSpinnerProcessGreyOutReport = async (req: Request, res: Response) =>
     }
   } catch (error: any) {
     console.log(error);
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -3077,7 +3139,7 @@ const exportSpinnerGreyOutReport = async (req: Request, res: Response) => {
     }
   } catch (error: any) {
     console.log(error);
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -3469,7 +3531,7 @@ const exportGinnerSales = async (req: Request, res: Response) => {
     }
   } catch (error: any) {
     console.error("Error appending data:", error);
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
 
   }
 };
@@ -3710,7 +3772,7 @@ const fetchSpinnerBalePagination = async (req: Request, res: Response) => {
     return res.sendPaginationSuccess(res, nData, totalCount);
   } catch (error: any) {
     console.log(error);
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -3887,7 +3949,7 @@ const fetchSpinnerPendingBale = async (req: Request, res: Response) => {
     return res.sendPaginationSuccess(res, rows, count.length);
   } catch (error: any) {
     console.log(error)
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -4187,7 +4249,7 @@ const exportSpinnerBale = async (req: Request, res: Response) => {
     }
   } catch (error: any) {
     console.log(error);
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -4531,7 +4593,7 @@ const exportPendingSpinnerBale = async (req: Request, res: Response) => {
     }
   } catch (error: any) {
     console.log(error)
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -4731,7 +4793,7 @@ const fetchSpinnerYarnProcessPagination = async (
     return res.sendPaginationSuccess(res, rows, totalCount);
   } catch (error: any) {
     console.log(error);
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -5254,7 +5316,7 @@ const exportSpinnerYarnProcess = async (req: Request, res: Response) => {
     }
   } catch (error: any) {
     console.log(error);
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -5481,7 +5543,7 @@ const fetchSpinSalesPagination = async (req: Request, res: Response) => {
     return res.sendPaginationSuccess(res, data, count?.length);
   } catch (error: any) {
     console.log(error)
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -6008,7 +6070,7 @@ const exportSpinnerSale = async (req: Request, res: Response) => {
     }
   } catch (error: any) {
     console.log(error)
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -6228,7 +6290,7 @@ const fetchKnitterYarnPagination = async (req: Request, res: Response) => {
     }
     return res.sendPaginationSuccess(res, data, count.length);
   } catch (error: any) {
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -6513,7 +6575,7 @@ const exportKnitterYarn = async (req: Request, res: Response) => {
     //   }, { where: { knitter_yarn_receipt_load: true } })
     // })()
     console.error("Error appending data:", error);
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -6659,7 +6721,7 @@ const fetchKnitterYarnProcess = async (req: Request, res: Response) => {
     return res.sendPaginationSuccess(res, result, data.length);
   } catch (error: any) {
     console.log(error);
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -6888,7 +6950,7 @@ const exportKnitterYarnProcess = async (req: Request, res: Response) => {
     //   }, { where: { knitter_yarn_process_load: true } })
     // })()
     console.log(error);
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -7092,7 +7154,7 @@ const fetchKnitterSalesPagination = async (req: Request, res: Response) => {
 
     return res.sendPaginationSuccess(res, rows, count);
   } catch (error: any) {
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -7371,7 +7433,7 @@ const exportKnitterSale = async (req: Request, res: Response) => {
     //   }, { where: { knitter_fabric_sales_load: true } })
     // })()
     console.error("Error appending data:", error);
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -7594,7 +7656,7 @@ const fetchWeaverYarnPagination = async (req: Request, res: Response) => {
     }
     return res.sendPaginationSuccess(res, data, count?.length);
   } catch (error: any) {
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -7880,7 +7942,7 @@ const exportWeaverYarn = async (req: Request, res: Response) => {
     //   }, { where: { weaver_yarn_receipt_load: true } })
     // })()
     console.error("Error appending data:", error);
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -8019,7 +8081,7 @@ const fetchWeaverYarnProcess = async (req: Request, res: Response) => {
     return res.sendPaginationSuccess(res, result, data.length);
   } catch (error: any) {
     console.log(error);
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -8237,7 +8299,7 @@ const exportWeaverYarnProcess = async (req: Request, res: Response) => {
     // }, { where: { weaver_yarn_process_load: true } })
   } catch (error: any) {
     console.error("Error appending data:", error);
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
     // (async () => {
     // await ExportData.update({
     //   weaver_yarn_process_load: false
@@ -8459,7 +8521,7 @@ const fetchWeaverSalesPagination = async (req: Request, res: Response) => {
 
     return res.sendPaginationSuccess(res, rows, count);
   } catch (error: any) {
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -8735,7 +8797,7 @@ const exportWeaverSale = async (req: Request, res: Response) => {
     //   }, { where: { weaver_yarn_sales_load: true } })
     // })()
     console.error("Error appending data:", error);
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -9042,7 +9104,7 @@ const fetchGarmentFabricReceipt = async (req: Request, res: Response) => {
 
     return res.sendPaginationSuccess(res, result, data.length);
   } catch (error: any) {
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -9427,7 +9489,7 @@ const exportGarmentFabricReceipt = async (req: Request, res: Response) => {
       }, { where: { garment_fabric_receipt_load: true } })
     })()
     console.error("Error appending data:", error);
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -9582,7 +9644,7 @@ const fetchGarmentFabricProcess = async (req: Request, res: Response) => {
     return res.sendPaginationSuccess(res, result, data.length);
   } catch (error: any) {
     console.log(error);
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -9806,7 +9868,7 @@ const exportGarmentFabricProcess = async (req: Request, res: Response) => {
       }, { where: { garment_fabric_process_load: true } })
     })()
     console.log(error);
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -9977,7 +10039,7 @@ const fetchGarmentSalesPagination = async (req: Request, res: Response) => {
     return res.sendPaginationSuccess(res, result, data.length);
   } catch (error: any) {
     console.log(error);
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -10225,7 +10287,7 @@ const exportGarmentSales = async (req: Request, res: Response) => {
         garment_fabric_sales_load: false
       }, { where: { garment_fabric_sales_load: true } })
     })()
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -10372,7 +10434,7 @@ const fetchQrCodeTrackPagination = async (req: Request, res: Response) => {
     });
     return res.sendPaginationSuccess(res, rows, count);
   } catch (error: any) {
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -10546,7 +10608,7 @@ const exportQrCodeTrack = async (req: Request, res: Response) => {
       }, { where: { qr_code_tracker_load: true } })
     })()
     console.error("Error appending data:", error);
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -10891,7 +10953,7 @@ const fetchSpinnerSummaryPagination = async (req: Request, res: Response) => {
 
     return res.sendPaginationSuccess(res, result, count);
   } catch (error: any) {
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -11309,7 +11371,7 @@ const exportSpinnerSummary = async (req: Request, res: Response) => {
 
   } catch (error: any) {
     console.log(error);
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -11796,7 +11858,7 @@ const fetchGinnerSummaryPagination = async (req: Request, res: Response) => {
     return res.sendPaginationSuccess(res, result, count);
   } catch (error: any) {
     console.log(error);
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -12407,7 +12469,7 @@ const exportGinnerSummary = async (req: Request, res: Response) => {
     }
   } catch (error: any) {
     console.error("Error appending data:", error);
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
 
   }
 };
@@ -12554,7 +12616,7 @@ const fetchGinnerCottonStock = async (req: Request, res: Response) => {
     return res.sendPaginationSuccess(res, result, count?.length);
   } catch (error: any) {
     console.log(error);
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -12754,7 +12816,7 @@ const exportGinnerCottonStock = async (req: Request, res: Response) => {
     }
   } catch (error: any) {
     console.log(error);
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
 
   }
 };
@@ -12923,7 +12985,7 @@ const fetchSpinnerLintCottonStock = async (req: Request, res: Response) => {
     return res.sendPaginationSuccess(res, rows, totalCount);
   } catch (error: any) {
     console.log(error);
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -13163,7 +13225,7 @@ const exportSpinnerCottonStock = async (req: Request, res: Response) => {
     }
   } catch (error: any) {
     console.log(error);
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -13185,7 +13247,7 @@ const fetchGarmentFabricPagination = async (req: Request, res: Response) => {
     return res.sendPaginationSuccess(res, data[1].rows, data[1].rowCount);
   } catch (error: any) {
     console.error("Error appending data:", error);
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -13297,7 +13359,7 @@ const exportGarmentFabric = async (req: Request, res: Response) => {
     });
   } catch (error: any) {
     console.error("Error appending data:", error);
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -13748,7 +13810,7 @@ const fetchPscpPrecurement = async (req: Request, res: Response) => {
     );
   } catch (error: any) {
     console.error("Error appending data:", error);
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -14290,7 +14352,7 @@ const exportPscpCottonProcurement = async (req: Request, res: Response) => {
     }
   } catch (error: any) {
     console.error("Error appending data:", error);
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -14667,7 +14729,7 @@ const fetchPscpGinnerPrecurement = async (req: Request, res: Response) => {
     );
   } catch (error: any) {
     console.error("Error appending data:", error);
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -15105,7 +15167,7 @@ const exportPscpGinnerCottonProcurement = async (
     });
   } catch (error: any) {
     console.error("Error appending data:", error);
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -15563,7 +15625,7 @@ const fetchPscpProcurementLiveTracker = async (req: Request, res: Response) => {
     );
   } catch (error: any) {
     console.error("Error appending data:", error);
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -15793,7 +15855,7 @@ const fetchPscpProcurementLiveTracker = async (req: Request, res: Response) => {
 //     );
 //   } catch (error: any) {
 //     console.error("Error appending data:", error);
-//     return res.sendError(res, error.message);
+//     return res.sendError(res, error.message, error);
 //   }
 // };
 
@@ -16387,7 +16449,7 @@ const exportPscpProcurementLiveTracker = async (
     }
   } catch (error: any) {
     console.error("Error appending data:", error);
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -17601,7 +17663,7 @@ const consolidatedTraceability = async (req: Request, res: Response) => {
     return res.sendPaginationSuccess(res, data, count);
   } catch (error: any) {
     console.log(error);
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -19057,7 +19119,7 @@ const exportConsolidatedTraceability = async (req: Request, res: Response) => {
     //   }, { where: { consolidated_tracebality_load: true } })
     // })()
     console.log(error);
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -19471,7 +19533,7 @@ const spinnerBackwardTraceabiltyReport = async (
     return res.sendPaginationSuccess(res, data, count);
   } catch (error: any) {
     console.log(error);
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -19997,7 +20059,7 @@ const exportSpinnerBackwardTraceability = async (
       }, { where: { spinner_backward_tracebality_load: true } })
     })()
     console.log(error);
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -20128,7 +20190,7 @@ const villageSeedCottonReport = async (req: Request, res: Response) => {
     return res.sendPaginationSuccess(res, data, count.length);
   } catch (error: any) {
     console.error(error);
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 const villageSeedCottonAllocationReport = async (req: Request, res: Response) => {
@@ -20274,7 +20336,7 @@ const villageSeedCottonAllocationReport = async (req: Request, res: Response) =>
     return res.sendPaginationSuccess(res, data, totalCount);
   } catch (error: any) {
     console.error(error);
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -20480,7 +20542,7 @@ const exportVillageSeedCotton = async (req: Request, res: Response) => {
       }, { where: { village_seed_cotton_load: true } })
     })
     console.error(error);
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -20681,7 +20743,7 @@ const exportVillageSeedCottonAllocation = async (req: Request, res: Response) =>
   } catch (error: any) {
     
     console.error(error);
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -20961,7 +21023,7 @@ const spinnerProcessBackwardTraceabiltyReport = async (
     return res.sendPaginationSuccess(res, data, count);
   } catch (error: any) {
     console.log(error);
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -21293,7 +21355,7 @@ const exportSpinProcessBackwardfTraceabilty = async (req: Request, res: Response
     }
   } catch (error: any) {
     console.log(error);
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -21555,7 +21617,7 @@ const brandWiseDataReport = async (req: Request, res: Response) => {
     return res.sendPaginationSuccess(res, data, count);
   } catch (error: any) {
     console.log(error);
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 }
 
@@ -21871,7 +21933,7 @@ const exportBrandWiseDataReport = async (req: Request, res: Response) => {
     }
   } catch (error: any) {
     console.log(error);
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 }
 
@@ -22024,7 +22086,7 @@ const fetchDataEntryMonitorDashboardPagination = async (req: Request, res: Respo
     }
   } catch (error: any) {
     console.error(error);
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 

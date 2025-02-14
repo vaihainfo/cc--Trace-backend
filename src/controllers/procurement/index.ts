@@ -119,7 +119,7 @@ const createTransaction = async (req: Request, res: Response) => {
   } catch (error: any) {
     await t.rollback(); // Rollback in case of error
     console.error(error);
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -653,7 +653,7 @@ const allVillageCottonData = async (req: Request, res: Response) => {
 
   } catch (error: any) {
     console.log(error);
-    return res.sendError(res, error.meessage);
+    return res.sendError(res, error.message, error);
   }
 
 }
@@ -717,7 +717,7 @@ const cottonData = async (req: Request, res: Response) => {
 
   } catch (error: any) {
     console.log(error);
-    return res.sendError(res, error.meessage);
+    return res.sendError(res, error.message, error);
   }
 
 }
@@ -790,7 +790,7 @@ const deleteTransaction = async (req: Request, res: Response) => {
     res.sendSuccess(res, { transaction });
   } catch (error: any) {
     console.log(error)
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -870,7 +870,7 @@ const deleteBulkTransactions = async (req: Request, res: Response) => {
     res.sendSuccess(res, { pass, fail })
   } catch (error: any) {
     console.log(error)
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 }
 
@@ -1501,7 +1501,7 @@ const uploadTransactionBulk = async (req: Request, res: Response) => {
     res.sendSuccess(res, { pass, fail });
   } catch (error: any) {
     console.log(error)
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -1691,7 +1691,7 @@ const exportProcurement = async (req: Request, res: Response) => {
     });
   } catch (error: any) {
     console.log(error)
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -1832,7 +1832,7 @@ const exportGinnerProcurement = async (req: Request, res: Response) => {
     });
   } catch (error: any) {
     console.log(error)
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -1869,7 +1869,7 @@ const fetchGinnerByVillage = async (req: Request, res: Response) => {
     return res.sendSuccess(res, allocatedGinner);
   } catch (error: any) {
     console.error(error);
-    return res.sendError(res, error.meessage);
+    return res.sendError(res, error.message, error);
   }
 };
 
