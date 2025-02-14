@@ -1,4 +1,5 @@
 name: Deploy to EC2
+
 on:
   push:
     branches:
@@ -25,56 +26,47 @@ jobs:
           GH_TOKEN: ${{ secrets.TOKEN_STAGING }}
         run: |
           ssh -o StrictHostKeyChecking=no ubuntu@3.110.178.245 <<EOF
-            echo "SSH Connection successful!"
+            echo "SSH Connection successful."
 
             # Navigate to the application directory
-            cd /home/ubuntu/tracebalebackend-staging
+            cd /home/ubuntu/tracebalebackend-staging || exit 1
 
-            # Configure git credentials
-            git config --global credential.helper store
-            echo "https://info.vaiha23@gmail.com:${{ secrets.TOKEN_STAGING }}@github.com" > ~/.git-credentials
-            git config --global user.email "info.vaiha23@gmail.com"
-            git config --global user.name "info.vaiha23@gmail.com"
-
-            # Update the remote URL with authentication
-            git remote set-url origin "https://info.vaiha23@gmail.com:${{ secrets.TOKEN_STAGING }}@github.com/vaihainfo/tracebalebackend.git"
+            # Update GitHub remote URL with token authentication
+            git remote set-url origin "https://${{ secrets.TOKEN_STAGING }}@github.com/vaihainfo/tracebalebackend.git"
 
             # Fetch latest changes
             echo "Fetching latest changes..."
-            git fetch origin staging
+            git fetch origin staging || exit 1
 
             # Reset to match remote staging branch
             echo "Resetting to origin/staging..."
-            git reset --hard origin/staging
+            git reset --hard origin/staging || exit 1
 
             # Clean any untracked files
             echo "Cleaning untracked files..."
-            git clean -fd
+            git clean -fd || exit 1
 
             # Show current commit to verify
             echo "Current commit hash:"
-            git rev-parse HEAD
+            git rev-parse HEAD || exit 1
 
             # Install dependencies
             echo "Installing dependencies..."
-            npm install --legacy-peer-deps
+            npm install --legacy-peer-deps || exit 1
 
-            # Set execute permission for tsc
+            # Set execute permission for TypeScript compiler
             chmod +x ./node_modules/.bin/tsc
 
             # Build the project
             echo "Building project..."
-            npm run build
+            npm run build || exit 1
 
             # Restart PM2 process
             echo "Restarting PM2 process..."
             pm2 delete backend || true
-            pm2 start npm --name 'backend' -- start
+            pm2 start npm --name 'backend' -- start || exit 1
 
-            # Clean up credentials
-            rm -f ~/.git-credentials
-
-            echo 'Deployment completed successfully!'
+            echo "Deployment completed successfully."
           EOF
 
       - name: Clean up and exit
