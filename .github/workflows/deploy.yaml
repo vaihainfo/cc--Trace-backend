@@ -1,3 +1,4 @@
+
 name: Deploy to EC2
 
 on:
@@ -23,9 +24,9 @@ jobs:
 
       - name: SSH into EC2 and deploy
         env:
-          GH_TOKEN: ${{ secrets.TOKEN_STAGING }}
+          GITHUB_TOKEN: ${{ secrets.TOKEN_STAGING }}
         run: |
-          ssh -o StrictHostKeyChecking=no ubuntu@3.110.178.245 << 'EOF'
+          ssh -o StrictHostKeyChecking=no ubuntu@3.110.178.245 << 'ENDSSH'
             echo "SSH Connection successful."
 
             # Navigate to the application directory
@@ -40,8 +41,13 @@ jobs:
             git config user.email "info.vaiha23@gmail.com"
             git config user.name "info.vaiha23@gmail.com"
 
+            # Store credentials temporarily
+            git config credential.helper store
+            echo "https://info.vaiha23:${GITHUB_TOKEN}@github.com" > ~/.git-credentials
+            chmod 600 ~/.git-credentials
+
             # Update GitHub remote URL with token authentication
-            git remote set-url origin "https://info.vaiha23:${{ secrets.TOKEN_STAGING }}@github.com/vaihainfo/tracebalebackend.git"
+            git remote set-url origin "https://github.com/vaihainfo/tracebalebackend.git"
 
             # Fetch latest changes
             echo "Fetching latest changes..."
@@ -68,7 +74,7 @@ jobs:
             npm install --legacy-peer-deps || exit 1
 
             # Set execute permission for TypeScript compiler
-            chmod +x ./node_modules/.bin/tsc
+            chmod +x ./node_modules/.bin/tsc || true
 
             # Build the project
             echo "Building project..."
@@ -76,13 +82,17 @@ jobs:
 
             # Ensure PM2 runs as the correct user
             echo "Restarting PM2 process..."
-            if pm2 list | grep backend; then
+            if pm2 list | grep -q "backend"; then
               pm2 delete backend
             fi
             pm2 start npm --name "backend" -- start || exit 1
 
+            # Clean up credentials
+            rm -f ~/.git-credentials
+            git config --global --unset credential.helper
+
             echo "Deployment completed successfully."
-EOF
+ENDSSH
 
       - name: Clean up and exit
         run: echo "Deployment process finished."
