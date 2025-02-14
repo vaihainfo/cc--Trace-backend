@@ -79,7 +79,7 @@ jobs:
             if pm2 list | grep backend; then
               pm2 delete backend
             fi
-            pm2 start npm --name backend -- run start || exit 1
+            pm2 start npm --name "backend" -- start || exit 1
 
             echo "Deployment completed successfully."
 EOF
