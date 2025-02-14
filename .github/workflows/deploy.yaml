@@ -25,17 +25,19 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.TOKEN_STAGING }}
         run: |
-          ssh -o StrictHostKeyChecking=no ubuntu@3.110.178.245 << EOF
-            echo "SSH Connection successful."
+          ssh -tt -o ServerAliveInterval=30 -o StrictHostKeyChecking=no ubuntu@3.110.178.245 << 'EOF'
+            echo "✅ SSH Connection successful."
 
             # Navigate to the application directory
             cd /home/ubuntu/tracebalebackend-staging || exit 1
 
             # Fix permissions
+            echo "🔧 Fixing permissions..."
             sudo chown -R ubuntu:ubuntu .
             sudo chmod -R 775 .
 
             # Configure Git
+            echo "🔧 Configuring Git..."
             git config --global --add safe.directory /home/ubuntu/tracebalebackend-staging
             git config user.email "info.vaiha23@gmail.com"
             git config user.name "info.vaiha23@gmail.com"
@@ -46,44 +48,51 @@ jobs:
             chmod 600 ~/.git-credentials
 
             # Update GitHub remote URL
-            git remote set-url origin "https://github.com/vaihainfo/tracebalebackend.git"
+            echo "🔄 Updating GitHub remote URL..."
+            git remote set-url origin "https://info.vaiha23:${GITHUB_TOKEN}@github.com/vaihainfo/tracebalebackend.git"
 
             # Fetch latest changes
-            echo "Fetching latest changes..."
+            echo "📥 Fetching latest changes..."
             git fetch origin staging || exit 1
 
             # Reset and clean repo
+            echo "🔄 Resetting repository..."
             git reset --hard origin/staging || exit 1
             git clean -fd || exit 1
 
             # Show current commit hash
+            echo "🔍 Current commit hash:"
             git rev-parse HEAD || exit 1
 
             # Fix permissions again
+            echo "🔧 Fixing permissions again..."
             sudo chown -R ubuntu:ubuntu .
             sudo chmod -R 775 .
 
             # Install dependencies
-            npm install --legacy-peer-deps || exit 1
-
-            # Set execute permission for TypeScript compiler
-            chmod +x ./node_modules/.bin/tsc || true
+            echo "📦 Installing dependencies..."
+            npm install --legacy-peer-deps --verbose || exit 1
 
             # Build the project
+            echo "🏗️ Building project..."
             npm run build || exit 1
 
             # Restart PM2 process
-            if pm2 list | grep -q "backend"; then
-              pm2 delete backend
-            fi
+            echo "🔄 Restarting PM2..."
+            pm2 delete 0 || true
             pm2 start npm --name "backend" -- start || exit 1
 
+            # Restart Nginx
+            echo "🌐 Restarting Nginx..."
+            sudo systemctl restart nginx || exit 1
+
             # Clean up credentials
+            echo "🧹 Cleaning up credentials..."
             rm -f ~/.git-credentials
             git config --global --unset credential.helper
 
-            echo "Deployment completed successfully."
+            echo "✅ Deployment completed successfully."
           EOF
 
       - name: Clean up and exit
-        run: echo "Deployment process finished."
+        run: echo "✅ Deployment process finished."
