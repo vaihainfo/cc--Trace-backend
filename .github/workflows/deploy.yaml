@@ -1,4 +1,4 @@
-name: Deploy to EC2
+name: Deploy to EC2 (Staging)
 
 on:
   push:
@@ -10,89 +10,87 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
+      - name: Checkout repository
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
           token: ${{ secrets.TOKEN_STAGING }}
 
-      - name: Set up SSH key for EC2
+      - name: Set up SSH key
         uses: webfactory/ssh-agent@v0.5.3
         with:
           ssh-private-key: ${{ secrets.EC2_SSH_KEY_STAGING }}
 
-      - name: SSH into EC2 and deploy
+      - name: Deploy to EC2
         env:
           GITHUB_TOKEN: ${{ secrets.TOKEN_STAGING }}
         run: |
           ssh -tt -o ServerAliveInterval=30 -o StrictHostKeyChecking=no ubuntu@3.110.178.245 << 'EOF'
-            echo "✅ SSH Connection successful."
+            set -e
+
+            echo "SSH Connection established."
 
             # Navigate to the application directory
             cd /home/ubuntu/tracebalebackend-staging || exit 1
 
-            # Fix permissions
-            echo "🔧 Fixing permissions..."
+            # Set correct permissions
+            echo "Setting correct permissions..."
             sudo chown -R ubuntu:ubuntu .
-            sudo chmod -R 775 .
+            sudo chmod -R 755 .
 
             # Configure Git
-            echo "🔧 Configuring Git..."
+            echo "Configuring Git..."
             git config --global --add safe.directory /home/ubuntu/tracebalebackend-staging
-            git config user.email "info.vaiha23@gmail.com"
-            git config user.name "info.vaiha23@gmail.com"
+            git config --global user.email "info.vaiha23@gmail.com"
+            git config --global user.name "info.vaiha23@gmail.com"
 
             # Store credentials temporarily
-            git config credential.helper store
+            git config --global credential.helper store
             echo 'https://info.vaiha23:${GITHUB_TOKEN}@github.com' > ~/.git-credentials
             chmod 600 ~/.git-credentials
 
-            # Update GitHub remote URL
-            echo "🔄 Updating GitHub remote URL..."
+            # Ensure the correct remote URL
+            echo "Setting correct GitHub remote..."
             git remote set-url origin "https://info.vaiha23:${GITHUB_TOKEN}@github.com/vaihainfo/tracebalebackend.git"
 
-            # Fetch latest changes
-            echo "📥 Fetching latest changes..."
-            git fetch origin staging || exit 1
+            # Fetch and reset to latest staging branch
+            echo "Fetching latest changes from staging..."
+            git fetch --all
+            git reset --hard origin/staging
+            git clean -fd
 
-            # Reset and clean repo
-            echo "🔄 Resetting repository..."
-            git reset --hard origin/staging || exit 1
-            git clean -fd || exit 1
+            # Verify latest commit
+            echo "Current commit hash:"
+            git rev-parse HEAD
 
-            # Show current commit hash
-            echo "🔍 Current commit hash:"
-            git rev-parse HEAD || exit 1
-
-            # Fix permissions again
-            echo "🔧 Fixing permissions again..."
+            # Set permissions again after fetching changes
             sudo chown -R ubuntu:ubuntu .
-            sudo chmod -R 775 .
+            sudo chmod -R 755 .
 
             # Install dependencies
-            echo "📦 Installing dependencies..."
-            npm install --legacy-peer-deps --verbose || exit 1
+            echo "Installing dependencies..."
+            npm install --legacy-peer-deps --verbose
 
             # Build the project
-            echo "🏗️ Building project..."
-            npm run build || exit 1
+            echo "Building project..."
+            npm run build
 
             # Restart PM2 process
-            echo "🔄 Restarting PM2..."
-            pm2 delete 0 || true
-            pm2 start npm --name "backend" -- start || exit 1
+            echo "Restarting PM2..."
+            pm2 delete backend || true
+            pm2 start npm --name "backend" -- start
 
             # Restart Nginx
-            echo "🌐 Restarting Nginx..."
-            sudo systemctl restart nginx || exit 1
+            echo "Restarting Nginx..."
+            sudo systemctl restart nginx
 
             # Clean up credentials
-            echo "🧹 Cleaning up credentials..."
+            echo "Cleaning up credentials..."
             rm -f ~/.git-credentials
             git config --global --unset credential.helper
 
-            echo "✅ Deployment completed successfully."
+            echo "Deployment successful."
           EOF
 
-      - name: Clean up and exit
-        run: echo "✅ Deployment process finished."
+      - name: Final confirmation
+        run: echo "Deployment workflow completed successfully."
