@@ -1,0 +1,62 @@
+name: Deploy to EC2
+
+on:
+  push:
+    branches:
+      - staging # Trigger deployment on changes to the 'staging1' branch
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest  # Use the latest Ubuntu runner from GitHub Actions
+
+    steps:
+      # Step 1: Checkout the latest code from the 'staging' branch
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # Step 2: Set up SSH key for EC2 access
+      - name: Set up SSH key for EC2
+        uses: webfactory/ssh-agent@v0.5.3
+        with:
+          ssh-private-key: ${{ secrets.EC2_SSH_KEY_STAGING }}  # The private key stored in GitHub Secrets for EC2 access
+
+      # Step 3: SSH into EC2 and deploy
+      - name: SSH into EC2 and deploy
+        run: |
+          ssh -o StrictHostKeyChecking=no -v -i "${{ secrets.EC2_SSH_KEY_STAGING }}" ubuntu@3.110.178.245 << 'EOF'
+            echo "SSH Connection successful!"
+
+            # Navigate to the application directory on the EC2 instance
+            cd /home/ubuntu/tracebalebackend-staging || { echo "Directory not found!"; exit 1; }
+
+            # Fetch the latest changes from the GitHub repository
+            sudo git fetch origin
+
+            # Reset the local branch to match the remote branch
+            sudo git reset --hard origin/staging1
+
+            # Check the status after pulling
+            sudo git status
+
+            # Install dependencies
+            npm install --legacy-peer-deps
+
+            # Set execute permission for tsc
+            chmod +x ./node_modules/.bin/tsc
+
+            # Build the project
+            npm run build
+
+            # Kill any process using port 5000 and delete the backend PM2 process
+            sudo lsof -t -i:5000 | xargs kill -9
+            pm2 delete backend
+
+            # Start the backend using PM2
+            pm2 start npm --name "backend" -- start
+
+            echo "Deployment completed successfully!"
+          EOF
+
+      # Step 4: Clean up and exit
+      - name: Clean up and exit
+        run: echo "Deployment process finished."
