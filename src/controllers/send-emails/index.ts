@@ -36,6 +36,9 @@ import FarmGroup from "../../models/farm-group.model";
 import OrganicIntegrity from "../../models/organic-integrity.model";
 import Trader from "../../models/trader.model";
 import TicketTracker from "../../models/ticket-tracker.model";
+import CropGrade from "../../models/crop-grade.model";
+import Farm from "../../models/farm.model";
+import UserApp from "../../models/users-app.model";
 
 
 export const sendGinnerBaleProcess = async (jobId?: number) => {
@@ -438,22 +441,19 @@ export const sendQrProcurementReport = async (jobId?: number) => {
             let adminEmail = await User.findAll({ where: { role: 1 }, attributes: ['email'] });
             const emailJob = await EmailManagement.findOne({ where: { id: jobId } });
             const currentDate = moment();
-            const excelFilePath = path.join("./upload", "agent-transactions.xlsx"); 
-
+            
             if (emailJob) {
                 let emails = await User.findAll({ where: { id: { [Op.in]: emailJob.dataValues.user_ids } }, attributes: ['email'] });
                 emails = emails.map((obj: any) => obj.email);
                 adminEmail = adminEmail.map((obj: any) => obj.email)
                
-               // let { path, count }: any = await procurementReport(emailJob.brand_ids, emailJob.mail_type, emailJob.program_ids, emailJob.country_ids, currentDate);
-                let path = excelFilePath;
-                let count = 1;
+                let { path, count }: any = await qrProcurementReport(emailJob.brand_ids, emailJob.mail_type, emailJob.program_ids, emailJob.country_ids, currentDate);
                 let body_title = 'Qr Procurement Report ';
                 let subject = 'Qr Procurement Report ' + new Date().toLocaleDateString('en-GB');
                 let body = get_procurement_report_body(body_title, emailJob.mail_type === 'Daily' ? 'Day' : 'Week', emails, adminEmail);
                 
                 if (count > 0) {
-                    return sendEmail(body, emails, subject, adminEmail, [{ path: path, filename: 'agent-transactions.xlsx' }])
+                    return sendEmail(body, emails, subject, adminEmail, [{ path: path, filename: 'qrAppProcurementDetails.xlsx' }])
                 }else{
                     return false;
                 }
@@ -2362,6 +2362,160 @@ const procurementReport = async (brandId: any, type: any, programId: any, countr
     }
 };
 
+const qrProcurementReport = async (brandId: any, type: any, programId: any, countryId: any, date: any) => {
+    const excelFilePath = path.join("./upload", "qrAppProcurementDetails.xlsx");
+
+    try {
+        let whereCondition: any = {};
+        if (countryId) {
+            whereCondition.country_id = { [Op.in]: countryId };
+        }
+        if (brandId) {
+            whereCondition.brand_id = 
+            { [Op.in]: brandId ,[Op.notIn]: [52,696,695] };
+        }
+
+        if (programId) {
+            whereCondition.program_id = { [Op.in]: programId };
+        }
+
+       
+        
+        if(type && date){
+            let daysToSub = type === 'Weekly' ? 7 : 1;
+            const startDate = moment(date).subtract(daysToSub, 'days');
+            const endDate = moment(date);
+            whereCondition.date = { 
+                [Op.gte]: startDate.toDate(),
+                [Op.lt]: endDate.toDate(),   
+           
+            }
+        }
+        //   if (startDate && endDate) {
+        //     const startOfDay = new Date(startDate);
+        //     startOfDay.setUTCHours(0, 0, 0, 0);
+        //     const endOfDay = new Date(endDate);
+        //     endOfDay.setUTCHours(23, 59, 59, 999);
+        //     whereCondition.date = { [Op.between]: [startOfDay, endOfDay] }
+        //   }
+
+        // apply search
+        // Create the excel workbook file
+        const workbook = new ExcelJS.Workbook();
+        const worksheet = workbook.addWorksheet("Sheet1");
+
+        // Set bold font for header row
+        const headerRow = worksheet.addRow([
+            "Sr No.", 'Date', 'Farmer Code', 'Farmer Name', 'Season', 'Country',
+            'State', 'District', 'Block', 'Village', 'Transaction Id', 'Quantity Purchased (Kgs)',
+            'Available Cotton (Kgs)', 'Price/KG(Local Currency)', 'Programme', 'Transport Vehicle No', 'Payment Method', 'Ginner Name', 'Transaction User Details'
+        ]);
+        headerRow.font = { bold: true };
+        const transaction = await Transaction.findAll({
+            where: whereCondition,
+            include: [
+                {
+                    model: Village,
+                    as: "village",
+                },
+                {
+                    model: Season,
+                    as: "season",
+                },
+                {
+                    model: Block,
+                    as: "block",
+                },
+                {
+                    model: District,
+                    as: "district",
+                },
+                {
+                    model: State,
+                    as: "state",
+                },
+                {
+                    model: Country,
+                    as: "country",
+                },
+                {
+                    model: Farmer,
+                    as: "farmer",
+                },
+                {
+                    model: Program,
+                    as: "program",
+                },
+                {
+                    model: Ginner,
+                    as: "ginner",
+                },
+                {
+                    model: CropGrade,
+                    as: "grade",
+                    attributes: ['id', 'cropGrade']
+                },
+                {
+                    model: Season,
+                    as: "season",
+                    attributes: ['id', 'name']
+                },
+                {
+                    model: Farm,
+                    as: "farm"
+                },
+                {
+                    model: UserApp,
+                    as: "agent"
+                },
+            ],
+        });
+
+        // Append data to worksheet
+        for await (const [index, item] of transaction.entries()) {
+            const rowValues = Object.values({
+                index: index + 1,
+                date: item.date.toISOString().substring(0, 10),
+                farmerCode: item.farmer ? item.farmer?.code : "",
+                farmerName: item.farmer ? item.farmer?.firstName + ' ' + item.farmer?.lastName : "",
+                season: item.season ? item.season.name : "",
+                country: item.country ? item.country.county_name : "",
+                state: item.state ? item.state.state_name : "",
+                district: item.district ? item.district.district_name : "",
+                block: item.block ? item.block.block_name : "",
+                village: item.village ? item.village.village_name : "",
+                transactionId: item.id,
+                qty_purchased: item.qty_purchased ? Number(item.qty_purchased) : 0,
+                available_cotton: item.farm ? (Number(item.farm.total_estimated_cotton) > Number(item.farm.cotton_transacted) ? Number(item.farm.total_estimated_cotton) - Number(item.farm.cotton_transacted) : 0) : 0,
+                rate: item.rate ? Number(item.rate) : 0,
+                program: item.program ? item.program.program_name : "",
+                vehicle: item.vehicle ? item.vehicle : "",
+                payment_method: item.payment_method ? item.payment_method : "",
+                ginner: item.ginner ? item.ginner.name : "",
+                agent: item?.agent && ( item?.agent?.lastName ? item?.agent?.firstName + " " + item?.agent?.lastName+ "-" + item?.agent?.access_level : item?.agent?.firstName+ "-" + item?.agent?.access_level),
+               
+            });
+            worksheet.addRow(rowValues);
+            
+        }
+        // Auto-adjust column widths based on content
+        // worksheet.columns.forEach((column: any) => {
+        //     let maxCellLength = 0;
+        //     column.eachCell({ includeEmpty: true }, (cell: any) => {
+        //         const cellLength = (cell.value ? cell.value.toString() : '').length;
+        //         maxCellLength = Math.max(maxCellLength, cellLength);
+        //     });
+        //     column.width = Math.min(30, maxCellLength + 2); // Limit width to 30 characters
+        // });
+
+        // Save the workbook
+        await workbook.xlsx.writeFile(excelFilePath);
+        return { path: excelFilePath, count: transaction.length }
+    } catch (error) {
+        console.error("Error appending data:", error);
+    }
+};
+
 const integrityReport = async (brandId: any, type: any, programId: any, countryId: any, date: any) => {
     const excelFilePath = path.join('./upload', 'Integrity-report.xlsx');
     try {
@@ -2432,7 +2586,7 @@ const integrityReport = async (brandId: any, type: any, programId: any, countryI
         });
 
         // Save the workbook
-        await workbook.xlsx.writeFile(excelFilePath);
+        await workbook.xlsx.writeFile(excelFilePath); 
         return { path: excelFilePath, count: rows.length }
     } catch (error) {
         console.error('Error appending data:', error);
