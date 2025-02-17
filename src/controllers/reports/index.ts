@@ -4729,11 +4729,13 @@ const fetchSpinnerYarnProcessPagination = async (
       FROM
         comber_selections cs
       LEFT JOIN
-        spin_processes sp ON cs.yarn_id = sp.id
+        combernoil_generations cg ON cs.yarn_id = cg.id
+      LEFT JOIN
+        spin_processes sp ON cg.process_id = sp.id
       LEFT JOIN
         seasons s ON sp.season_id = s.id
       GROUP BY
-        process_id
+        cs.process_id
     ),
     yarn_sold_data AS (
       SELECT
@@ -5083,11 +5085,13 @@ const exportSpinnerYarnProcess = async (req: Request, res: Response) => {
       FROM
         comber_selections cs
       LEFT JOIN
-        spin_processes sp ON cs.yarn_id = sp.id
+        combernoil_generations cg ON cs.yarn_id = cg.id
+      LEFT JOIN
+        spin_processes sp ON cg.process_id = sp.id
       LEFT JOIN
         seasons s ON sp.season_id = s.id
       GROUP BY
-        process_id
+        cs.process_id
     ),
     yarn_sold_data AS (
       SELECT

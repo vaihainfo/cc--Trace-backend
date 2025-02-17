@@ -4596,19 +4596,21 @@ const generateSpinnerYarnProcess = async () => {
             process_id
         ),
         comber_consumed_data AS (
-      SELECT
-        cs.process_id,
-        COALESCE(SUM(cs.qty_used), 0) AS comber_consumed,
-        STRING_AGG(DISTINCT s.name, ', ') AS seasons
-      FROM
-        comber_selections cs
-      LEFT JOIN
-        spin_processes sp ON cs.yarn_id = sp.id
-      LEFT JOIN
-        seasons s ON sp.season_id = s.id
-      GROUP BY
-        process_id
-    ),
+          SELECT
+            cs.process_id,
+            COALESCE(SUM(cs.qty_used), 0) AS comber_consumed,
+            STRING_AGG(DISTINCT s.name, ', ') AS seasons
+          FROM
+            comber_selections cs
+          LEFT JOIN
+            combernoil_generations cg ON cs.yarn_id = cg.id
+          LEFT JOIN
+            spin_processes sp ON cg.process_id = sp.id
+          LEFT JOIN
+            seasons s ON sp.season_id = s.id
+          GROUP BY
+            cs.process_id
+        ),
         yarn_sold_data AS (
           SELECT
             spin_process_id,
