@@ -109,7 +109,7 @@ const fetchValidationFarmerPagination = async (req: Request, res: Response) => {
             },
             {
                 model: Farmer, as: 'farmer',
-                attributes: ['id', 'firstName', 'lastName', "code"],
+                attributes: ['id', 'firstName', 'lastName', "code", "tracenet_id"],
             },
             {
                 model: Season, as: 'season'
@@ -247,7 +247,7 @@ const exportValidationFarmerPagination = async (req: Request, res: Response) => 
             },
             {
                 model: Farmer, as: 'farmer',
-                attributes: ['id', 'firstName', 'lastName', "code"],
+                attributes: ['id', 'firstName', 'lastName', "code" , "tracenet_id"],
             },
             {
                 model: Season, as: 'season'
@@ -268,6 +268,7 @@ const exportValidationFarmerPagination = async (req: Request, res: Response) => 
          "Date",
          "Season",
          "Farmer Name/Ginner",
+         "Tracenet ID",
          "Farm Group",
          "ICS Name",
          "Procured Quantity",
@@ -309,6 +310,7 @@ const exportValidationFarmerPagination = async (req: Request, res: Response) => 
                   date: item.date ? item.date : "",
                   season: item.season.name ? item.season.name : "",
                   farmer: item.farmer.firstName ? item.farmer.firstName : "",
+                  tracenet_id:item.farmer.tracenet_id ? item.farmer.tracenet_id : "",
                   farm: item.farmGroup?.name ? item.farmGroup?.name : "",
                   ics: item.ics.ics_name ? item.ics.ics_name : "",
                   procured_quantity: item.transactions[0]?.qty_purchased ? item.transactions[0]?.qty_purchased : 0,
