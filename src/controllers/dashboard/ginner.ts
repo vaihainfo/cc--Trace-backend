@@ -3556,9 +3556,9 @@ const getLintBaleSoldData = async (
 const getLintBaleGreyoutData = async (
   where: any
 ) => {
-  where["$ginprocess.greyout_status$"] = true;
-  where.sold_status = false
-  where.is_all_rejected = null
+  // where["$ginprocess.greyout_status$"] = true;
+  // where.sold_status = false
+  // where.is_all_rejected = null
   // where.status = 'Sold';
 
   const result = await GinBale.findAll({
@@ -3605,7 +3605,30 @@ const getLintBaleGreyoutData = async (
         }],
       },
     ],
-    where,
+    where:{
+      ...where,
+      [Op.or]: [
+        {
+          [Op.and]: [
+            { "$ginprocess.greyout_status$": true },
+            { sold_status: false },
+            { is_all_rejected: null }
+          ]
+        },
+        {
+          [Op.and]: [
+            { "$ginprocess.scd_verified_status$": true },
+            { "$gin-bales.scd_verified_status$": { [Op.not]: true } }
+          ]
+        },
+        {
+          [Op.and]: [
+            { "$ginprocess.scd_verified_status$": false },
+            { "$gin-bales.scd_verified_status$": { [Op.is]: false } }
+          ]
+        }
+      ]
+    },
     // limit: 3,
     order: [['seasonId', 'desc']],
     group: ["ginprocess.season.id"],
