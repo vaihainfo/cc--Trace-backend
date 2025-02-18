@@ -213,6 +213,47 @@ const getSpinnerLintQuery = (
     };
 
   if (reqData?.season)
+    where['$ginsales.season_id$'] = reqData.season;
+
+  if (reqData?.country)
+    where['$spinprocess.spinner.country_id$'] = reqData.country;
+
+  if (reqData?.state)
+    where['$spinprocess.spinner.state_id$'] = reqData.state;
+
+  if (reqData?.district)
+    where['$spinprocess.spinner.district_id$'] = reqData.district;
+
+  if (reqData?.spinner)
+    where['$spinprocess.spinner.id$'] = reqData.spinner;
+
+  if (reqData?.fromDate)
+    where['$spinprocess.date$'] = { [Op.gte]: reqData.fromDate };
+
+  if (reqData?.toDate)
+    where['$spinprocess.date$'] = { [Op.lt]: reqData.toDate };
+
+  if (reqData?.fromDate && reqData?.toDate)
+    where['$spinprocess.date$'] = { [Op.between]: [reqData.fromDate, reqData.toDate] };
+
+  return where;
+};
+
+const getSpinnerYarnQuery = (
+  reqData: any
+) => {
+  const where: any = {
+  };
+
+  if (reqData?.program)
+    where['$spinprocess.program_id$'] = reqData.program;
+
+  if (reqData?.brand)
+    where['$spinprocess.spinner.brand$'] = {
+      [Op.contains]: Sequelize.literal(`ARRAY [${reqData.brand}]`)
+    };
+
+  if (reqData?.season)
     where['$spinprocess.season_id$'] = reqData.season;
 
   if (reqData?.country)
@@ -682,32 +723,39 @@ const getLintProcessedData = async (
         ),
         "lintProcessed",
       ],
-      [Sequelize.col('spinprocess.season.name'), 'seasonName'],
-      [Sequelize.col('spinprocess.season.id'), 'seasonId']
+      [Sequelize.col('ginsales.season.name'), 'seasonName'],
+      [Sequelize.col('ginsales.season.id'), 'seasonId']
     ],
     include: [
       {
         model: SpinProcess,
         as: "spinprocess",
         attributes: [],
+        include: [ {
+          model: Spinner,
+          as: 'spinner',
+          attributes: []
+        }],
+      },
+      {
+        model: GinSales,
+        as: "ginsales",
+        attributes: [],
         include: [{
           model: Season,
           as: 'season',
-          attributes: []
-        }, {
-          model: Spinner,
-          as: 'spinner',
           attributes: []
         }],
       },
     ],
     order: [['seasonId', 'desc']],
     where:{
-     '$spinprocess.season_id$': { [Op.ne]: null },
+     '$ginsales.season_id$': { [Op.ne]: null },
      ...where
     },
-    group: ['spinprocess.season.id']
+    group: ['ginsales.season.id']
   });
+  console.log(result)
   return result;
 
 };
@@ -980,13 +1028,19 @@ const getLintProcessedDataByMonth = async (
         model: SpinProcess,
         as: "spinprocess",
         attributes: [],
+        include: [ {
+          model: Spinner,
+          as: 'spinner',
+          attributes: []
+        }],
+      },
+      {
+        model: GinSales,
+        as: "ginsales",
+        attributes: [],
         include: [{
           model: Season,
           as: 'season',
-          attributes: []
-        }, {
-          model: Spinner,
-          as: 'spinner',
           attributes: []
         }],
       },
@@ -1192,7 +1246,7 @@ const getTopYarnCount = async (
   try {
     const reqData = await getQueryParams(req, res);
     // const where = getSpinnerSalesWhereQuery(reqData);
-    const where = getSpinnerLintQuery(reqData);
+    const where = getSpinnerYarnQuery(reqData);
     const spinnersData = await getTopYarnCountData(where);
     const data = await getTopYarnCountRes(spinnersData);
     return res.sendSuccess(res, data);
@@ -1772,8 +1826,8 @@ const getLintProcessedByCountryData = async (where: any) => {
       ],
       [Sequelize.col('spinprocess.spinner.country.id'), 'countryId'],
       [Sequelize.col('spinprocess.spinner.country.county_name'), 'countryName'],
-      [Sequelize.col('spinprocess.season.name'), 'seasonName'],
-      [Sequelize.col('spinprocess.season.id'), 'seasonId']
+      [Sequelize.col('ginsales.season.name'), 'seasonName'],
+      [Sequelize.col('ginsales.season.id'), 'seasonId']
     ],
     include: [
       {
@@ -1781,10 +1835,6 @@ const getLintProcessedByCountryData = async (where: any) => {
         as: "spinprocess",
         attributes: [],
         include: [{
-          model: Season,
-          as: 'season',
-          attributes: []
-        }, {
           model: Spinner,
           as: 'spinner',
           attributes: [],
@@ -1795,14 +1845,24 @@ const getLintProcessedByCountryData = async (where: any) => {
           }]
         }],
       },
+      {
+        model: GinSales,
+        as: "ginsales",
+        attributes: [],
+        include: [{
+          model: Season,
+          as: 'season',
+          attributes: []
+        }],
+      },
     ],
     order: [['seasonId', 'desc']],
     // limit: 3,
     where:{
-     '$spinprocess.season_id$': { [Op.ne]: null },
+     '$ginsales.season_id$': { [Op.ne]: null },
      ...where
     },
-    group: ['spinprocess.spinner.country.id', 'spinprocess.season.id']
+    group: ['spinprocess.spinner.country.id', 'ginsales.season.id']
   });
 
   return result;
