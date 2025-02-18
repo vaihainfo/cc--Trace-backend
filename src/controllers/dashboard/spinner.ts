@@ -755,7 +755,6 @@ const getLintProcessedData = async (
     },
     group: ['ginsales.season.id']
   });
-  console.log(result)
   return result;
 
 };
