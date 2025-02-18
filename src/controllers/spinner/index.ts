@@ -42,6 +42,7 @@ import SpinCombernoilSale from "../../models/spin_combernoil_sale.model";
 import GinToGinSale from "../../models/gin-to-gin-sale.model";
 import SpinSaleYarnSelected from "../../models/spin-sale-yarn-selected.model";
 // import SpinSelectedBlend from "../../models/spin_selected_blend";
+import SpinnerYarnOrderSales from "../../models/spinner-yarn-order-sales.model";
 
 //create Spinner Process
 const createSpinnerProcess = async (req: Request, res: Response) => {
@@ -1343,6 +1344,16 @@ const createSpinnerSales = async (req: Request, res: Response) => {
           await SpinSaleYarnSelected.create(
             batchList, 
             { transaction });
+        }
+      }
+
+      if(req.body.selectedYarnOrders && req.body.selectedYarnOrders.length > 0){
+        for await (let obj of req.body.selectedYarnOrders) {  
+          await SpinnerYarnOrderSales.create({
+            spinner_yarn_order_id: obj.label,
+            quantity_used: obj.quantity,
+            sale_id: spinSales.id
+          });
         }
       }
 
