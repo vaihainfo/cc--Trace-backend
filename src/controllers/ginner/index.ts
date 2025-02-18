@@ -999,7 +999,7 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
         to: item.to_date ? item.to_date : "",
         season: item.season ? item.season.name : "",
         lot: item.lot_no ? item.lot_no : "",
-        gin_press_no: gin_press_no ? gin_press_no : "",
+        gin_press_no: item.press_no !== "NaN-NaN" ? item.press_no : gin_press_no,
         reel_lot_no: item.reel_lot_no ? item.reel_lot_no : "",
         heap_number: item.heap_number ? item.heap_number : "",
         press_no: reel_press_no ? reel_press_no : "",
