@@ -179,7 +179,7 @@ const uploadGinnerOrder = async (req: Request, res: Response) => {
         res.sendSuccess(res, { pass, fail });
     } catch (error: any) {
         console.error(error);
-        return res.sendError(res, error.message);
+        return res.sendError(res, error.message, error);
     }
 }
 
@@ -214,7 +214,7 @@ const uploadStyleMark = async (req: Request, res: Response) => {
         res.sendSuccess(res, { pass, fail });
     } catch (error: any) {
         console.error(error);
-        return res.sendError(res, error.message);
+        return res.sendError(res, error.message, error);
     }
 }
 
@@ -427,7 +427,7 @@ const uploadVillage = async (req: Request, res: Response) => {
         res.sendSuccess(res, { pass, fail });
     } catch (error: any) {
         console.error(error);
-        return res.sendError(res, error.message);
+        return res.sendError(res, error.message, error);
     }
 }
 
@@ -1131,7 +1131,7 @@ const uploadFarmer = async (req: Request, res: Response) => {
         res.sendSuccess(res, { pass, fail });
     } catch (error: any) {
         console.error(error);
-        return res.sendError(res, error.message);
+        return res.sendError(res, error.message, error);
     }
 }
 
@@ -1179,7 +1179,7 @@ const uploadProcessorList = async (req: Request, res: Response) => {
         res.sendSuccess(res, { pass, fail });
     } catch (error: any) {
         console.error(error);
-        return res.sendError(res, error.message);
+        return res.sendError(res, error.message, error);
     }
 }
 
@@ -1412,7 +1412,7 @@ const uploadSeedAvailability = async (req: Request, res: Response) => {
         res.sendSuccess(res, { pass, fail });
     } catch (error: any) {
         console.error(error);
-        return res.sendError(res, error.message);
+        return res.sendError(res, error.message, error);
     }
 }
 
@@ -2763,7 +2763,7 @@ const uploadOrganicFarmer = async (req: Request, res: Response) => {
         res.sendSuccess(res, { pass, fail });
     } catch (error: any) {
         console.error(error);
-        return res.sendError(res, error.message);
+        return res.sendError(res, error.message, error);
     }
 }
 
@@ -3058,7 +3058,7 @@ const uploadAllocatedGinnerVillage = async (req: Request, res: Response) => {
         res.sendSuccess(res, { pass, fail });
     } catch (error: any) {
         console.error(error);
-        return res.sendError(res, error.message);
+        return res.sendError(res, error.message, error);
     }
 }
 

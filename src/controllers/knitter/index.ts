@@ -163,7 +163,7 @@ const createKnitterProcess = async (req: Request, res: Response) => {
     res.sendSuccess(res, { knit });
   } catch (error: any) {
     console.log(error);
-    return res.sendError(res, error.meessage);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -191,7 +191,7 @@ const updateKnitterProcess = async (req: Request, res: Response) => {
     res.sendSuccess(res, { knit });
   } catch (error: any) {
     console.log(error);
-    return res.sendError(res, error.meessage);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -240,7 +240,7 @@ const fetchKnitterProcess = async (req: Request, res: Response) => {
     let data = { ...rows.dataValues, fabrics };
     return res.sendSuccess(res, data);
   } catch (error: any) {
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -486,7 +486,7 @@ const fetchKnitterProcessPagination = async (req: Request, res: Response) => {
       return res.sendSuccess(res, data);
     }
   } catch (error: any) {
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -579,7 +579,7 @@ const createKnitterrSales = async (req: Request, res: Response) => {
     return res.sendSuccess(res, kniSale);
   } catch (error: any) {
     console.log(error);
-    return res.sendError(res, error.meessage);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -603,7 +603,7 @@ const updateKnitterrSales = async (req: Request, res: Response) => {
     return res.sendSuccess(res, kniSale);
   } catch (error: any) {
     console.log(error);
-    return res.sendError(res, error.meessage);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -663,7 +663,7 @@ const deleteKnitterSales = async (req: Request, res: Response) => {
       message: "Successfully deleted this process",
     });
   } catch (error: any) {
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -752,7 +752,7 @@ const fetchKnitterSalesPagination = async (req: Request, res: Response) => {
       return res.sendSuccess(res, gin);
     }
   } catch (error: any) {
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -809,7 +809,7 @@ const fetchKnitterSale = async (req: Request, res: Response) => {
     let data = { ...rows.dataValues, fabricType };
     return res.sendSuccess(res, data);
   } catch (error: any) {
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -860,7 +860,7 @@ const fetchFabricReelLotNo = async (req: Request, res: Response) => {
 
     return res.sendSuccess(res, { reelLotNo });
   } catch (error: any) {
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -994,7 +994,7 @@ const exportKnitterSale = async (req: Request, res: Response) => {
     });
   } catch (error: any) {
     console.error("Error appending data:", error);
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -1159,7 +1159,7 @@ const exportKnitterProcess = async (req: Request, res: Response) => {
     });
   } catch (error: any) {
     console.error("Error appending data:", error);
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -1336,7 +1336,7 @@ const fetchKnitterDashBoard = async (req: Request, res: Response) => {
       return res.sendSuccess(res, data);
     }
   } catch (error: any) {
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -1355,7 +1355,7 @@ const updateStatusKnitterSale = async (req: Request, res: Response) => {
 
     res.sendSuccess(res, { update });
   } catch (error: any) {
-    return res.sendError(res, error.meessage);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -1407,7 +1407,7 @@ const countCottonBaleWithProgram = async (req: Request, res: Response) => {
     });
     res.sendSuccess(res, { weaver, data });
   } catch (error: any) {
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -1427,7 +1427,7 @@ const getProgram = async (req: Request, res: Response) => {
     });
     res.sendSuccess(res, data);
   } catch (error: any) {
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -1491,7 +1491,7 @@ const getSpinnerAndProgram = async (req: Request, res: Response) => {
     });
     res.sendSuccess(res, { spinner, program, season });
   } catch (error: any) {
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -1576,7 +1576,7 @@ const getInvoiceAndyarnType = async (req: Request, res: Response) => {
 
     res.sendSuccess(res, { invoice, yarncount: yarnCounts, yarn_type, reelLot });
   } catch (error: any) {
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -1617,7 +1617,7 @@ const getChooseFabricFilters = async (req: Request, res: Response) => {
 
     res.sendSuccess(res, { batchLotNo, reelLot, noOfRolls });
   } catch (error: any) {
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -1760,7 +1760,7 @@ const chooseFabricProcess = async (req: Request, res: Response) => {
 
     return res.sendSuccess(res, data);
   } catch (error: any) {
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -2005,7 +2005,7 @@ const exportKnitterTransactionList = async (req: Request, res: Response) => {
     });
   } catch (error: any) {
     console.error("Error appending data:", error);
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
 
   }
 };

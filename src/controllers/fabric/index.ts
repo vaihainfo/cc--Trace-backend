@@ -165,7 +165,7 @@ ORDER BY
     return res.sendPaginationSuccess(res, data[1]?.rows, totalCount);
   } catch (error: any) {
     console.error("Error appending data:", error);
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -221,7 +221,7 @@ const fetchDyingTransactionsAll = async (req: Request, res: Response) => {
     return res.sendSuccess(res, abc);
   } catch (error: any) {
     console.error("Error appending data:", error);
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -276,7 +276,7 @@ const getProgram = async (req: Request, res: Response) => {
     });
     res.sendSuccess(res, data);
   } catch (error: any) {
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -357,7 +357,7 @@ const createDyingProcess = async (req: Request, res: Response) => {
     res.sendSuccess(res, sales);
   } catch (error: any) {
     console.log(error);
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -432,7 +432,7 @@ const fetchDyingSalesPagination = async (req: Request, res: Response) => {
       return res.sendSuccess(res, gin);
     }
   } catch (error: any) {
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -555,7 +555,7 @@ const exportDyingProcess = async (req: Request, res: Response) => {
     });
   } catch (error: any) {
     console.error("Error appending data:", error);
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -688,7 +688,7 @@ const chooseDyingFabric = async (req: Request, res: Response) => {
     return res.sendSuccess(res, abc);
   } catch (error: any) {
     console.error("Error appending data:", error);
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -705,7 +705,7 @@ const deleteDyingProcess = async (req: Request, res: Response) => {
     return res.sendSuccess(res, deletedDying);
   } catch (error: any) {
     console.error("Error appending data:", error);
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -842,7 +842,7 @@ const fetchWashingTransactions = async (req: Request, res: Response) => {
     return res.sendSuccess(res, abc);
   } catch (error: any) {
     console.error("Error appending data:", error);
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -916,7 +916,7 @@ const fetchWashingTransactionsAll = async (req: Request, res: Response) => {
     return res.sendSuccess(res, abc);
   } catch (error: any) {
     console.error("Error appending data:", error);
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -1044,7 +1044,7 @@ const createWashingProcess = async (req: Request, res: Response) => {
     }
     res.sendSuccess(res, sales);
   } catch (error: any) {
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 //fetch the Washing process/sale data
@@ -1116,7 +1116,7 @@ const fetchWashingSalesPagination = async (req: Request, res: Response) => {
       return res.sendSuccess(res, gin);
     }
   } catch (error: any) {
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -1245,7 +1245,7 @@ const chooseWashingFabric = async (req: Request, res: Response) => {
     return res.sendSuccess(res, abc);
   } catch (error: any) {
     console.error("Error appending data:", error);
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -1362,7 +1362,7 @@ const exportWashingProcess = async (req: Request, res: Response) => {
     });
   } catch (error: any) {
     console.error("Error appending data:", error);
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -1379,7 +1379,7 @@ const deleteWashingProcess = async (req: Request, res: Response) => {
     return res.sendSuccess(res, deletedWashing);
   } catch (error: any) {
     console.error("Error appending data:", error);
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -1434,7 +1434,7 @@ const fetchPrintingTransactions = async (req: Request, res: Response) => {
     res.sendSuccess(res, data);
   } catch (error: any) {
     console.error("Error appending data:", error);
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -1511,7 +1511,7 @@ const fetchPrintingTransactionSold = async (req: Request, res: Response) => {
     res.sendPaginationSuccess(res, rows, count);
   } catch (error: any) {
     console.error("Error appending data:", error);
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -1615,7 +1615,7 @@ const createPrintingProcess = async (req: Request, res: Response) => {
     }
     res.sendSuccess(res, sales);
   } catch (error: any) {
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -1681,7 +1681,7 @@ const fetchPrintingSalesPagination = async (req: Request, res: Response) => {
       return res.sendSuccess(res, gin);
     }
   } catch (error: any) {
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -1755,7 +1755,7 @@ const choosePrintingFabric = async (req: Request, res: Response) => {
     return res.sendSuccess(res, result);
   } catch (error: any) {
     console.error("Error appending data:", error);
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 //export Printing process data
@@ -1870,7 +1870,7 @@ const exportPrintingProcess = async (req: Request, res: Response) => {
     });
   } catch (error: any) {
     console.error("Error appending data:", error);
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -1887,7 +1887,7 @@ const deletePrintingProcess = async (req: Request, res: Response) => {
     return res.sendSuccess(res, deletedPrinting);
   } catch (error: any) {
     console.error("Error appending data:", error);
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -1963,7 +1963,7 @@ const fetchCompactingTransactions = async (req: Request, res: Response) => {
     res.sendSuccess(res, data.flat());
   } catch (error: any) {
     console.error("Error appending data:", error);
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -2101,7 +2101,7 @@ const fetchCompactingTransactionSold = async (req: Request, res: Response) => {
     return res.sendPaginationSuccess(res, data, abc?.length);
   } catch (error: any) {
     console.error("Error appending data:", error);
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -2237,7 +2237,7 @@ const createCompactingProcess = async (req: Request, res: Response) => {
     }
     res.sendSuccess(res, sales);
   } catch (error: any) {
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -2298,7 +2298,7 @@ const fetchCompactingSalesPagination = async (req: Request, res: Response) => {
       return res.sendSuccess(res, gin);
     }
   } catch (error: any) {
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -2440,7 +2440,7 @@ const chooseCompactingFabric = async (req: Request, res: Response) => {
     return res.sendSuccess(res, data.flat());
   } catch (error: any) {
     console.error("Error appending data:", error);
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 //export Compacting process data
@@ -2546,7 +2546,7 @@ const exportCompactingProcess = async (req: Request, res: Response) => {
     });
   } catch (error: any) {
     console.error("Error appending data:", error);
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -2563,7 +2563,7 @@ const deleteCompactingProcess = async (req: Request, res: Response) => {
     return res.sendSuccess(res, deletedCompacting);
   } catch (error: any) {
     console.error("Error appending data:", error);
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -2749,7 +2749,7 @@ const getProcessName = async (req: Request, res: Response) => {
 
     res.sendSuccess(res, response.flat());
   } catch (error: any) {
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -2968,7 +2968,7 @@ const getBatchLot = async (req: Request, res: Response) => {
 
     res.sendSuccess(res, response.flat());
   } catch (error: any) {
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -3562,7 +3562,7 @@ const exportTransactionList = async (req: Request, res: Response) => {
     });
   } catch (error: any) {
     console.error("Error appending data:", error);
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
 
   }
 };
@@ -3672,7 +3672,7 @@ const exportPrintingTransactionList = async (req: Request, res: Response) => {
     });
   } catch (error: any) {
     console.error("Error appending data:", error);
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
 
   }
 };
@@ -3816,7 +3816,7 @@ const exportWashingTransactionList = async (req: Request, res: Response) => {
     });
   } catch (error: any) {
     console.error("Error appending data:", error);
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
 
   }
 };
@@ -3976,7 +3976,7 @@ const exportCompactingTransactionList = async (req: Request, res: Response) => {
     });
   } catch (error: any) {
     console.error("Error appending data:", error);
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
 
   }
 };

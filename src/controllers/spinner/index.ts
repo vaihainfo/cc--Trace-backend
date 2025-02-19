@@ -37,22 +37,42 @@ import PhysicalTraceabilityDataSpinnerSample from "../../models/physical-traceab
 import BaleSelection from "../../models/bale-selection.model";
 import GinBale from "../../models/gin-bale.model";
 import { _getGinnerProcessTracingChartData } from "../ginner";
-import GinToGinSale from "../../models/gin-to-gin-sale.model";
-import SpinSelectedBlend from "../../models/spin_selected_blend";
 import CombernoilGeneration from "../../models/combernoil_generation.model";
 import SpinCombernoilSale from "../../models/spin_combernoil_sale.model";
 import SpinnerYarnOrderSales from "../../models/spinner-yarn-order-sales.model";
+import GinToGinSale from "../../models/gin-to-gin-sale.model";
+// import SpinSelectedBlend from "../../models/spin_selected_blend";
 
 //create Spinner Process
 const createSpinnerProcess = async (req: Request, res: Response) => {
+    const transaction = await sequelize.transaction();
   try {
     let program = await Program.findOne({
-      where: { program_name: { [Op.iLike]: "Reel" } },
+      where: { program_name: { [Op.iLike]: "Reel" } }, transaction,
     });
     let abc;
     if (program.dataValues.id === req.body.programId) {
       abc = await yarnId(req.body.spinnerId, req.body.date);
-    }
+        }
+
+        if (req.body.spinnerId && req.body.seasonId && req.body.programId && req.body.totalQty && req.body.batchLotNo) {
+            let ProcessExist = await SpinProcess.findOne(
+              { where: { 
+                spinner_id: req.body.spinnerId,
+                program_id: req.body.programId,
+                season_id: req.body.seasonId,
+                total_qty: Number(req.body.totalQty),
+                net_yarn_qty: req.body.netYarnQty,
+                batch_lot_no: req.body.batchLotNo,
+                yarn_type: req.body.yarnType,
+                yarn_realisation: req.body.yarnRealisation,
+              }, transaction },
+            );
+            if (ProcessExist) {
+              await transaction.rollback();
+              return res.sendError(res, "Process already exist with same Lot Number, Yarn Type, Yarn Realisation, Net Yarn Quantity (Kgs) and Total Quantity(Kg/MT) for this Season.");
+            }
+      }
 
     let dyeing;
     if (req.body.dyeingRequired) {
@@ -94,15 +114,15 @@ const createSpinnerProcess = async (req: Request, res: Response) => {
       status: "Pending",
       from_date: req.body.from_date,
       to_date: req.body.to_date,
-      yarn_blend_id: req.body.yarnBlendId,
+      // yarn_blend_id: req.body.yarnBlendId,
     };
-    const spin = await SpinProcess.create(data);
+    const spin = await SpinProcess.create(data, { transaction });
     await CombernoilGeneration.create({
       spinner_id: req.body.spinnerId,
       process_id: spin.id,
       total_qty: req.body.comber_noil,
       qty_stock: req.body.comber_noil,
-    });
+    }, { transaction });
     let uniqueFilename = `spin_procees_qrcode_${Date.now()}.png`;
     let da = encrypt(`Spinner,Process,${spin.id}`);
     let aa = await generateOnlyQrCode(da, uniqueFilename);
@@ -112,7 +132,8 @@ const createSpinnerProcess = async (req: Request, res: Response) => {
         where: {
           id: spin.id,
         },
-      }
+      },
+            transaction
     );
 
     for await (let yarn of req.body.yarns) {
@@ -123,7 +144,7 @@ const createSpinnerProcess = async (req: Request, res: Response) => {
         yarn_qty_stock: yarn.yarnProduced,
       };
 
-      const yarns = await SpinYarn.create(yarnData);
+      const yarns = await SpinYarn.create(yarnData, { transaction });
       let uniqueFilename = `spin_yarn_qrcode_${Date.now()}.png`;
       let da = encrypt(`Spinner,Yarn, ${yarns.id}`);
       let aa = await generateOnlyQrCode(da, uniqueFilename);
@@ -133,96 +154,93 @@ const createSpinnerProcess = async (req: Request, res: Response) => {
           where: {
             id: yarns.id,
           },
+                transaction,
         }
       );
     }
 
-    for await (let data of req.body.cotton_mixes) {
-      let newData = {
-        process_id: spin.id,
-        brand_ids: req.body.brandIds,
-        yarn_blend_id: data.yarn_blend_id,
-        cotton_mix_id: data.cotton_mix_id,
-        cotton_mix_qty: data.cotton_mix_qty,
-      };
-      await SpinSelectedBlend.create(newData);
-    }
+    // for await (let data of req.body.cotton_mixes) {
+    //   let newData = {
+    //     process_id: spin.id,
+    //     brand_ids: req.body.brandIds,
+    //     yarn_blend_id: data.yarn_blend_id,
+    //     cotton_mix_id: data.cotton_mix_id,
+    //     cotton_mix_qty: data.cotton_mix_qty,
+    //   };
+    //   // await SpinSelectedBlend.create(newData);
+    // }
 
     for await (let obj of req.body.chooseLint) {
       let update = await GinSales.update(
         { qty_stock: obj.totalQty - obj.qtyUsed },
-        { where: { id: obj.id } }
+        { where: { id: obj.id }, transaction }
       );
       let create = await LintSelections.create({
         qty_used: obj.qtyUsed,
         process_id: spin.id,
         lint_id: obj.id,
-      });
+      }, { transaction });
     }
     if (req.body.chooseComberNoil && req.body.chooseComberNoil.length > 0) {
       for await (let obj of req.body.chooseComberNoil) {
         let update = await SpinProcess.update(
           { comber_noil_stock: obj.totalQty - obj.qtyUsed },
-          { where: { id: obj.id } }
+          { where: { id: obj.id }, transaction }
         );
         let create = await ComberSelection.create({
           qty_used: obj.qtyUsed,
           process_id: spin.id,
           yarn_id: obj.id,
-        });
+        }, { transaction });
         await CombernoilGeneration.update(
           { qty_stock: obj.totalQty - obj.qtyUsed },
-          { where: { id: obj.id } }
+          { where: { id: obj.id }, transaction }
         );
       }
     }
 
-    if (req.body.enterPhysicalTraceability) {
-      const physicalTraceabilityData = {
-        date_sample_collection: req.body.dateSampleCollection,
-        data_of_sample_dispatch: req.body.dataOfSampleDispatch,
-        operator_name: req.body.operatorName,
-        expected_date_of_yarn_sale: req.body.expectedDateOfYarnSale,
-        physical_traceability_partner_id:
-          req.body.physicalTraceabilityPartnerId,
-        spin_process_id: spin.id,
-        spinner_id: req.body.spinnerId,
-      };
-      const physicalTraceabilityDataSpinner =
-        await PhysicalTraceabilityDataSpinner.create(physicalTraceabilityData);
+        if (req.body.enterPhysicalTraceability) {
+            const physicalTraceabilityData = {
+                date_sample_collection: req.body.dateSampleCollection,
+                data_of_sample_dispatch: req.body.dataOfSampleDispatch,
+                operator_name: req.body.operatorName,
+                expected_date_of_yarn_sale: req.body.expectedDateOfYarnSale,
+                physical_traceability_partner_id: req.body.physicalTraceabilityPartnerId,
+                spin_process_id: spin.id,
+                spinner_id: req.body.spinnerId
+            };
+            const physicalTraceabilityDataSpinner = await PhysicalTraceabilityDataSpinner.create(physicalTraceabilityData, { transaction });
 
-      for await (const weightAndCone of req.body.weightAndCone) {
-        let brand = await Brand.findOne({
-          where: { id: req.body.brandId },
-        });
+            for await (const weightAndCone of req.body.weightAndCone) {
+                let brand = await Brand.findOne({
+                    where: { id: req.body.brandId },
+                    transaction
+                });
 
-        const updatedCount = brand.dataValues.count + 1;
-        let physicalTraceabilityDataSpinnerSampleData = {
-          physical_traceability_data_spinner_id:
-            physicalTraceabilityDataSpinner.id,
-          weight: weightAndCone.weight,
-          cone: weightAndCone.cone,
-          original_sample_status: weightAndCone.originalSampleStatus,
-          code: `DNA${req.body.spinnerShortname}${
-            abc ? "-" + abc : ""
-          }-${updatedCount}`,
-          sample_result: 0,
-        };
-        await PhysicalTraceabilityDataSpinnerSample.create(
-          physicalTraceabilityDataSpinnerSampleData
-        );
+                const updatedCount = brand.dataValues.count + 1;
+                let physicalTraceabilityDataSpinnerSampleData = {
+                    physical_traceability_data_spinner_id: physicalTraceabilityDataSpinner.id,
+                    weight: weightAndCone.weight,
+                    cone: weightAndCone.cone,
+                    original_sample_status: weightAndCone.originalSampleStatus,
+                    code: `DNA${req.body.spinnerShortname}${abc ? '-' + abc : ''}-${updatedCount}`,
+                    sample_result: 0
+                };
+                await PhysicalTraceabilityDataSpinnerSample.create(physicalTraceabilityDataSpinnerSampleData, { transaction });
 
-        await Brand.update(
-          { count: updatedCount },
-          { where: { id: brand.id } }
-        );
-      }
-    }
+                await Brand.update(
+                    { count: updatedCount },
+                    { where: { id: brand.id }, transaction }
+                );
+            }
+        }
 
+        await transaction.commit();
     res.sendSuccess(res, { spin });
   } catch (error: any) {
     console.log(error);
-    return res.sendError(res, error.meessage);
+        await transaction.rollback();
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -267,12 +285,12 @@ const updateSpinProcess = async (req: Request, res: Response) => {
       );
     }
 
-    res.sendSuccess(res, { spin });
-  } catch (error: any) {
-    console.log(error);
-    return res.sendError(res, error.meessage);
-  }
-};
+        res.sendSuccess(res, { spin });
+    } catch (error: any) {
+        console.log(error);
+        return res.sendError(res, error.message, error);
+    }
+}
 
 const yarnId = async (id: any, date: any) => {
   let a = await sequelize.query(
@@ -453,7 +471,7 @@ const fetchSpinnerProcessPagination = async (req: Request, res: Response) => {
       return res.sendSuccess(res, data);
     }
   } catch (error: any) {
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -573,7 +591,7 @@ const deleteSpinnerProcess = async (req: Request, res: Response) => {
       });
     }
   } catch (error: any) {
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -645,6 +663,8 @@ const fetchComberNoilPagination = async (req: Request, res: Response) => {
       whereCondition.program_id = { [Op.in]: idArray };
     }
     combernoilGenerationWhereCondition.qty_stock = { [Op.gt]: 0 };
+
+
     //fetch data with pagination
     if (req.query.pagination === "true") {
       const { count, rows } = await CombernoilGeneration.findAndCountAll({
@@ -655,11 +675,18 @@ const fetchComberNoilPagination = async (req: Request, res: Response) => {
             where: whereCondition,
             required: false,
             attributes: ["id", "batch_lot_no", "program_id"],
+            include: [
+              {
+                model : Program,
+                as : "program",
+                attributes: ["program_name"],
+              }
+            ]
           },
           {
             model: Spinner,
             as: "spinner",
-            attributes: ["id", "name"],
+            attributes: ["id", "name"]
           },
           {
             model: SpinCombernoilSale,
@@ -821,25 +848,26 @@ const fetchComberNoilPagination = async (req: Request, res: Response) => {
     }
   } catch (error: any) {
     console.log(error);
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
 const updateSpinnerProcess = async (req: Request, res: Response) => {
-  try {
-    const spin = await SpinProcess.update(
-      {
-        process_complete: req.body.processComplete,
-      },
-      {
-        where: { id: req.body.id },
-      }
-    );
-    res.sendSuccess(res, { spin });
-  } catch (error: any) {
-    return res.sendError(res, error.meessage);
-  }
-};
+    try {
+        const spin = await SpinProcess.update({
+            process_complete: req.body.processComplete
+        },
+            {
+                where: { id: req.body.id }
+            }
+        );
+        res.sendSuccess(res, { spin });
+    } catch (error: any) {
+        return res.sendError(res, error.message, error);
+    }
+}
+
+
 
 const exportSpinnerProcess = async (req: Request, res: Response) => {
   const excelFilePath = path.join("./upload", "spinner-process.xlsx");
@@ -998,7 +1026,7 @@ const exportSpinnerProcess = async (req: Request, res: Response) => {
     });
   } catch (error: any) {
     console.error("Error appending data:", error);
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -1069,112 +1097,138 @@ const chooseYarnProcess = async (req: Request, res: Response) => {
       });
     }
 
-    return res.sendSuccess(res, data);
-  } catch (error: any) {
-    return res.sendError(res, error.message);
-  }
+        return res.sendSuccess(res, data);
+
+    } catch (error: any) {
+        return res.sendError(res, error.message, error);
+    }
 };
 
 //create Spinner Sale
 const createSpinnerSales = async (req: Request, res: Response) => {
-  try {
-    const data: any = {
-      spinner_id: req.body.spinnerId,
-      program_id: req.body.programId,
-      season_id: req.body.seasonId,
-      date: req.body.date,
-      order_ref: req.body.orderRef,
-      buyer_type: req.body.buyerType,
-      buyer_id: req.body.buyerId,
-      knitter_id: req.body.knitterId,
-      processor_name: req.body.processorName,
-      processor_address: req.body.processorAddress,
-      total_qty: req.body.totalQty,
-      transaction_via_trader: req.body.transactionViaTrader,
-      transaction_agent: req.body.transactionAgent,
-      no_of_boxes: req.body.noOfBoxes,
-      batch_lot_no: req.body.batchLotNo,
-      reel_lot_no: req.body.reelLotNno ? req.body.reelLotNno : null,
-      box_ids: req.body.boxIds,
-      yarn_type: req.body.yarnType,
-      yarn_count: req.body.yarnCount,
-      invoice_no: req.body.invoiceNo,
-      bill_of_ladding: req.body.billOfLadding,
-      transporter_name: req.body.transporterName,
-      vehicle_no: req.body.vehicleNo,
-      quality_doc: req.body.qualityDoc,
-      tc_files: req.body.tcFiles,
-      contract_file: req.body.contractFile,
-      invoice_file: req.body.invoiceFile,
-      delivery_notes: req.body.deliveryNotes,
-      qty_stock: req.body.totalQty,
-      price: req.body.price,
-      letter_of_credit: req.body.letterOfCredit,
-      logistics_documents: req.body.logisticsDocuments,
-      yarn_quality_test_reports: req.body.yarnQualityTestReports,
-      status: "Pending for QR scanning",
-    };
+    const transaction = await sequelize.transaction();
+    try {
 
-    if (req.body.buyerType === "Spinner") {
-      data.status = "Pending";
-      data.total_qty = req.body.chooseComberNoil.totalQuantityUsed;
-      data.qty_stock = req.body.chooseComberNoil.totalQuantityUsed;
-      data.sale_type = "Spinner";
-      data.buyer_id = req.body.buyer;
-      data.comber_ids = req.body.chooseComberNoil.chooseComberNoil.map(
-        (comber: any) => comber.id
-      );
-      const spinCombernoilSales = await SpinCombernoilSale.create(data);
-      // Update existing CombernoilGeneration records
-      for (const comber of req.body.chooseComberNoil.chooseComberNoil) {
-        const existingComber = await CombernoilGeneration.findByPk(comber.id);
-        if (existingComber) {
-          // Update existing record's qty_stock
-          await existingComber.update({
-            qty_stock: existingComber.qty_stock - comber.qtyUsed,
-          });
-
-          // Create new CombernoilGeneration record for buyer
-          await CombernoilGeneration.create({
-            spinner_id: req.body.buyer, // buyer's spinner id
-            sales_id: spinCombernoilSales.id,
-            total_qty: comber.qtyUsed,
-            qty_stock: comber.qtyUsed,
-            old_combernoil_id: comber.id,
-          });
-        }
-      }
-
-      let uniqueFilename = `spin_sales_qrcode_${Date.now()}.png`;
-      let da = encrypt(`Spinner,Sale,${spinCombernoilSales.id}`);
-      let aa = await generateOnlyQrCode(da, uniqueFilename);
-      await SpinCombernoilSale.update(
-        { qr: uniqueFilename },
-        {
-          where: {
-            id: spinCombernoilSales.id,
-          },
-        }
-      );
-      res.sendSuccess(res, { data });
-    } else {
-      if (req.body.chooseYarn && req.body.chooseYarn.length > 0) {
-        for await (let obj of req.body.chooseYarn) {
-          const spinYarnData = await SpinYarn.findOne({
-            where: { id: obj.id },
-            raw: true,
-          });
-          console.log(spinYarnData);
-          if (obj.qtyUsed > spinYarnData.yarn_qty_stock) {
-            return res.sendError(
-              res,
-              "Requested quantity exceeds available stock"
+        if (req.body.spinnerId && req.body.seasonId && req.body.programId && req.body.totalQty && req.body.batchLotNo) {
+            let SalesExist = await SpinSales.findOne(
+              { where: { 
+                spinner_id: req.body.spinnerId,
+                program_id: req.body.programId,
+                season_id: req.body.seasonId,
+                order_ref: req.body.orderRef,
+                buyer_type: req.body.buyerType,
+                buyer_id: req.body.buyerId,
+                knitter_id: req.body.knitterId,
+                total_qty: Number(req.body.totalQty),
+                invoice_no: req.body.invoiceNo,
+                batch_lot_no: req.body.batchLotNo,
+                reel_lot_no: req.body.reelLotNno ? req.body.reelLotNno : null,
+                vehicle_no: req.body.vehicleNo,      
+              }, transaction },
             );
+            if (SalesExist) {
+              await transaction.rollback();
+              return res.sendError(res, "Sales already exist with same Batch Lot Number, Invoice No., Vehicle No., Order Reference and Total Quantity(Kg/MT) for this Season.");
+            }
           }
-        }
-      }
 
-      const spinSales = await SpinSales.create(data);
+        const data: any = {
+            spinner_id: req.body.spinnerId,
+            program_id: req.body.programId,
+            season_id: req.body.seasonId,
+            date: req.body.date,
+            order_ref: req.body.orderRef,
+            buyer_type: req.body.buyerType,
+            buyer_id: req.body.buyerId,
+            knitter_id: req.body.knitterId,
+            processor_name: req.body.processorName,
+            processor_address: req.body.processorAddress,
+            total_qty: req.body.totalQty,
+            transaction_via_trader: req.body.transactionViaTrader,
+            transaction_agent: req.body.transactionAgent,
+            no_of_boxes: req.body.noOfBoxes,
+            batch_lot_no: req.body.batchLotNo,
+            reel_lot_no: req.body.reelLotNno ? req.body.reelLotNno : null,
+            box_ids: req.body.boxIds,
+            yarn_type: req.body.yarnType,
+            yarn_count: req.body.yarnCount,
+            invoice_no: req.body.invoiceNo,
+            bill_of_ladding: req.body.billOfLadding,
+            transporter_name: req.body.transporterName,
+            vehicle_no: req.body.vehicleNo,
+            quality_doc: req.body.qualityDoc,
+            tc_files: req.body.tcFiles,
+            contract_file: req.body.contractFile,
+            invoice_file: req.body.invoiceFile,
+            delivery_notes: req.body.deliveryNotes,
+            qty_stock: req.body.totalQty,
+            price: req.body.price,
+            letter_of_credit: req.body.letterOfCredit,
+            logistics_documents: req.body.logisticsDocuments,
+            yarn_quality_test_reports: req.body.yarnQualityTestReports,
+            status: 'Pending for QR scanning'
+        };
+
+        if (req.body.buyerType === "Spinner") {
+          data.status = "Pending";
+          data.total_qty = req.body.chooseComberNoil.totalQuantityUsed;
+          data.qty_stock = req.body.chooseComberNoil.totalQuantityUsed;
+          data.sale_type = "Spinner";
+          data.buyer_id = req.body.buyer;
+          data.comber_ids = req.body.chooseComberNoil.chooseComberNoil.map(
+            (comber: any) => comber.id
+          );
+          const spinCombernoilSales = await SpinCombernoilSale.create(data, { transaction });
+          // Update existing CombernoilGeneration records
+          for (const comber of req.body.chooseComberNoil.chooseComberNoil) {
+            const existingComber = await CombernoilGeneration.findByPk(comber.id);
+            if (existingComber) {
+              // Update existing record's qty_stock
+              await existingComber.update({
+                qty_stock: existingComber.qty_stock - comber.qtyUsed,
+              }, { transaction });
+    
+              // Create new CombernoilGeneration record for buyer
+              await CombernoilGeneration.create({
+                spinner_id: req.body.buyer, // buyer's spinner id
+                sales_id: spinCombernoilSales.id,
+                total_qty: comber.qtyUsed,
+                qty_stock: comber.qtyUsed,
+                old_combernoil_id: comber.id,
+              }, { transaction });
+            }
+          }
+    
+          let uniqueFilename = `spin_sales_qrcode_${Date.now()}.png`;
+          let da = encrypt(`Spinner,Sale,${spinCombernoilSales.id}`);
+          let aa = await generateOnlyQrCode(da, uniqueFilename);
+          await SpinCombernoilSale.update(
+            { qr: uniqueFilename },
+            {
+              where: {
+                id: spinCombernoilSales.id,
+              },
+              transaction
+            }
+          );
+          // Commit transaction
+          await transaction.commit();
+          res.sendSuccess(res, { data });
+        } 
+        else 
+        {
+
+        if (req.body.chooseYarn && req.body.chooseYarn.length > 0) {
+            for await (let obj of req.body.chooseYarn) {
+                const spinYarnData = await SpinYarn.findOne({ where: { id: obj.id }, transaction, raw: true });
+                console.log(spinYarnData)
+                if (obj.qtyUsed > spinYarnData.yarn_qty_stock) {
+                    return res.sendError(res, 'Requested quantity exceeds available stock')
+                }
+            }
+        }
+
+      const spinSales = await SpinSales.create(data, { transaction });
       let uniqueFilename = `spin_sales_qrcode_${Date.now()}.png`;
       let da = encrypt(`Spinner,Sale,${spinSales.id}`);
       let aa = await generateOnlyQrCode(da, uniqueFilename);
@@ -1184,23 +1238,24 @@ const createSpinnerSales = async (req: Request, res: Response) => {
           where: {
             id: spinSales.id,
           },
-        }
+          transaction
+        },
       );
 
       if (req.body.chooseYarn && req.body.chooseYarn.length > 0) {
         for await (let obj of req.body.chooseYarn) {
           const spinProcessData = await SpinProcess.findOne({
-            where: { id: obj.process_id },
+            where: { id: obj.process_id }, transaction,
           });
           let update = await SpinProcess.update(
             {
               qty_stock: spinProcessData.qty_stock - obj.qtyUsed,
               status: "Sold",
             },
-            { where: { id: obj.process_id } }
+            { where: { id: obj.process_id }, transaction }
           );
           const spinYarnData = await SpinYarn.findOne({
-            where: { id: obj.id },
+            where: { id: obj.id }, transaction,
           });
 
           let updateyarns = {};
@@ -1215,14 +1270,14 @@ const createSpinnerSales = async (req: Request, res: Response) => {
             };
           }
           const spinYarnStatus = await SpinYarn.update(updateyarns, {
-            where: { id: obj.id },
+            where: { id: obj.id }, transaction,
           });
           await SpinProcessYarnSelection.create({
             spin_process_id: obj.process_id,
             yarn_id: obj.id,
             sales_id: spinSales.id,
             qty_used: obj.qtyUsed,
-          });
+          }, { transaction });
         }
       }
 
@@ -1240,11 +1295,14 @@ const createSpinnerSales = async (req: Request, res: Response) => {
         await send_spin_mail(spinSales.id);
       }
 
+         // Commit transaction
+        await transaction.commit();
       res.sendSuccess(res, { spinSales });
     }
   } catch (error: any) {
+        await transaction.rollback();
     console.error(error);
-    return res.sendError(res, error.meessage);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -1267,7 +1325,7 @@ const updateSpinnerSales = async (req: Request, res: Response) => {
     res.sendSuccess(res, { spinSales });
   } catch (error: any) {
     console.error(error);
-    return res.sendError(res, error.meessage);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -1767,7 +1825,7 @@ const deleteSpinnerSales = async (req: Request, res: Response) => {
       message: "Successfully deleted this process",
     });
   } catch (error: any) {
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -1845,10 +1903,7 @@ const fetchComberNoilTransactionList = async (req: Request, res: Response) => {
     );
   } catch (error: any) {
     console.log(error);
-    return res.status(500).json({
-      success: false,
-      error: error.message,
-    });
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -1896,7 +1951,7 @@ const updateStatusComberNoil = async (req: Request, res: Response) => {
     }
     res.sendSuccess(res, { items });
   } catch (error: any) {
-    return res.sendError(res, error.meessage);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -2024,10 +2079,7 @@ const fetchTransactionAlertForComberNoil = async (
     return res.sendSuccess(res, processedData);
   } catch (error: any) {
     console.error("Error appending data:", error);
-    return res.status(500).json({
-      success: false,
-      error: error.message,
-    });
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -2196,7 +2248,7 @@ const fetchTransactionAlert = async (req: Request, res: Response) => {
 
     return res.sendSuccess(res, data);
   } catch (error: any) {
-    return res.sendError(res, error.message);
+    return res.sendError(res, error.message, error);
   }
 };
 
@@ -2311,7 +2363,7 @@ const fetchTransactionAlert = async (req: Request, res: Response) => {
 //     } catch (error: any) {
 //         await GinSales.update({visible_flag: true}, { where: { id: req.body.items?.map((obj: any) => obj.id) } });
 //         console.log(error)
-//         return res.sendError(res, error.meessage);
+//         return res.sendError(res, error.message, error);
 //     }
 // }
 
@@ -2376,27 +2428,27 @@ const updateStatusSales = async (req: Request, res: Response) => {
               ?.map((bale: any) => bale.id);
             if (GintoGinBalesId && GintoGinBalesId.length > 0) {
               for await (let id of GintoGinBalesId) {
-                let oldSale = await GinToGinSale.findOne({
-                  where: { bale_id: id },
-                  order: [["sales_id", "desc"]],
-                  transaction: t,
-                });
-                if (oldSale) {
-                  await GinToGinSale.update(
-                    { gin_sold_status: null },
-                    {
-                      where: {
-                        bale_id: id,
-                        sales_id: oldSale?.dataValues?.sales_id,
-                      },
-                      transaction: t,
-                    }
-                  );
-                  await GinBale.update(
-                    { is_all_rejected: false },
-                    { where: { id }, transaction: t }
-                  );
-                }
+                // let oldSale = await GinToGinSale.findOne({
+                //   where: { bale_id: id },
+                //   order: [["sales_id", "desc"]],
+                //   transaction: t,
+                // });
+                // if (oldSale) {
+                //   await GinToGinSale.update(
+                //     { gin_sold_status: null },
+                //     {
+                //       where: {
+                //         bale_id: id,
+                //         sales_id: oldSale?.dataValues?.sales_id,
+                //       },
+                //       transaction: t,
+                //     }
+                //   );
+                //   await GinBale.update(
+                //     { is_all_rejected: false },
+                //     { where: { id }, transaction: t }
+                //   );
+                // }
               }
             } else if (notGintoGinBalesId && notGintoGinBalesId.length > 0) {
               await GinBale.update(
@@ -2526,16 +2578,13 @@ const updateStatusSales = async (req: Request, res: Response) => {
       }
     });
 
-    // Send combined response with all updates
-    res.sendSuccess(res, { update });
-  } catch (error: any) {
-    console.log(error);
-    await GinSales.update(
-      { visible_flag: true },
-      { where: { id: req.body.items?.map((obj: any) => obj.id) } }
-    );
-    return res.sendError(res, error.message);
-  }
+        // Send combined response with all updates
+        res.sendSuccess(res, { update });
+    } catch (error: any) {
+        console.log(error);
+        await GinSales.update({ visible_flag: true }, { where: { id: req.body.items?.map((obj: any) => obj.id) } });
+        return res.sendError(res, error.message, error);
+    }
 };
 
 const fetchTransactionList = async (req: Request, res: Response) => {
@@ -2715,12 +2764,12 @@ const fetchTransactionList = async (req: Request, res: Response) => {
 
     // let result = data.slice(offset, offset + limit);
 
-    // return res.sendPaginationSuccess(res, result, data.length);
-    return res.sendPaginationSuccess(res, rows, totalCount);
-  } catch (error: any) {
-    console.log(error);
-    return res.sendError(res, error.message);
-  }
+        // return res.sendPaginationSuccess(res, result, data.length);
+        return res.sendPaginationSuccess(res, rows, totalCount);
+    } catch (error: any) {
+        console.log(error)
+        return res.sendError(res, error.message, error);
+    }
 };
 
 //count the number of bales and total quantity stock With Program
@@ -3243,15 +3292,16 @@ const chooseLint = async (req: Request, res: Response) => {
                 ORDER BY 
                     gs.id DESC;`;
 
-      const items = await sequelize.query(dataQuery, {
-        type: sequelize.QueryTypes.SELECT,
-      });
-      list.push({ ...item.dataValues, data: items });
+            const items = await sequelize.query(dataQuery, {
+                type: sequelize.QueryTypes.SELECT,
+            })
+            list.push({ ...item.dataValues, data: items });
+        }
+        return res.sendSuccess(res, list);
+
+    } catch (error: any) {
+        return res.sendError(res, error.message, error);
     }
-    return res.sendSuccess(res, list);
-  } catch (error: any) {
-    return res.sendError(res, error.message);
-  }
 };
 
 const chooseYarn = async (req: Request, res: Response) => {
@@ -3446,11 +3496,12 @@ const chooseYarn = async (req: Request, res: Response) => {
       list.push({ ...item.dataValues, data: data });
     }
 
-    return res.sendSuccess(res, list);
-  } catch (error: any) {
-    console.log(error);
-    return res.sendError(res, error.message);
-  }
+        return res.sendSuccess(res, list);
+
+    } catch (error: any) {
+        console.log(error)
+        return res.sendError(res, error.message, error);
+    }
 };
 
 const getInvoiceAndReelLotNo = async (req: Request, res: Response) => {

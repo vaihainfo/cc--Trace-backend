@@ -145,7 +145,7 @@ const createTraining = async (req: Request, res: Response) => {
         res.sendSuccess(res, training);
     } catch (error: any) {
         console.error(error)
-        return res.sendError(res, error.meessage);
+        return res.sendError(res, error.message, error);
     }
 }
 
@@ -245,7 +245,7 @@ const fetchTrainings = async (req: Request, res: Response) => {
 
     } catch (error: any) {
         console.error(error)
-        return res.sendError(res, error.meessage);
+        return res.sendError(res, error.message, error);
     }
 }
 
@@ -273,7 +273,7 @@ const fetchTraining = async (req: Request, res: Response) => {
         return res.sendSuccess(res, training);
     } catch (error: any) {
         console.error(error)
-        return res.sendError(res, error.meessage);
+        return res.sendError(res, error.message, error);
     }
 }
 
@@ -291,7 +291,7 @@ const updateTraining = async (req: Request, res: Response) => {
         res.sendSuccess(res, { training });
     } catch (error: any) {
         console.error(error)
-        return res.sendError(res, error.meessage);
+        return res.sendError(res, error.message, error);
     }
 }
 
@@ -307,7 +307,7 @@ const updateTrainingStatus = async (req: Request, res: Response) => {
         res.sendSuccess(res, { training });
     } catch (error: any) {
         console.error(error)
-        return res.sendError(res, error.meessage);
+        return res.sendError(res, error.message, error);
     }
 }
 
@@ -322,7 +322,7 @@ const deleteTraining = async (req: Request, res: Response) => {
         res.sendSuccess(res, { training });
     } catch (error: any) {
         console.error(error)
-        return res.sendError(res, error.meessage);
+        return res.sendError(res, error.message, error);
     }
 }
 
@@ -418,7 +418,7 @@ const fecthTrainingStatus = async (req: Request, res: Response) => {
         return res.sendPaginationSuccess(res, rows, count);
     } catch (error: any) {
         console.error(error)
-        return res.sendError(res, error.meessage);
+        return res.sendError(res, error.message, error);
     }
 }
 
@@ -543,7 +543,7 @@ const fecthTrainingStatusSpecific = async (req: Request, res: Response) => {
         return res.sendPaginationSuccess(res, rows, count);
     } catch (error: any) {
         console.error(error)
-        return res.sendError(res, error.meessage);
+        return res.sendError(res, error.message, error);
     }
 }
 
@@ -569,7 +569,7 @@ const updateTrainingProcessStatus = async (req: Request, res: Response) => {
         res.sendSuccess(res, { training });
     } catch (error: any) {
         console.error(error)
-        return res.sendError(res, error.meessage);
+        return res.sendError(res, error.message, error);
     }
 }
 
@@ -716,7 +716,7 @@ const exportTrainingStatus = async (req: Request, res: Response) => {
 
     } catch (error: any) {
         console.error(error)
-        return res.sendError(res, error.meessage);
+        return res.sendError(res, error.message, error);
     }
 }
 
