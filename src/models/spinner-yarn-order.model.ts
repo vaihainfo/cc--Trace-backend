@@ -1,5 +1,7 @@
 import { DataTypes } from 'sequelize';
 import db from '../util/dbConn';
+import SpinnerYarnOrderSales from './spinner-yarn-order-sales.model';
+import YarnOrderProcess from './yarn-order-process.model';
 
 const SpinnerYarnOrder = db.define('spinner_yarn_orders', {
   id: {
@@ -97,6 +99,16 @@ const SpinnerYarnOrder = db.define('spinner_yarn_orders', {
     type: DataTypes.INTEGER,
     allowNull: true
   },
+});
+
+SpinnerYarnOrder.hasMany(SpinnerYarnOrderSales, {
+  foreignKey: 'spinner_yarn_order_id',
+  as: 'YarnOrderSales'
+});
+
+SpinnerYarnOrder.belongsTo(YarnOrderProcess, {
+  foreignKey: 'processId',
+  as: 'YarnOrderProcess'
 });
 
 export default SpinnerYarnOrder;
