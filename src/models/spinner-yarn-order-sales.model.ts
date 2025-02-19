@@ -23,7 +23,7 @@ const SpinnerYarnOrderSales = db.define('spinner_yarn_order_sales', {
     allowNull: false
   },
   quantity_used: {
-    type: DataTypes.DECIMAL(10, 2),
+    type: DataTypes.INTEGER,
     allowNull: false,
     comment: 'Quantity of yarn used from the order'
   }
