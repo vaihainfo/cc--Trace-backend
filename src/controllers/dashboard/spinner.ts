@@ -3031,13 +3031,37 @@ const getSpinLintGreyoutData = async (
 ) => {
 
   where['$gin_sales.status$'] = 'Sold';
-  where['$gin_sales.greyout_status$'] = true;
+  // where['$gin_sales.greyout_status$'] = true;
+
+  where[Op.or] = [
+    { '$gin_sales.greyout_status$': true },
+    {
+      '$gin_sales.greyout_status$': false,
+      '$gin_sales.greyed_out_qty$': { [Op.ne]: null },
+    },
+  ];
 
   const result = await GinSales.findAll({
     attributes: [
       [Sequelize.col('season.id'), 'seasonId'],   // season_id from Season
       [Sequelize.col('season.name'), 'seasonName'], 
-      [Sequelize.fn('SUM', Sequelize.col('qty_stock')), 'lintGreyout']
+      // [Sequelize.fn('SUM', Sequelize.col('qty_stock')), 'lintGreyout'],
+      [
+        Sequelize.fn(
+          "COALESCE",
+          Sequelize.fn(
+            "SUM",
+            Sequelize.literal(`
+               CASE 
+                WHEN greyout_status = true THEN qty_stock
+                ELSE greyed_out_qty
+              END
+            `)
+          ),
+          0
+        ),
+        "lintGreyout",
+      ],
     ],
     include: [
       {

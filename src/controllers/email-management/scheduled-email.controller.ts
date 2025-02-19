@@ -5,6 +5,7 @@ import EmailTemplate from "../../models/email-template.model";
 import EmailManagement from "../../models/email-management.model";
 import ScheduledEmailJobs from "../../models/scheduled-email-jobs.model";
 import { sendFarmerReport, sendGinnerBaleProcess,sendGinnerPendingSales, sendGinnerSales, sendSpinnerBale, sendSpinnerYarnSale, sendKnitterYarnReceipt, sendKnitterFabricSale, sendWeaverYarnReceipt, sendWeaverFabricSale, sendGarmentFabric, sendGarmentFabricSale, sendOrganicFarmerReport, sendProcurementReport, sendIntegrityReport, processAndSentTicketReminder, sendGinnerPendingReminder } from "../send-emails";
+import logger from "../../util/logger";
 
 async function checkEmailFunction(templateName: string) {
   const tempFunction: any = {
@@ -116,11 +117,13 @@ const sendScheduledEmails = async () => {
             let createNextSchedule = await ScheduledEmailJobs.create(dataToCreate)
            }
            console.log(result ? "Scheduled Email Sent and Updated Successfully" : "Failed Sending Scheduled Email")    
+           logger.info(`${result ? "Scheduled Email Sent and Updated Successfully" : "Failed Sending Scheduled Email"}`)
           }
         }
       }
     }  catch (error: any) {
       console.error("Error appending data:", error);
+      logger.error(`ERROR SENDING SCHEDULED MAIL - ${error}`)
     }
   };
 
