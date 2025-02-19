@@ -23,12 +23,7 @@ const YarnOrderProcess = db.define('yarn_order_processes', {
       model: 'spinners',
       key: 'id'
     }
-  },
-  process_status: {
-    type: DataTypes.BOOLEAN,
-    allowNull: false,
-    defaultValue: true,
-  },
+  }
 });
 
 export default YarnOrderProcess;

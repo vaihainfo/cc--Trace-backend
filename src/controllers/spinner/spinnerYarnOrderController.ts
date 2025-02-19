@@ -4,6 +4,7 @@ import YarnOrderProcess from "../../models/yarn-order-process.model";
 import Weaver from "../../models/weaver.model";
 import Knitter from "../../models/knitter.model";
 import CottonMix from "../../models/cotton-mix.model";
+import SpinnerYarnOrderSales from "../../models/spinner-yarn-order-sales.model";
 
 export const createSpinnerYarnOrder = async (req: Request, res: Response) => {
   try {
@@ -90,7 +91,18 @@ export const getSpinnerYarnOrders = async (req: Request, res: Response) => {
     const yarnOrders = await SpinnerYarnOrder.findAll({
       where: { spinnerId },
       order: [["createdAt", "DESC"]],
-      
+      include: [
+        {
+          model: SpinnerYarnOrderSales,
+          as: 'YarnOrderSales',
+          attributes: ['quantity_used']
+        },
+        {
+          model: YarnOrderProcess,
+          as: 'YarnOrderProcess',
+          attributes: ['id', 'name', 'address']
+        }
+      ]
     });
 
     // Get all buyer and process IDs
@@ -128,7 +140,7 @@ export const getSpinnerYarnOrders = async (req: Request, res: Response) => {
         where: { id: knitterIds },
         attributes: ["id", "name"],
       });
-      weavers.push(...knitters);
+      weavers.push(...knitters.map((a: any) => ({ id: a.id, name: a.name, type: 'kniter' })));
     }
 
     if (weaverIds.length > 0) {
@@ -136,7 +148,7 @@ export const getSpinnerYarnOrders = async (req: Request, res: Response) => {
         where: { id: weaverIds },
         attributes: ["id", "name"],
       });
-      weavers.push(...weaversList);
+      weavers.push(...weaversList.map((a: any) => ({ id: a.id, name: a.name, type: 'weaver' })));
     }
 
     if(yarnBlendIds.length > 0){  
@@ -159,19 +171,30 @@ export const getSpinnerYarnOrders = async (req: Request, res: Response) => {
     const yarnBlendMap = new Map(yarnBlends.map((p: any) => [p.id, p]));
 
     // Combine the data
-    const enrichedYarnOrders = yarnOrders.map((order: any) => ({
-      ...order.toJSON(),
-      Weaver:
-        order.buyerType === "Mapped" && order.buyerOption
-          ? weaverMap.get(order.buyerOption)
+    const enrichedYarnOrders = yarnOrders.map((order: any) => {
+      const totalSales = order.YarnOrderSales?.reduce(
+        (sum: number, sale: any) => sum + (sale.quantity_used || 0),
+        0
+      ) || 0;
+
+      const availableQty = order.totalOrderQuantity - totalSales;
+
+      return {
+        ...order.toJSON(),
+        Weaver:
+          order.buyerType === "Mapped" && order.buyerOption
+            ? weaverMap.get(order.buyerOption)
+            : null,
+        YarnOrderProcess: order.processId
+          ? processMap.get(order.processId)
           : null,
-      YarnOrderProcess: order.processId
-        ? processMap.get(order.processId)
-        : null,
-      CottonMix: order.yarnBlend
-        ? yarnBlendMap.get(order.yarnBlend)
-        : null,
-    }));
+        CottonMix: order.yarnBlend
+          ? yarnBlendMap.get(order.yarnBlend)
+          : null,
+        availableQty,
+        totalSales
+      };
+    });
     return res.status(200).json({
       success: true,
       data: enrichedYarnOrders,
@@ -192,6 +215,11 @@ export const getSpinnerYarnOrderById = async (req: Request, res: Response) => {
         "YarnCount",
         "Weaver",
         "YarnOrderProcess",
+        {
+          model: SpinnerYarnOrderSales,
+          as: 'YarnOrderSales',
+          attributes: ['quantity_used']
+        }
       ],
     });
 
@@ -202,9 +230,27 @@ export const getSpinnerYarnOrderById = async (req: Request, res: Response) => {
       });
     }
 
-    return res.status(200).json({
-      success: true,
-      data: yarnOrder,
+    if (yarnOrder) {
+      const totalSales = yarnOrder.YarnOrderSales?.reduce(
+        (sum: number, sale: any) => sum + (sale.quantity_used || 0),
+        0
+      ) || 0;
+
+      const availableQty = yarnOrder.totalOrderQuantity - totalSales;
+
+      return res.status(200).json({
+        success: true,
+        data: {
+          ...yarnOrder.toJSON(),
+          availableQty,
+          totalSales
+        },
+      });
+    }
+
+    return res.status(404).json({
+      success: false,
+      message: "Yarn order not found",
     });
   } catch (error: any) {
     console.log(error);

@@ -1299,8 +1299,8 @@ const createSpinnerSales = async (req: Request, res: Response) => {
       if(req.body.selectedYarnOrders && req.body.selectedYarnOrders.length > 0){
         for await (let obj of req.body.selectedYarnOrders) {  
           await SpinnerYarnOrderSales.create({
-            spinner_yarn_order_id: obj.label,
-            quantity_used: obj.quantity,
+            spinner_yarn_order_id: obj.id,
+            quantity_used: obj.quantity, 
             sale_id: spinSales.id
           });
         }

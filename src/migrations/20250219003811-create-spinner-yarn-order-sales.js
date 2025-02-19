@@ -25,7 +25,7 @@ module.exports = {
         allowNull: false
       },
       quantity_used: {
-        type: Sequelize.DECIMAL(10, 2),
+        type: Sequelize.INTEGER,
         allowNull: false,
         comment: 'Quantity of yarn used from the order'
       },
