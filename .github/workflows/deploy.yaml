@@ -1,4 +1,4 @@
-name: Deploy to EC2 (Staging)
+name: Deploy to Server
 
 on:
   push:
@@ -8,102 +8,87 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
-          token: ${{ secrets.TOKEN_STAGING }}
 
-      - name: Set up SSH key
-        uses: webfactory/ssh-agent@v0.5.3
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.7.0
         with:
-          ssh-private-key: ${{ secrets.EC2_SSH_KEY_STAGING }}
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY_STAGING_SERVER }}
 
-      - name: Deploy to EC2
-        env:
-          GITHUB_TOKEN: ${{ secrets.TOKEN_STAGING }}
+      - name: Add host key to known hosts
         run: |
-          ssh -tt -o ServerAliveInterval=30 -o StrictHostKeyChecking=no ubuntu@3.110.178.245 << 'EOF'
-            set -e
+          mkdir -p ~/.ssh
+          ssh-keyscan -H ${{ secrets.SSH_HOST_STAGING_SERVER }} >> ~/.ssh/known_hosts
 
-            echo "=== SSH Connection established ==="
+      - name: Create deploy script
+        run: |
+          cat << 'EOF' > deploy.sh
+          #!/bin/bash
+          set -e
 
-            # Navigate to the application directory
-            cd /home/ubuntu/tracebalebackend-staging || exit 1
+          # Navigate to project directory
+          cd /home/ubuntu/tracebalebackend-staging
 
-            # Ensure correct file permissions
-            echo "Setting correct permissions..."
-            sudo chown -R ubuntu:ubuntu .
-            sudo chmod -R 755 .
+          # Configure git
+          git config --global --add safe.directory /home/ubuntu/tracebalebackend-staging
 
-            # Configure Git
-            echo "Configuring Git..."
-            git config --global --add safe.directory /home/ubuntu/tracebalebackend-staging
-            git config --global user.email "info.vaiha23@gmail.com"
-            git config --global user.name "info.vaiha23@gmail.com"
+          # Set the correct remote URL with token
+          git remote set-url origin "https://$TOKEN@github.com/Talha-ji/docker-compose.git"
 
-            # Store credentials temporarily
-            git config --global credential.helper store
-            echo 'https://info.vaiha23:${GITHUB_TOKEN}@github.com' > ~/.git-credentials
-            chmod 600 ~/.git-credentials
+          # Fetch and reset
+          git fetch origin staging
+          git checkout staging
+          git reset --hard origin/staging
 
-            # Ensure the correct remote URL
-            echo "Setting correct GitHub remote..."
-            git remote set-url origin "https://info.vaiha23:${GITHUB_TOKEN}@github.com/vaihainfo/tracebalebackend.git"
+          # Install dependencies
+          npm install --legacy-peer-deps
 
-            # Ensure we are on the correct branch
-            echo "Checking out staging branch..."
-            git checkout staging || git checkout -b staging origin/staging
+          # Set execute permission for tsc
+          chmod +x ./node_modules/.bin/tsc
 
-            # Fetch and reset to the latest staging branch
-            echo "Fetching latest changes from staging..."
-            git fetch --all --prune
-            git reset --hard origin/staging
-            git clean -fd
+          # Build the project
+          npm run build
 
-            # Verify latest commit
-            echo "Current commit hash:"
-            git rev-parse HEAD
+          # Kill any process using port 5000 and delete the backend PM2 process
+          sudo lsof -t -i:5000 | xargs kill -9
+          pm2 delete backend
 
-            # Ensure correct file permissions after fetching updates
-            echo "Resetting file permissions..."
-            sudo chown -R ubuntu:ubuntu .
-            sudo chmod -R 755 .
+          # Start the backend using PM2
+          pm2 start npm --name "backend" -- start
 
-            # Install dependencies
-            echo "Cleaning NPM cache..."
-            npm cache clean --force
+          # Set proper permissions
+          chown -R ubuntu:ubuntu /home/ubuntu/tracebalebackend-staging
 
-            echo "Installing dependencies..."
-            npm ci --legacy-peer-deps --verbose
-
-            # Build the project
-            echo "Building project..."
-            npm run build
-
-            # Ensure PM2 is installed
-            echo "Ensuring PM2 is installed..."
-            if ! command -v pm2 &> /dev/null; then
-              npm install -g pm2
-            fi
-
-            # Restart PM2 process
-            echo "Restarting PM2..."
-            pm2 restart backend || pm2 start npm --name "backend" -- start
-
-            # Restart Nginx
-            echo "Restarting Nginx..."
-            sudo systemctl restart nginx
-
-            # Clean up credentials
-            echo "Cleaning up credentials..."
-            rm -f ~/.git-credentials
-            git config --global --unset credential.helper
-
-            echo "=== Deployment successful ==="
+          # List directory contents to verify
+          ls -la
           EOF
 
-      - name: Final confirmation
-        run: echo "Deployment workflow completed successfully."
+      - name: Deploy to server
+        env:
+          SSH_USER: ${{ secrets.EC2_USER_STAGING_SERVER }}
+          SSH_HOST: ${{ secrets.SSH_HOST_STAGING_SERVER }}
+          TOKEN: ${{ secrets.TOKEN_STAGING_SERVER }}
+        run: |
+          # Make script executable
+          chmod +x deploy.sh
+
+          # Copy script to server
+          scp deploy.sh ${SSH_USER}@${SSH_HOST}:/tmp/deploy.sh
+
+          # Execute script with sudo and pass environment variables
+          ssh ${SSH_USER}@${SSH_HOST} "sudo -E bash -c 'TOKEN=\"$TOKEN\" bash /tmp/deploy.sh'"
+
+          # Cleanup
+          ssh ${SSH_USER}@${SSH_HOST} "rm /tmp/deploy.sh"
+          rm deploy.sh
+
+      - name: Verify deployment
+        env:
+          SSH_USER: ${{ secrets.EC2_USER_STAGING_SERVER }}
+          SSH_HOST: ${{ secrets.SSH_HOST_STAGING_SERVER }}
+        run: |
+          ssh ${SSH_USER}@${SSH_HOST} "sudo ls -la /home/ubuntu/tracebalebackend-staging"
