@@ -37,7 +37,7 @@ jobs:
           git config --global --add safe.directory /home/ubuntu/tracebalebackend-staging
 
           # Set the correct remote URL with token
-          git remote set-url origin "https://$TOKEN@github.com/Talha-ji/docker-compose.git"
+          git remote set-url origin "https://$TOKEN@github.com/vaihainfo/tracebalebackend.git"
 
           # Fetch and reset
           git fetch origin staging
