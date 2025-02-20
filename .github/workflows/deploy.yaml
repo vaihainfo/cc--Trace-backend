@@ -64,6 +64,9 @@ jobs:
           # Start the backend using PM2
           pm2 start npm --name "backend" -- start
 
+          # Restart Nginx
+          sudo systemctl restart nginx
+
           # Set proper permissions
           chown -R ubuntu:ubuntu /home/ubuntu/tracebalebackend-staging
 
