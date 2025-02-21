@@ -2379,7 +2379,7 @@ const qrProcurementReport = async (brandId: any, type: any, programId: any, coun
             whereCondition.program_id = { [Op.in]: programId };
         }
 
-       
+        whereCondition.agent_id = { [Op.not]: null, [Op.ne]: 0 };
         
         if(type && date){
             let daysToSub = type === 'Weekly' ? 7 : 1;
