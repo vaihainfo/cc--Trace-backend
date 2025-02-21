@@ -11399,9 +11399,7 @@ const fetchGinnerSummaryPagination = async (req: Request, res: Response) => {
               ...ginBaleWhere,
               "$ginprocess.ginner_id$": ginner.id,
               "$ginprocess.greyout_status$": true,
-              sold_status: false,
-              is_all_rejected: null,
-
+              sold_status: false
             },
             group: ["ginprocess.ginner_id"],
           }),
@@ -11875,7 +11873,7 @@ const exportGinnerSummary = async (req: Request, res: Response) => {
               '$ginprocess.ginner_id$': item.id,
               '$ginprocess.greyout_status$': true,
               sold_status: false,
-              is_all_rejected: null,
+             
             },
             group: ["ginprocess.ginner_id"]
           }),
