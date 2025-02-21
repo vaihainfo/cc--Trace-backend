@@ -2471,7 +2471,7 @@ const generateGinnerSummary = async () => {
               '$ginprocess.ginner_id$': item.id,
               '$ginprocess.greyout_status$': true,
               sold_status: false,
-              is_all_rejected: null,
+              
             },
             group: ["ginprocess.ginner_id"]
           }),

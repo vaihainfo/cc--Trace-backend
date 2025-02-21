@@ -96,12 +96,18 @@ const createSpinnerProcess = async (req: Request, res: Response) => {
       // yarn_blend_id: req.body.yarnBlendId,
     };
     const spin = await SpinProcess.create(data);
+
+    if (req.body.comber_noil && req.body.comber_noil > 0) {
+
     await CombernoilGeneration.create({
       spinner_id: req.body.spinnerId,
       process_id: spin.id,
       total_qty: req.body.comber_noil,
       qty_stock: req.body.comber_noil,
     });
+    
+    }
+
     let uniqueFilename = `spin_procees_qrcode_${Date.now()}.png`;
     let da = encrypt(`Spinner,Process,${spin.id}`);
     let aa = await generateOnlyQrCode(da, uniqueFilename);
