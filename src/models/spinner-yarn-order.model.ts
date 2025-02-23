@@ -99,6 +99,18 @@ const SpinnerYarnOrder = db.define('spinner_yarn_orders', {
     type: DataTypes.INTEGER,
     allowNull: true
   },
+  order_document: {
+    type: DataTypes.STRING,
+    allowNull: true,
+  },
+  contract_files: {
+    type: DataTypes.STRING,
+    allowNull: true,
+  },
+  other_files: {
+    type: DataTypes.STRING,
+    allowNull: true,
+  },
 });
 
 SpinnerYarnOrder.hasMany(SpinnerYarnOrderSales, {
