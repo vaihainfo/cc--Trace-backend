@@ -11399,9 +11399,7 @@ const fetchGinnerSummaryPagination = async (req: Request, res: Response) => {
               ...ginBaleWhere,
               "$ginprocess.ginner_id$": ginner.id,
               "$ginprocess.greyout_status$": true,
-              sold_status: false,
-              is_all_rejected: null,
-
+              sold_status: false
             },
             group: ["ginprocess.ginner_id"],
           }),
@@ -11491,12 +11489,15 @@ const fetchGinnerSummaryPagination = async (req: Request, res: Response) => {
       obj.lintSoldMt = convert_kg_to_mt(lintSold?.dataValues.qty ?? 0);
       obj.lintGreyoutKg = greyoutLint?.dataValues.qty ?? 0;
       obj.lintGreyoutMT = convert_kg_to_mt(greyoutLint?.dataValues.qty ?? 0);
-      obj.lintActualStockMT = Number(obj.lintProcuredKg) > (Number(obj.lintSoldKg) + Number(obj.lintGreyoutKg))
-        ? Number(obj.lintProcuredKg) - (Number(obj.lintSoldKg) + Number(obj.lintGreyoutKg))
-        : 0;
-      obj.lintActualStockMT = Number(obj.lintProcuredKg) > (Number(obj.lintSoldKg) + Number(obj.lintGreyoutKg))
-        ? Number(obj.lintProcuredMt) - (Number(obj.lintSoldMt) + Number(obj.lintGreyoutMT))
-        : 0;
+      // obj.lintActualStockMT = Number(obj.lintProcuredKg) > (Number(obj.lintSoldKg) + Number(obj.lintGreyoutKg))
+      //   ? Number(obj.lintProcuredKg) - (Number(obj.lintSoldKg) + Number(obj.lintGreyoutKg))
+      //   : 0;
+      obj.lintActualStockMT = 
+    (ginner.id === 502 && seasonId && Number(seasonId) === 9) 
+        ? 0 
+        : (Number(obj.lintProcuredKg) > (Number(obj.lintSoldKg) + Number(obj.lintGreyoutKg))
+            ? Number(obj.lintProcuredMt) - (Number(obj.lintSoldMt) + Number(obj.lintGreyoutMT))
+            : 0);
       obj.lintStockKg =
         Number(obj.lintProcuredKg) > Number(obj.lintSoldKg)
           ? Number(obj.lintProcuredKg) - Number(obj.lintSoldKg)
@@ -11875,7 +11876,7 @@ const exportGinnerSummary = async (req: Request, res: Response) => {
               '$ginprocess.ginner_id$': item.id,
               '$ginprocess.greyout_status$': true,
               sold_status: false,
-              is_all_rejected: null,
+             
             },
             group: ["ginprocess.ginner_id"]
           }),
@@ -11940,12 +11941,18 @@ const exportGinnerSummary = async (req: Request, res: Response) => {
         obj.lintSoldMt = convert_kg_to_mt(lintSold?.dataValues.qty ?? 0);
         obj.lintGreyoutKg = greyoutLint?.dataValues.qty ?? 0;
         obj.lintGreyoutMT = convert_kg_to_mt(greyoutLint?.dataValues.qty ?? 0);
-        obj.lintActualStockMT = Number(obj.lintProcuredKg) > (Number(obj.lintSoldKg) + Number(obj.lintGreyoutKg))
+        obj.lintActualStockKg = Number(obj.lintProcuredKg) > (Number(obj.lintSoldKg) + Number(obj.lintGreyoutKg))
           ? Number(obj.lintProcuredKg) - (Number(obj.lintSoldKg) + Number(obj.lintGreyoutKg))
           : 0;
-        obj.lintActualStockMT = Number(obj.lintProcuredKg) > (Number(obj.lintSoldKg) + Number(obj.lintGreyoutKg))
-          ? Number(obj.lintProcuredMt) - (Number(obj.lintSoldMt) + Number(obj.lintGreyoutMT))
-          : 0;
+        // obj.lintActualStockMT = Number(obj.lintProcuredKg) > (Number(obj.lintSoldKg) + Number(obj.lintGreyoutKg))
+        //   ? Number(obj.lintProcuredMt) - (Number(obj.lintSoldMt) + Number(obj.lintGreyoutMT))
+        //   : 0;
+        obj.lintActualStockMT = 
+        (item.id === 502 && seasonId && Number(seasonId) === 9) 
+            ? 0 
+            : (Number(obj.lintProcuredKg) > (Number(obj.lintSoldKg) + Number(obj.lintGreyoutKg))
+                ? Number(obj.lintProcuredMt) - (Number(obj.lintSoldMt) + Number(obj.lintGreyoutMT))
+                : 0);
         obj.lintStockKg = Number(obj.lintProcuredKg) > Number(obj.lintSoldKg) ? Number(obj.lintProcuredKg) - Number(obj.lintSoldKg) : 0;
         obj.lintStockMt = Number(obj.lintProcuredKg) > Number(obj.lintSoldKg) ? Number(obj.lintProcuredMt) - Number(obj.lintSoldMt) : 0;
         obj.balesProduced = lintProcured?.dataValues?.bales_procured ? Number(lintProcured?.dataValues?.bales_procured) : 0;
