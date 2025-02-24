@@ -10,7 +10,7 @@ import Weaver from "../../models/weaver.model";
 import Garment from "../../models/garment.model";
 import * as ExcelJS from "exceljs";
 import * as path from "path";
-
+import sequelize from "../../util/dbConn";
 
 const createTicketTracker = async (req: Request, res: Response) => {
     try {
@@ -80,7 +80,7 @@ const fetchTicketTracker = async (req: Request, res: Response) => {
     const offset = (page - 1) * limit;
     const whereCondition: any = {}
 
-    const { status, processor, from, to, processSale, processorId, brandId, countryId, spinnerId }: any = req.query;
+    const { status, processor, from, to, processSale, processorId, brandId, countryId, spinnerId, userId }: any = req.query;
 
     try {
         if (status) {
@@ -217,19 +217,42 @@ const fetchTicketTracker = async (req: Request, res: Response) => {
 
 
         let queryOptions: any = {
-            where: whereCondition,
+            where: whereCondition
         };
 
-        if (req.query.pagination === 'true') {
+        if (userId != 718 && req.query.pagination === 'true') {
             queryOptions.offset = offset;
             queryOptions.limit = limit;
             queryOptions.order = [
-                ['date', 'desc'], // Sort the results based on the 'username' field and the specified order
+                ['date', 'desc'],
             ];
 
             const { count, rows } = await TicketTracker.findAndCountAll(queryOptions);
             return res.sendPaginationSuccess(res, rows, count);
-        } else {
+        }
+        else if (userId == 718 && req.query.pagination === 'true') {
+            const approvedTickets = await sequelize.query(
+                `SELECT DISTINCT ticket_id FROM ticket_tracker_statuses 
+                 WHERE user_id = 722 AND status = 'Approved'`,
+                { type: sequelize.QueryTypes.SELECT }
+            );
+        
+            const approvedTicketIds = approvedTickets.map((ticket:any) => ticket.ticket_id);
+
+            queryOptions.where = {
+                ...queryOptions.where,
+                id: { [Op.in]: approvedTicketIds }
+            };
+        
+            queryOptions.offset = offset;
+            queryOptions.limit = limit;
+            queryOptions.order = [['date', 'desc']];
+        
+            const { count, rows } = await TicketTracker.findAndCountAll(queryOptions);
+        
+            return res.sendPaginationSuccess(res, rows, count);
+        }
+        else {
             const training = await TicketTracker.findAll({
             });
             return res.sendSuccess(res, training);
@@ -506,7 +529,8 @@ const exportTicketList = async (req: Request, res: Response) => {
             to,
             processor,
             processorId,
-            processSale
+            processSale,
+            userId
         }: any = req.query;
 
         const workbook = new ExcelJS.Workbook();
@@ -615,8 +639,33 @@ const exportTicketList = async (req: Request, res: Response) => {
         };
         queryOptions.order = [['date', 'desc']]
         const ticketList = await TicketTracker.findAll(queryOptions);
+
+        let filteredData = [];
+            
+        for await (let row of ticketList) {
+            if (row.dataValues?.id) {            
+                const ticketStatus = await TicketTrackerStatus.findAll({
+                    where: { ticket_id: row.dataValues?.id },
+                    attributes: ["id", "user_id", "ticket_id", "status", "comment"]
+                });
+        
+                const isApprovedByPTechAppro = ticketStatus.some(
+                    (status:any) => status.user_id == 722 && status.status === "Approved"
+                );
+                
+
+                if (userId == 718 && !isApprovedByPTechAppro) {
+                    continue; 
+                }
+        
+                filteredData.push({
+                    ...row.dataValues,
+                    ticketStatus: ticketStatus
+                });
+            }
+        }
         // Append data to worksheet
-        ticketList.forEach((item: any, index: number) => {
+        filteredData.forEach((item: any, index: number) => {
             const rowValues = Object.values({
                 index: index + 1,
                 ticket_no: item.ticket_no,
