@@ -20,4 +20,5 @@ router.delete('/', deletePhysicalPartner);
 router.post('/check-physical-partner', checkPhysicalPartner);
 router.get('/export/registration', exportPhysicalPartnerRegistrationList);
 
+
 export default router;

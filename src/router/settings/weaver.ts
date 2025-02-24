@@ -1,3 +1,4 @@
+import r from "middleware/error";
 import {
     createWeaver,
     fetchWeaverPagination,
@@ -5,7 +6,8 @@ import {
     deleteWeaver,
     fetchWeaver,
     checkWeaver,
-    exportWeaverRegistrationList
+    exportWeaverRegistrationList,
+    fetchWeaverForPartnerId
 } from "../../controllers/process-registration/weaver";
 import accessControl from "../../middleware/access-control";
 import { Router } from "express";
@@ -14,6 +16,7 @@ const router = Router();
 router.use(accessControl);
 
 // Scope Certificate Routes
+router.get('/get-weaver-for-partner-id', fetchWeaverForPartnerId);
 router.get('/', fetchWeaverPagination);
 router.get('/get-weaver', fetchWeaver);
 router.post('/', createWeaver);

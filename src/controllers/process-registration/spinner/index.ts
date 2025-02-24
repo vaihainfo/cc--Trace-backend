@@ -13,7 +13,7 @@ import UserRole from "../../../models/user-role.model";
 import District from "../../../models/district.model";
 import * as ExcelJS from "exceljs";
 import * as path from "path";
-
+import db from "../../../util/dbConn";
 
 const createSpinner = async (req: Request, res: Response) => {
     try {
@@ -188,7 +188,7 @@ const fetchSpinnerPagination = async (req: Request, res: Response) => {
                     status: newStatus ? 'Active' : 'Inactive'
                 });
             }
-            const activeUsers = dataAll.filter((item:any)=> item.status === 'Active');
+            const activeUsers = dataAll.filter((item: any) => item.status === 'Active');
             return res.sendSuccess(res, all === 'true' ? activeUsers : dataAll);
         }
     } catch (error: any) {
@@ -196,6 +196,23 @@ const fetchSpinnerPagination = async (req: Request, res: Response) => {
         return res.sendError(res, error.message);
     }
 }
+
+const fetchSpinnerForPartnerId = async (req: Request, res: Response) => {
+    try {
+        const result = await db.query(`select s.id, s.name from spinners s 
+            join physical_partners pp on pp.brand  = s.brand 
+            where pp.id = :ppid`, {
+            replacements: { ppid: req.query.ppid },
+            type: db.QueryTypes.SELECT
+        })
+        return res.sendSuccess(res, result);
+
+    } catch (error: any) {
+        console.log(error);
+        return res.sendError(res, error.message);
+    }
+}
+
 
 const fetchSpinner = async (req: Request, res: Response) => {
     try {
@@ -247,15 +264,15 @@ const fetchSpinner = async (req: Request, res: Response) => {
                 where: { id: result.brand },
             });
             if (result.yarn_count_range) {
-                const idArray: number[] =  result?.yarn_count_range != 'NULL' && result.yarn_count_range
+                const idArray: number[] = result?.yarn_count_range != 'NULL' && result.yarn_count_range
                     .split(",")
                     .map((id: any) => parseInt(id, 10));
 
-           if(idArray){
-               yarnCount = await YarnCount.findAll({
-                   where: { id: { [Op.in]: idArray } },
-                });
-            }
+                if (idArray) {
+                    yarnCount = await YarnCount.findAll({
+                        where: { id: { [Op.in]: idArray } },
+                    });
+                }
             }
         }
         return res.sendSuccess(res, result ? { ...result.dataValues, userData, programs, unitCerts, brands, yarnCount } : null);
@@ -342,18 +359,18 @@ const deleteSpinner = async (req: Request, res: Response) => {
             )
         });
 
-        for await (let user of users){
+        for await (let user of users) {
             const updatedProcessRole = user.process_role.filter((roleId: any) => roleId !== userRole.id);
-      
+
             if (updatedProcessRole && updatedProcessRole.length > 0) {
                 const updatedUser = await User.update({
                     process_role: updatedProcessRole,
                     role: updatedProcessRole[0]
                 }, { where: { id: user.id } });
             } else {
-                await User.destroy({ where: { id: user.id }});
+                await User.destroy({ where: { id: user.id } });
             }
-          }
+        }
 
         const spinner = await Spinner.destroy({
             where: {
@@ -519,5 +536,6 @@ export {
     updateSpinner,
     deleteSpinner,
     checkSpinner,
-    exportSpinnerRegistrationList
+    exportSpinnerRegistrationList,
+    fetchSpinnerForPartnerId
 };

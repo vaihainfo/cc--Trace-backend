@@ -5,7 +5,8 @@ import {
     deleteSpinner,
     fetchSpinner,
     checkSpinner,
-    exportSpinnerRegistrationList
+    exportSpinnerRegistrationList,
+    fetchSpinnerForPartnerId
 } from "../../controllers/process-registration/spinner";
 import accessControl from "../../middleware/access-control";
 import { Router } from "express";
@@ -14,6 +15,7 @@ const router = Router();
 router.use(accessControl);
 
 // Scope Certificate Routes
+router.get('/get-spinner-for-partner-id', fetchSpinnerForPartnerId);
 router.get('/', fetchSpinnerPagination);
 router.get('/get-spinner', fetchSpinner);
 router.post('/', createSpinner);

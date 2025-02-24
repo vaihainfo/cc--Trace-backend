@@ -10,6 +10,8 @@ import UnitCertification from "../../../models/unit-certification.model";
 import Brand from "../../../models/brand.model";
 import UserRole from "../../../models/user-role.model";
 import District from "../../../models/district.model";
+import db from '../../../util/dbConn';
+
 import * as ExcelJS from "exceljs";
 import * as path from "path";
 
@@ -70,6 +72,7 @@ const createGinner = async (req: Request, res: Response) => {
 }
 
 const fetchGinnerPagination = async (req: Request, res: Response) => {
+    console.log("...................................................................................");
     const searchTerm = req.query.search || '';
     const status = req.query.status || '';
     const sortOrder = req.query.sort || 'asc';
@@ -199,7 +202,7 @@ const fetchGinnerPagination = async (req: Request, res: Response) => {
                     status: newStatus ? 'Active' : 'Inactive'
                 });
             }
-            const activeUsers = dataAll.filter((item:any)=> item.status === 'Active');
+            const activeUsers = dataAll.filter((item: any) => item.status === 'Active');
             return res.sendSuccess(res, all === 'true' ? activeUsers : dataAll);
         }
     } catch (error: any) {
@@ -267,6 +270,22 @@ const fetchGinner = async (req: Request, res: Response) => {
 }
 
 
+const fetchGinnerForPartnerId = async (req: Request, res: Response) => {
+    try {
+        const result = await db.query(`select g.id, g.name from ginners g
+            join physical_partners pp on pp.brand  = g.brand 
+            where pp.id = :ppid`, {
+            replacements: { ppid: req.query.ppid },
+            type: db.QueryTypes.SELECT
+        })
+        return res.sendSuccess(res, result);
+
+    } catch (error: any) {
+        console.log(error);
+        return res.sendError(res, error.message);
+    }
+}
+
 const updateGinner = async (req: Request, res: Response) => {
     try {
         let userIds = [];
@@ -331,33 +350,33 @@ const deleteGinner = async (req: Request, res: Response) => {
                 id: req.body.id
             },
         });
-  
+
         const users = await User.findAll({
             where: {
                 id: ginn.ginnerUser_id
             },
         });
-  
+
         const userRole = await UserRole.findOne({
             where: Sequelize.where(
                 Sequelize.fn('LOWER', Sequelize.col('user_role')),
                 'ginner'
             )
         });
-        for await (let user of users){
-          const updatedProcessRole = user.process_role.filter((roleId: any) => roleId !== userRole.id);
-    
-          if (updatedProcessRole && updatedProcessRole.length > 0) {
-              const updatedUser = await User.update({
-                  process_role: updatedProcessRole,
-                  role: updatedProcessRole[0]
-              }, { where: { id: user.id } });
-          } else {
-              await User.destroy({ where: { id: user.id }});
-          }
+        for await (let user of users) {
+            const updatedProcessRole = user.process_role.filter((roleId: any) => roleId !== userRole.id);
+
+            if (updatedProcessRole && updatedProcessRole.length > 0) {
+                const updatedUser = await User.update({
+                    process_role: updatedProcessRole,
+                    role: updatedProcessRole[0]
+                }, { where: { id: user.id } });
+            } else {
+                await User.destroy({ where: { id: user.id } });
+            }
         }
-  
-  
+
+
         const ginner = await Ginner.destroy({
             where: {
                 id: req.body.id
@@ -367,7 +386,7 @@ const deleteGinner = async (req: Request, res: Response) => {
     } catch (error: any) {
         return res.sendError(res, error.message);
     }
-  }
+}
 
 
 const checkGinner = async (req: Request, res: Response) => {
@@ -525,5 +544,6 @@ export {
     updateGinner,
     deleteGinner,
     checkGinner,
-    exportGinnerRegistrationList
+    exportGinnerRegistrationList,
+    fetchGinnerForPartnerId
 };
