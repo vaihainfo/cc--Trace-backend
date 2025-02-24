@@ -1,5 +1,6 @@
 import nodemailer from "nodemailer";
 import Mail from "nodemailer/lib/mailer";
+import logger from "../util/logger";
 
 const transporter = nodemailer.createTransport({
     host: process.env.EMAIL_HOST,
@@ -71,10 +72,12 @@ const sendEmail = (html: any, email: any, subject: any, cc?: any, attachment?: a
     transporter.sendMail(message, function (err, info) {
         if (err) { 
             console.log(err);  
+            logger.error(`Email Sending Failed | ID -${email} | SUBJECT - ${subject} | ERROR - ${err}`)
             resolve(false);
         }
         else { 
             console.log('sent'); 
+            logger.info(`Email Sent Successfully | ID -${email} | SUBJECT - ${subject}`)
         resolve(true);
     }
     });

@@ -80,46 +80,44 @@ const getOverAllDataQuery = (
 const getGinnerAllocationQuery = (
   reqData: any
 ) => {
-  const where: any = {
+  const where = [];
 
-  };
   if (reqData?.program)
-    where.program_id = reqData.program;
+    where.push(`gv.program_id IN (${reqData.program})`)
 
   if (reqData?.brand)
-    where['$ginner_expected_cotton.brand$'] = {
-      [Op.contains]: Sequelize.literal(`ARRAY [${reqData.brand}]`)
-    };
+      where.push(`g.brand && ARRAY[${reqData.brand}]`)
 
   if (reqData?.season) {
     if (Array.isArray(reqData.season)) {
-      where.season_id = {
-        [Op.in]: reqData.season
-      };
+      where.push(`gv.season_id IN (${reqData.season.join(',')})`)
     } else {
-      where.season_id = reqData.season;
+      where.push(`gv.season_id IN (${reqData.season})`)
     }
+  } else {
+    where.push(`gv.season_id IS NOT NULL`)
   }
+  
   if (reqData?.country)
-    where['$ginner_expected_cotton.country_id$'] = reqData.country;
+    where.push(`g.country_id IN (${reqData.country})`)
 
   if (reqData?.state)
-    where['$ginner_expected_cotton.state_id$'] = reqData.state;
+    where.push(`g.state_id IN (${reqData.state})`);
 
   if (reqData?.district)
-    where['$ginner_expected_cotton.district_id$'] = reqData.district;
+    where.push(`g.district_id IN (${reqData.district})`);
 
   if (reqData?.ginner)
-    where['$ginner_expected_cotton.id$'] = reqData.ginner;
+    where.push(`gv.ginner_id IN (${reqData?.ginner})`);
 
   if (reqData?.fromDate)
-    where.upload_date = { [Op.gte]: reqData.fromDate };
+    where.push(`"gv"."createdAt" >= ${reqData.fromDate}`);
 
   if (reqData?.toDate)
-    where.upload_date = { [Op.lt]: reqData.toDate };
+    where.push(`"gv"."createdAt" < ${reqData.toDate}`);
 
   if (reqData?.fromDate && reqData?.toDate)
-    where.upload_date = { [Op.between]: [reqData.fromDate, reqData.toDate] };
+    where.push(`"gv"."createdAt" BETWEEN '${reqData.fromDate}' AND '${reqData.toDate}'`);
 
   return where;
 };
@@ -1038,6 +1036,7 @@ const getLintSoldDataByMonth = async (
   // });
 
   where.push(`gs.status in ('Pending', 'Pending for QR scanning', 'Partially Accepted', 'Partially Rejected','Sold')`)
+  where.push(`gs.buyer_ginner IS NULL`)
 
   const whereClause = where.length > 0 ? `WHERE ${where.join(' AND ')}` : '';
 
@@ -1435,6 +1434,7 @@ const getBaleSoldData = async (
   // where.sold_status = true
   // where.status = 'Sold';
   where.push(`gs.status in ('Pending', 'Pending for QR scanning', 'Partially Accepted', 'Partially Rejected','Sold')`)
+  where.push(`gs.buyer_ginner IS NULL`)
 
   const whereClause = where.length > 0 ? `WHERE ${where.join(' AND ')}` : '';
 
@@ -1731,6 +1731,7 @@ const getLintSoldTopGinnersData = async (
 ) => {
 
   where.push(`gs.status in ('Pending', 'Pending for QR scanning', 'Partially Accepted', 'Partially Rejected','Sold')`)
+  where.push(`gs.buyer_ginner IS NULL`)
 
   const whereClause = where.length > 0 ? `WHERE ${where.join(' AND ')}` : '';
   try {
@@ -1859,6 +1860,7 @@ const getLintStockTopGinnersData = async (
 
   soldWhere.push(`g.name IS NOT NULL`)
   soldWhere.push(`gs.status in ('Pending', 'Pending for QR scanning', 'Partially Accepted', 'Partially Rejected','Sold')`)
+  soldWhere.push(`gs.buyer_ginner IS NULL`)
 
   const whereClause = soldWhere.length > 0 ? `WHERE ${soldWhere.join(' AND ')}` : '';
 
@@ -2229,26 +2231,50 @@ const getAllocatedData = async (
   where: any
 ) => {
 
-  const result = await GinnerExpectedCotton.findAll({
-    attributes: [
-      [Sequelize.fn('SUM', Sequelize.literal('CAST(expected_seed_cotton  as numeric)')), 'allocated'],
-      [Sequelize.col('season.name'), 'seasonName'],
-      [Sequelize.col('season.id'), 'seasonId']
-    ],
-    include: [{
-      model: Season,
-      as: 'season',
-      attributes: []
-    }, {
-      model: Ginner,
-      as: 'ginner_expected_cotton',
-      attributes: []
-    }],
-    where,
-    order: [['seasonId', 'desc']],
-    // limit: 3,
-    group: ['season.id']
-  });
+  const whereClause = where.length > 0 ? `WHERE ${where.join(' AND ')}` : '';
+
+  const [result] = await sequelize.query(`
+    SELECT
+        season.name AS "seasonName",
+        season.id AS "seasonId",
+        COALESCE(SUM(CAST("farms"."total_estimated_cotton"AS DOUBLE PRECISION)), 0) AS allocated
+      FROM "ginner_allocated_villages" as gv
+      LEFT JOIN 
+            "villages" AS "farmer->village" ON "gv"."village_id" = "farmer->village"."id" 
+      LEFT JOIN 
+            "farmers" AS "farmer" ON "farmer->village"."id" = "farmer"."village_id" and "farmer"."brand_id" ="gv"."brand_id"
+      LEFT JOIN 
+            "farms" as "farms" on farms.farmer_id = "farmer".id and farms.season_id = gv.season_id
+      LEFT JOIN 
+            "seasons" AS "season" ON "gv"."season_id" = "season"."id"
+      LEFT JOIN 
+            ginners g ON gv.ginner_id = g.id
+    ${whereClause}
+    GROUP BY
+        season.id
+    ORDER BY "seasonId" DESC`)
+
+
+  // const result = await GinnerExpectedCotton.findAll({
+  //   attributes: [
+  //     [Sequelize.fn('SUM', Sequelize.literal('CAST(expected_seed_cotton  as numeric)')), 'allocated'],
+  //     [Sequelize.col('season.name'), 'seasonName'],
+  //     [Sequelize.col('season.id'), 'seasonId']
+  //   ],
+  //   include: [{
+  //     model: Season,
+  //     as: 'season',
+  //     attributes: []
+  //   }, {
+  //     model: Ginner,
+  //     as: 'ginner_expected_cotton',
+  //     attributes: []
+  //   }],
+  //   where,
+  //   order: [['seasonId', 'desc']],
+  //   // limit: 3,
+  //   group: ['season.id']
+  // });
 
   return result;
 
@@ -2267,8 +2293,8 @@ const getProcuredAllocatedRes = async (
   });
 
   allocatedData.forEach((processed: any) => {
-    if (!seasonIds.includes(processed.dataValues.seasonId))
-      seasonIds.push(processed.dataValues.seasonId);
+    if (!seasonIds.includes(processed.seasonId))
+      seasonIds.push(processed.seasonId);
   });
 
   const seasons = await Season.findAll({
@@ -2301,7 +2327,7 @@ const getProcuredAllocatedRes = async (
       production.dataValues.seasonId == sessionId
     );
     const gAllocated = allocatedData.find((processed: any) =>
-      processed.dataValues.seasonId == sessionId
+      processed.seasonId == sessionId
     );
     let data = {
       seasonName: '',
@@ -2314,8 +2340,8 @@ const getProcuredAllocatedRes = async (
     }
 
     if (gAllocated) {
-      data.seasonName = gAllocated.dataValues.seasonName;
-      data.allocated = mtConversion(gAllocated.dataValues.allocated);
+      data.seasonName = gAllocated.seasonName;
+      data.allocated = mtConversion(gAllocated.allocated);
     }
 
     if (!data.seasonName) {
@@ -3042,6 +3068,7 @@ const getBaleSoldByCountryData = async (
   // where.sold_status = true
 
   where.push(`gs.status in ('Pending', 'Pending for QR scanning', 'Partially Accepted', 'Partially Rejected','Sold')`)
+  where.push(`gs.buyer_ginner IS NULL`)
 
   const whereClause = where.length > 0 ? `WHERE ${where.join(' AND ')}` : '';
 
@@ -3527,9 +3554,9 @@ const getLintBaleSoldData = async (
 const getLintBaleGreyoutData = async (
   where: any
 ) => {
-  where["$ginprocess.greyout_status$"] = true;
-  where.sold_status = false
-  where.is_all_rejected = null
+  // where["$ginprocess.greyout_status$"] = true;
+  // where.sold_status = false
+  // where.is_all_rejected = null
   // where.status = 'Sold';
 
   const result = await GinBale.findAll({
@@ -3576,7 +3603,30 @@ const getLintBaleGreyoutData = async (
         }],
       },
     ],
-    where,
+    where:{
+      ...where,
+      [Op.or]: [
+        {
+          [Op.and]: [
+            { "$ginprocess.greyout_status$": true },
+            { sold_status: false },
+            { is_all_rejected: null }
+          ]
+        },
+        {
+          [Op.and]: [
+            { "$ginprocess.scd_verified_status$": true },
+            { "$gin-bales.scd_verified_status$": { [Op.not]: true } }
+          ]
+        },
+        {
+          [Op.and]: [
+            { "$ginprocess.scd_verified_status$": false },
+            { "$gin-bales.scd_verified_status$": { [Op.is]: false } }
+          ]
+        }
+      ]
+    },
     // limit: 3,
     order: [['seasonId', 'desc']],
     group: ["ginprocess.season.id"],
