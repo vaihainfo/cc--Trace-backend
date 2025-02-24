@@ -813,8 +813,8 @@ const deleteBulkTransactions = async (req: Request, res: Response) => {
           fail.push({ id: i, message: 'Transaction is not in pending state' })
         }
 
-        if (trans.dataValues.farm_id) {
-          if (trans.dataValues) {
+        if (trans.dataValues && trans.dataValues.farm_id) {
+          
             const mappedTransactions = await Transaction.findAll({
               where: {
                 farm_id: trans.dataValues.farm_id,
@@ -849,22 +849,19 @@ const deleteBulkTransactions = async (req: Request, res: Response) => {
                     cotton_transacted: 0
                   }, { where: { id: trans.dataValues.farm_id } });
                 }
+                const transaction = await Transaction.destroy({
+                  where: {
+                    id: i,
+                  }
+                });
+                pass.push({ id: i, message: 'Deleted successfully' })
               }
               else {
                 fail.push({ id: i, message: 'Only latest transaction can be deleted first from this farmer and farm' })
               }
             }
-          }
+        }
 
-        }
-        else {
-          const transaction = await Transaction.destroy({
-            where: {
-              id: i,
-            }
-          });
-          pass.push({ id: i, message: 'Deleted successfully' })
-        }
       }
     }
     res.sendSuccess(res, { pass, fail })

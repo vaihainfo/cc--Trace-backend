@@ -571,10 +571,18 @@ export const send_gin_mail = async (salesId: number) => {
                     {
                         model: Spinner,
                         as: "buyerdata",
+                    },
+                    {
+                        model: Ginner,
+                        as: "buyerdata_ginner",
                     }
                 ]
             });
-            let buyer = sales?.dataValues?.buyerdata;
+
+            let buyertype = sales?.dataValues?.buyer_type;
+          
+            let buyer = buyertype === 'Ginner' ? sales?.dataValues?.buyerdata_ginner : sales?.dataValues?.buyerdata;
+            
             let adminEmail = await User.findAll({ where: { role: 1 }, attributes: ['email'] });
             const emailJob = await is_email_job_available(template.dataValues.id, buyer?.brand, [buyer?.country_id], buyer?.program_id);
             if (emailJob) {
