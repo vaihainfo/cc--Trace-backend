@@ -8,6 +8,7 @@ import State from "../../../models/state.model";
 import UserRole from "../../../models/user-role.model";
 import District from "../../../models/district.model";
 import Brand from "../../../models/brand.model";
+import db from "../../../util/dbConn";
 
 import * as ExcelJS from "exceljs";
 import * as path from "path";
@@ -65,6 +66,23 @@ const createGarment = async (req: Request, res: Response) => {
         return res.sendError(res, "ERR_INTERNAL_SERVER_ERROR");
     }
 }
+
+const fetchGarmentForPartnerId = async (req: Request, res: Response) => {
+    try {
+        const result = await db.query(`select g.id, g.name from garments g     
+            join physical_partners pp on pp.brand  = g.brand 
+            where pp.id = :ppid`, {
+            replacements: { ppid: req.query.ppid },
+            type: db.QueryTypes.SELECT
+        })
+        return res.sendSuccess(res, result);
+
+    } catch (error: any) {
+        console.log(error);
+        return res.sendError(res, error.message);
+    }
+}
+
 
 const fetchGarmentPagination = async (req: Request, res: Response) => {
     const searchTerm = req.query.search || '';
@@ -185,7 +203,7 @@ const fetchGarmentPagination = async (req: Request, res: Response) => {
                     status: newStatus ? 'Active' : 'Inactive'
                 });
             }
-            const activeUsers = dataAll.filter((item:any)=> item.status === 'Active');
+            const activeUsers = dataAll.filter((item: any) => item.status === 'Active');
             return res.sendSuccess(res, all === 'true' ? activeUsers : dataAll);
         }
     } catch (error: any) {
@@ -234,7 +252,7 @@ const fetchGarment = async (req: Request, res: Response) => {
                 where: { id: result.brand },
             });
         }
-        return res.sendSuccess(res, result ? { ...result.dataValues, userData, brands} : null);
+        return res.sendSuccess(res, result ? { ...result.dataValues, userData, brands } : null);
 
     } catch (error: any) {
         console.log(error);
@@ -322,19 +340,19 @@ const deleteGarment = async (req: Request, res: Response) => {
         });
 
 
-        for await (let user of users){
+        for await (let user of users) {
             const updatedProcessRole = user.process_role.filter((roleId: any) => roleId !== userRole.id);
-      
+
             if (updatedProcessRole && updatedProcessRole.length > 0) {
                 const updatedUser = await User.update({
                     process_role: updatedProcessRole,
                     role: updatedProcessRole[0]
                 }, { where: { id: user.id } });
             } else {
-                await User.destroy({ where: { id: user.id }});
+                await User.destroy({ where: { id: user.id } });
             }
-          }
-          
+        }
+
         const garment = await Garment.destroy({
             where: {
                 id: req.body.id
@@ -498,5 +516,6 @@ export {
     updateGarment,
     deleteGarment,
     checkGarment,
-    exportGarmentRegistrationList
+    exportGarmentRegistrationList,
+    fetchGarmentForPartnerId
 };  

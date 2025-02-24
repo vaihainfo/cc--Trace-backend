@@ -1,5 +1,5 @@
-import { Request, Response } from "express";
 import { Sequelize, Op } from "sequelize";
+import { Request, Response } from "express";
 import Knitter from "../../../models/knitter.model";
 import User from "../../../models/user.model";
 import hash from "../../../util/hash";
@@ -10,6 +10,7 @@ import District from "../../../models/district.model";
 import * as ExcelJS from "exceljs";
 import * as path from "path";
 import Brand from "../../../models/brand.model";
+import db from "../../../util/dbConn";
 
 const createKnitter = async (req: Request, res: Response) => {
     try {
@@ -183,7 +184,7 @@ const fetchKnitterPagination = async (req: Request, res: Response) => {
                     status: newStatus ? 'Active' : 'Inactive'
                 });
             }
-            const activeUsers = dataAll.filter((item:any)=> item.status === 'Active');
+            const activeUsers = dataAll.filter((item: any) => item.status === 'Active');
             return res.sendSuccess(res, all === 'true' ? activeUsers : dataAll);
         }
     } catch (error: any) {
@@ -191,6 +192,23 @@ const fetchKnitterPagination = async (req: Request, res: Response) => {
         return res.sendError(res, error.message);
     }
 }
+
+const fetchKnitterForPartnerId = async (req: Request, res: Response) => {
+    try {
+        const result = await db.query(`select k.id, k.name from knitters k  
+            join physical_partners pp on pp.brand  = k.brand 
+            where pp.id = :ppid`, {
+            replacements: { ppid: req.query.ppid },
+            type: db.QueryTypes.SELECT
+        })
+        return res.sendSuccess(res, result);
+
+    } catch (error: any) {
+        console.log(error);
+        return res.sendError(res, error.message);
+    }
+}
+
 
 const fetchKnitter = async (req: Request, res: Response) => {
     try {
@@ -319,19 +337,19 @@ const deleteKnitter = async (req: Request, res: Response) => {
         });
 
 
-        for await (let user of users){
+        for await (let user of users) {
             const updatedProcessRole = user.process_role.filter((roleId: any) => roleId !== userRole.id);
-      
+
             if (updatedProcessRole && updatedProcessRole.length > 0) {
                 const updatedUser = await User.update({
                     process_role: updatedProcessRole,
                     role: updatedProcessRole[0]
                 }, { where: { id: user.id } });
             } else {
-                await User.destroy({ where: { id: user.id }});
+                await User.destroy({ where: { id: user.id } });
             }
-          }
-          
+        }
+
         const knitter = await Knitter.destroy({
             where: {
                 id: req.body.id
@@ -498,5 +516,6 @@ export {
     updateKnitter,
     deleteKnitter,
     checkKnitter,
-    exportKnitterRegistrationList
+    exportKnitterRegistrationList,
+    fetchKnitterForPartnerId
 };  

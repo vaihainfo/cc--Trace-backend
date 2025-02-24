@@ -129,7 +129,7 @@ const fetchPhysicalPartnerPagination = async (req: Request, res: Response) => {
                     status: newStatus ? 'Active' : 'Inactive'
                 });
             }
-            const activeUsers = dataAll.filter((item:any)=> item.status === 'Active');
+            const activeUsers = dataAll.filter((item: any) => item.status === 'Active');
             return res.sendSuccess(res, all === 'true' ? activeUsers : dataAll);
         }
     } catch (error: any) {
@@ -137,6 +137,7 @@ const fetchPhysicalPartnerPagination = async (req: Request, res: Response) => {
         return res.sendError(res, error.message);
     }
 };
+
 
 const fetchPhysicalPartner = async (req: Request, res: Response) => {
     try {
@@ -214,19 +215,19 @@ const deletePhysicalPartner = async (req: Request, res: Response) => {
         });
 
 
-        for await (let user of users){
+        for await (let user of users) {
             const updatedProcessRole = user.process_role.filter((roleId: any) => roleId !== userRole.id);
-      
+
             if (updatedProcessRole && updatedProcessRole.length > 0) {
                 const updatedUser = await User.update({
                     process_role: updatedProcessRole,
                     role: updatedProcessRole[0]
                 }, { where: { id: user.id } });
             } else {
-                await User.destroy({ where: { id: user.id }});
+                await User.destroy({ where: { id: user.id } });
             }
-          }
-          
+        }
+
         const physicalPartner = await PhysicalPartner.destroy({
             where: {
                 id: req.body.id

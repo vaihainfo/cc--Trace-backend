@@ -1,3 +1,4 @@
+import r from "middleware/error";
 import {
     createGarment,
     fetchGarmentPagination,
@@ -5,7 +6,8 @@ import {
     deleteGarment,
     fetchGarment,
     checkGarment,
-    exportGarmentRegistrationList
+    exportGarmentRegistrationList,
+    fetchGarmentForPartnerId
 } from "../../controllers/process-registration/garment";
 import accessControl from "../../middleware/access-control";
 import { Router } from "express";
@@ -14,6 +16,7 @@ const router = Router();
 router.use(accessControl);
 
 // Scope Certificate Routes
+router.get('/get-garment-for-partner-id', fetchGarmentForPartnerId);
 router.get('/', fetchGarmentPagination);
 router.post('/', createGarment);
 router.get('/get-garment', fetchGarment);

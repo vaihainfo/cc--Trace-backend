@@ -5,7 +5,8 @@ import {
     deleteKnitter,
     fetchKnitter,
     checkKnitter,
-    exportKnitterRegistrationList
+    exportKnitterRegistrationList,
+    fetchKnitterForPartnerId
 } from "../../controllers/process-registration/knitter";
 import accessControl from "../../middleware/access-control";
 import { Router } from "express";
@@ -13,6 +14,7 @@ const router = Router();
 
 router.use(accessControl);
 // Scope Certificate Routes
+router.get('/get-knitter-for-partner-id', fetchKnitterForPartnerId);
 router.get('/', fetchKnitterPagination);
 router.get('/get-knitter', fetchKnitter);
 router.post('/', createKnitter);
