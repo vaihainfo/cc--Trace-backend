@@ -99,6 +99,10 @@ const SpinnerYarnOrder = db.define('spinner_yarn_orders', {
     type: DataTypes.INTEGER,
     allowNull: true
   },
+  agent_details: {  
+    type: DataTypes.STRING,
+    allowNull: true,
+  },
   order_document: {
     type: DataTypes.STRING,
     allowNull: true,
