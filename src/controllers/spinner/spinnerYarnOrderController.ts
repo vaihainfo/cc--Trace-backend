@@ -5,6 +5,7 @@ import Weaver from "../../models/weaver.model";
 import Knitter from "../../models/knitter.model";
 import CottonMix from "../../models/cotton-mix.model";
 import SpinnerYarnOrderSales from "../../models/spinner-yarn-order-sales.model";
+import YarnCount from "../../models/yarn-count.model";
 
 export const createSpinnerYarnOrder = async (req: Request, res: Response) => {
   try {
@@ -64,7 +65,7 @@ export const createSpinnerYarnOrder = async (req: Request, res: Response) => {
       yarnCount: yarnCount?.value,
       totalOrderQuantity,
       tentativeOrderCompletionDate: new Date(tentativeOrderCompletionDate),
-      agentDetails,
+      agent_details: agentDetails,
       order_document,
       contract_files,
       other_files,
@@ -128,11 +129,14 @@ export const getSpinnerYarnOrders = async (req: Request, res: Response) => {
     const processIds = yarnOrders
       .filter((order: any) => order.processId)
       .map((order: any) => order.processId);
-
+    const yarnCountIds = yarnOrders
+      .filter((order: any) => order.yarnCount)
+      .map((order: any) => order.yarnCount);
     // Get buyers and processes data
     let weavers: any = [];
     let processes: any = [];
     let yarnBlends: any = [];
+    let yarnCounts: any = [];
 
     // Fetch buyers based on their type
     if (knitterIds.length > 0) {
@@ -165,10 +169,18 @@ export const getSpinnerYarnOrders = async (req: Request, res: Response) => {
       });
     }
 
+    if (yarnCountIds.length > 0) {
+      yarnCounts = await YarnCount.findAll({
+        where: { id: yarnCountIds },
+        attributes: ["id", "yarnCount_name"],
+      });
+    }
+
     // Create lookup maps
     const weaverMap = new Map(weavers.map((w: any) => [w.id, w]));
     const processMap = new Map(processes.map((p: any) => [p.id, p]));
     const yarnBlendMap = new Map(yarnBlends.map((p: any) => [p.id, p]));
+    const yarnCountMap = new Map(yarnCounts.map((y: any) => [y.id, y]));
 
     // Combine the data
     const enrichedYarnOrders = yarnOrders.map((order: any) => {
@@ -191,6 +203,9 @@ export const getSpinnerYarnOrders = async (req: Request, res: Response) => {
         CottonMix: order.yarnBlend
           ? yarnBlendMap.get(order.yarnBlend)
           : null,
+        YarnCount: order.yarnCount
+          ? yarnCountMap.get(order.yarnCount)
+          : null,
         availableQty,
         totalSales
       };
@@ -204,6 +219,23 @@ export const getSpinnerYarnOrders = async (req: Request, res: Response) => {
     return res.sendError(res, error.message);
   }
 };
+
+export const getSpinnerYarnOrdersProcess = async (req: Request, res: Response) => {
+  try {
+    const spinnerId = req.query.spinnerId;
+    const processes = await YarnOrderProcess.findAll({
+      where: { spinnerId },
+    });
+    return res.status(200).json({
+      success: true,
+      data: processes,
+    });
+  } catch (error: any) {
+    console.log(error);
+    return res.sendError(res, error.message);
+  }
+
+}
 
 export const getSpinnerYarnOrderById = async (req: Request, res: Response) => {
   try {
