@@ -898,6 +898,37 @@ const createGarmentProcess = async (req: Request, res: Response) => {
   }
 };
 
+
+const deleteGarmentProcess = async (req: Request, res: Response) => {
+
+  if (!req.body.id) {
+    return res.sendError(res, "need process id");
+  }
+
+  const garmentProcess = await GarmentProcess.findOne({ where: { id: req.body.id } });
+    if (garmentProcess) {
+        const trans = await  sequelize.transaction();
+        
+        try{
+        Embroidering.destroy({ where: { id: garmentProcess.embroidering_id } },trans);
+        FabricSelection.destroy({ where: { sales_id: req.body.id}}, trans);
+        PhysicalTraceabilityDataGarment.destroy({ where: { garm_process_id: req.body.id }}, trans);
+        PhysicalTraceabilityDataGarmentSample.destroy({ where: { physical_traceability_data_garment_id: req.body.id }},trans);
+        GarmentFabricType.destroy({ where: { process_id: req.body.id}}, trans);        
+        
+        GarmentProcess.destroy({ where: { id: req.body.id }},trans);
+        trans.commit();
+        res.sendSuccess(res, { garmentProcess: "Garment Process deleted" });
+    } catch (error: any) {
+      await trans.rollback();
+      console.log(error.message);
+      return res.sendError(res, error.message, error);
+    }
+    } else{
+      return res.sendError(res, "Garment Process not found");
+    }
+}
+
 //create Garment Process
 const updateGarmentProcess = async (req: Request, res: Response) => {
   try {
@@ -4449,4 +4480,5 @@ export {
   exportGarmentTransactionList,
   getCOCDocumentData,
   updateCOCDoc,
+  deleteGarmentProcess
 };
