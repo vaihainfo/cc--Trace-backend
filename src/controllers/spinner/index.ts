@@ -1594,6 +1594,23 @@ const fetchSpinSalesPagination = async (req: Request, res: Response) => {
       const { count, rows } = await SpinSales.findAndCountAll({
         where: whereCondition,
         include: include,
+        attributes: {
+          include: [
+            [
+              Sequelize.literal(`(
+                SELECT json_agg(json_build_object(
+                  'quantity', sys."quantity_used",
+                  'reel_yarn_order_number', syo."reel_yarn_order_number"
+                ))
+                FROM "spinner_yarn_order_sales" sys
+                LEFT JOIN "spinner_yarn_orders" syo 
+                ON sys."spinner_yarn_order_id" = syo."id"
+                WHERE sys."sale_id" = "spin_sales"."id"
+              )`),
+              'yarnOrderNumbers'
+            ]
+          ]
+        },
         order: [["id", "desc"]],
         offset: offset,
         limit: limit,
