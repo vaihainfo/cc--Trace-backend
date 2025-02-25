@@ -11,6 +11,7 @@ import {
 import {
     createSpinnerYarnOrder,
     getSpinnerYarnOrders,
+    getSpinnerYarnOrdersProcess,
     getSpinnerYarnOrderById,
     updateSpinnerYarnOrder,
     deleteSpinnerYarnOrder
@@ -34,6 +35,7 @@ router.get('/export/registration', exportSpinnerRegistrationList);
 // Yarn Order Routes
 router.post('/yarn-order', createSpinnerYarnOrder);
 router.get('/yarn-order', getSpinnerYarnOrders);
+router.get('/yarn-order-process', getSpinnerYarnOrdersProcess);
 router.get('/yarn-order/:id', getSpinnerYarnOrderById);
 router.put('/yarn-order/:id', updateSpinnerYarnOrder);
 router.delete('/yarn-order/:id', deleteSpinnerYarnOrder);
