@@ -205,6 +205,23 @@ export const getSpinnerYarnOrders = async (req: Request, res: Response) => {
   }
 };
 
+export const getSpinnerYarnOrdersProcess = async (req: Request, res: Response) => {
+  try {
+    const spinnerId = req.query.spinnerId;
+    const processes = await YarnOrderProcess.findAll({
+      where: { spinnerId },
+    });
+    return res.status(200).json({
+      success: true,
+      data: processes,
+    });
+  } catch (error: any) {
+    console.log(error);
+    return res.sendError(res, error.message);
+  }
+
+}
+
 export const getSpinnerYarnOrderById = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
