@@ -163,6 +163,12 @@ const deleteWeaverProcess = async (req: Request, res: Response) => {
     if (weaver) {
       const trans = await db.transaction();
       try {        
+        let yarnsel = await YarnSelection.findOne({ where: { sales_id: req.body.id }, transaction:trans});
+        if (yarnsel) {
+            let val = await SpinSales.findOne({ where: { id: yarnsel.yarn_id } });
+           let update = await SpinSales.update({ qty_stock: val.dataValues.qty_stock + yarnsel.qtyUsed }, { where: { id: yarnsel.yarn_id } });
+           YarnSelection.destroy({ where: { sales_id: req.body.id }, transaction:trans});
+        }
         await WeaverFabric.destroy({ where: { process_id: req.body.id }, transaction:trans});
         await PhysicalTraceabilityDataWeaver.destroy({ where: { weav_process_id: req.body.id }, transaction:trans});
         await PhysicalTraceabilityDataWeaverSample.destroy({ where: { physical_traceability_data_weaver_id: req.body.id}, transaction: trans});
