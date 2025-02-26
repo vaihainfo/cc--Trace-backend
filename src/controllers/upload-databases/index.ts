@@ -2278,8 +2278,7 @@ const uploadIntegrityTest = async (req: Request, res: Response) => {
                 });
             } else {
                 const brand = await Brand.findOne({ where: { brand_name: data.brand } });
-                const farmer = await Farmer.findOne({ where: { tracenet_id: data.tracenetId,brand_id:brand.id} });
-                const season = await Season.findOne({ where: { name: data.season}});
+                let farmer;
                 const ics = await ICS.findOne({ where: { ics_name: data.icsName}});
 
                 if (!brand) {
@@ -2289,6 +2288,19 @@ const uploadIntegrityTest = async (req: Request, res: Response) => {
                         message: "Brand does not exists"
                     });
                 }
+                if(brand){
+                    farmer = await Farmer.findOne({ where: { tracenet_id: data.tracenetId,brand_id:brand.id} });
+                }
+                const season = await Season.findOne({ where: { name: data.season}});
+
+                if (!season) {
+                    fail.push({
+                        success: false,
+                        data: { season: data.season ? data.season : ''},
+                        message: data.season + " season does not exists"
+                    });
+                }
+                
                 if (!ics) {
                     fail.push({
                         success: false,
@@ -2316,14 +2328,7 @@ const uploadIntegrityTest = async (req: Request, res: Response) => {
                     }
                 }
 
-                if (!season) {
-                    fail.push({
-                        success: false,
-                        data: { season: data.season ? data.season : ''},
-                        message: data.season + " season does not exists"
-                    });
-                }
-
+                
                 if (!farmer) {
                     fail.push({
                         success: false,

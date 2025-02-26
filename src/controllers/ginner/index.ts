@@ -403,6 +403,17 @@ const updateGinnerProcess = async (req: Request, res: Response) => {
   if (!req.body.id) {
     return res.sendError(res, "Need Process Id");
   }
+
+  let ids = await BaleSelection.count({
+    where: { "$bale.process_id$": req.body.id },
+    include: [{ model: GinBale, as: "bale" }],
+  });
+
+  if (ids > 0) {
+    return res.sendError(res, "Unable to edit this process since some bales of this process were sold");
+  }
+
+
   if (req.body.lotNo) {
     let lot = await GinProcess.findOne({
       where: { lot_no: req.body.lotNo, id: { [Op.ne]: req.body.id } },
@@ -411,6 +422,7 @@ const updateGinnerProcess = async (req: Request, res: Response) => {
       return res.sendError(res, "Lot No already Exists");
     }
   }
+
   const data = {
     date: req.body.date,
     lot_no: req.body.lotNo,
