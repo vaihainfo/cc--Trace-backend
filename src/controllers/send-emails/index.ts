@@ -2380,7 +2380,7 @@ const qrProcurementReport = async (brandId: any, type: any, programId: any, coun
         }
         if (brandId) {
             whereCondition.brand_id = 
-            { [Op.in]: brandId ,[Op.notIn]: [52,696,695] };
+            { [Op.in]: brandId ,[Op.notIn]: [52,696,695] };//ignore test brand, vaiha brand data
         }
 
         if (programId) {
@@ -2389,15 +2389,33 @@ const qrProcurementReport = async (brandId: any, type: any, programId: any, coun
 
         whereCondition.agent_id = { [Op.not]: null, [Op.ne]: 0 };
         
+        whereCondition.status = { [Op.notIn] :['Rejected'] };
+
+        const normalizeDate = (date: Date) => {
+            return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+        };
+        const currentDate = normalizeDate(new Date());
+        const allSeasons = await Season.findAll({
+            where: {
+                from: {  [Op.lt]: currentDate},
+                to:{ [Op.gte]: currentDate }
+            }
+        });
+        
+        const validSeasons = allSeasons.slice(0, 1);
+        const seasonData: any = validSeasons.map((item: any) => item.dataValues.id);
+        
+        whereCondition.season_id = { [Op.in] : seasonData }; 
+
         if(type && date){
             let daysToSub = type === 'Weekly' ? 7 : 1;
             const startDate = moment(date).subtract(daysToSub, 'days');
             const endDate = moment(date);
-            whereCondition.date = { 
+            /*whereCondition.date = { 
                 [Op.gte]: startDate.toDate(),
-                [Op.lt]: endDate.toDate(),   
+                [Op.lt]: endDate.toDate(),  
            
-            }
+            } */
         }
         //   if (startDate && endDate) {
         //     const startOfDay = new Date(startDate);
