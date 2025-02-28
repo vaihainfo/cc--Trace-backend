@@ -502,7 +502,6 @@ const exportAgentTransactions = async (req: Request, res: Response) => {
             const workbook = new ExcelJS.Workbook();
             const worksheet = workbook.addWorksheet("Sheet1");
             worksheet.mergeCells('A1:V1');
-            worksheet.mergeCells('A1:V1');
             const mergedCell = worksheet.getCell('A1');
             mergedCell.value = 'CottonConnect | QR App Procurement Report';
             mergedCell.font = { bold: true };
