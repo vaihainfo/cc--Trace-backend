@@ -163,7 +163,7 @@ const fetchFarmerPagination = async (req: Request, res: Response) => {
         .map((id: any) => parseInt(id, 10));
       whereCondition.season_id = { [Op.in]: idArray };
     }
-
+    whereCondition["$farmer.old_data$"] = { [Op.is]: null };
     let include = [
       {
         model: Farmer,
@@ -729,7 +729,7 @@ const exportFarmer = async (req: Request, res: Response) => {
         .map((id: any) => parseInt(id, 10));
       whereCondition.season_id = { [Op.in]: idArray };
     }
-
+    whereCondition["$farmer.old_data$"] = { [Op.is]: null };
     const workbook = new ExcelJS.Workbook();
 
       while (hasNextBatch) {
