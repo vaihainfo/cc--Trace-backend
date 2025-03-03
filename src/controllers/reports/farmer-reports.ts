@@ -119,7 +119,7 @@ const fetchFarmerReportPagination = async (req: Request, res: Response) => {
     if (seasonId) {
       whereCondition.id = {
         [Op.in]: Sequelize.literal(
-          '( SELECT farmer_id FROM farms WHERE season_id = ' + seasonId + ')')
+          '( SELECT farmer_id FROM farms WHERE season_id = ' + seasonId + '  and old_data IS NULL)')
       }
     }
 
@@ -559,7 +559,7 @@ const exportOrganicFarmerReport = async (req: Request, res: Response) => {
       if (seasonId) {
         whereCondition.id = {
           [Op.in]: Sequelize.literal(
-            '( SELECT farmer_id FROM farms WHERE season_id = ' + seasonId + ')')
+            '( SELECT farmer_id FROM farms WHERE season_id = ' + seasonId + ' and old_data IS NULL)')
         }
       }
 
