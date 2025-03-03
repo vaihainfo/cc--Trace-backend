@@ -16398,8 +16398,7 @@ const exportPscpProcurementLiveTracker = async (
                             "seasons" AS "season" ON "gv"."season_id" = "season"."id"
             LEFT JOIN filtered_ginners ON gv.ginner_id = filtered_ginners.id
             WHERE
-              "farmer".program_id = ANY (filtered_ginners.program_id)
-             AND ${seedAllocationConditionSql} 
+               ${seedAllocationConditionSql} 
             GROUP BY
               gv.ginner_id
           ),
