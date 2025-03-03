@@ -89,7 +89,7 @@ const getRegisteredDevices = async (req: Request, res: Response) => {
 
     } catch (error: any) {
         console.log(error)
-        return res.sendError(res, error.meessage);
+        return res.sendError(res, error.message, error);
     }
 }
 
@@ -142,7 +142,7 @@ const getRegisteredOne = async (req: Request, res: Response) => {
         res.sendSuccess(res, data)
     } catch (error: any) {
         console.log(error)
-        return res.sendError(res, error.meessage);
+        return res.sendError(res, error.message, error);
     }
 }
 
@@ -195,7 +195,7 @@ const getUnRegisteredOne = async (req: Request, res: Response) => {
         res.sendSuccess(res, data)
     } catch (error: any) {
         console.log(error)
-        return res.sendError(res, error.meessage);
+        return res.sendError(res, error.message, error);
     }
 }
 
@@ -1161,7 +1161,7 @@ const fetchCountryByGinner = async (req: Request, res: Response) => {
       return res.sendSuccess(res, allocatedCountry);
     } catch (error: any) {
       console.error(error);
-      return res.sendError(res, error.meessage);
+      return res.sendError(res, error.message, error);
     }
   };
 
@@ -1188,7 +1188,7 @@ const fetchCountryByGinner = async (req: Request, res: Response) => {
       return res.sendSuccess(res, allocatedState);
     } catch (error: any) {
       console.error(error);
-      return res.sendError(res, error.meessage);
+      return res.sendError(res, error.message, error);
     }
   };
 
@@ -1215,7 +1215,7 @@ const fetchCountryByGinner = async (req: Request, res: Response) => {
       return res.sendSuccess(res, allocatedDistrict);
     } catch (error: any) {
       console.error(error);
-      return res.sendError(res, error.meessage);
+      return res.sendError(res, error.message, error);
     }
   };
 
@@ -1244,7 +1244,7 @@ const fetchCountryByGinner = async (req: Request, res: Response) => {
       return res.sendSuccess(res, allocatedBlock);
     } catch (error: any) {
       console.error(error);
-      return res.sendError(res, error.meessage);
+      return res.sendError(res, error.message, error);
     }
   };
 
