@@ -42,7 +42,7 @@ const GinSales = db.define('gin_sales', {
     type: DataTypes.STRING
   },
   lot_no: {
-    type: DataTypes.STRING
+    type: DataTypes.TEXT
   },
   buyer: {
     type: DataTypes.INTEGER
@@ -59,16 +59,16 @@ const GinSales = db.define('gin_sales', {
     type: DataTypes.STRING
   },
   tc_file: {
-    type: DataTypes.STRING
+    type: DataTypes.TEXT
   },
   contract_file: {
-    type: DataTypes.STRING
+    type: DataTypes.TEXT
   },
   invoice_file: {
     type: DataTypes.ARRAY(DataTypes.TEXT)
   },
   delivery_notes: {
-    type: DataTypes.STRING
+    type: DataTypes.TEXT
   },
   candy_rate: {
     allowNull: false,
@@ -82,7 +82,7 @@ const GinSales = db.define('gin_sales', {
     type: DataTypes.STRING
   },
   invoice_no: {
-    type: DataTypes.STRING
+    type: DataTypes.TEXT
   },
   despatch_from: {
     allowNull: false,
@@ -101,13 +101,13 @@ const GinSales = db.define('gin_sales', {
     type: DataTypes.BOOLEAN
   },
   transporter_name: {
-    type: DataTypes.STRING
+    type: DataTypes.TEXT
   },
   vehicle_no: {
-    type: DataTypes.STRING
+    type: DataTypes.TEXT
   },
   lrbl_no: {
-    type: DataTypes.STRING
+    type: DataTypes.TEXT
   },
   place_of_supply: {
     type: DataTypes.STRING
@@ -134,7 +134,7 @@ const GinSales = db.define('gin_sales', {
     type: DataTypes.DATE
   },
   press_no: {
-    type: DataTypes.STRING
+    type: DataTypes.TEXT
   },
   reel_lot_no: {
     type: DataTypes.STRING
