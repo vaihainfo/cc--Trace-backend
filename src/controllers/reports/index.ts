@@ -1980,7 +1980,7 @@ const fetchSpinnerGreyOutReport = async (req: Request, res: Response) => {
       { greyout_status: true, ...searchCondition },
       {
         greyout_status: false,
-        greyed_out_qty: { [Op.ne]: null },
+        greyed_out_qty: { [Op.gt]: 0 },
         ...searchCondition
       },
     ];
