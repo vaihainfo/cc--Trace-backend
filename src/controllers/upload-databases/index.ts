@@ -2276,7 +2276,7 @@ const uploadIntegrityTest = async (req: Request, res: Response) => {
                 let farmer;
                let ginner;
                 const ics = await ICS.findOne({ where: { ics_name: data.icsName}});
-
+         
                 if (!brand) {
                     fail.push({
                         success: false,
@@ -2304,7 +2304,7 @@ const uploadIntegrityTest = async (req: Request, res: Response) => {
                     });
                 }
                 
-                if (!ics) {
+                if (!ics && data.stageOfTesting.toLowerCase().replace(/[^a-zA-Z0-9]/g, "") !== "lintcotton") {
                     fail.push({
                         success: false,
                         data: { ics: data.icsName ? data.icsName : '', farmerName: data.farmer ? data.farmer : '', farmGroupName: data.farmGroup ? data.farmGroup : '', icsName: data.icsName ? data.icsName : '' },
@@ -2350,7 +2350,7 @@ const uploadIntegrityTest = async (req: Request, res: Response) => {
                     return res.sendSuccess(res, { pass, fail });
                 }
 
-                else if(farmer && brand && season && ics ) {
+                else if((farmer || ginner) && brand && season && ics ) {
                     const obj = {
                         date: data.date,
                         brand_id: brand.id,
