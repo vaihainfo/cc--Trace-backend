@@ -12423,9 +12423,11 @@ const fetchGinnerSummaryPagination = async (req: Request, res: Response) => {
       obj.total_qty_lint_received = ginToGinReceive
         ? convert_kg_to_mt(ginToGinReceive.dataValues.total_qty ?? 0)
         : 0;
-      obj.lintActualStockMT =   (ginner.id === 502 && seasonId && Number(seasonId) === 9)  ? 0 :(Number(obj.lintProcuredMt) + Number(obj.total_qty_lint_received)) > (Number(obj.lintSoldMt) + Number(obj.lintGreyoutMT) + Number(obj.total_qty_lint_transfered)) 
-        ? (Number(obj.lintProcuredMt) + Number(obj.total_qty_lint_received)) - (Number(obj.lintSoldMt) + Number(obj.lintGreyoutMT) + Number(obj.total_qty_lint_transfered))
-        : 0;
+      obj.lintActualStockMT = (ginner.id === 502 && seasonId && Number(seasonId) === 9) 
+        ? 0 
+        :  (Number(obj.lintProcuredMt) + Number(obj.total_qty_lint_received)) > (Number(obj.lintSoldMt) + Number(obj.lintGreyoutMT) + Number(obj.total_qty_lint_transfered))
+          ? (Number(obj.lintProcuredMt) + Number(obj.total_qty_lint_received)) - (Number(obj.lintSoldMt) + Number(obj.lintGreyoutMT) + Number(obj.total_qty_lint_transfered))
+          : 0;
       obj.lintStockKg =
         Number(obj.lintProcuredKg) > Number(obj.lintSoldKg)
           ? Number(obj.lintProcuredKg) - Number(obj.lintSoldKg)
@@ -13035,8 +13037,9 @@ const exportGinnerSummary = async (req: Request, res: Response) => {
         obj.total_qty_lint_received = ginToGinReceive
           ? convert_kg_to_mt(ginToGinReceive.dataValues.total_qty ?? 0)
           : 0;
-        obj.lintActualStockMT =    (item.id === 502 && seasonId && Number(seasonId) === 9) 
-        ? 0 :(Number(obj.lintProcuredMt) + Number(obj.total_qty_lint_received)) > (Number(obj.lintSoldMt) + Number(obj.lintGreyoutMT) + Number(obj.total_qty_lint_transfered))
+        obj.lintActualStockMT = (item.id === 502 && seasonId && Number(seasonId) === 9) 
+        ? 0  
+        : (Number(obj.lintProcuredMt) + Number(obj.total_qty_lint_received)) > (Number(obj.lintSoldMt) + Number(obj.lintGreyoutMT) + Number(obj.total_qty_lint_transfered))
           ? (Number(obj.lintProcuredMt) + Number(obj.total_qty_lint_received)) - (Number(obj.lintSoldMt) + Number(obj.lintGreyoutMT) + Number(obj.total_qty_lint_transfered))
           : 0;
         obj.lintStockKg = Number(obj.lintProcuredKg) > Number(obj.lintSoldKg) ? Number(obj.lintProcuredKg) - Number(obj.lintSoldKg) : 0;
@@ -16198,8 +16201,7 @@ const fetchPscpProcurementLiveTracker = async (req: Request, res: Response) => {
                           "seasons" AS "season" ON "gv"."season_id" = "season"."id"
           LEFT JOIN filtered_ginners ON gv.ginner_id = filtered_ginners.id
           WHERE
-            "farmer".program_id = ANY (filtered_ginners.program_id)
-           AND ${seedAllocationConditionSql} 
+           ${seedAllocationConditionSql} 
           GROUP BY
             gv.ginner_id
         ),
@@ -16952,9 +16954,7 @@ const exportPscpProcurementLiveTracker = async (
                        LEFT JOIN 
                             "seasons" AS "season" ON "gv"."season_id" = "season"."id"
             LEFT JOIN filtered_ginners ON gv.ginner_id = filtered_ginners.id
-            WHERE
-              "farmer".program_id = ANY (filtered_ginners.program_id)
-             AND ${seedAllocationConditionSql} 
+            WHERE ${seedAllocationConditionSql} 
             GROUP BY
               gv.ginner_id
           ),

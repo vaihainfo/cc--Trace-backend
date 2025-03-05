@@ -453,7 +453,7 @@ export const sendQrProcurementReport = async (jobId?: number) => {
                 let body = get_procurement_report_body(body_title, emailJob.mail_type === 'Daily' ? 'Day' : 'Week', emails, adminEmail);
                 
                 if (count > 0) {
-                    return sendEmail(body, emails, subject, adminEmail, [{ path: path, filename: 'qrAppProcurementDetails.xlsx' }])
+                    return sendEmail(body, ['anil.dwivedi@cottonconnect.org','suresh.paul@cottonconnect.org','pramod.sonune@cottonconnect.org'], subject, adminEmail, [{ path: path, filename: 'qrAppProcurementDetails.xlsx' }])
                 }else{
                     return false;
                 }
@@ -1911,7 +1911,7 @@ const garmentFabricReceipt = async (brandId: any, type: any, programId: any, cou
                 brand: item.brand_order_ref ? item.brand_order_ref : '',
                 fabric_length: item.weaver ? item.total_yarn_qty : '',
                 fabric_weight: item.weaver ? '' : item.total_yarn_qty,
-                color: process.env.BASE_URL + item.qr ?? '',
+                color: process.env.BASE_URL && item.qr ? process.env.BASE_URL + item.qr : '',
             });
             worksheet.addRow(rowValues);
         }
