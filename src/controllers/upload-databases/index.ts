@@ -2338,11 +2338,11 @@ const uploadIntegrityTest = async (req: Request, res: Response) => {
                         farmGroup_id: farmer ? farmer.farmGroup_id : 0,
                         ics_id: farmer ? farmer.ics_id: 0,
                         ginner_id: ginner ? ginner.id : 0,
-                        test_stage: data.stageOfTesting,
+                        test_stage: String(data.stageOfTesting),
                         farmer: farmer ? farmer.id: 0,
                         seal_no: String(data.sealNo),
-                        sample_code: data.sampleCodeNo,
-                        seed_lot: data.seedLotNo,
+                        sample_code: String(data.sampleCodeNo),
+                        seed_lot: String(data.seedLotNo),
                         integrity_score: data.integrityScore.toLowerCase() === "positive" ? true : false,
                         season_id: season.id
                     }
