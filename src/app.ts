@@ -137,6 +137,9 @@ const connectToDb = async () => {
       console.log("Time Zone", serverTimezone);
       console.log("Offset IST", differenceInMinutes);
       setupAssociations();
+
+
+
     } catch (error) {
     console.error("Unable to connect to the database:", error);
   }
