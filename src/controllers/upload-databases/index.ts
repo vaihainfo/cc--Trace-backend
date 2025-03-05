@@ -2231,17 +2231,12 @@ const uploadIntegrityTest = async (req: Request, res: Response) => {
                     success: false,
                     message: "Stage of testing cannot be empty"
                 });
-            } else if (!data.typeOfTest) {
-                fail.push({
-                    success: false,
-                    message: "Type of test cannot be empty"
-                });
-            } else if (!data.farmGroup) {
+            } else if (data.stageOfTesting.toLowerCase().replace(/[^a-zA-Z0-9]/g, "") !== "lintcotton" && !data.farmGroup) {
                 fail.push({
                     success: false,
                     message: "Farm Group cannot be empty"
                 });
-            } else if (!data.icsName) {
+            } else if (data.stageOfTesting.toLowerCase().replace(/[^a-zA-Z0-9]/g, "") !== "lintcotton" && !data.icsName) {
                 fail.push({
                     success: false,
                     message: "ICS Name cannot be empty"
@@ -2249,14 +2244,14 @@ const uploadIntegrityTest = async (req: Request, res: Response) => {
             } else if (!data.farmer) {
                 fail.push({
                     success: false,
-                    message: "Farmer cannot be empty"
+                    message: "Farmer/Ginner cannot be empty"
                 });
             } else if (!data.sealNo) {
                 fail.push({
                     success: false,
                     message: "Seal No. cannot be empty"
                 });
-            } else if (!data.tracenetId) {
+            } else if (data.stageOfTesting.toLowerCase().replace(/[^a-zA-Z0-9]/g, "") !== "lintcotton" && !data.tracenetId) {
                 fail.push({
                     success: false,
                     message: "Tracenet Id cannot be empty"
@@ -2279,6 +2274,7 @@ const uploadIntegrityTest = async (req: Request, res: Response) => {
             } else {
                 const brand = await Brand.findOne({ where: { brand_name: data.brand } });
                 let farmer;
+               let ginner;
                 const ics = await ICS.findOne({ where: { ics_name: data.icsName}});
 
                 if (!brand) {
@@ -2288,8 +2284,15 @@ const uploadIntegrityTest = async (req: Request, res: Response) => {
                         message: "Brand does not exists"
                     });
                 }
-                if(brand){
+                if(brand && data.stageOfTesting.toLowerCase().replace(/[^a-zA-Z0-9]/g, "") !== "lintcotton") {
                     farmer = await Farmer.findOne({ where: { tracenet_id: data.tracenetId,brand_id:brand.id} });
+                }
+                if(brand && data.stageOfTesting.toLowerCase().replace(/[^a-zA-Z0-9]/g, "") === "lintcotton") {
+                    const farmerName = data.farmer ? data.farmer.trim() : null;
+                    ginner = await Ginner.findOne({ where: { name: farmerName, brand: {
+                            [Op.contains]: [brand.id]
+                        }
+                        } });
                 }
                 const season = await Season.findOne({ where: { name: data.season}});
 
@@ -2329,7 +2332,7 @@ const uploadIntegrityTest = async (req: Request, res: Response) => {
                 }
 
                 
-                if (!farmer) {
+                if (!farmer && data.stageOfTesting.toLowerCase().replace(/[^a-zA-Z0-9]/g, "") !== "lintcotton") {
                     fail.push({
                         success: false,
                         data: { brand: data.brand ? data.brand : '', farmerName: data.farmer ? data.farmer : '', farmGroupName: data.farmGroup ? data.farmGroup : '', icsName: data.icsName ? data.icsName : '' },
@@ -2338,15 +2341,24 @@ const uploadIntegrityTest = async (req: Request, res: Response) => {
                    
                 }
 
+                if(!ginner && data.stageOfTesting.toLowerCase().replace(/[^a-zA-Z0-9]/g, "") === "lintcotton") {
+                    fail.push({
+                        success: false,
+                        data: { brand: data.brand ? data.brand : '', farmerName: data.farmer ? data.farmer : '', farmGroupName: data.farmGroup ? data.farmGroup : '', icsName: data.icsName ? data.icsName : '' },
+                        message: "Ginner with mentioned name "+ data.farmer +" does not exists with brand "+ data.brand
+                    });
+                    return res.sendSuccess(res, { pass, fail });
+                }
+
                 else if(farmer && brand && season && ics ) {
                     const obj = {
                         date: data.date,
                         brand_id: brand.id,
-                        farmGroup_id: farmer.farmGroup_id,
-                        ics_id: ics.id,
-                        ginner_id: 0,
+                        farmGroup_id: farmer ? farmer.farmGroup_id : 0,
+                        ics_id: farmer ? ics.id: 0,
+                        ginner_id: ginner ? ginner.id : 0,
                         test_stage: data.stageOfTesting,
-                        farmer: farmer.id,
+                        farmer: farmer ? farmer.id: 0,
                         seal_no: data.sealNo,
                         sample_code: data.sampleCodeNo,
                         seed_lot: data.seedLotNo,
@@ -2354,11 +2366,10 @@ const uploadIntegrityTest = async (req: Request, res: Response) => {
                         documents: "",
                         season_id: season.id
                     };
-
                     const result = await OrganicIntegrity.create(obj);
                     pass.push({
                         success: true,
-                        data: result,
+                        data: [],
                         message: "Organic Integrity Added"
                     });
                 }
