@@ -1911,7 +1911,7 @@ const garmentFabricReceipt = async (brandId: any, type: any, programId: any, cou
                 brand: item.brand_order_ref ? item.brand_order_ref : '',
                 fabric_length: item.weaver ? item.total_yarn_qty : '',
                 fabric_weight: item.weaver ? '' : item.total_yarn_qty,
-                color: process.env.BASE_URL + item.qr ?? '',
+                color: process.env.BASE_URL && item.qr  ? process.env.BASE_URL + item.qr : '',
             });
             worksheet.addRow(rowValues);
         }
