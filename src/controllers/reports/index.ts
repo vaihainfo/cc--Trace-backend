@@ -63,6 +63,7 @@ import DyingFabricSelection from "../../models/dying-fabric-selection.model";
 import Country from "../../models/country.model";
 import GinHeap from "../../models/gin-heap.model";
 import GinToGinSale from "../../models/gin-to-gin-sale.model";
+import { object } from "yup";
 
 const fetchBaleProcess = async (req: Request, res: Response) => {
   const searchTerm = req.query.search || "";
@@ -148,6 +149,8 @@ const fetchBaleProcess = async (req: Request, res: Response) => {
             gp."createdAt" AS created_date,
             s.name AS season_name,
             g.name AS ginner_name,
+            g.country_id as country_id,
+            g.state_id as state_id,
             gp.heap_number,
             gp.heap_register,
             gp.weigh_bridge,
@@ -332,8 +335,11 @@ const fetchBaleProcess = async (req: Request, res: Response) => {
               gd.from_date AS from_date,
               gd.to_date AS to_date,
               gd.created_date AS "createdAt",
+              EXTRACT(DAY FROM AGE(gd.created_date , gd.to_date)) AS no_of_days,
               gd.season_name AS season,
               gd.ginner_name AS ginner_name,
+              c.county_name AS country_name,
+              s.state_name AS state_name,
               gd.heap_number AS heap_number,
               gd.heap_register AS heap_register,
               gd.bale_process AS bale_process,
@@ -374,6 +380,10 @@ const fetchBaleProcess = async (req: Request, res: Response) => {
               gin_bale_greyout_data gbg ON gd.process_id = gbg.process_id
           LEFT JOIN 
               gin_to_gin_sales_data gtg ON gd.process_id = gtg.process_id
+          LEFT JOIN
+              countries c ON gd.country_id = c.id 
+          LEFT JOIN
+              states s ON gd.state_id = s.id  
           ORDER BY gd.process_id DESC
           LIMIT :limit OFFSET :offset
           `, {
@@ -442,6 +452,17 @@ const fetchGinHeapReport = async (req: Request, res: Response) => {
       {
         model: Ginner,
         as: "ginner",
+        include: [
+          {
+            model: Country,
+            as: "country",
+          },
+          {
+            model: State,
+            as: "state",
+          }
+        ]
+        
       },
       {
         model: Season,
@@ -594,6 +615,16 @@ const exportGinHeapReport = async (req: Request, res: Response) => {
         {
           model: Ginner,
           as: "ginner",
+          include: [
+            {
+              model: Country,
+              as: "country",
+            },
+            {
+              model: State,
+              as: "state",
+            }
+          ]
         },
         {
           model: Season,
@@ -608,14 +639,16 @@ const exportGinHeapReport = async (req: Request, res: Response) => {
       // Create the excel workbook file
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet("Sheet1");
-      worksheet.mergeCells("A1:M1");
-      const mergedCell = worksheet.getCell("A1");
-      mergedCell.value = "CottonConnect | Heap Report";
-      mergedCell.font = { bold: true };
-      mergedCell.alignment = { horizontal: "center", vertical: "middle" };
+      // worksheet.mergeCells("A1:M1");
+      // const mergedCell = worksheet.getCell("A1");
+      // mergedCell.value = "CottonConnect | Heap Report";
+      // mergedCell.font = { bold: true };
+      // mergedCell.alignment = { horizontal: "center", vertical: "middle" };
       // Set bold font for header row
       const headerRow = worksheet.addRow([
         "Sr No.",
+        "Country",
+        "State",
         "Created Date",
         "Season",
         "Gin heap no.",
@@ -636,27 +669,34 @@ const exportGinHeapReport = async (req: Request, res: Response) => {
         offset: offset,
         limit: limit,
       });
+
+      let weightSum = 0;
+
       // // Append data to worksheet
       for await (const [index, item] of rows.entries()) {
         if (item.dataValues?.weighbridge_village) {
-          const villageIds = item.dataValues.weighbridge_village && item.dataValues.weighbridge_village
-            .split(",")
-            .map((id: string) => id.trim()) 
-            .filter((id: string) => id !== ""); 
+            const villageIds = item.dataValues.weighbridge_village && item.dataValues.weighbridge_village
+              .split(",")
+              .map((id: string) => id.trim()) 
+              .filter((id: string) => id !== ""); 
 
-            if(villageIds.length > 0) {
-          const villages = await Village.findAll({
-            where: { id: { [Op.in]: villageIds } },
-            attributes: ["id", "village_name"],
-          });
+              if(villageIds.length > 0) {
+            const villages = await Village.findAll({
+              where: { id: { [Op.in]: villageIds } },
+              attributes: ["id", "village_name"],
+            });
 
-          const uniqueVillageNames = [...new Set(villages.map((v:any) => v.village_name))];
-          item.dataValues.village_names = uniqueVillageNames.join(", ");
+            const uniqueVillageNames = [...new Set(villages.map((v:any) => v.village_name))];
+            item.dataValues.village_names = uniqueVillageNames.join(", ");
+          }
         }
-        }
+
+        weightSum += item.dataValues.estimated_heap ? Number(item.dataValues.estimated_heap) : 0;
 
         const rowValues = Object.values({
           index: index + 1,
+          country: item.dataValues.ginner.country.county_name,
+          state: item.dataValues.ginner.state.state_name,
           created_date: item.dataValues.createdAt
             ? item.dataValues.createdAt
             : "",
@@ -676,12 +716,29 @@ const exportGinHeapReport = async (req: Request, res: Response) => {
         });
         worksheet.addRow(rowValues);
       }
+
+      const rowValues = Object.values({
+        index: "", country: "", state: "", created_date:"", season: "", ginner_heap_no:"",
+        reel_heap_no:"", ginner_name:"", village_name: "", 
+        heap_weight:"Total = "+ String(weightSum),
+        heap_starting_date: "", heap_ending_date: "", weighbridge_vehicle_no:""
+      });
+      worksheet.addRow(rowValues);
+
+      const borderStyle = {
+        top: { style: "thin" },
+        bottom: { style: "thin" },
+        left: { style: "thin" },
+        right: { style: "thin" },
+      };
+
       // Auto-adjust column widths based on content
       worksheet.columns.forEach((column: any) => {
         let maxCellLength = 0;
         column.eachCell({ includeEmpty: true }, (cell: any) => {
           const cellLength = (cell.value ? cell.value.toString() : "").length;
           maxCellLength = Math.max(maxCellLength, cellLength);
+          cell.border = borderStyle;
         });
         column.width = Math.min(14, maxCellLength + 2);
       });
@@ -694,6 +751,9 @@ const exportGinHeapReport = async (req: Request, res: Response) => {
         data: process.env.BASE_URL + "excel-heap-report.xlsx",
       });
     }
+
+
+    
   } catch (error: any) {
     console.log(error);
     return res.sendError(res, error.message, error);
@@ -797,6 +857,8 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
       // Create the excel workbook file
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet("Sheet1");
+     
+      /*
       if (isOrganic === 'true') {
         worksheet.mergeCells('A1:N1');
       }else if (isBrand === 'true') {
@@ -812,25 +874,26 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
       mergedCell.value = 'CottonConnect | Ginner Bale Process Report';
       mergedCell.font = { bold: true };
       mergedCell.alignment = { horizontal: 'center', vertical: 'middle' };
+      */
       // Set bold font for header row
       let headerRow;
      if (isOrganic === 'true') {
         headerRow = worksheet.addRow([
-        "Sr No.", "Process Date", "Data Entry Date and Time", "Lint Production Start Date", "Lint Production End Date", "Lint process Season choosen", "Ginner Name", "Heap Number", "Gin Lot No", "Gin Press No",  "No of Bales", "Lint Quantity(Kgs)", "Programme", "Grey Out Status"
+        "Sr No.","Country","State", "Process Date", "Data Entry Date and Time", "No. of Days", "Lint Production Start Date", "Lint Production End Date", "Lint process Season choosen", "Ginner Name", "Heap Number", "Gin Lot No", "Gin Press No",  "No of Bales", "Lint Quantity(Kgs)", "Programme", "Grey Out Status"
         ]);
       }
       else if (isBrand === 'true') {
         headerRow = worksheet.addRow([
-          "Sr No.", "Process Date", "Data Entry Date and Time", "Lint Production Start Date", "Lint Production End Date", "Lint process Season choosen", "Ginner Name", "Heap Number", "Gin Lot No", "Gin Press No", "REEL Lot No", "REEL Press Nos", "No of Bales", "Lint Quantity(Kgs)", "Programme", "Grey Out Status"
+          "Sr No.","Country","State", "Process Date", "Data Entry Date and Time", "No. of Days", "Lint Production Start Date", "Lint Production End Date", "Lint process Season choosen", "Ginner Name", "Heap Number", "Gin Lot No", "Gin Press No", "REEL Lot No", "REEL Press Nos", "No of Bales", "Lint Quantity(Kgs)", "Programme", "Grey Out Status"
         ]);
       } 
       else if(isAdmin === 'true') {
         headerRow = worksheet.addRow([
-          "Sr No.", "Process Date", "Data Entry Date and Time", "Lint Production Start Date", "Lint Production End Date", "Seed Cotton Consumed Season", "Lint process Season choosen", "Ginner Name", "Heap Number", "Gin Lot No", "Gin Press No", "REEL Lot No", "REEL Press Nos", "No of Bales", "Lint Quantity(Kgs)", "Total Seed Cotton Consumed(Kgs)", "GOT", "Total lint cotton sold(Kgs)", "Total Bales Sold", "Total lint cotton rejected(Kgs)", "Total Bales Rejected", "Total lint cotton transfered(Kgs)", "Total Bales Transfered", "Total lint cotton in stock(Kgs)", "Total Bales in stock", "Programme","Grey Out Status"
+          "Sr No.","Country","State", "Process Date", "Data Entry Date and Time", "No. of Days", "Lint Production Start Date", "Lint Production End Date", "Seed Cotton Consumed Season", "Lint process Season choosen", "Ginner Name", "Heap Number", "Gin Lot No", "Gin Press No", "REEL Lot No", "REEL Press Nos", "No of Bales", "Lint Quantity(Kgs)", "Total Seed Cotton Consumed(Kgs)", "GOT", "Total lint cotton sold(Kgs)", "Total Bales Sold", "Total lint cotton rejected(Kgs)", "Total Bales Rejected", "Total lint cotton transfered(Kgs)", "Total Bales Transfered", "Total lint cotton in stock(Kgs)", "Total Bales in stock", "Programme","Grey Out Status"
         ]);
       }else {
         headerRow = worksheet.addRow([
-          "Sr No.", "Process Date", "Data Entry Date and Time", "Lint Production Start Date", "Lint Production End Date", "Seed Cotton Consumed Season", "Lint process Season choosen", "Ginner Name", "Heap Number", "Gin Lot No", "Gin Press No", "REEL Lot No", "REEL Press Nos", "No of Bales", "Lint Quantity(Kgs)", "Total Seed Cotton Consumed(Kgs)", "GOT", "Total lint cotton sold(Kgs)", "Total Bales Sold", "Total lint cotton rejected(Kgs)", "Total Bales Rejected", "Total lint cotton transfered(Kgs)", "Total Bales Transfered", "Total lint cotton in stock(Kgs)", "Total Bales in stock", "Programme", "Village", "Grey Out Status"
+          "Sr No.","Country","State", "Process Date", "Data Entry Date and Time", "No. of Days", "Lint Production Start Date", "Lint Production End Date", "Seed Cotton Consumed Season", "Lint process Season choosen", "Ginner Name", "Heap Number", "Gin Lot No", "Gin Press No", "REEL Lot No", "REEL Press Nos", "No of Bales", "Lint Quantity(Kgs)", "Total Seed Cotton Consumed(Kgs)", "GOT", "Total lint cotton sold(Kgs)", "Total Bales Sold", "Total lint cotton rejected(Kgs)", "Total Bales Rejected", "Total lint cotton transfered(Kgs)", "Total Bales Transfered", "Total lint cotton in stock(Kgs)", "Total Bales in stock", "Programme", "Village", "Grey Out Status"
         ]);
       }
       headerRow.font = { bold: true };
@@ -845,6 +908,8 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
               gp."createdAt" AS created_date,
               s.name AS season_name,
               g.name AS ginner_name,
+              g.country_id as country_id,
+              g.state_id as state_id,
               gp.heap_number,
               gp.heap_register,
               gp.weigh_bridge,
@@ -867,6 +932,7 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
               seasons s ON gp.season_id = s.id
           LEFT JOIN
               programs pr ON gp.program_id = pr.id
+    
           ${whereClause}
             ),
           gin_bale_data AS (
@@ -1029,8 +1095,11 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
               gd.from_date AS from_date,
               gd.to_date AS to_date,
               gd.created_date AS "createdAt",
+              EXTRACT(DAY FROM AGE(gd.created_date , gd.to_date)) AS no_of_days,
               gd.season_name AS season,
               gd.ginner_name AS ginner_name,
+              c.county_name AS country_name,
+              s.state_name AS state_name,
               gd.heap_number AS heap_number,
               gd.heap_register AS heap_register,
               gd.bale_process AS bale_process,
@@ -1071,20 +1140,43 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
               gin_bale_greyout_data gbg ON gd.process_id = gbg.process_id
           LEFT JOIN 
               gin_to_gin_sales_data gtg ON gd.process_id = gtg.process_id
+          LEFT JOIN
+              countries c ON gd.country_id = c.id 
+          LEFT JOIN
+              states s ON gd.state_id = s.id  
           ORDER BY gd.process_id DESC
           LIMIT :limit OFFSET :offset
             `, {
         replacements: { limit: limit, offset },
         type: sequelize.QueryTypes.SELECT,
       });
+
+      let totals = {
+        total_no_of_bales: 0,
+        total_lint_quantity: 0,
+        total_seedConsmed: 0,
+        total_sold_bales: 0,
+        total_lint_quantity_sold: 0,
+        total_lint_qty_transfered: 0, 
+        total_bales_transfered:0,
+        total_lint_stock:0,
+        total_bale_stock:0,
+
+      };
+
+
+
       // Append data to worksheet
       for await (const [index, item] of rows.entries()) {
         let rowValues;
        if (isOrganic === 'true') {
           rowValues = Object.values({
             index: index + 1,
+            country: item.country_name ? item.country_name : "",
+            state: item.state_name ? item.state_name : "",
             date: item.date ? item.date : "",
             created_date: item.createdAt ? item.createdAt : "",
+            no_of_days: item.no_of_days ? item.no_of_days : "",
             from_date: item.from_date ? item.from_date : "",
             to_date: item.to_date ? item.to_date : "",
             season: item.season ? item.season : "",
@@ -1098,12 +1190,17 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
             program: item.program ? item.program : "",
             greyout_status: item.greyout_status ? "Yes" : "No",
           });
+
+         
         }
         else if (isBrand === 'true') {
           rowValues = Object.values({
             index: index + 1,
+            country: item.country_name ? item.country_name : "",
+            state: item.state_name ? item.state_name : "",
             date: item.date ? item.date : "",
             created_date: item.createdAt ? item.createdAt : "",
+            no_of_days: item.no_of_days ? item.no_of_days : "",
             from_date: item.from_date ? item.from_date : "",
             to_date: item.to_date ? item.to_date : "",
             season: item.season ? item.season : "",
@@ -1118,12 +1215,16 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
             program: item.program ? item.program : "",
             greyout_status: item.greyout_status ? "Yes" : "No",
           });
+        
         }
         else if(isAdmin === 'true'){
           rowValues = Object.values({
             index: index + 1,
+            country: item.country_name ? item.country_name : "",
+            state: item.state_name ? item.state_name : "",
             date: item.date ? item.date : "",
             created_date: item.createdAt ? item.createdAt : "",
+            no_of_days: item.no_of_days ? item.no_of_days : "",
             from_date: item.from_date ? item.from_date : "",
             to_date: item.to_date ? item.to_date : "",
             seed_consumed_seasons: item.seed_consumed_seasons ? item.seed_consumed_seasons : "",
@@ -1148,48 +1249,192 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
             bale_stock: item.bale_stock && Number(item.bale_stock) > 0 ? Number(item.bale_stock) : 0,
             program: item.program ? item.program : "",
             greyout_status: item.greyout_status ? "Yes" : "No",
-          });
+          });         
         }
         else {
-          rowValues = Object.values({
-            index: index + 1,
-            date: item.date ? item.date : "",
-            created_date: item.createdAt ? item.createdAt : "",
-            from_date: item.from_date ? item.from_date : "",
-            to_date: item.to_date ? item.to_date : "",
-            seed_consumed_seasons: item.seed_consumed_seasons ? item.seed_consumed_seasons : "",
-            season: item.season ? item.season : "",
-            ginner: item.ginner_name ? item.ginner_name : "",
-            heap: item.heap_number ? item.heap_number : '',
-            lot_no: item.lot_no ? item.lot_no : "",
-            press_no: item.press_no !== "NaN-NaN" ? item.press_no : item?.gin_press_no,
-            reel_lot_no: item.reel_lot_no ? item.reel_lot_no : "",
-            reel_press_no: item.reel_press_no ? item.reel_press_no : "",
-            noOfBales: item.no_of_bales ? Number(item.no_of_bales) : 0,
-            lint_quantity: item.lint_quantity ? Number(item.lint_quantity) : 0,
-            seedConsmed: item.total_qty ? Number(item.total_qty) : 0,
-            got: item.gin_out_turn ? item.gin_out_turn : "",
-            lint_quantity_sold: item.lint_quantity_sold ? Number(item.lint_quantity_sold) : 0,
-            sold_bales: item.sold_bales ? Number(item.sold_bales) : 0,
-            lint_qty_greyout: item.lint_qty_greyout ? Number(formatDecimal(item.lint_qty_greyout)) : 0,
-            greyout_bales: item.greyout_bales ? Number(item.greyout_bales) : 0,
-            lint_qty_transfered: item.lint_qty_transfered ? Number(formatDecimal(item.lint_qty_transfered)) : 0,
-            bales_transfered: item.bales_transfered ? Number(item.bales_transfered) : 0,
-            lint_stock: item.lint_stock && Number(item.lint_stock) > 0 ? Number(item.lint_stock) : 0,
-            bale_stock: item.bale_stock && Number(item.bale_stock) > 0 ? Number(item.bale_stock) : 0,
-            program: item.program ? item.program : "",
-            village_names: item.village_names && item.village_names.length > 0 ? item.village_names.join(", ") : "",
-            greyout_status: item.greyout_status ? "Yes" : "No",
-          });
-        }
+            rowValues = Object.values({
+              index: index + 1,
+              country: item.country_name ? item.country_name : "",
+              state: item.state_name ? item.state_name : "",
+              date: item.date ? item.date : "",
+              created_date: item.createdAt ? item.createdAt : "",
+              no_of_days: item.no_of_days ? item.no_of_days : "",
+              from_date: item.from_date ? item.from_date : "",
+              to_date: item.to_date ? item.to_date : "",
+              seed_consumed_seasons: item.seed_consumed_seasons ? item.seed_consumed_seasons : "",
+              season: item.season ? item.season : "",
+              ginner: item.ginner_name ? item.ginner_name : "",
+              heap: item.heap_number ? item.heap_number : '',
+              lot_no: item.lot_no ? item.lot_no : "",
+              press_no: item.press_no !== "NaN-NaN" ? item.press_no : item?.gin_press_no,
+              reel_lot_no: item.reel_lot_no ? item.reel_lot_no : "",
+              reel_press_no: item.reel_press_no ? item.reel_press_no : "",
+              noOfBales: item.no_of_bales ? Number(item.no_of_bales) : 0,
+              lint_quantity: item.lint_quantity ? Number(item.lint_quantity) : 0,
+              seedConsmed: item.total_qty ? Number(item.total_qty) : 0,
+              got: item.gin_out_turn ? item.gin_out_turn : "",
+              lint_quantity_sold: item.lint_quantity_sold ? Number(item.lint_quantity_sold) : 0,
+              sold_bales: item.sold_bales ? Number(item.sold_bales) : 0,
+              lint_qty_greyout: item.lint_qty_greyout ? Number(formatDecimal(item.lint_qty_greyout)) : 0,
+              greyout_bales: item.greyout_bales ? Number(item.greyout_bales) : 0,
+              lint_qty_transfered: item.lint_qty_transfered ? Number(formatDecimal(item.lint_qty_transfered)) : 0,
+              bales_transfered: item.bales_transfered ? Number(item.bales_transfered) : 0,
+              lint_stock: item.lint_stock && Number(item.lint_stock) > 0 ? Number(item.lint_stock) : 0,
+              bale_stock: item.bale_stock && Number(item.bale_stock) > 0 ? Number(item.bale_stock) : 0,
+              program: item.program ? item.program : "",
+              village_names: item.village_names && item.village_names.length > 0 ? item.village_names.join(", ") : "",
+              greyout_status: item.greyout_status ? "Yes" : "No",
+            });
+          }
+        totals.total_no_of_bales += item.no_of_bales? Number(item.no_of_bales): 0;
+        totals.total_lint_quantity += item.lint_quantity? Number(item.lint_quantity): 0;
+        totals.total_seedConsmed += item.seedConsmed? Number(item.seedConsmed):0;
+        totals.total_lint_quantity_sold +=  item.lint_quantity_sold? Number(item.lint_quantity_sold):0;
+        totals.total_lint_qty_transfered += item.lint_qty_transfered? Number(item.lint_qty_transfered):0;
+        totals.total_sold_bales += item.sold_bales?Number(item.sold_bales):0;
+        totals.total_bales_transfered += item.bales_transfered?Number(item.bales_transfered):0;
+        totals.total_lint_stock += item.lint_stock?Number(item.lint_stock):0;
+        totals.total_bale_stock += item.bale_stock?Number(item.bale_stock):0;
+        
         worksheet.addRow(rowValues);
       }
+
+      let rowValues;
+
+      if (isOrganic === 'true') {
+        rowValues = Object.values({
+          index: "",
+          country: "",
+          state: "",
+          date: "",
+          created_date: "",
+          no_of_days: "",
+          from_date: "",
+          to_date:  "",
+          season: "",
+          ginner: "",
+          heap: '',
+          lot_no: "",
+          press_no: "",
+          reel_press_no_no : "",
+          noOfBales: "Total No of Bales=" + String(totals.total_no_of_bales),
+          lint_quantity: "Total lint Qty =" + String(totals.total_lint_quantity),
+          program:"",
+          greyout_status: "",
+        });
+
+       
+      }
+      else if (isBrand === 'true') {
+        rowValues = Object.values({
+          index: "",
+          country: "",
+          state: "",
+          date: "",
+          created_date: "",
+          no_of_days: "",
+          from_date: "",
+          to_date:  "",
+          season: "",
+          ginner: "",
+          heap: '',
+          lot_no: "",
+          press_no: "",
+          reel_lot_no: "",
+          reel_press_no: "",
+          noOfBales: "Total No of Bales=" + String(totals.total_no_of_bales),
+          lint_quantity: "Total lint Qty =" + String(totals.total_lint_quantity),
+          program: "",
+          greyout_status: "",
+        });
+      
+      }
+      else if(isAdmin === 'true'){
+        rowValues = Object.values({
+          index: "",
+          country: "",
+          state: "",
+          date: "",
+          created_date: "",
+          no_of_days: "",
+          from_date: "",
+          to_date:  "",
+          seed_consumed_seasons: "",
+          season: "",
+          ginner: "",
+          heap: '',
+          lot_no: "",
+          press_no: "",
+          reel_lot_no: "",
+          reel_press_no: "",
+          noOfBales: "Total No of Bales=" + String(totals.total_no_of_bales),
+          lint_quantity: "Total lint Qty =" + String(totals.total_lint_quantity),
+          seedConsmed: "Total Seed Consume = "+ String(totals.total_seedConsmed),
+          got: "",
+          lint_quantity_sold: "Total lint sold =" + String(totals.total_lint_quantity_sold),
+          sold_bales: "Total bale sold = " + String(totals.total_sold_bales),
+          lint_qty_greyout: "",
+          greyout_bales: "",
+          lint_qty_transfered: "Total lint transfered = " + String(totals.total_lint_qty_transfered),
+          bales_transfered:  "Total bales transfered = " + String(totals.total_bales_transfered),
+          lint_stock: "Total lint stock= " + String(totals.total_lint_stock),
+          bale_stock:  "Total bale stock= " + String(totals.total_bale_stock),
+          program: "",
+          greyout_status: "",
+        });         
+      }
+      else {
+          rowValues = Object.values({
+            index: "",
+            country: "",
+            state: "",
+            date: "",
+            created_date: "",
+            no_of_days: "",
+            from_date: "",
+            to_date:  "",
+            seed_consumed_seasons:"",
+            season: "",
+            ginner: "",
+            heap: '',
+            lot_no: "",
+            press_no: "",
+            reel_lot_no: "",
+            reel_press_no: "",
+            noOfBales: "Total No of Bales=" + String(totals.total_no_of_bales),
+            lint_quantity: "Total lint Qty =" + String(totals.total_lint_quantity),
+            seedConsmed: "Total Seed Consume = "+ String(totals.total_seedConsmed),
+            got: "",
+            lint_quantity_sold: "Total lint sold =" + String(totals.total_lint_quantity_sold),
+            sold_bales: "Total bale sold = " + String(totals.total_sold_bales),
+            lint_qty_greyout: "",
+            greyout_bales: "",
+            lint_qty_transfered: "Total lint transfered = " + String(totals.total_lint_qty_transfered),
+            bales_transfered: "Total bales transfered = " + String(totals.total_bales_transfered),
+            lint_stock: "Total lint stock= " + String(totals.total_lint_stock),
+            bale_stock: "Total bale stock= " + String(totals.total_bale_stock),
+            program: "",
+            village_names: "",
+            greyout_status: "",
+          });
+        }
+
+        worksheet.addRow(rowValues);
+      // Define a border style
+      const borderStyle = {
+        top: { style: "thin" },
+        bottom: { style: "thin" },
+        left: { style: "thin" },
+        right: { style: "thin" },
+      };
+  
       // Auto-adjust column widths based on content
       worksheet.columns.forEach((column: any) => {
         let maxCellLength = 0;
         column.eachCell({ includeEmpty: true }, (cell: any) => {
           const cellLength = (cell.value ? cell.value.toString() : "").length;
           maxCellLength = Math.max(maxCellLength, cellLength);
+          cell.border = borderStyle;
         });
         column.width = Math.min(15, maxCellLength + 2); // Limit width to 30 characters
       });
@@ -1288,7 +1533,19 @@ const fetchPendingGinnerSales = async (req: Request, res: Response) => {
       {
         model: Ginner,
         as: "ginner",
-        attributes: ["id", "name", "country_id", "brand"],
+       // attributes: ["id", "name", "country_id", "brand"],
+        include: [
+          {
+            model: Country,
+            as: "country",
+            attributes:["county_name"]
+          },
+          {
+            model: State,
+            as: "state",
+            attributes:["state_name"]
+          },
+        ],
       },
       {
         model: Season,
@@ -1318,6 +1575,7 @@ const fetchPendingGinnerSales = async (req: Request, res: Response) => {
         [Sequelize.literal('"sales"."id"'), "sales_id"],
         [Sequelize.literal('"sales"."date"'), "date"],
         [Sequelize.literal('"sales"."createdAt"'), "createdAt"],
+        [Sequelize.literal('EXTRACT(DAY FROM AGE("sales"."createdAt", "sales"."date"))'), "no_of_days"],  
         [Sequelize.col('"sales"."season"."name"'), "season_name"],
         [Sequelize.col('"sales"."ginner"."id"'), "ginner_id"],
         [Sequelize.col('"sales"."ginner"."name"'), "ginner"],
@@ -1338,6 +1596,9 @@ const fetchPendingGinnerSales = async (req: Request, res: Response) => {
         [Sequelize.literal('"sales"."invoice_file"'), "invoice_file"],
         [Sequelize.literal('"sales"."status"'), "status"],
         [Sequelize.literal('"sales"."qr"'), "qr"],
+        [sequelize.col('"sales"."ginner"."country"."county_name"'), "country_name"],
+        [sequelize.col('"sales"."ginner"."state"."state_name"'), "state_name"],
+
       ],
       where: whereCondition,
       include: [
@@ -1367,6 +1628,8 @@ const fetchPendingGinnerSales = async (req: Request, res: Response) => {
         "sales.buyerdata.id",
         "sales.program.id",
         "sales.buyerdata_ginner.id",
+        "sales.ginner.country.id",
+        "sales.ginner.state.id",
       ],
       order: [["sales_id", "desc"]],
       offset: offset,
@@ -1463,6 +1726,7 @@ const exportPendingGinnerSales = async (req: Request, res: Response) => {
       // Create the excel workbook file
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet("Sheet1");
+      /*
       if (isOrganic === 'true') {
         worksheet.mergeCells('A1:N1');
       } else {
@@ -1472,11 +1736,15 @@ const exportPendingGinnerSales = async (req: Request, res: Response) => {
       mergedCell.value = "CottonConnect | Ginner Pending Sales Report";
       mergedCell.font = { bold: true };
       mergedCell.alignment = { horizontal: "center", vertical: "middle" };
+
+      */
       // Set bold font for header row
       let headerRow;
       if (isOrganic === 'true') {
         headerRow = worksheet.addRow([
           "Sr No.",
+          "country",
+          "state",
           "Date",
           "Season",
           "Ginner Name",
@@ -1495,6 +1763,8 @@ const exportPendingGinnerSales = async (req: Request, res: Response) => {
       else{
        headerRow = worksheet.addRow([
         "Sr No.",
+        "country",
+        "state",
         "Date",
         "Season",
         "Ginner Name",
@@ -1517,7 +1787,19 @@ const exportPendingGinnerSales = async (req: Request, res: Response) => {
         {
           model: Ginner,
           as: "ginner",
-          attributes: ["id", "name", "country_id", "brand"],
+          //attributes: ["id", "name", "country_id", "brand"],
+          include: [
+            {
+              model: Country,
+              as: "country",
+              attributes:["county_name"]
+            },
+            {
+              model: State,
+              as: "state",
+              attributes:["state_name"]
+            },
+          ],
         },
         {
           model: Season,
@@ -1566,6 +1848,9 @@ const exportPendingGinnerSales = async (req: Request, res: Response) => {
           [Sequelize.literal('"sales"."invoice_file"'), "invoice_file"],
           [Sequelize.literal('"sales"."status"'), "status"],
           [Sequelize.literal('"sales"."qr"'), "qr"],
+          [sequelize.col('"sales"."ginner"."country"."county_name"'), "country_name"],
+        [sequelize.col('"sales"."ginner"."state"."state_name"'), "state_name"],
+        
         ],
         where: whereCondition,
         include: [
@@ -1595,11 +1880,18 @@ const exportPendingGinnerSales = async (req: Request, res: Response) => {
           "sales.buyerdata.id",
           "sales.program.id",
           "sales.buyerdata_ginner.id",
+          "sales.ginner.country.id",
+          "sales.ginner.state.id",
         ],
         order: [["sales_id", "desc"]],
         offset: offset,
         limit: limit,
       });
+
+      let totals = {  
+        total_no_of_bales: 0,
+        total_lint_quantity: 0,
+      }
 
       // Append data to worksheet
       for await (const [index, item] of rows.entries()) {
@@ -1607,6 +1899,8 @@ const exportPendingGinnerSales = async (req: Request, res: Response) => {
         if(isOrganic === 'true'){
           rowValues = Object.values({
             index: index + 1,
+            country: item.dataValues.country_name?item.dataValues.country_name:"",
+            state: item.dataValues.state_name?item.dataValues.state_name:"",
             date: item.dataValues.date ? item.dataValues.date : "",
             season: item.dataValues.season_name ? item.dataValues.season_name : "",
             ginner: item.dataValues.ginner ? item.dataValues.ginner : "",
@@ -1625,6 +1919,8 @@ const exportPendingGinnerSales = async (req: Request, res: Response) => {
         else{
         rowValues = Object.values({
           index: index + 1,
+          country: item.dataValues.country_name?item.dataValues.country_name:"",
+          state: item.dataValues.state_name?item.dataValues.state_name:"",
           date: item.dataValues.date ? item.dataValues.date : "",
           season: item.dataValues.season_name ? item.dataValues.season_name : "",
           ginner: item.dataValues.ginner ? item.dataValues.ginner : "",
@@ -1641,14 +1937,72 @@ const exportPendingGinnerSales = async (req: Request, res: Response) => {
           status: item.dataValues.status ? item.dataValues.status : "",
         });
       }
+
+       totals.total_no_of_bales += Number(item.dataValues.no_of_bales);
+       totals.total_lint_quantity += Number(item.dataValues.total_qty);
+
         worksheet.addRow(rowValues);
       }
+
+      let rowValues;
+      if(isOrganic === 'true'){
+        rowValues = Object.values({
+          index: "",
+          country: "",
+          state: "",
+          date:  "",
+          season:  "",
+          ginner:  "",
+          invoice:  "",
+          buyer_type: "",
+          buyer:  '',
+          lot_no: "",
+          no_of_bales: "Total No of bales = "+ totals.total_no_of_bales,
+          press_no: "",
+          rate: "",
+          total_qty: "Total Qty = "+ totals.total_lint_quantity,
+          program:  "",
+          status:"",
+        });
+      }
+      else{
+      rowValues = Object.values({
+        index: "",
+        country: "",
+        state: "",
+        date:  "",
+        season:  "",
+        ginner:  "",
+        invoice:  "",
+        buyer_type: "",
+        buyer:  '',
+        lot_no:  "",
+        reel_lot_no: "",
+        no_of_bales: "Total No of bales = "+ totals.total_no_of_bales,
+        press_no:  "",
+        rate: "",
+        total_qty: "Total Qty = "+ totals.total_lint_quantity,
+        program: "",
+        status: "",
+      });
+    }
+
+    worksheet.addRow(rowValues);
+
+      const borderStyle = {
+        top: { style: "thin" },
+        bottom: { style: "thin" },
+        left: { style: "thin" },
+        right: { style: "thin" },
+      };
+      
       // Auto-adjust column widths based on content
       worksheet.columns.forEach((column: any) => {
         let maxCellLength = 0;
         column.eachCell({ includeEmpty: true }, (cell: any) => {
           const cellLength = (cell.value ? cell.value.toString() : "").length;
           maxCellLength = Math.max(maxCellLength, cellLength);
+          cell.border = borderStyle;
         });
         column.width = Math.min(24, maxCellLength + 2); // Limit width to 30 characters
       });
@@ -2327,10 +2681,13 @@ const fetchGinSalesPagination = async (req: Request, res: Response) => {
         gs.id AS ginsale_id,
         gs.date AS date,
         gs."createdAt" AS "createdAt",
+        EXTRACT(DAY FROM AGE(gs."createdAt" , gs.date)) AS no_of_days,
         season.name AS season_name,
         program.program_name AS program,
         ginner.id AS ginner_id,
         ginner.name AS ginner,
+        c.county_name AS country_name,
+        s.state_name AS state_name,
         gs.total_qty AS total_qty,
         spinner.id AS spinner_id,
         spinner.name AS buyerdata,
@@ -2400,10 +2757,13 @@ const fetchGinSalesPagination = async (req: Request, res: Response) => {
     LEFT JOIN ginners buyerginner ON gs.buyer_ginner = buyerginner.id
     LEFT JOIN spinners spinner ON gs.buyer = spinner.id
     LEFT JOIN programs program ON gs.program_id = program.id
+    LEFT JOIN countries c ON ginner.country_id = c.id
+    LEFT JOIN states s ON ginner.state_id = s.id
+
     ${whereClause}
     GROUP BY 
-        gs.id, spinner.id, season.id, ginner.id, program.id, buyerginner.id
-    ORDER BY gs.id DESC
+        gs.id, spinner.id, season.id, ginner.id, program.id, buyerginner.id, c.id, s.id
+    ORDER BY ginner.name ASC
     LIMIT ${limit} OFFSET ${offset}
   ;`
 
@@ -3274,6 +3634,7 @@ const exportGinnerSales = async (req: Request, res: Response) => {
         data: process.env.BASE_URL + "Ginner-sales-report.xlsx",
       });
     } else {
+     
       if (searchTerm) {
         whereCondition.push(`
         (
@@ -3337,29 +3698,31 @@ const exportGinnerSales = async (req: Request, res: Response) => {
       // Create the excel workbook file
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet("Sheet1");
-       if (isOrganic === 'true') {
-        worksheet.mergeCells('A1:P1');
-      } else if (isBrand === 'true') {
-        worksheet.mergeCells('A1:Q1');
-      } else {
-        worksheet.mergeCells('A1:U1');
-      }
-      const mergedCell = worksheet.getCell('A1');
-      mergedCell.value = 'CottonConnect | Ginner Sales Report';
-      mergedCell.font = { bold: true };
-      mergedCell.alignment = { horizontal: 'center', vertical: 'middle' };
+      /*
+        if (isOrganic === 'true') {
+          worksheet.mergeCells('A1:P1');
+        } else if (isBrand === 'true') {
+          worksheet.mergeCells('A1:Q1');
+        } else {
+          worksheet.mergeCells('A1:U1');
+        }
+        const mergedCell = worksheet.getCell('A1');
+        mergedCell.value = 'CottonConnect | Ginner Sales Report';
+        mergedCell.font = { bold: true };
+        mergedCell.alignment = { horizontal: 'center', vertical: 'middle' };
+      */
       // Set bold font for header row
       let headerRow;
       if (isOrganic === 'true') {
         headerRow = worksheet.addRow([
-          "Sr No.", "Process Date", "Data Entry Date", "Lint sale chosen season", "Ginner Name",
+          "Sr No.","country","state", "Process Date", "Data Entry Date", "No of Days", "Lint sale chosen season", "Ginner Name",
           "Invoice No", "Buyer Type", "Sold To", "Bale Lot No", "No of Bales", "Press/Bale No", "Rate/Kg",
           "Total Quantity", "Vehicle No", "Transporter Name", "Programme", "Agent Detials"
         ]);
       }
       else if (isBrand === 'true') {
         headerRow = worksheet.addRow([
-          "Sr No.", "Process Date", "Data Entry Date", "Lint sale chosen season", "Ginner Name",
+          "Sr No.","country","state", "Process Date", "Data Entry Date", "No of Days", "Lint sale chosen season", "Ginner Name",
           "Invoice No","Buyer Type", "Sold To", "Bale Lot No", "REEL Lot No", "No of Bales", "Press/Bale No", "Rate/Kg",
           "Total Quantity", "Vehicle No", "Transporter Name", "Programme", "Agent Detials"
         ]);
@@ -3371,7 +3734,7 @@ const exportGinnerSales = async (req: Request, res: Response) => {
         // ]);
 
         headerRow = worksheet.addRow([
-          "Sr No.", "Process Date", "Data Entry Date", "Lint Process Season", "Lint sale chosen season", "Ginner Name",
+          "Sr No.","country","state", "Process Date", "Data Entry Date", "No of Days", "Lint Process Season", "Lint sale chosen season", "Ginner Name",
           "Invoice No","Buyer Type", "Sold To", "Bale Lot No", "REEL Lot No", "No of Bales", "Press/Bale No", "Rate/Kg",
           "Total Quantity", "Other Season Quantity (Kgs)", "Other Season Bales", "Sales Value", "Vehicle No", "Transporter Name", "Programme", "Agent Detials", "Status"
         ]);
@@ -3490,10 +3853,13 @@ const exportGinnerSales = async (req: Request, res: Response) => {
           gs.id AS ginsale_id,
           gs.date AS date,
           gs."createdAt" AS "createdAt",
+          EXTRACT(DAY FROM AGE(gs."createdAt" , gs.date)) AS no_of_days,
           season.name AS season_name,
           program.program_name AS program,
           ginner.id AS ginner_id,
           ginner.name AS ginner,
+          c.county_name AS country_name,
+          s.state_name AS state_name,
           gs.total_qty AS total_qty,
           spinner.id AS spinner_id,
           spinner.name AS buyerdata,
@@ -3562,10 +3928,12 @@ const exportGinnerSales = async (req: Request, res: Response) => {
       LEFT JOIN ginners buyerginner ON gs.buyer_ginner = buyerginner.id
       LEFT JOIN spinners spinner ON gs.buyer = spinner.id
       LEFT JOIN programs program ON gs.program_id = program.id
+      LEFT JOIN countries c ON ginner.country_id = c.id
+      LEFT JOIN states s ON ginner.state_id = s.id
       ${whereClause}
       GROUP BY 
-          gs.id, spinner.id, season.id, ginner.id, program.id, buyerginner.id
-      ORDER BY gs.id DESC
+          gs.id, spinner.id, season.id, ginner.id, program.id, buyerginner.id, c.id, s.id
+      ORDER BY ginner.name ASC
       LIMIT ${limit} OFFSET ${offset}
    ;`
 
@@ -3573,14 +3941,23 @@ const exportGinnerSales = async (req: Request, res: Response) => {
         type: sequelize.QueryTypes.SELECT,
       })
 
+      let totels = {
+        total_no_of_bales: 0,
+        total_lint_quantity: 0,
+        total_Sales_value: 0,
+      };
+
       // Append data to worksheet
       for await (const [index, item] of rows.entries()) {
         let rowValues;
         if (isOrganic === 'true') {
           rowValues = Object.values({
             index: index + 1,
+            country: item.country_name ? item.country_name : '',
+            state: item.state_name ? item.state_name : '',
             date: item.date ? item.date : '',
             created_at: item.createdAt ? item.createdAt : '',
+            no_of_days: item.no_of_days ? item.no_of_days : '',            
             season: item.season_name ? item.season_name : '',
             ginner: item.ginner ? item.ginner : '',
             invoice: item.invoice_no ? item.invoice_no : '',
@@ -3600,8 +3977,11 @@ const exportGinnerSales = async (req: Request, res: Response) => {
         else if (isBrand === 'true') {
           rowValues = Object.values({
             index: index + 1,
+            country: item.country_name ? item.country_name : '',
+            state: item.state_name ? item.state_name : '',            
             date: item.date ? item.date : '',
             created_at: item.createdAt ? item.createdAt : '',
+            no_of_days: item.no_of_days ? item.no_of_days : '',
             season: item.season_name ? item.season_name : '',
             ginner: item.ginner ? item.ginner : '',
             invoice: item.invoice_no ? item.invoice_no : '',
@@ -3622,8 +4002,11 @@ const exportGinnerSales = async (req: Request, res: Response) => {
 
           rowValues = Object.values({
             index: index + 1,
+            country: item.country_name ? item.country_name : '',
+            state: item.state_name ? item.state_name : '',            
             date: item.date ? item.date : '',
             created_at: item.createdAt ? item.createdAt : '',
+            no_of_days: item.no_of_days ? item.no_of_days : '',
             // seed_consumed_seasons: item.seed_consumed_seasons ? item.seed_consumed_seasons : "",
             lint_process_seasons: item.lint_process_seasons ? item.lint_process_seasons : '',
             season: item.season_name ? item.season_name : '',
@@ -3661,14 +4044,61 @@ const exportGinnerSales = async (req: Request, res: Response) => {
             status: item.status === 'Sold' ? 'Sold' : `Available [Stock : ${item.qty_stock ? item.qty_stock : 0}]`
           });
         }
+
+        totels.total_no_of_bales += item.no_of_bales ? Number(item.no_of_bales) : 0;
+        totels.total_lint_quantity += item.lint_quantity ? Number(item.lint_quantity) : 0;
+        totels.total_Sales_value += item.sale_value ? Number(item.sale_value) : 0;
+
         worksheet.addRow(rowValues);
       }
+
+     let rowValues = Object.values({
+        index: "",
+        country: "",
+        state: '',            
+        date: '',
+        created_at:  '',
+        no_of_days: '',
+        // seed_consumed_seasons: item.seed_consumed_seasons ? item.seed_consumed_seasons : "",
+        lint_process_seasons: '',
+        season: '',
+        ginner:  '',
+        invoice:'',
+        buyer_type:"",
+        buyer: '',
+        // heap: '',
+        lot_no:  '',
+        reel_lot_no: '',
+        no_of_bales: "Total Bales = " + totels.total_no_of_bales,
+        press_no:'',
+        rate:0,
+        lint_quantity:  'Total Lint Quantity = ' + totels.total_lint_quantity,
+        other_season_quantity: '',
+    
+      other_season_bales: '',
+        sales_value: 'Total Sales Value = ' + totels.total_Sales_value,
+        vehicle_no: '',
+        transporter_name: '',
+        program: '',
+        agentDetails: 'NA',
+        status: ''
+      });
+      worksheet.addRow(rowValues);
+
+
+      const borderStyle = {
+        top: { style: "thin" },
+        bottom: { style: "thin" },
+        left: { style: "thin" },
+        right: { style: "thin" },
+      };
       // Auto-adjust column widths based on content
       worksheet.columns.forEach((column: any) => {
         let maxCellLength = 0;
         column.eachCell({ includeEmpty: true }, (cell: any) => {
           const cellLength = (cell.value ? cell.value.toString() : '').length;
           maxCellLength = Math.max(maxCellLength, cellLength);
+          cell.border = borderStyle;
         });
         column.width = Math.min(14, maxCellLength + 2); // Limit width to 30 characters
       });
@@ -11597,15 +12027,17 @@ const fetchGinnerSummaryPagination = async (req: Request, res: Response) => {
 
     let { count, rows } = await Ginner.findAndCountAll({
       where: whereCondition,
-      attributes: ["id", "name", "address"],
+      attributes: ["id", "name", "address", "state_id", "country_id"],
       offset: offset,
       limit: limit,
-    });
+      order: [["name", "ASC"]],
+    }
+    );
     let result: any = [];
     for await (let ginner of rows) {
       let obj: any = {};
 
-      let [cottonProcured, cottonProcessed, cottonProcessedByHeap, lintProcured, greyoutLint, lintSold,ginToGinSale,ginToGinReceive, old_weight]: any =
+      let [cottonProcured, cottonProcessed, cottonProcessedByHeap, lintProcured, greyoutLint, lintSold, ginToGinSale, ginToGinReceive, old_weight, countryname, statename]: any =
         await Promise.all([
           // Transaction.findOne({
           //   attributes: [
@@ -11954,6 +12386,18 @@ const fetchGinnerSummaryPagination = async (req: Request, res: Response) => {
             },
             raw: true // Get raw data for easier access
           }),
+          Country.findOne({
+            attributes: ["county_name"],
+            where: {
+              id: ginner.country_id
+            }
+          }),
+          State.findOne({
+            attributes: ["state_name"],
+            where: {
+              id: ginner.state_id
+            }
+          })
         ]);
       const cottonProcessedQty = isNaN(cottonProcessed?.dataValues?.qty) ? 0 : cottonProcessed?.dataValues?.qty;
       const cottonProcessedByHeapQty = isNaN(cottonProcessedByHeap?.dataValues?.qty) ? 0 : cottonProcessedByHeap?.dataValues?.qty;
@@ -12007,6 +12451,8 @@ const fetchGinnerSummaryPagination = async (req: Request, res: Response) => {
         obj.balesProduced > obj.balesSold
           ? obj.balesProduced - obj.balesSold
           : 0;
+      obj.country = countryname?.county_name;
+      obj.state = statename?.state_name;
       result.push({ ...obj, ginner });
     }
     //fetch data with pagination
@@ -12168,14 +12614,17 @@ const exportGinnerSummary = async (req: Request, res: Response) => {
   const cottenSectionWhere: any = {};
   const ginToGinWhere: any = {};
   try {
-    if (exportType === "all") {
-      return res.status(200).send({
-        success: true,
-        messgage: "File successfully Generated",
-        data: process.env.BASE_URL + "ginner-summary.xlsx",
-      });
-
-    } else {
+    
+      if (exportType === "all") {
+        return res.status(200).send({
+          success: true,
+          messgage: "File successfully Generated",
+          data: process.env.BASE_URL + "ginner-summary.xlsx",
+        });
+  
+      } else 
+  
+    {
       if (searchTerm) {
         whereCondition[Op.or] = [{ name: { [Op.iLike]: `%${searchTerm}%` } }];
       }
@@ -12227,30 +12676,38 @@ const exportGinnerSummary = async (req: Request, res: Response) => {
       // Create the excel workbook file
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet("Sheet1");
-      worksheet.mergeCells('A1:S1');
-      const mergedCell = worksheet.getCell('A1');
-      mergedCell.value = 'CottonConnect | Ginner Summary Report';
-      mergedCell.font = { bold: true };
-      mergedCell.alignment = { horizontal: 'center', vertical: 'middle' };
+      // worksheet.mergeCells('A1:S1');
+      // const mergedCell = worksheet.getCell('A1');
+      // mergedCell.value = 'CottonConnect | Ginner Summary Report';
+      // mergedCell.font = { bold: true };
+      // mergedCell.alignment = { horizontal: 'center', vertical: 'middle' };
       // Set bold font for header row
       const headerRow = worksheet.addRow([
-        "S. No.", "Ginner Name", "Total seed cotton procured (MT)", "Total seed cotton processed (MT)",
-        "Total seed cotton in stock (MT)", "Total lint produce (MT)", "Total lint sold (MT)", "Grey-Out Lint Quantity (MT)", "Total Lint Received (MT)", "Total Lint Transfered (MT)",  "Actual lint in stock (MT)", "Total lint in stock (MT)",
+        "S. No.", "Ginner Name", "Country", "State", "Total seed cotton procured (MT)", "Total seed cotton processed (MT)",
+        "Total seed cotton in stock (MT)", "Total lint produce (MT)", "Total lint sold (MT)", "Grey-Out Lint Quantity (MT)", "Total Lint Received (MT)", "Total Lint Transfered (MT)", "Actual lint in stock (MT)", "Total lint in stock (MT)",
         "Total bales produced", "Total Bales sold", "Total Bales Greyout", "Total Bales Received", "Total Bales Transfered", "Actual Bales in stock", "Total bales in stock"
       ]);
       headerRow.font = { bold: true };
-      let rows = await Ginner.findAll({
-        where: whereCondition, attributes: ["id", "name", "address"],
+      let options = (exportType === "all") ? {
+        attributes: ["id", "name", "address", "state_id", "country_id"],
+        order: [["name", "ASC"]]
+      } : {
+        where: whereCondition,
+        attributes: ["id", "name", "address", "state_id", "country_id"],
         offset: offset,
         limit: limit,
-      });
+        order: [["name", "ASC"]]
+      };
+
+
+      let rows = await Ginner.findAll(options);
 
       // Append data to worksheet
       for await (const [index, item] of rows.entries()) {
         let obj: any = {};
 
 
-        let [cottonProcured, cottonProcessed, cottonProcessedByHeap, lintProcured, greyoutLint, lintSold, ginToGinSale, ginToGinReceive]: any = await Promise.all([
+        let [cottonProcured, cottonProcessed, cottonProcessedByHeap, lintProcured, greyoutLint, lintSold, ginToGinSale, ginToGinReceive, countryname, statename]: any = await Promise.all([
           // Transaction.findOne({
           //   attributes: [
           //     [sequelize.fn('COALESCE', sequelize.fn('SUM', Sequelize.literal("CAST(qty_purchased AS DOUBLE PRECISION)")), 0), 'qty']
@@ -12538,6 +12995,18 @@ const exportGinnerSummary = async (req: Request, res: Response) => {
               "$ginsales.buyer_type$": 'Ginner'
             },
             group: ["ginsales.buyer_ginner"]
+          }),
+          Country.findOne({
+            attributes: ["county_name"],
+            where: {
+              id: item.country_id
+            }
+          }),
+          State.findOne({
+            attributes: ["state_name"],
+            where: {
+              id: item.state_id
+            }
           })
         ]);
         const cottonProcessedQty = isNaN(cottonProcessed?.dataValues?.qty) ? 0 : cottonProcessed?.dataValues?.qty;
@@ -12583,9 +13052,14 @@ const exportGinnerSummary = async (req: Request, res: Response) => {
           : 0;
         obj.balesStock = obj.balesProduced > obj.balesSold ? obj.balesProduced - obj.balesSold : 0;
 
+        obj.country = countryname?.dataValues.county_name;
+        obj.state = statename?.dataValues.state_name;
+
         const rowValues = Object.values({
           index: index + 1,
           name: item.name ? item.name : '',
+          country: obj.country,
+          state: obj.state,
           cottonProcuredMt: obj.cottonProcuredMt ? Number(obj.cottonProcuredMt) : 0,
           cottonProcessedeMt: obj.cottonProcessedeMt ? Number(obj.cottonProcessedeMt) : 0,
           cottonStockMt: obj.cottonStockMt ? Number(obj.cottonStockMt) : 0,
@@ -12606,12 +13080,20 @@ const exportGinnerSummary = async (req: Request, res: Response) => {
         });
         worksheet.addRow(rowValues);
       }
+      // Define a border style
+      const borderStyle = {
+        top: { style: "thin" },
+        bottom: { style: "thin" },
+        left: { style: "thin" },
+        right: { style: "thin" },
+      };
       // Auto-adjust column widths based on content
       worksheet.columns.forEach((column: any) => {
         let maxCellLength = 0;
         column.eachCell({ includeEmpty: true }, (cell: any) => {
           const cellLength = (cell.value ? cell.value.toString() : '').length;
           maxCellLength = Math.max(maxCellLength, cellLength);
+          cell.border = borderStyle;
         });
         column.width = Math.min(24, maxCellLength + 2); // Limit width to 30 characters
       });
@@ -12668,13 +13150,13 @@ const fetchGinnerCottonStock = async (req: Request, res: Response) => {
       whereCondition["$ginner.country_id$"] = { [Op.in]: idArray };
     }
 
-    if (programId) {
-      const idArray: number[] = programId
-        .split(",")
-        .map((id: any) => parseInt(id, 10));
-      transactionWhere.program_id = { [Op.in]: idArray };
-      whereCondition.program_id = { [Op.in]: idArray };
-    }
+    // if (programId) {
+    //   const idArray: number[] = programId
+    //     .split(",")
+    //     .map((id: any) => parseInt(id, 10));
+    //   transactionWhere.program_id = { [Op.in]: idArray };
+    //   whereCondition.program_id = { [Op.in]: idArray };
+    // }
 
     if (seasonId) {
       const idArray: number[] = seasonId
@@ -12687,18 +13169,26 @@ const fetchGinnerCottonStock = async (req: Request, res: Response) => {
       {
         model: Ginner,
         as: "ginner",
-        attributes: [],
+        // include: [
+        //   {
+        //     model: Country,
+        //     as  : "country",
+        //   },
+        //   {
+        //     model: State,
+        //     as  : "state",
+        //   }
+        // ]
       },
       {
         model: Season,
         as: "season",
-        attributes: [],
       },
-      {
-        model: Program,
-        as: "program",
-        attributes: [],
-      },
+      // {
+      //   model: Program,
+      //   as: "program",
+
+      // },
     ];
 
     let { count, rows } = await GinProcess.findAndCountAll({
@@ -12707,6 +13197,8 @@ const fetchGinnerCottonStock = async (req: Request, res: Response) => {
         [Sequelize.literal('"ginner"."name"'), "ginner_name"],
         [Sequelize.literal('"season"."id"'), "season_id"],
         [Sequelize.col('"season"."name"'), "season_name"],
+        [Sequelize.literal('"ginner"."country_id"'), "country_id"],
+        [Sequelize.literal('"ginner"."state_id"'), "state_id"],
         // [Sequelize.literal('"program"."program_name"'), 'program_name'],
         // [
         //   sequelize.fn(
@@ -12720,9 +13212,10 @@ const fetchGinnerCottonStock = async (req: Request, res: Response) => {
       where: whereCondition,
       include: include,
       group: ["ginner.id", "season.id"],
-      order: [["ginner_id", "desc"]],
+      order: [["ginner_name", "ASC"]],
       limit: limit,
       offset: offset,
+      
     });
 
     let result: any = [];
@@ -12761,10 +13254,26 @@ const fetchGinnerCottonStock = async (req: Request, res: Response) => {
         },
       });
 
+      const country_name = await Country.findOne({
+        attributes: ["county_name"],
+        where: {
+          id: ginner.ginner.country_id,
+        },
+      });
+
+      const state_name = await State.findOne({
+        attributes: ["state_name"],
+        where: {
+          id: ginner.ginner.state_id,
+        },
+      });
+
       obj.cotton_procured = cottonProcured?.dataValues?.cotton_procured ?? 0;
       obj.cotton_stock = cottonProcured?.dataValues?.cotton_stock ?? 0;
       obj.cotton_processed = obj.cotton_procured - obj.cotton_stock;
-      result.push({ ...ginner?.dataValues, ...obj });
+      obj.country = country_name?.dataValues.county_name;
+      obj.state = state_name?.dataValues.state_name;
+      result.push({ ...ginner?.dataValues, ...obj});
     }
     //fetch data with pagination
 
@@ -12845,16 +13354,20 @@ const exportGinnerCottonStock = async (req: Request, res: Response) => {
       // Create the excel workbook file
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet("Sheet1");
+      /*
       worksheet.mergeCells("A1:F1");
       const mergedCell = worksheet.getCell("A1");
       mergedCell.value = "CottonConnect | Ginner Seed Cotton Stock Report";
       mergedCell.font = { bold: true };
       mergedCell.alignment = { horizontal: "center", vertical: "middle" };
+      */
       // Set bold font for header row
       const headerRow = worksheet.addRow([
         "Sr No.",
         "Ginner Name",
         "Season",
+        "Country",
+        "State",
         "Total Seed Cotton Procured (Kgs)",
         "Total Seed Cotton in Processed (Kgs)",
         "Total Seed Cotton in Stock (Kgs)",
@@ -12865,18 +13378,26 @@ const exportGinnerCottonStock = async (req: Request, res: Response) => {
         {
           model: Ginner,
           as: "ginner",
-          attributes: [],
+          include: [
+            {
+              model: Country,
+              as: "country",
+            },
+            {
+              model: State,
+              as: "state",
+            }
+
+          ]
         },
         {
           model: Season,
           as: "season",
-          attributes: [],
         },
-        {
-          model: Program,
-          as: "program",
-          attributes: [],
-        },
+        // {
+        //   model: Program,
+        //   as: "program",
+        // },
       ];
 
       let { count, rows } = await GinProcess.findAndCountAll({
@@ -12897,11 +13418,18 @@ const exportGinnerCottonStock = async (req: Request, res: Response) => {
         ],
         where: whereCondition,
         include: include,
-        group: ["ginner.id", "season.id"],
-        order: [["ginner_id", "desc"]],
+        group: ["ginner.id", "season.id", "ginner.country.id", "ginner->state.id"],
+        order: [["ginner_name", "ASC"]],
         limit: limit,
         offset: offset,
       });
+
+      let totals = {
+        total_cotton_procured:0,
+        total_cotton_processed:0,
+        total_cotton_stock:0,
+      }
+
       let result: any = [];
       for await (let [index, item] of rows.entries()) {
         let obj: any = {};
@@ -12942,16 +13470,43 @@ const exportGinnerCottonStock = async (req: Request, res: Response) => {
         obj.cotton_stock = cottonProcured?.dataValues?.cotton_stock ?? 0;
         obj.cotton_processed = obj.cotton_procured - obj.cotton_stock;
 
-        const rowValues = Object.values({
+          const rowValues = Object.values({
           index: index + 1,
           ginner: item?.dataValues.ginner_name ? item?.dataValues.ginner_name : "",
           season: item?.dataValues.season_name ? item?.dataValues.season_name : "",
+          country: item?.dataValues.ginner.country.county_name,
+          state: item?.dataValues.ginner.state.state_name,
           cotton_procured: obj.cotton_procured ? obj.cotton_procured : 0,
           cotton_processed: obj.cotton_processed ? obj.cotton_processed : 0,
           cotton_stock: obj.cotton_stock ? obj.cotton_stock : 0,
         });
+
+        totals.total_cotton_processed += obj.cotton_processed?Number(obj.cotton_processed):0;
+        totals.total_cotton_procured += obj.cotton_procured?Number(obj.cotton_procured):0;
+        totals.total_cotton_stock += obj.cotton_stock?Number(obj.cotton_stock):0;
+
         worksheet.addRow(rowValues);
       }
+
+      const rowValues = Object.values({
+        index: "",
+        ginner:  "",
+        season:  "",
+        country: "",
+        state: "",
+        cotton_procured: "Total Procured = "+ totals.total_cotton_procured,
+        cotton_processed: "Total Processed = "+ totals.total_cotton_processed,
+        cotton_stock: "Total Stock = "+ totals.total_cotton_stock,
+      });
+      worksheet.addRow(rowValues);
+
+      const borderStyle = {
+        top: { style: "thin" },
+        bottom: { style: "thin" },
+        left: { style: "thin" },
+        right: { style: "thin" },
+      };
+
 
       // Auto-adjust column widths based on content
       worksheet.columns.forEach((column: any) => {
@@ -12959,6 +13514,7 @@ const exportGinnerCottonStock = async (req: Request, res: Response) => {
         column.eachCell({ includeEmpty: true }, (cell: any) => {
           const cellLength = (cell.value ? cell.value.toString() : "").length;
           maxCellLength = Math.max(maxCellLength, cellLength);
+          cell.border = borderStyle;
         });
         column.width = Math.min(14, maxCellLength + 2); // Limit width to 30 characters
       });
