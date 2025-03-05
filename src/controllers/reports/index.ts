@@ -720,10 +720,10 @@ const exportGinHeapReport = async (req: Request, res: Response) => {
       const rowValues = Object.values({
         index: "", country: "", state: "", created_date:"", season: "", ginner_heap_no:"",
         reel_heap_no:"", ginner_name:"", village_name: "", 
-        heap_weight:"Total = "+ String(weightSum),
+        heap_weight:Number(formatDecimal(weightSum)),
         heap_starting_date: "", heap_ending_date: "", weighbridge_vehicle_no:""
       });
-      worksheet.addRow(rowValues);
+      worksheet.addRow(rowValues).eachCell((cell, colNumber) => { cell.font={bold:true}});;
 
       const borderStyle = {
         top: { style: "thin" },
@@ -1303,7 +1303,7 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
 
       if (isOrganic === 'true') {
         rowValues = Object.values({
-          index: "",
+          index: "Total: ",
           country: "",
           state: "",
           date: "",
@@ -1317,8 +1317,8 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
           lot_no: "",
           press_no: "",
           reel_press_no_no : "",
-          noOfBales: "Total No of Bales=" + String(totals.total_no_of_bales),
-          lint_quantity: "Total lint Qty =" + String(totals.total_lint_quantity),
+          noOfBales: Number(formatDecimal(totals.total_no_of_bales)),
+          lint_quantity: Number(formatDecimal(totals.total_lint_quantity)),
           program:"",
           greyout_status: "",
         });
@@ -1327,7 +1327,7 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
       }
       else if (isBrand === 'true') {
         rowValues = Object.values({
-          index: "",
+          index: "Total: ",
           country: "",
           state: "",
           date: "",
@@ -1342,8 +1342,8 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
           press_no: "",
           reel_lot_no: "",
           reel_press_no: "",
-          noOfBales: "Total No of Bales=" + String(totals.total_no_of_bales),
-          lint_quantity: "Total lint Qty =" + String(totals.total_lint_quantity),
+          noOfBales: Number(formatDecimal(totals.total_no_of_bales)),
+          lint_quantity: Number(formatDecimal(totals.total_lint_quantity)),
           program: "",
           greyout_status: "",
         });
@@ -1351,7 +1351,7 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
       }
       else if(isAdmin === 'true'){
         rowValues = Object.values({
-          index: "",
+          index: "Total: ",
           country: "",
           state: "",
           date: "",
@@ -1367,25 +1367,25 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
           press_no: "",
           reel_lot_no: "",
           reel_press_no: "",
-          noOfBales: "Total No of Bales=" + String(totals.total_no_of_bales),
-          lint_quantity: "Total lint Qty =" + String(totals.total_lint_quantity),
-          seedConsmed: "Total Seed Consume = "+ String(totals.total_seedConsmed),
+          noOfBales: Number(formatDecimal(totals.total_no_of_bales)),
+          lint_quantity: Number(formatDecimal(totals.total_lint_quantity)),
+          seedConsmed: Number(formatDecimal(totals.total_seedConsmed)),
           got: "",
-          lint_quantity_sold: "Total lint sold =" + String(totals.total_lint_quantity_sold),
-          sold_bales: "Total bale sold = " + String(totals.total_sold_bales),
+          lint_quantity_sold: Number(formatDecimal(totals.total_lint_quantity_sold)),
+          sold_bales: Number(formatDecimal(totals.total_sold_bales)),
           lint_qty_greyout: "",
           greyout_bales: "",
-          lint_qty_transfered: "Total lint transfered = " + String(totals.total_lint_qty_transfered),
-          bales_transfered:  "Total bales transfered = " + String(totals.total_bales_transfered),
-          lint_stock: "Total lint stock= " + String(totals.total_lint_stock),
-          bale_stock:  "Total bale stock= " + String(totals.total_bale_stock),
+          lint_qty_transfered: Number(formatDecimal(totals.total_lint_qty_transfered)),
+          bales_transfered:  Number(formatDecimal(totals.total_bales_transfered)),
+          lint_stock: Number(formatDecimal(totals.total_lint_stock)),
+          bale_stock:  Number(formatDecimal(totals.total_bale_stock)),
           program: "",
           greyout_status: "",
         });         
       }
       else {
           rowValues = Object.values({
-            index: "",
+            index: "Total: ",
             country: "",
             state: "",
             date: "",
@@ -1401,25 +1401,25 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
             press_no: "",
             reel_lot_no: "",
             reel_press_no: "",
-            noOfBales: "Total No of Bales=" + String(totals.total_no_of_bales),
-            lint_quantity: "Total lint Qty =" + String(totals.total_lint_quantity),
-            seedConsmed: "Total Seed Consume = "+ String(totals.total_seedConsmed),
+            noOfBales: Number(formatDecimal(totals.total_no_of_bales)),
+            lint_quantity: Number(formatDecimal(totals.total_lint_quantity)),
+            seedConsmed: Number(formatDecimal(totals.total_seedConsmed)),
             got: "",
-            lint_quantity_sold: "Total lint sold =" + String(totals.total_lint_quantity_sold),
-            sold_bales: "Total bale sold = " + String(totals.total_sold_bales),
+            lint_quantity_sold: Number(formatDecimal(totals.total_lint_quantity_sold)),
+            sold_bales: Number(formatDecimal(totals.total_sold_bales)),
             lint_qty_greyout: "",
             greyout_bales: "",
-            lint_qty_transfered: "Total lint transfered = " + String(totals.total_lint_qty_transfered),
-            bales_transfered: "Total bales transfered = " + String(totals.total_bales_transfered),
-            lint_stock: "Total lint stock= " + String(totals.total_lint_stock),
-            bale_stock: "Total bale stock= " + String(totals.total_bale_stock),
+            lint_qty_transfered: Number(formatDecimal(totals.total_lint_qty_transfered)),
+            bales_transfered: Number(formatDecimal(totals.total_bales_transfered)),
+            lint_stock: Number(formatDecimal(totals.total_lint_stock)),
+            bale_stock: Number(formatDecimal(totals.total_bale_stock)),
             program: "",
             village_names: "",
             greyout_status: "",
           });
         }
 
-        worksheet.addRow(rowValues);
+        worksheet.addRow(rowValues).eachCell((cell, colNumber) => { cell.font={bold:true}});;
       // Define a border style
       const borderStyle = {
         top: { style: "thin" },
@@ -1533,7 +1533,7 @@ const fetchPendingGinnerSales = async (req: Request, res: Response) => {
       {
         model: Ginner,
         as: "ginner",
-       // attributes: ["id", "name", "country_id", "brand"],
+        attributes: ["id", "name", "country_id", "brand", "state_id"],
         include: [
           {
             model: Country,
@@ -1787,7 +1787,7 @@ const exportPendingGinnerSales = async (req: Request, res: Response) => {
         {
           model: Ginner,
           as: "ginner",
-          //attributes: ["id", "name", "country_id", "brand"],
+          attributes: ["id", "name", "country_id", "brand", "state_id"],
           include: [
             {
               model: Country,
@@ -1947,7 +1947,7 @@ const exportPendingGinnerSales = async (req: Request, res: Response) => {
       let rowValues;
       if(isOrganic === 'true'){
         rowValues = Object.values({
-          index: "",
+          index: "Total: ",
           country: "",
           state: "",
           date:  "",
@@ -1957,17 +1957,17 @@ const exportPendingGinnerSales = async (req: Request, res: Response) => {
           buyer_type: "",
           buyer:  '',
           lot_no: "",
-          no_of_bales: "Total No of bales = "+ totals.total_no_of_bales,
+          no_of_bales: Number(formatDecimal(totals.total_no_of_bales)),
           press_no: "",
           rate: "",
-          total_qty: "Total Qty = "+ totals.total_lint_quantity,
+          total_qty: Number(formatDecimal(totals.total_lint_quantity)),
           program:  "",
           status:"",
         });
       }
       else{
       rowValues = Object.values({
-        index: "",
+        index: "Total: ",
         country: "",
         state: "",
         date:  "",
@@ -1978,16 +1978,16 @@ const exportPendingGinnerSales = async (req: Request, res: Response) => {
         buyer:  '',
         lot_no:  "",
         reel_lot_no: "",
-        no_of_bales: "Total No of bales = "+ totals.total_no_of_bales,
+        no_of_bales: Number(formatDecimal(totals.total_no_of_bales)),
         press_no:  "",
         rate: "",
-        total_qty: "Total Qty = "+ totals.total_lint_quantity,
+        total_qty: Number(formatDecimal(totals.total_lint_quantity)),
         program: "",
         status: "",
       });
     }
 
-    worksheet.addRow(rowValues);
+    worksheet.addRow(rowValues).eachCell((cell, colNumber) => { cell.font={bold:true}});;
 
       const borderStyle = {
         top: { style: "thin" },
@@ -4053,7 +4053,7 @@ const exportGinnerSales = async (req: Request, res: Response) => {
       }
 
      let rowValues = Object.values({
-        index: "",
+        index: "Total: ",
         country: "",
         state: '',            
         date: '',
@@ -4069,21 +4069,21 @@ const exportGinnerSales = async (req: Request, res: Response) => {
         // heap: '',
         lot_no:  '',
         reel_lot_no: '',
-        no_of_bales: "Total Bales = " + totels.total_no_of_bales,
+        no_of_bales: totels.total_no_of_bales,
         press_no:'',
         rate:0,
-        lint_quantity:  'Total Lint Quantity = ' + totels.total_lint_quantity,
+        lint_quantity: Number(formatDecimal(totels.total_lint_quantity)),
         other_season_quantity: '',
     
       other_season_bales: '',
-        sales_value: 'Total Sales Value = ' + totels.total_Sales_value,
+        sales_value: Number(formatDecimal(totels.total_Sales_value)),
         vehicle_no: '',
         transporter_name: '',
         program: '',
-        agentDetails: 'NA',
+        agentDetails: '',
         status: ''
       });
-      worksheet.addRow(rowValues);
+      worksheet.addRow(rowValues).eachCell((cell, colNumber) => { cell.font={bold:true}});;
 
 
       const borderStyle = {
@@ -12031,13 +12031,25 @@ const fetchGinnerSummaryPagination = async (req: Request, res: Response) => {
       offset: offset,
       limit: limit,
       order: [["name", "ASC"]],
+      include: [
+        {
+          model: Country,
+          attributes:["id","county_name"],
+          as: "country",
+        },
+        {
+          model: State,
+          attributes:["id","state_name"],
+          as: "state"
+        }
+      ],
     }
     );
     let result: any = [];
     for await (let ginner of rows) {
       let obj: any = {};
 
-      let [cottonProcured, cottonProcessed, cottonProcessedByHeap, lintProcured, greyoutLint, lintSold, ginToGinSale, ginToGinReceive, old_weight, countryname, statename]: any =
+      let [cottonProcured, cottonProcessed, cottonProcessedByHeap, lintProcured, greyoutLint, lintSold, ginToGinSale, ginToGinReceive, old_weight]: any =
         await Promise.all([
           // Transaction.findOne({
           //   attributes: [
@@ -12386,18 +12398,7 @@ const fetchGinnerSummaryPagination = async (req: Request, res: Response) => {
             },
             raw: true // Get raw data for easier access
           }),
-          Country.findOne({
-            attributes: ["county_name"],
-            where: {
-              id: ginner.country_id
-            }
-          }),
-          State.findOne({
-            attributes: ["state_name"],
-            where: {
-              id: ginner.state_id
-            }
-          })
+        
         ]);
       const cottonProcessedQty = isNaN(cottonProcessed?.dataValues?.qty) ? 0 : cottonProcessed?.dataValues?.qty;
       const cottonProcessedByHeapQty = isNaN(cottonProcessedByHeap?.dataValues?.qty) ? 0 : cottonProcessedByHeap?.dataValues?.qty;
@@ -12453,8 +12454,8 @@ const fetchGinnerSummaryPagination = async (req: Request, res: Response) => {
         obj.balesProduced > obj.balesSold
           ? obj.balesProduced - obj.balesSold
           : 0;
-      obj.country = countryname?.county_name;
-      obj.state = statename?.state_name;
+      obj.country = ginner.country.county_name;
+      obj.state = ginner.state.state_name;
       result.push({ ...obj, ginner });
     }
     //fetch data with pagination
@@ -12690,14 +12691,28 @@ const exportGinnerSummary = async (req: Request, res: Response) => {
         "Total bales produced", "Total Bales sold", "Total Bales Greyout", "Total Bales Received", "Total Bales Transfered", "Actual Bales in stock", "Total bales in stock"
       ]);
       headerRow.font = { bold: true };
-      let options = (exportType === "all") ? {
+      let options = /*(exportType === "all") ? {
         attributes: ["id", "name", "address", "state_id", "country_id"],
         order: [["name", "ASC"]]
-      } : {
+      } : */
+      {
         where: whereCondition,
         attributes: ["id", "name", "address", "state_id", "country_id"],
         offset: offset,
         limit: limit,
+
+        include: [
+          {
+            model: Country,
+            attributes:["id","county_name"],
+            as: "country",
+          },
+          {
+            model: State,
+            attributes:["id","state_name"],
+            as: "state"
+          }
+        ],
         order: [["name", "ASC"]]
       };
 
@@ -12709,7 +12724,7 @@ const exportGinnerSummary = async (req: Request, res: Response) => {
         let obj: any = {};
 
 
-        let [cottonProcured, cottonProcessed, cottonProcessedByHeap, lintProcured, greyoutLint, lintSold, ginToGinSale, ginToGinReceive, countryname, statename]: any = await Promise.all([
+        let [cottonProcured, cottonProcessed, cottonProcessedByHeap, lintProcured, greyoutLint, lintSold, ginToGinSale, ginToGinReceive]: any = await Promise.all([
           // Transaction.findOne({
           //   attributes: [
           //     [sequelize.fn('COALESCE', sequelize.fn('SUM', Sequelize.literal("CAST(qty_purchased AS DOUBLE PRECISION)")), 0), 'qty']
@@ -12997,19 +13012,7 @@ const exportGinnerSummary = async (req: Request, res: Response) => {
               "$ginsales.buyer_type$": 'Ginner'
             },
             group: ["ginsales.buyer_ginner"]
-          }),
-          Country.findOne({
-            attributes: ["county_name"],
-            where: {
-              id: item.country_id
-            }
-          }),
-          State.findOne({
-            attributes: ["state_name"],
-            where: {
-              id: item.state_id
-            }
-          })
+          }),      
         ]);
         const cottonProcessedQty = isNaN(cottonProcessed?.dataValues?.qty) ? 0 : cottonProcessed?.dataValues?.qty;
         const cottonProcessedByHeapQty = isNaN(cottonProcessedByHeap?.dataValues?.qty) ? 0 : cottonProcessedByHeap?.dataValues?.qty;
@@ -13055,8 +13058,8 @@ const exportGinnerSummary = async (req: Request, res: Response) => {
           : 0;
         obj.balesStock = obj.balesProduced > obj.balesSold ? obj.balesProduced - obj.balesSold : 0;
 
-        obj.country = countryname?.dataValues.county_name;
-        obj.state = statename?.dataValues.state_name;
+        obj.country = item.country.county_name;
+        obj.state = item.state.state_name;
 
         const rowValues = Object.values({
           index: index + 1,
@@ -13492,16 +13495,17 @@ const exportGinnerCottonStock = async (req: Request, res: Response) => {
       }
 
       const rowValues = Object.values({
-        index: "",
+        index: "Total: ",
         ginner:  "",
         season:  "",
         country: "",
         state: "",
-        cotton_procured: "Total Procured = "+ totals.total_cotton_procured,
-        cotton_processed: "Total Processed = "+ totals.total_cotton_processed,
-        cotton_stock: "Total Stock = "+ totals.total_cotton_stock,
+        cotton_procured: Number(formatDecimal(totals.total_cotton_procured)),
+        cotton_processed: Number(formatDecimal(totals.total_cotton_processed)),
+        cotton_stock: Number(formatDecimal(totals.total_cotton_stock)),
       });
-      worksheet.addRow(rowValues);
+      worksheet.addRow(rowValues).eachCell((cell, colNumber) => { cell.font={bold:true}});
+     
 
       const borderStyle = {
         top: { style: "thin" },

@@ -2622,9 +2622,21 @@ const generateGinnerSummary = async () => {
 
     while (hasNextBatch) {
       let rows = await Ginner.findAll({
-        attributes: ["id", "name", "address"],
+        attributes: ["id", "name", "address", "state_id", "country_id"],
         offset: offset,
         limit: batchSize,
+        include: [
+                  {
+                    model: Country,
+                    attributes:["id","county_name"],
+                    as: "country",
+                  },
+                  {
+                    model: State,
+                    attributes:["id","state_name"],
+                    as: "state"
+                  }
+                ],
       });
 
       if (rows.length === 0) {
@@ -2639,18 +2651,18 @@ const generateGinnerSummary = async () => {
       let currentWorksheet = workbook.getWorksheet(`Sheet${worksheetIndex}`);
       if (!currentWorksheet) {
         currentWorksheet = workbook.addWorksheet(`Sheet${worksheetIndex}`);
-        if (worksheetIndex == 1) {
-          currentWorksheet.mergeCells('A1:S1');
-          const mergedCell = currentWorksheet.getCell('A1');
-          mergedCell.value = 'CottonConnect | Ginner Summary Report';
-          mergedCell.font = { bold: true };
-          mergedCell.alignment = { horizontal: 'center', vertical: 'middle' };
-          // Set bold font for header row
+        // if (worksheetIndex == 1) {
+        //   currentWorksheet.mergeCells('A1:S1');
+        //   const mergedCell = currentWorksheet.getCell('A1');
+        //   mergedCell.value = 'CottonConnect | Ginner Summary Report';
+        //   mergedCell.font = { bold: true };
+        //   mergedCell.alignment = { horizontal: 'center', vertical: 'middle' };
+        //   // Set bold font for header row
 
-        }
+        // }
         // Set bold font for header row
         const headerRow = currentWorksheet.addRow([
-          "S. No.", "Ginner Name", "Total seed cotton procured (MT)", "Total seed cotton processed (MT)",
+          "S. No.", "Ginner Name", "Country", "State", "Total seed cotton procured (MT)", "Total seed cotton processed (MT)",
           "Total seed cotton in stock (MT)", "Total lint produce (MT)", "Total lint sold (MT)", "Grey-Out Lint Quantity (MT)", "Total Lint Received (MT)", "Total Lint Transfered (MT)", "Actual lint in stock (MT)", "Total lint in stock (MT)",
           "Total bales produce", "Total bales sold", "Total Bales Greyout", "Total Bales Received", "Total Bales Transfered", "Actual Bales in stock", "Total bales in stock"
         ]);
@@ -2987,10 +2999,15 @@ const generateGinnerSummary = async () => {
           ? (obj.balesProduced + obj.total_bales_received) - (obj.balesSold + obj.total_bales_transfered + obj.balesGreyout)
           : 0;
         obj.balesStock = obj.balesProduced > obj.balesSold ? obj.balesProduced - obj.balesSold : 0;
+        
+        obj.country = item.country.county_name;
+        obj.state = item.state.state_name;
 
         const rowValues = Object.values({
           index: index + offset + 1,
           name: item.name ? item.name : '',
+          country: obj.country,
+          state: obj.state,
           cottonProcuredMt: Number(obj.cottonProcuredMt) ?? 0,
           cottonProcessedeMt: Number(obj.cottonProcessedeMt) ?? 0,
           cottonStockMt: Number(obj.cottonStockMt) ?? 0,
@@ -3013,8 +3030,24 @@ const generateGinnerSummary = async () => {
       }
       // Auto-adjust column widths based on content
       offset += batchSize;
+      const borderStyle = {
+        top: { style: "thin" },
+        bottom: { style: "thin" },
+        left: { style: "thin" },
+        right: { style: "thin" },
+      };
+      currentWorksheet.columns.forEach((column: any) => {
+        let maxCellLength = 0;
+        column.eachCell({ includeEmpty: true }, (cell: any) => {
+          const cellLength = (cell.value ? cell.value.toString() : '').length;
+          maxCellLength = Math.max(maxCellLength, cellLength);
+          cell.border = borderStyle;
+        });
+        column.width = Math.min(24, maxCellLength + 2); // Limit width to 30 characters
+      });
 
     }
+   
     // Save the workbook
     await workbook.commit()
       .then(() => {
@@ -3059,6 +3092,8 @@ const generateGinnerProcess = async () => {
               gp."createdAt" AS created_date,
               s.name AS season_name,
               g.name AS ginner_name,
+              g.country_id as country_id,
+              g.state_id as state_id,
               gp.heap_number,
               gp.heap_register,
               gp.weigh_bridge,
@@ -3239,6 +3274,8 @@ const generateGinnerProcess = async () => {
                 gd.created_date AS "createdAt",
                 gd.season_name AS season,
                 gd.ginner_name AS ginner_name,
+                c.county_name AS country_name,
+                s.state_name AS state_name,                
                 gd.heap_number AS heap_number,
                 gd.heap_register AS heap_register,
                 gd.bale_process AS bale_process,
@@ -3278,6 +3315,10 @@ const generateGinnerProcess = async () => {
               gin_bale_greyout_data gbg ON gd.process_id = gbg.process_id
             LEFT JOIN 
               gin_to_gin_sales_data gtg ON gd.process_id = gtg.process_id
+            LEFT JOIN
+              countries c ON gd.country_id = c.id 
+            LEFT JOIN
+              states s ON gd.state_id = s.id  
             LIMIT :limit OFFSET :offset
             `, {
         replacements: { limit: batchSize, offset },
@@ -3296,26 +3337,42 @@ const generateGinnerProcess = async () => {
       let currentWorksheet = workbook.getWorksheet(`Sheet${worksheetIndex}`);
       if (!currentWorksheet) {
         currentWorksheet = workbook.addWorksheet(`Sheet${worksheetIndex}`);
-        if (worksheetIndex == 1) {
-          currentWorksheet.mergeCells('A1:AB1');
-          const mergedCell = currentWorksheet.getCell('A1');
-          mergedCell.value = 'CottonConnect | Ginner Bale Process Report';
-          mergedCell.font = { bold: true };
-          mergedCell.alignment = { horizontal: 'center', vertical: 'middle' };
+        // if (worksheetIndex == 1) {
+        //   currentWorksheet.mergeCells('A1:AB1');
+        //   const mergedCell = currentWorksheet.getCell('A1');
+        //   mergedCell.value = 'CottonConnect | Ginner Bale Process Report';
+        //   mergedCell.font = { bold: true };
+        //   mergedCell.alignment = { horizontal: 'center', vertical: 'middle' };
 
-        }
+        // }
         // Set bold font for header row
         // Set bold font for header row
         const headerRow = currentWorksheet.addRow([
-          "Sr No.", "Process Date", "Data Entry Date", "Lint Production Start Date", "Lint Production End Date", "Seed Cotton Consumed Season", "Lint process Season choosen", "Ginner Name", "Heap Number", "Gin Lot No", "Gin Press No", "REEL Lot No", "REEL Press No", "No of Bales", "Lint Quantity(Kgs)", "Total Seed Cotton Consumed(Kgs)", "GOT", "Total lint cotton sold(Kgs)", "Total Bales Sold", "Total lint cotton rejected(Kgs)", "Total Bales Rejected", "Total lint cotton transfered(Kgs)", "Total Bales Transfered", "Total lint cotton in stock(Kgs)", "Total Bales in stock", "Programme", "Village", "Grey Out Status"
+          "Sr No.","Country","State", "Process Date", "Data Entry Date", "Lint Production Start Date", "Lint Production End Date", "Seed Cotton Consumed Season", "Lint process Season choosen", "Ginner Name", "Heap Number", "Gin Lot No", "Gin Press No", "REEL Lot No", "REEL Press No", "No of Bales", "Lint Quantity(Kgs)", "Total Seed Cotton Consumed(Kgs)", "GOT", "Total lint cotton sold(Kgs)", "Total Bales Sold", "Total lint cotton rejected(Kgs)", "Total Bales Rejected", "Total lint cotton transfered(Kgs)", "Total Bales Transfered", "Total lint cotton in stock(Kgs)", "Total Bales in stock", "Programme", "Village", "Grey Out Status"
         ]);
         headerRow.font = { bold: true };
       }
+
+      let totals = {
+        total_no_of_bales: 0,
+        total_lint_quantity: 0,
+        total_seedConsmed: 0,
+        total_sold_bales: 0,
+        total_lint_quantity_sold: 0,
+        total_lint_qty_transfered: 0, 
+        total_bales_transfered:0,
+        total_lint_stock:0,
+        total_bale_stock:0,
+
+      };
+
 
       // Append data to worksheet
       for await (const [index, item] of ginProcess.entries()) {
         const rowValues = Object.values({
           index: index + offset + 1,
+          country: item.country_name ? item.country_name : "",
+          state: item.state_name ? item.state_name : "",
           date: item.date ? item.date : "",
           created_date: item.createdAt ? item.createdAt : "",
           from_date: item.from_date ? item.from_date : "",
@@ -3346,8 +3403,72 @@ const generateGinnerProcess = async () => {
         });
 
         currentWorksheet.addRow(rowValues).commit();
+
+        totals.total_no_of_bales += item.no_of_bales? Number(item.no_of_bales): 0;
+        totals.total_lint_quantity += item.lint_quantity? Number(item.lint_quantity): 0;
+        totals.total_seedConsmed += item.seedConsmed? Number(item.seedConsmed):0;
+        totals.total_lint_quantity_sold +=  item.lint_quantity_sold? Number(item.lint_quantity_sold):0;
+        totals.total_lint_qty_transfered += item.lint_qty_transfered? Number(item.lint_qty_transfered):0;
+        totals.total_sold_bales += item.sold_bales?Number(item.sold_bales):0;
+        totals.total_bales_transfered += item.bales_transfered?Number(item.bales_transfered):0;
+        totals.total_lint_stock += item.lint_stock?Number(item.lint_stock):0;
+        totals.total_bale_stock += item.bale_stock?Number(item.bale_stock):0;
+
       }
       offset += batchSize;
+
+      const rowValues = Object.values({
+        index:"",
+        country:"",
+        state:"",
+        date:"",
+        created_date:"",
+        from_date:"",
+        to_date:"",
+        seed_consumed_seasons:"",
+        season:"",
+        ginner:"",
+        heap:"",
+        lot_no:"",
+        press_no:"",
+        reel_lot_no:"",
+        reel_press_no:"",
+        noOfBales: Number(formatDecimal(totals.total_no_of_bales)),
+        lint_quantity: Number(formatDecimal(totals.total_lint_quantity)),
+        seedConsmed: Number(formatDecimal(totals.total_seedConsmed)),
+        got:"",
+        lint_quantity_sold: Number(formatDecimal(totals.total_lint_quantity_sold)),
+        sold_bales: Number(formatDecimal(totals.total_sold_bales)),
+        lint_qty_greyout:"",
+        greyout_bales:"",
+        lint_qty_transfered: Number(formatDecimal(totals.total_lint_qty_transfered)),
+        bales_transfered: Number(formatDecimal(totals.total_bales_transfered)),
+        lint_stock: Number(formatDecimal(totals.total_lint_stock)),
+        bale_stock: Number(formatDecimal(totals.total_bale_stock)),
+        program:"",
+        village_names:"",
+        greyout_status:"",
+      });
+      currentWorksheet.addRow(rowValues).eachCell((cell, colNumber) => { cell.font={bold:true}});
+      const borderStyle = {
+        top: { style: "thin" },
+        bottom: { style: "thin" },
+        left: { style: "thin" },
+        right: { style: "thin" },
+      };
+  
+      // Auto-adjust column widths based on content
+      currentWorksheet.columns.forEach((column: any) => {
+        let maxCellLength = 0;
+        column.eachCell({ includeEmpty: true }, (cell: any) => {
+          const cellLength = (cell.value ? cell.value.toString() : "").length;
+          maxCellLength = Math.max(maxCellLength, cellLength);
+          cell.border = borderStyle;
+        });
+        column.width = Math.min(15, maxCellLength + 2); // Limit width to 30 characters
+      });
+
+
     }
     // Save the workbook
     await workbook.commit()
@@ -3500,10 +3621,13 @@ const generateGinnerSales = async () => {
               gs.id AS ginsale_id,
               gs.date AS date,
               gs."createdAt" AS "createdAt",
+              EXTRACT(DAY FROM AGE(gs."createdAt" , gs.date)) AS no_of_days,
               season.name AS season_name,
               program.program_name AS program,
               ginner.id AS ginner_id,
               ginner.name AS ginner,
+              c.county_name AS country_name,
+              s.state_name AS state_name,              
               gs.total_qty AS total_qty,
               spinner.id AS spinner_id,
               spinner.name AS buyerdata,
@@ -3573,9 +3697,12 @@ const generateGinnerSales = async () => {
           LEFT JOIN ginners buyerginner ON gs.buyer_ginner = buyerginner.id
           LEFT JOIN spinners spinner ON gs.buyer = spinner.id
           LEFT JOIN programs program ON gs.program_id = program.id
+          LEFT JOIN countries c ON ginner.country_id = c.id
+          LEFT JOIN states s ON ginner.state_id = s.id          
           ${whereClause}
           GROUP BY 
-              gs.id, spinner.id, season.id, ginner.id, program.id, buyerginner.id
+              gs.id, spinner.id, season.id, ginner.id, program.id, buyerginner.id, c.id, s.id
+          ORDER BY ginner.name ASC
           LIMIT ${batchSize} OFFSET ${offset};`
 
 
@@ -3611,20 +3738,30 @@ const generateGinnerSales = async () => {
         // ]);
 
         const headerRow = currentWorksheet.addRow([
-          "Sr No.", "Process Date", "Data Entry Date", "Lint Process Season", "Lint sale chosen season", "Ginner Name",
+          "Sr No.", "country","state", "Process Date", "Data Entry Date", "No of Days", "Lint Process Season", "Lint sale chosen season", "Ginner Name",
           "Invoice No", "Buyer Type", "Sold To", "Bale Lot No", "REEL Lot No", "No of Bales", "Press/Bale No", "Rate/Kg",
           "Total Quantity", "Other Season Quantity (Kgs)", "Other Season Bales", "Sales Value", "Vehicle No", "Transporter Name", "Programme", "Agent Details", "Status"
         ]);
         headerRow.font = { bold: true };
       }
 
+      
+      let totels = {
+        total_no_of_bales: 0,
+        total_lint_quantity: 0,
+        total_Sales_value: 0,
+      };
       // Append data to worksheet
       for await (const [index, item] of rows.entries()) {
 
         const rowValues = Object.values({
           index: index + offset + 1,
+          country: item.country_name ? item.country_name : '',
+          state: item.state_name ? item.state_name : '',          
           date: item.date ? item.date : '',
           created_at: item.createdAt ? item.createdAt : '',
+          no_of_days: item.no_of_days ? item.no_of_days : '',            
+
           // seed_consumed_seasons: item.seed_consumed_seasons ? item.seed_consumed_seasons : "",
           lint_process_seasons: item.lint_process_seasons ? item.lint_process_seasons : '',
           season: item.season_name ? item.season_name : '',
@@ -3662,8 +3799,63 @@ const generateGinnerSales = async () => {
           status: item.status === 'Sold' ? 'Sold' : `Available [Stock : ${item.qty_stock ? item.qty_stock : 0}]`
         });
         currentWorksheet.addRow(rowValues).commit();
+        totels.total_no_of_bales += item.no_of_bales ? Number(item.no_of_bales) : 0;
+        totels.total_lint_quantity += item.lint_quantity ? Number(item.lint_quantity) : 0;
+        totels.total_Sales_value += item.sale_value ? Number(item.sale_value) : 0;
+
       }
       offset += batchSize;
+
+      const rowValues = Object.values({
+        index:"",
+        country:"",
+        state:"",
+        date:"",
+        created_at:"",
+        no_of_days:"",
+
+        // seed_consumed_seasons:"",
+        lint_process_seasons:"",
+        season:"",
+        ginner:"",
+        invoice:"",
+        buyer_type:"",
+        buyer:"",
+        // heap:"",
+        lot_no:"",
+        reel_lot_no:"",
+        no_of_bales: Number(formatDecimal(totels.total_no_of_bales)),
+        press_no:"",
+        rate:"",
+        lint_quantity: Number(formatDecimal(totels.total_lint_quantity)),
+        other_season_quantity:"",
+        other_season_bales:"",
+        sales_value: Number(formatDecimal(totels.total_Sales_value)),
+        vehicle_no:"",
+        transporter_name:"",
+        program:"",
+        agentDetails:"",
+        status:"",
+      });
+      currentWorksheet.addRow(rowValues).eachCell((cell, colNumber) => { cell.font={bold:true}});;
+
+      const borderStyle = {
+        top: { style: "thin" },
+        bottom: { style: "thin" },
+        left: { style: "thin" },
+        right: { style: "thin" },
+      };
+      // Auto-adjust column widths based on content
+      currentWorksheet.columns.forEach((column: any) => {
+        let maxCellLength = 0;
+        column.eachCell({ includeEmpty: true }, (cell: any) => {
+          const cellLength = (cell.value ? cell.value.toString() : '').length;
+          maxCellLength = Math.max(maxCellLength, cellLength);
+          cell.border = borderStyle;
+        });
+        column.width = Math.min(14, maxCellLength + 2); // Limit width to 30 characters
+      });
+
     }
     // Save the workbook
     await workbook.commit()
@@ -3704,7 +3896,19 @@ const generatePendingGinnerSales = async () => {
       {
         model: Ginner,
         as: "ginner",
-        attributes: ["id", "name", "country_id", "brand"],
+          attributes: ["id", "name", "country_id", "brand", "state_id"],
+          include: [
+            {
+              model: Country,
+              as: "country",
+              attributes:["county_name"]
+            },
+            {
+              model: State,
+              as: "state",
+              attributes:["state_name"]
+            },
+          ],
       },
       {
         model: Season,
@@ -3755,6 +3959,8 @@ const generatePendingGinnerSales = async () => {
           [Sequelize.literal('"sales"."invoice_file"'), "invoice_file"],
           [Sequelize.literal('"sales"."status"'), "status"],
           [Sequelize.literal('"sales"."qr"'), "qr"],
+          [sequelize.col('"sales"."ginner"."country"."county_name"'), "country_name"],
+          [sequelize.col('"sales"."ginner"."state"."state_name"'), "state_name"],
         ],
         where: whereCondition,
         include: [{
@@ -3772,7 +3978,10 @@ const generatePendingGinnerSales = async () => {
             attributes: []
           }]
         }],
-        group: ['sales.id', "sales.season.id", "sales.ginner.id", "sales.buyerdata.id", "sales.program.id", "sales.buyerdata_ginner.id"],
+        group: ['sales.id', "sales.season.id", "sales.ginner.id", "sales.buyerdata.id", "sales.program.id", "sales.buyerdata_ginner.id",
+          "sales.ginner.country.id",
+          "sales.ginner.state.id",
+        ],
         offset: offset,
         limit: batchSize,
       })
@@ -3789,17 +3998,19 @@ const generatePendingGinnerSales = async () => {
       let currentWorksheet = workbook.getWorksheet(`Sheet${worksheetIndex}`);
       if (!currentWorksheet) {
         currentWorksheet = workbook.addWorksheet(`Sheet${worksheetIndex}`);
-        if (worksheetIndex == 1) {
-          currentWorksheet.mergeCells("A1:O1");
-          const mergedCell = currentWorksheet.getCell("A1");
-          mergedCell.value = "CottonConnect | Ginner Pending Sales Report";
-          mergedCell.font = { bold: true };
-          mergedCell.alignment = { horizontal: "center", vertical: "middle" };
-          // Set bold font for header row
-        }
+        // if (worksheetIndex == 1) {
+        //   currentWorksheet.mergeCells("A1:O1");
+        //   const mergedCell = currentWorksheet.getCell("A1");
+        //   mergedCell.value = "CottonConnect | Ginner Pending Sales Report";
+        //   mergedCell.font = { bold: true };
+        //   mergedCell.alignment = { horizontal: "center", vertical: "middle" };
+        //   // Set bold font for header row
+        // }
         // Set bold font for header row
         const headerRow = currentWorksheet.addRow([
           "Sr No.",
+          "country",
+          "state",
           "Date",
           "Season",
           "Ginner Name",
@@ -3818,10 +4029,16 @@ const generatePendingGinnerSales = async () => {
         headerRow.font = { bold: true };
       }
 
+      let totals = {  
+        total_no_of_bales: 0,
+        total_lint_quantity: 0,
+      }
       // Append data to worksheet
       for await (const [index, item] of rows.entries()) {
         const rowValues = Object.values({
           index: index + offset + 1,
+          country: item.dataValues.country_name?item.dataValues.country_name:"",
+          state: item.dataValues.state_name?item.dataValues.state_name:"",
           date: item.dataValues.date ? item.dataValues.date : "",
           season: item.dataValues.season_name ? item.dataValues.season_name : "",
           ginner: item.dataValues.ginner ? item.dataValues.ginner : "",
@@ -3838,8 +4055,53 @@ const generatePendingGinnerSales = async () => {
           status: item.dataValues.status ? item.dataValues.status : "",
         });
         currentWorksheet.addRow(rowValues).commit();
+        totals.total_no_of_bales += Number(item.dataValues.no_of_bales);
+        totals.total_lint_quantity += Number(item.dataValues.total_qty);
       }
+
+
+      const rowValues = Object.values({
+        index:"",
+        country:"",
+        state:"",
+        date:"",
+        season:"",
+        ginner:"",
+        invoice:"",
+        buyer_type:"",
+        buyer:"",
+        lot_no:"",
+        reel_lot_no:"",
+        no_of_bales: Number(formatDecimal(totals.total_no_of_bales)),
+        press_no:"",
+        rate:"",
+        total_qty: Number(formatDecimal(totals.total_lint_quantity)),
+        program:"",
+        status:"",
+      });
+
+      currentWorksheet.addRow(rowValues).eachCell((cell, colNumber) => { cell.font={bold:true}});;
+
+
       offset += batchSize;
+      const borderStyle = {
+        top: { style: "thin" },
+        bottom: { style: "thin" },
+        left: { style: "thin" },
+        right: { style: "thin" },
+      };
+      
+      // Auto-adjust column widths based on content
+      currentWorksheet.columns.forEach((column: any) => {
+        let maxCellLength = 0;
+        column.eachCell({ includeEmpty: true }, (cell: any) => {
+          const cellLength = (cell.value ? cell.value.toString() : "").length;
+          maxCellLength = Math.max(maxCellLength, cellLength);
+          cell.border = borderStyle;
+        });
+        column.width = Math.min(24, maxCellLength + 2); // Limit width to 30 characters
+      });
+
     }
 
     // Save the workbook
@@ -3876,7 +4138,17 @@ const generateGinnerCottonStock = async () => {
       {
         model: Ginner,
         as: "ginner",
-        attributes: [],
+        include: [
+          {
+            model: Country,
+            as: "country",
+          },
+          {
+            model: State,
+            as: "state",
+          }
+
+        ],
       },
       {
         model: Season,
@@ -3908,8 +4180,8 @@ const generateGinnerCottonStock = async () => {
           // ],
         ],
         include: include,
-        group: ["ginner.id", "season.id"],
-        order: [["ginner_id", "desc"]],
+        group: ["ginner.id", "season.id", "ginner.country.id", "ginner->state.id"],
+        order: [["ginner_name", "ASC"]],
         offset: offset,
         limit: batchSize,
       });
@@ -3926,24 +4198,32 @@ const generateGinnerCottonStock = async () => {
       let currentWorksheet = workbook.getWorksheet(`Sheet${worksheetIndex}`);
       if (!currentWorksheet) {
         currentWorksheet = workbook.addWorksheet(`Sheet${worksheetIndex}`);
-        if (worksheetIndex == 1) {
-          currentWorksheet.mergeCells("A1:F1");
-          const mergedCell = currentWorksheet.getCell("A1");
-          mergedCell.value = "CottonConnect | Ginner Seed Cotton Stock Report";
-          mergedCell.font = { bold: true };
-          mergedCell.alignment = { horizontal: "center", vertical: "middle" };
-          // Set bold font for header row
-        }
+        // if (worksheetIndex == 1) {
+        //   currentWorksheet.mergeCells("A1:F1");
+        //   const mergedCell = currentWorksheet.getCell("A1");
+        //   mergedCell.value = "CottonConnect | Ginner Seed Cotton Stock Report";
+        //   mergedCell.font = { bold: true };
+        //   mergedCell.alignment = { horizontal: "center", vertical: "middle" };
+        //   // Set bold font for header row
+        // }
         // Set bold font for header row
         const headerRow = currentWorksheet.addRow([
           "Sr No.",
           "Ginner Name",
           "Season",
+          "Country",
+          "State",
           "Total Seed Cotton Procured (Kgs)",
           "Total Seed Cotton in Processed (Kgs)",
           "Total Seed Cotton in Stock (Kgs)",
         ]);
         headerRow.font = { bold: true };
+      }
+
+      let totals = {
+        total_cotton_procured:0,
+        total_cotton_processed:0,
+        total_cotton_stock:0,
       }
 
       for await (let [index, item] of rows.entries()) {
@@ -3988,12 +4268,50 @@ const generateGinnerCottonStock = async () => {
           index: index + offset + 1,
           ginner: item?.dataValues.ginner_name ? item?.dataValues.ginner_name : "",
           season: item?.dataValues.season_name ? item?.dataValues.season_name : "",
+          country: item?.dataValues.ginner.country.county_name,
+          state: item?.dataValues.ginner.state.state_name,
           cotton_procured: obj.cotton_procured ? Number(obj.cotton_procured) : 0,
           cotton_processed: obj.cotton_processed ? Number(obj.cotton_processed) : 0,
           cotton_stock: obj.cotton_stock ? Number(obj.cotton_stock) : 0,
         });
+
+        totals.total_cotton_processed += obj.cotton_processed?Number(obj.cotton_processed):0;
+        totals.total_cotton_procured += obj.cotton_procured?Number(obj.cotton_procured):0;
+        totals.total_cotton_stock += obj.cotton_stock?Number(obj.cotton_stock):0;
+
         currentWorksheet.addRow(rowValues).commit();
       }
+
+      const rowValues = Object.values({
+        index: "",
+        ginner:  "",
+        season:  "",
+        country: "",
+        state: "",
+        cotton_procured: Number(formatDecimal( totals.total_cotton_procured)),
+        cotton_processed: Number(formatDecimal(totals.total_cotton_processed)),
+        cotton_stock: Number(formatDecimal(totals.total_cotton_stock)),
+      });
+      currentWorksheet.addRow(rowValues).eachCell((cell, colNumber) => { cell.font={bold:true}});;
+
+      const borderStyle = {
+        top: { style: "thin" },
+        bottom: { style: "thin" },
+        left: { style: "thin" },
+        right: { style: "thin" },
+      };
+
+
+      // Auto-adjust column widths based on content
+      currentWorksheet.columns.forEach((column: any) => {
+        let maxCellLength = 0;
+        column.eachCell({ includeEmpty: true }, (cell: any) => {
+          const cellLength = (cell.value ? cell.value.toString() : "").length;
+          maxCellLength = Math.max(maxCellLength, cellLength);
+          cell.border = borderStyle;
+        });
+        column.width = Math.min(14, maxCellLength + 2); // Limit width to 30 characters
+      });
 
       offset += batchSize;
     }
