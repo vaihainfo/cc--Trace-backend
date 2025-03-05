@@ -1,0 +1,4893 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "title": "Swagger Cotton Connect",
+        "description": "Cotton Connect",
+        "version": "1.0.0",
+        "contact": {
+            "email": "info@cottonconnect.co.in"
+        },
+        "license": {
+            "name": "Apache 2.0",
+            "url": "http://www.apache.org/licenses/LICENSE-2.0.html"
+        }
+    },
+    "schemes": [
+        "https"
+    ],
+    "host": "api.newtracebale.com",
+    "basePath": "/",
+    "paths": {
+        "/auth/signin": {
+            "post": {
+                "summary": "login the user",
+                "description": "login user",
+                "produces": [
+                    "application/json"
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Authentication"
+                ],
+                "parameters": [
+                    {
+                        "in": "body",
+                        "name": "body",
+                        "description": "user authentication",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "$ref": "#/definitions/User"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "successful operation",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/successResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid status value",
+                        "schema": {
+                            "$ref": "#/definitions/InvalidResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/location/get-countries": {
+            "get": {
+                "summary": "Get all the countries",
+                "description": "Get all the countries",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Countries"
+                ],
+                "parameters": [],
+                "responses": {
+                    "200": {
+                        "description": "successful operation",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/successResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid status value",
+                        "schema": {
+                            "$ref": "#/definitions/InvalidResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/location/set-country": {
+            "post": {
+                "summary": "Add country",
+                "description": "Add country",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Countries"
+                ],
+                "parameters": [
+                    {
+                        "in": "body",
+                        "name": "body",
+                        "description": "Add Country",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "$ref": "#/definitions/Country"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "successful operation",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/successResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid status value",
+                        "schema": {
+                            "$ref": "#/definitions/InvalidResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/location/update-country": {
+            "post": {
+                "summary": "Update Country",
+                "description": "Update Country",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Countries"
+                ],
+                "parameters": [
+                    {
+                        "in": "body",
+                        "name": "body",
+                        "description": "update country",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "$ref": "#/definitions/Updatecountry"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "successful operation",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/successResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid status value",
+                        "schema": {
+                            "$ref": "#/definitions/InvalidResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/location/delete-country": {
+            "post": {
+                "summary": "Delete country",
+                "description": "Delete country",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Countries"
+                ],
+                "parameters": [
+                    {
+                        "in": "body",
+                        "name": "body",
+                        "description": "delete country",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "$ref": "#/definitions/Delete"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "successful operation",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/successResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid status value",
+                        "schema": {
+                            "$ref": "#/definitions/InvalidResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/location/get-states": {
+            "get": {
+                "summary": "Get all the states",
+                "description": "Get all the states",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "State"
+                ],
+                "parameters": [],
+                "responses": {
+                    "200": {
+                        "description": "successful operation",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/successResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid status value",
+                        "schema": {
+                            "$ref": "#/definitions/InvalidResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/location/set-state": {
+            "post": {
+                "summary": "Add State",
+                "description": "Add State",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "State"
+                ],
+                "parameters": [
+                    {
+                        "in": "body",
+                        "name": "body",
+                        "description": "Add State",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "$ref": "#/definitions/Createstate"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "successful operation",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/successResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid status value",
+                        "schema": {
+                            "$ref": "#/definitions/InvalidResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/location/update-state": {
+            "post": {
+                "summary": "Update State",
+                "description": "Update State",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "State"
+                ],
+                "parameters": [
+                    {
+                        "in": "body",
+                        "name": "body",
+                        "description": "update state",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "$ref": "#/definitions/Updatestate"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "successful operation",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/successResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid status value",
+                        "schema": {
+                            "$ref": "#/definitions/InvalidResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/location/delete-state": {
+            "post": {
+                "summary": "Delete states",
+                "description": "Delete states",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "State"
+                ],
+                "parameters": [
+                    {
+                        "in": "body",
+                        "name": "body",
+                        "description": "delete state",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "$ref": "#/definitions/Delete"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "successful operation",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/successResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid status value",
+                        "schema": {
+                            "$ref": "#/definitions/InvalidResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/location/get-districts": {
+            "get": {
+                "summary": "Get all the districts",
+                "description": "Get all the districts",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "District"
+                ],
+                "parameters": [],
+                "responses": {
+                    "200": {
+                        "description": "successful operation",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/successResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid status value",
+                        "schema": {
+                            "$ref": "#/definitions/InvalidResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/location/set-district": {
+            "post": {
+                "summary": "Add district",
+                "description": "Add district",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "District"
+                ],
+                "parameters": [
+                    {
+                        "in": "body",
+                        "name": "body",
+                        "description": "Add District",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "$ref": "#/definitions/Createdistrict"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "successful operation",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/successResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid status value",
+                        "schema": {
+                            "$ref": "#/definitions/InvalidResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/location/update-district": {
+            "post": {
+                "summary": "Update district",
+                "description": "Update district",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "District"
+                ],
+                "parameters": [
+                    {
+                        "in": "body",
+                        "name": "body",
+                        "description": "Update District",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "$ref": "#/definitions/Updatedistrict"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "successful operation",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/successResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid status value",
+                        "schema": {
+                            "$ref": "#/definitions/InvalidResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/location/delete-district": {
+            "post": {
+                "summary": "delete the district",
+                "description": "delete the district",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "District"
+                ],
+                "parameters": [
+                    {
+                        "in": "body",
+                        "name": "body",
+                        "description": "delete district",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "$ref": "#/definitions/Delete"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "successful operation",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/successResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid status value",
+                        "schema": {
+                            "$ref": "#/definitions/InvalidResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/location/get-villages": {
+            "get": {
+                "summary": "Get all the villages",
+                "description": "Get all the villages",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Village"
+                ],
+                "parameters": [],
+                "responses": {
+                    "200": {
+                        "description": "successful operation",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/successResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid status value",
+                        "schema": {
+                            "$ref": "#/definitions/InvalidResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/location/set-village": {
+            "post": {
+                "summary": "Add Village",
+                "description": "Add Village",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Village"
+                ],
+                "parameters": [
+                    {
+                        "in": "body",
+                        "name": "body",
+                        "description": "Add Village",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "$ref": "#/definitions/Createvillage"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "successful operation",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/successResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid status value",
+                        "schema": {
+                            "$ref": "#/definitions/InvalidResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/location/update-village": {
+            "post": {
+                "summary": "Update Village",
+                "description": "Update Village",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Village"
+                ],
+                "parameters": [
+                    {
+                        "in": "body",
+                        "name": "body",
+                        "description": "Update village",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "$ref": "#/definitions/Updatevillage"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "successful operation",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/successResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid status value",
+                        "schema": {
+                            "$ref": "#/definitions/InvalidResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/location/delete-village": {
+            "post": {
+                "summary": "delete the villages",
+                "description": "delete the village",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Village"
+                ],
+                "parameters": [
+                    {
+                        "in": "body",
+                        "name": "body",
+                        "description": "delete village",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "$ref": "#/definitions/Delete"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "successful operation",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/successResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid status value",
+                        "schema": {
+                            "$ref": "#/definitions/InvalidResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/location/get-block": {
+            "get": {
+                "summary": "Get all the blocks",
+                "description": "Get all the blocks",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Block"
+                ],
+                "parameters": [],
+                "responses": {
+                    "200": {
+                        "description": "successful operation",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/successResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid status value",
+                        "schema": {
+                            "$ref": "#/definitions/InvalidResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/location/set-block": {
+            "post": {
+                "summary": "Add Block",
+                "description": "Add Block",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Block"
+                ],
+                "parameters": [
+                    {
+                        "in": "body",
+                        "name": "body",
+                        "description": "Add Block",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "$ref": "#/definitions/Createblock"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "successful operation",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/successResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid status value",
+                        "schema": {
+                            "$ref": "#/definitions/InvalidResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/location/update-block": {
+            "post": {
+                "summary": "Update block",
+                "description": "Update block",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Block"
+                ],
+                "parameters": [
+                    {
+                        "in": "body",
+                        "name": "body",
+                        "description": "Update block",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "$ref": "#/definitions/Updateblock"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "successful operation",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/successResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid status value",
+                        "schema": {
+                            "$ref": "#/definitions/InvalidResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/location/delete-block": {
+            "post": {
+                "summary": "Delete Block",
+                "description": "Delete Block",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Block"
+                ],
+                "parameters": [
+                    {
+                        "in": "body",
+                        "name": "body",
+                        "description": "delete block name",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "$ref": "#/definitions/Delete"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "successful operation",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/successResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid status value",
+                        "schema": {
+                            "$ref": "#/definitions/InvalidResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/crop/crop-name": {
+            "get": {
+                "summary": "Get all the crop names",
+                "description": "Get all the cropnames",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Crop Name"
+                ],
+                "parameters": [],
+                "responses": {
+                    "200": {
+                        "description": "successful operation",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/successResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid status value",
+                        "schema": {
+                            "$ref": "#/definitions/InvalidResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "summary": "add crop name",
+                "description": "add crop",
+                "produces": [
+                    "application/json"
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Crop Name"
+                ],
+                "parameters": [
+                    {
+                        "in": "body",
+                        "name": "body",
+                        "description": "add crop name",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "$ref": "#/definitions/Crop"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "successful operation",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/successResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid status value",
+                        "schema": {
+                            "$ref": "#/definitions/InvalidResponse"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "summary": "update crop name",
+                "description": "update crop",
+                "produces": [
+                    "application/json"
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Crop Name"
+                ],
+                "parameters": [
+                    {
+                        "in": "body",
+                        "name": "body",
+                        "description": "update crop name",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "$ref": "#/definitions/UpdateCrop"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "successful operation",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/successResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid status value",
+                        "schema": {
+                            "$ref": "#/definitions/InvalidResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "summary": "delete crop name",
+                "description": "delete crop",
+                "produces": [
+                    "application/json"
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Crop Name"
+                ],
+                "parameters": [
+                    {
+                        "in": "body",
+                        "name": "body",
+                        "description": "delete crop name",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "$ref": "#/definitions/Delete"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "successful operation",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/successResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid status value",
+                        "schema": {
+                            "$ref": "#/definitions/InvalidResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/crop/crop-type": {
+            "get": {
+                "summary": "Get all the crop type",
+                "description": "Get all the type",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Crop type"
+                ],
+                "parameters": [],
+                "responses": {
+                    "200": {
+                        "description": "successful operation",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/successResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid status value",
+                        "schema": {
+                            "$ref": "#/definitions/InvalidResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "summary": "add crop type",
+                "description": "add crop",
+                "produces": [
+                    "application/json"
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Crop type"
+                ],
+                "parameters": [
+                    {
+                        "in": "body",
+                        "name": "body",
+                        "description": "add crop type",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "$ref": "#/definitions/Croptype"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "successful operation",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/successResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid status value",
+                        "schema": {
+                            "$ref": "#/definitions/InvalidResponse"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "summary": "update crop type",
+                "description": "update type",
+                "produces": [
+                    "application/json"
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Crop type"
+                ],
+                "parameters": [
+                    {
+                        "in": "body",
+                        "name": "body",
+                        "description": "update crop type",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "$ref": "#/definitions/UpdatetypeCrop"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "successful operation",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/successResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid status value",
+                        "schema": {
+                            "$ref": "#/definitions/InvalidResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "summary": "delete crop type",
+                "description": "delete type",
+                "produces": [
+                    "application/json"
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Crop type"
+                ],
+                "parameters": [
+                    {
+                        "in": "body",
+                        "name": "body",
+                        "description": "delete crop type",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "$ref": "#/definitions/Delete"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "successful operation",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/successResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid status value",
+                        "schema": {
+                            "$ref": "#/definitions/InvalidResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/crop/crop-variety": {
+            "get": {
+                "summary": "Get all the crop variety",
+                "description": "Get all the variety",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Crop variety"
+                ],
+                "parameters": [],
+                "responses": {
+                    "200": {
+                        "description": "successful operation",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/successResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid status value",
+                        "schema": {
+                            "$ref": "#/definitions/InvalidResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "summary": "add crop variety",
+                "description": "add crop",
+                "produces": [
+                    "application/json"
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Crop variety"
+                ],
+                "parameters": [
+                    {
+                        "in": "body",
+                        "name": "body",
+                        "description": "add crop variety",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "$ref": "#/definitions/cropVariety"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "successful operation",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/successResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid status value",
+                        "schema": {
+                            "$ref": "#/definitions/InvalidResponse"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "summary": "update crop variety",
+                "description": "update variety",
+                "produces": [
+                    "application/json"
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Crop variety"
+                ],
+                "parameters": [
+                    {
+                        "in": "body",
+                        "name": "body",
+                        "description": "update crop variety",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "$ref": "#/definitions/UpdatevarietyCrop"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "successful operation",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/successResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid status value",
+                        "schema": {
+                            "$ref": "#/definitions/InvalidResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "summary": "delete crop variety",
+                "description": "delete variety",
+                "produces": [
+                    "application/json"
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Crop variety"
+                ],
+                "parameters": [
+                    {
+                        "in": "body",
+                        "name": "body",
+                        "description": "delete crop variety",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "$ref": "#/definitions/Delete"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "successful operation",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/successResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid status value",
+                        "schema": {
+                            "$ref": "#/definitions/InvalidResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/crop/crop-grade": {
+            "get": {
+                "summary": "Get all the crop grade",
+                "description": "Get all the grade",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Crop grade"
+                ],
+                "parameters": [],
+                "responses": {
+                    "200": {
+                        "description": "successful operation",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/successResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid status value",
+                        "schema": {
+                            "$ref": "#/definitions/InvalidResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "summary": "add crop grade",
+                "description": "add crop",
+                "produces": [
+                    "application/json"
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Crop grade"
+                ],
+                "parameters": [
+                    {
+                        "in": "body",
+                        "name": "body",
+                        "description": "add crop grade",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "$ref": "#/definitions/cropgrade"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "successful operation",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/successResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid status value",
+                        "schema": {
+                            "$ref": "#/definitions/InvalidResponse"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "summary": "update crop grade",
+                "description": "update grade",
+                "produces": [
+                    "application/json"
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Crop grade"
+                ],
+                "parameters": [
+                    {
+                        "in": "body",
+                        "name": "body",
+                        "description": "update crop grade",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "$ref": "#/definitions/UpdategradeCrop"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "successful operation",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/successResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid status value",
+                        "schema": {
+                            "$ref": "#/definitions/InvalidResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "summary": "delete crop grade",
+                "description": "delete grade",
+                "produces": [
+                    "application/json"
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Crop grade"
+                ],
+                "parameters": [
+                    {
+                        "in": "body",
+                        "name": "body",
+                        "description": "delete crop grade",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "$ref": "#/definitions/Delete"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "successful operation",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/successResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid status value",
+                        "schema": {
+                            "$ref": "#/definitions/InvalidResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/farm/farm-item": {
+            "get": {
+                "summary": "Get all the farm item",
+                "description": "Get all the item",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "farm item"
+                ],
+                "parameters": [],
+                "responses": {
+                    "200": {
+                        "description": "successful operation",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/successResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid status value",
+                        "schema": {
+                            "$ref": "#/definitions/InvalidResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "summary": "add farm item",
+                "description": "add farm",
+                "produces": [
+                    "application/json"
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "farm item"
+                ],
+                "parameters": [
+                    {
+                        "in": "body",
+                        "name": "body",
+                        "description": "add farm item",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "$ref": "#/definitions/farmItem"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "successful operation",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/successResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid status value",
+                        "schema": {
+                            "$ref": "#/definitions/InvalidResponse"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "summary": "update farm item",
+                "description": "update item",
+                "produces": [
+                    "application/json"
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "farm item"
+                ],
+                "parameters": [
+                    {
+                        "in": "body",
+                        "name": "body",
+                        "description": "update farm item",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "$ref": "#/definitions/UpdatefarmItem"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "successful operation",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/successResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid status value",
+                        "schema": {
+                            "$ref": "#/definitions/InvalidResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "summary": "delete farm item",
+                "description": "delete item",
+                "produces": [
+                    "application/json"
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "farm item"
+                ],
+                "parameters": [
+                    {
+                        "in": "body",
+                        "name": "body",
+                        "description": "delete farm item",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "$ref": "#/definitions/Delete"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "successful operation",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/successResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid status value",
+                        "schema": {
+                            "$ref": "#/definitions/InvalidResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/farm/farm-product": {
+            "get": {
+                "summary": "Get all the farm product",
+                "description": "Get all the product",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "farm product"
+                ],
+                "parameters": [],
+                "responses": {
+                    "200": {
+                        "description": "successful operation",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/successResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid status value",
+                        "schema": {
+                            "$ref": "#/definitions/InvalidResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "summary": "add farm product",
+                "description": "add product",
+                "produces": [
+                    "application/json"
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "farm product"
+                ],
+                "parameters": [
+                    {
+                        "in": "body",
+                        "name": "body",
+                        "description": "add farm product",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "$ref": "#/definitions/farmproductItem"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "successful operation",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/successResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid status value",
+                        "schema": {
+                            "$ref": "#/definitions/InvalidResponse"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "summary": "update farm product",
+                "description": "update product",
+                "produces": [
+                    "application/json"
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "farm product"
+                ],
+                "parameters": [
+                    {
+                        "in": "body",
+                        "name": "body",
+                        "description": "update farm product",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "$ref": "#/definitions/UpdateproductfarmItem"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "successful operation",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/successResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid status value",
+                        "schema": {
+                            "$ref": "#/definitions/InvalidResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "summary": "delete farm product",
+                "description": "delete product",
+                "produces": [
+                    "application/json"
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "farm product"
+                ],
+                "parameters": [
+                    {
+                        "in": "body",
+                        "name": "body",
+                        "description": "delete farm product",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "$ref": "#/definitions/Delete"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "successful operation",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/successResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid status value",
+                        "schema": {
+                            "$ref": "#/definitions/InvalidResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/unit/unit-type": {
+            "get": {
+                "summary": "Get all the unit type",
+                "description": "Get all the type",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Unit type"
+                ],
+                "parameters": [],
+                "responses": {
+                    "200": {
+                        "description": "successful operation",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/successResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid status value",
+                        "schema": {
+                            "$ref": "#/definitions/InvalidResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "summary": "add unit type",
+                "description": "add unit type",
+                "produces": [
+                    "application/json"
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Unit type"
+                ],
+                "parameters": [
+                    {
+                        "in": "body",
+                        "name": "body",
+                        "description": "add unit type",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "$ref": "#/definitions/unittype"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "successful operation",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/successResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid status value",
+                        "schema": {
+                            "$ref": "#/definitions/InvalidResponse"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "summary": "update unit type",
+                "description": "update unit type",
+                "produces": [
+                    "application/json"
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Unit type"
+                ],
+                "parameters": [
+                    {
+                        "in": "body",
+                        "name": "body",
+                        "description": "update unit type",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "$ref": "#/definitions/Updateunittype"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "successful operation",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/successResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid status value",
+                        "schema": {
+                            "$ref": "#/definitions/InvalidResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "summary": "delete unit type",
+                "description": "delete unit type",
+                "produces": [
+                    "application/json"
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Unit type"
+                ],
+                "parameters": [
+                    {
+                        "in": "body",
+                        "name": "body",
+                        "description": "delete unit type",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "$ref": "#/definitions/Delete"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "successful operation",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/successResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid status value",
+                        "schema": {
+                            "$ref": "#/definitions/InvalidResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/unit/unit-sub-type": {
+            "get": {
+                "summary": "Get all the unit sub type",
+                "description": "Get all the type",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Unit Subtype"
+                ],
+                "parameters": [],
+                "responses": {
+                    "200": {
+                        "description": "successful operation",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/successResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid status value",
+                        "schema": {
+                            "$ref": "#/definitions/InvalidResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "summary": "add unit sub type",
+                "description": "add unit sub type",
+                "produces": [
+                    "application/json"
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Unit Subtype"
+                ],
+                "parameters": [
+                    {
+                        "in": "body",
+                        "name": "body",
+                        "description": "add unit sub type",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "$ref": "#/definitions/unitSubType"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "successful operation",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/successResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid status value",
+                        "schema": {
+                            "$ref": "#/definitions/InvalidResponse"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "summary": "update unit sub type",
+                "description": "update unit sub type",
+                "produces": [
+                    "application/json"
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Unit Subtype"
+                ],
+                "parameters": [
+                    {
+                        "in": "body",
+                        "name": "body",
+                        "description": "update unit sub type",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "$ref": "#/definitions/UpdateunitSubType"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "successful operation",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/successResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid status value",
+                        "schema": {
+                            "$ref": "#/definitions/InvalidResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "summary": "delete unit sub type",
+                "description": "delete unit sub type",
+                "produces": [
+                    "application/json"
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Unit Subtype"
+                ],
+                "parameters": [
+                    {
+                        "in": "body",
+                        "name": "body",
+                        "description": "delete unit sub type",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "$ref": "#/definitions/Delete"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "successful operation",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/successResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid status value",
+                        "schema": {
+                            "$ref": "#/definitions/InvalidResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/unit/unit-certification": {
+            "get": {
+                "summary": "Get all the unit certification",
+                "description": "Get all the type",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Unit Certification"
+                ],
+                "parameters": [],
+                "responses": {
+                    "200": {
+                        "description": "successful operation",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/successResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid status value",
+                        "schema": {
+                            "$ref": "#/definitions/InvalidResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "summary": "add unit certification",
+                "description": "add unit certification",
+                "produces": [
+                    "application/json"
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Unit Certification"
+                ],
+                "parameters": [
+                    {
+                        "in": "body",
+                        "name": "body",
+                        "description": "add unit certification",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "$ref": "#/definitions/unitCertification"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "successful operation",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/successResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid status value",
+                        "schema": {
+                            "$ref": "#/definitions/InvalidResponse"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "summary": "update unit certification",
+                "description": "update unit certification",
+                "produces": [
+                    "application/json"
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Unit Certification"
+                ],
+                "parameters": [
+                    {
+                        "in": "body",
+                        "name": "body",
+                        "description": "update unit certification",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "$ref": "#/definitions/UpdateunitCertification"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "successful operation",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/successResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid status value",
+                        "schema": {
+                            "$ref": "#/definitions/InvalidResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "summary": "delete unit certification",
+                "description": "delete unit certification",
+                "produces": [
+                    "application/json"
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Unit Certification"
+                ],
+                "parameters": [
+                    {
+                        "in": "body",
+                        "name": "body",
+                        "description": "delete unit certification",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "$ref": "#/definitions/Delete"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "successful operation",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/successResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid status value",
+                        "schema": {
+                            "$ref": "#/definitions/InvalidResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/department": {
+            "get": {
+                "summary": "Get all the department",
+                "description": "Get all the department",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Department"
+                ],
+                "parameters": [],
+                "responses": {
+                    "200": {
+                        "description": "successful operation",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/successResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid status value",
+                        "schema": {
+                            "$ref": "#/definitions/InvalidResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "summary": "add department",
+                "description": "add department",
+                "produces": [
+                    "application/json"
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Department"
+                ],
+                "parameters": [
+                    {
+                        "in": "body",
+                        "name": "body",
+                        "description": "add department",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "$ref": "#/definitions/department"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "successful operation",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/successResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid status value",
+                        "schema": {
+                            "$ref": "#/definitions/InvalidResponse"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "summary": "update department",
+                "description": "update department",
+                "produces": [
+                    "application/json"
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Department"
+                ],
+                "parameters": [
+                    {
+                        "in": "body",
+                        "name": "body",
+                        "description": "update department",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "$ref": "#/definitions/Updatedepartment"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "successful operation",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/successResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid status value",
+                        "schema": {
+                            "$ref": "#/definitions/InvalidResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "summary": "delete department",
+                "description": "delete department",
+                "produces": [
+                    "application/json"
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Department"
+                ],
+                "parameters": [
+                    {
+                        "in": "body",
+                        "name": "body",
+                        "description": "delete department",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "$ref": "#/definitions/Delete"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "successful operation",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/successResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid status value",
+                        "schema": {
+                            "$ref": "#/definitions/InvalidResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/program": {
+            "get": {
+                "summary": "Get all the program",
+                "description": "Get all the program",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Program"
+                ],
+                "parameters": [],
+                "responses": {
+                    "200": {
+                        "description": "successful operation",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/successResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid status value",
+                        "schema": {
+                            "$ref": "#/definitions/InvalidResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "summary": "add program",
+                "description": "add program",
+                "produces": [
+                    "application/json"
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Program"
+                ],
+                "parameters": [
+                    {
+                        "in": "body",
+                        "name": "body",
+                        "description": "add program",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "$ref": "#/definitions/program"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "successful operation",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/successResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid status value",
+                        "schema": {
+                            "$ref": "#/definitions/InvalidResponse"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "summary": "update program",
+                "description": "update program",
+                "produces": [
+                    "application/json"
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Program"
+                ],
+                "parameters": [
+                    {
+                        "in": "body",
+                        "name": "body",
+                        "description": "update program",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "$ref": "#/definitions/Updateprogram"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "successful operation",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/successResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid status value",
+                        "schema": {
+                            "$ref": "#/definitions/InvalidResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "summary": "delete program",
+                "description": "delete program",
+                "produces": [
+                    "application/json"
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Program"
+                ],
+                "parameters": [
+                    {
+                        "in": "body",
+                        "name": "body",
+                        "description": "delete program",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "$ref": "#/definitions/Delete"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "successful operation",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/successResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid status value",
+                        "schema": {
+                            "$ref": "#/definitions/InvalidResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/fabric-type": {
+            "get": {
+                "summary": "Get all the fabrictype",
+                "description": "Get all the fabrictype",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "fabrictype"
+                ],
+                "parameters": [],
+                "responses": {
+                    "200": {
+                        "description": "successful operation",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/successResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid status value",
+                        "schema": {
+                            "$ref": "#/definitions/InvalidResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "summary": "add fabrictype",
+                "description": "add fabrictype",
+                "produces": [
+                    "application/json"
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "fabrictype"
+                ],
+                "parameters": [
+                    {
+                        "in": "body",
+                        "name": "body",
+                        "description": "add fabrictype",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "$ref": "#/definitions/fabrictype"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "successful operation",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/successResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid status value",
+                        "schema": {
+                            "$ref": "#/definitions/InvalidResponse"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "summary": "update fabrictype",
+                "description": "update fabrictype",
+                "produces": [
+                    "application/json"
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "fabrictype"
+                ],
+                "parameters": [
+                    {
+                        "in": "body",
+                        "name": "body",
+                        "description": "update fabrictype",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "$ref": "#/definitions/Updatefabrictype"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "successful operation",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/successResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid status value",
+                        "schema": {
+                            "$ref": "#/definitions/InvalidResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "summary": "delete fabrictype",
+                "description": "delete fabrictype",
+                "produces": [
+                    "application/json"
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "fabrictype"
+                ],
+                "parameters": [
+                    {
+                        "in": "body",
+                        "name": "body",
+                        "description": "delete fabrictype",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "$ref": "#/definitions/Delete"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "successful operation",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/successResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid status value",
+                        "schema": {
+                            "$ref": "#/definitions/InvalidResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/season": {
+            "get": {
+                "summary": "Get all the season",
+                "description": "Get all the season",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "season"
+                ],
+                "parameters": [],
+                "responses": {
+                    "200": {
+                        "description": "successful operation",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/successResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid status value",
+                        "schema": {
+                            "$ref": "#/definitions/InvalidResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "summary": "add season",
+                "description": "add season",
+                "produces": [
+                    "application/json"
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "season"
+                ],
+                "parameters": [
+                    {
+                        "in": "body",
+                        "name": "body",
+                        "description": "add season",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "$ref": "#/definitions/season"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "successful operation",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/successResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid status value",
+                        "schema": {
+                            "$ref": "#/definitions/InvalidResponse"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "summary": "update season",
+                "description": "update season",
+                "produces": [
+                    "application/json"
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "season"
+                ],
+                "parameters": [
+                    {
+                        "in": "body",
+                        "name": "body",
+                        "description": "update season",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "$ref": "#/definitions/Updateseason"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "successful operation",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/successResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid status value",
+                        "schema": {
+                            "$ref": "#/definitions/InvalidResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "summary": "delete season",
+                "description": "delete season",
+                "produces": [
+                    "application/json"
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "season"
+                ],
+                "parameters": [
+                    {
+                        "in": "body",
+                        "name": "body",
+                        "description": "delete season",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "$ref": "#/definitions/Delete"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "successful operation",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/successResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid status value",
+                        "schema": {
+                            "$ref": "#/definitions/InvalidResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/loom-type": {
+            "get": {
+                "summary": "Get all the loomtype",
+                "description": "Get all the loomtype",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "loomtype"
+                ],
+                "parameters": [],
+                "responses": {
+                    "200": {
+                        "description": "successful operation",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/successResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid status value",
+                        "schema": {
+                            "$ref": "#/definitions/InvalidResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "summary": "add loomtype",
+                "description": "add loomtype",
+                "produces": [
+                    "application/json"
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "loomtype"
+                ],
+                "parameters": [
+                    {
+                        "in": "body",
+                        "name": "body",
+                        "description": "add loomtype",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "$ref": "#/definitions/loomtype"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "successful operation",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/successResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid status value",
+                        "schema": {
+                            "$ref": "#/definitions/InvalidResponse"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "summary": "update loomtype",
+                "description": "update loomtype",
+                "produces": [
+                    "application/json"
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "loomtype"
+                ],
+                "parameters": [
+                    {
+                        "in": "body",
+                        "name": "body",
+                        "description": "update loomtype",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "$ref": "#/definitions/Updateloomtype"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "successful operation",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/successResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid status value",
+                        "schema": {
+                            "$ref": "#/definitions/InvalidResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "summary": "delete loomtype",
+                "description": "delete loomtype",
+                "produces": [
+                    "application/json"
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "loomtype"
+                ],
+                "parameters": [
+                    {
+                        "in": "body",
+                        "name": "body",
+                        "description": "delete loomtype",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "$ref": "#/definitions/Delete"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "successful operation",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/successResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid status value",
+                        "schema": {
+                            "$ref": "#/definitions/InvalidResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/production-capacity": {
+            "get": {
+                "summary": "Get all the productioncapacity",
+                "description": "Get all the productioncapacity",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "productioncapacity"
+                ],
+                "parameters": [],
+                "responses": {
+                    "200": {
+                        "description": "successful operation",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/successResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid status value",
+                        "schema": {
+                            "$ref": "#/definitions/InvalidResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "summary": "add productioncapacity",
+                "description": "add productioncapacity",
+                "produces": [
+                    "application/json"
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "productioncapacity"
+                ],
+                "parameters": [
+                    {
+                        "in": "body",
+                        "name": "body",
+                        "description": "add productioncapacity",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "$ref": "#/definitions/productioncapacity"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "successful operation",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/successResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid status value",
+                        "schema": {
+                            "$ref": "#/definitions/InvalidResponse"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "summary": "update productioncapacity",
+                "description": "update productioncapacity",
+                "produces": [
+                    "application/json"
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "productioncapacity"
+                ],
+                "parameters": [
+                    {
+                        "in": "body",
+                        "name": "body",
+                        "description": "update productioncapacity",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "$ref": "#/definitions/Updateproductioncapacity"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "successful operation",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/successResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid status value",
+                        "schema": {
+                            "$ref": "#/definitions/InvalidResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "summary": "delete productioncapacity",
+                "description": "delete productioncapacity",
+                "produces": [
+                    "application/json"
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "productioncapacity"
+                ],
+                "parameters": [
+                    {
+                        "in": "body",
+                        "name": "body",
+                        "description": "delete productioncapacity",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "$ref": "#/definitions/Delete"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "successful operation",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/successResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid status value",
+                        "schema": {
+                            "$ref": "#/definitions/InvalidResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/yarncount": {
+            "get": {
+                "summary": "Get all the yarncount",
+                "description": "Get all the yarncount",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "yarncount"
+                ],
+                "parameters": [],
+                "responses": {
+                    "200": {
+                        "description": "successful operation",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/successResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid status value",
+                        "schema": {
+                            "$ref": "#/definitions/InvalidResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "summary": "add yarncount",
+                "description": "add yarncount",
+                "produces": [
+                    "application/json"
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "yarncount"
+                ],
+                "parameters": [
+                    {
+                        "in": "body",
+                        "name": "body",
+                        "description": "add yarncount",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "$ref": "#/definitions/yarncount"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "successful operation",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/successResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid status value",
+                        "schema": {
+                            "$ref": "#/definitions/InvalidResponse"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "summary": "update yarncount",
+                "description": "update yarncount",
+                "produces": [
+                    "application/json"
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "yarncount"
+                ],
+                "parameters": [
+                    {
+                        "in": "body",
+                        "name": "body",
+                        "description": "update yarncount",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "$ref": "#/definitions/Updateyarncount"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "successful operation",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/successResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid status value",
+                        "schema": {
+                            "$ref": "#/definitions/InvalidResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "summary": "delete yarncount",
+                "description": "delete yarncount",
+                "produces": [
+                    "application/json"
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "yarncount"
+                ],
+                "parameters": [
+                    {
+                        "in": "body",
+                        "name": "body",
+                        "description": "delete yarncount",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "$ref": "#/definitions/Delete"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "successful operation",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/successResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid status value",
+                        "schema": {
+                            "$ref": "#/definitions/InvalidResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/cottonmix": {
+            "get": {
+                "summary": "Get all the cottonmix",
+                "description": "Get all the cottonmix",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "cottonmix"
+                ],
+                "parameters": [],
+                "responses": {
+                    "200": {
+                        "description": "successful operation",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/successResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid status value",
+                        "schema": {
+                            "$ref": "#/definitions/InvalidResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "summary": "add cottonmix",
+                "description": "add cottonmix",
+                "produces": [
+                    "application/json"
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "cottonmix"
+                ],
+                "parameters": [
+                    {
+                        "in": "body",
+                        "name": "body",
+                        "description": "add cottonmix",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "$ref": "#/definitions/cottonmix"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "successful operation",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/successResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid status value",
+                        "schema": {
+                            "$ref": "#/definitions/InvalidResponse"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "summary": "update cottonmix",
+                "description": "update cottonmix",
+                "produces": [
+                    "application/json"
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "cottonmix"
+                ],
+                "parameters": [
+                    {
+                        "in": "body",
+                        "name": "body",
+                        "description": "update cottonmix",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "$ref": "#/definitions/Updatecottonmix"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "successful operation",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/successResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid status value",
+                        "schema": {
+                            "$ref": "#/definitions/InvalidResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "summary": "delete cottonmix",
+                "description": "delete cottonmix",
+                "produces": [
+                    "application/json"
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "cottonmix"
+                ],
+                "parameters": [
+                    {
+                        "in": "body",
+                        "name": "body",
+                        "description": "delete cottonmix",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "$ref": "#/definitions/Delete"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "successful operation",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/successResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid status value",
+                        "schema": {
+                            "$ref": "#/definitions/InvalidResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/cooperative": {
+            "get": {
+                "summary": "Get all the cooperative",
+                "description": "Get all the cooperative",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "cooperative"
+                ],
+                "parameters": [],
+                "responses": {
+                    "200": {
+                        "description": "successful operation",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/successResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid status value",
+                        "schema": {
+                            "$ref": "#/definitions/InvalidResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "summary": "add cooperative",
+                "description": "add cooperative",
+                "produces": [
+                    "application/json"
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "cooperative"
+                ],
+                "parameters": [
+                    {
+                        "in": "body",
+                        "name": "body",
+                        "description": "add cooperative",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "$ref": "#/definitions/cooperative"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "successful operation",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/successResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid status value",
+                        "schema": {
+                            "$ref": "#/definitions/InvalidResponse"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "summary": "update cooperative",
+                "description": "update cooperative",
+                "produces": [
+                    "application/json"
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "cooperative"
+                ],
+                "parameters": [
+                    {
+                        "in": "body",
+                        "name": "body",
+                        "description": "update cooperative",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "$ref": "#/definitions/Updatecooperative"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "successful operation",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/successResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid status value",
+                        "schema": {
+                            "$ref": "#/definitions/InvalidResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "summary": "delete cooperative",
+                "description": "delete cooperative",
+                "produces": [
+                    "application/json"
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "cooperative"
+                ],
+                "parameters": [
+                    {
+                        "in": "body",
+                        "name": "body",
+                        "description": "delete cooperative",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "$ref": "#/definitions/Delete"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "successful operation",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/successResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid status value",
+                        "schema": {
+                            "$ref": "#/definitions/InvalidResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/linen-variety": {
+            "get": {
+                "summary": "Get all the linenvariety",
+                "description": "Get all the linenvariety",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "linenvariety"
+                ],
+                "parameters": [],
+                "responses": {
+                    "200": {
+                        "description": "successful operation",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/successResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid status value",
+                        "schema": {
+                            "$ref": "#/definitions/InvalidResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "summary": "add linenvariety",
+                "description": "add linenvariety",
+                "produces": [
+                    "application/json"
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "linenvariety"
+                ],
+                "parameters": [
+                    {
+                        "in": "body",
+                        "name": "body",
+                        "description": "add linenvariety",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "$ref": "#/definitions/linenvariety"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "successful operation",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/successResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid status value",
+                        "schema": {
+                            "$ref": "#/definitions/InvalidResponse"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "summary": "update linenvariety",
+                "description": "update linenvariety",
+                "produces": [
+                    "application/json"
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "linenvariety"
+                ],
+                "parameters": [
+                    {
+                        "in": "body",
+                        "name": "body",
+                        "description": "update linenvariety",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "$ref": "#/definitions/Updatelinenvariety"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "successful operation",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/successResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid status value",
+                        "schema": {
+                            "$ref": "#/definitions/InvalidResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "summary": "delete linenvariety",
+                "description": "delete linenvariety",
+                "produces": [
+                    "application/json"
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "linenvariety"
+                ],
+                "parameters": [
+                    {
+                        "in": "body",
+                        "name": "body",
+                        "description": "delete linenvariety",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "$ref": "#/definitions/Delete"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "successful operation",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/successResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid status value",
+                        "schema": {
+                            "$ref": "#/definitions/InvalidResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/farm-group": {
+            "get": {
+                "summary": "Get all the farmgroup",
+                "description": "Get all the farmgroup",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "farmgroup"
+                ],
+                "parameters": [],
+                "responses": {
+                    "200": {
+                        "description": "successful operation",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/successResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid status value",
+                        "schema": {
+                            "$ref": "#/definitions/InvalidResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "summary": "add farmgroup",
+                "description": "add farmgroup",
+                "produces": [
+                    "application/json"
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "farmgroup"
+                ],
+                "parameters": [
+                    {
+                        "in": "body",
+                        "name": "body",
+                        "description": "add farmgroup",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "$ref": "#/definitions/farmgroup"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "successful operation",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/successResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid status value",
+                        "schema": {
+                            "$ref": "#/definitions/InvalidResponse"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "summary": "update farmgroup",
+                "description": "update farmgroup",
+                "produces": [
+                    "application/json"
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "farmgroup"
+                ],
+                "parameters": [
+                    {
+                        "in": "body",
+                        "name": "body",
+                        "description": "update farmgroup",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "$ref": "#/definitions/Updatefarmgroup"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "successful operation",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/successResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid status value",
+                        "schema": {
+                            "$ref": "#/definitions/InvalidResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "summary": "delete farmgroup",
+                "description": "delete farmgroup",
+                "produces": [
+                    "application/json"
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "farmgroup"
+                ],
+                "parameters": [
+                    {
+                        "in": "body",
+                        "name": "body",
+                        "description": "delete farmgroup",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "$ref": "#/definitions/Delete"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "successful operation",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/successResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid status value",
+                        "schema": {
+                            "$ref": "#/definitions/InvalidResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/ics": {
+            "get": {
+                "summary": "Get all the ics",
+                "description": "Get all the ics",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "ics"
+                ],
+                "parameters": [],
+                "responses": {
+                    "200": {
+                        "description": "successful operation",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/successResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid status value",
+                        "schema": {
+                            "$ref": "#/definitions/InvalidResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "summary": "add ics",
+                "description": "add ics",
+                "produces": [
+                    "application/json"
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "ics"
+                ],
+                "parameters": [
+                    {
+                        "in": "body",
+                        "name": "body",
+                        "description": "add ics",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "$ref": "#/definitions/ics"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "successful operation",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/successResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid status value",
+                        "schema": {
+                            "$ref": "#/definitions/InvalidResponse"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "summary": "update ics",
+                "description": "update ics",
+                "produces": [
+                    "application/json"
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "ics"
+                ],
+                "parameters": [
+                    {
+                        "in": "body",
+                        "name": "body",
+                        "description": "update ics",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "$ref": "#/definitions/Updateics"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "successful operation",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/successResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid status value",
+                        "schema": {
+                            "$ref": "#/definitions/InvalidResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "summary": "delete ics",
+                "description": "delete ics",
+                "produces": [
+                    "application/json"
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "ics"
+                ],
+                "parameters": [
+                    {
+                        "in": "body",
+                        "name": "body",
+                        "description": "delete ics",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "$ref": "#/definitions/Delete"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "successful operation",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/successResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid status value",
+                        "schema": {
+                            "$ref": "#/definitions/InvalidResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/video": {
+            "get": {
+                "summary": "Get all the video",
+                "description": "Get all the video",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "video"
+                ],
+                "parameters": [],
+                "responses": {
+                    "200": {
+                        "description": "successful operation",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/successResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid status value",
+                        "schema": {
+                            "$ref": "#/definitions/InvalidResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "summary": "add video",
+                "description": "add video",
+                "produces": [
+                    "application/json"
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "video"
+                ],
+                "parameters": [
+                    {
+                        "in": "body",
+                        "name": "body",
+                        "description": "add video",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "$ref": "#/definitions/video"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "successful operation",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/successResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid status value",
+                        "schema": {
+                            "$ref": "#/definitions/InvalidResponse"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "summary": "update video",
+                "description": "update video",
+                "produces": [
+                    "application/json"
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "video"
+                ],
+                "parameters": [
+                    {
+                        "in": "body",
+                        "name": "body",
+                        "description": "update video",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "$ref": "#/definitions/Updatevideo"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "successful operation",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/successResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid status value",
+                        "schema": {
+                            "$ref": "#/definitions/InvalidResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "summary": "delete video",
+                "description": "delete video",
+                "produces": [
+                    "application/json"
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "video"
+                ],
+                "parameters": [
+                    {
+                        "in": "body",
+                        "name": "body",
+                        "description": "delete video",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "$ref": "#/definitions/Delete"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "successful operation",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/successResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid status value",
+                        "schema": {
+                            "$ref": "#/definitions/InvalidResponse"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "successResponse": {
+            "type": "object",
+            "properties": {
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
+        "Country": {
+            "type": "array",
+            "properties": {
+                "countryName": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "Updatecountry": {
+            "properties": {
+                "countryName": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "Createstate": {
+            "properties": {
+                "countryId": {
+                    "type": "integer"
+                },
+                "stateName": {
+                    "type": "string"
+                }
+            }
+        },
+        "Updatestate": {
+            "properties": {
+                "id": {
+                    "type": "integer"
+                },
+                "countryId": {
+                    "type": "integer"
+                },
+                "stateName": {
+                    "type": "string"
+                }
+            }
+        },
+        "Createdistrict": {
+            "properties": {
+                "stateId": {
+                    "type": "integer"
+                },
+                "districtName": {
+                    "type": "string"
+                }
+            }
+        },
+        "Updatedistrict": {
+            "properties": {
+                "id": {
+                    "type": "integer"
+                },
+                "stateId": {
+                    "type": "integer"
+                },
+                "districtName": {
+                    "type": "string"
+                }
+            }
+        },
+        "Createblock": {
+            "properties": {
+                "districtId": {
+                    "type": "integer"
+                },
+                "blockName": {
+                    "type": "string"
+                }
+            }
+        },
+        "Updateblock": {
+            "properties": {
+                "id": {
+                    "type": "integer"
+                },
+                "districtId": {
+                    "type": "integer"
+                },
+                "blockName": {
+                    "type": "string"
+                }
+            }
+        },
+        "Createvillage": {
+            "properties": {
+                "blockId": {
+                    "type": "integer"
+                },
+                "villageName": {
+                    "type": "string"
+                }
+            }
+        },
+        "Updatevillage": {
+            "properties": {
+                "id": {
+                    "type": "integer"
+                },
+                "blockId": {
+                    "type": "integer"
+                },
+                "villageName": {
+                    "type": "string"
+                }
+            }
+        },
+        "fabrictype": {
+            "properties": {
+                "fabricTypeName": {
+                    "type": "string"
+                }
+            }
+        },
+        "Updatefabrictype": {
+            "properties": {
+                "fabricTypeName": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "season": {
+            "properties": {
+                "name": {
+                    "type": "string"
+                },
+                "from": {
+                    "type": "string"
+                },
+                "to": {
+                    "type": "string"
+                }
+            }
+        },
+        "Updateseason": {
+            "properties": {
+                "name": {
+                    "type": "string"
+                },
+                "from": {
+                    "type": "string"
+                },
+                "to": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "loomtype": {
+            "properties": {
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "Updateloomtype": {
+            "properties": {
+                "name": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "productioncapacity": {
+            "properties": {
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "Updateproductioncapacity": {
+            "properties": {
+                "name": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "yarncount": {
+            "properties": {
+                "yarnCountName": {
+                    "type": "string"
+                }
+            }
+        },
+        "Updateyarncount": {
+            "properties": {
+                "yarnCountName": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "cottonmix": {
+            "properties": {
+                "cottonMixName": {
+                    "type": "string"
+                }
+            }
+        },
+        "Updatecottonmix": {
+            "properties": {
+                "cottonMixName": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "cooperative": {
+            "properties": {
+                "address": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "country": {
+                    "type": "string"
+                },
+                "contactperson": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "mobile": {
+                    "type": "string"
+                }
+            }
+        },
+        "Updatecooperative": {
+            "properties": {
+                "address": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "country": {
+                    "type": "string"
+                },
+                "contactperson": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "mobile": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "linenvariety": {
+            "properties": {
+                "variety": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "Updatelinenvariety": {
+            "properties": {
+                "variety": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "farmgroup": {
+            "properties": {
+                "brandId": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "Updatefarmgroup": {
+            "properties": {
+                "brandId": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "ics": {
+            "properties": {
+                "formGroupId": {
+                    "type": "integer"
+                },
+                "icsName": {
+                    "type": "string"
+                }
+            }
+        },
+        "Updateics": {
+            "properties": {
+                "formGroupId": {
+                    "type": "integer"
+                },
+                "icsName": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "video": {
+            "properties": {
+                "country": {
+                    "type": "string"
+                },
+                "brand": {
+                    "type": "string"
+                },
+                "processor": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "video": {
+                    "type": "string"
+                }
+            }
+        },
+        "Updatevideo": {
+            "properties": {
+                "country": {
+                    "type": "string"
+                },
+                "brand": {
+                    "type": "string"
+                },
+                "processor": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "video": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "User": {
+            "properties": {
+                "username": {
+                    "type": "string"
+                },
+                "password": {
+                    "type": "string"
+                }
+            }
+        },
+        "Crop": {
+            "properties": {
+                "cropName": {
+                    "type": "string"
+                }
+            }
+        },
+        "UpdateCrop": {
+            "properties": {
+                "cropName": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "Croptype": {
+            "properties": {
+                "cropTypeName": {
+                    "type": "string"
+                }
+            }
+        },
+        "UpdatetypeCrop": {
+            "properties": {
+                "cropTypeName": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "cropVariety": {
+            "properties": {
+                "cropVariety": {
+                    "type": "string"
+                }
+            }
+        },
+        "UpdatevarietyCrop": {
+            "properties": {
+                "cropVariety": {
+                    "type": "string"
+                },
+                "cropTypeId": {
+                    "type": "integer"
+                }
+            }
+        },
+        "cropgrade": {
+            "properties": {
+                "cropGrade": {
+                    "type": "string"
+                }
+            }
+        },
+        "UpdategradeCrop": {
+            "properties": {
+                "cropGrade": {
+                    "type": "string"
+                },
+                "cropTypeId": {
+                    "type": "integer"
+                }
+            }
+        },
+        "Delete": {
+            "properties": {
+                "id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "farmItem": {
+            "properties": {
+                "farmItem": {
+                    "type": "string"
+                }
+            }
+        },
+        "UpdatefarmItem": {
+            "properties": {
+                "farmItem": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "farmproductItem": {
+            "properties": {
+                "farmProduct": {
+                    "type": "string"
+                },
+                "farmItemId": {
+                    "type": "integer"
+                }
+            }
+        },
+        "UpdateproductfarmItem": {
+            "properties": {
+                "farmProduct": {
+                    "type": "string"
+                },
+                "farmItemId": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "unittype": {
+            "properties": {
+                "unitType": {
+                    "type": "string"
+                }
+            }
+        },
+        "Updateunittype": {
+            "properties": {
+                "unitType": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "unitSubType": {
+            "properties": {
+                "unitSubType": {
+                    "type": "string"
+                }
+            }
+        },
+        "UpdateunitSubType": {
+            "properties": {
+                "unitSubType": {
+                    "type": "string"
+                },
+                "unitTypeId": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "unitCertification": {
+            "properties": {
+                "certificationLogo": {
+                    "type": "string"
+                },
+                "certificationName": {
+                    "type": "string"
+                }
+            }
+        },
+        "UpdateunitCertification": {
+            "properties": {
+                "certificationLogo": {
+                    "type": "string"
+                },
+                "certificationName": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "department": {
+            "properties": {
+                "deptName": {
+                    "type": "string"
+                }
+            }
+        },
+        "Updatedepartment": {
+            "properties": {
+                "deptName": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "program": {
+            "properties": {
+                "programName": {
+                    "type": "string"
+                }
+            }
+        },
+        "Updateprogram": {
+            "properties": {
+                "programName": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "InvalidResponse": {
+            "type": "object",
+            "properties": {
+                "statusCode": {
+                    "type": "string"
+                },
+                "message": {
+                    "type": "string"
+                }
+            }
+        }
+    }
+}
