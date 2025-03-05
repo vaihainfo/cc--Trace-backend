@@ -164,7 +164,7 @@ const exportSpinnerGreyOutReport = async () => {
       { greyout_status: true},
       {
         greyout_status: false,
-        greyed_out_qty: { [Op.ne]: null }
+        greyed_out_qty: { [Op.gt]: 0 }
       },
     ];
 
@@ -452,13 +452,12 @@ const exportGinnerProcessGreyOutReport = async () => {
 
 
     for await (const [index, item] of rows.entries()) {
-
       const rowValues = [
         offset + index + 1,
         item?.season_name ? item?.season_name : "",
         item?.ginner_name ? item?.ginner_name : "",
         item.reel_lot_no ? item.reel_lot_no : "",
-        item.press_no ? item.press_no : "",
+        item.press_no?.toLowerCase().trim() !== "nan-nan"  ? item.press_no : item?.pressno_from && item?.pressno_to ? item?.pressno_from+ ' - '+item?.pressno_to: '',
         item?.lot_no ? item?.lot_no : "",
         item.lint_quantity ? Number(formatDecimal( item.lint_quantity)) : 0
       ];
@@ -4505,7 +4504,7 @@ const generateSpinnerSummary = async () => {
               status: { [Op.in]: ['Sold', 'Partially Accepted', 'Partially Rejected'] },
               [Op.or]: [
                 { greyout_status: true },
-                { greyout_status: false, greyed_out_qty: { [Op.ne]: null } },
+                { greyout_status: false,  greyed_out_qty: { [Op.gt]: 0 } },
               ],
             },
           }),

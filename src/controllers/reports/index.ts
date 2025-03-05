@@ -3227,7 +3227,8 @@ const exportGinnerProcessGreyOutReport = async (req: Request, res: Response) => 
           ginner: item.ginner_name ? item.ginner_name : "",
           reel_lot_no: item.reel_lot_no ? item.reel_lot_no : "",
           press: item.press_no ? item.press_no : "",
-          lot_no: item.lot_no ? item.lot_no : "",
+          // lot_no: item.lot_no ? item.lot_no : "",
+          lot_no: item.press_no?.toLowerCase().trim() !== "nan-nan"  ? item.press_no : item?.pressno_from && item?.pressno_to ? item?.pressno_from+ ' - '+item?.pressno_to: '',
           lint_quantity: item.lint_quantity ? item.lint_quantity : 0,
         });
         worksheet.addRow(rowValues);
@@ -3502,7 +3503,7 @@ const exportSpinnerGreyOutReport = async (req: Request, res: Response) => {
         { greyout_status: true, ...searchCondition },
         {
           greyout_status: false,
-          greyed_out_qty: { [Op.ne]: null },
+          greyed_out_qty: { [Op.gt]: 0 },
           ...searchCondition
         },
       ];
@@ -11407,7 +11408,7 @@ const fetchSpinnerSummaryPagination = async (req: Request, res: Response) => {
             status: { [Op.in]: ['Sold', 'Partially Accepted', 'Partially Rejected'] },
             [Op.or]: [
               { greyout_status: true },
-              { greyout_status: false, greyed_out_qty: { [Op.ne]: null } },
+              { greyout_status: false,  greyed_out_qty: { [Op.gt]: 0 }, },
             ],
           },
         }),
@@ -11793,7 +11794,7 @@ const exportSpinnerSummary = async (req: Request, res: Response) => {
               status: { [Op.in]: ['Sold', 'Partially Accepted', 'Partially Rejected'] },
               [Op.or]: [
                 { greyout_status: true },
-                { greyout_status: false, greyed_out_qty: { [Op.ne]: null } },
+                { greyout_status: false,  greyed_out_qty: { [Op.gt]: 0 } },
               ],
             },
           }),
