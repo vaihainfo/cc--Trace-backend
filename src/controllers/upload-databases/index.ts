@@ -2321,7 +2321,23 @@ const uploadIntegrityTest = async (req: Request, res: Response) => {
                     }
                 }
 
-                
+                let check = await  OrganicIntegrity.findOne({
+                    where: {
+                        brand_id: brand.id,
+                        farmGroup_id: farmer ? farmer.farmGroup_id : 0,
+                        ics_id: farmer ? farmer.ics_id: 0,
+                        ginner_id: ginner ? ginner.id : 0,
+                        test_stage: String(data.stageOfTesting),
+                        farmer: farmer ? farmer.id: 0,
+                        seal_no: String(data.sealNo),
+                        sample_code: String(data.sampleCodeNo),
+                        seed_lot: String(data.seedLotNo),
+                        integrity_score: data.integrityScore.toLowerCase() === "positive" ? true : false,
+                        season_id: season.id
+                    }
+                });
+
+
                 if (!farmer && data.stageOfTesting.toLowerCase().replace(/[^a-zA-Z0-9]/g, "") !== "lintcotton") {
                     fail.push({
                         success: false,
@@ -2339,6 +2355,18 @@ const uploadIntegrityTest = async (req: Request, res: Response) => {
                     });
                     return res.sendSuccess(res, { pass, fail });
                 }
+
+                if(check){
+                    fail.push({
+                        success: false,
+                        data: { 
+                            brand: data.brand ? data.brand : '', farmerName: data.farmer ? data.farmer : '', farmGroupName: data.farmGroup ? data.farmGroup : '', icsName: data.icsName ? data.icsName : ''
+                        },
+                        message: "Organic Integrity already exists"
+                    });
+                    return res.sendSuccess(res, { pass, fail });
+                }
+                
                 else if(farmer || brand || season ) {
                     const obj = {
                         date: data.date,
