@@ -2361,9 +2361,10 @@ const uploadIntegrityTest = async (req: Request, res: Response) => {
                         });
                         return res.sendSuccess(res, { pass, fail });
                        
+                       
                     }
                 }
-                  
+ 
                 let check = await  OrganicIntegrity.findOne({
                     where: {
                         brand_id: brand.id,
@@ -2407,9 +2408,7 @@ const uploadIntegrityTest = async (req: Request, res: Response) => {
                     });
                     return res.sendSuccess(res, { pass, fail });
                 }
-                
-
-                else if((farmer || ginner) && brand && season && icsName ) {
+                else if((farmer || ginner) && brand && season ) {
                     const obj = {
                         date: data.date,
                         brand_id: brand.id,
