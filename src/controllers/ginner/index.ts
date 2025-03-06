@@ -3529,6 +3529,8 @@ const fetchGinLintAlert = async (req: Request, res: Response) => {
                   'buyer_ginner_id', buyer.id,
                   'buyer_ginner_name', buyer.name,
                   'status', gs.status,
+                  'invoice_file', gs.invoice_file,
+                  'approval_doc', gs.approval_doc,
                   'greyout_status', gs.greyout_status,
               'weight', SUM(CAST(gb.weight AS DOUBLE PRECISION)),
               'bales', jsonb_agg(jsonb_build_object(
