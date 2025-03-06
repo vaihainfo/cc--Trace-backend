@@ -2178,15 +2178,16 @@ const createGinnerSales = async (req: Request, res: Response) => {
               bale_id: bale.id,
               process_id: bale.process_id,
             },
-          }, { transaction }
+            transaction
+          }
         );
 
-        const ginsaledata = await GinSales.findOne({ where: { id: bale.sales_id } }, { transaction });
+        const ginsaledata = await GinSales.findOne({ where: { id: bale.sales_id }, transaction });
         if(ginsaledata){
           if (Number(ginsaledata?.qty_stock) - Number(bale.weight) <= 0) {
-            await GinSales.update({ qty_stock: 0}, { where: { id: bale.sales_id } }, { transaction });
+            await GinSales.update({ qty_stock: 0}, { where: { id: bale.sales_id }, transaction });
           }else{
-            let update = await GinSales.update({ qty_stock: Number(ginsaledata?.qty_stock) - Number(bale.weight) }, { where: { id: bale.sales_id } }, { transaction });
+            let update = await GinSales.update({ qty_stock: Number(ginsaledata?.qty_stock) - Number(bale.weight) }, { where: { id: bale.sales_id }, transaction });
           }
         }
 
