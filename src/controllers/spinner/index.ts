@@ -137,8 +137,8 @@ const createSpinnerProcess = async (req: Request, res: Response) => {
         where: {
           id: spin.id,
         },
+        transaction
       },
-            transaction
     );
 
     for await (let yarn of req.body.yarns) {
