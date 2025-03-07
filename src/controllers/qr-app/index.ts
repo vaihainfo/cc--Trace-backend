@@ -443,15 +443,16 @@ const fetchAgentTransactions = async (req: Request, res: Response) => {
             ],
         };
 
-        if (sortOrder === "asc" || sortOrder === "desc") {
-            queryOptions.order = [["id", sortOrder]];
-        }
+        // if (sortOrder === "asc" || sortOrder === "desc") {
+        //     queryOptions.order = [["id", sortOrder]];
+        // }
 
         // apply pagination
         if (req.query.pagination === "true") {
             queryOptions.offset = offset;
             queryOptions.limit = limit;
-
+            queryOptions.order = [["date", "DESC"], ["id", "DESC"]];
+            
             const { count, rows } = await Transaction.findAndCountAll(queryOptions);
 
             return res.sendPaginationSuccess(res, rows, count);
@@ -679,15 +680,16 @@ const exportAgentTransactions = async (req: Request, res: Response) => {
                 ],
             };
 
-            if (sortOrder === "asc" || sortOrder === "desc") {
-                queryOptions.order = [["id", sortOrder]];
-            }
+            // if (sortOrder === "asc" || sortOrder === "desc") {
+            //     queryOptions.order = [["id", sortOrder]];
+            // }
 
             let transactions: any;
 
             if (req.query.pagination === "true") {
                 queryOptions.offset = offset;
                 queryOptions.limit = limit;
+                queryOptions.order = [["date", "DESC"], ["id", "DESC"]];
 
                 const { count, rows } = await Transaction.findAndCountAll(queryOptions);
 
