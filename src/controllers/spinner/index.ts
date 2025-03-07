@@ -147,6 +147,7 @@ const createSpinnerProcess = async (req: Request, res: Response) => {
         yarn_count: yarn.yarnCount,
         yarn_produced: yarn.yarnProduced,
         yarn_qty_stock: yarn.yarnProduced,
+        batch_lot_no: yarn.batchLotNo,
       };
 
       const yarns = await SpinYarn.create(yarnData, { transaction });
@@ -275,6 +276,7 @@ const updateSpinProcess = async (req: Request, res: Response) => {
         yarn_count: yarn.yarnCount,
         yarn_produced: yarn.yarnProduced,
         yarn_qty_stock: yarn.yarnProduced,
+        batch_lot_no: yarn.batchLotNo,
       };
       const yarns = await SpinYarn.create(yarnData);
       let uniqueFilename = `spin_yarn_qrcode_${Date.now()}.png`;
@@ -502,10 +504,6 @@ const fetchSpinnerProcess = async (req: Request, res: Response) => {
         model: Program,
         as: "program",
       },
-      // {
-      //     model: YarnCount,
-      //     as: "yarncount",
-      // }
     ];
     //fetch data with pagination
 
@@ -516,16 +514,33 @@ const fetchSpinnerProcess = async (req: Request, res: Response) => {
     });
 
     let yarncount = [];
+    let spinyarns = [];
 
-    if (gin.dataValues?.yarn_count.length > 0) {
-      yarncount = await YarnCount.findAll({
-        attributes: ["id", "yarnCount_name"],
-        where: { id: { [Op.in]: gin.dataValues?.yarn_count } },
-      });
+    if(gin){
+      spinyarns = await SpinYarn.findAll({
+        where: {process_id: gin.id},
+        include:{
+          model: YarnCount,
+          as: "yarncount",
+          attributes: ["id", "yarnCount_name"],
+        }
+      })
     }
-    gin.yarncount = yarncount;
 
-    return res.sendSuccess(res, gin);
+    let data = {
+      ...gin?.dataValues,
+      spinyarns
+    }
+
+    // if (gin.dataValues?.yarn_count.length > 0) {
+    //   yarncount = await YarnCount.findAll({
+    //     attributes: ["id", "yarnCount_name"],
+    //     where: { id: { [Op.in]: gin.dataValues?.yarn_count } },
+    //   });
+    // }
+    // gin.yarncount = yarncount;
+
+    return res.sendSuccess(res, data);
   } catch (error: any) {
     return res.sendError(res, error.message);
   }

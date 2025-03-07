@@ -73,7 +73,7 @@ const SpinProcess = db.define('spin_processes', {
   },
   batch_lot_no: {
     allowNull: false,
-    type: DataTypes.STRING
+    type: DataTypes.TEXT
   },
   reel_lot_no: {
     type: DataTypes.STRING
