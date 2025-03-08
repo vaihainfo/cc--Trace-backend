@@ -88,12 +88,13 @@ const fetchSeasonPagination = async (req: Request, res: Response) => {
             order: [
                 [sortName, sortOrder] 
             ],
+            limit: limit,
+            offset: offset            
         });
         const normalizeDate = (date: Date) => {
             return new Date(date.getFullYear(), date.getMonth(), date.getDate());
         };
-        const currentDate = normalizeDate(new Date());
-          
+        const currentDate = normalizeDate(new Date());          
         let currentSeasonIndex = allSeasons.findIndex((season: any) => {
             const fromDate = normalizeDate(new Date(season.from));
             const toDate = normalizeDate(new Date(season.to));
@@ -104,7 +105,7 @@ const fetchSeasonPagination = async (req: Request, res: Response) => {
             currentSeasonIndex = allSeasons.length - 1;
         }
 
-        const validSeasons = allSeasons.slice(0, currentSeasonIndex + 1);
+        const validSeasons = (sortOrder == 'desc')? allSeasons.slice(currentSeasonIndex , currentSeasonIndex + Number(limit)) :allSeasons.slice(0, currentSeasonIndex + 1);
 
 
         if (req.query.pagination === "true") {

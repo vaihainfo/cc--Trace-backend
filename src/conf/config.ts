@@ -1,4 +1,5 @@
 import dotenv from "dotenv";
+import logging from "middleware/logging";
 // dotenv.config({ path: '.env.local' });
 dotenv.config({ path: `.env.${process.env.NODE_ENV || 'development'}` });
 
@@ -8,6 +9,7 @@ module.exports = {
   database: process.env.DB_NAME,
   host: process.env.DB_HOST,
   dialect: "postgres",
+  logging:false,
   dialectOptions: {
     connectTimeout: 60000,  // 1 minute for establishing connection
     statement_timeout: 600000,  // 10 minutes for query execution timeout
