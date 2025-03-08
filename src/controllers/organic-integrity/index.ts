@@ -49,7 +49,10 @@ const fetchOrganicIntegrityPagination = async (req: Request, res: Response) => {
                 { sample_code: { [Op.iLike]: `%${searchTerm}%` } }, // Search by sample_code
                 { seed_lot: { [Op.iLike]: `%${searchTerm}%` } },// Search by seed_lot
                 { '$farmGroup.name$': { [Op.iLike]: `%${searchTerm}%` } },  // Search by farm group name
-                { '$ics.ics_name$': { [Op.iLike]: `%${searchTerm}%` } }  // Search by ics name
+                { '$ics.ics_name$': { [Op.iLike]: `%${searchTerm}%` } },  // Search by ics name
+                { '$ginner.name$': { [Op.iLike]: `%${searchTerm}%` } },
+                { '$farmerdetails.firstName$': { [Op.iLike]: `%${searchTerm}%` } },
+                { '$farmerdetails.lastName$': { [Op.iLike]: `%${searchTerm}%` } },
             ];
         }
         if (brandId) {
