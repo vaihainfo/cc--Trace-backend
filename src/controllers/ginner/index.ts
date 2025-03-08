@@ -2178,15 +2178,16 @@ const createGinnerSales = async (req: Request, res: Response) => {
               bale_id: bale.id,
               process_id: bale.process_id,
             },
-          }, { transaction }
+            transaction
+          }
         );
 
-        const ginsaledata = await GinSales.findOne({ where: { id: bale.sales_id } }, { transaction });
+        const ginsaledata = await GinSales.findOne({ where: { id: bale.sales_id }, transaction });
         if(ginsaledata){
           if (Number(ginsaledata?.qty_stock) - Number(bale.weight) <= 0) {
-            await GinSales.update({ qty_stock: 0}, { where: { id: bale.sales_id } }, { transaction });
+            await GinSales.update({ qty_stock: 0}, { where: { id: bale.sales_id }, transaction });
           }else{
-            let update = await GinSales.update({ qty_stock: Number(ginsaledata?.qty_stock) - Number(bale.weight) }, { where: { id: bale.sales_id } }, { transaction });
+            let update = await GinSales.update({ qty_stock: Number(ginsaledata?.qty_stock) - Number(bale.weight) }, { where: { id: bale.sales_id }, transaction });
           }
         }
 
@@ -3591,6 +3592,8 @@ const fetchGinLintAlert = async (req: Request, res: Response) => {
                   'buyer_ginner_id', buyer.id,
                   'buyer_ginner_name', buyer.name,
                   'status', gs.status,
+                  'invoice_file', gs.invoice_file,
+                  'approval_doc', gs.approval_doc,
                   'greyout_status', gs.greyout_status,
               'weight', SUM(CAST(gb.weight AS DOUBLE PRECISION)),
               'bales', jsonb_agg(jsonb_build_object(

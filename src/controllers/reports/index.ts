@@ -149,6 +149,8 @@ const fetchBaleProcess = async (req: Request, res: Response) => {
             gp."createdAt" AS created_date,
             s.name AS season_name,
             g.name AS ginner_name,
+            g.outturn_range_from AS got_from,
+            g.outturn_range_to AS got_to,
             g.country_id as country_id,
             g.state_id as state_id,
             gp.heap_number,
@@ -338,8 +340,12 @@ const fetchBaleProcess = async (req: Request, res: Response) => {
               EXTRACT(DAY FROM AGE(gd.created_date , gd.to_date)) AS no_of_days,
               gd.season_name AS season,
               gd.ginner_name AS ginner_name,
+
+              gd.got_from AS got_from,
+              gd.got_to AS got_to,
               c.county_name AS country_name,
               s.state_name AS state_name,
+
               gd.heap_number AS heap_number,
               gd.heap_register AS heap_register,
               gd.bale_process AS bale_process,
@@ -2330,7 +2336,7 @@ const fetchSpinnerGreyOutReport = async (req: Request, res: Response) => {
       { greyout_status: true, ...searchCondition },
       {
         greyout_status: false,
-        greyed_out_qty: { [Op.ne]: null },
+        greyed_out_qty: { [Op.gt]: 0 },
         ...searchCondition
       },
     ];
@@ -3221,7 +3227,8 @@ const exportGinnerProcessGreyOutReport = async (req: Request, res: Response) => 
           ginner: item.ginner_name ? item.ginner_name : "",
           reel_lot_no: item.reel_lot_no ? item.reel_lot_no : "",
           press: item.press_no ? item.press_no : "",
-          lot_no: item.lot_no ? item.lot_no : "",
+          // lot_no: item.lot_no ? item.lot_no : "",
+          lot_no: item.press_no?.toLowerCase().trim() !== "nan-nan"  ? item.press_no : item?.pressno_from && item?.pressno_to ? item?.pressno_from+ ' - '+item?.pressno_to: '',
           lint_quantity: item.lint_quantity ? item.lint_quantity : 0,
         });
         worksheet.addRow(rowValues);
@@ -3496,7 +3503,7 @@ const exportSpinnerGreyOutReport = async (req: Request, res: Response) => {
         { greyout_status: true, ...searchCondition },
         {
           greyout_status: false,
-          greyed_out_qty: { [Op.ne]: null },
+          greyed_out_qty: { [Op.gt]: 0 },
           ...searchCondition
         },
       ];
@@ -11401,7 +11408,7 @@ const fetchSpinnerSummaryPagination = async (req: Request, res: Response) => {
             status: { [Op.in]: ['Sold', 'Partially Accepted', 'Partially Rejected'] },
             [Op.or]: [
               { greyout_status: true },
-              { greyout_status: false, greyed_out_qty: { [Op.ne]: null } },
+              { greyout_status: false,  greyed_out_qty: { [Op.gt]: 0 }, },
             ],
           },
         }),
@@ -11787,7 +11794,7 @@ const exportSpinnerSummary = async (req: Request, res: Response) => {
               status: { [Op.in]: ['Sold', 'Partially Accepted', 'Partially Rejected'] },
               [Op.or]: [
                 { greyout_status: true },
-                { greyout_status: false, greyed_out_qty: { [Op.ne]: null } },
+                { greyout_status: false,  greyed_out_qty: { [Op.gt]: 0 } },
               ],
             },
           }),
