@@ -4194,7 +4194,7 @@ const fetchSpinnerBalePagination = async (req: Request, res: Response) => {
       endOfDay.setUTCHours(23, 59, 59, 999);
       whereCondition.push(`gs."createdAt" BETWEEN '${startOfDay.toISOString()}' AND '${endOfDay.toISOString()}'`);
     }
-
+ 
 
     // const whereClause = whereCondition.length > 0 ? `WHERE ${whereCondition.join(' AND ')}` : '';
     whereCondition.push(`gs.status IN ('Sold', 'Partially Accepted', 'Partially Rejected')`);
@@ -4292,6 +4292,8 @@ const fetchSpinnerBalePagination = async (req: Request, res: Response) => {
                     gs.*, 
                     g.id AS ginner_id, 
                     g.name AS ginner, 
+                    g.country_id AS country_id,
+                    g.state_id AS state_id,
                     s.id AS season_id, 
                     s.name AS season_name, 
                     p.id AS program_id, 
@@ -4316,6 +4318,7 @@ const fetchSpinnerBalePagination = async (req: Request, res: Response) => {
                     spinners sp ON gs.buyer = sp.id
                 LEFT JOIN 
                     bale_details bd ON gs.id = bd.sales_id
+            
                 ${whereClause}
                 ORDER BY 
                     gs."id" DESC
@@ -4352,11 +4355,26 @@ const fetchSpinnerBalePagination = async (req: Request, res: Response) => {
         });
       }
 
+     const country = await Country.findOne({
+      where: {
+        id: item.country_id
+      }        
+     })
+
+     const state = await State.findOne({
+      where: {
+        id: item.state_id
+      }
+     })
+
       nData.push({
         ...item,
+        country: country.dataValues.county_name,
+        state: state.dataValues.state_name,
         quality_report: qualityReport ? qualityReport : null,
       });
     }
+
 
     return res.sendPaginationSuccess(res, nData, totalCount);
   } catch (error: any) {
@@ -4636,20 +4654,22 @@ const exportSpinnerBale = async (req: Request, res: Response) => {
       // Create the excel workbook file
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet("Sheet1");
-      if (isOrganic === 'true') {
-        worksheet.mergeCells('A1:N1');
-      } else{
-        worksheet.mergeCells("A1:O1");
-      }
-      const mergedCell = worksheet.getCell("A1");
-      mergedCell.value = "CottonConnect | Spinner Bale Receipt Report";
-      mergedCell.font = { bold: true };
-      mergedCell.alignment = { horizontal: "center", vertical: "middle" };
+      // if (isOrganic === 'true') {
+      //   worksheet.mergeCells('A1:N1');
+      // } else{
+      //   worksheet.mergeCells("A1:O1");
+      // }
+      // const mergedCell = worksheet.getCell("A1");
+      // mergedCell.value = "CottonConnect | Spinner Bale Receipt Report";
+      // mergedCell.font = { bold: true };
+      // mergedCell.alignment = { horizontal: "center", vertical: "middle" };
       // Set bold font for header row
       let headerRow;
       if(isOrganic === 'true') {
         headerRow = worksheet.addRow([
           "Sr No.",
+          "country",
+          "state",
           "Date of transaction accepted",
           "Date of transaction received",
           "Season",
@@ -4667,6 +4687,8 @@ const exportSpinnerBale = async (req: Request, res: Response) => {
       }else{
        headerRow = worksheet.addRow([
         "Sr No.",
+        "country",
+        "state",
         "Date of transaction accepted",
         "Date of transaction received",
         "Season",
@@ -4720,6 +4742,8 @@ const exportSpinnerBale = async (req: Request, res: Response) => {
                     gs.*, 
                     g.id AS ginner_id, 
                     g.name AS ginner, 
+                    g.country_id as country_id,
+                    g.state_id as state_id,
                     s.id AS season_id, 
                     s.name AS season_name, 
                     p.id AS program_id, 
@@ -4757,13 +4781,29 @@ const exportSpinnerBale = async (req: Request, res: Response) => {
         })
       ]);
 
+      let totals = {
+        total_no_of_bales:0,
+        total_lint_quantity: 0,
+
+      }
+
       // // Append data to worksheet
 
       for await (const [index, item] of rows.entries()) {
+
+        const country = await Country.findOne({
+          where: { id: item.country_id },
+        });
+        const state = await State.findOne({
+          where: { id: item.state_id },
+        });
+
         let rowValues;
         if (isOrganic === 'true') {
        rowValues = Object.values({
           index: index + 1,
+          country: country.dataValues.county_name,
+          state: state.dataValues.state_name,
           accept_date: item.accept_date
             ? item.accept_date
             : "",
@@ -4790,6 +4830,8 @@ const exportSpinnerBale = async (req: Request, res: Response) => {
       else{
         rowValues = Object.values({
           index: index + 1,
+          country: country.dataValues.county_name,
+          state: state.dataValues.state_name,
           accept_date: item.accept_date
             ? item.accept_date
             : "",
@@ -4816,14 +4858,73 @@ const exportSpinnerBale = async (req: Request, res: Response) => {
           greyout_status: item.greyout_status ? "Yes" : "No",
         });
       }
+
+        totals.total_no_of_bales += Number(item.accepted_no_of_bales);
+        totals.total_lint_quantity += Number(item.accepted_total_qty);
+
+
         worksheet.addRow(rowValues);
       }
+
+
+      let rowValues;
+      if (isOrganic === 'true') {
+     rowValues = Object.values({
+        index:"Totals: ",
+        country:"",
+        state:"",
+        accept_date:"",
+        date:"",
+        season:"",
+        spinner:"",
+        ginner:"",
+        invoice:"",
+        lot_no:"",
+        press_no:"",
+        no_of_bales: Number(formatDecimal(totals.total_no_of_bales)),
+        lint_quantity: Number(formatDecimal(totals.total_lint_quantity)),
+        greyed_out_qty:"",
+        program:"",
+        greyout_status:"",
+      });
+    }
+    else{
+      rowValues = Object.values({
+        index:"Totals: ",
+        country:"",
+        state:"",
+        accept_date:"",
+        date:"",
+        season:"",
+        spinner:"",
+        ginner:"",
+        invoice:"",
+        lot_no:"",
+        reel_lot_no:"",
+        press_no:"",
+        no_of_bales: Number(formatDecimal(totals.total_no_of_bales)),
+        lint_quantity: Number(formatDecimal(totals.total_lint_quantity)),
+        greyed_out_qty:"",
+        program:"",
+        greyout_status:"",
+      });
+    }
+    worksheet.addRow(rowValues).eachCell((cell, colNumber) => { cell.font={bold:true}});
+
+
+      const  borderStyle = {
+        top: { style: "thin" },
+        bottom: { style: "thin" },
+        left: { style: "thin" },
+        right: { style: "thin" }, 
+      };
       // Auto-adjust column widths based on content
       worksheet.columns.forEach((column: any) => {
         let maxCellLength = 0;
         column.eachCell({ includeEmpty: true }, (cell: any) => {
           const cellLength = (cell.value ? cell.value.toString() : "").length;
           maxCellLength = Math.max(maxCellLength, cellLength);
+          cell.border = borderStyle;
         });
         column.width = Math.min(14, maxCellLength + 2); // Limit width to 30 characters
       });
@@ -11257,9 +11358,21 @@ const fetchSpinnerSummaryPagination = async (req: Request, res: Response) => {
 
     let { count, rows } = await Spinner.findAndCountAll({
       where: whereCondition,
-      attributes: ["id", "name", "address"],
+      attributes: ["id", "name", "address", "country_id", "state_id"],
       offset: offset,
       limit: limit,
+      include: [
+        {
+          model: Country,
+          as: "country",
+          attributes: ["id", "county_name"],
+        },
+        {
+          model: State,
+          as: "state",
+          attributes: ["id", "state_name"],
+        }
+      ],
     });
     let result: any = [];
     for await (let spinner of rows) {
@@ -11616,14 +11729,16 @@ const exportSpinnerSummary = async (req: Request, res: Response) => {
       // Create the excel workbook file
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet("Sheet1");
-      worksheet.mergeCells("A1:M1");
-      const mergedCell = worksheet.getCell("A1");
-      mergedCell.value = "CottonConnect | Spinner Summary Report";
-      mergedCell.font = { bold: true };
-      mergedCell.alignment = { horizontal: "center", vertical: "middle" };
+      // worksheet.mergeCells("A1:M1");
+      // const mergedCell = worksheet.getCell("A1");
+      // mergedCell.value = "CottonConnect | Spinner Summary Report";
+      // mergedCell.font = { bold: true };
+      // mergedCell.alignment = { horizontal: "center", vertical: "middle" };
       // Set bold font for header row
       const headerRow = worksheet.addRow([
         "Sr No.",
+        "Country",
+        "State",
         "Spinner Name",
         "Total Lint Cotton Procured MT (Accepted)",
         "Total Lint Cotton Procured MT (Pending)",
@@ -11641,10 +11756,37 @@ const exportSpinnerSummary = async (req: Request, res: Response) => {
 
       let { count, rows } = await Spinner.findAndCountAll({
         where: whereCondition,
-        attributes: ["id", "name", "address"],
+        attributes: ["id", "name", "address", "country_id", "state_id"],
         offset: offset,
         limit: limit,
+        include:[
+          {
+            model: Country,
+            as: "country",
+            attributes: ["county_name"],
+          },
+          {
+            model: State,
+            as: "state",
+            attributes: ["state_name"],
+          },
+        ],
       });
+
+
+      let totals = {
+        total_lint_cotton_procured:0,
+        total_lint_cotton_procured_pending:0,
+        total_lint_consumed:0,
+        total_lintGreyoutMT:0,
+        total_lintActualStockMT:0,
+        total_balance_lint_cotton:0,
+        total_yarn_procured:0,
+        total_yarn_sold:0,
+        total_yarnGreyoutMT:0,
+        total_yarnActualStockMT:0,
+        total_yarn_stock:0,
+      };
 
       // Append data to worksheet
       for await (const [index, item] of rows.entries()) {
@@ -11925,9 +12067,10 @@ const exportSpinnerSummary = async (req: Request, res: Response) => {
         obj.yarnGreyoutMT = convert_kg_to_mt(obj.yarnGreyoutKg);
         obj.yarnActualStockMT = convert_kg_to_mt(obj.yarnActualStockKg);
 
-
-        const rowValues = Object.values({
+        const rowVal ={
           index: index + 1,
+          country: item.country.county_name,
+          state: item.state.state_name,
           name: item.name ? item.name : "",
           lint_cotton_procured: obj.lintCottonProcuredMT ? Number(obj.lintCottonProcuredMT) : 0,
           lint_cotton_procured_pending: obj.lintCottonProcuredPendingMT ? Number(obj.lintCottonProcuredPendingMT) : 0,
@@ -11940,15 +12083,60 @@ const exportSpinnerSummary = async (req: Request, res: Response) => {
           yarnGreyoutMT: obj.yarnGreyoutMT ? Number(obj.yarnGreyoutMT) : 0,
           yarnActualStockMT: obj.yarnActualStockMT ? Number(obj.yarnActualStockMT) : 0,
           yarn_stock: obj.yarnStockMT ? Number(obj.yarnStockMT) : 0,
-        });
+        }; 
+
+
+        const rowValues = Object.values(rowVal);
         worksheet.addRow(rowValues);
+
+        totals.total_lint_cotton_procured+=Number(rowVal.lint_cotton_procured);
+        totals.total_lint_cotton_procured_pending+=Number(rowVal.lint_cotton_procured_pending);
+        totals.total_lint_consumed+=Number(rowVal.lint_consumed);
+        totals.total_lintGreyoutMT+=Number(rowVal.lintGreyoutMT);
+        totals.total_lintActualStockMT+=Number(rowVal.lintActualStockMT);
+        totals.total_balance_lint_cotton+=Number(rowVal.balance_lint_cotton);
+        totals.total_yarn_procured+=Number(rowVal.yarn_procured);
+        totals.total_yarn_sold+=Number(rowVal.yarn_sold);
+        totals.total_yarnGreyoutMT+=Number(rowVal.lintGreyoutMT);
+        totals.total_yarnActualStockMT+=Number(rowVal.yarnActualStockMT);
+        totals.total_yarn_stock+=Number(rowVal.yarn_stock);
       }
+
+
+      const rowVal ={
+        index:"Totals",
+        country:"",
+        state:"",
+        name:"",
+        lint_cotton_procured:Number(formatDecimal(totals.total_lint_cotton_procured)),
+        lint_cotton_procured_pending:Number(formatDecimal(totals.total_lint_cotton_procured_pending)),
+        lint_consumed:Number(formatDecimal(totals.total_lint_consumed)),
+        lintGreyoutMT:Number(formatDecimal(totals.total_lintGreyoutMT)),
+        lintActualStockMT:Number(formatDecimal(totals.total_lintActualStockMT)),
+        balance_lint_cotton:Number(formatDecimal(totals.total_balance_lint_cotton)),
+        yarn_procured:Number(formatDecimal(totals.total_yarn_procured)),
+        yarn_sold:Number(formatDecimal(totals.total_yarn_sold)),
+        yarnGreyoutMT:Number(formatDecimal(totals.total_lintGreyoutMT)),
+        yarnActualStockMT:Number(formatDecimal(totals.total_yarnActualStockMT)),
+        yarn_stock:Number(formatDecimal(totals.total_yarn_stock)),
+      }; 
+
+      const rowValues = Object.values(rowVal);
+      worksheet.addRow(rowValues).eachCell((cell, colNumber) => { cell.font={bold:true}});
+
+      const borderStyle = {
+        top: { style: "thin" },
+        bottom: { style: "thin" },
+        left: { style: "thin" },
+        right: { style: "thin" },
+      };           
       // Auto-adjust column widths based on content
       worksheet.columns.forEach((column: any) => {
         let maxCellLength = 0;
         column.eachCell({ includeEmpty: true }, (cell: any) => {
           const cellLength = (cell.value ? cell.value.toString() : "").length;
           maxCellLength = Math.max(maxCellLength, cellLength);
+          cell.border = borderStyle;
         });
         column.width = Math.min(24, maxCellLength + 2); // Limit width to 30 characters
       });
@@ -13093,6 +13281,7 @@ const exportGinnerSummary = async (req: Request, res: Response) => {
         });
         worksheet.addRow(rowValues);
       }
+
       // Define a border style
       const borderStyle = {
         top: { style: "thin" },
