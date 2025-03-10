@@ -4355,9 +4355,22 @@ const generateSpinnerSummary = async () => {
     while (hasNextBatch) {
       let { count, rows } = await Spinner.findAndCountAll({
         where: whereCondition,
-        attributes: ["id", "name", "address"],
+        attributes: ["id", "name", "address", "country_id", "state_id"],
         offset: offset,
         limit: batchSize,
+        include: [
+          {
+            model: Country,
+            as: "country",
+            attributes: ["id", "county_name"],
+          },
+          {
+            model: State,
+            as: "state",
+            attributes: ["id", "state_name"],
+          }
+        ],
+        order: [["name", "asc"]],
       });
 
       if (rows.length === 0) {
@@ -4368,6 +4381,20 @@ const generateSpinnerSummary = async () => {
       if (offset % maxRowsPerWorksheet === 0) {
         worksheetIndex++;
       }
+
+      let totals = {
+        total_lint_cotton_procured:0,
+        total_lint_cotton_procured_pending:0,
+        total_lint_consumed:0,
+        total_lintGreyoutMT:0,
+        total_lintActualStockMT:0,
+        total_balance_lint_cotton:0,
+        total_yarn_procured:0,
+        total_yarn_sold:0,
+        total_yarnGreyoutMT:0,
+        total_yarnActualStockMT:0,
+        total_yarn_stock:0,
+      };
 
       // Append data to worksheet
       for await (const [index, item] of rows.entries()) {
@@ -4628,35 +4655,54 @@ const generateSpinnerSummary = async () => {
         obj.yarnActualStockMT = convert_kg_to_mt(obj.yarnActualStockKg);
         obj.yarnStockMT = Number(convert_kg_to_mt(obj.yarnStockKG));
 
-        const rowValues = Object.values({
-          index: index + offset + 1,
+
+        const rowVal ={
+          index: index + 1,
+          country: item.country.county_name,
+          state: item.state.state_name,
           name: item.name ? item.name : "",
-          lint_cotton_procured: obj.lintCottonProcuredMT,
-          lint_cotton_procured_pending: obj.lintCottonProcuredPendingMT,
-          lint_consumed: obj.lintConsumedMT,
+          lint_cotton_procured: obj.lintCottonProcuredMT ? Number(obj.lintCottonProcuredMT) : 0,
+          lint_cotton_procured_pending: obj.lintCottonProcuredPendingMT ? Number(obj.lintCottonProcuredPendingMT) : 0,
+          lint_consumed: obj.lintConsumedMT ? Number(obj.lintConsumedMT) : 0,
           lintGreyoutMT: obj.lintGreyoutMT ? Number(obj.lintGreyoutMT) : 0,
           lintActualStockMT: obj.lintActualStockMT ? Number(obj.lintActualStockMT) : 0,
-          balance_lint_cotton: obj.lintStockMT,
-          yarn_procured: obj.yarnProcuredMT,
-          yarn_sold: obj.yarnSoldMT,
+          balance_lint_cotton: obj.lintStockMT ? Number(obj.lintStockMT) : 0,
+          yarn_procured: obj.yarnProcuredMT ? Number(obj.yarnProcuredMT) : 0,
+          yarn_sold: obj.yarnSoldMT ? Number(obj.yarnSoldMT) : 0,
           yarnGreyoutMT: obj.yarnGreyoutMT ? Number(obj.yarnGreyoutMT) : 0,
           yarnActualStockMT: obj.yarnActualStockMT ? Number(obj.yarnActualStockMT) : 0,
-          yarn_stock: obj.yarnStockMT,
-        });
+          yarn_stock: obj.yarnStockMT ? Number(obj.yarnStockMT) : 0,
+        }; 
+
+        totals.total_lint_cotton_procured+=Number(rowVal.lint_cotton_procured);
+        totals.total_lint_cotton_procured_pending+=Number(rowVal.lint_cotton_procured_pending);
+        totals.total_lint_consumed+=Number(rowVal.lint_consumed);
+        totals.total_lintGreyoutMT+=Number(rowVal.lintGreyoutMT);
+        totals.total_lintActualStockMT+=Number(rowVal.lintActualStockMT);
+        totals.total_balance_lint_cotton+=Number(rowVal.balance_lint_cotton);
+        totals.total_yarn_procured+=Number(rowVal.yarn_procured);
+        totals.total_yarn_sold+=Number(rowVal.yarn_sold);
+        totals.total_yarnGreyoutMT+=Number(rowVal.lintGreyoutMT);
+        totals.total_yarnActualStockMT+=Number(rowVal.yarnActualStockMT);
+        totals.total_yarn_stock+=Number(rowVal.yarn_stock);
+
+        const rowValues = Object.values(rowVal);
 
         let currentWorksheet = workbook.getWorksheet(`Spinner Summary ${worksheetIndex}`);
         if (!currentWorksheet) {
           currentWorksheet = workbook.addWorksheet(`Spinner Summary ${worksheetIndex}`);
-          if (worksheetIndex == 1) {
-            currentWorksheet.mergeCells("A1:M1");
-            const mergedCell = currentWorksheet.getCell("A1");
-            mergedCell.value = "CottonConnect | Spinner Summary Report";
-            mergedCell.font = { bold: true };
-            mergedCell.alignment = { horizontal: "center", vertical: "middle" };
-          }
+          // if (worksheetIndex == 1) {
+          //   currentWorksheet.mergeCells("A1:M1");
+          //   const mergedCell = currentWorksheet.getCell("A1");
+          //   mergedCell.value = "CottonConnect | Spinner Summary Report";
+          //   mergedCell.font = { bold: true };
+          //   mergedCell.alignment = { horizontal: "center", vertical: "middle" };
+          // }
 
           const headerRow = currentWorksheet.addRow([
             "Sr No.",
+            "Country",
+            "State",
             "Spinner Name",
             "Total Lint Cotton Procured MT (Accepted)",
             "Total Lint Cotton Procured MT (Pending)",
@@ -4676,6 +4722,44 @@ const generateSpinnerSummary = async () => {
         currentWorksheet.addRow(rowValues).commit();
       }
       offset += batchSize;
+
+      const rowVal ={
+        index:"Totals",
+        country:"",
+        state:"",
+        name:"",
+        lint_cotton_procured:Number(formatDecimal(totals.total_lint_cotton_procured)),
+        lint_cotton_procured_pending:Number(formatDecimal(totals.total_lint_cotton_procured_pending)),
+        lint_consumed:Number(formatDecimal(totals.total_lint_consumed)),
+        lintGreyoutMT:Number(formatDecimal(totals.total_lintGreyoutMT)),
+        lintActualStockMT:Number(formatDecimal(totals.total_lintActualStockMT)),
+        balance_lint_cotton:Number(formatDecimal(totals.total_balance_lint_cotton)),
+        yarn_procured:Number(formatDecimal(totals.total_yarn_procured)),
+        yarn_sold:Number(formatDecimal(totals.total_yarn_sold)),
+        yarnGreyoutMT:Number(formatDecimal(totals.total_lintGreyoutMT)),
+        yarnActualStockMT:Number(formatDecimal(totals.total_yarnActualStockMT)),
+        yarn_stock:Number(formatDecimal(totals.total_yarn_stock)),
+      }; 
+      const rowValues = Object.values(rowVal);
+      let currentWorksheet = workbook.getWorksheet(`Spinner Summary ${worksheetIndex}`);
+      currentWorksheet?.addRow(rowValues).eachCell((cell) => { cell.font={bold:true}});
+      const borderStyle = {
+        top: { style: "thin" },
+        left: { style: "thin" },
+        bottom: { style: "thin" },
+        right: { style: "thin" },      
+      }
+  
+      // Auto-adjust column widths based on content
+      currentWorksheet?.columns.forEach((column: any) => {
+        let maxCellLength = 0;
+        column.eachCell({ includeEmpty: true }, (cell: any) => {
+          const cellLength = (cell.value ? cell.value.toString() : "").length;
+          maxCellLength = Math.max(maxCellLength, cellLength);
+          cell.border = borderStyle;
+        });
+        column.width = Math.min(14, maxCellLength + 2); // Limit width to 30 characters
+      });
     }
 
     // Save the workbook
@@ -4753,6 +4837,8 @@ const generateSpinnerBale = async () => {
                     gs.*, 
                     g.id AS ginner_id, 
                     g.name AS ginner, 
+                    g.country_id as country_id,
+                    g.state_id as state_id,
                     s.id AS season_id, 
                     s.name AS season_name, 
                     p.id AS program_id, 
@@ -4800,9 +4886,26 @@ const generateSpinnerBale = async () => {
         worksheetIndex++;
       }
 
+      let totals = {
+        total_no_of_bales:0,
+        total_lint_quantity: 0,
+
+      }
+
       for await (const [index, item] of rows.entries()) {
+
+
+        const country = await Country.findOne({
+          where: { id: item.country_id },
+        });
+        const state = await State.findOne({
+          where: { id: item.state_id },
+        });
+
         const rowValues = Object.values({
           index: index + offset + 1,
+          country: country.dataValues.county_name,
+          state: state.dataValues.state_name,
           accept_date: item.accept_date
             ? item.accept_date
             : "",
@@ -4832,16 +4935,18 @@ const generateSpinnerBale = async () => {
         let currentWorksheet = workbook.getWorksheet(`Spinner Bale Receipt ${worksheetIndex}`);
         if (!currentWorksheet) {
           currentWorksheet = workbook.addWorksheet(`Spinner Bale Receipt ${worksheetIndex}`);
-          if (worksheetIndex == 1) {
-            currentWorksheet.mergeCells("A1:O1");
-            const mergedCell = currentWorksheet.getCell("A1");
-            mergedCell.value = "CottonConnect | Spinner Bale Receipt Report";
-            mergedCell.alignment = { horizontal: "center", vertical: "middle" };
-            mergedCell.font = { bold: true };
-          }
+          // if (worksheetIndex == 1) {
+          //   currentWorksheet.mergeCells("A1:O1");
+          //   const mergedCell = currentWorksheet.getCell("A1");
+          //   mergedCell.value = "CottonConnect | Spinner Bale Receipt Report";
+          //   mergedCell.alignment = { horizontal: "center", vertical: "middle" };
+          //   mergedCell.font = { bold: true };
+          // }
 
           const headerRow = currentWorksheet.addRow([
             "Sr No.",
+            "country",
+            "state",
             "Date of transaction accepted",
             "Date of transaction received",
             "Season",
@@ -4860,8 +4965,52 @@ const generateSpinnerBale = async () => {
           headerRow.font = { bold: true };
         }
 
+        totals.total_no_of_bales += Number(item.accepted_no_of_bales);
+        totals.total_lint_quantity += Number(item.accepted_total_qty);
+
         currentWorksheet.addRow(rowValues).commit();
       }
+
+      const rowValues = Object.values({
+        index:"Totals: ",
+        country:"",
+        state:"",
+        accept_date:"",
+        date:"",
+        season:"",
+        spinner:"",
+        ginner:"",
+        invoice:"",
+        lot_no:"",
+        reel_lot_no:"",
+        press_no:"",
+        no_of_bales: Number(formatDecimal(totals.total_no_of_bales)),
+        lint_quantity: Number(formatDecimal(totals.total_lint_quantity)),
+        program:"",
+        greyout_status:"",
+      });
+
+      let currentWorksheet = workbook.getWorksheet(`Spinner Bale Receipt ${worksheetIndex}`);
+      currentWorksheet?.addRow(rowValues).eachCell(cell=>{ cell.font={bold:true}});
+
+      const borderStyle = {
+        top: { style: "thin" },
+        left: { style: "thin" },
+        bottom: { style: "thin" },
+        right: { style: "thin" },      
+      }
+  
+      // Auto-adjust column widths based on content
+      currentWorksheet?.columns.forEach((column: any) => {
+        let maxCellLength = 0;
+        column.eachCell({ includeEmpty: true }, (cell: any) => {
+          const cellLength = (cell.value ? cell.value.toString() : "").length;
+          maxCellLength = Math.max(maxCellLength, cellLength);
+          cell.border = borderStyle;
+        });
+        column.width = Math.min(14, maxCellLength + 2); // Limit width to 30 characters
+      });
+
       offset += batchSize;
     }
 
@@ -4909,8 +5058,11 @@ const generateSpinnerYarnProcess = async () => {
             spin_process.from_date,
             spin_process.to_date,
             spin_process."createdAt",
+            EXTRACT(DAY FROM AGE(spin_process."createdAt" , spin_process.date)) AS no_of_days,
             season.name AS season_name,
             spinner.name AS spinner_name,
+            spinner.country_id AS country_id,
+            spinner.state_id AS state_id,
             spin_process.batch_lot_no,
             spin_process.reel_lot_no,
             spin_process.yarn_type,
@@ -5006,6 +5158,8 @@ const generateSpinnerYarnProcess = async () => {
           yarn_sold_data ysd ON spd.process_id = ysd.spin_process_id
         LEFT JOIN
           yarn_count_data ycd ON spd.process_id = ycd.process_id
+        ORDER BY
+          spd.spinner_name ASC
         LIMIT :limit OFFSET :offset
         `;
 
@@ -5023,6 +5177,17 @@ const generateSpinnerYarnProcess = async () => {
       if (offset % maxRowsPerWorksheet === 0) {
         worksheetIndex++;
       }
+
+      
+      let totals = {
+        total_comber:0,
+        total_cotton_consumed:0,
+        total_comber_consumed:0,
+        total_total_lint_blend_consumed:0,
+        total_total:0,
+        total_yarn_sold:0,
+        total_yarn_stock:0,
+      };
 
       // Append data to worksheet
       for await (const [index, item] of rows.entries()) {
@@ -5042,10 +5207,13 @@ const generateSpinnerYarnProcess = async () => {
           }
         }
 
-        const rowValues = Object.values({
+        const rowValues = {
           index: index + offset + 1,
+          country: item.country? item.country:"",
+          state: item.state? item.state: "",
           createdAt: item.createdAt ? item.createdAt : "",
           date: item.date ? item.date : "",
+          no_of_days: item.no_of_days ? item.no_of_days : "",
           from_date: item.from_date ? item.from_date : "",
           to_date: item.to_date ? item.to_date : "",
           lint_consumed_seasons: item.lint_consumed_seasons ? item.lint_consumed_seasons : "",
@@ -5075,23 +5243,26 @@ const generateSpinnerYarnProcess = async () => {
             : 0,
           yarn_stock: item.qty_stock ? Number(item.qty_stock) : 0,
           greyout_status: item.greyout_status ? "Yes" : "No",
-        });
+        };
 
         let currentWorksheet = workbook.getWorksheet(`Spinner Yarn Process ${worksheetIndex}`);
         if (!currentWorksheet) {
           currentWorksheet = workbook.addWorksheet(`Spinner Yarn Process ${worksheetIndex}`);
-          if (worksheetIndex == 1) {
-            currentWorksheet.mergeCells("A1:X1");
-            const mergedCell = currentWorksheet.getCell("A1");
-            mergedCell.value = "CottonConnect | Spinner Yarn Process Report";
-            mergedCell.font = { bold: true };
-            mergedCell.alignment = { horizontal: "center", vertical: "middle" };
-          }
+          // if (worksheetIndex == 1) {
+          //   currentWorksheet.mergeCells("A1:X1");
+          //   const mergedCell = currentWorksheet.getCell("A1");
+          //   mergedCell.value = "CottonConnect | Spinner Yarn Process Report";
+          //   mergedCell.font = { bold: true };
+          //   mergedCell.alignment = { horizontal: "center", vertical: "middle" };
+          // }
 
           const headerRow = currentWorksheet.addRow([
             "Sr No.",
+            "country",
+            "state",
             "Date and Time",
             "Process Date",
+            "No of Days",
             "Yarn Production Start Date",
             "Yarn Production End Date",
             "Lint Cotton Consumed Season",
@@ -5117,11 +5288,72 @@ const generateSpinnerYarnProcess = async () => {
           headerRow.font = { bold: true };
         }
 
-        currentWorksheet.addRow(rowValues).commit();
+        totals.total_comber+=Number(rowValues.comber);
+
+        totals.total_cotton_consumed+=Number(rowValues.cotton_consumed);
+        totals.total_comber_consumed+=Number(rowValues.comber_consumed);
+        totals.total_total_lint_blend_consumed+=Number(rowValues.total_lint_blend_consumed);
+        totals.total_total+=Number(rowValues.total);
+        totals.total_yarn_sold+=Number(rowValues.yarn_sold);
+        totals.total_yarn_stock+=Number(rowValues.yarn_stock);
+
+        currentWorksheet.addRow(Object.values(rowValues)).commit();
       }
 
       offset += batchSize;
+      let rowValues;
+       rowValues = {
+            index:"Totals: ",
+            country:"",
+            state:"",
+            createdAt:"",
+            date:"",
+            no_of_days:"",
+            from_date:"",
+            to_date:"",
+            lint_consumed_seasons:"",
+            season:"",
+            spinner:"",
+            lotNo:"",
+            reel_lot_no:"",
+            yarnType:"",
+            count:"",
+            resa:"",
+            comber: Number(formatDecimal(totals.total_comber)),
+            blend: "",
+            blendqty: "",
+            cotton_consumed: Number(formatDecimal(totals.total_cotton_consumed)),
+            comber_consumed: Number(formatDecimal(totals.total_comber_consumed)),
+            total_lint_blend_consumed: Number(formatDecimal(totals.total_total_lint_blend_consumed)),
+            program:"",
+            total: Number(formatDecimal(totals.total_total)),
+            yarn_sold: Number(formatDecimal(totals.total_yarn_sold)),
+            yarn_stock: Number(formatDecimal(totals.total_yarn_stock)),
+            greyout_status:"",
+          }
+          let currentWorksheet = workbook.getWorksheet(`Spinner Yarn Process ${worksheetIndex}`);
+          currentWorksheet?.addRow(Object.values(rowValues)).commit();
+          const borderStyle = {
+            top: { style: "thin" },
+            left: { style: "thin" },
+            bottom: { style: "thin" },
+            right: { style: "thin" },      
+          }
+      
+          // Auto-adjust column widths based on content
+          currentWorksheet?.columns.forEach((column: any) => {
+            let maxCellLength = 0;
+            column.eachCell({ includeEmpty: true }, (cell: any) => {
+              const cellLength = (cell.value ? cell.value.toString() : "").length;
+              maxCellLength = Math.max(maxCellLength, cellLength);
+              cell.border = borderStyle;
+            });
+            column.width = Math.min(14, maxCellLength + 2); // Limit width to 30 characters
+          });
     }
+
+ 
+
 
     // Save the workbook
     await workbook.commit()
