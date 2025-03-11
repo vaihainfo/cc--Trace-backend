@@ -4864,7 +4864,7 @@ const generateSpinnerBale = async () => {
                     bale_details bd ON gs.id = bd.sales_id
                 ${whereClause}
                 ORDER BY 
-                    gs."id" ASC
+                    "spinner" asc
                 LIMIT 
                     :limit OFFSET :offset;`
 
@@ -5392,7 +5392,17 @@ const generateSpinnerSale = async () => {
       {
         model: Spinner,
         as: "spinner",
-        attributes: ["id", "name"],
+        attributes: ["id", "name", "country_id", "state_id"],
+          include:[
+            {
+              model: Country,
+              as: "country",
+            },
+            {
+              model: State,
+              as: "state",
+            }
+          ],
       },
       {
         model: Season,
@@ -5428,6 +5438,8 @@ const generateSpinnerSale = async () => {
             [Sequelize.col('"sales"."season"."id"'), "season_id"],
             [Sequelize.col('"sales"."spinner"."id"'), "spinner_id"],
             [Sequelize.col('"sales"."spinner"."name"'), "spinner"],
+            [sequelize.col('"sales"."spinner"."country"."county_name"'),"country"],
+            [sequelize.col('"sales"."spinner"."state"."state_name"'),"state"],
             [Sequelize.col('"sales"."program"."program_name"'), "program"],
             [Sequelize.col('"sales"."order_ref"'), "order_ref"],
             [Sequelize.col('"sales"."buyer_type"'), "buyer_type"],
@@ -5483,7 +5495,10 @@ const generateSpinnerSale = async () => {
             "sales.weaver.id",
             "sales.knitter.id",
             "sales.program.id",
+            "sales.spinner.country.id",
+            "sales.spinner.state.id",
           ],
+          order: [["spinner", "asc"]],
           offset: offset,
           limit: batchSize,
         }
@@ -5498,6 +5513,11 @@ const generateSpinnerSale = async () => {
       if (offset % maxRowsPerWorksheet === 0) {
         worksheetIndex++;
       }
+
+      let totals = {
+        total_price:0,
+       total_net_weight:0,
+     };
 
       for await (const [index, item] of rows.entries()) {
 
@@ -5547,7 +5567,7 @@ const generateSpinnerSale = async () => {
 
         yarnTypeData =
           item.dataValues?.yarn_type?.length > 0 ? item.dataValues?.yarn_type.join(",") : "";
-        const rowValues = Object.values({
+        const rowValues ={
           index: index + offset + 1,
           createdAt: item.dataValues.createdAt ? item.dataValues.createdAt : "",
           date: item.dataValues.date ? formatDate(item.dataValues.date) : "",
@@ -5581,7 +5601,7 @@ const generateSpinnerSale = async () => {
           agent: item.dataValues.transaction_agent
             ? item.dataValues.transaction_agent
             : "",
-        });
+        };
 
         let currentWorksheet = workbook.getWorksheet(`Spinner Yarn Sales ${worksheetIndex}`);
         if (!currentWorksheet) {
@@ -5596,6 +5616,8 @@ const generateSpinnerSale = async () => {
 
           const headerRow = currentWorksheet.addRow([
             "Sr No.",
+            "Country",
+            "State",
             "Created Date and Time",
             "Date of transaction",
             "Lint Cotton Consumed Season",
@@ -5620,8 +5642,54 @@ const generateSpinnerSale = async () => {
           headerRow.font = { bold: true };
         }
 
-        currentWorksheet.addRow(rowValues).commit();
+        currentWorksheet.addRow( Object.values(rowValues)).commit();
+
+        totals.total_price += Number(rowValues.price);
+        totals.total_net_weight += Number(rowValues.total);
+
       }
+
+      const rowValues ={
+        index:"Totals: ",
+        createdAt:"",
+        date:"",
+        lint_consumed_seasons:"",
+        season:"",
+        spinner:"",
+        buyer_id:"",
+        invoice:"",
+        order_ref:"",
+        lotNo:"",
+        reelLot:"",
+        program:"",
+        yarnType:"",
+        count:"",
+        boxes:"",
+        boxId:"",
+        price: Number(formatDecimal(totals.total_price)),
+        total: Number(formatDecimal(totals.total_net_weight)),
+        transporter_name:"",
+        vehicle_no:"",
+        agent:"",
+      };
+      let currentWorksheet = workbook.getWorksheet(`Spinner Yarn Sales ${worksheetIndex}`);
+      currentWorksheet?.addRow( Object.values(rowValues)).commit();
+      let borderStyle = {
+        top: {style: "thin"},
+        left: {style: "thin"},
+        bottom: {style: "thin"},
+        right: {style: "thin"}
+      };
+      // Auto-adjust column widths based on content
+      currentWorksheet?.columns.forEach((column: any) => {
+        let maxCellLength = 0;
+        column.eachCell({ includeEmpty: true }, (cell: any) => {
+          const cellLength = (cell.value ? cell.value.toString() : "").length;
+          maxCellLength = Math.max(maxCellLength, cellLength);
+          cell.border = borderStyle;
+        });
+        column.width = Math.min(14, maxCellLength + 2); // Limit width to 30 characters
+      });
 
       offset += batchSize;
     }
