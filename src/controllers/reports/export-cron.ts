@@ -6044,7 +6044,17 @@ const generatePendingSpinnerBale = async () => {
       {
         model: Spinner,
         as: "buyerdata",
-        attributes: ["id", "name"],
+        attributes: ["id", "name", "country_id", "state_id"],
+        include: [
+          {
+            model: Country,
+            as: "country",
+          },
+          {
+            model: State,
+            as: "state",
+          }
+        ],
       },
     ];
 
@@ -6061,6 +6071,8 @@ const generatePendingSpinnerBale = async () => {
           [Sequelize.col('"sales"."program"."program_name"'), "program"],
           [Sequelize.col('"sales"."buyerdata"."id"'), "spinner_id"],
           [Sequelize.col('"sales"."buyerdata"."name"'), "spinner"],
+          [Sequelize.col('"sales"."buyerdata"."country"."county_name"'), "country"],
+          [Sequelize.col('"sales"."buyerdata"."state"."state_name"'), "state"],          
           [Sequelize.literal('"sales"."total_qty"'), "total_qty"],
           [Sequelize.literal('"sales"."invoice_no"'), "invoice_no"],
           [Sequelize.col('"sales"."lot_no"'), "lot_no"],
@@ -6102,8 +6114,10 @@ const generatePendingSpinnerBale = async () => {
           "sales.ginner.id",
           "sales.buyerdata.id",
           "sales.program.id",
+          "sales.buyerdata.country.id",
+          "sales.buyerdata.state.id",          
         ],
-        order: [["sales_id", "desc"]],
+        order: [["spinner", "asc"]],
         offset: offset,
         limit: batchSize,
       });
@@ -6117,10 +6131,18 @@ const generatePendingSpinnerBale = async () => {
         worksheetIndex++;
       }
 
+      let totals = {
+        no_of_bales:0,
+        total_qty:0,
+        actual_qty:0,
+      };
+
       // Append data to worksheet
       for await (const [index, item] of rows.entries()) {
-        const rowValues = Object.values({
+        const rowValues = {
           index: index + offset + 1,
+          country: item.dataValues.country,
+          state: item.dataValues.state,          
           createdAt: item.dataValues.createdAt ? item.dataValues.createdAt : "",
           date: item.dataValues.date ? item.dataValues.date : "",
           season: item.dataValues.season_name ? item.dataValues.season_name : "",
@@ -6142,21 +6164,23 @@ const generatePendingSpinnerBale = async () => {
             : 0,
           program: item.dataValues.program ? item.dataValues.program : "",
           village: item.dataValues.vehicle_no ? item.dataValues.vehicle_no : ""
-        });
+        };
 
         let currentWorksheet = workbook.getWorksheet(`Spinner Pending Bales ${worksheetIndex}`);
         if (!currentWorksheet) {
           currentWorksheet = workbook.addWorksheet(`Spinner Pending Bales ${worksheetIndex}`);
-          if (worksheetIndex == 1) {
-            currentWorksheet.mergeCells("A1:N1");
-            const mergedCell = currentWorksheet.getCell("A1");
-            mergedCell.value = "CottonConnect | Spinner Pending Bales Receipt Report";
-            mergedCell.font = { bold: true };
-            mergedCell.alignment = { horizontal: "center", vertical: "middle" };
-          }
+          // if (worksheetIndex == 1) {
+          //   currentWorksheet.mergeCells("A1:N1");
+          //   const mergedCell = currentWorksheet.getCell("A1");
+          //   mergedCell.value = "CottonConnect | Spinner Pending Bales Receipt Report";
+          //   mergedCell.font = { bold: true };
+          //   mergedCell.alignment = { horizontal: "center", vertical: "middle" };
+          // }
 
           const headerRow = currentWorksheet.addRow([
             "Sr No.",
+            "Country",
+            "State",                    
             "Date and Time",
             "Date",
             "Season",
@@ -6173,10 +6197,50 @@ const generatePendingSpinnerBale = async () => {
           ]);
           headerRow.font = { bold: true };
         }
+        totals.no_of_bales += rowValues.no_of_bales;
+        totals.total_qty += rowValues.total_qty;
+        totals.actual_qty += rowValues.actual_qty;
 
-        currentWorksheet.addRow(rowValues).commit();
+
+        currentWorksheet.addRow(Object.values(rowValues)).commit();
       }
 
+      let rowValues = {
+        index:"Totals: ",
+        country:"",
+        state:"",
+        createdAt:"",
+        date:"",
+        season:"",
+        ginner:"",
+        spinner:"",
+        invoice:"",
+        no_of_bales: Number(formatDecimal(totals.no_of_bales)),
+        lot_no:"",
+        reel_lot_no:"",
+        total_qty: Number(formatDecimal(totals.total_qty)),
+        actual_qty: Number(formatDecimal(totals.actual_qty)),
+        program:"",
+        village:"",
+      };
+      let currentWorksheet = workbook.getWorksheet(`Spinner Pending Bales ${worksheetIndex}`);
+      currentWorksheet?.addRow(Object.values(rowValues)).commit();
+      let borderStyle = {
+        top: {style: "thin"},
+        left: {style: "thin"},
+        bottom: {style: "thin"},
+        right: {style: "thin"}
+      }
+      // Auto-adjust column widths based on content
+      currentWorksheet?.columns.forEach((column: any) => {
+        let maxCellLength = 0;
+        column.eachCell({ includeEmpty: true }, (cell: any) => {
+          const cellLength = (cell.value ? cell.value.toString() : "").length;
+          maxCellLength = Math.max(maxCellLength, cellLength);
+          cell.border = borderStyle
+        });
+        column.width = Math.min(20, maxCellLength + 2); // Limit width to 30 characters
+      });
       offset += batchSize;
     }
 
