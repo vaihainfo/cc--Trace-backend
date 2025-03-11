@@ -14347,7 +14347,8 @@ const fetchSpinnerLintCottonStock = async (req: Request, res: Response) => {
                 AND (bs.spinner_status = true OR gs.status = 'Sold')
             GROUP BY 
                 bs.sales_id
-        )
+        ),
+        gin_sale_date as (
         SELECT 
             gs.*, 
             g.id AS ginner_id, 
@@ -14357,7 +14358,9 @@ const fetchSpinnerLintCottonStock = async (req: Request, res: Response) => {
             p.id AS program_id, 
             p.program_name, 
             sp.id AS spinner_id, 
-            sp.name AS spinner_name, 
+            sp.name AS spinner_name,
+            sp.country_id as country_id,
+            sp.state_id as state_id, 
             sp.address AS spinner_address, 
             bd.no_of_bales AS accepted_no_of_bales, 
             bd.total_qty AS accepted_total_qty
@@ -14375,8 +14378,20 @@ const fetchSpinnerLintCottonStock = async (req: Request, res: Response) => {
             bale_details bd ON gs.id = bd.sales_id
         ${whereClause}
         ORDER BY 
-            gs."updatedAt" DESC
+            "spinner_name" DESC
         LIMIT :limit OFFSET :offset
+        )
+
+        Select 
+          gsd.*,
+          c.county_name as country,
+          s.state_name as state
+        from 
+          gin_sale_date gsd
+        left join
+          countries c on gsd.country_id = c.id
+        left join
+          states s on gsd.state_id = s.id
       `;
 
     const [countResult, rows] = await Promise.all([
@@ -14499,6 +14514,8 @@ const exportSpinnerCottonStock = async (req: Request, res: Response) => {
       // Set bold font for header row
       const headerRow = worksheet.addRow([
         "Sr No.",
+        "Country",
+        "State",
         "Created Date",
         "Season",
         "Ginner Name",
@@ -14552,7 +14569,8 @@ const exportSpinnerCottonStock = async (req: Request, res: Response) => {
                 AND (bs.spinner_status = true OR gs.status = 'Sold')
             GROUP BY 
                 bs.sales_id
-        )
+        ),
+        gin_sale_date as(
         SELECT 
             gs.*, 
             g.id AS ginner_id, 
@@ -14563,6 +14581,8 @@ const exportSpinnerCottonStock = async (req: Request, res: Response) => {
             p.program_name, 
             sp.id AS spinner_id, 
             sp.name AS spinner_name, 
+            sp.country_id as country_id,
+            sp.state_id as state_id, 
             sp.address AS spinner_address, 
             bd.no_of_bales AS accepted_no_of_bales, 
             bd.total_qty AS accepted_total_qty
@@ -14580,8 +14600,19 @@ const exportSpinnerCottonStock = async (req: Request, res: Response) => {
             bale_details bd ON gs.id = bd.sales_id
         ${whereClause}
         ORDER BY 
-            gs."updatedAt" DESC
+            "spinner_name" DESC
         LIMIT :limit OFFSET :offset
+        )
+        Select 
+          gsd.*,
+          c.county_name as country,
+          s.state_name as state
+        from 
+          gin_sale_date gsd
+        left join
+          countries c on gsd.country_id = c.id
+        left join
+          states s on gsd.state_id = s.id
       `;
 
       const [countResult, rows] = await Promise.all([
@@ -14594,9 +14625,19 @@ const exportSpinnerCottonStock = async (req: Request, res: Response) => {
         })
       ]);
 
+      let totals = {
+        cotton_procured: 0,
+        cotton_stock: 0,
+        greyed_out_qty: 0,
+        cotton_consumed: 0,
+      };
+
+
       for await (const [index, spinner] of rows.entries()) {
-        const rowValues = Object.values({
+        const rowValues = {
           index: index + 1,
+          country: spinner.country,
+          state: spinner.state,
           date: spinner?.date ? moment(spinner.date).format('DD-MM-YYYY') : "",
           season: spinner?.season_name ? spinner?.season_name : "",
           ginner_names: spinner?.ginner_name ? spinner?.ginner_name
@@ -14609,9 +14650,41 @@ const exportSpinnerCottonStock = async (req: Request, res: Response) => {
           cotton_stock: spinner?.qty_stock ? Number(formatDecimal(spinner?.qty_stock)) : 0,
           greyed_out_qty: spinner?.greyed_out_qty ? Number(formatDecimal(spinner?.greyed_out_qty)) : 0,
           cotton_consumed: Number(spinner?.accepted_total_qty) > (Number(spinner?.qty_stock) + Number(spinner?.greyed_out_qty)) ? Number(formatDecimal(spinner?.accepted_total_qty)) - (Number(formatDecimal(spinner?.qty_stock)) + Number(formatDecimal(spinner?.greyed_out_qty))) : 0,
-        });
-        worksheet.addRow(rowValues);
+        };
+
+        totals.cotton_procured += Number(rowValues.cotton_procured);
+        totals.cotton_stock += Number(rowValues.cotton_stock);
+        totals.greyed_out_qty += Number(rowValues.greyed_out_qty);
+        totals.cotton_consumed += Number(rowValues.cotton_consumed);
+
+        worksheet.addRow(Object.values(rowValues));
       }
+
+    
+      const rowValues = {
+        index:"Totals: ",
+        country:"",
+        state:"",
+        date:"",
+        season:"",
+        ginner_names:"",
+        spinner:"",
+        reel_lot_no:"",
+        invoice_no:"",
+        batch_lot_no:"",
+        cotton_procured: Number(formatDecimal(totals.cotton_procured)),
+        cotton_stock: Number(formatDecimal(totals.cotton_stock)),
+        greyed_out_qty: Number(formatDecimal(totals.greyed_out_qty)),
+        cotton_consumed: Number(formatDecimal(totals.cotton_consumed)),
+      };
+      worksheet.addRow(Object.values(rowValues)).eachCell(cell=>cell.font={bold : true});
+
+      let borderStyle = {
+        top: {style:"thin"},
+        left: {style:"thin"},
+        bottom: {style:"thin"},
+        right: {style:"thin"}
+      };
 
       // Auto-adjust column widths based on content
       worksheet.columns.forEach((column: any) => {
@@ -14619,6 +14692,7 @@ const exportSpinnerCottonStock = async (req: Request, res: Response) => {
         column.eachCell({ includeEmpty: true }, (cell: any) => {
           const cellLength = (cell.value ? cell.value.toString() : "").length;
           maxCellLength = Math.max(maxCellLength, cellLength);
+          cell.border = borderStyle;
         });
         column.width = Math.min(14, maxCellLength + 2); // Limit width to 30 characters
       });

@@ -635,7 +635,8 @@ const generateSpinnerLintCottonStock = async () => {
                 AND (bs.spinner_status = true OR gs.status = 'Sold')
             GROUP BY 
                 bs.sales_id
-        )
+        ),
+        gin_sale_date as(
         SELECT 
             gs.*, 
             g.id AS ginner_id, 
@@ -646,6 +647,8 @@ const generateSpinnerLintCottonStock = async () => {
             p.program_name, 
             sp.id AS spinner_id, 
             sp.name AS spinner_name, 
+            sp.country_id as country_id,
+            sp.state_id as state_id,             
             sp.address AS spinner_address, 
             bd.no_of_bales AS accepted_no_of_bales, 
             bd.total_qty AS accepted_total_qty
@@ -663,8 +666,19 @@ const generateSpinnerLintCottonStock = async () => {
             bale_details bd ON gs.id = bd.sales_id
         ${whereClause}
         ORDER BY 
-            gs."id" ASC
+            "spinner_name" ASC
         LIMIT :limit OFFSET :offset
+        )
+        Select 
+          gsd.*,
+          c.county_name as country,
+          s.state_name as state
+        from 
+          gin_sale_date gsd
+        left join
+          countries c on gsd.country_id = c.id
+        left join
+          states s on gsd.state_id = s.id
       `;
 
       const [rows] = await Promise.all([
@@ -685,11 +699,20 @@ const generateSpinnerLintCottonStock = async () => {
       }
 
 
+      let totals = {
+        cotton_procured: 0,
+        cotton_stock: 0,
+        greyed_out_qty: 0,
+        cotton_consumed: 0,
+      };
+
       for await (const [index, spinner] of rows.entries()) {
         let cotton_consumed = Number(spinner?.accepted_total_qty) > (Number(spinner?.qty_stock) + Number(spinner?.greyed_out_qty)) ? Number(formatDecimal(spinner?.accepted_total_qty)) - (Number(formatDecimal(spinner?.qty_stock)) + Number(formatDecimal(spinner?.greyed_out_qty))) : 0;
 
         const rowValues = [
           offset + index + 1,
+          spinner?.country ? spinner?.country : "",
+          spinner?.state ? spinner?.state : "",
           spinner?.date ? moment(spinner.date).format('DD-MM-YYYY') : "",
           spinner?.season_name ? spinner?.season_name : "",
           spinner?.ginner_name ? spinner?.ginner_name : "",
@@ -703,19 +726,28 @@ const generateSpinnerLintCottonStock = async () => {
           cotton_consumed,
         ];
 
+        
+        totals.cotton_procured +=  Number(formatDecimal(spinner?.accepted_total_qty)) ;
+        totals.cotton_stock += Number(formatDecimal(spinner?.qty_stock));
+        totals.greyed_out_qty +=  Number(formatDecimal(spinner?.greyed_out_qty));
+        totals.cotton_consumed += Number(formatDecimal(cotton_consumed));
+
+
         let currentWorksheet = workbook.getWorksheet(`Lint Cotton Stock Report ${worksheetIndex}`);
         if (!currentWorksheet) {
           currentWorksheet = workbook.addWorksheet(`Lint Cotton Stock Report ${worksheetIndex}`);
-          if (worksheetIndex == 1) {
-            currentWorksheet.mergeCells("A1:L1");
-            const mergedCell = currentWorksheet.getCell("A1");
-            mergedCell.value = "CottonConnect | Spinner Lint Cotton Stock Report";
-            mergedCell.font = { bold: true };
-            mergedCell.alignment = { horizontal: "center", vertical: "middle" };
-          }
+          // if (worksheetIndex == 1) {
+          //   currentWorksheet.mergeCells("A1:L1");
+          //   const mergedCell = currentWorksheet.getCell("A1");
+          //   mergedCell.value = "CottonConnect | Spinner Lint Cotton Stock Report";
+          //   mergedCell.font = { bold: true };
+          //   mergedCell.alignment = { horizontal: "center", vertical: "middle" };
+          // }
           // Set bold font for header row
           const headerRow = currentWorksheet.addRow([
             "Sr No.",
+            "Country",
+            "State",
             "Created Date",
             "Season",
             "Ginner Name",
@@ -732,6 +764,43 @@ const generateSpinnerLintCottonStock = async () => {
         }
         currentWorksheet.addRow(rowValues).commit();
       }
+
+      const rowValues = [
+        "Totals: ",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        totals.cotton_procured,
+        totals.cotton_stock,
+        totals.greyed_out_qty,
+        totals.cotton_consumed,
+      ];
+      let currentWorksheet = workbook.getWorksheet(`Lint Cotton Stock Report ${worksheetIndex}`);
+      currentWorksheet?.addRow(rowValues).eachCell(cell=>cell.font={bold : true});
+      let borderStyle = {
+        top: {style:"thin"},
+        left: {style:"thin"},
+        bottom: {style:"thin"},
+        right: {style:"thin"}
+      };
+
+      // Auto-adjust column widths based on content
+      currentWorksheet?.columns.forEach((column: any) => {
+        let maxCellLength = 0;
+        column.eachCell({ includeEmpty: true }, (cell: any) => {
+          const cellLength = (cell.value ? cell.value.toString() : "").length;
+          maxCellLength = Math.max(maxCellLength, cellLength);
+          cell.border = borderStyle;
+        });
+        column.width = Math.min(14, maxCellLength + 2); // Limit width to 30 characters
+      });
+
       offset += batchSize;
     }
 
