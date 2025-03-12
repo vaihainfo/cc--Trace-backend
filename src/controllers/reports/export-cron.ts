@@ -364,7 +364,7 @@ const exportGinHeapReport = async () => {
   }
 
   const rowValues = Object.values({
-    index: "", country: "", state: "", created_date:"", season: "", ginner_heap_no:"",
+    index: "Totals:", country: "", state: "", created_date:"", season: "", ginner_heap_no:"",
     reel_heap_no:"", ginner_name:"", village_name: "", 
     heap_weight:Number(formatDecimal(weightSum)),
     heap_starting_date: "", heap_ending_date: "", weighbridge_vehicle_no:""
@@ -4149,6 +4149,7 @@ const generatePendingGinnerSales = async () => {
       let totals = {  
         total_no_of_bales: 0,
         total_lint_quantity: 0,
+        total_rate:0,
       }
       // Append data to worksheet
       for await (const [index, item] of rows.entries()) {
@@ -4174,6 +4175,8 @@ const generatePendingGinnerSales = async () => {
         currentWorksheet.addRow(rowValues).commit();
         totals.total_no_of_bales += Number(item.dataValues.no_of_bales);
         totals.total_lint_quantity += Number(item.dataValues.total_qty);
+        totals.total_rate += Number(item.dataValues.rate);
+
       }
 
 
@@ -4191,7 +4194,7 @@ const generatePendingGinnerSales = async () => {
         reel_lot_no:"",
         no_of_bales: Number(formatDecimal(totals.total_no_of_bales)),
         press_no:"",
-        rate:"",
+        rate: Number(formatDecimal(totals.total_rate)),
         total_qty: Number(formatDecimal(totals.total_lint_quantity)),
         program:"",
         status:"",
@@ -4337,11 +4340,11 @@ const generateGinnerCottonStock = async () => {
         headerRow.font = { bold: true };
       }
 
-      let totals = {
-        total_cotton_procured:0,
-        total_cotton_processed:0,
-        total_cotton_stock:0,
-      }
+      // let totals = {
+      //   total_cotton_procured:0,
+      //   total_cotton_processed:0,
+      //   total_cotton_stock:0,
+      // }
 
       for await (let [index, item] of rows.entries()) {
         let obj: any = {};
@@ -4392,24 +4395,24 @@ const generateGinnerCottonStock = async () => {
           cotton_stock: obj.cotton_stock ? Number(obj.cotton_stock) : 0,
         });
 
-        totals.total_cotton_processed += obj.cotton_processed?Number(obj.cotton_processed):0;
-        totals.total_cotton_procured += obj.cotton_procured?Number(obj.cotton_procured):0;
-        totals.total_cotton_stock += obj.cotton_stock?Number(obj.cotton_stock):0;
+        // totals.total_cotton_processed += obj.cotton_processed?Number(obj.cotton_processed):0;
+        // totals.total_cotton_procured += obj.cotton_procured?Number(obj.cotton_procured):0;
+        // totals.total_cotton_stock += obj.cotton_stock?Number(obj.cotton_stock):0;
 
         currentWorksheet.addRow(rowValues).commit();
       }
 
-      const rowValues = Object.values({
-        index: "",
-        ginner:  "",
-        season:  "",
-        country: "",
-        state: "",
-        cotton_procured: Number(formatDecimal( totals.total_cotton_procured)),
-        cotton_processed: Number(formatDecimal(totals.total_cotton_processed)),
-        cotton_stock: Number(formatDecimal(totals.total_cotton_stock)),
-      });
-      currentWorksheet.addRow(rowValues).eachCell((cell, colNumber) => { cell.font={bold:true}});;
+      // const rowValues = Object.values({
+      //   index: "",
+      //   ginner:  "",
+      //   season:  "",
+      //   country: "",
+      //   state: "",
+      //   cotton_procured: Number(formatDecimal( totals.total_cotton_procured)),
+      //   cotton_processed: Number(formatDecimal(totals.total_cotton_processed)),
+      //   cotton_stock: Number(formatDecimal(totals.total_cotton_stock)),
+      // });
+      // currentWorksheet.addRow(rowValues).eachCell((cell, colNumber) => { cell.font={bold:true}});;
 
       const borderStyle = {
         top: { style: "thin" },
