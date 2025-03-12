@@ -1261,17 +1261,23 @@ const fetchCountryByGinner = async (req: Request, res: Response) => {
       const blockIds = typeof blockId === "string" ? blockId.split(",").map(id => id.trim()) : [blockId];
 
       const allocatedVillage = await GinnerAllocatedVillage.findAll({
-        attributes: ["village_id"],
+        attributes: ["village_id"], // Keep necessary attributes
         where: {
-          block_id: {
-            [Op.in]: blockIds, 
-          },
+          block_id: { [Op.in]: blockIds },
           ginner_id: ginnerId,
         },
         include: [
-          { model: Village, as: "village", attributes: ["id", "village_name"] },
+          {
+            model: Village,
+            as: "village",
+            attributes: { exclude: ["createdAt", "updatedAt"] }, 
+          },
+          {
+            model: Block,
+            as: "block",
+            attributes: { exclude: ["createdAt", "updatedAt"] },
+          },
         ],
-        group: ["village_id", "village.id"],
       });
       return res.sendSuccess(res, allocatedVillage);
     } catch (error: any) {
