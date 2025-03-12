@@ -17083,7 +17083,7 @@ const fetchPscpProcurementLiveTracker = async (req: Request, res: Response) => {
         LEFT JOIN gin_to_gin_sales_data gtg ON fg.id = gtg.ginner_id
         LEFT JOIN gin_to_gin_recieved_data gtgr ON fg.id = gtgr.ginner_id
       ORDER BY
-        fg.id DESC
+        fg.name asc
       LIMIT :limit OFFSET :offset
       `,
       {
@@ -17440,15 +17440,15 @@ const exportPscpProcurementLiveTracker = async (
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet("Sheet1");
 
-      if (isBrand === 'true') {
-        worksheet.mergeCells('A1:W1');
-      } else {
-        worksheet.mergeCells("A1:X1");
-      }
-      const mergedCell = worksheet.getCell("A1");
-      mergedCell.value = "CottonConnect | PSCP Procurement and Sell Live Tracker";
-      mergedCell.font = { bold: true };
-      mergedCell.alignment = { horizontal: "center", vertical: "middle" };
+      // if (isBrand === 'true') {
+      //   worksheet.mergeCells('A1:W1');
+      // } else {
+      //   worksheet.mergeCells("A1:X1");
+      // }
+      // const mergedCell = worksheet.getCell("A1");
+      // mergedCell.value = "CottonConnect | PSCP Procurement and Sell Live Tracker";
+      // mergedCell.font = { bold: true };
+      // mergedCell.alignment = { horizontal: "center", vertical: "middle" };
       // Set bold font for header row
       let headerRow;
       if (isBrand === 'true') {
@@ -17820,7 +17820,7 @@ const exportPscpProcurementLiveTracker = async (
           LEFT JOIN gin_to_gin_sales_data gtg ON fg.id = gtg.ginner_id
           LEFT JOIN gin_to_gin_recieved_data gtgr ON fg.id = gtgr.ginner_id
         ORDER BY
-          fg.id DESC
+          fg.name asc
         LIMIT :limit OFFSET :offset
         `,
         {
