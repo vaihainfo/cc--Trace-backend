@@ -1931,6 +1931,71 @@ const fetchComberNoilTransactionList = async (req: Request, res: Response) => {
   }
 };
 
+const fetchComberNoilSoldList = async (req: Request, res: Response) => {
+  try {
+    const searchTerm = req.query.search || "";
+    const page = Number(req.query.page) || 1;
+    const limit = Number(req.query.limit) || 10;
+    const { ginnerId, status, filter, programId, spinnerId, seasonId }: any =
+      req.query;
+    const offset = (page - 1) * limit;
+    const whereCondition: any = {};
+
+    whereCondition.spinner_id = spinnerId;
+    whereCondition.buyer_type = "Spinner";
+
+    // Add season filter if seasonId is provided
+    if (seasonId) {
+      const seasonIds = seasonId.split(",").map(Number);
+      whereCondition.season_id = {
+        [Op.in]: seasonIds,
+      };
+    }
+
+    // Add program filter if programId is provided
+    if (programId) {
+      const programIds = programId.toString().split(",").map(Number);
+      whereCondition.program_id = {
+        [Op.in]: programIds,
+      };
+    }
+
+    const includes = [
+      
+      {
+        model: Season,
+        as: "season",
+        attributes: ["id", "name"],
+      },
+      {
+        model: Program,
+        as: "program",
+        attributes: ["id", "program_name"],
+      },
+      {
+        model: Spinner,
+        as: "buyer",
+        attributes: ["id", "name"],
+        
+      },
+    ];
+    const spinnerComberNoil = await SpinCombernoilSale.findAndCountAll({
+      where: whereCondition,
+      include: includes,
+      offset: offset,
+      limit: limit,
+      order: [["createdAt", "desc"]],
+    });
+    return res.sendPaginationSuccess(
+      res,
+      spinnerComberNoil.rows,
+      spinnerComberNoil.count
+    );
+  } catch (error: any) {
+    console.log(error);
+    return res.sendError(res, error.message, error);
+  }
+};
 const updateStatusComberNoil = async (req: Request, res: Response) => {
   try {
     const items = req.body.items;
@@ -3811,5 +3876,6 @@ export {
   fetchTransactionAlertForComberNoil,
   updateStatusComberNoil,
   fetchComberNoilTransactionList,
+  fetchComberNoilSoldList,
   _getSpinnerProcessTracingChartData,
 };

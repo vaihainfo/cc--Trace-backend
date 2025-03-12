@@ -64,6 +64,8 @@ import Country from "../../models/country.model";
 import GinHeap from "../../models/gin-heap.model";
 import GinToGinSale from "../../models/gin-to-gin-sale.model";
 import { object } from "yup";
+import CombernoilGeneration from "../../models/combernoil_generation.model";
+import SpinCombernoilSale from "../../models/spin_combernoil_sale.model";
 
 const fetchBaleProcess = async (req: Request, res: Response) => {
   const searchTerm = req.query.search || "";
@@ -7254,6 +7256,438 @@ const exportSpinnerSale = async (req: Request, res: Response) => {
         success: true,
         messgage: "File successfully Generated",
         data: process.env.BASE_URL + "excel-spinner-yarn-sale.xlsx",
+      });
+    }
+  } catch (error: any) {
+    console.log(error)
+    return res.sendError(res, error.message, error);
+  }
+};
+
+//fetch spinner combernoil with filters
+const fetchCombernoilPagination = async (req: Request, res: Response) => {const searchTerm = req.query.search || "";
+  const page = Number(req.query.page) || 1;
+  const limit = Number(req.query.limit) || 10;
+  const { spinnerId, seasonId, programId, brandId, countryId, startDate, endDate }: any = req.query;
+  const offset = (page - 1) * limit;
+  const whereCondition: any = {};
+  try {
+    if (searchTerm) {
+      whereCondition[Op.or] = [
+        { "$spinner.name$": { [Op.iLike]: `%${searchTerm}%` } },
+        { "$season.name$": { [Op.iLike]: `%${searchTerm}%` } },
+        { "$program.program_name$": { [Op.iLike]: `%${searchTerm}%` } },
+        { order_ref: { [Op.iLike]: `%${searchTerm}%` } },
+        { invoice_no: { [Op.iLike]: `%${searchTerm}%` } },
+        { batch_lot_no: { [Op.iLike]: `%${searchTerm}%` } },
+        { transporter_name: { [Op.iLike]: `%${searchTerm}%` } },
+        { vehicle_no: { [Op.iLike]: `%${searchTerm}%` } },
+        { transaction_agent: { [Op.iLike]: `%${searchTerm}%` } },
+      ];
+    }
+    if (spinnerId) {
+      const idArray: number[] = spinnerId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition["$spinner_id$"] = { [Op.in]: idArray };
+    }
+    if (brandId) {
+      const idArray: number[] = brandId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition["$spinner.brand$"] = { [Op.overlap]: idArray };
+    }
+
+    if (countryId) {
+      const idArray: number[] = countryId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition["$spinner.country_id$"] = { [Op.in]: idArray };
+    }
+
+    if (seasonId) {
+      const idArray: number[] = seasonId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition["$season_id$"] = { [Op.in]: idArray };
+    }
+
+    if (programId) {
+      const idArray: number[] = programId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition["program_id"] = { [Op.in]: idArray };
+    }
+    
+
+    if (startDate && endDate) {
+      const startOfDay = new Date(startDate);
+      startOfDay.setUTCHours(0, 0, 0, 0);
+      const endOfDay = new Date(endDate);
+      endOfDay.setUTCHours(23, 59, 59, 999);
+      whereCondition["$date$"] = { [Op.between]: [startOfDay, endOfDay] }
+    }
+
+      const includes = [
+      {
+        model: Spinner,
+        as: "spinner",
+        attributes: ["id", "name"], 
+      },
+      {
+        model: Season,
+        as: "season",
+        attributes: ["id", "name"],
+      },
+      {
+        model: Program,
+        as: "program",
+        attributes: ["id", "program_name"],
+        required: false, 
+      },      
+      {
+        model: Spinner,
+        as: "buyer",
+        attributes: ["id", "name"],
+        
+      },
+    ];
+    //fetch data with pagination
+
+    const { count, rows }: any = await SpinCombernoilSale.findAndCountAll(
+      {
+        
+        where: whereCondition,
+        include: includes,
+        distinct: true, 
+        order: [["id", "desc"]],
+        offset: offset,
+        limit: limit,
+      }
+    );
+    let data = [];
+
+    for await (let row of rows) {
+      let yarnCount: string = "";     
+      data.push({
+        ...row.dataValues,
+        program_name: row.program?.program_name || "N/A", // Default value for null program
+        rows,
+        count,
+      });
+    }
+
+    return res.sendPaginationSuccess(res, data, count);
+  } catch (error: any) {
+    console.log(error)
+    return res.sendError(res, error.message, error);
+  }
+};
+
+const exportSpinnerCombernoil = async (req: Request, res: Response) => {
+
+  // spinner_combernoil_sales_load
+  const excelFilePath = path.join("./upload", "excel-spinner-combernoil-sale.xlsx");
+  const searchTerm = req.query.search || "";
+  const page = Number(req.query.page) || 1;
+  const limit = Number(req.query.limit) || 10;
+  const isOrganic = req.query.isOrganic || false;
+  const isAdmin = req.query.isAdmin || false;
+
+  const isBrand = req.query.isBrand || false;
+  const { exportType, spinnerId, seasonId, programId, brandId, countryId, startDate, endDate }: any = req.query;
+  const offset = (page - 1) * limit;
+  const whereCondition: any = {};
+  try {
+
+    if (exportType === "all") {
+      return res.status(200).send({
+        success: true,
+        messgage: "File successfully Generated",
+        data: process.env.BASE_URL + "spinner-combernoil-sale.xlsx",
+      });
+    } else {
+
+      if (searchTerm) {
+        whereCondition[Op.or] = [
+          { "$spinner.name$": { [Op.iLike]: `%${searchTerm}%` } },
+          { "$season.name$": { [Op.iLike]: `%${searchTerm}%` } },
+          { "$program.program_name$": { [Op.iLike]: `%${searchTerm}%` } },          
+          { order_ref: { [Op.iLike]: `%${searchTerm}%` } },
+          { invoice_no: { [Op.iLike]: `%${searchTerm}%` } },
+          { batch_lot_no: { [Op.iLike]: `%${searchTerm}%` } },
+          { transporter_name: { [Op.iLike]: `%${searchTerm}%` } },
+          { vehicle_no: { [Op.iLike]: `%${searchTerm}%` } },
+          { transaction_agent: { [Op.iLike]: `%${searchTerm}%` } },
+        ];
+      }
+      if (spinnerId) {
+        const idArray: number[] = spinnerId
+          .split(",")
+          .map((id: any) => parseInt(id, 10));
+        whereCondition["$spinner_id$"] = { [Op.in]: idArray };
+      }
+      if (brandId) {
+        const idArray: number[] = brandId
+          .split(",")
+          .map((id: any) => parseInt(id, 10));
+        whereCondition["$spinner.brand$"] = { [Op.overlap]: idArray };
+      }
+
+      if (countryId) {
+        const idArray: number[] = countryId
+          .split(",")
+          .map((id: any) => parseInt(id, 10));
+        whereCondition["$spinner.country_id$"] = { [Op.in]: idArray };
+      }
+
+      if (seasonId) {
+        const idArray: number[] = seasonId
+          .split(",")
+          .map((id: any) => parseInt(id, 10));
+        whereCondition["$season_id$"] = { [Op.in]: idArray };
+      }
+
+      if (programId) {
+        const idArray: number[] = programId
+          .split(",")
+          .map((id: any) => parseInt(id, 10));
+        whereCondition["program_id"] = { [Op.in]: idArray };
+      }
+
+      if (startDate && endDate) {
+        const startOfDay = new Date(startDate);
+        startOfDay.setUTCHours(0, 0, 0, 0);
+        const endOfDay = new Date(endDate);
+        endOfDay.setUTCHours(23, 59, 59, 999);
+        whereCondition["$date$"] = { [Op.between]: [startOfDay, endOfDay] }
+      }
+
+      // Create the excel workbook file
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet("Sheet1");
+      if(isOrganic === 'true') {
+        worksheet.mergeCells('A1:Q1');
+      } else if (isBrand === 'true' &&  (isOrganic === false ||  isOrganic === 'false')) {
+        worksheet.mergeCells('A1:R1');
+      }
+      else if(isAdmin === 'true'){
+        worksheet.mergeCells("A1:T1");
+      }
+      else {
+        worksheet.mergeCells("A1:U1");
+      }
+      const mergedCell = worksheet.getCell("A1");
+      mergedCell.value = "CottonConnect | Spinner Combernoil Sales Report";
+      mergedCell.font = { bold: true };
+      mergedCell.alignment = { horizontal: "center", vertical: "middle" };
+      // Set bold font for header row
+      let headerRow;
+      if (isOrganic === 'true') {
+        headerRow = worksheet.addRow([
+          "Sr No.",
+          "Created Date and Time",
+          "Date of transaction",
+          "Season",
+          "Invoice Number",
+          "Spinner Name",
+          "Sold To",
+          "Order Reference",
+          "Total weight",
+          "Programme",
+          "Vehicle No",
+          "Agent Details",
+        ]);
+      }
+      else if (isBrand === 'true' &&  (isOrganic === false ||  isOrganic === 'false')) {
+        headerRow = worksheet.addRow([
+          "Sr No.",
+          "Created Date and Time",
+          "Date of transaction",
+          "Season",
+          "Invoice Number",
+          "Spinner Name",
+          "Sold To",
+          "Order Reference",
+          "Total weight",
+          "Programme",
+          "Vehicle No",
+          "Agent Details",
+        ]);
+      }
+      else if(isAdmin === 'true' ){
+        headerRow = worksheet.addRow([
+          "Sr No.",
+          "Created Date and Time",
+          "Date of transaction",
+          "Season",
+          "Invoice Number",
+          "Spinner Name",
+          "Sold To",
+          "Order Reference",
+          "Total weight",
+          "Programme",
+          "Vehicle No",
+          "Agent Details",
+        ]);
+      }
+      else {
+        headerRow = worksheet.addRow([
+          "Sr No.",
+          "Created Date and Time",
+          "Date of transaction",
+          "Season",
+          "Invoice Number",
+          "Spinner Name",
+          "Sold To",
+          "Order Reference",
+          "Total weight",
+          "Programme",
+          "Vehicle No",
+          "Agent Details",
+        ]);
+      }
+      headerRow.font = { bold: true };
+
+      const includes = [
+        {
+          model: Spinner,
+          as: "spinner",
+          attributes: ["id", "name"],
+        },
+        {
+          model: Season,
+          as: "season",
+          attributes: ["id", "name"],
+        },
+        {
+          model: Program,
+          as: "program",
+          attributes: ["id", "program_name"],
+          required: false,
+        },     
+        {
+          model: Spinner,
+          as: "buyer",
+          attributes: ["id", "name"],
+          
+        },
+      ];
+
+      const { count, rows }: any = await SpinCombernoilSale.findAndCountAll(
+        {
+          
+          where: whereCondition,
+          include: includes,
+          
+          order: [["id", "desc"]],
+          offset: offset,
+          limit: limit,
+        }
+      );
+
+      for await (const [index, item] of rows.entries()) {
+        
+      const formatDate = (dateString: any) => {
+        if (!dateString) return "";
+        const date = new Date(dateString);
+
+        const day = String(date.getDate()).padStart(2, '0');
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const year = date.getFullYear();
+
+        return `${day}-${month}-${year}`;
+      };
+
+        let rowValues;
+        if (isOrganic === 'true') {
+          rowValues = Object.values({
+            index: index + 1,
+            createdAt: item.dataValues.createdAt ? item.dataValues.createdAt : "",
+            date: item.dataValues.date ? formatDate(item.dataValues.date) : "",
+            season: item.dataValues.season ? item.dataValues.season.name : "",
+            invoice: item.dataValues.invoice_no ? item.dataValues.invoice_no : "",
+            spinner: item.dataValues.spinner ? item.dataValues.spinner.name : "",
+            buyer: item.dataValues.buyer ? item.dataValues.buyer.name : "",
+            order_ref: item.dataValues.order_ref ? item.dataValues.order_ref : "",
+            lotNo: item.dataValues.total_qty ? item.dataValues.total_qty : "",
+            program: item.dataValues.program ? item.dataValues.program.program_name : "",
+            vehicle_no: item.dataValues.vehicle_no ? item.dataValues.vehicle_no : "",
+            agent: item.dataValues.transaction_agent ? item.dataValues.transaction_agent : "NA", 
+            
+          });
+        } 
+        else if (isBrand === 'true' &&  (isOrganic === false ||  isOrganic === 'false')) {
+          rowValues = Object.values({
+            index: index + 1,
+            createdAt: item.dataValues.createdAt ? item.dataValues.createdAt : "",
+            date: item.dataValues.date ? formatDate(item.dataValues.date) : "",
+            season: item.dataValues.season ? item.dataValues.season.name : "",
+            invoice: item.dataValues.invoice_no ? item.dataValues.invoice_no : "",
+            spinner: item.dataValues.spinner ? item.dataValues.spinner.name : "",
+            buyer: item.dataValues.buyer ? item.dataValues.buyer.name : "",
+            order_ref: item.dataValues.order_ref ? item.dataValues.order_ref : "",
+            lotNo: item.dataValues.total_qty ? item.dataValues.total_qty : "",
+            program: item.dataValues.program ? item.dataValues.program.program_name : "",
+            vehicle_no: item.dataValues.vehicle_no ? item.dataValues.vehicle_no : "",
+            agent: item.dataValues.transaction_agent ? item.dataValues.transaction_agent : "NA", 
+            
+          });
+        }
+        else if (isAdmin === 'true') {
+          rowValues = Object.values({
+            index: index + 1,
+            createdAt: item.dataValues.createdAt ? item.dataValues.createdAt : "",
+            date: item.dataValues.date ? formatDate(item.dataValues.date) : "",
+            season: item.dataValues.season ? item.dataValues.season.name : "",
+            invoice: item.dataValues.invoice_no ? item.dataValues.invoice_no : "",
+            spinner: item.dataValues.spinner ? item.dataValues.spinner.name : "",
+            buyer: item.dataValues.buyer ? item.dataValues.buyer.name : "",
+            order_ref: item.dataValues.order_ref ? item.dataValues.order_ref : "",
+            lotNo: item.dataValues.total_qty ? item.dataValues.total_qty : "",
+            program: item.dataValues.program ? item.dataValues.program.program_name : "",
+            vehicle_no: item.dataValues.vehicle_no ? item.dataValues.vehicle_no : "",
+            agent: item.dataValues.transaction_agent ? item.dataValues.transaction_agent : "NA", 
+            
+          });
+        }    
+        else {
+          rowValues = Object.values({
+            index: index + 1,
+            createdAt: item.dataValues.createdAt ? item.dataValues.createdAt : "",
+            date: item.dataValues.date ? formatDate(item.dataValues.date) : "",
+            season: item.dataValues.season ? item.dataValues.season.name : "",
+            invoice: item.dataValues.invoice_no ? item.dataValues.invoice_no : "",
+            spinner: item.dataValues.spinner ? item.dataValues.spinner.name : "",
+            buyer: item.dataValues.buyer ? item.dataValues.buyer.name : "",
+            order_ref: item.dataValues.order_ref ? item.dataValues.order_ref : "",
+            lotNo: item.dataValues.total_qty ? item.dataValues.total_qty : "",
+            program: item.dataValues.program ? item.dataValues.program.program_name : "",
+            vehicle_no: item.dataValues.vehicle_no ? item.dataValues.vehicle_no : "",
+            agent: item.dataValues.transaction_agent ? item.dataValues.transaction_agent : "NA", 
+            
+          });
+        }
+
+        worksheet.addRow(rowValues);
+      }
+
+      // Auto-adjust column widths based on content
+      worksheet.columns.forEach((column: any) => {
+        let maxCellLength = 0;
+        column.eachCell({ includeEmpty: true }, (cell: any) => {
+          const cellLength = (cell.value ? cell.value.toString() : "").length;
+          maxCellLength = Math.max(maxCellLength, cellLength);
+        });
+        column.width = Math.min(14, maxCellLength + 2); // Limit width to 30 characters
+      });
+
+      // Save the workbook
+      await workbook.xlsx.writeFile(excelFilePath);
+      res.status(200).send({
+        success: true,
+        messgage: "File successfully Generated",
+        data: process.env.BASE_URL + "excel-spinner-combernoil-sale.xlsx",
       });
     }
   } catch (error: any) {
@@ -23599,6 +24033,8 @@ export {
   exportSpinnerYarnProcess,
   fetchSpinSalesPagination,
   exportSpinnerSale,
+  fetchCombernoilPagination,
+  exportSpinnerCombernoil,
   fetchKnitterYarnPagination,
   exportKnitterYarn,
   fetchKnitterSalesPagination,
