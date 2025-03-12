@@ -292,11 +292,11 @@ const exportGinHeapReport = async () => {
   // Create the excel workbook file
   const workbook = new ExcelJS.Workbook();
   const worksheet = workbook.addWorksheet("Sheet1");
-  worksheet.mergeCells("A1:M1");
-  const mergedCell = worksheet.getCell("A1");
-  mergedCell.value = "CottonConnect | Heap Report";
-  mergedCell.font = { bold: true };
-  mergedCell.alignment = { horizontal: "center", vertical: "middle" };
+  // worksheet.mergeCells("A1:M1");
+  // const mergedCell = worksheet.getCell("A1");
+  // mergedCell.value = "CottonConnect | Heap Report";
+  // mergedCell.font = { bold: true };
+  // mergedCell.alignment = { horizontal: "center", vertical: "middle" };
   // Set bold font for header row
   const headerRow = worksheet.addRow([
     "Sr No.",
@@ -317,6 +317,9 @@ const exportGinHeapReport = async () => {
     include: include,
     order: [["id", "desc"]],
   });
+
+  let weightSum = 0;
+
   // // Append data to worksheet
   for await (const [index, item] of rows.entries()) {
     if (item.dataValues?.weighbridge_village) {
@@ -335,6 +338,9 @@ const exportGinHeapReport = async () => {
       item.dataValues.village_names = uniqueVillageNames.join(", ");
     }
     }
+
+    weightSum += item.dataValues.estimated_heap ? Number(item.dataValues.estimated_heap) : 0;
+
     const rowValues = Object.values({
       index: index + 1,
       created_date: item.dataValues.createdAt
@@ -356,12 +362,30 @@ const exportGinHeapReport = async () => {
     });
     worksheet.addRow(rowValues);
   }
+
+  const rowValues = Object.values({
+    index: "", country: "", state: "", created_date:"", season: "", ginner_heap_no:"",
+    reel_heap_no:"", ginner_name:"", village_name: "", 
+    heap_weight:Number(formatDecimal(weightSum)),
+    heap_starting_date: "", heap_ending_date: "", weighbridge_vehicle_no:""
+  });
+  worksheet.addRow(rowValues).eachCell((cell, colNumber) => { cell.font={bold:true}});;
+
+  const borderStyle = {
+    top: { style: "thin" },
+    bottom: { style: "thin" },
+    left: { style: "thin" },
+    right: { style: "thin" },
+  };
+
   // Auto-adjust column widths based on content
   worksheet.columns.forEach((column: any) => {
     let maxCellLength = 0;
     column.eachCell({ includeEmpty: true }, (cell: any) => {
       const cellLength = (cell.value ? cell.value.toString() : "").length;
       maxCellLength = Math.max(maxCellLength, cellLength);
+      cell.border = borderStyle;
+
     });
     column.width = Math.min(14, maxCellLength + 2);
   });
@@ -2402,6 +2426,25 @@ const generatePscpProcurementLiveTracker = async () => {
         }
         currentWorksheet.addRow(rowValues).commit();
       }
+      let borderStyle = {
+        top: {style: "thin"},
+        left: {style: "thin"},
+        bottom: {style: "thin"},
+        right: {style: "thin"}
+      };
+      let currentWorksheet = workbook.getWorksheet(`Sheet${worksheetIndex}`);
+
+      // Auto-adjust column widths based on content
+      currentWorksheet?.columns.forEach((column: any) => {
+        let maxCellLength = 0;
+        column.eachCell({ includeEmpty: true }, (cell: any) => {
+          const cellLength = (cell.value ? cell.value.toString() : "").length;
+          maxCellLength = Math.max(maxCellLength, cellLength);
+          cell.border = borderStyle;
+        });
+        column.width = Math.min(24, maxCellLength + 2); // Limit width to 30 characters
+      });
+
     }
 
     await workbook.commit()
@@ -3476,7 +3519,7 @@ const generateGinnerProcess = async () => {
 
         totals.total_no_of_bales += item.no_of_bales? Number(item.no_of_bales): 0;
         totals.total_lint_quantity += item.lint_quantity? Number(item.lint_quantity): 0;
-        totals.total_seedConsmed += item.seedConsmed? Number(item.seedConsmed):0;
+        totals.total_seedConsmed += item.total_qty ? Number(item.total_qty) : 0;
         totals.total_lint_quantity_sold +=  item.lint_quantity_sold? Number(item.lint_quantity_sold):0;
         totals.total_lint_qty_transfered += item.lint_qty_transfered? Number(item.lint_qty_transfered):0;
         totals.total_sold_bales += item.sold_bales?Number(item.sold_bales):0;
@@ -3793,14 +3836,14 @@ const generateGinnerSales = async () => {
       let currentWorksheet = workbook.getWorksheet(`Sheet${worksheetIndex}`);
       if (!currentWorksheet) {
         currentWorksheet = workbook.addWorksheet(`Sheet${worksheetIndex}`);
-        if (worksheetIndex == 1) {
-          currentWorksheet.mergeCells('A1:U1');
-          const mergedCell = currentWorksheet.getCell('A1');
-          mergedCell.value = 'CottonConnect | Ginner Sales Report';
-          mergedCell.font = { bold: true };
-          mergedCell.alignment = { horizontal: 'center', vertical: 'middle' };
-          // Set bold font for header row
-        }
+        // if (worksheetIndex == 1) {
+        //   currentWorksheet.mergeCells('A1:U1');
+        //   const mergedCell = currentWorksheet.getCell('A1');
+        //   mergedCell.value = 'CottonConnect | Ginner Sales Report';
+        //   mergedCell.font = { bold: true };
+        //   mergedCell.alignment = { horizontal: 'center', vertical: 'middle' };
+        //   // Set bold font for header row
+        // }
         // Set bold font for header row
         // const headerRow = currentWorksheet.addRow([
         //   "Sr No.", "Process Date", "Data Entry Date", "Seed Cotton Consumed Season", "Lint Process Season", "Lint sale chosen season", "Ginner Name",
@@ -3817,10 +3860,12 @@ const generateGinnerSales = async () => {
       }
 
       
-      let totels = {
+      let totals = {
         total_no_of_bales: 0,
         total_lint_quantity: 0,
         total_Sales_value: 0,
+        total_rate: 0,
+
       };
       // Append data to worksheet
       for await (const [index, item] of rows.entries()) {
@@ -3870,9 +3915,10 @@ const generateGinnerSales = async () => {
           status: item.status === 'Sold' ? 'Sold' : `Available [Stock : ${item.qty_stock ? item.qty_stock : 0}]`
         });
         currentWorksheet.addRow(rowValues).commit();
-        totels.total_no_of_bales += item.no_of_bales ? Number(item.no_of_bales) : 0;
-        totels.total_lint_quantity += item.lint_quantity ? Number(item.lint_quantity) : 0;
-        totels.total_Sales_value += item.sale_value ? Number(item.sale_value) : 0;
+        totals.total_no_of_bales += item.no_of_bales ? Number(item.no_of_bales) : 0;
+        totals.total_lint_quantity += item.lint_quantity ? Number(item.lint_quantity) : 0;
+        totals.total_Sales_value += item.sale_value ? Number(item.sale_value) : 0;
+        totals.total_rate += item.rate ? Number(item.rate ): 0;
 
       }
       offset += batchSize;
@@ -3895,13 +3941,13 @@ const generateGinnerSales = async () => {
         // heap:"",
         lot_no:"",
         reel_lot_no:"",
-        no_of_bales: Number(formatDecimal(totels.total_no_of_bales)),
+        no_of_bales: Number(formatDecimal(totals.total_no_of_bales)),
         press_no:"",
-        rate:"",
-        lint_quantity: Number(formatDecimal(totels.total_lint_quantity)),
+        rate: Number(formatDecimal(totals.total_rate)),
+        lint_quantity: Number(formatDecimal(totals.total_lint_quantity)),
         other_season_quantity:"",
         other_season_bales:"",
-        sales_value: Number(formatDecimal(totels.total_Sales_value)),
+        sales_value: Number(formatDecimal(totals.total_Sales_value)),
         vehicle_no:"",
         transporter_name:"",
         program:"",
