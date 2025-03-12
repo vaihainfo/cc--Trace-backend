@@ -1167,7 +1167,6 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
         total_bales_transfered:0,
         total_lint_stock:0,
         total_bale_stock:0,
-
       };
 
 
@@ -1176,7 +1175,7 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
       for await (const [index, item] of rows.entries()) {
         let rowValues;
        if (isOrganic === 'true') {
-          rowValues = Object.values({
+          rowValues = {
             index: index + 1,
             country: item.country_name ? item.country_name : "",
             state: item.state_name ? item.state_name : "",
@@ -1195,12 +1194,12 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
             lint_quantity: item.lint_quantity ? Number(item.lint_quantity) : 0,
             program: item.program ? item.program : "",
             greyout_status: item.greyout_status ? "Yes" : "No",
-          });
+          };
 
          
         }
         else if (isBrand === 'true') {
-          rowValues = Object.values({
+          rowValues = {
             index: index + 1,
             country: item.country_name ? item.country_name : "",
             state: item.state_name ? item.state_name : "",
@@ -1220,11 +1219,11 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
             lint_quantity: item.lint_quantity ? Number(item.lint_quantity) : 0,
             program: item.program ? item.program : "",
             greyout_status: item.greyout_status ? "Yes" : "No",
-          });
+          };
         
         }
         else if(isAdmin === 'true'){
-          rowValues = Object.values({
+          rowValues = {
             index: index + 1,
             country: item.country_name ? item.country_name : "",
             state: item.state_name ? item.state_name : "",
@@ -1255,10 +1254,10 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
             bale_stock: item.bale_stock && Number(item.bale_stock) > 0 ? Number(item.bale_stock) : 0,
             program: item.program ? item.program : "",
             greyout_status: item.greyout_status ? "Yes" : "No",
-          });         
+          };         
         }
         else {
-            rowValues = Object.values({
+            rowValues = {
               index: index + 1,
               country: item.country_name ? item.country_name : "",
               state: item.state_name ? item.state_name : "",
@@ -1290,11 +1289,11 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
               program: item.program ? item.program : "",
               village_names: item.village_names && item.village_names.length > 0 ? item.village_names.join(", ") : "",
               greyout_status: item.greyout_status ? "Yes" : "No",
-            });
+            };
           }
         totals.total_no_of_bales += item.no_of_bales? Number(item.no_of_bales): 0;
         totals.total_lint_quantity += item.lint_quantity? Number(item.lint_quantity): 0;
-        totals.total_seedConsmed += item.seedConsmed? Number(item.seedConsmed):0;
+        totals.total_seedConsmed +=  item.total_qty ? Number(item.total_qty) : 0;
         totals.total_lint_quantity_sold +=  item.lint_quantity_sold? Number(item.lint_quantity_sold):0;
         totals.total_lint_qty_transfered += item.lint_qty_transfered? Number(item.lint_qty_transfered):0;
         totals.total_sold_bales += item.sold_bales?Number(item.sold_bales):0;
@@ -1302,7 +1301,7 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
         totals.total_lint_stock += item.lint_stock?Number(item.lint_stock):0;
         totals.total_bale_stock += item.bale_stock?Number(item.bale_stock):0;
         
-        worksheet.addRow(rowValues);
+        worksheet.addRow(Object.values(rowValues));
       }
 
       let rowValues;
@@ -3948,10 +3947,11 @@ const exportGinnerSales = async (req: Request, res: Response) => {
         type: sequelize.QueryTypes.SELECT,
       })
 
-      let totels = {
+      let totals = {
         total_no_of_bales: 0,
         total_lint_quantity: 0,
         total_Sales_value: 0,
+        total_rate: 0,
       };
 
       // Append data to worksheet
@@ -4026,7 +4026,7 @@ const exportGinnerSales = async (req: Request, res: Response) => {
             reel_lot_no: item.reel_lot_no ? item.reel_lot_no : '',
             no_of_bales: item.no_of_bales ? Number(item.no_of_bales) : 0,
             press_no: item.press_no ? item.press_no : '',
-            rate: item.rate ? item.rate : 0,
+            rate: item.rate ? Number(item.rate) : 0,
             lint_quantity: item.lint_quantity ? item.lint_quantity : '',
             other_season_quantity: item.lint_process_seasons?.split(',').length > 1
             ? Number(item.other_season_quantity || item.previous_season_quantity || item.future_season_quantity || null)
@@ -4052,9 +4052,10 @@ const exportGinnerSales = async (req: Request, res: Response) => {
           });
         }
 
-        totels.total_no_of_bales += item.no_of_bales ? Number(item.no_of_bales) : 0;
-        totels.total_lint_quantity += item.lint_quantity ? Number(item.lint_quantity) : 0;
-        totels.total_Sales_value += item.sale_value ? Number(item.sale_value) : 0;
+        totals.total_no_of_bales += item.no_of_bales ? Number(item.no_of_bales) : 0;
+        totals.total_lint_quantity += item.lint_quantity ? Number(item.lint_quantity) : 0;
+        totals.total_Sales_value += item.sale_value ? Number(item.sale_value) : 0;
+        totals.total_rate += item.rate ? Number(item.rate ): 0;
 
         worksheet.addRow(rowValues);
       }
@@ -4076,14 +4077,14 @@ const exportGinnerSales = async (req: Request, res: Response) => {
         // heap: '',
         lot_no:  '',
         reel_lot_no: '',
-        no_of_bales: totels.total_no_of_bales,
+        no_of_bales: totals.total_no_of_bales,
         press_no:'',
-        rate:0,
-        lint_quantity: Number(formatDecimal(totels.total_lint_quantity)),
+        rate: Number(formatDecimal(totals.total_rate)),
+        lint_quantity: Number(formatDecimal(totals.total_lint_quantity)),
         other_season_quantity: '',
     
       other_season_bales: '',
-        sales_value: Number(formatDecimal(totels.total_Sales_value)),
+        sales_value: Number(formatDecimal(totals.total_Sales_value)),
         vehicle_no: '',
         transporter_name: '',
         program: '',
@@ -17906,12 +17907,20 @@ const exportPscpProcurementLiveTracker = async (
         worksheet.addRow(rowValues);
       }
 
+      let borderStyle = {
+        top: {style: "thin"},
+        left: {style: "thin"},
+        bottom: {style: "thin"},
+        right: {style: "thin"}
+      };
+
       // Auto-adjust column widths based on content
       worksheet.columns.forEach((column: any) => {
         let maxCellLength = 0;
         column.eachCell({ includeEmpty: true }, (cell: any) => {
           const cellLength = (cell.value ? cell.value.toString() : "").length;
           maxCellLength = Math.max(maxCellLength, cellLength);
+          cell.border = borderStyle;
         });
         column.width = Math.min(24, maxCellLength + 2); // Limit width to 30 characters
       });
