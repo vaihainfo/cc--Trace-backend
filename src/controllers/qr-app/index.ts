@@ -1261,7 +1261,7 @@ const fetchCountryByGinner = async (req: Request, res: Response) => {
       const blockIds = typeof blockId === "string" ? blockId.split(",").map(id => id.trim()) : [blockId];
 
       const allocatedVillage = await GinnerAllocatedVillage.findAll({
-        attributes: ["village_id"], // Keep necessary attributes
+        attributes: ["village_id"], 
         where: {
           block_id: { [Op.in]: blockIds },
           ginner_id: ginnerId,
