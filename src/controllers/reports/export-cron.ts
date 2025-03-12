@@ -2305,7 +2305,7 @@ const generatePscpProcurementLiveTracker = async () => {
           LEFT JOIN gin_to_gin_sales_data gtg ON fg.id = gtg.ginner_id
           LEFT JOIN gin_to_gin_recieved_data gtgr ON fg.id = gtgr.ginner_id
         ORDER BY
-          fg.id ASC
+          fg.name ASC
         LIMIT :limit OFFSET :offset
         `,
         {
@@ -2364,13 +2364,13 @@ const generatePscpProcurementLiveTracker = async () => {
         let currentWorksheet = workbook.getWorksheet(`Sheet${worksheetIndex}`);
         if (!currentWorksheet) {
           currentWorksheet = workbook.addWorksheet(`Sheet${worksheetIndex}`);
-          if (worksheetIndex == 1) {
-            currentWorksheet.mergeCells("A1:X1");
-            const mergedCell = currentWorksheet.getCell("A1");
-            mergedCell.value = "CottonConnect | PSCP Procurement and Sell Live Tracker";
-            mergedCell.font = { bold: true };
-            mergedCell.alignment = { horizontal: "center", vertical: "middle" };
-          }
+          // if (worksheetIndex == 1) {
+          //   currentWorksheet.mergeCells("A1:X1");
+          //   const mergedCell = currentWorksheet.getCell("A1");
+          //   mergedCell.value = "CottonConnect | PSCP Procurement and Sell Live Tracker";
+          //   mergedCell.font = { bold: true };
+          //   mergedCell.alignment = { horizontal: "center", vertical: "middle" };
+          // }
           // Set bold font for header row
           const headerRow = currentWorksheet.addRow([
             "Sr No.",
@@ -3340,6 +3340,7 @@ const generateGinnerProcess = async () => {
                 gd.from_date AS from_date,
                 gd.to_date AS to_date,
                 gd.created_date AS "createdAt",
+                EXTRACT(DAY FROM AGE(gd.created_date , gd.to_date)) AS no_of_days,
                 gd.season_name AS season,
                 gd.ginner_name AS ginner_name,
                 c.county_name AS country_name,
@@ -3416,7 +3417,7 @@ const generateGinnerProcess = async () => {
         // Set bold font for header row
         // Set bold font for header row
         const headerRow = currentWorksheet.addRow([
-          "Sr No.","Country","State", "Process Date", "Data Entry Date", "Lint Production Start Date", "Lint Production End Date", "Seed Cotton Consumed Season", "Lint process Season choosen", "Ginner Name", "Heap Number", "Gin Lot No", "Gin Press No", "REEL Lot No", "REEL Press No", "No of Bales", "Lint Quantity(Kgs)", "Total Seed Cotton Consumed(Kgs)", "GOT", "Total lint cotton sold(Kgs)", "Total Bales Sold", "Total lint cotton rejected(Kgs)", "Total Bales Rejected", "Total lint cotton transfered(Kgs)", "Total Bales Transfered", "Total lint cotton in stock(Kgs)", "Total Bales in stock", "Programme", "Village", "Grey Out Status"
+          "Sr No.","Country","State", "Process Date", "Data Entry Date",  "No. of Days", "Lint Production Start Date", "Lint Production End Date", "Seed Cotton Consumed Season", "Lint process Season choosen", "Ginner Name", "Heap Number", "Gin Lot No", "Gin Press No", "REEL Lot No", "REEL Press No", "No of Bales", "Lint Quantity(Kgs)", "Total Seed Cotton Consumed(Kgs)", "GOT", "Total lint cotton sold(Kgs)", "Total Bales Sold", "Total lint cotton rejected(Kgs)", "Total Bales Rejected", "Total lint cotton transfered(Kgs)", "Total Bales Transfered", "Total lint cotton in stock(Kgs)", "Total Bales in stock", "Programme", "Village", "Grey Out Status"
         ]);
         headerRow.font = { bold: true };
       }
@@ -3443,6 +3444,7 @@ const generateGinnerProcess = async () => {
           state: item.state_name ? item.state_name : "",
           date: item.date ? item.date : "",
           created_date: item.createdAt ? item.createdAt : "",
+          no_of_days: item.no_of_days ? item.no_of_days : "",
           from_date: item.from_date ? item.from_date : "",
           to_date: item.to_date ? item.to_date : "",
           seed_consumed_seasons: item.seed_consumed_seasons ? item.seed_consumed_seasons : "",
@@ -3491,6 +3493,7 @@ const generateGinnerProcess = async () => {
         state:"",
         date:"",
         created_date:"",
+        no_of_days:"",
         from_date:"",
         to_date:"",
         seed_consumed_seasons:"",
@@ -3806,7 +3809,7 @@ const generateGinnerSales = async () => {
         // ]);
 
         const headerRow = currentWorksheet.addRow([
-          "Sr No.", "country","state", "Process Date", "Data Entry Date", "No of Days", "Lint Process Season", "Lint sale chosen season", "Ginner Name",
+          "Sr No.", "Country","State", "Process Date", "Data Entry Date", "No of Days", "Lint Process Season", "Lint sale chosen season", "Ginner Name",
           "Invoice No", "Buyer Type", "Sold To", "Bale Lot No", "REEL Lot No", "No of Bales", "Press/Bale No", "Rate/Kg",
           "Total Quantity", "Other Season Quantity (Kgs)", "Other Season Bales", "Sales Value", "Vehicle No", "Transporter Name", "Programme", "Agent Details", "Status"
         ]);
@@ -4077,8 +4080,8 @@ const generatePendingGinnerSales = async () => {
         // Set bold font for header row
         const headerRow = currentWorksheet.addRow([
           "Sr No.",
-          "country",
-          "state",
+          "Country",
+          "State",
           "Date",
           "Season",
           "Ginner Name",
@@ -5014,8 +5017,8 @@ const generateSpinnerBale = async () => {
 
           const headerRow = currentWorksheet.addRow([
             "Sr No.",
-            "country",
-            "state",
+            "Country",
+            "State",
             "Date of transaction accepted",
             "Date of transaction received",
             "Season",
@@ -5327,8 +5330,8 @@ const generateSpinnerYarnProcess = async () => {
 
           const headerRow = currentWorksheet.addRow([
             "Sr No.",
-            "country",
-            "state",
+            "Country",
+            "State",
             "Date and Time",
             "Process Date",
             "No of Days",
