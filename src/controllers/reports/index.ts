@@ -2961,7 +2961,7 @@ const exportSpinnerProcessGreyOutReport = async (req: Request, res: Response) =>
         const idArray: number[] = programId
           .split(",")
           .map((id: any) => parseInt(id, 10));
-        whereCondition["$program_id$"] = { [Op.in]: idArray };
+        whereCondition.program_id = { [Op.in]: idArray };
       }
 
       let include = [
@@ -3132,7 +3132,7 @@ const exportSpinnerGreyOutReport = async (req: Request, res: Response) => {
         const idArray: number[] = programId
           .split(",")
           .map((id: any) => parseInt(id, 10));
-        whereCondition["$program_id$"] = { [Op.in]: idArray };
+        whereCondition.program_id = { [Op.in]: idArray };
       }
 
       whereCondition[Op.or] = [
