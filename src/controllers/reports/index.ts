@@ -4761,7 +4761,7 @@ const exportSpinnerBale = async (req: Request, res: Response) => {
                 )
                 SELECT 
                     gs.*, 
-                    EXTRACT(DAY FROM AGE(gs."createdAt" , gs."accept_date")) AS no_of_days,
+                    EXTRACT(DAY FROM AGE(  gs."createdAt", gs."accept_date" )) AS no_of_days,
                     g.id AS ginner_id, 
                     g.name AS ginner, 
                     g.country_id as country_id,
@@ -4899,6 +4899,7 @@ const exportSpinnerBale = async (req: Request, res: Response) => {
         state:"",
         accept_date:"",
         date:"",
+        no_of_days:"",
         season:"",
         spinner:"",
         ginner:"",
@@ -4919,6 +4920,7 @@ const exportSpinnerBale = async (req: Request, res: Response) => {
         state:"",
         accept_date:"",
         date:"",
+        no_of_days:"",
         season:"",
         spinner:"",
         ginner:"",
@@ -5988,10 +5990,7 @@ const exportSpinnerYarnProcess = async (req: Request, res: Response) => {
     LEFT JOIN
       countries c ON spd.country_id = c.id
     LEFT JOIN
-      states s ON spd.state_id = s.id  LEFT JOIN
-      countries c ON spd.country_id = c.id
-    LEFT JOIN
-      states s ON spd.state_id = s.id
+      states s ON spd.state_id = s.id      
     ORDER BY
       spd.spinner_name ASC
     LIMIT :limit OFFSET :offset
@@ -12304,19 +12303,19 @@ const exportSpinnerSummary = async (req: Request, res: Response) => {
       });
 
 
-      // let totals = {
-      //   total_lint_cotton_procured:0,
-      //   total_lint_cotton_procured_pending:0,
-      //   total_lint_consumed:0,
-      //   total_lintGreyoutMT:0,
-      //   total_lintActualStockMT:0,
-      //   total_balance_lint_cotton:0,
-      //   total_yarn_procured:0,
-      //   total_yarn_sold:0,
-      //   total_yarnGreyoutMT:0,
-      //   total_yarnActualStockMT:0,
-      //   total_yarn_stock:0,
-      // };
+      let totals = {
+        total_lint_cotton_procured:0,
+        total_lint_cotton_procured_pending:0,
+        total_lint_consumed:0,
+        total_lintGreyoutMT:0,
+        total_lintActualStockMT:0,
+        total_balance_lint_cotton:0,
+        total_yarn_procured:0,
+        total_yarn_sold:0,
+        total_yarnGreyoutMT:0,
+        total_yarnActualStockMT:0,
+        total_yarn_stock:0,
+      };
 
       // Append data to worksheet
       for await (const [index, item] of rows.entries()) {
@@ -12619,40 +12618,40 @@ const exportSpinnerSummary = async (req: Request, res: Response) => {
         const rowValues = Object.values(rowVal);
         worksheet.addRow(rowValues);
 
-        // totals.total_lint_cotton_procured+=Number(rowVal.lint_cotton_procured);
-        // totals.total_lint_cotton_procured_pending+=Number(rowVal.lint_cotton_procured_pending);
-        // totals.total_lint_consumed+=Number(rowVal.lint_consumed);
-        // totals.total_lintGreyoutMT+=Number(rowVal.lintGreyoutMT);
-        // totals.total_lintActualStockMT+=Number(rowVal.lintActualStockMT);
-        // totals.total_balance_lint_cotton+=Number(rowVal.balance_lint_cotton);
-        // totals.total_yarn_procured+=Number(rowVal.yarn_procured);
-        // totals.total_yarn_sold+=Number(rowVal.yarn_sold);
-        // totals.total_yarnGreyoutMT+=Number(rowVal.lintGreyoutMT);
-        // totals.total_yarnActualStockMT+=Number(rowVal.yarnActualStockMT);
-        // totals.total_yarn_stock+=Number(rowVal.yarn_stock);
+        totals.total_lint_cotton_procured+=Number(rowVal.lint_cotton_procured);
+        totals.total_lint_cotton_procured_pending+=Number(rowVal.lint_cotton_procured_pending);
+        totals.total_lint_consumed+=Number(rowVal.lint_consumed);
+        totals.total_lintGreyoutMT+=Number(rowVal.lintGreyoutMT);
+        totals.total_lintActualStockMT+=Number(rowVal.lintActualStockMT);
+        totals.total_balance_lint_cotton+=Number(rowVal.balance_lint_cotton);
+        totals.total_yarn_procured+=Number(rowVal.yarn_procured);
+        totals.total_yarn_sold+=Number(rowVal.yarn_sold);
+        totals.total_yarnGreyoutMT+=Number(rowVal.lintGreyoutMT);
+        totals.total_yarnActualStockMT+=Number(rowVal.yarnActualStockMT);
+        totals.total_yarn_stock+=Number(rowVal.yarn_stock);
       }
 
 
-      // const rowVal ={
-      //   index:"Totals",
-      //   country:"",
-      //   state:"",
-      //   name:"",
-      //   lint_cotton_procured:Number(formatDecimal(totals.total_lint_cotton_procured)),
-      //   lint_cotton_procured_pending:Number(formatDecimal(totals.total_lint_cotton_procured_pending)),
-      //   lint_consumed:Number(formatDecimal(totals.total_lint_consumed)),
-      //   lintGreyoutMT:Number(formatDecimal(totals.total_lintGreyoutMT)),
-      //   lintActualStockMT:Number(formatDecimal(totals.total_lintActualStockMT)),
-      //   balance_lint_cotton:Number(formatDecimal(totals.total_balance_lint_cotton)),
-      //   yarn_procured:Number(formatDecimal(totals.total_yarn_procured)),
-      //   yarn_sold:Number(formatDecimal(totals.total_yarn_sold)),
-      //   yarnGreyoutMT:Number(formatDecimal(totals.total_lintGreyoutMT)),
-      //   yarnActualStockMT:Number(formatDecimal(totals.total_yarnActualStockMT)),
-      //   yarn_stock:Number(formatDecimal(totals.total_yarn_stock)),
-      // }; 
+      const rowVal ={
+        index:"Totals",
+        country:"",
+        state:"",
+        name:"",
+        lint_cotton_procured:Number(formatDecimal(totals.total_lint_cotton_procured)),
+        lint_cotton_procured_pending:Number(formatDecimal(totals.total_lint_cotton_procured_pending)),
+        lint_consumed:Number(formatDecimal(totals.total_lint_consumed)),
+        lintGreyoutMT:Number(formatDecimal(totals.total_lintGreyoutMT)),
+        lintActualStockMT:Number(formatDecimal(totals.total_lintActualStockMT)),
+        balance_lint_cotton:Number(formatDecimal(totals.total_balance_lint_cotton)),
+        yarn_procured:Number(formatDecimal(totals.total_yarn_procured)),
+        yarn_sold:Number(formatDecimal(totals.total_yarn_sold)),
+        yarnGreyoutMT:Number(formatDecimal(totals.total_lintGreyoutMT)),
+        yarnActualStockMT:Number(formatDecimal(totals.total_yarnActualStockMT)),
+        yarn_stock:Number(formatDecimal(totals.total_yarn_stock)),
+      }; 
 
-      // const rowValues = Object.values(rowVal);
-      // worksheet.addRow(rowValues).eachCell((cell, colNumber) => { cell.font={bold:true}});
+      const rowValues = Object.values(rowVal);
+      worksheet.addRow(rowValues).eachCell((cell, colNumber) => { cell.font={bold:true}});
 
       const borderStyle = {
         top: { style: "thin" },
