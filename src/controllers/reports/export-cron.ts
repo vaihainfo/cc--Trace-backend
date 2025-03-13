@@ -71,8 +71,7 @@ import { NUMBER } from "sequelize";
 import GinHeap from "../../models/gin-heap.model";
 import ValidationProject from "../../models/validation-project.model";
 import GinToGinSale from "../../models/gin-to-gin-sale.model";
-import { Console } from "console";
-
+import SpinCombernoilSale from "../../models/spin_combernoil_sale.model";
 
 const exportReportsTameTaking = async () => {
   // //call all export reports one by one on every cron
@@ -119,6 +118,7 @@ const exportReportsOnebyOne = async () => {
   await exportGinHeapReport();
   await exportGinnerProcessGreyOutReport();
   await exportSpinnerProcessGreyOutReport();
+  await generateSpinnerCombernoilSale();
 
 
   console.log('Cron Job Completed to execute all reports.');
@@ -5851,6 +5851,147 @@ const generateSpinnerSale = async () => {
       })
       .catch(error => {
         console.log('Failed to generate Spinner Yarn Sales Report.');
+        throw error;
+      });
+  } catch (error: any) {
+    console.log(error)
+  }
+};
+
+const generateSpinnerCombernoilSale = async () => {
+
+  const whereCondition: any = {};
+  const maxRowsPerWorksheet = 500000;
+
+  try {
+
+    const workbook = new ExcelJS.stream.xlsx.WorkbookWriter({
+      stream: fs.createWriteStream("./upload/spinner-combernoil-sale-test.xlsx")
+    });
+    let worksheetIndex = 0;
+
+
+    const batchSize = 5000;
+    let offset = 0;
+    let hasNextBatch = true;
+
+    let includes = [
+      {
+        model: Spinner,
+        as: "spinner",
+        attributes: ["id", "name"],
+      },
+      {
+        model: Season,
+        as: "season",
+        attributes: ["id", "name"],
+      },
+      {
+        model: Program,
+        as: "program",
+        attributes: ["id", "program_name"],
+      },
+    ];
+
+    while (hasNextBatch) {
+
+      const rows: any = await SpinCombernoilSale.findAll(
+        {
+          
+          where: whereCondition,
+          include: includes,
+          
+          offset: offset,
+          limit: batchSize,
+        }
+      );
+
+
+      if (rows.length === 0) {
+        hasNextBatch = false;
+        break;
+      }
+
+      if (offset % maxRowsPerWorksheet === 0) {
+        worksheetIndex++;
+      }
+
+      for await (const [index, item] of rows.entries()) {
+
+        
+
+        const formatDate = (dateString: any) => {
+          if (!dateString) return "";
+          const date = new Date(dateString);
+
+          const day = String(date.getDate()).padStart(2, '0');
+          const month = String(date.getMonth() + 1).padStart(2, '0');
+          const year = date.getFullYear();
+
+          return `${day}-${month}-${year}`;
+        };
+
+        
+        const rowValues = Object.values({
+          index: index + offset + 1,
+          createdAt: item.dataValues.createdAt ? item.dataValues.createdAt : "",
+          date: item.dataValues.date ? formatDate(item.dataValues.date) : "",
+          season: item.dataValues.season_name ? item.dataValues.season_name : "",          
+          invoice: item.dataValues.invoice_no ? item.dataValues.invoice_no : "",
+          spinner: item.dataValues.spinner ? item.dataValues.spinner.name : "",
+          buyer: item.dataValues.buyer ? item.dataValues.buyer.name : "",
+          order_ref: item.dataValues.order_ref ? item.dataValues.order_ref : "",
+          lotNo: item.dataValues.total_qty ? item.dataValues.total_qty : "",
+          program: item.dataValues.program ? item.dataValues.program.program_name : "",
+          vehicle_no: item.dataValues.vehicle_no ? item.dataValues.vehicle_no : "",
+          agent: item.dataValues.transaction_agent ? item.dataValues.transaction_agent : "NA", 
+        
+        });
+
+        let currentWorksheet = workbook.getWorksheet(`Spinner Combernoil Sales ${worksheetIndex}`);
+        if (!currentWorksheet) {
+          currentWorksheet = workbook.addWorksheet(`Spinner Combernoil Sales ${worksheetIndex}`);
+          if (worksheetIndex == 1) {
+            currentWorksheet.mergeCells("A1:U1");
+            const mergedCell = currentWorksheet.getCell("A1");
+            mergedCell.value = "CottonConnect | Spinner Combernoil Sales Report";
+            mergedCell.font = { bold: true };
+            mergedCell.alignment = { horizontal: "center", vertical: "middle" };
+          }
+
+          const headerRow = currentWorksheet.addRow([
+            "Sr No.",
+            "Created Date and Time",
+            "Date of transaction",
+            "Season",
+            "Invoice Number",
+            "Spinner Name",
+            "Sold To",
+            "Order Reference",
+            "Total weight",
+            "Programme",
+            "Vehicle No",
+            "Agent Details",
+          ]);
+          headerRow.font = { bold: true };
+        }
+
+        currentWorksheet.addRow(rowValues).commit();
+      }
+
+      offset += batchSize;
+    }
+
+    // Save the workbook
+    await workbook.commit()
+      .then(() => {
+        // Rename the temporary file to the final filename
+        fs.renameSync("./upload/spinner-combernoil-sale-test.xlsx", './upload/spinner-combernoil-sale.xlsx');
+        console.log('====== Spinner Combernoil Sales Report Generated. =======');
+      })
+      .catch(error => {
+        console.log('Failed to generate Spinner Yarn Sales Report.');
+        console.log('Failed to generate Spinner Combernoil Sales Report.');
         throw error;
       });
   } catch (error: any) {
