@@ -73,7 +73,6 @@ import ValidationProject from "../../models/validation-project.model";
 import GinToGinSale from "../../models/gin-to-gin-sale.model";
 import SpinCombernoilSale from "../../models/spin_combernoil_sale.model";
 
-
 const exportReportsTameTaking = async () => {
   // //call all export reports one by one on every cron
   await generateOrganicFarmerReport();
@@ -621,7 +620,9 @@ const generateSpinnerLintCottonStock = async () => {
 
   try {
     const workbook = new ExcelJS.stream.xlsx.WorkbookWriter({
-      stream: fs.createWriteStream("./upload/spinner-lint-cotton-stock-report-test.xlsx")
+      stream: fs.createWriteStream("./upload/spinner-lint-cotton-stock-report-test.xlsx"),
+      useStyles: true,
+
     });
     let worksheetIndex = 0;
     const batchSize = 5000;
@@ -788,7 +789,7 @@ const generateSpinnerLintCottonStock = async () => {
           ]);
           headerRow.font = { bold: true };
         }
-        currentWorksheet.addRow(rowValues).commit();
+        currentWorksheet.addRow(rowValues);
       }
 
       const rowValues = [
@@ -4467,7 +4468,8 @@ const generateSpinnerSummary = async () => {
   try {
 
     const workbook = new ExcelJS.stream.xlsx.WorkbookWriter({
-      stream: fs.createWriteStream("./upload/spinner-summary-test.xlsx")
+      stream: fs.createWriteStream("./upload/spinner-summary-test.xlsx"),
+      useStyles: true,
     });
     let worksheetIndex = 0;
 
@@ -4842,9 +4844,10 @@ const generateSpinnerSummary = async () => {
           headerRow.font = { bold: true };
         }
 
-        currentWorksheet.addRow(rowValues).commit();
+        currentWorksheet.addRow(rowValues);
       }
       offset += batchSize;
+      let currentWorksheet = workbook.getWorksheet(`Spinner Summary ${worksheetIndex}`);
 
       const rowVal ={
         index:"Totals",
@@ -4864,8 +4867,9 @@ const generateSpinnerSummary = async () => {
         yarn_stock:Number(formatDecimal(totals.total_yarn_stock)),
       }; 
       const rowValues = Object.values(rowVal);
-      let currentWorksheet = workbook.getWorksheet(`Spinner Summary ${worksheetIndex}`);
       currentWorksheet?.addRow(rowValues).eachCell((cell) => { cell.font={bold:true}});
+
+
       const borderStyle = {
         top: { style: "thin" },
         left: { style: "thin" },
@@ -4916,7 +4920,9 @@ const generateSpinnerBale = async () => {
     const whereClause = whereCondition.length > 0 ? `WHERE ${whereCondition.join(' AND ')} AND bd.total_qty > 0` : 'WHERE bd.total_qty > 0';
 
     const workbook = new ExcelJS.stream.xlsx.WorkbookWriter({
-      stream: fs.createWriteStream("./upload/Spinner-bale-receipt-report-test.xlsx")
+      stream: fs.createWriteStream("./upload/Spinner-bale-receipt-report-test.xlsx"),
+      useStyles: true,
+      
     });
     let worksheetIndex = 0;
 
@@ -4957,7 +4963,8 @@ const generateSpinnerBale = async () => {
                         bs.sales_id
                 )
                 SELECT 
-                    gs.*, 
+                    gs.*,
+                    EXTRACT(DAY FROM AGE(gs."createdAt" , gs."accept_date")) AS no_of_days,
                     g.id AS ginner_id, 
                     g.name AS ginner, 
                     g.country_id as country_id,
@@ -5033,6 +5040,7 @@ const generateSpinnerBale = async () => {
             ? item.accept_date
             : "",
           date: item.date ? item.date : "",
+          no_of_days: item.no_of_days? item.no_of_days:"",
           season: item.season_name ? item.season_name : "",
           spinner: item.spinner ? item.spinner : "",
           ginner: item.ginner ? item.ginner : "",
@@ -5072,6 +5080,7 @@ const generateSpinnerBale = async () => {
             "State",
             "Date of transaction accepted",
             "Date of transaction received",
+            "No. of Days",
             "Season",
             "Spinner Name",
             "Ginner Name",
@@ -5091,7 +5100,7 @@ const generateSpinnerBale = async () => {
         totals.total_no_of_bales += Number(item.accepted_no_of_bales);
         totals.total_lint_quantity += Number(item.accepted_total_qty);
 
-        currentWorksheet.addRow(rowValues).commit();
+        currentWorksheet.addRow(rowValues);
       }
 
       const rowValues = Object.values({
@@ -5100,6 +5109,7 @@ const generateSpinnerBale = async () => {
         state:"",
         accept_date:"",
         date:"",
+        no_of_days:"",
         season:"",
         spinner:"",
         ginner:"",
@@ -5122,7 +5132,8 @@ const generateSpinnerBale = async () => {
         bottom: { style: "thin" },
         right: { style: "thin" },      
       }
-  
+
+   
       // Auto-adjust column widths based on content
       currentWorksheet?.columns.forEach((column: any) => {
         let maxCellLength = 0;
@@ -5163,7 +5174,9 @@ const generateSpinnerYarnProcess = async () => {
   try {
 
     const workbook = new ExcelJS.stream.xlsx.WorkbookWriter({
-      stream: fs.createWriteStream("./upload/spinner-yarn-process-test.xlsx")
+      stream: fs.createWriteStream("./upload/spinner-yarn-process-test.xlsx"),
+      useStyles: true,
+
     });
     let worksheetIndex = 0;
 
@@ -5266,6 +5279,8 @@ const generateSpinnerYarnProcess = async () => {
         )
         SELECT
           spd.*,
+          c.county_name AS country,
+          s.state_name AS state,
           COALESCE(ccd.cotton_consumed, 0) AS cotton_consumed,
           COALESCE(csd.comber_consumed, 0) AS comber_consumed,
           ccd.seasons AS lint_consumed_seasons,
@@ -5281,6 +5296,10 @@ const generateSpinnerYarnProcess = async () => {
           yarn_sold_data ysd ON spd.process_id = ysd.spin_process_id
         LEFT JOIN
           yarn_count_data ycd ON spd.process_id = ycd.process_id
+        LEFT JOIN
+            countries c ON spd.country_id = c.id
+        LEFT JOIN
+            states s ON spd.state_id = s.id
         ORDER BY
           spd.spinner_name ASC
         LIMIT :limit OFFSET :offset
@@ -5420,7 +5439,7 @@ const generateSpinnerYarnProcess = async () => {
         totals.total_yarn_sold+=Number(rowValues.yarn_sold);
         totals.total_yarn_stock+=Number(rowValues.yarn_stock);
 
-        currentWorksheet.addRow(Object.values(rowValues)).commit();
+        currentWorksheet.addRow(Object.values(rowValues));
       }
 
       offset += batchSize;
@@ -5455,7 +5474,7 @@ const generateSpinnerYarnProcess = async () => {
             greyout_status:"",
           }
           let currentWorksheet = workbook.getWorksheet(`Spinner Yarn Process ${worksheetIndex}`);
-          currentWorksheet?.addRow(Object.values(rowValues)).commit();
+          currentWorksheet?.addRow(Object.values(rowValues));
           const borderStyle = {
             top: { style: "thin" },
             left: { style: "thin" },
@@ -5502,7 +5521,9 @@ const generateSpinnerSale = async () => {
   try {
 
     const workbook = new ExcelJS.stream.xlsx.WorkbookWriter({
-      stream: fs.createWriteStream("./upload/spinner-yarn-sale-test.xlsx")
+      stream: fs.createWriteStream("./upload/spinner-yarn-sale-test.xlsx"),
+      useStyles: true,
+
     });
     let worksheetIndex = 0;
 
@@ -5557,6 +5578,7 @@ const generateSpinnerSale = async () => {
             [Sequelize.literal('"sales"."id"'), "sales_id"],
             [Sequelize.literal('"sales"."date"'), "date"],
             [Sequelize.literal('"sales"."createdAt"'), "createdAt"],
+            [Sequelize.literal('EXTRACT(DAY FROM AGE("sales"."createdAt", "sales"."date"))'), "no_of_days"],
             [Sequelize.col('"sales"."season"."name"'), "season_name"],
             [Sequelize.col('"sales"."season"."id"'), "season_id"],
             [Sequelize.col('"sales"."spinner"."id"'), "spinner_id"],
@@ -5694,6 +5716,7 @@ const generateSpinnerSale = async () => {
           index: index + offset + 1,
           createdAt: item.dataValues.createdAt ? item.dataValues.createdAt : "",
           date: item.dataValues.date ? formatDate(item.dataValues.date) : "",
+          no_of_days: item.no_of_days,
           lint_consumed_seasons: seedSeason ? seedSeason[0]?.seasons : "",
           season: item.dataValues.season_name ? item.dataValues.season_name : "",
           spinner: item.dataValues.spinner ? item.dataValues.spinner : "",
@@ -5729,13 +5752,13 @@ const generateSpinnerSale = async () => {
         let currentWorksheet = workbook.getWorksheet(`Spinner Yarn Sales ${worksheetIndex}`);
         if (!currentWorksheet) {
           currentWorksheet = workbook.addWorksheet(`Spinner Yarn Sales ${worksheetIndex}`);
-          if (worksheetIndex == 1) {
-            currentWorksheet.mergeCells("A1:U1");
-            const mergedCell = currentWorksheet.getCell("A1");
-            mergedCell.value = "CottonConnect | Spinner Yarn Sales Report";
-            mergedCell.font = { bold: true };
-            mergedCell.alignment = { horizontal: "center", vertical: "middle" };
-          }
+          // if (worksheetIndex == 1) {
+          //   currentWorksheet.mergeCells("A1:U1");
+          //   const mergedCell = currentWorksheet.getCell("A1");
+          //   mergedCell.value = "CottonConnect | Spinner Yarn Sales Report";
+          //   mergedCell.font = { bold: true };
+          //   mergedCell.alignment = { horizontal: "center", vertical: "middle" };
+          // }
 
           const headerRow = currentWorksheet.addRow([
             "Sr No.",
@@ -5743,6 +5766,7 @@ const generateSpinnerSale = async () => {
             "State",
             "Created Date and Time",
             "Date of transaction",
+            "No. of Days",
             "Lint Cotton Consumed Season",
             "Yarn sale season chosen",
             "Spinner Name",
@@ -5765,7 +5789,7 @@ const generateSpinnerSale = async () => {
           headerRow.font = { bold: true };
         }
 
-        currentWorksheet.addRow( Object.values(rowValues)).commit();
+        currentWorksheet.addRow( Object.values(rowValues));
 
         totals.total_price += Number(rowValues.price);
         totals.total_net_weight += Number(rowValues.total);
@@ -5776,6 +5800,7 @@ const generateSpinnerSale = async () => {
         index:"Totals: ",
         createdAt:"",
         date:"",
+        no_of_days:"",
         lint_consumed_seasons:"",
         season:"",
         spinner:"",
@@ -5796,7 +5821,7 @@ const generateSpinnerSale = async () => {
         agent:"",
       };
       let currentWorksheet = workbook.getWorksheet(`Spinner Yarn Sales ${worksheetIndex}`);
-      currentWorksheet?.addRow( Object.values(rowValues)).commit();
+      currentWorksheet?.addRow( Object.values(rowValues));
       let borderStyle = {
         top: {style: "thin"},
         left: {style: "thin"},
@@ -6283,7 +6308,9 @@ const generatePendingSpinnerBale = async () => {
     };
 
     const workbook = new ExcelJS.stream.xlsx.WorkbookWriter({
-      stream: fs.createWriteStream("./upload/Spinner-Pending-Bales-Receipt-Report-test.xlsx")
+      stream: fs.createWriteStream("./upload/Spinner-Pending-Bales-Receipt-Report-test.xlsx"),
+      useStyles: true,
+
     });
     let worksheetIndex = 0;
 
@@ -6328,6 +6355,7 @@ const generatePendingSpinnerBale = async () => {
           [Sequelize.literal('"sales"."id"'), "sales_id"],
           [Sequelize.literal('"sales"."date"'), "date"],
           [Sequelize.literal('"sales"."createdAt"'), "createdAt"],
+          [Sequelize.literal('EXTRACT(DAY FROM AGE("sales"."createdAt", "sales"."date"))'), "no_of_days"],
           [Sequelize.literal('"sales"."accept_date"'), "accept_date"],
           [Sequelize.col('"sales"."season"."name"'), "season_name"],
           [Sequelize.col('"sales"."ginner"."id"'), "ginner_id"],
@@ -6409,6 +6437,7 @@ const generatePendingSpinnerBale = async () => {
           state: item.dataValues.state,          
           createdAt: item.dataValues.createdAt ? item.dataValues.createdAt : "",
           date: item.dataValues.date ? item.dataValues.date : "",
+          no_of_days: item.dataValues.no_of_days,
           season: item.dataValues.season_name ? item.dataValues.season_name : "",
           ginner: item.dataValues.ginner ? item.dataValues.ginner : "",
           spinner: item.dataValues.spinner ? item.dataValues.spinner : "",
@@ -6447,6 +6476,7 @@ const generatePendingSpinnerBale = async () => {
             "State",                    
             "Date and Time",
             "Date",
+            "No of Days",
             "Season",
             "Ginner Name",
             "Spinner Name",
@@ -6466,7 +6496,7 @@ const generatePendingSpinnerBale = async () => {
         totals.actual_qty += rowValues.actual_qty;
 
 
-        currentWorksheet.addRow(Object.values(rowValues)).commit();
+        currentWorksheet.addRow(Object.values(rowValues));
       }
 
       let rowValues = {
@@ -6475,6 +6505,7 @@ const generatePendingSpinnerBale = async () => {
         state:"",
         createdAt:"",
         date:"",
+        no_of_days:"",
         season:"",
         ginner:"",
         spinner:"",
@@ -6488,7 +6519,7 @@ const generatePendingSpinnerBale = async () => {
         village:"",
       };
       let currentWorksheet = workbook.getWorksheet(`Spinner Pending Bales ${worksheetIndex}`);
-      currentWorksheet?.addRow(Object.values(rowValues)).commit();
+      currentWorksheet?.addRow(Object.values(rowValues));
       let borderStyle = {
         top: {style: "thin"},
         left: {style: "thin"},
@@ -6916,3 +6947,7 @@ function convert_kg_to_mt(number: any) {
 }
 
 export { exportReportsTameTaking, exportReportsOnebyOne };
+
+// export {generateSpinnerSummary, generateSpinnerBale, 
+//   generateSpinnerYarnProcess, generateSpinnerSale,
+//   generatePendingSpinnerBale, generateSpinnerLintCottonStock}

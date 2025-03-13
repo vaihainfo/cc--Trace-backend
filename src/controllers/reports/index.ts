@@ -4295,6 +4295,7 @@ const fetchSpinnerBalePagination = async (req: Request, res: Response) => {
                 )
                 SELECT 
                     gs.*, 
+                    EXTRACT(DAY FROM AGE(gs."createdAt" , gs."accept_date")) AS no_of_days,
                     g.id AS ginner_id, 
                     g.name AS ginner, 
                     g.country_id AS country_id,
@@ -4510,6 +4511,7 @@ const fetchSpinnerPendingBale = async (req: Request, res: Response) => {
         [Sequelize.literal('"sales"."id"'), "sales_id"],
         [Sequelize.literal('"sales"."date"'), "date"],
         [Sequelize.literal('"sales"."createdAt"'), "createdAt"],
+        [Sequelize.literal('Extract(DAY FROM AGE("sales"."createdAt", "sales"."date"))'), "no_of_days"],
         [Sequelize.literal('"sales"."accept_date"'), "accept_date"],
         [Sequelize.col('"sales"."season"."name"'), "season_name"],
         [Sequelize.col('"sales"."ginner"."id"'), "ginner_id"],
@@ -4691,6 +4693,7 @@ const exportSpinnerBale = async (req: Request, res: Response) => {
           "State",
           "Date of transaction accepted",
           "Date of transaction received",
+          "No. of Days",
           "Season",
           "Spinner Name",
           "Ginner Name",
@@ -4710,6 +4713,7 @@ const exportSpinnerBale = async (req: Request, res: Response) => {
         "State",
         "Date of transaction accepted",
         "Date of transaction received",
+        "No. of Days",
         "Season",
         "Spinner Name",
         "Ginner Name",
@@ -4759,6 +4763,7 @@ const exportSpinnerBale = async (req: Request, res: Response) => {
                 )
                 SELECT 
                     gs.*, 
+                    EXTRACT(DAY FROM AGE(gs."createdAt" , gs."accept_date")) AS no_of_days,
                     g.id AS ginner_id, 
                     g.name AS ginner, 
                     g.country_id as country_id,
@@ -4827,6 +4832,7 @@ const exportSpinnerBale = async (req: Request, res: Response) => {
             ? item.accept_date
             : "",
           date: item.date ? item.date : "",
+          no_of_days: item.no_of_days? item.no_of_days:"",
           season: item.season_name ? item.season_name : "",
           spinner: item.spinner ? item.spinner : "",
           ginner: item.ginner ? item.ginner : "",
@@ -4855,6 +4861,7 @@ const exportSpinnerBale = async (req: Request, res: Response) => {
             ? item.accept_date
             : "",
           date: item.date ? item.date : "",
+          no_of_days: item.no_of_days? item.no_of_days:"",
           season: item.season_name ? item.season_name : "",
           spinner: item.spinner ? item.spinner : "",
           ginner: item.ginner ? item.ginner : "",
@@ -5086,6 +5093,7 @@ const exportPendingSpinnerBale = async (req: Request, res: Response) => {
           "State",          
           "Date and Time",
           "Date",
+          "No. of Days",
           "Season",
           "Ginner Name",
           "Spinner Name",
@@ -5104,6 +5112,7 @@ const exportPendingSpinnerBale = async (req: Request, res: Response) => {
           "State",          
           "Date and Time",
           "Date",
+          "No. of Days",
           "Season",
           "Ginner Name",
           "Spinner Name",
@@ -5122,6 +5131,7 @@ const exportPendingSpinnerBale = async (req: Request, res: Response) => {
           "State",          
           "Date and Time",
           "Date",
+          "No. of Days",
           "Season",
           "Ginner Name",
           "Spinner Name",
@@ -5171,6 +5181,7 @@ const exportPendingSpinnerBale = async (req: Request, res: Response) => {
           [Sequelize.literal('"sales"."id"'), "sales_id"],
           [Sequelize.literal('"sales"."date"'), "date"],
           [Sequelize.literal('"sales"."createdAt"'), "createdAt"],
+          [Sequelize.literal('EXTRACT(DAY FROM AGE("sales"."createdAt", "sales"."date"))'), "no_of_days"],
           [Sequelize.literal('"sales"."accept_date"'), "accept_date"],
           [Sequelize.col('"sales"."season"."name"'), "season_name"],
           [Sequelize.col('"sales"."ginner"."id"'), "ginner_id"],
@@ -5245,6 +5256,7 @@ const exportPendingSpinnerBale = async (req: Request, res: Response) => {
             state: item.dataValues.state,
             createdAt: item.dataValues.createdAt ? item.dataValues.createdAt : "",
             date: item.dataValues.date ? item.dataValues.date : "",
+            no_of_days: item.dataValues.no_of_days,
             season: item.dataValues.season_name ? item.dataValues.season_name : "",
             ginner: item.dataValues.ginner ? item.dataValues.ginner : "",
             spinner: item.dataValues.spinner ? item.dataValues.spinner : "",
@@ -5267,6 +5279,7 @@ const exportPendingSpinnerBale = async (req: Request, res: Response) => {
             state: item.dataValues.state,            
             createdAt: item.dataValues.createdAt ? item.dataValues.createdAt : "",
             date: item.dataValues.date ? item.dataValues.date : "",
+            no_of_days: item.dataValues.no_of_days,
             season: item.dataValues.season_name ? item.dataValues.season_name : "",
             ginner: item.dataValues.ginner ? item.dataValues.ginner : "",
             spinner: item.dataValues.spinner ? item.dataValues.spinner : "",
@@ -5291,6 +5304,7 @@ const exportPendingSpinnerBale = async (req: Request, res: Response) => {
             state: item.dataValues.state,            
             createdAt: item.dataValues.createdAt ? item.dataValues.createdAt : "",
             date: item.dataValues.date ? item.dataValues.date : "",
+            no_of_days: item.dataValues.no_of_days,
             season: item.dataValues.season_name ? item.dataValues.season_name : "",
             ginner: item.dataValues.ginner ? item.dataValues.ginner : "",
             spinner: item.dataValues.spinner ? item.dataValues.spinner : "",
@@ -5331,6 +5345,7 @@ const exportPendingSpinnerBale = async (req: Request, res: Response) => {
           state:"",
           createdAt:"",
           date:"",
+          no_of_days:"",
           season:"",
           ginner:"",
           spinner:"",
@@ -5349,6 +5364,7 @@ const exportPendingSpinnerBale = async (req: Request, res: Response) => {
           state:"",
           createdAt:"",
           date:"",
+          no_of_days:"",
           season:"",
           ginner:"",
           spinner:"",
@@ -5367,6 +5383,7 @@ const exportPendingSpinnerBale = async (req: Request, res: Response) => {
           state:"",
           createdAt:"",
           date:"",
+          no_of_days:"",
           season:"",
           ginner:"",
           spinner:"",
@@ -5973,6 +5990,9 @@ const exportSpinnerYarnProcess = async (req: Request, res: Response) => {
     LEFT JOIN
       countries c ON spd.country_id = c.id
     LEFT JOIN
+      states s ON spd.state_id = s.id  LEFT JOIN
+      countries c ON spd.country_id = c.id
+    LEFT JOIN
       states s ON spd.state_id = s.id
     ORDER BY
       spd.spinner_name ASC
@@ -6447,6 +6467,7 @@ const fetchSpinSalesPagination = async (req: Request, res: Response) => {
           [Sequelize.literal('"sales"."id"'), "sales_id"],
           [Sequelize.literal('"sales"."date"'), "date"],
           [Sequelize.literal('"sales"."createdAt"'), "createdAt"],
+          [Sequelize.literal('EXTRACT(DAY FROM AGE("sales"."createdAt", "sales"."date"))'), "no_of_days"],  
           [Sequelize.col('"sales"."season"."name"'), "season_name"],
           [Sequelize.col('"sales"."season"."id"'), "season_id"],
           [Sequelize.col('"sales"."spinner"."id"'), "spinner_id"],
@@ -6686,6 +6707,7 @@ const exportSpinnerSale = async (req: Request, res: Response) => {
           "State",
           "Created Date and Time",
           "Date of transaction",
+          "No. of Days",
           "Season",
           "Spinner Name",
           "Knitter/Weaver Name",
@@ -6709,6 +6731,7 @@ const exportSpinnerSale = async (req: Request, res: Response) => {
           "State",
           "Created Date and Time",
           "Date of transaction",
+          "No. of Days",
           "Season",
           "Spinner Name",
           "Knitter/Weaver Name",
@@ -6733,6 +6756,7 @@ const exportSpinnerSale = async (req: Request, res: Response) => {
           "State",
           "Created Date and Time",
           "Date of transaction",
+          "No. of Days",
           "Yarn sale season chosen",
           "Spinner Name",
           "Knitter/Weaver Name",
@@ -6759,6 +6783,7 @@ const exportSpinnerSale = async (req: Request, res: Response) => {
           "State",
           "Created Date and Time",
           "Date of transaction",
+          "No. of Days",
           "Lint Cotton Consumed Season",
           "Yarn sale season chosen",
           "Spinner Name",
@@ -6828,6 +6853,7 @@ const exportSpinnerSale = async (req: Request, res: Response) => {
             [Sequelize.literal('"sales"."id"'), "sales_id"],
             [Sequelize.literal('"sales"."date"'), "date"],
             [Sequelize.literal('"sales"."createdAt"'), "createdAt"],
+            [Sequelize.literal('EXTRACT(DAY FROM AGE("sales"."createdAt", "sales"."date"))'), "no_of_days"],
             [Sequelize.col('"sales"."season"."name"'), "season_name"],
             [Sequelize.col('"sales"."season"."id"'), "season_id"],
             [Sequelize.col('"sales"."spinner"."id"'), "spinner_id"],
@@ -6979,10 +7005,11 @@ const exportSpinnerSale = async (req: Request, res: Response) => {
         if (isOrganic === 'true') {
           rowValues = {
             index: index + 1,
-            country: item.country,
-            state: item.state,
+            country: item.dataValues.country,
+            state: item.dataValues.state,
             createdAt: item.dataValues.createdAt ? item.dataValues.createdAt : "",
             date: item.dataValues.date ? formatDate(item.dataValues.date) : "",
+            no_of_days: item.dataValues.no_of_days,
             season: item.dataValues.season_name ? item.dataValues.season_name : "",
             spinner: item.dataValues.spinner ? item.dataValues.spinner : "",
             buyer_id: item.dataValues.weaver
@@ -7010,10 +7037,11 @@ const exportSpinnerSale = async (req: Request, res: Response) => {
         else if (isBrand === 'true' &&  (isOrganic === false ||  isOrganic === 'false')) {
           rowValues = {
             index: index + 1,
-            country: item.country,
-            state: item.state,
+            country: item.dataValues.country,
+            state: item.dataValues.state,
             createdAt: item.dataValues.createdAt ? item.dataValues.createdAt : "",
             date: item.dataValues.date ? formatDate(item.dataValues.date) : "",
+            no_of_days: item.dataValues.no_of_days,
             season: item.dataValues.season_name ? item.dataValues.season_name : "",
             spinner: item.dataValues.spinner ? item.dataValues.spinner : "",
             buyer_id: item.dataValues.weaver
@@ -7042,10 +7070,11 @@ const exportSpinnerSale = async (req: Request, res: Response) => {
         else if (isAdmin === 'true') {
           rowValues = {
             index: index + 1,
-            country: item.country,
-            state: item.state,
+            country: item.dataValues.country,
+            state: item.dataValues.state,
             createdAt: item.dataValues.createdAt ? item.dataValues.createdAt : "",
             date: item.dataValues.date ? formatDate(item.dataValues.date) : "",
+            no_of_days: item.dataValues.no_of_days,
             season: item.dataValues.season_name ? item.dataValues.season_name : "",
             spinner: item.dataValues.spinner ? item.dataValues.spinner : "",
             buyer_id: item.dataValues.weaver
@@ -7080,10 +7109,11 @@ const exportSpinnerSale = async (req: Request, res: Response) => {
         else {
           rowValues = {
             index: index + 1,
-            country: item.country,
-            state: item.state,
+            country: item.dataValues.country,
+            state: item.dataValues.state,
             createdAt: item.dataValues.createdAt ? item.dataValues.createdAt : "",
             date: item.dataValues.date ? formatDate(item.dataValues.date) : "",
+            no_of_days: item.dataValues.no_of_days,
             lint_consumed_seasons: seedSeason ? seedSeason[0]?.seasons : "",
             season: item.dataValues.season_name ? item.dataValues.season_name : "",
             spinner: item.dataValues.spinner ? item.dataValues.spinner : "",
@@ -7135,6 +7165,7 @@ const exportSpinnerSale = async (req: Request, res: Response) => {
           state:"",
           createdAt:"",
           date:"",
+          no_of_days:"",
           season:"",
           spinner:"",
           buyer_id:"",
@@ -7160,6 +7191,7 @@ const exportSpinnerSale = async (req: Request, res: Response) => {
           state:"",
           createdAt:"",
           date:"",
+          no_of_days:"",
           season:"",
           spinner:"",
           buyer_id:"",
@@ -7184,6 +7216,7 @@ const exportSpinnerSale = async (req: Request, res: Response) => {
           state:"",
           createdAt:"",
           date:"",
+          no_of_days:"",
           season:"",
           spinner:"",
           buyer_id:"",
@@ -7210,6 +7243,7 @@ const exportSpinnerSale = async (req: Request, res: Response) => {
           state:"",
           createdAt:"",
           date:"",
+          no_of_days:"",
           lint_consumed_seasons:"",
           season:"",
           spinner:"",
@@ -12704,19 +12738,19 @@ const exportSpinnerSummary = async (req: Request, res: Response) => {
       });
 
 
-      let totals = {
-        total_lint_cotton_procured:0,
-        total_lint_cotton_procured_pending:0,
-        total_lint_consumed:0,
-        total_lintGreyoutMT:0,
-        total_lintActualStockMT:0,
-        total_balance_lint_cotton:0,
-        total_yarn_procured:0,
-        total_yarn_sold:0,
-        total_yarnGreyoutMT:0,
-        total_yarnActualStockMT:0,
-        total_yarn_stock:0,
-      };
+      // let totals = {
+      //   total_lint_cotton_procured:0,
+      //   total_lint_cotton_procured_pending:0,
+      //   total_lint_consumed:0,
+      //   total_lintGreyoutMT:0,
+      //   total_lintActualStockMT:0,
+      //   total_balance_lint_cotton:0,
+      //   total_yarn_procured:0,
+      //   total_yarn_sold:0,
+      //   total_yarnGreyoutMT:0,
+      //   total_yarnActualStockMT:0,
+      //   total_yarn_stock:0,
+      // };
 
       // Append data to worksheet
       for await (const [index, item] of rows.entries()) {
@@ -13019,40 +13053,40 @@ const exportSpinnerSummary = async (req: Request, res: Response) => {
         const rowValues = Object.values(rowVal);
         worksheet.addRow(rowValues);
 
-        totals.total_lint_cotton_procured+=Number(rowVal.lint_cotton_procured);
-        totals.total_lint_cotton_procured_pending+=Number(rowVal.lint_cotton_procured_pending);
-        totals.total_lint_consumed+=Number(rowVal.lint_consumed);
-        totals.total_lintGreyoutMT+=Number(rowVal.lintGreyoutMT);
-        totals.total_lintActualStockMT+=Number(rowVal.lintActualStockMT);
-        totals.total_balance_lint_cotton+=Number(rowVal.balance_lint_cotton);
-        totals.total_yarn_procured+=Number(rowVal.yarn_procured);
-        totals.total_yarn_sold+=Number(rowVal.yarn_sold);
-        totals.total_yarnGreyoutMT+=Number(rowVal.lintGreyoutMT);
-        totals.total_yarnActualStockMT+=Number(rowVal.yarnActualStockMT);
-        totals.total_yarn_stock+=Number(rowVal.yarn_stock);
+        // totals.total_lint_cotton_procured+=Number(rowVal.lint_cotton_procured);
+        // totals.total_lint_cotton_procured_pending+=Number(rowVal.lint_cotton_procured_pending);
+        // totals.total_lint_consumed+=Number(rowVal.lint_consumed);
+        // totals.total_lintGreyoutMT+=Number(rowVal.lintGreyoutMT);
+        // totals.total_lintActualStockMT+=Number(rowVal.lintActualStockMT);
+        // totals.total_balance_lint_cotton+=Number(rowVal.balance_lint_cotton);
+        // totals.total_yarn_procured+=Number(rowVal.yarn_procured);
+        // totals.total_yarn_sold+=Number(rowVal.yarn_sold);
+        // totals.total_yarnGreyoutMT+=Number(rowVal.lintGreyoutMT);
+        // totals.total_yarnActualStockMT+=Number(rowVal.yarnActualStockMT);
+        // totals.total_yarn_stock+=Number(rowVal.yarn_stock);
       }
 
 
-      const rowVal ={
-        index:"Totals",
-        country:"",
-        state:"",
-        name:"",
-        lint_cotton_procured:Number(formatDecimal(totals.total_lint_cotton_procured)),
-        lint_cotton_procured_pending:Number(formatDecimal(totals.total_lint_cotton_procured_pending)),
-        lint_consumed:Number(formatDecimal(totals.total_lint_consumed)),
-        lintGreyoutMT:Number(formatDecimal(totals.total_lintGreyoutMT)),
-        lintActualStockMT:Number(formatDecimal(totals.total_lintActualStockMT)),
-        balance_lint_cotton:Number(formatDecimal(totals.total_balance_lint_cotton)),
-        yarn_procured:Number(formatDecimal(totals.total_yarn_procured)),
-        yarn_sold:Number(formatDecimal(totals.total_yarn_sold)),
-        yarnGreyoutMT:Number(formatDecimal(totals.total_lintGreyoutMT)),
-        yarnActualStockMT:Number(formatDecimal(totals.total_yarnActualStockMT)),
-        yarn_stock:Number(formatDecimal(totals.total_yarn_stock)),
-      }; 
+      // const rowVal ={
+      //   index:"Totals",
+      //   country:"",
+      //   state:"",
+      //   name:"",
+      //   lint_cotton_procured:Number(formatDecimal(totals.total_lint_cotton_procured)),
+      //   lint_cotton_procured_pending:Number(formatDecimal(totals.total_lint_cotton_procured_pending)),
+      //   lint_consumed:Number(formatDecimal(totals.total_lint_consumed)),
+      //   lintGreyoutMT:Number(formatDecimal(totals.total_lintGreyoutMT)),
+      //   lintActualStockMT:Number(formatDecimal(totals.total_lintActualStockMT)),
+      //   balance_lint_cotton:Number(formatDecimal(totals.total_balance_lint_cotton)),
+      //   yarn_procured:Number(formatDecimal(totals.total_yarn_procured)),
+      //   yarn_sold:Number(formatDecimal(totals.total_yarn_sold)),
+      //   yarnGreyoutMT:Number(formatDecimal(totals.total_lintGreyoutMT)),
+      //   yarnActualStockMT:Number(formatDecimal(totals.total_yarnActualStockMT)),
+      //   yarn_stock:Number(formatDecimal(totals.total_yarn_stock)),
+      // }; 
 
-      const rowValues = Object.values(rowVal);
-      worksheet.addRow(rowValues).eachCell((cell, colNumber) => { cell.font={bold:true}});
+      // const rowValues = Object.values(rowVal);
+      // worksheet.addRow(rowValues).eachCell((cell, colNumber) => { cell.font={bold:true}});
 
       const borderStyle = {
         top: { style: "thin" },
