@@ -1,5 +1,6 @@
 import { DataTypes } from 'sequelize';
 import db from '../util/dbConn';
+import Spinner from './spinner.model';
 
 const SpinCombernoilSale = db.define('spin_combernoil_sales', {
   id: {
@@ -153,6 +154,17 @@ const SpinCombernoilSale = db.define('spin_combernoil_sales', {
  
 }, {
   timestamps: true // This will handle createdAt and updatedAt automatically
+});
+
+SpinCombernoilSale.belongsTo(Spinner, {
+  foreignKey: 'buyer_id',  
+  targetKey: 'id',         
+  as: 'buyer'              
+});
+SpinCombernoilSale.belongsTo(Spinner, {
+  foreignKey: 'spinner_id',   
+  targetKey: 'id',            
+  as: 'spinner'               
 });
 
 SpinCombernoilSale.sync();
