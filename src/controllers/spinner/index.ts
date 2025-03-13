@@ -40,6 +40,7 @@ import { _getGinnerProcessTracingChartData } from "../ginner";
 import CombernoilGeneration from "../../models/combernoil_generation.model";
 import SpinCombernoilSale from "../../models/spin_combernoil_sale.model";
 import GinToGinSale from "../../models/gin-to-gin-sale.model";
+import SpinSaleYarnSelected from "../../models/spin-sale-yarn-selected.model";
 // import SpinSelectedBlend from "../../models/spin_selected_blend";
 
 //create Spinner Process
@@ -435,6 +436,17 @@ const fetchSpinnerProcessPagination = async (req: Request, res: Response) => {
 
       for await (let row of rows) {
         let yarncount = [];
+        let spinyarns = [];
+
+        spinyarns = await SpinYarn.findAll({
+          where: {process_id: row.dataValues?.id},
+          include:{
+            model: YarnCount,
+            as: "yarncount",
+            attributes: ["id", "yarnCount_name"],
+          },
+          attributes: ["id", "process_id", "yarn_count", "yarn_produced", "batch_lot_no"],
+        })
 
         if (row.dataValues?.yarn_count.length > 0) {
           yarncount = await YarnCount.findAll({
@@ -446,6 +458,7 @@ const fetchSpinnerProcessPagination = async (req: Request, res: Response) => {
         data.push({
           ...row.dataValues,
           yarncount,
+          spinyarns
         });
       }
 
@@ -461,6 +474,19 @@ const fetchSpinnerProcessPagination = async (req: Request, res: Response) => {
 
       for await (let row of gin) {
         let yarncount = [];
+        let spinyarns = [];
+
+        spinyarns = await SpinYarn.findAll({
+          where: {process_id: row.dataValues?.id},
+          include:{
+            model: YarnCount,
+            as: "yarncount",
+            attributes: ["id", "yarnCount_name"],
+          },
+          attributes: ["id", "process_id", "yarn_count", "yarn_produced", "batch_lot_no"],
+        })
+
+        console.log(spinyarns)
 
         if (row.dataValues?.yarn_count.length > 0) {
           yarncount = await YarnCount.findAll({
@@ -472,6 +498,7 @@ const fetchSpinnerProcessPagination = async (req: Request, res: Response) => {
         data.push({
           ...row.dataValues,
           yarncount,
+          spinyarns
         });
       }
 
@@ -1298,6 +1325,24 @@ const createSpinnerSales = async (req: Request, res: Response) => {
             sales_id: spinSales.id,
             qty_used: obj.qtyUsed,
           }, { transaction });
+        }
+      }
+
+      if(req.body.batchWiseData && req.body.batchWiseData.length > 0){
+        for await (let obj of req.body.chooseYarn) {
+          const batchList ={
+            process_id: obj.process_id,
+            yarn_id: obj.id,
+            sales_id: spinSales.id,
+            batch_lot_no: obj.batchLotNo,
+            price: obj.price,
+            box_id: obj.boxId,
+            no_of_boxes: obj.noOfBoxes,
+          }
+
+          await SpinSaleYarnSelected.create(
+            batchList, 
+            { transaction });
         }
       }
 
