@@ -5474,7 +5474,7 @@ const generateSpinnerYarnProcess = async () => {
             greyout_status:"",
           }
           let currentWorksheet = workbook.getWorksheet(`Spinner Yarn Process ${worksheetIndex}`);
-          currentWorksheet?.addRow(Object.values(rowValues));
+          currentWorksheet?.addRow(Object.values(rowValues)).eachCell(cell=> cell.font={bold:true});
           const borderStyle = {
             top: { style: "thin" },
             left: { style: "thin" },
@@ -5821,7 +5821,7 @@ const generateSpinnerSale = async () => {
         agent:"",
       };
       let currentWorksheet = workbook.getWorksheet(`Spinner Yarn Sales ${worksheetIndex}`);
-      currentWorksheet?.addRow( Object.values(rowValues));
+      currentWorksheet?.addRow( Object.values(rowValues)).eachCell(cell=> cell.font={bold:true});
       let borderStyle = {
         top: {style: "thin"},
         left: {style: "thin"},
@@ -6519,7 +6519,7 @@ const generatePendingSpinnerBale = async () => {
         village:"",
       };
       let currentWorksheet = workbook.getWorksheet(`Spinner Pending Bales ${worksheetIndex}`);
-      currentWorksheet?.addRow(Object.values(rowValues));
+      currentWorksheet?.addRow(Object.values(rowValues)).eachCell(cell=> cell.font={bold:true});
       let borderStyle = {
         top: {style: "thin"},
         left: {style: "thin"},

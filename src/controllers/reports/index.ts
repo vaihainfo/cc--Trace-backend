@@ -7004,8 +7004,8 @@ const exportSpinnerSale = async (req: Request, res: Response) => {
         if (isOrganic === 'true') {
           rowValues = {
             index: index + 1,
-            country: item.dataValues.country,
-            state: item.dataValues.state,
+            country: item.dataValues.country?item.dataValues.country:"",
+            state: item.dataValues.state?item.dataValues.state:"",
             createdAt: item.dataValues.createdAt ? item.dataValues.createdAt : "",
             date: item.dataValues.date ? formatDate(item.dataValues.date) : "",
             no_of_days: item.dataValues.no_of_days,
@@ -7036,8 +7036,8 @@ const exportSpinnerSale = async (req: Request, res: Response) => {
         else if (isBrand === 'true' &&  (isOrganic === false ||  isOrganic === 'false')) {
           rowValues = {
             index: index + 1,
-            country: item.dataValues.country,
-            state: item.dataValues.state,
+            country: item.dataValues.country?item.dataValues.country:"",
+            state: item.dataValues.state?item.dataValues.state:"",
             createdAt: item.dataValues.createdAt ? item.dataValues.createdAt : "",
             date: item.dataValues.date ? formatDate(item.dataValues.date) : "",
             no_of_days: item.dataValues.no_of_days,
@@ -7069,8 +7069,8 @@ const exportSpinnerSale = async (req: Request, res: Response) => {
         else if (isAdmin === 'true') {
           rowValues = {
             index: index + 1,
-            country: item.dataValues.country,
-            state: item.dataValues.state,
+            country: item.dataValues.country?item.dataValues.country:"",
+            state: item.dataValues.state?item.dataValues.state:"",
             createdAt: item.dataValues.createdAt ? item.dataValues.createdAt : "",
             date: item.dataValues.date ? formatDate(item.dataValues.date) : "",
             no_of_days: item.dataValues.no_of_days,
@@ -7108,8 +7108,8 @@ const exportSpinnerSale = async (req: Request, res: Response) => {
         else {
           rowValues = {
             index: index + 1,
-            country: item.dataValues.country,
-            state: item.dataValues.state,
+            country: item.dataValues.country?item.dataValues.country:"",
+            state: item.dataValues.state?item.dataValues.state:"",
             createdAt: item.dataValues.createdAt ? item.dataValues.createdAt : "",
             date: item.dataValues.date ? formatDate(item.dataValues.date) : "",
             no_of_days: item.dataValues.no_of_days,
@@ -14976,11 +14976,11 @@ const exportSpinnerCottonStock = async (req: Request, res: Response) => {
       // Create the excel workbook file
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet("Sheet1");
-      worksheet.mergeCells("A1:L1");
-      const mergedCell = worksheet.getCell("A1");
-      mergedCell.value = "CottonConnect | Spinner Lint Cotton Stock Report";
-      mergedCell.font = { bold: true };
-      mergedCell.alignment = { horizontal: "center", vertical: "middle" };
+      // worksheet.mergeCells("A1:L1");
+      // const mergedCell = worksheet.getCell("A1");
+      // mergedCell.value = "CottonConnect | Spinner Lint Cotton Stock Report";
+      // mergedCell.font = { bold: true };
+      // mergedCell.alignment = { horizontal: "center", vertical: "middle" };
       // Set bold font for header row
       const headerRow = worksheet.addRow([
         "Sr No.",
