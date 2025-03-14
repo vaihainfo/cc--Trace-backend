@@ -4064,37 +4064,89 @@ const exportGinnerSales = async (req: Request, res: Response) => {
         worksheet.addRow(rowValues);
       }
 
-     let rowValues = Object.values({
-        index: "Total: ",
-        country: "",
-        state: '',            
-        date: '',
-        created_at:  '',
-        no_of_days: '',
-        // seed_consumed_seasons: item.seed_consumed_seasons ? item.seed_consumed_seasons : "",
-        lint_process_seasons: '',
-        season: '',
-        ginner:  '',
-        invoice:'',
-        buyer_type:"",
-        buyer: '',
-        // heap: '',
-        lot_no:  '',
-        reel_lot_no: '',
-        no_of_bales: totals.total_no_of_bales,
-        press_no:'',
-        rate: Number(formatDecimal(totals.total_rate)),
-        lint_quantity: Number(formatDecimal(totals.total_lint_quantity)),
-        other_season_quantity: '',
-    
-      other_season_bales: '',
-        sales_value: Number(formatDecimal(totals.total_Sales_value)),
-        vehicle_no: '',
-        transporter_name: '',
-        program: '',
-        agentDetails: '',
-        status: ''
-      });
+      let rowValues;
+      if (isOrganic === 'true') {
+        rowValues = Object.values({
+          index:"Total: ",
+          country:"",
+          state:"",
+          date:"",
+          created_at:"",
+          no_of_days:"",            
+          season:"",
+          ginner:"",
+          invoice:"",
+          buyer_type:"",
+          buyer:"",
+          lot_no:"",
+          no_of_bales: totals.total_no_of_bales,
+          press_no:"",
+          rate: Number(formatDecimal(totals.total_rate)),
+          lint_quantity: Number(formatDecimal(totals.total_lint_quantity)),
+          vehicle_no:"",
+          transporter_name:"",
+          program:"",
+          agentDetails:"",
+        });
+      }
+      else if (isBrand === 'true') {
+        rowValues = Object.values({
+          index:"Total: ",
+          country:"",
+          state:"",            
+          date:"",
+          created_at:"",
+          no_of_days:"",
+          season:"",
+          ginner:"",
+          invoice:"",
+          buyer_type:"",
+          buyer:"",
+          lot_no:"",
+          reel_lot_no:"",
+          no_of_bales: totals.total_no_of_bales,
+          press_no:"",
+          rate: Number(formatDecimal(totals.total_rate)),
+          lint_quantity: Number(formatDecimal(totals.total_lint_quantity)),
+          vehicle_no:"",
+          transporter_name:"",
+          program:"",
+          agentDetails:"",
+        });
+      } else {
+
+        rowValues = Object.values({
+          index:"Total: ",
+          country:"",
+          state:"",            
+          date:"",
+          created_at:"",
+          no_of_days:"",
+          // seed_consumed_seasons:"",
+          lint_process_seasons:"",
+          season:"",
+          ginner:"",
+          invoice:"",
+          buyer_type:"",
+          buyer:"",
+          // heap:"",
+          lot_no:"",
+          reel_lot_no:"",
+          no_of_bales: totals.total_no_of_bales,
+          press_no:"",
+          rate: Number(formatDecimal(totals.total_rate)),
+          lint_quantity: Number(formatDecimal(totals.total_lint_quantity)),
+          other_season_quantity:"",      
+          other_season_bales:"",
+          sales_value: Number(formatDecimal(totals.total_Sales_value)),
+          vehicle_no:"",
+          transporter_name:"",
+          program:"",
+          agentDetails:"",
+          status:"",
+        });
+      }
+     
       worksheet.addRow(rowValues).eachCell((cell, colNumber) => { cell.font={bold:true}});;
 
 
@@ -14621,7 +14673,6 @@ const exportGinnerCottonStock = async (req: Request, res: Response) => {
               model: State,
               as: "state",
             }
-
           ]
         },
         {
@@ -14658,11 +14709,11 @@ const exportGinnerCottonStock = async (req: Request, res: Response) => {
         offset: offset,
       });
 
-      // let totals = {
-      //   total_cotton_procured:0,
-      //   total_cotton_processed:0,
-      //   total_cotton_stock:0,
-      // }
+      let totals = {
+        total_cotton_procured:0,
+        total_cotton_processed:0,
+        total_cotton_stock:0,
+      }
 
       let result: any = [];
       for await (let [index, item] of rows.entries()) {
@@ -14700,9 +14751,9 @@ const exportGinnerCottonStock = async (req: Request, res: Response) => {
           },
         });
 
-        obj.cotton_procured = cottonProcured?.dataValues?.cotton_procured ?? 0;
-        obj.cotton_stock = cottonProcured?.dataValues?.cotton_stock ?? 0;
-        obj.cotton_processed = obj.cotton_procured - obj.cotton_stock;
+          obj.cotton_procured = cottonProcured?.dataValues?.cotton_procured ?? 0;
+          obj.cotton_stock = cottonProcured?.dataValues?.cotton_stock ?? 0;
+          obj.cotton_processed = obj.cotton_procured - obj.cotton_stock;
 
           const rowValues = Object.values({
           index: index + 1,
@@ -14715,24 +14766,24 @@ const exportGinnerCottonStock = async (req: Request, res: Response) => {
           cotton_stock: obj.cotton_stock ? obj.cotton_stock : 0,
         });
 
-        // totals.total_cotton_processed += obj.cotton_processed?Number(obj.cotton_processed):0;
-        // totals.total_cotton_procured += obj.cotton_procured?Number(obj.cotton_procured):0;
-        // totals.total_cotton_stock += obj.cotton_stock?Number(obj.cotton_stock):0;
+        totals.total_cotton_processed += obj.cotton_processed?Number(obj.cotton_processed):0;
+        totals.total_cotton_procured += obj.cotton_procured?Number(obj.cotton_procured):0;
+        totals.total_cotton_stock += obj.cotton_stock?Number(obj.cotton_stock):0;
 
         worksheet.addRow(rowValues);
       }
 
-      // const rowValues = Object.values({
-      //   index: "Total: ",
-      //   ginner:  "",
-      //   season:  "",
-      //   country: "",
-      //   state: "",
-      //   cotton_procured: Number(formatDecimal(totals.total_cotton_procured)),
-      //   cotton_processed: Number(formatDecimal(totals.total_cotton_processed)),
-      //   cotton_stock: Number(formatDecimal(totals.total_cotton_stock)),
-      // });
-      // worksheet.addRow(rowValues).eachCell((cell, colNumber) => { cell.font={bold:true}});
+      const rowValues = Object.values({
+        index: "Total: ",
+        ginner:  "",
+        season:  "",
+        country: "",
+        state: "",
+        cotton_procured: Number(formatDecimal(totals.total_cotton_procured)),
+        cotton_processed: Number(formatDecimal(totals.total_cotton_processed)),
+        cotton_stock: Number(formatDecimal(totals.total_cotton_stock)),
+      });
+      worksheet.addRow(rowValues).eachCell((cell, colNumber) => { cell.font={bold:true}});
      
 
       const borderStyle = {
@@ -18376,11 +18427,33 @@ const exportPscpProcurementLiveTracker = async (
         }
       );
 
+      let totals = {
+          expected_seed_cotton:0,
+          expected_lint:0,
+          procurement_seed_cotton:0,
+          procurement:0,
+          pending_seed_cotton:0,
+          procured_lint_cotton_mt:0,
+          no_of_bales:0,
+          sold_bales:0,
+          total_qty_sold_lint: 0,
+          balace_stock:0,
+          balance_lint_quantity:0,
+          greyout_bales:0,
+          greyout_qty:0,
+          total_bales_received:0,
+          total_qty_lint_received:0,
+          total_bales_transfered:0,
+          total_qty_lint_transfered:0,
+          ginner_sale_percentage:0,
+          order_in_hand:0,
+      };
+
       let index = 0;
       for await (const obj of data) {
         let rowValues;
         if (isBrand === 'true') {
-          rowValues = Object.values({
+          rowValues = {
             index: index + 1,
             name: obj.ginner_name ? obj?.ginner_name : "",
             country: obj.county_name ? obj?.county_name : "",
@@ -18408,9 +18481,9 @@ const exportPscpProcurementLiveTracker = async (
             total_bales_transfered: obj.total_bales_transfered ? Number(obj.total_bales_transfered) : 0,
             total_qty_lint_transfered: obj.total_qty_lint_transfered ? Number(formatDecimal(obj.total_qty_lint_transfered)) : 0,
             ginner_sale_percentage: Number(obj.ginner_sale_percentage),
-          });
+          };
         } else {
-          rowValues = Object.values({
+          rowValues = {
             index: index + 1,
             name: obj.ginner_name ? obj?.ginner_name : "",
             country: obj.county_name ? obj?.county_name : "",
@@ -18439,11 +18512,90 @@ const exportPscpProcurementLiveTracker = async (
             total_bales_transfered: obj.total_bales_transfered ? Number(obj.total_bales_transfered) : 0,
             total_qty_lint_transfered: obj.total_qty_lint_transfered ? Number(formatDecimal(obj.total_qty_lint_transfered)) : 0,
             ginner_sale_percentage: Number(obj.ginner_sale_percentage),
-          });
+          };
         }
         index++;
-        worksheet.addRow(rowValues);
+        worksheet.addRow(Object.values(rowValues));
+
+        totals.expected_seed_cotton+= rowValues.expected_seed_cotton;
+        totals.expected_lint+= rowValues.expected_lint;
+        totals.procurement_seed_cotton+= rowValues.procurement_seed_cotton;
+        totals.procurement+= rowValues.procurement;
+        totals.pending_seed_cotton+= rowValues.pending_seed_cotton;
+        totals.procured_lint_cotton_mt+= rowValues.procured_lint_cotton_mt;
+        totals.no_of_bales+= rowValues.no_of_bales;
+        totals.sold_bales+= rowValues.sold_bales;
+        totals.total_qty_sold_lint += rowValues.total_qty_sold_lint;
+        totals.balace_stock+= rowValues.balace_stock;
+        totals.balance_lint_quantity+= rowValues.balance_lint_quantity;
+        totals.greyout_bales+= rowValues.greyout_bales;
+        totals.greyout_qty+= rowValues.greyout_qty;
+        totals.total_bales_received+= rowValues.total_bales_received;
+        totals.total_qty_lint_received+= rowValues.total_qty_lint_received;
+        totals.total_bales_transfered+= rowValues.total_bales_transfered;
+        totals.total_qty_lint_transfered+= rowValues.total_qty_lint_transfered;
+        totals.ginner_sale_percentage+= rowValues.ginner_sale_percentage;
+        totals.order_in_hand+= rowValues.order_in_hand?rowValues.order_in_hand : 0;
+
       }
+
+
+      let rowValues;
+      if (isBrand === 'true') {
+        rowValues = {
+          index:"Totals:",
+          name:"",
+          country:"",
+          state:"",
+          program:"",
+          expected_seed_cotton:totals.expected_seed_cotton,
+          expected_lint:totals.expected_lint,
+          procurement_seed_cotton:totals.procurement_seed_cotton,
+          procurement:totals.procurement,
+          pending_seed_cotton:totals.pending_seed_cotton,
+          procured_lint_cotton_mt:totals.procured_lint_cotton_mt,
+          no_of_bales:totals.no_of_bales,
+          sold_bales:totals.sold_bales,
+          total_qty_sold_lint:totals.total_qty_sold_lint,
+          balace_stock:totals.balace_stock,
+          balance_lint_quantity:totals.balance_lint_quantity,
+          greyout_bales:totals.greyout_bales,
+          greyout_qty:totals.greyout_qty,
+          total_bales_received:totals.total_bales_received,
+          total_qty_lint_received:totals.total_qty_lint_received,
+          total_bales_transfered:totals.total_bales_transfered,
+          total_qty_lint_transfered:totals.total_qty_lint_transfered,
+          ginner_sale_percentage:totals.ginner_sale_percentage,
+        };
+      } else {
+        rowValues = {
+          index:"Totals:",
+          name:"",
+          country:"",
+          state:"",
+          program:"",
+          expected_seed_cotton: totals.expected_seed_cotton,
+          expected_lint: totals.expected_lint,
+          procurement_seed_cotton: totals.procurement_seed_cotton,
+          procurement: totals.procurement,
+          pending_seed_cotton: totals.pending_seed_cotton,
+          procured_lint_cotton_mt: totals.procured_lint_cotton_mt,
+          no_of_bales: totals.no_of_bales,
+          sold_bales: totals.sold_bales,
+          total_qty_sold_lint: totals.total_qty_sold_lint,
+          order_in_hand: totals.order_in_hand,
+          balace_stock: totals.balace_stock,
+          balance_lint_quantity: totals.balance_lint_quantity,
+          greyout_bales: totals.greyout_bales,
+          greyout_qty: totals.greyout_qty,
+          total_bales_received: totals.total_bales_received,
+          total_qty_lint_received: totals.total_qty_lint_received,
+          total_bales_transfered: totals.total_bales_transfered,
+          total_qty_lint_transfered: totals.total_qty_lint_transfered,
+          ginner_sale_percentage: totals.ginner_sale_percentage,
+        };
+      }
+      worksheet.addRow(Object.values(rowValues)).eachCell(cell=> cell.font={bold:true});
 
       let borderStyle = {
         top: {style: "thin"},
