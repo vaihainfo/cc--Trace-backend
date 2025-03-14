@@ -4295,7 +4295,7 @@ const fetchSpinnerBalePagination = async (req: Request, res: Response) => {
                 )
                 SELECT 
                     gs.*, 
-                    EXTRACT(DAY FROM AGE(gs."createdAt" , gs."accept_date")) AS no_of_days,
+                    EXTRACT(DAY FROM AGE( gs."accept_date", gs."createdAt" )) AS no_of_days,
                     g.id AS ginner_id, 
                     g.name AS ginner, 
                     g.country_id AS country_id,
@@ -4763,7 +4763,7 @@ const exportSpinnerBale = async (req: Request, res: Response) => {
                 )
                 SELECT 
                     gs.*, 
-                    EXTRACT(DAY FROM AGE(  gs."createdAt", gs."accept_date" )) AS no_of_days,
+                    EXTRACT(DAY FROM AGE(  gs."accept_date",  gs."createdAt")) AS no_of_days,
                     g.id AS ginner_id, 
                     g.name AS ginner, 
                     g.country_id as country_id,
