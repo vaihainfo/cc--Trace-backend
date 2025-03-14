@@ -279,6 +279,16 @@ const exportGinHeapReport = async () => {
     {
       model: Ginner,
       as: "ginner",
+      include: [
+        {
+          model: Country,
+          as: "country",
+        },
+        {
+          model: State,
+          as: "state",
+        }
+      ]
     },
     {
       model: Season,
@@ -301,6 +311,8 @@ const exportGinHeapReport = async () => {
   // Set bold font for header row
   const headerRow = worksheet.addRow([
     "Sr No.",
+    "Country",
+    "State",
     "Created Date",
     "Season",
     "Gin heap no.",
@@ -344,6 +356,8 @@ const exportGinHeapReport = async () => {
 
     const rowValues = Object.values({
       index: index + 1,
+      country: item.dataValues.ginner.country.county_name,
+      state: item.dataValues.ginner.state.state_name,
       created_date: item.dataValues.createdAt
         ? item.dataValues.createdAt
         : "",
@@ -2726,7 +2740,9 @@ const generateGinnerSummary = async () => {
 
   try {
     const workbook = new ExcelJS.stream.xlsx.WorkbookWriter({
-      stream: fs.createWriteStream("./upload/ginner-summary-test.xlsx")
+      stream: fs.createWriteStream("./upload/ginner-summary-test.xlsx"),
+      useStyles: true,
+
     });
 
     const batchSize = 5000;
@@ -2782,6 +2798,26 @@ const generateGinnerSummary = async () => {
         ]);
         headerRow.font = { bold: true };
       }
+
+      let totals = {
+        cottonProcuredMt:0,
+          cottonProcessedeMt:0,
+          cottonStockMt:0,
+          lintProcuredMt:0,
+          lintSoldMt:0,
+          lintGreyoutMT:0,
+          total_qty_lint_received:0,
+          total_qty_lint_transfered:0,
+          lintActualStockMT:0,
+          lintStockMt:0,
+          balesProduced:0,
+          balesSold:0,
+          balesGreyout:0,
+          total_bales_received:0,
+          total_bales_transfered:0,
+          balesActualStock:0,
+          balesStock:0,
+      };
 
       // Append data to worksheet
       for await (const [index, item] of rows.entries()) {
@@ -3117,7 +3153,7 @@ const generateGinnerSummary = async () => {
         obj.country = item.country.county_name;
         obj.state = item.state.state_name;
 
-        const rowValues = Object.values({
+        const rowValues = {
           index: index + offset + 1,
           name: item.name ? item.name : '',
           country: obj.country,
@@ -3139,9 +3175,54 @@ const generateGinnerSummary = async () => {
           total_bales_transfered: Number(obj.total_bales_transfered),
           balesActualStock: Number(obj.balesActualStock),
           balesStock: Number(obj.balesStock) ?? 0
-        });
-        currentWorksheet.addRow(rowValues).commit();
+        };
+        currentWorksheet.addRow(Object.values(rowValues));
+
+        totals.cottonProcessedeMt+= Number(rowValues.cottonProcessedeMt ); 
+        totals.cottonProcuredMt+= Number(rowValues.cottonProcuredMt );                
+        totals.cottonStockMt+= Number(rowValues.cottonStockMt );
+        totals.lintProcuredMt+= Number(rowValues.lintProcuredMt );
+        totals.lintSoldMt+= Number(rowValues.lintSoldMt );
+        totals.lintGreyoutMT+= Number(rowValues.lintGreyoutMT );
+        totals.total_qty_lint_received+= Number(rowValues.total_qty_lint_received );
+        totals.total_qty_lint_transfered+= Number(rowValues.total_qty_lint_transfered );
+        totals.lintActualStockMT+= Number(rowValues.lintActualStockMT );
+        totals.lintStockMt+= Number(rowValues.lintStockMt );
+        totals.balesProduced+= Number(rowValues.balesProduced );
+        totals.balesSold+= Number(rowValues.balesSold );
+        totals.balesGreyout+= Number(rowValues.balesGreyout );
+        totals.total_bales_received+= Number(rowValues.total_bales_received );
+        totals.total_bales_transfered+= Number(rowValues.total_bales_transfered );
+        totals.balesActualStock+= Number(rowValues.balesActualStock );
+        totals.balesStock+= Number(rowValues.balesStock );
       }
+
+      const rowValues = {
+        index:"Totals:",
+        name:"",
+        country:"",
+        state:"",
+        cottonProcuredMt: totals.cottonProcuredMt,
+        cottonProcessedeMt: totals.cottonProcessedeMt,
+        cottonStockMt: totals.cottonStockMt,
+        lintProcuredMt: totals.lintProcuredMt,
+        lintSoldMt: totals.lintSoldMt,
+        lintGreyoutMT: totals.lintGreyoutMT,
+        total_qty_lint_received: totals.total_qty_lint_received, 
+        total_qty_lint_transfered: totals.total_qty_lint_transfered,
+        lintActualStockMT: totals.lintActualStockMT,
+        lintStockMt: totals.lintStockMt,
+        balesProduced: totals.balesProduced,
+        balesSold: totals.balesSold,
+        balesGreyout: totals.balesGreyout,
+        total_bales_received: totals.total_bales_received,
+        total_bales_transfered: totals.total_bales_transfered,
+        balesActualStock: totals.balesActualStock,
+        balesStock: totals.balesStock,
+      };
+     
+      currentWorksheet.addRow(Object.values(rowValues)).eachCell(cell=> cell.font = {bold: true});
+
       // Auto-adjust column widths based on content
       offset += batchSize;
       const borderStyle = {
@@ -3187,7 +3268,8 @@ const generateGinnerProcess = async () => {
   try {
     // Create the excel workbook file
     const workbook = new ExcelJS.stream.xlsx.WorkbookWriter({
-      stream: fs.createWriteStream("./upload/gin-bale-process-test.xlsx")
+      stream: fs.createWriteStream("./upload/gin-bale-process-test.xlsx"),
+      useStyles: true,
     });
 
     const batchSize = 5000;
@@ -3490,7 +3572,7 @@ const generateGinnerProcess = async () => {
           state: item.state_name ? item.state_name : "",
           date: item.date ? item.date : "",
           created_date: item.createdAt ? item.createdAt : "",
-          no_of_days: item.no_of_days ? item.no_of_days : "",
+          no_of_days: item.no_of_days ? Number(item.no_of_days) : "",
           from_date: item.from_date ? item.from_date : "",
           to_date: item.to_date ? item.to_date : "",
           seed_consumed_seasons: item.seed_consumed_seasons ? item.seed_consumed_seasons : "",
@@ -3518,7 +3600,7 @@ const generateGinnerProcess = async () => {
           greyout_status: item.greyout_status ? "Yes" : "No",
         });
 
-        currentWorksheet.addRow(rowValues).commit();
+        currentWorksheet.addRow(rowValues);
 
         totals.total_no_of_bales += item.no_of_bales? Number(item.no_of_bales): 0;
         totals.total_lint_quantity += item.lint_quantity? Number(item.lint_quantity): 0;
@@ -3534,7 +3616,7 @@ const generateGinnerProcess = async () => {
       offset += batchSize;
 
       const rowValues = Object.values({
-        index:"",
+        Index:"Total",
         country:"",
         state:"",
         date:"",
@@ -3617,7 +3699,8 @@ const generateGinnerSales = async () => {
     const whereClause = whereCondition.length > 0 ? `WHERE ${whereCondition.join(' AND ')}` : '';
     // Create the excel workbook file
     const workbook = new ExcelJS.stream.xlsx.WorkbookWriter({
-      stream: fs.createWriteStream("./upload/Ginner-sales-report-test.xlsx")
+      stream: fs.createWriteStream("./upload/Ginner-sales-report-test.xlsx"),
+      useStyles: true,
     });
 
     const batchSize = 5000;
@@ -3879,7 +3962,7 @@ const generateGinnerSales = async () => {
           state: item.state_name ? item.state_name : '',          
           date: item.date ? item.date : '',
           created_at: item.createdAt ? item.createdAt : '',
-          no_of_days: item.no_of_days ? item.no_of_days : '',            
+          no_of_days: item.no_of_days ? Number(item.no_of_days) : '',            
 
           // seed_consumed_seasons: item.seed_consumed_seasons ? item.seed_consumed_seasons : "",
           lint_process_seasons: item.lint_process_seasons ? item.lint_process_seasons : '',
@@ -3917,7 +4000,7 @@ const generateGinnerSales = async () => {
           agentDetails: item.transaction_agent ? item.transaction_agent : 'NA',
           status: item.status === 'Sold' ? 'Sold' : `Available [Stock : ${item.qty_stock ? item.qty_stock : 0}]`
         });
-        currentWorksheet.addRow(rowValues).commit();
+        currentWorksheet.addRow(rowValues);
         totals.total_no_of_bales += item.no_of_bales ? Number(item.no_of_bales) : 0;
         totals.total_lint_quantity += item.lint_quantity ? Number(item.lint_quantity) : 0;
         totals.total_Sales_value += item.sale_value ? Number(item.sale_value) : 0;
@@ -3927,7 +4010,7 @@ const generateGinnerSales = async () => {
       offset += batchSize;
 
       const rowValues = Object.values({
-        index:"",
+        Index:"Total",
         country:"",
         state:"",
         date:"",
@@ -4002,7 +4085,8 @@ const generatePendingGinnerSales = async () => {
 
     // Create the excel workbook file
     const workbook = new ExcelJS.stream.xlsx.WorkbookWriter({
-      stream: fs.createWriteStream("./upload/ginner-pending-sales-report-test.xlsx")
+      stream: fs.createWriteStream("./upload/ginner-pending-sales-report-test.xlsx"),
+      useStyles: true,      
     });
 
     const batchSize = 5000;
@@ -4175,7 +4259,7 @@ const generatePendingGinnerSales = async () => {
           program: item.dataValues.program ? item.dataValues.program : "",
           status: item.dataValues.status ? item.dataValues.status : "",
         });
-        currentWorksheet.addRow(rowValues).commit();
+        currentWorksheet.addRow(rowValues);
         totals.total_no_of_bales += Number(item.dataValues.no_of_bales);
         totals.total_lint_quantity += Number(item.dataValues.total_qty);
         totals.total_rate += Number(item.dataValues.rate);
@@ -4184,7 +4268,7 @@ const generatePendingGinnerSales = async () => {
 
 
       const rowValues = Object.values({
-        index:"",
+        Index:"Total",
         country:"",
         state:"",
         date:"",
@@ -4249,7 +4333,8 @@ const generateGinnerCottonStock = async () => {
   try {
     // Create the excel workbook file
     const workbook = new ExcelJS.stream.xlsx.WorkbookWriter({
-      stream: fs.createWriteStream("./upload/ginner-seed-cotton-stock-report-test.xlsx")
+      stream: fs.createWriteStream("./upload/ginner-seed-cotton-stock-report-test.xlsx"),
+      useStyles: true,
     });
 
     const batchSize = 5000;
@@ -4402,7 +4487,7 @@ const generateGinnerCottonStock = async () => {
         // totals.total_cotton_procured += obj.cotton_procured?Number(obj.cotton_procured):0;
         // totals.total_cotton_stock += obj.cotton_stock?Number(obj.cotton_stock):0;
 
-        currentWorksheet.addRow(rowValues).commit();
+        currentWorksheet.addRow(rowValues);
       }
 
       // const rowValues = Object.values({
@@ -5040,7 +5125,7 @@ const generateSpinnerBale = async () => {
             ? item.accept_date
             : "",
           date: item.date ? item.date : "",
-          no_of_days: item.no_of_days? item.no_of_days:"",
+          no_of_days: item.no_of_days? Number(item.no_of_days):"",
           season: item.season_name ? item.season_name : "",
           spinner: item.spinner ? item.spinner : "",
           ginner: item.ginner ? item.ginner : "",
@@ -5355,7 +5440,7 @@ const generateSpinnerYarnProcess = async () => {
           state: item.state? item.state: "",
           createdAt: item.createdAt ? item.createdAt : "",
           date: item.date ? item.date : "",
-          no_of_days: item.no_of_days ? item.no_of_days : "",
+          no_of_days: item.no_of_days ? Number(item.no_of_days) : "",
           from_date: item.from_date ? item.from_date : "",
           to_date: item.to_date ? item.to_date : "",
           lint_consumed_seasons: item.lint_consumed_seasons ? item.lint_consumed_seasons : "",
@@ -5716,7 +5801,7 @@ const generateSpinnerSale = async () => {
           index: index + offset + 1,
           createdAt: item.dataValues.createdAt ? item.dataValues.createdAt : "",
           date: item.dataValues.date ? formatDate(item.dataValues.date) : "",
-          no_of_days: item.no_of_days,
+          no_of_days: item.no_of_days? Number(item.no_of_days):"",
           lint_consumed_seasons: seedSeason ? seedSeason[0]?.seasons : "",
           season: item.dataValues.season_name ? item.dataValues.season_name : "",
           spinner: item.dataValues.spinner ? item.dataValues.spinner : "",
@@ -6951,3 +7036,6 @@ export { exportReportsTameTaking, exportReportsOnebyOne };
 // export {generateSpinnerSummary, generateSpinnerBale, 
 //   generateSpinnerYarnProcess, generateSpinnerSale,
 //   generatePendingSpinnerBale, generateSpinnerLintCottonStock}
+
+// export {generateGinnerSummary, generateGinnerProcess, 
+//   generateGinnerSales, generatePendingGinnerSales, generateGinnerCottonStock, exportGinHeapReport}

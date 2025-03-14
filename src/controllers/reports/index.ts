@@ -1183,7 +1183,7 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
             state: item.state_name ? item.state_name : "",
             date: item.date ? item.date : "",
             created_date: item.createdAt ? item.createdAt : "",
-            no_of_days: item.no_of_days ? item.no_of_days : "",
+            no_of_days: item.no_of_days ? Number(item.no_of_days) : "",
             from_date: item.from_date ? item.from_date : "",
             to_date: item.to_date ? item.to_date : "",
             season: item.season ? item.season : "",
@@ -1207,7 +1207,7 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
             state: item.state_name ? item.state_name : "",
             date: item.date ? item.date : "",
             created_date: item.createdAt ? item.createdAt : "",
-            no_of_days: item.no_of_days ? item.no_of_days : "",
+            no_of_days: item.no_of_days ? Number(item.no_of_days) : "",
             from_date: item.from_date ? item.from_date : "",
             to_date: item.to_date ? item.to_date : "",
             season: item.season ? item.season : "",
@@ -1231,7 +1231,7 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
             state: item.state_name ? item.state_name : "",
             date: item.date ? item.date : "",
             created_date: item.createdAt ? item.createdAt : "",
-            no_of_days: item.no_of_days ? item.no_of_days : "",
+            no_of_days: item.no_of_days ? Number(item.no_of_days) : "",
             from_date: item.from_date ? item.from_date : "",
             to_date: item.to_date ? item.to_date : "",
             seed_consumed_seasons: item.seed_consumed_seasons ? item.seed_consumed_seasons : "",
@@ -1265,7 +1265,7 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
               state: item.state_name ? item.state_name : "",
               date: item.date ? item.date : "",
               created_date: item.createdAt ? item.createdAt : "",
-              no_of_days: item.no_of_days ? item.no_of_days : "",
+              no_of_days: item.no_of_days ? Number(item.no_of_days) : "",
               from_date: item.from_date ? item.from_date : "",
               to_date: item.to_date ? item.to_date : "",
               seed_consumed_seasons: item.seed_consumed_seasons ? item.seed_consumed_seasons : "",
@@ -3968,7 +3968,7 @@ const exportGinnerSales = async (req: Request, res: Response) => {
             state: item.state_name ? item.state_name : '',
             date: item.date ? item.date : '',
             created_at: item.createdAt ? item.createdAt : '',
-            no_of_days: item.no_of_days ? item.no_of_days : '',            
+            no_of_days: item.no_of_days ? Number(item.no_of_days) : '',            
             season: item.season_name ? item.season_name : '',
             ginner: item.ginner ? item.ginner : '',
             invoice: item.invoice_no ? item.invoice_no : '',
@@ -3992,7 +3992,7 @@ const exportGinnerSales = async (req: Request, res: Response) => {
             state: item.state_name ? item.state_name : '',            
             date: item.date ? item.date : '',
             created_at: item.createdAt ? item.createdAt : '',
-            no_of_days: item.no_of_days ? item.no_of_days : '',
+            no_of_days: item.no_of_days ? Number(item.no_of_days) : '',
             season: item.season_name ? item.season_name : '',
             ginner: item.ginner ? item.ginner : '',
             invoice: item.invoice_no ? item.invoice_no : '',
@@ -4017,7 +4017,7 @@ const exportGinnerSales = async (req: Request, res: Response) => {
             state: item.state_name ? item.state_name : '',            
             date: item.date ? item.date : '',
             created_at: item.createdAt ? item.createdAt : '',
-            no_of_days: item.no_of_days ? item.no_of_days : '',
+            no_of_days: item.no_of_days ? Number(item.no_of_days) : '',
             // seed_consumed_seasons: item.seed_consumed_seasons ? item.seed_consumed_seasons : "",
             lint_process_seasons: item.lint_process_seasons ? item.lint_process_seasons : '',
             season: item.season_name ? item.season_name : '',
@@ -4832,7 +4832,7 @@ const exportSpinnerBale = async (req: Request, res: Response) => {
             ? item.accept_date
             : "",
           date: item.date ? item.date : "",
-          no_of_days: item.no_of_days? item.no_of_days:"",
+          no_of_days: item.no_of_days? Number(item.no_of_days):"",
           season: item.season_name ? item.season_name : "",
           spinner: item.spinner ? item.spinner : "",
           ginner: item.ginner ? item.ginner : "",
@@ -4861,7 +4861,7 @@ const exportSpinnerBale = async (req: Request, res: Response) => {
             ? item.accept_date
             : "",
           date: item.date ? item.date : "",
-          no_of_days: item.no_of_days? item.no_of_days:"",
+          no_of_days: item.no_of_days? Number(item.no_of_days):"",
           season: item.season_name ? item.season_name : "",
           spinner: item.spinner ? item.spinner : "",
           ginner: item.ginner ? item.ginner : "",
@@ -6115,7 +6115,7 @@ const exportSpinnerYarnProcess = async (req: Request, res: Response) => {
             state: item.state? item.state: "",
             createdAt: item.createdAt ? item.createdAt : "",
             date: item.date ? item.date : "",
-            no_of_days: item.no_of_days ? item.no_of_days : "",
+            no_of_days: item.no_of_days ? Number(item.no_of_days) : "",
             from_date: item.from_date ? item.from_date : "",
             to_date: item.to_date ? item.to_date : "",
             season: item.season_name ? item.season_name : "",
@@ -6153,7 +6153,7 @@ const exportSpinnerYarnProcess = async (req: Request, res: Response) => {
             state: item.state? item.state: "",
             createdAt: item.createdAt ? item.createdAt : "",
             date: item.date ? item.date : "",
-            no_of_days: item.no_of_days ? item.no_of_days : "",
+            no_of_days: item.no_of_days ? Number(item.no_of_days) : "",
             from_date: item.from_date ? item.from_date : "",
             to_date: item.to_date ? item.to_date : "",
             lint_consumed_seasons: item.lint_consumed_seasons ? item.lint_consumed_seasons : "",
@@ -13875,6 +13875,27 @@ const exportGinnerSummary = async (req: Request, res: Response) => {
       };
 
 
+      let totals = {
+        cottonProcuredMt:0,
+          cottonProcessedeMt:0,
+          cottonStockMt:0,
+          lintProcuredMt:0,
+          lintSoldMt:0,
+          lintGreyoutMT:0,
+          total_qty_lint_received:0,
+          total_qty_lint_transfered:0,
+          lintActualStockMT:0,
+          lintStockMt:0,
+          balesProduced:0,
+          balesSold:0,
+          balesGreyout:0,
+          total_bales_received:0,
+          total_bales_transfered:0,
+          balesActualStock:0,
+          balesStock:0,
+      };
+
+
       let rows = await Ginner.findAll(options);
 
       // Append data to worksheet
@@ -14219,7 +14240,7 @@ const exportGinnerSummary = async (req: Request, res: Response) => {
         obj.country = item.country.county_name;
         obj.state = item.state.state_name;
 
-        const rowValues = Object.values({
+        const rowValues = {
           index: index + 1,
           name: item.name ? item.name : '',
           country: obj.country,
@@ -14241,9 +14262,57 @@ const exportGinnerSummary = async (req: Request, res: Response) => {
           total_bales_transfered: obj.total_bales_transfered,
           balesActualStock: obj.balesActualStock,
           balesStock: obj.balesStock
-        });
-        worksheet.addRow(rowValues);
+        };
+
+
+        totals.cottonProcessedeMt+= Number(rowValues.cottonProcessedeMt ); 
+        totals.cottonProcuredMt+= Number(rowValues.cottonProcuredMt );                
+        totals.cottonStockMt+= Number(rowValues.cottonStockMt );
+        totals.lintProcuredMt+= Number(rowValues.lintProcuredMt );
+        totals.lintSoldMt+= Number(rowValues.lintSoldMt );
+        totals.lintGreyoutMT+= Number(rowValues.lintGreyoutMT );
+        totals.total_qty_lint_received+= Number(rowValues.total_qty_lint_received );
+        totals.total_qty_lint_transfered+= Number(rowValues.total_qty_lint_transfered );
+        totals.lintActualStockMT+= Number(rowValues.lintActualStockMT );
+        totals.lintStockMt+= Number(rowValues.lintStockMt );
+        totals.balesProduced+= Number(rowValues.balesProduced );
+        totals.balesSold+= Number(rowValues.balesSold );
+        totals.balesGreyout+= Number(rowValues.balesGreyout );
+        totals.total_bales_received+= Number(rowValues.total_bales_received );
+        totals.total_bales_transfered+= Number(rowValues.total_bales_transfered );
+        totals.balesActualStock+= Number(rowValues.balesActualStock );
+        totals.balesStock+= Number(rowValues.balesStock );
+
+        worksheet.addRow(Object.values(rowValues));
       }
+
+
+      
+      const rowValues = {
+        index:"Totals:",
+        name:"",
+        country:"",
+        state:"",
+        cottonProcuredMt: totals.cottonProcuredMt,
+        cottonProcessedeMt: totals.cottonProcessedeMt,
+        cottonStockMt: totals.cottonStockMt,
+        lintProcuredMt: totals.lintProcuredMt,
+        lintSoldMt: totals.lintSoldMt,
+        lintGreyoutMT: totals.lintGreyoutMT,
+        total_qty_lint_received: totals.total_qty_lint_received, 
+        total_qty_lint_transfered: totals.total_qty_lint_transfered,
+        lintActualStockMT: totals.lintActualStockMT,
+        lintStockMt: totals.lintStockMt,
+        balesProduced: totals.balesProduced,
+        balesSold: totals.balesSold,
+        balesGreyout: totals.balesGreyout,
+        total_bales_received: totals.total_bales_received,
+        total_bales_transfered: totals.total_bales_transfered,
+        balesActualStock: totals.balesActualStock,
+        balesStock: totals.balesStock,
+      };
+     
+      worksheet.addRow(Object.values(rowValues)).eachCell(cell=> cell.font = {bold: true});
 
       // Define a border style
       const borderStyle = {
