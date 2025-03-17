@@ -75,11 +75,7 @@ const generateQrCode = async (qrData: any, farmerName: string, fileName: any, fa
 
 const generateCanvasFromHTML = async (htmlContent: string, outputPath: string) => {
     try {
-        // const browser = await puppeteer.launch({ args: ['--no-sandbox'] });
-        const browser = await puppeteer.launch({        // USE THIS ON THE SERVER 
-            executablePath: "/usr/bin/chromium-browser",
-            args: ['--disable-gpu', '--disable-setuid-sandbox', '--no-sandbox', '--no-zygote']
-          });
+        const browser = await puppeteer.launch({ args: ['--no-sandbox'] });
         const page = await browser.newPage();
         await page.setViewport({ width: 374, height: 520 }); // Adjust the values as needed
         await page.setContent(htmlContent);
@@ -96,8 +92,6 @@ const generateCanvasFromHTML = async (htmlContent: string, outputPath: string) =
         console.log(error.message);
     }
 }
-
-
 
 const getQrImageHtml = (src: any, name: any, code: any, village: any) => {
     return `
@@ -623,10 +617,7 @@ const generateGinSalesHtml = async (sales: any) => {
     </body>
     
     </html>`
-    const browser = await puppeteer.launch({        // USE THIS ON THE SERVER 
-        executablePath: "/usr/bin/chromium-browser",
-        args: ['--disable-gpu', '--disable-setuid-sandbox', '--no-sandbox', '--no-zygote']
-      });
+        const browser = await puppeteer.launch({ args: ['--no-sandbox']});
         const page = await browser.newPage();
 
         const htmlContent = html;

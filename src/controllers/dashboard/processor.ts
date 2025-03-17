@@ -53,11 +53,11 @@ const getQueryParams = async (
             await reqValidator.validate(buyer);
             await reqValidator.validate(fabric);
         }
-
+       
         let knitter = null;
         let weaver = null;
         let garment = null;
-
+       
         if (req.query.knitterId) {
             knitter = req.query.knitterId;
         }

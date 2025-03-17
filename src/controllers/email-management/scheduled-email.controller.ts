@@ -4,7 +4,7 @@ import moment from "moment";
 import EmailTemplate from "../../models/email-template.model";
 import EmailManagement from "../../models/email-management.model";
 import ScheduledEmailJobs from "../../models/scheduled-email-jobs.model";
-import { sendFarmerReport, sendGinnerBaleProcess,sendGinnerPendingSales, sendGinnerSales, sendSpinnerBale, sendSpinnerYarnSale, sendKnitterYarnReceipt, sendKnitterFabricSale, sendWeaverYarnReceipt, sendWeaverFabricSale, sendGarmentFabric, sendGarmentFabricSale, sendOrganicFarmerReport, sendProcurementReport, sendIntegrityReport, processAndSentTicketReminder, sendGinnerPendingReminder, sendQrProcurementReport} from "../send-emails";
+import { sendFarmerReport, sendGinnerBaleProcess,sendGinnerPendingSales, sendGinnerSales, sendSpinnerBale, sendSpinnerYarnSale, sendKnitterYarnReceipt, sendKnitterFabricSale, sendWeaverYarnReceipt, sendWeaverFabricSale, sendGarmentFabric, sendGarmentFabricSale, sendOrganicFarmerReport, sendProcurementReport, sendIntegrityReport, processAndSentTicketReminder, sendGinnerPendingReminder, sendQrProcurementReport } from "../send-emails";
 import logger from "../../util/logger";
 
 async function checkEmailFunction(templateName: string) {

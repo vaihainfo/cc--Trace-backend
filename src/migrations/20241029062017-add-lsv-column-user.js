@@ -9,9 +9,9 @@ module.exports = {
      * Example:
      * await queryInterface.createTable('users', { id: Sequelize.INTEGER });
      */
-    // await queryInterface.addColumn('users', 'lsv_brand', {
-    //   type: Sequelize.ARRAY(Sequelize.INTEGER)
-    // });
+    await queryInterface.addColumn('users', 'lsv_brand', {
+      type: Sequelize.ARRAY(Sequelize.INTEGER)
+    });
 
     await queryInterface.addColumn('users', 'lsv_program', {
       type: Sequelize.INTEGER

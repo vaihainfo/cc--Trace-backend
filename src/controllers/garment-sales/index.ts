@@ -898,75 +898,6 @@ const createGarmentProcess = async (req: Request, res: Response) => {
   }
 };
 
-
-const deleteGarmentProcess = async (req: Request, res: Response) => {
-
-  if (!req.body.id) {
-    return res.sendError(res, "need process id");
-  }
-
-  const garmentProcess = await GarmentProcess.findOne({ where: { id: req.body.id } });
-    if (garmentProcess) {
-        const trans = await  sequelize.transaction();
-        
-        try{
-        Embroidering.destroy({ where: { id: garmentProcess.embroidering_id } },trans);
-
-        let fabrics = await FabricSelection.findAll({ where: { sales_id: req.body.id}}, trans);
-          
-        for await (let fabric of fabrics) {
-          if (fabric.processor === "knitter") {
-                    let update = await KnitSales.update(
-                      { qty_stock: garmentProcess.totalQty + fabric.qtyUsed },
-                      { where: { id: fabric.fabric_id } }, trans
-                    );
-                  } else if (fabric.processor === "weaver") {
-                    let update = await WeaverSales.update(
-                      { qty_stock: garmentProcess.totalQty + fabric.qtyUsed },
-                      { where: { id: fabric.fabric_id } }, trans
-                    );
-                  } else if (fabric.processor === "dying") {
-                    let update = await DyingSales.update(
-                      { qty_stock: garmentProcess.totalQty + fabric.qtyUsed },
-                      { where: { id: fabric.fabric_id } }, trans
-                    );
-                  } else if (fabric.processor === "washing") {
-                    let update = await WashingSales.update(
-                      { qty_stock: garmentProcess.totalQty + fabric.qtyUsed },
-                      { where: { id: fabric.fabric_id } }, trans
-                    );
-                  } else if (fabric.processor === "printing") {
-                    let update = await PrintingSales.update(
-                      { qty_stock: garmentProcess.totalQty + fabric.qtyUsed },
-                      { where: { id: fabric.fabric_id } }, trans
-                    );
-                  } else {
-                    let update = await CompactingSales.update(
-                      { qty_stock: garmentProcess.totalQty + fabric.qtyUsed },
-                      { where: { id: fabric.fabric_id } }, trans
-                    );
-                  }                 
-        }  
-
-
-        FabricSelection.destroy({ where: { sales_id: req.body.id}}, trans);
-        PhysicalTraceabilityDataGarment.destroy({ where: { garm_process_id: req.body.id }}, trans);
-        PhysicalTraceabilityDataGarmentSample.destroy({ where: { physical_traceability_data_garment_id: req.body.id }},trans);
-        GarmentFabricType.destroy({ where: { process_id: req.body.id}}, trans);        
-        
-        GarmentProcess.destroy({ where: { id: req.body.id }},trans);
-        trans.commit();
-        res.sendSuccess(res, { garmentProcess: "Garment Process deleted" });
-    } catch (error: any) {
-      await trans.rollback();
-      console.log(error.message);
-      return res.sendError(res, error.message, error);
-    }
-    } else{
-      return res.sendError(res, "Garment Process not found");
-    }
-}
-
 //create Garment Process
 const updateGarmentProcess = async (req: Request, res: Response) => {
   try {
@@ -4518,5 +4449,4 @@ export {
   exportGarmentTransactionList,
   getCOCDocumentData,
   updateCOCDoc,
-  deleteGarmentProcess
 };

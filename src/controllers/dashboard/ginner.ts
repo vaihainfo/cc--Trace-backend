@@ -21,7 +21,6 @@ const getTopVillages = async (
   try {
     const reqData = await getQueryParams(req, res);
     const where = getTransactionDataQuery(reqData);
-    delete where.status
     const villagesData = await getTopVillagesData(where);
     const data = getTopVillagesRes(villagesData);
     return res.sendSuccess(res, data);
@@ -345,6 +344,7 @@ const getBaleSelectionQuery = (
   const where: any = {
 
   };
+  where['$sales.status$'] = { [Op.in]: ['Pending', 'Pending for QR scanning', 'Partially Accepted', 'Partially Rejected','Sold'] };
   if (reqData?.program)
     where['$sales.program_id$'] = reqData.program;
 
@@ -759,6 +759,7 @@ const getLintProcessedData = async (
 const getProcuredProcessedData = async (
   where: any
 ) => {
+  // where.status = 'Sold';
   const result = await Transaction.findAll({
     attributes: [
       [Sequelize.fn('SUM', Sequelize.literal('CAST(qty_purchased  as numeric)')), 'procured'],
@@ -2525,6 +2526,7 @@ const getProcuredByCountry = async (
 
 
 const getProcuredByCountryData = async (where: any) => {
+  where.status = 'Sold';
   const result = await Transaction.findAll({
     attributes: [
       [Sequelize.fn('SUM', Sequelize.literal('CAST(qty_purchased  as numeric)')), 'procured'],

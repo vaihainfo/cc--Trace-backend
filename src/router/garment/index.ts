@@ -29,8 +29,7 @@ import {
     garmentTraceabilityMap,
     exportGarmentTransactionList,
     getCOCDocumentData,
-    updateCOCDoc,
-    deleteGarmentProcess
+    updateCOCDoc
 } from "../../controllers/garment-sales";
 import accessControl from "../../middleware/access-control";
 import { Router } from "express";
@@ -48,7 +47,6 @@ router.get('/dashboard', fetchTransactions);
 router.get('/dashboard-all', fetchTransactionsAll);
 router.post('/update-transaction', updateTransactionStatus);
 router.post('/process', createGarmentProcess);
-router.delete('/process', deleteGarmentProcess);
 router.put('/process', updateGarmentProcess);
 router.get('/process/get-process', fetchGarmentProcess);
 router.get('/process', fetchGarmentProcessPagination);

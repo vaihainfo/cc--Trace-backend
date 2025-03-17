@@ -109,6 +109,7 @@ const getSpinnerSalesWhereQuery = (
   reqData: any
 ) => {
   const where: any = {
+    status: "Sold"
   };
 
   if (reqData?.program)
@@ -153,6 +154,7 @@ const getWeaverSalesWhereQuery = (
   reqData: any
 ) => {
   const where: any = {
+    status: "Sold"
   };
 
   if (reqData?.program)

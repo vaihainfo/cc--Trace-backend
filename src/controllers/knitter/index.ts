@@ -244,100 +244,6 @@ const fetchKnitterProcess = async (req: Request, res: Response) => {
   }
 };
 
-const deleteKnitterProcess = async (req: Request, res: Response) => {
-  try {
-    if (!req.body.id) {
-      return res.sendError(res, "Need Process Id");
-    }
-
-    // Start a transaction to ensure all deletes are atomic
-    const transaction = await sequelize.transaction();
-
-    try {
-      // 1. Delete KnitFabric records
-      await KnitFabric.destroy({ 
-        where: { process_id: req.body.id },
-        transaction 
-      });
-
-      // 2. Delete KnitYarnSelection records and update SpinSales quantities
-      const yarnSelections = await KnitYarnSelection.findAll({
-        where: { sales_id: req.body.id }
-      });
-
-      for await (const yarn of yarnSelections) {
-        // Restore the qty_stock in SpinSales
-        await SpinSales.increment(
-          { qty_stock: yarn.qty_used },
-          { 
-            where: { id: yarn.yarn_id },
-            transaction
-          }
-        );
-        
-        // Delete the yarn selection
-        await KnitYarnSelection.destroy({
-          where: { id: yarn.id },
-          transaction
-        });
-      }
-
-      // 3. Delete Physical Traceability Data if exists
-      const physicalTraceabilityData = await PhysicalTraceabilityDataKnitter.findOne({
-        where: { knit_process_id: req.body.id }
-      });
-
-      if (physicalTraceabilityData) {
-        // Delete associated samples first
-        await PhysicalTraceabilityDataKnitterSample.destroy({
-          where: { physical_traceability_data_knitter_id: physicalTraceabilityData.id },
-          transaction
-        });
-
-        // Then delete the main physical traceability record
-        await PhysicalTraceabilityDataKnitter.destroy({
-          where: { id: physicalTraceabilityData.id },
-          transaction
-        });
-      }
-
-      // 4. Get Dyeing info before deleting KnitProcess
-      const knitProcess = await KnitProcess.findOne({
-        where: { id: req.body.id }
-      });
-
-      // 5. Delete the main KnitProcess record
-      await KnitProcess.destroy({
-        where: { id: req.body.id },
-        transaction
-      });
-
-      // 6. Delete associated Dyeing record if exists
-      if (knitProcess?.dyeing_id) {
-        await Dyeing.destroy({
-          where: { id: knitProcess.dyeing_id },
-          transaction
-        });
-      }
-
-      // Commit the transaction
-      await transaction.commit();
-
-      return res.sendSuccess(res, {
-        message: "Successfully deleted this process",
-      });
-    } catch (error) {
-      // Rollback transaction if any operation fails
-      await transaction.rollback();
-      throw error;
-    }
-
-  } catch (error: any) {
-    console.log(error);
-    return res.sendError(res, error.message);
-  }
-};
-
 //fetch knitter process by id
 const fetchKnitterProcessPagination = async (req: Request, res: Response) => {
   const searchTerm = req.query.search || "";
@@ -606,8 +512,6 @@ const updateKnitterrSales = async (req: Request, res: Response) => {
     return res.sendError(res, error.message, error);
   }
 };
-
-
 
 const deleteKnitterSales = async (req: Request, res: Response) => {
   try {
@@ -2152,6 +2056,5 @@ export {
   chooseFabricProcess,
   getKnitterProcessTracingChartData,
   exportKnitterTransactionList,
-  _getKnitterProcessTracingChartData,
-  deleteKnitterProcess
+  _getKnitterProcessTracingChartData
 };
