@@ -2285,7 +2285,7 @@ const uploadIntegrityTest = async (req: Request, res: Response) => {
                         data: { brand: data.brand ? data.brand : '', farmerName: data.farmer ? data.farmer : '', farmGroupName: data.farmGroup ? data.farmGroup : '', icsName: data.icsName ? data.icsName : '' },
                         message: "Brand does not exists"
                     });
-                    return res.sendSuccess(res, { pass, fail });  
+                    continue;
                 }
 
                 if(brand && data.stageOfTesting.toLowerCase().replace(/[^a-zA-Z0-9]/g, "") !== "lintcotton") {
@@ -2296,7 +2296,7 @@ const uploadIntegrityTest = async (req: Request, res: Response) => {
                             data: { brand: data.brand ? data.brand : '', farmGroupName: data.farmGroup ? data.farmGroup : '', icsName: data.icsName ? data.icsName : '' },
                             message: "Farm Group does not exists with this brand"
                         })    
-                        return res.sendSuccess(res, { pass, fail });            
+                        continue;          
                     }
 
                     if(farmGroup){
@@ -2314,7 +2314,7 @@ const uploadIntegrityTest = async (req: Request, res: Response) => {
                                 data: { brand: data.brand ? data.brand : '', farmGroupName: data.farmGroup ? data.farmGroup : '', icsName: data.icsName ? data.icsName : '' },
                                 message: "ICS Name does not exists with this farm group"
                             })    
-                            return res.sendSuccess(res, { pass, fail });            
+                            continue;           
                         }
                     }
                 }
@@ -2362,7 +2362,7 @@ const uploadIntegrityTest = async (req: Request, res: Response) => {
                             success: false,
                             message: "Brand is not associated with the Organic Programme"
                         });
-                        return res.sendSuccess(res, { pass, fail });
+                        continue;
                        
                     }
                 }
@@ -2397,7 +2397,7 @@ const uploadIntegrityTest = async (req: Request, res: Response) => {
                         data: { brand: data.brand ? data.brand : '', farmerName: data.farmer ? data.farmer : '', farmGroupName: data.farmGroup ? data.farmGroup : '', icsName: data.icsName ? data.icsName : '' },
                         message: "Ginner with mentioned name "+ data.farmer +" does not exists with brand "+ data.brand
                     });
-                    return res.sendSuccess(res, { pass, fail });
+                    continue;
                 }
 
                 if(check){
@@ -2408,7 +2408,7 @@ const uploadIntegrityTest = async (req: Request, res: Response) => {
                         },
                         message: "Organic Integrity already exists"
                     });
-                    return res.sendSuccess(res, { pass, fail });
+                    continue;
                 }
                 else if((farmer || ginner) && brand && season ) {
                     const obj = {
