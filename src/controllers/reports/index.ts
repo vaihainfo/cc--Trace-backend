@@ -1103,7 +1103,7 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
               gd.from_date AS from_date,
               gd.to_date AS to_date,
               gd.created_date AS "createdAt",
-              EXTRACT(DAY FROM AGE(gd.created_date , gd.to_date)) AS no_of_days,
+              EXTRACT(DAY FROM AGE( gd.created_date , gd.to_date)) AS no_of_days,
               gd.season_name AS season,
               gd.ginner_name AS ginner_name,
               c.county_name AS country_name,
