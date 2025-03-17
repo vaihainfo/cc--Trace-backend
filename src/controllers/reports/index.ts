@@ -4851,7 +4851,15 @@ const fetchSpinnerYarnProcessPagination = async (
         spin_process.accept_date,
         spin_process.qr,
         spin_process.greyout_status,
-        program.program_name AS program
+        program.program_name AS program,
+        jsonb_agg(jsonb_build_object(
+                'id', spinyarn.id,
+                'process_id', spinyarn.process_id,
+                'yarn_count', spinyarn.yarn_count,
+                'yarncount', "yarn_count"."yarnCount_name",
+                'batch_lot_no', "spinyarn"."batch_lot_no",
+                'yarn_produced', "spinyarn"."yarn_produced"
+       )) AS spinyarns
       FROM
         spin_processes spin_process
       LEFT JOIN
@@ -4860,7 +4868,12 @@ const fetchSpinnerYarnProcessPagination = async (
         seasons season ON spin_process.season_id = season.id
       LEFT JOIN
         programs program ON spin_process.program_id = program.id
+      LEFT JOIN
+        spin_yarns spinyarn ON spin_process.id = spinyarn.process_id
+      LEFT JOIN
+        yarn_counts yarn_count ON yarn_count.id = spinyarn.yarn_count
       ${whereClause}
+      GROUP BY spin_process.id, season.id, program.id,spinner.id
     ),
     cotton_consumed_data AS (
       SELECT
@@ -5207,7 +5220,15 @@ const exportSpinnerYarnProcess = async (req: Request, res: Response) => {
         spin_process.accept_date,
         spin_process.qr,
         spin_process.greyout_status,
-        program.program_name AS program
+        program.program_name AS program,
+        jsonb_agg(jsonb_build_object(
+                'id', spinyarn.id,
+                'process_id', spinyarn.process_id,
+                'yarn_count', spinyarn.yarn_count,
+                'yarncount', "yarn_count"."yarnCount_name",
+                'batch_lot_no', "spinyarn"."batch_lot_no",
+                'yarn_produced', "spinyarn"."yarn_produced"
+       )) AS spinyarns
       FROM
         spin_processes spin_process
       LEFT JOIN
@@ -5216,7 +5237,12 @@ const exportSpinnerYarnProcess = async (req: Request, res: Response) => {
         seasons season ON spin_process.season_id = season.id
       LEFT JOIN
         programs program ON spin_process.program_id = program.id
+      LEFT JOIN
+        spin_yarns spinyarn ON spin_process.id = spinyarn.process_id
+      LEFT JOIN
+        yarn_counts yarn_count ON yarn_count.id = spinyarn.yarn_count
       ${whereClause}
+      GROUP BY spin_process.id, season.id, program.id,spinner.id
     ),
     cotton_consumed_data AS (
       SELECT

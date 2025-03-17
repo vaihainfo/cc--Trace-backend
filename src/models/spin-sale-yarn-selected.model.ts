@@ -47,7 +47,7 @@ const SpinSaleYarnSelected = db.define('spin_sale_yarn_selecteds', {
 });
 
 SpinSaleYarnSelected.belongsTo(SpinProcess, {
-  foreignKey: "spin_process_id",
+  foreignKey: "process_id",
   as: "process",
 });
 
