@@ -63,6 +63,8 @@ import DyingFabricSelection from "../../models/dying-fabric-selection.model";
 import Country from "../../models/country.model";
 import GinHeap from "../../models/gin-heap.model";
 import GinToGinSale from "../../models/gin-to-gin-sale.model";
+import SpinSaleYarnSelected from "../../models/spin-sale-yarn-selected.model";
+import SpinYarn from "../../models/spin-yarn.model";
 
 const fetchBaleProcess = async (req: Request, res: Response) => {
   const searchTerm = req.query.search || "";
@@ -5718,10 +5720,34 @@ const fetchSpinSalesPagination = async (req: Request, res: Response) => {
           attributes: ["yarnCount_name"],
         });
       }
+
+      const spinyarns = await SpinSaleYarnSelected.findAll({
+        where: {
+          sales_id: row?.dataValues?.sales_id,
+        },
+        include:[
+          {
+            model: SpinYarn,
+            as: "spinyarn",
+            include:[
+              {
+                model: YarnCount,
+                as: "yarncount",
+              }
+            ]
+          },
+          {
+            model: SpinProcess,
+            as: "process",
+          },
+        ]
+      });
+
       data.push({
         ...row.dataValues,
         lint_consumed_seasons: seedSeason ? seedSeason[0]?.seasons : "",
         yarnCount,
+        spinyarns
       });
     }
 
@@ -6098,6 +6124,35 @@ const exportSpinnerSale = async (req: Request, res: Response) => {
       `);
         }
 
+        const spinyarns = await SpinSaleYarnSelected.findAll({
+          where: {
+            sales_id: item?.dataValues?.sales_id,
+          },
+          include:[
+            {
+              model: SpinYarn,
+              as: "spinyarn",
+              include:[
+                {
+                  model: YarnCount,
+                  as: "yarncount",
+                }
+              ]
+            },
+            {
+              model: SpinProcess,
+              as: "process",
+            },
+          ]
+        });
+
+      let boxid = spinyarns && spinyarns.length > 0 ? spinyarns.map((obj:any) => obj.box_id).join(',') : "";
+      let price = spinyarns && spinyarns.length > 0 ? spinyarns.map((obj:any) => obj.price).join(',') : "";
+      let no_of_boxes = spinyarns && spinyarns.length > 0 ? spinyarns.map((obj:any) => obj.no_of_boxes).join(',') : "";
+
+      const rowStart = worksheet.rowCount + 1; // Track the starting row
+      const maxLength = spinyarns && spinyarns.length; // Number of rows to be created
+
         let rowValues;
         if (isOrganic === 'true') {
           rowValues = Object.values({
@@ -6119,9 +6174,9 @@ const exportSpinnerSale = async (req: Request, res: Response) => {
             count: yarnCount
               ? yarnCount
               : "",
-            boxes: item.dataValues.no_of_boxes ? item.dataValues.no_of_boxes : "",
-            boxId: item.dataValues.box_ids ? item.dataValues.box_ids : "",
-            price: item.dataValues.price ? item.dataValues.price : "",
+            boxes: item.dataValues.no_of_boxes ? item.dataValues.no_of_boxes : no_of_boxes,
+            boxId: item.dataValues.box_ids ? item.dataValues.box_ids : boxid,
+            price: item.dataValues.price ? item.dataValues.price : price,
             total: item.dataValues.total_qty ? item.dataValues.total_qty : 0,
             agent: item.dataValues.transaction_agent
               ? item.dataValues.transaction_agent
@@ -6149,9 +6204,9 @@ const exportSpinnerSale = async (req: Request, res: Response) => {
             count: yarnCount
               ? yarnCount
               : "",
-            boxes: item.dataValues.no_of_boxes ? item.dataValues.no_of_boxes : "",
-            boxId: item.dataValues.box_ids ? item.dataValues.box_ids : "",
-            price: item.dataValues.price ? item.dataValues.price : "",
+            boxes: item.dataValues.no_of_boxes ? item.dataValues.no_of_boxes : no_of_boxes,
+            boxId: item.dataValues.box_ids ? item.dataValues.box_ids : boxid,
+            price: item.dataValues.price ? item.dataValues.price : price,
             total: item.dataValues.total_qty ? item.dataValues.total_qty : 0,
             agent: item.dataValues.transaction_agent
               ? item.dataValues.transaction_agent
@@ -6179,9 +6234,9 @@ const exportSpinnerSale = async (req: Request, res: Response) => {
             count: yarnCount
               ? yarnCount
               : "",
-            boxes: item.dataValues.no_of_boxes ? item.dataValues.no_of_boxes : "",
-            boxId: item.dataValues.box_ids ? item.dataValues.box_ids : "",
-            price: item.dataValues.price ? item.dataValues.price : "",
+            boxes: item.dataValues.no_of_boxes ? item.dataValues.no_of_boxes : no_of_boxes,
+            boxId: item.dataValues.box_ids ? item.dataValues.box_ids : boxid,
+            price: item.dataValues.price ? item.dataValues.price : price,
             total: item.dataValues.total_qty ? item.dataValues.total_qty : 0,
             transporter_name: item.dataValues.transporter_name
               ? item.dataValues.transporter_name
@@ -6195,6 +6250,87 @@ const exportSpinnerSale = async (req: Request, res: Response) => {
           });
         }    
         else {
+          //Separate Rows for different lot no, merge cells
+          // if(maxLength > 1){
+          //   for (let i = 0; i < maxLength; i++) {
+          //     rowValues = Object.values({
+          //       index: i === 0 ? index + 1 : null,
+          //       createdAt: i === 0 ? item.dataValues.createdAt ? item.dataValues.createdAt : "" : null,
+          //       date: i === 0 ? item.dataValues.date ? formatDate(item.dataValues.date) : "" : null,
+          //       lint_consumed_seasons: i === 0 ? seedSeason ? seedSeason[0]?.seasons : "" : null,
+          //       season: i === 0 ? item.dataValues.season_name ? item.dataValues.season_name : "" : null,
+          //       spinner: i === 0 ? item.dataValues.spinner ? item.dataValues.spinner : "" : null,
+          //       buyer_id: i === 0 ?  item.dataValues.weaver
+          //         ? item.dataValues.weaver
+          //         : item.dataValues.knitter
+          //           ? item.dataValues.knitter
+          //           : item.dataValues.processor_name : null,
+          //       invoice: i === 0 ?  item.dataValues.invoice_no ? item.dataValues.invoice_no : "" : null,
+          //       order_ref: i === 0 ?  item.dataValues.order_ref ? item.dataValues.order_ref : "" : null,
+          //       lotNo: i === 0 ?  item.dataValues.batch_lot_no ? item.dataValues.batch_lot_no : "" : null,
+          //       reelLot: i === 0 ?  item.dataValues.reel_lot_no ? item.dataValues.reel_lot_no : "" : null,
+          //       program: i === 0 ?  item.dataValues.program ? item.dataValues.program : "" : null,
+          //       yarnType: i === 0 ?  yarnTypeData ? yarnTypeData : "" : null,
+          //       count: i === 0 ?  yarnCount
+          //         ? yarnCount
+          //         : "" : null,
+          //       boxes: item.dataValues.no_of_boxes ? item.dataValues.no_of_boxes : no_of_boxes[i],
+          //       boxId: item.dataValues.box_ids ? item.dataValues.box_ids : boxid[i],
+          //       price: item.dataValues.price ? item.dataValues.price : price[i],
+          //       total: i === 0 ?  item.dataValues.total_qty ? item.dataValues.total_qty : 0 : null,
+          //       transporter_name: i === 0 ?  item.dataValues.transporter_name
+          //         ? item.dataValues.transporter_name
+          //         : "" : null,
+          //       vehicle_no: i === 0 ?  item.dataValues.vehicle_no
+          //         ? item.dataValues.vehicle_no
+          //         : "" : null,
+          //       agent: i === 0 ?  item.dataValues.transaction_agent
+          //         ? item.dataValues.transaction_agent
+          //         : "" : null,
+          //     });
+          // }
+          // for(let j = 1; j<15; j++){
+
+          //   worksheet.mergeCells(rowStart, j, rowStart + maxLength - 1, j);
+          // }
+          // }else{
+          //   rowValues = Object.values({
+          //     index:index + 1,
+          //     createdAt:item.dataValues.createdAt ? item.dataValues.createdAt : "",
+          //     date:item.dataValues.date ? formatDate(item.dataValues.date) : "",
+          //     lint_consumed_seasons:seedSeason ? seedSeason[0]?.seasons : "",
+          //     season:item.dataValues.season_name ? item.dataValues.season_name : "",
+          //     spinner:item.dataValues.spinner ? item.dataValues.spinner : "",
+          //     buyer_id: item.dataValues.weaver
+          //       ? item.dataValues.weaver
+          //       : item.dataValues.knitter
+          //         ? item.dataValues.knitter
+          //         : item.dataValues.processor_name,
+          //     invoice: item.dataValues.invoice_no ? item.dataValues.invoice_no : "",
+          //     order_ref: item.dataValues.order_ref ? item.dataValues.order_ref : "",
+          //     lotNo: item.dataValues.batch_lot_no ? item.dataValues.batch_lot_no : "",
+          //     reelLot: item.dataValues.reel_lot_no ? item.dataValues.reel_lot_no : "",
+          //     program: item.dataValues.program ? item.dataValues.program : "",
+          //     yarnType: yarnTypeData ? yarnTypeData : "",
+          //     count: yarnCount
+          //       ? yarnCount
+          //       : "",
+          //     boxes: item.dataValues.no_of_boxes ? item.dataValues.no_of_boxes : '',
+          //     boxId: item.dataValues.box_ids ? item.dataValues.box_ids : '',
+          //     price: item.dataValues.price ? item.dataValues.price : '',
+          //     total: item.dataValues.total_qty ? item.dataValues.total_qty : 0,
+          //     transporter_name: item.dataValues.transporter_name
+          //       ? item.dataValues.transporter_name
+          //       : "",
+          //     vehicle_no: item.dataValues.vehicle_no
+          //       ? item.dataValues.vehicle_no
+          //       : "",
+          //     agent: item.dataValues.transaction_agent
+          //       ? item.dataValues.transaction_agent
+          //       : "",
+          //   });
+          // }
+
           rowValues = Object.values({
             index: index + 1,
             createdAt: item.dataValues.createdAt ? item.dataValues.createdAt : "",
@@ -6216,9 +6352,9 @@ const exportSpinnerSale = async (req: Request, res: Response) => {
             count: yarnCount
               ? yarnCount
               : "",
-            boxes: item.dataValues.no_of_boxes ? item.dataValues.no_of_boxes : "",
-            boxId: item.dataValues.box_ids ? item.dataValues.box_ids : "",
-            price: item.dataValues.price ? item.dataValues.price : "",
+            boxes: item.dataValues.no_of_boxes ? item.dataValues.no_of_boxes : no_of_boxes,
+            boxId: item.dataValues.box_ids ? item.dataValues.box_ids : boxid,
+            price: item.dataValues.price ? item.dataValues.price : price,
             total: item.dataValues.total_qty ? item.dataValues.total_qty : 0,
             transporter_name: item.dataValues.transporter_name
               ? item.dataValues.transporter_name
