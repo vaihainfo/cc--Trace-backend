@@ -3327,7 +3327,7 @@ const exportSpinnerProcessGreyOutReport = async (req: Request, res: Response) =>
         const idArray: number[] = programId
           .split(",")
           .map((id: any) => parseInt(id, 10));
-        whereCondition["$program_id$"] = { [Op.in]: idArray };
+        whereCondition.program_id = { [Op.in]: idArray };
       }
 
       let include = [
@@ -3499,7 +3499,7 @@ const exportSpinnerGreyOutReport = async (req: Request, res: Response) => {
         const idArray: number[] = programId
           .split(",")
           .map((id: any) => parseInt(id, 10));
-        whereCondition["$program_id$"] = { [Op.in]: idArray };
+        whereCondition.program_id = { [Op.in]: idArray };
       }
 
       whereCondition[Op.or] = [
@@ -17259,7 +17259,7 @@ const fetchPscpProcurementLiveTracker = async (req: Request, res: Response) => {
     let ginToGinSaleCondition: string[] = [];
 
     if (search) {
-      brandCondition.push(`(name ILIKE :searchTerm OR "s.state_name" ILIKE :searchTerm)`);
+      brandCondition.push(`(name ILIKE :searchTerm OR state_name ILIKE :searchTerm OR county_name ILIKE :searchTerm OR program_name ILIKE :searchTerm)`);
     }
 
     if (countryId) {
@@ -17541,7 +17541,7 @@ const fetchPscpProcurementLiveTracker = async (req: Request, res: Response) => {
                   AND gtg.gin_accepted_status = true
                   AND gs.buyer_type ='Ginner'
                 GROUP BY 
-                  gs.id, filtered_ginners.id
+                  filtered_ginners.id
             ),
         expected_cotton_data AS (
           SELECT
@@ -18295,7 +18295,7 @@ const exportPscpProcurementLiveTracker = async (
                     AND gtg.gin_accepted_status = true
                     AND gs.buyer_type ='Ginner'
                   GROUP BY 
-                    gs.id, filtered_ginners.id
+                    filtered_ginners.id
               ),
           expected_cotton_data AS (
             SELECT

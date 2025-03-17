@@ -443,15 +443,16 @@ const fetchAgentTransactions = async (req: Request, res: Response) => {
             ],
         };
 
-        if (sortOrder === "asc" || sortOrder === "desc") {
-            queryOptions.order = [["id", sortOrder]];
-        }
+        // if (sortOrder === "asc" || sortOrder === "desc") {
+        //     queryOptions.order = [["id", sortOrder]];
+        // }
 
         // apply pagination
         if (req.query.pagination === "true") {
             queryOptions.offset = offset;
             queryOptions.limit = limit;
-
+            queryOptions.order = [["date", "DESC"], ["id", "DESC"]];
+            
             const { count, rows } = await Transaction.findAndCountAll(queryOptions);
 
             return res.sendPaginationSuccess(res, rows, count);
@@ -501,7 +502,7 @@ const exportAgentTransactions = async (req: Request, res: Response) => {
             // Create the excel workbook file
             const workbook = new ExcelJS.Workbook();
             const worksheet = workbook.addWorksheet("Sheet1");
-            worksheet.mergeCells('A1:V1');
+            worksheet.mergeCells('A1:T1');
             const mergedCell = worksheet.getCell('A1');
             mergedCell.value = 'CottonConnect | QR App Procurement Report';
             mergedCell.font = { bold: true };
@@ -510,7 +511,7 @@ const exportAgentTransactions = async (req: Request, res: Response) => {
             const headerRow = worksheet.addRow([
                 "Sr No.", 'Date', 'Farmer Code', 'Farmer Name', 'Season', 'Country',
                 'State', 'District', 'Block', 'Village', 'Transaction Id', 'Quantity Purchased (Kgs)',
-                'Available Cotton (Kgs)', 'Price/KG(Local Currency)', 'Programme', 'Transport Vehicle No', 'Payment Method', 'Ginner Name', 'Transaction User Details', 'Latitude', 'longitude', 'Status'
+                'Available Cotton (Kgs)', 'Price/KG(Local Currency)', 'Programme', 'Transport Vehicle No', 'Payment Method', 'Ginner Name', 'Transaction User Details', 'Status'
             ]);
             headerRow.font = { bold: true };
             const whereCondition: any = {}
@@ -679,15 +680,16 @@ const exportAgentTransactions = async (req: Request, res: Response) => {
                 ],
             };
 
-            if (sortOrder === "asc" || sortOrder === "desc") {
-                queryOptions.order = [["id", sortOrder]];
-            }
+            // if (sortOrder === "asc" || sortOrder === "desc") {
+            //     queryOptions.order = [["id", sortOrder]];
+            // }
 
             let transactions: any;
 
             if (req.query.pagination === "true") {
                 queryOptions.offset = offset;
                 queryOptions.limit = limit;
+                queryOptions.order = [["date", "DESC"], ["id", "DESC"]];
 
                 const { count, rows } = await Transaction.findAndCountAll(queryOptions);
 
@@ -719,8 +721,8 @@ const exportAgentTransactions = async (req: Request, res: Response) => {
                     payment_method: item.payment_method ? item.payment_method : "",
                     ginner: item.ginner ? item.ginner.name : "",
                     agent: item?.agent && ( item?.agent?.lastName ? item?.agent?.firstName + " " + item?.agent?.lastName+ "-" + item?.agent?.access_level : item?.agent?.firstName+ "-" + item?.agent?.access_level),
-                    latitude: item.latitude ? item.latitude : "-",
-                    longitude: item.longitude ? item.longitude : "-",
+                    //latitude: item.latitude ? item.latitude : "-",
+                   // longitude: item.longitude ? item.longitude : "-",
                     status: item.status ? item.status : ''
                 });
                 worksheet.addRow(rowValues);
@@ -1259,17 +1261,23 @@ const fetchCountryByGinner = async (req: Request, res: Response) => {
       const blockIds = typeof blockId === "string" ? blockId.split(",").map(id => id.trim()) : [blockId];
 
       const allocatedVillage = await GinnerAllocatedVillage.findAll({
-        attributes: ["village_id"],
+        attributes: ["village_id"], 
         where: {
-          block_id: {
-            [Op.in]: blockIds, 
-          },
+          block_id: { [Op.in]: blockIds },
           ginner_id: ginnerId,
         },
         include: [
-          { model: Village, as: "village", attributes: ["id", "village_name"] },
+          {
+            model: Village,
+            as: "village",
+            attributes: { exclude: ["createdAt", "updatedAt"] }, 
+          },
+          {
+            model: Block,
+            as: "block",
+            attributes: { exclude: ["createdAt", "updatedAt"] },
+          },
         ],
-        group: ["village_id", "village.id"],
       });
       return res.sendSuccess(res, allocatedVillage);
     } catch (error: any) {
