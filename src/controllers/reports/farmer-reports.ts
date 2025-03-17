@@ -38,10 +38,7 @@ const fetchFarmerReportPagination = async (req: Request, res: Response) => {
   try {
     if (type === "Organic") {
       whereCondition["$program.program_name$"] = { [Op.iLike]: `%Organic%` };
-      whereCondition["old_data"] = { [Op.is]: null };
-      
-
-    } else {
+     } else {
       whereCondition["$program.program_name$"] = { [Op.notILike]: `%Organic%` };
     }
     if (searchTerm) {
@@ -119,7 +116,7 @@ const fetchFarmerReportPagination = async (req: Request, res: Response) => {
     if (seasonId) {
       whereCondition.id = {
         [Op.in]: Sequelize.literal(
-          '( SELECT farmer_id FROM farms WHERE season_id = ' + seasonId + '  and old_data IS NULL)')
+          '( SELECT farmer_id FROM farms WHERE season_id = ' + seasonId + ')')
       }
     }
 
@@ -482,9 +479,7 @@ const exportOrganicFarmerReport = async (req: Request, res: Response) => {
       headerRow.font = { bold: true };
 
       whereCondition["$program.program_name$"] = { [Op.iLike]: `%Organic%` };
-      whereCondition["old_data"] = { [Op.is]: null };
-      
-
+     
       if (searchTerm) {
         whereCondition[Op.or] = [
           { firstName: { [Op.iLike]: `%${searchTerm}%` } },
@@ -559,7 +554,7 @@ const exportOrganicFarmerReport = async (req: Request, res: Response) => {
       if (seasonId) {
         whereCondition.id = {
           [Op.in]: Sequelize.literal(
-            '( SELECT farmer_id FROM farms WHERE season_id = ' + seasonId + ' and old_data IS NULL)')
+            '( SELECT farmer_id FROM farms WHERE season_id = ' + seasonId + ')')
         }
       }
 

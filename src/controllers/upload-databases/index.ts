@@ -2272,18 +2272,20 @@ const uploadIntegrityTest = async (req: Request, res: Response) => {
                     message: "Integrity Score cannot be empty"
                 });
             } else {
-                const brand = await Brand.findOne({ where: { brand_name: data.brand } });
+                const brandName = data.brand ? data.brand.trim() : null;
+                const brand = await Brand.findOne({ where: { brand_name: brandName } });
                 let farmer;
                 let ginner;
                 let farmGroup;
                 let icsName;
-                
+   
                 if (!brand) {
                     fail.push({
                         success: false,
                         data: { brand: data.brand ? data.brand : '', farmerName: data.farmer ? data.farmer : '', farmGroupName: data.farmGroup ? data.farmGroup : '', icsName: data.icsName ? data.icsName : '' },
                         message: "Brand does not exists"
                     });
+                    return res.sendSuccess(res, { pass, fail });  
                 }
 
                 if(brand && data.stageOfTesting.toLowerCase().replace(/[^a-zA-Z0-9]/g, "") !== "lintcotton") {
@@ -2298,7 +2300,8 @@ const uploadIntegrityTest = async (req: Request, res: Response) => {
                     }
 
                     if(farmGroup){
-                        icsName = await ICS.findOne({ where: { ics_name: data.icsName, farmGroup_id: farmGroup.id }, 
+                        const ics = data.icsName ? data.icsName.trim() : null;
+                        icsName = await ICS.findOne({ where: { ics_name: ics, farmGroup_id: farmGroup.id }, 
                             include: [
                             {
                                 model: FarmGroup, as: 'farmGroup'
