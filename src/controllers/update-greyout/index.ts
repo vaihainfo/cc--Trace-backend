@@ -29,7 +29,7 @@ const updateGinProcessGreyoutStatusData = async (req: Request, res: Response) =>
                     message: "Reel Lot no cannot be empty"
                 });
             } else {
-                const ginner = await Ginner.findOne({ where: { name: { [Op.iLike]: `${String(data.ginnerName).trim()}` } } });
+                const ginner = await Ginner.findOne({ where: { name: data.ginnerName } });
                 if (!ginner) {
                     fail.push({
                         success: false,
@@ -102,7 +102,7 @@ const updateSpinProcessGreyoutStatusData = async (req: Request, res: Response) =
                 });
             } else {
                 
-                const spinner = await Spinner.findOne({ where: { name: { [Op.iLike]: `${String(data.spinnerName).trim()}` } } });
+                const spinner = await Spinner.findOne({ where: { name: data.spinnerName } });
                 if (!spinner) {
                     fail.push({
                         success: false,
@@ -191,8 +191,8 @@ const updateGinSalesGreyoutStatusData = async (req: Request, res: Response) => {
                 });
             } 
             else {
-                const ginner = await Ginner.findOne({ where: { name: { [Op.iLike]: `${String(data.ginnerName).trim()}` } } });
-                const spinner = await Spinner.findOne({ where: { name: { [Op.iLike]: `${String(data.spinnerName).trim()}` } } });
+                const ginner = await Ginner.findOne({ where: { name: data.ginnerName } });
+                const spinner = await Spinner.findOne({ where: { name: data.spinnerName } });
                 if (!ginner) {
                     fail.push({
                         success: false,

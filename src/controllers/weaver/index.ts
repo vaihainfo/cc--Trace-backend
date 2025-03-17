@@ -28,6 +28,7 @@ import Country from "../../models/country.model";
 import PhysicalTraceabilityDataWeaver from "../../models/physical-traceability-data-weaver.model";
 import Brand from "../../models/brand.model";
 import PhysicalTraceabilityDataWeaverSample from "../../models/physical-traceability-data-weaver-sample.model";
+import db from "../../util/dbConn";
 
 const createWeaverProcess = async (req: Request, res: Response) => {
   try {
@@ -149,6 +150,41 @@ const createWeaverProcess = async (req: Request, res: Response) => {
     console.log(error)
     return res.sendError(res, error.message, error);
   }
+}
+
+const deleteWeaverProcess = async (req: Request, res: Response) => {
+
+  if (!req.body.id) {
+      return res.sendError(res, "need process id");
+      
+    }
+
+    let weaver = await WeaverProcess.findOne({ where: { id: req.body.id } });
+    if (weaver) {
+      const trans = await db.transaction();
+      try {        
+        let yarnsel = await YarnSelection.findOne({ where: { sales_id: req.body.id }, transaction:trans});
+        if (yarnsel) {
+            let val = await SpinSales.findOne({ where: { id: yarnsel.yarn_id } });
+           let update = await SpinSales.update({ qty_stock: val.dataValues.qty_stock + yarnsel.qtyUsed }, { where: { id: yarnsel.yarn_id } });
+           YarnSelection.destroy({ where: { sales_id: req.body.id }, transaction:trans});
+        }
+        await WeaverFabric.destroy({ where: { process_id: req.body.id }, transaction:trans});
+        await PhysicalTraceabilityDataWeaver.destroy({ where: { weav_process_id: req.body.id }, transaction:trans});
+        await PhysicalTraceabilityDataWeaverSample.destroy({ where: { physical_traceability_data_weaver_id: req.body.id}, transaction: trans});
+        await WeaverProcess.destroy({ where: { id: req.body.id }, transaction:trans});
+        await Dyeing.destroy({ where: { id: weaver.dyeing_id }, transaction: trans });
+        await trans.commit();
+        res.sendSuccess(res, { weaver });
+      } catch (error: any) {
+        await trans.rollback();
+        return res.sendError(res, error.message);
+      }
+
+    } else {
+      return res.sendError(res, "Process not found");
+    }
+
 }
 
 const updateWeaverProcess = async (req: Request, res: Response) => {
@@ -1932,5 +1968,6 @@ export {
   chooseWeaverFabric,
   getWeaverProcessTracingChartData,
   exportWeaverTransactionList,
-  _getWeaverProcessTracingChartData
+  _getWeaverProcessTracingChartData,
+  deleteWeaverProcess
 };

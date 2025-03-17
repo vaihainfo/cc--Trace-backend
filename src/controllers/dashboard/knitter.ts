@@ -109,7 +109,6 @@ const getSpinnerSalesWhereQuery = (
   reqData: any
 ) => {
   const where: any = {
-    status: "Sold"
   };
 
   if (reqData?.program)
@@ -122,7 +121,7 @@ const getSpinnerSalesWhereQuery = (
 
   if (reqData?.season)
     where.season_id = reqData.season;
-
+  
   if (reqData?.country)
     where['$knitter.country_id$'] = reqData.country;
 
@@ -154,7 +153,6 @@ const getKnitterSalesWhereQuery = (
   reqData: any
 ) => {
   const where: any = {
-    status: "Sold"
   };
 
   if (reqData?.program)
@@ -337,6 +335,7 @@ const getYarnProcessedData = async (
 const getYarnProcuredData = async (
   where: any
 ) => {
+  where.status = "Sold"
   const result = await SpinSales.findAll({
     attributes: [
       [Sequelize.fn('SUM', Sequelize.col('total_qty')), 'procured'],
@@ -698,6 +697,7 @@ const getYarnProcessedMonthlyData = async (
 const getYarnProcuredMonthlyData = async (
   where: any
 ) => {
+  where.status = "Sold"
   const result = await SpinSales.findAll({
     attributes: [
       [Sequelize.fn('SUM', Sequelize.col('total_qty')), 'procured'],
@@ -756,6 +756,7 @@ const getTopYarnProcuredRes = (yarnList: any) => {
 const getTopYarnProcuredData = async (
   where: any
 ) => {
+  where.status = "Sold"
   const result = await SpinSales.findAll({
     attributes: [
       [Sequelize.fn('SUM', Sequelize.col('total_qty')), 'qty'],

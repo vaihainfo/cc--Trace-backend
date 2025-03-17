@@ -41,7 +41,6 @@ import Block from "../../models/block.model";
 //         return res.sendError(res, "Lot No already Exists");
 //       }
 //     }
-
 //     if (!req.body.ginnerId) {
 //       return res.sendError(res, "need ginner id");
 //     }
@@ -1320,7 +1319,7 @@ const chooseBale = async (req: Request, res: Response) => {
           JOIN 
               ginners g ON gp.ginner_id = g.id
           JOIN 
-              seasons s ON gp.season_id = s.id
+              seasons s ON gp.season_id = s.id AND gp.season_id IN (${seasonId})
           JOIN 
               programs p ON gp.program_id = p.id
           WHERE 
@@ -1381,7 +1380,7 @@ const chooseBale = async (req: Request, res: Response) => {
           JOIN 
               ginners g ON gtg.new_ginner_id = g.id
           JOIN 
-              seasons s ON gp.season_id = s.id
+              seasons s ON gp.season_id = s.id AND gp.season_id IN (${seasonId})
           JOIN 
               programs p ON gp.program_id = p.id
           WHERE 
@@ -1657,6 +1656,8 @@ const chooseCotton = async (req: Request, res: Response) => {
     }
     let villageId: any = req.query.villageId;
     let seasonId: any = req.query.seasonId;
+    let fromDt: any = req.query.fromDt;
+    let toDt: any = req.query.toDt;
     let whereCondition: any = {};
 
     let transactionCondition: any = {
@@ -1706,6 +1707,19 @@ const chooseCotton = async (req: Request, res: Response) => {
 
     for await (let row of allocated) {
 
+      const whereCondition = {
+        ...transactionCondition,
+        village_id: row?.dataValues?.village_id,
+        season_id: row?.dataValues?.season_id,
+      };
+      
+      // Add date filter only if fromDt and toDt are not null
+      if (fromDt && toDt) {
+        whereCondition.date = {
+          [Op.between]: [fromDt, toDt],
+        };
+      }
+
       const results = await Transaction.findAll({
         // attributes: [
         // [Sequelize.fn("SUM", Sequelize.col("qty_stock")), "qty_stock"],
@@ -1728,11 +1742,7 @@ const chooseCotton = async (req: Request, res: Response) => {
           { model: Program, as: "program" },
           { model: Season, as: "season" },
         ],
-        where: {
-          ...transactionCondition,
-          village_id: row?.dataValues?.village_id,
-          season_id: row?.dataValues?.season_id,
-        },
+        where: whereCondition,
         // group: ["transactions.village_id, transactions.id"],
         order: [
           ["id", "DESC"],
@@ -2414,6 +2424,70 @@ const getBrands = async (req: Request, res: Response) => {
 };
 
 //update Ginner Sale
+// const updateGinnerSales = async (req: Request, res: Response) => {
+//   try {
+//     const data: any = {
+//       status: "Pending for QR scanning",
+//       weight_loss: req.body.weightLoss,
+//       sale_value: req.body.saleValue,
+//       invoice_no: req.body.invoiceNo,
+//       tc_file: req.body.tcFile,
+//       contract_file: req.body.contractFile,
+//       invoice_file: req.body.invoiceFile,
+//       delivery_notes: req.body.deliveryNotes,
+//       transporter_name: req.body.transporterName,
+//       vehicle_no: req.body.vehicleNo,
+//       lrbl_no: req.body.lrblNo
+//     };
+
+//     if (req.body.weightLoss) {
+//       for await (let obj of req.body.lossData) {
+//         let bale = await GinBale.findOne({
+//           where: {
+//             "$ginprocess.reel_lot_no$": String(obj.reelLotNo),
+//             bale_no: String(obj.baleNo),
+//           },
+//           include: [{ model: GinProcess, as: "ginprocess" }],
+//         });
+//         if (bale) {
+//           await GinBale.update(
+//             {
+//               old_weight: Sequelize.literal('weight'),
+//               weight: obj.newWeight
+//             },
+//             { where: { id: bale.dataValues.id } }
+//           );
+//         }
+//       }
+
+//       let [newSum] = await sequelize.query(`
+//         SELECT COALESCE(
+//             SUM(CAST(gb.weight AS DOUBLE PRECISION)), 0) AS lint_quantity 
+// 			  FROM "gin-bales" gb
+//         LEFT JOIN bale_selections bs ON gb.id = bs.bale_id
+//         LEFT JOIN gin_sales gs ON bs.sales_id = gs.id
+//         WHERE bs.sales_id = ${req.body.id}`);
+
+//         if(newSum && newSum[0]){
+//           let newQuantity = newSum[0]?.lint_quantity;
+//           data.total_qty = newQuantity;
+//         }
+//     }
+
+//         const ginSales = await GinSales.update(data, {
+//       where: { id: req.body.id },
+//     });
+
+//     if (ginSales && ginSales[0] === 1) {
+//       await send_gin_mail(req.body.id);
+//     }
+//     res.sendSuccess(res, { ginSales });
+//   } catch (error: any) {
+//     console.error(error);
+//     return res.sendError(res, error.meessage);
+//   }
+// };
+
 const updateGinnerSales = async (req: Request, res: Response) => {
   try {
     const data: any = {
@@ -2429,49 +2503,47 @@ const updateGinnerSales = async (req: Request, res: Response) => {
       transporter_name: req.body.transporterName,
       vehicle_no: req.body.vehicleNo,
       lrbl_no: req.body.lrblNo,
-      letter_of_credit: req.body.letterOfCredit,
-      logistics_documents: req.body.logisticsDocuments,
     };
 
-    if (req.body.weightLoss) {
-      for await (let obj of req.body.lossData) {
-        let bale = await GinBale.findOne({
-          where: {
-            [Op.and]: [
-              Sequelize.where(
-                Sequelize.fn('TRIM', Sequelize.col('ginprocess.reel_lot_no')),
-                String(obj.reelLotNo)
-              ),
-              Sequelize.where(
-                Sequelize.fn('TRIM', Sequelize.col('bale_no')),
-                String(obj.baleNo)
-              )
-            ]
-          },
-          include: [{ model: GinProcess, as: "ginprocess" }],
-        });
-        if (bale) {
-          await GinBale.update(
-            {
-              old_weight: Sequelize.literal('weight'),
-              weight: obj.newWeight
-            },
-            { where: { id: bale.dataValues.id } }
-          );
+    if (req.body.weightLoss && Array.isArray(req.body.lossData) && req.body.lossData.length) {
+      const baleUpdates = req.body.lossData.map(async (obj: any) => {
+        try {
+          return await sequelize.query(`
+                  UPDATE "gin-bales" 
+                  SET old_weight = "gin-bales".weight, weight = :newWeight
+                  FROM "gin_processes" 
+                  WHERE "gin-bales".bale_no = :baleNo
+                  AND "gin_processes".reel_lot_no = :reelLotNo
+                  AND "gin_processes".id = "gin-bales".process_id;
+            `, {
+            replacements: {
+              newWeight: obj.newWeight,
+              baleNo: obj.baleNo,
+              reelLotNo: obj.reelLotNo
+            }
+          });
+        } catch (updateError) {
+          console.error(`Error updating bale with reel_lot_no ${obj.reelLotNo} and bale_no ${obj.baleNo}:`, updateError);
+          throw updateError;
         }
-      }
+      });
 
-      let [newSum] = await sequelize.query(`
-        SELECT COALESCE(
-            SUM(CAST(gb.weight AS DOUBLE PRECISION)), 0) AS lint_quantity 
-			  FROM "gin-bales" gb
+      await Promise.all(baleUpdates);
+
+      const [newSum] = await sequelize.query(
+        `
+        SELECT COALESCE(SUM(CAST(gb.weight AS DOUBLE PRECISION)), 0) AS lint_quantity 
+        FROM "gin-bales" gb
         LEFT JOIN bale_selections bs ON gb.id = bs.bale_id
-        LEFT JOIN gin_sales gs ON bs.sales_id = gs.id
-        WHERE bs.sales_id = ${req.body.id}`);
+        WHERE bs.sales_id = :salesId
+        `,
+        {
+          replacements: { salesId: req.body.id }
+        }
+      );
 
       if (newSum && newSum[0]) {
-        let newQuantity = newSum[0]?.lint_quantity;
-        data.total_qty = newQuantity;
+        data.total_qty = newSum[0]?.lint_quantity || 0;
       }
     }
 
@@ -2482,6 +2554,7 @@ const updateGinnerSales = async (req: Request, res: Response) => {
     if (ginSales && ginSales[0] === 1) {
       await send_gin_mail(req.body.id);
     }
+
     res.sendSuccess(res, { ginSales });
   } catch (error: any) {
     console.error(error);
@@ -3218,6 +3291,35 @@ const getSpinner = async (req: Request, res: Response) => {
   });
   res.sendSuccess(res, result);
 };
+
+const getMappedVillages= async  (req: Request, res: Response) => {
+  let ginnerId = req.query.ginnerId;
+  if (!ginnerId) {
+    return res.sendError(res, "Need Ginner Id ");
+  }
+  
+  const allocated = await GinnerAllocatedVillage.findAll({
+    where: {
+      ginner_id: ginnerId,
+    },
+    include: [
+      { model: Village, as: "village" },
+    ]
+  })
+
+  try {
+    const villageData = allocated.map((item : any) => ({
+      id: item.dataValues.village.id,
+      village_name: item.dataValues.village.village_name
+    }));
+
+    res.sendSuccess(res, villageData);
+  } catch (error: any) {
+    console.error(error);
+    return res.sendError(res, error.message, error);
+  }
+}
+
 const getVillageAndFarmer = async (req: Request, res: Response) => {
   let ginnerId = req.query.ginnerId;
   if (!ginnerId) {
@@ -3940,5 +4042,6 @@ export {
   getBrands,
   fetchGinLintAlert,
   fetchGinLintList,
-  updateStatusLintSales
+  updateStatusLintSales,
+  getMappedVillages,
 };

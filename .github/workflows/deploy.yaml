@@ -1,0 +1,101 @@
+name: Deploy to Server
+
+on:
+  push:
+    branches:
+      - staging
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.7.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY_STAGING_SERVER }}
+
+      - name: Add host key to known hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H ${{ secrets.SSH_HOST_STAGING_SERVER }} >> ~/.ssh/known_hosts
+
+      - name: Create deploy script
+        run: |
+          cat << 'EOF' > deploy.sh
+          #!/bin/bash
+          set -e
+
+          # Navigate to project directory
+          cd /home/ubuntu/tracebalebackend-staging
+
+          # Configure git
+          git config --global --add safe.directory /home/ubuntu/tracebalebackend-staging
+
+          # Set the correct remote URL with token
+          git remote set-url origin "https://$TOKEN@github.com/vaihainfo/tracebalebackend.git"
+
+          # Fetch and reset
+          git fetch origin staging
+          git checkout staging
+          git reset --hard origin/staging
+
+          # Install dependencies
+          npm install --legacy-peer-deps
+
+          # Set execute permission for tsc
+          chmod +x ./node_modules/.bin/tsc
+
+          # Build the project
+          npm run build
+
+          # Kill any process using port 5000
+          sudo lsof -t -i:5000 | xargs kill -9
+
+          # Check if the backend process exists before deleting
+          if pm2 describe backend > /dev/null 2>&1; then
+            pm2 delete backend
+          fi
+
+          # Start the backend using PM2
+          pm2 start npm --name "backend" -- start
+
+          # Restart Nginx
+          sudo systemctl restart nginx
+
+          # Set proper permissions
+          chown -R ubuntu:ubuntu /home/ubuntu/tracebalebackend-staging
+
+          # List directory contents to verify
+          ls -la
+          EOF
+
+      - name: Deploy to server
+        env:
+          SSH_USER: ${{ secrets.EC2_USER_STAGING_SERVER }}
+          SSH_HOST: ${{ secrets.SSH_HOST_STAGING_SERVER }}
+          TOKEN: ${{ secrets.TOKEN_STAGING_SERVER }}
+        run: |
+          # Make script executable
+          chmod +x deploy.sh
+
+          # Copy script to server
+          scp deploy.sh ${SSH_USER}@${SSH_HOST}:/tmp/deploy.sh
+
+          # Execute script with sudo and pass environment variables
+          ssh ${SSH_USER}@${SSH_HOST} "sudo -E bash -c 'TOKEN=\"$TOKEN\" bash /tmp/deploy.sh'"
+
+          # Cleanup
+          ssh ${SSH_USER}@${SSH_HOST} "rm /tmp/deploy.sh"
+          rm deploy.sh
+
+      - name: Verify deployment
+        env:
+          SSH_USER: ${{ secrets.EC2_USER_STAGING_SERVER }}
+          SSH_HOST: ${{ secrets.SSH_HOST_STAGING_SERVER }}
+        run: |
+          ssh ${SSH_USER}@${SSH_HOST} "sudo ls -la /home/ubuntu/tracebalebackend-staging"

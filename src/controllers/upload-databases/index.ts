@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { Op } from "sequelize";
+import { fn, col, Op, Sequelize } from "sequelize";
 import moment from 'moment';
 import GinnerOrder from "../../models/ginner-order.model";
 import Season from "../../models/season.model";
@@ -2364,6 +2364,7 @@ const uploadIntegrityTest = async (req: Request, res: Response) => {
                         });
                         continue;
                        
+                       
                     }
                 }
  
@@ -3136,8 +3137,8 @@ const uploadAllocatedGinnerVillage = async (req: Request, res: Response) => {
         console.error(error);
         return res.sendError(res, error.message, error);
     }
-
 }
+
 function isValidDateRange(startDate: Date | string, endDate: Date | string): boolean {
     // Convert to moment objects and set to UTC
     const start = moment.utc(startDate).startOf('day');
@@ -3430,6 +3431,7 @@ const uploadPriceMapping = async (req: Request, res: Response) => {
                             endDate: data.end_date_of_week,
                             market_price: type === "cotton" ? data.convetional_market_seed_cotton_pricekg : type === "lint" ? data.convetional_market_lint_pricekg : data.convetional_market_yarn_pricekg,
                             programme_price: data.other_sustainable_programme_pricekg,
+
                        
                         };
 

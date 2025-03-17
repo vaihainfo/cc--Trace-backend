@@ -39,6 +39,7 @@ import GinBale from "../../models/gin-bale.model";
 import { _getGinnerProcessTracingChartData } from "../ginner";
 import CombernoilGeneration from "../../models/combernoil_generation.model";
 import SpinCombernoilSale from "../../models/spin_combernoil_sale.model";
+import SpinnerYarnOrderSales from "../../models/spinner-yarn-order-sales.model";
 import GinToGinSale from "../../models/gin-to-gin-sale.model";
 // import SpinSelectedBlend from "../../models/spin_selected_blend";
 
@@ -1286,6 +1287,16 @@ const createSpinnerSales = async (req: Request, res: Response) => {
         }
       }
 
+      if(req.body.selectedYarnOrders && req.body.selectedYarnOrders.length > 0){
+        for await (let obj of req.body.selectedYarnOrders) {  
+          await SpinnerYarnOrderSales.create({
+            spinner_yarn_order_id: obj.id,
+            quantity_used: obj.quantity, 
+            sale_id: spinSales.id
+          });
+        }
+      }
+
       if (spinSales) {
         await send_spin_mail(spinSales.id);
       }
@@ -1498,6 +1509,23 @@ const fetchSpinSalesPagination = async (req: Request, res: Response) => {
       const { count, rows } = await SpinSales.findAndCountAll({
         where: whereCondition,
         include: include,
+        attributes: {
+          include: [
+            [
+              Sequelize.literal(`(
+                SELECT json_agg(json_build_object(
+                  'quantity', sys."quantity_used",
+                  'reel_yarn_order_number', syo."reel_yarn_order_number"
+                ))
+                FROM "spinner_yarn_order_sales" sys
+                LEFT JOIN "spinner_yarn_orders" syo 
+                ON sys."spinner_yarn_order_id" = syo."id"
+                WHERE sys."sale_id" = "spin_sales"."id"
+              )`),
+              'yarnOrderNumbers'
+            ]
+          ]
+        },
         order: [["id", "desc"]],
         offset: offset,
         limit: limit,
@@ -1514,6 +1542,7 @@ const fetchSpinSalesPagination = async (req: Request, res: Response) => {
           },
           attributes: ["id", "yarnCount_name"],
         });
+        
         data.push({
           ...row.dataValues,
           yarncount,
@@ -1902,6 +1931,71 @@ const fetchComberNoilTransactionList = async (req: Request, res: Response) => {
   }
 };
 
+const fetchComberNoilSoldList = async (req: Request, res: Response) => {
+  try {
+    const searchTerm = req.query.search || "";
+    const page = Number(req.query.page) || 1;
+    const limit = Number(req.query.limit) || 10;
+    const { ginnerId, status, filter, programId, spinnerId, seasonId }: any =
+      req.query;
+    const offset = (page - 1) * limit;
+    const whereCondition: any = {};
+
+    whereCondition.spinner_id = spinnerId;
+    whereCondition.buyer_type = "Spinner";
+
+    // Add season filter if seasonId is provided
+    if (seasonId) {
+      const seasonIds = seasonId.split(",").map(Number);
+      whereCondition.season_id = {
+        [Op.in]: seasonIds,
+      };
+    }
+
+    // Add program filter if programId is provided
+    if (programId) {
+      const programIds = programId.toString().split(",").map(Number);
+      whereCondition.program_id = {
+        [Op.in]: programIds,
+      };
+    }
+
+    const includes = [
+      
+      {
+        model: Season,
+        as: "season",
+        attributes: ["id", "name"],
+      },
+      {
+        model: Program,
+        as: "program",
+        attributes: ["id", "program_name"],
+      },
+      {
+        model: Spinner,
+        as: "buyer",
+        attributes: ["id", "name"],
+        
+      },
+    ];
+    const spinnerComberNoil = await SpinCombernoilSale.findAndCountAll({
+      where: whereCondition,
+      include: includes,
+      offset: offset,
+      limit: limit,
+      order: [["createdAt", "desc"]],
+    });
+    return res.sendPaginationSuccess(
+      res,
+      spinnerComberNoil.rows,
+      spinnerComberNoil.count
+    );
+  } catch (error: any) {
+    console.log(error);
+    return res.sendError(res, error.message, error);
+  }
+};
 const updateStatusComberNoil = async (req: Request, res: Response) => {
   try {
     const items = req.body.items;
@@ -3782,5 +3876,6 @@ export {
   fetchTransactionAlertForComberNoil,
   updateStatusComberNoil,
   fetchComberNoilTransactionList,
+  fetchComberNoilSoldList,
   _getSpinnerProcessTracingChartData,
 };
