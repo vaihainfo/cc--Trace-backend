@@ -3663,7 +3663,7 @@ const generateGinnerProcess = async () => {
                 gd.from_date AS from_date,
                 gd.to_date AS to_date,
                 gd.created_date AS "createdAt",
-                EXTRACT(DAY FROM AGE(gd.created_date , gd.to_date)) AS no_of_days,
+                EXTRACT(DAY FROM AGE(gd.created_date , gd.date)) AS no_of_days,
                 gd.season_name AS season,
                 gd.ginner_name AS ginner_name,
                 c.county_name AS country_name,
@@ -4059,7 +4059,7 @@ const generateGinnerSales = async () => {
           SELECT 
               gs.id AS ginsale_id,
               gs.date AS date,
-              gs."createdAt" AS "createdAt",
+              gs."createdAt" AS createdAt,
               EXTRACT(DAY FROM AGE(gs."createdAt" , gs.date)) AS no_of_days,
               season.name AS season_name,
               program.program_name AS program,
