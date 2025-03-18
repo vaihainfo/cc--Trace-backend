@@ -30,7 +30,11 @@ const SpinYarn = db.define('spin_yarns', {
   sold_status: {
     type: DataTypes.BOOLEAN,
     defaultValue: false
-  }
+  },
+  batch_lot_no: {
+    allowNull: false,
+    type: DataTypes.STRING
+  },
 });
 
 SpinYarn.belongsTo(SpinProcess, {
