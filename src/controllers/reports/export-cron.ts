@@ -278,6 +278,16 @@ const exportGinHeapReport = async () => {
     {
       model: Ginner,
       as: "ginner",
+      include: [
+        {
+          model: Country,
+          as: "country",
+        },
+        {
+          model: State,
+          as: "state",
+        }
+      ]
     },
     {
       model: Season,
@@ -292,14 +302,16 @@ const exportGinHeapReport = async () => {
   // Create the excel workbook file
   const workbook = new ExcelJS.Workbook();
   const worksheet = workbook.addWorksheet("Sheet1");
-  worksheet.mergeCells("A1:M1");
-  const mergedCell = worksheet.getCell("A1");
-  mergedCell.value = "CottonConnect | Heap Report";
-  mergedCell.font = { bold: true };
-  mergedCell.alignment = { horizontal: "center", vertical: "middle" };
+  // worksheet.mergeCells("A1:M1");
+  // const mergedCell = worksheet.getCell("A1");
+  // mergedCell.value = "CottonConnect | Heap Report";
+  // mergedCell.font = { bold: true };
+  // mergedCell.alignment = { horizontal: "center", vertical: "middle" };
   // Set bold font for header row
   const headerRow = worksheet.addRow([
     "Sr No.",
+    "Country",
+    "State",
     "Created Date",
     "Season",
     "Gin heap no.",
@@ -317,6 +329,9 @@ const exportGinHeapReport = async () => {
     include: include,
     order: [["id", "desc"]],
   });
+
+  let weightSum = 0;
+
   // // Append data to worksheet
   for await (const [index, item] of rows.entries()) {
     if (item.dataValues?.weighbridge_village) {
@@ -335,8 +350,13 @@ const exportGinHeapReport = async () => {
       item.dataValues.village_names = uniqueVillageNames.join(", ");
     }
     }
+
+    weightSum += item.dataValues.estimated_heap ? Number(item.dataValues.estimated_heap) : 0;
+
     const rowValues = Object.values({
       index: index + 1,
+      country: item.dataValues.ginner.country.county_name,
+      state: item.dataValues.ginner.state.state_name,
       created_date: item.dataValues.createdAt
         ? item.dataValues.createdAt
         : "",
@@ -356,12 +376,30 @@ const exportGinHeapReport = async () => {
     });
     worksheet.addRow(rowValues);
   }
+
+  const rowValues = Object.values({
+    index: "Totals:", country: "", state: "", created_date:"", season: "", ginner_heap_no:"",
+    reel_heap_no:"", ginner_name:"", village_name: "", 
+    heap_weight:Number(formatDecimal(weightSum)),
+    heap_starting_date: "", heap_ending_date: "", weighbridge_vehicle_no:""
+  });
+  worksheet.addRow(rowValues).eachCell((cell, colNumber) => { cell.font={bold:true}});;
+
+  const borderStyle = {
+    top: { style: "thin" },
+    bottom: { style: "thin" },
+    left: { style: "thin" },
+    right: { style: "thin" },
+  };
+
   // Auto-adjust column widths based on content
   worksheet.columns.forEach((column: any) => {
     let maxCellLength = 0;
     column.eachCell({ includeEmpty: true }, (cell: any) => {
       const cellLength = (cell.value ? cell.value.toString() : "").length;
       maxCellLength = Math.max(maxCellLength, cellLength);
+      cell.border = borderStyle;
+
     });
     column.width = Math.min(14, maxCellLength + 2);
   });
@@ -595,7 +633,9 @@ const generateSpinnerLintCottonStock = async () => {
 
   try {
     const workbook = new ExcelJS.stream.xlsx.WorkbookWriter({
-      stream: fs.createWriteStream("./upload/spinner-lint-cotton-stock-report-test.xlsx")
+      stream: fs.createWriteStream("./upload/spinner-lint-cotton-stock-report-test.xlsx"),
+      useStyles: true,
+
     });
     let worksheetIndex = 0;
     const batchSize = 5000;
@@ -608,6 +648,68 @@ const generateSpinnerLintCottonStock = async () => {
     whereCondition.push(`gs.qty_stock > 0`);
 
     const whereClause = whereCondition.length > 0 ? `WHERE ${whereCondition.join(' AND ')}` : '';
+
+
+    interface Totals{
+      cotton_procured: 0,
+      cotton_stock: 0,
+      greyed_out_qty: 0,
+      cotton_consumed: 0,
+    };
+
+    
+    let totals: Totals = {
+      cotton_procured: 0,
+      cotton_stock: 0,
+      greyed_out_qty: 0,
+      cotton_consumed: 0,
+    };
+
+
+    const AddTotalRow = (currentWorksheet: ExcelJS.Worksheet | undefined, totals : Totals) =>{
+
+      if(currentWorksheet != undefined){
+        const rowValues = [
+          "Totals: ",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          totals.cotton_procured,
+          totals.cotton_stock,
+          totals.greyed_out_qty,
+          totals.cotton_consumed,
+        ];
+        currentWorksheet?.addRow(rowValues).eachCell(cell=>cell.font={bold : true});
+        let borderStyle = {
+          top: {style:"thin"},
+          left: {style:"thin"},
+          bottom: {style:"thin"},
+          right: {style:"thin"}
+        };
+  
+        // Auto-adjust column widths based on content
+        currentWorksheet?.columns.forEach((column: any) => {
+          let maxCellLength = 0;
+          column.eachCell({ includeEmpty: true }, (cell: any) => {
+            const cellLength = (cell.value ? cell.value.toString() : "").length;
+            maxCellLength = Math.max(maxCellLength, cellLength);
+            cell.border = borderStyle;
+          });
+          column.width = Math.min(14, maxCellLength + 2); // Limit width to 30 characters
+        });
+ 
+      }
+      
+    };
+
+    let currentWorksheet: ExcelJS.Worksheet| undefined = undefined;
+
 
     let hasNextBatch = true;
     while (hasNextBatch) {
@@ -635,7 +737,8 @@ const generateSpinnerLintCottonStock = async () => {
                 AND (bs.spinner_status = true OR gs.status = 'Sold')
             GROUP BY 
                 bs.sales_id
-        )
+        ),
+        gin_sale_date as(
         SELECT 
             gs.*, 
             g.id AS ginner_id, 
@@ -646,6 +749,8 @@ const generateSpinnerLintCottonStock = async () => {
             p.program_name, 
             sp.id AS spinner_id, 
             sp.name AS spinner_name, 
+            sp.country_id as country_id,
+            sp.state_id as state_id,             
             sp.address AS spinner_address, 
             bd.no_of_bales AS accepted_no_of_bales, 
             bd.total_qty AS accepted_total_qty
@@ -663,8 +768,19 @@ const generateSpinnerLintCottonStock = async () => {
             bale_details bd ON gs.id = bd.sales_id
         ${whereClause}
         ORDER BY 
-            gs."id" ASC
+            "spinner_name" ASC
         LIMIT :limit OFFSET :offset
+        )
+        Select 
+          gsd.*,
+          c.county_name as country,
+          s.state_name as state
+        from 
+          gin_sale_date gsd
+        left join
+          countries c on gsd.country_id = c.id
+        left join
+          states s on gsd.state_id = s.id
       `;
 
       const [rows] = await Promise.all([
@@ -681,8 +797,15 @@ const generateSpinnerLintCottonStock = async () => {
       }
 
       if (offset % maxRowsPerWorksheet === 0) {
+        if(currentWorksheet){
+          AddTotalRow(currentWorksheet, totals);
+        
+        }
+        totals = {cotton_procured: 0, cotton_stock: 0, greyed_out_qty: 0, cotton_consumed: 0};
+        
         worksheetIndex++;
       }
+
 
 
       for await (const [index, spinner] of rows.entries()) {
@@ -690,6 +813,8 @@ const generateSpinnerLintCottonStock = async () => {
 
         const rowValues = [
           offset + index + 1,
+          spinner?.country ? spinner?.country : "",
+          spinner?.state ? spinner?.state : "",
           spinner?.date ? moment(spinner.date).format('DD-MM-YYYY') : "",
           spinner?.season_name ? spinner?.season_name : "",
           spinner?.ginner_name ? spinner?.ginner_name : "",
@@ -703,19 +828,28 @@ const generateSpinnerLintCottonStock = async () => {
           cotton_consumed,
         ];
 
+        
+        totals.cotton_procured +=  Number(formatDecimal(spinner?.accepted_total_qty)) ;
+        totals.cotton_stock += Number(formatDecimal(spinner?.qty_stock));
+        totals.greyed_out_qty +=  Number(formatDecimal(spinner?.greyed_out_qty));
+        totals.cotton_consumed += Number(formatDecimal(cotton_consumed));
+
+
         let currentWorksheet = workbook.getWorksheet(`Lint Cotton Stock Report ${worksheetIndex}`);
         if (!currentWorksheet) {
           currentWorksheet = workbook.addWorksheet(`Lint Cotton Stock Report ${worksheetIndex}`);
-          if (worksheetIndex == 1) {
-            currentWorksheet.mergeCells("A1:L1");
-            const mergedCell = currentWorksheet.getCell("A1");
-            mergedCell.value = "CottonConnect | Spinner Lint Cotton Stock Report";
-            mergedCell.font = { bold: true };
-            mergedCell.alignment = { horizontal: "center", vertical: "middle" };
-          }
+          // if (worksheetIndex == 1) {
+          //   currentWorksheet.mergeCells("A1:L1");
+          //   const mergedCell = currentWorksheet.getCell("A1");
+          //   mergedCell.value = "CottonConnect | Spinner Lint Cotton Stock Report";
+          //   mergedCell.font = { bold: true };
+          //   mergedCell.alignment = { horizontal: "center", vertical: "middle" };
+          // }
           // Set bold font for header row
           const headerRow = currentWorksheet.addRow([
             "Sr No.",
+            "Country",
+            "State",
             "Created Date",
             "Season",
             "Ginner Name",
@@ -730,11 +864,18 @@ const generateSpinnerLintCottonStock = async () => {
           ]);
           headerRow.font = { bold: true };
         }
-        currentWorksheet.addRow(rowValues).commit();
+        currentWorksheet.addRow(rowValues);
       }
+
+   
+
       offset += batchSize;
     }
 
+    if(currentWorksheet){
+      AddTotalRow(currentWorksheet, totals);
+    }
+    
 
     await workbook.commit()
       .then(() => {
@@ -1918,7 +2059,8 @@ const generatePscpProcurementLiveTracker = async () => {
     const prevSeasonId = prevSeason?.id;
 
     const workbook = new ExcelJS.stream.xlsx.WorkbookWriter({
-      stream: fs.createWriteStream("./upload/pscp-procurement-sell-live-tracker-test.xlsx")
+      stream: fs.createWriteStream("./upload/pscp-procurement-sell-live-tracker-test.xlsx"),
+      useStyles: true,
     });
     let worksheetIndex = 1;
     let Count = 0;
@@ -2241,7 +2383,7 @@ const generatePscpProcurementLiveTracker = async () => {
           LEFT JOIN gin_to_gin_sales_data gtg ON fg.id = gtg.ginner_id
           LEFT JOIN gin_to_gin_recieved_data gtgr ON fg.id = gtgr.ginner_id
         ORDER BY
-          fg.id ASC
+          fg.name ASC
         LIMIT :limit OFFSET :offset
         `,
         {
@@ -2263,9 +2405,31 @@ const generatePscpProcurementLiveTracker = async () => {
         Count = 0;
       }
 
+      let totals = {
+        expected_seed_cotton:0,
+        expected_lint:0,
+        procurement_seed_cotton:0,
+        procurement:0,
+        pending_seed_cotton:0,
+        procured_lint_cotton_mt:0,
+        no_of_bales:0,
+        sold_bales:0,
+        total_qty_sold_lint: 0,
+        balace_stock:0,
+        balance_lint_quantity:0,
+        greyout_bales:0,
+        greyout_qty:0,
+        total_bales_received:0,
+        total_qty_lint_received:0,
+        total_bales_transfered:0,
+        total_qty_lint_transfered:0,
+        ginner_sale_percentage:0,
+        order_in_hand:0,
+    };
+
       let index = 0;
       for await (const obj of data) {
-        const rowValues = Object.values({
+        const rowValues = {
           index: index + 1,
           name: obj.ginner_name ? obj?.ginner_name : "",
           country: obj.county_name ? obj?.county_name : "",
@@ -2294,19 +2458,19 @@ const generatePscpProcurementLiveTracker = async () => {
           total_bales_transfered: obj.total_bales_transfered ? Number(obj.total_bales_transfered) : 0,
           total_qty_lint_transfered: obj.total_qty_lint_transfered ? Number(formatDecimal(obj.total_qty_lint_transfered)) : 0,
           ginner_sale_percentage: Number(obj.ginner_sale_percentage) ?? 0,
-        });
+        };
         index++;
 
         let currentWorksheet = workbook.getWorksheet(`Sheet${worksheetIndex}`);
         if (!currentWorksheet) {
           currentWorksheet = workbook.addWorksheet(`Sheet${worksheetIndex}`);
-          if (worksheetIndex == 1) {
-            currentWorksheet.mergeCells("A1:X1");
-            const mergedCell = currentWorksheet.getCell("A1");
-            mergedCell.value = "CottonConnect | PSCP Procurement and Sell Live Tracker";
-            mergedCell.font = { bold: true };
-            mergedCell.alignment = { horizontal: "center", vertical: "middle" };
-          }
+          // if (worksheetIndex == 1) {
+          //   currentWorksheet.mergeCells("A1:X1");
+          //   const mergedCell = currentWorksheet.getCell("A1");
+          //   mergedCell.value = "CottonConnect | PSCP Procurement and Sell Live Tracker";
+          //   mergedCell.font = { bold: true };
+          //   mergedCell.alignment = { horizontal: "center", vertical: "middle" };
+          // }
           // Set bold font for header row
           const headerRow = currentWorksheet.addRow([
             "Sr No.",
@@ -2336,8 +2500,78 @@ const generatePscpProcurementLiveTracker = async () => {
           ]);
           headerRow.font = { bold: true };
         }
-        currentWorksheet.addRow(rowValues).commit();
+        currentWorksheet.addRow(Object.values(rowValues));
+
+        totals.expected_seed_cotton+= rowValues.expected_seed_cotton;
+        totals.expected_lint+= rowValues.expected_lint;
+        totals.procurement_seed_cotton+= rowValues.procurement_seed_cotton;
+        totals.procurement+= rowValues.procurement;
+        totals.pending_seed_cotton+= rowValues.pending_seed_cotton;
+        totals.procured_lint_cotton_mt+= rowValues.procured_lint_cotton_mt;
+        totals.no_of_bales+= rowValues.no_of_bales;
+        totals.sold_bales+= rowValues.sold_bales;
+        totals.total_qty_sold_lint += rowValues.total_qty_sold_lint;
+        totals.balace_stock+= rowValues.balace_stock;
+        totals.balance_lint_quantity+= rowValues.balance_lint_quantity;
+        totals.greyout_bales+= rowValues.greyout_bales;
+        totals.greyout_qty+= rowValues.greyout_qty;
+        totals.total_bales_received+= rowValues.total_bales_received;
+        totals.total_qty_lint_received+= rowValues.total_qty_lint_received;
+        totals.total_bales_transfered+= rowValues.total_bales_transfered;
+        totals.total_qty_lint_transfered+= rowValues.total_qty_lint_transfered;
+        totals.ginner_sale_percentage+= rowValues.ginner_sale_percentage;
+        totals.order_in_hand+= rowValues.order_in_hand?rowValues.order_in_hand : 0;
+
       }
+      let currentWorksheet = workbook.getWorksheet(`Sheet${worksheetIndex}`);
+
+      const rowValues = {
+        index:"Totals:",
+        name:"",
+        country:"",
+        state:"",
+        program:"",
+        expected_seed_cotton: totals.expected_seed_cotton,
+        expected_lint: totals.expected_lint,
+        procurement_seed_cotton: totals.procurement_seed_cotton,
+        procurement: totals.procurement,
+        pending_seed_cotton: totals.pending_seed_cotton,
+        procured_lint_cotton_mt: totals.procured_lint_cotton_mt,
+        no_of_bales: totals.no_of_bales,
+        sold_bales: totals.sold_bales,
+        total_qty_sold_lint: totals.total_qty_sold_lint,
+        order_in_hand: totals.order_in_hand,
+        balace_stock: totals.balace_stock,
+        balance_lint_quantity: totals.balance_lint_quantity,
+        greyout_bales: totals.greyout_bales,
+        greyout_qty: totals.greyout_qty,
+        total_bales_received: totals.total_bales_received,
+        total_qty_lint_received: totals.total_qty_lint_received,
+        total_bales_transfered: totals.total_bales_transfered,
+        total_qty_lint_transfered: totals.total_qty_lint_transfered,
+        ginner_sale_percentage: totals.ginner_sale_percentage,
+      };
+
+      currentWorksheet?.addRow(Object.values(rowValues)).eachCell(cell=>cell.font={bold:true});
+
+      let borderStyle = {
+        top: {style: "thin"},
+        left: {style: "thin"},
+        bottom: {style: "thin"},
+        right: {style: "thin"}
+      };
+
+      // Auto-adjust column widths based on content
+      currentWorksheet?.columns.forEach((column: any) => {
+        let maxCellLength = 0;
+        column.eachCell({ includeEmpty: true }, (cell: any) => {
+          const cellLength = (cell.value ? cell.value.toString() : "").length;
+          maxCellLength = Math.max(maxCellLength, cellLength);
+          cell.border = borderStyle;
+        });
+        column.width = Math.min(24, maxCellLength + 2); // Limit width to 30 characters
+      });
+
     }
 
     await workbook.commit()
@@ -2616,7 +2850,9 @@ const generateGinnerSummary = async () => {
 
   try {
     const workbook = new ExcelJS.stream.xlsx.WorkbookWriter({
-      stream: fs.createWriteStream("./upload/ginner-summary-test.xlsx")
+      stream: fs.createWriteStream("./upload/ginner-summary-test.xlsx"),
+      useStyles: true,
+
     });
 
     const batchSize = 5000;
@@ -2626,9 +2862,22 @@ const generateGinnerSummary = async () => {
 
     while (hasNextBatch) {
       let rows = await Ginner.findAll({
-        attributes: ["id", "name", "address"],
+        attributes: ["id", "name", "address", "state_id", "country_id"],
         offset: offset,
         limit: batchSize,
+        include: [
+                  {
+                    model: Country,
+                    attributes:["id","county_name"],
+                    as: "country",
+                  },
+                  {
+                    model: State,
+                    attributes:["id","state_name"],
+                    as: "state"
+                  }
+                ],
+        order:[["name", "ASC"]],
       });
 
       if (rows.length === 0) {
@@ -2643,23 +2892,43 @@ const generateGinnerSummary = async () => {
       let currentWorksheet = workbook.getWorksheet(`Sheet${worksheetIndex}`);
       if (!currentWorksheet) {
         currentWorksheet = workbook.addWorksheet(`Sheet${worksheetIndex}`);
-        if (worksheetIndex == 1) {
-          currentWorksheet.mergeCells('A1:S1');
-          const mergedCell = currentWorksheet.getCell('A1');
-          mergedCell.value = 'CottonConnect | Ginner Summary Report';
-          mergedCell.font = { bold: true };
-          mergedCell.alignment = { horizontal: 'center', vertical: 'middle' };
-          // Set bold font for header row
+        // if (worksheetIndex == 1) {
+        //   currentWorksheet.mergeCells('A1:S1');
+        //   const mergedCell = currentWorksheet.getCell('A1');
+        //   mergedCell.value = 'CottonConnect | Ginner Summary Report';
+        //   mergedCell.font = { bold: true };
+        //   mergedCell.alignment = { horizontal: 'center', vertical: 'middle' };
+        //   // Set bold font for header row
 
-        }
+        // }
         // Set bold font for header row
         const headerRow = currentWorksheet.addRow([
-          "S. No.", "Ginner Name", "Total seed cotton procured (MT)", "Total seed cotton processed (MT)",
+          "S. No.", "Ginner Name", "Country", "State", "Total seed cotton procured (MT)", "Total seed cotton processed (MT)",
           "Total seed cotton in stock (MT)", "Total lint produce (MT)", "Total lint sold (MT)", "Grey-Out Lint Quantity (MT)", "Total Lint Received (MT)", "Total Lint Transfered (MT)", "Actual lint in stock (MT)", "Total lint in stock (MT)",
           "Total bales produce", "Total bales sold", "Total Bales Greyout", "Total Bales Received", "Total Bales Transfered", "Actual Bales in stock", "Total bales in stock"
         ]);
         headerRow.font = { bold: true };
       }
+
+      let totals = {
+        cottonProcuredMt:0,
+          cottonProcessedeMt:0,
+          cottonStockMt:0,
+          lintProcuredMt:0,
+          lintSoldMt:0,
+          lintGreyoutMT:0,
+          total_qty_lint_received:0,
+          total_qty_lint_transfered:0,
+          lintActualStockMT:0,
+          lintStockMt:0,
+          balesProduced:0,
+          balesSold:0,
+          balesGreyout:0,
+          total_bales_received:0,
+          total_bales_transfered:0,
+          balesActualStock:0,
+          balesStock:0,
+      };
 
       // Append data to worksheet
       for await (const [index, item] of rows.entries()) {
@@ -2991,10 +3260,15 @@ const generateGinnerSummary = async () => {
           ? (obj.balesProduced + obj.total_bales_received) - (obj.balesSold + obj.total_bales_transfered + obj.balesGreyout)
           : 0;
         obj.balesStock = obj.balesProduced > obj.balesSold ? obj.balesProduced - obj.balesSold : 0;
+        
+        obj.country = item.country.county_name;
+        obj.state = item.state.state_name;
 
-        const rowValues = Object.values({
+        const rowValues = {
           index: index + offset + 1,
           name: item.name ? item.name : '',
+          country: obj.country,
+          state: obj.state,
           cottonProcuredMt: Number(obj.cottonProcuredMt) ?? 0,
           cottonProcessedeMt: Number(obj.cottonProcessedeMt) ?? 0,
           cottonStockMt: Number(obj.cottonStockMt) ?? 0,
@@ -3012,13 +3286,74 @@ const generateGinnerSummary = async () => {
           total_bales_transfered: Number(obj.total_bales_transfered),
           balesActualStock: Number(obj.balesActualStock),
           balesStock: Number(obj.balesStock) ?? 0
-        });
-        currentWorksheet.addRow(rowValues).commit();
+        };
+        currentWorksheet.addRow(Object.values(rowValues));
+
+        totals.cottonProcessedeMt+= Number(rowValues.cottonProcessedeMt ); 
+        totals.cottonProcuredMt+= Number(rowValues.cottonProcuredMt );                
+        totals.cottonStockMt+= Number(rowValues.cottonStockMt );
+        totals.lintProcuredMt+= Number(rowValues.lintProcuredMt );
+        totals.lintSoldMt+= Number(rowValues.lintSoldMt );
+        totals.lintGreyoutMT+= Number(rowValues.lintGreyoutMT );
+        totals.total_qty_lint_received+= Number(rowValues.total_qty_lint_received );
+        totals.total_qty_lint_transfered+= Number(rowValues.total_qty_lint_transfered );
+        totals.lintActualStockMT+= Number(rowValues.lintActualStockMT );
+        totals.lintStockMt+= Number(rowValues.lintStockMt );
+        totals.balesProduced+= Number(rowValues.balesProduced );
+        totals.balesSold+= Number(rowValues.balesSold );
+        totals.balesGreyout+= Number(rowValues.balesGreyout );
+        totals.total_bales_received+= Number(rowValues.total_bales_received );
+        totals.total_bales_transfered+= Number(rowValues.total_bales_transfered );
+        totals.balesActualStock+= Number(rowValues.balesActualStock );
+        totals.balesStock+= Number(rowValues.balesStock );
       }
+
+      const rowValues = {
+        index:"Totals:",
+        name:"",
+        country:"",
+        state:"",
+        cottonProcuredMt: totals.cottonProcuredMt,
+        cottonProcessedeMt: totals.cottonProcessedeMt,
+        cottonStockMt: totals.cottonStockMt,
+        lintProcuredMt: totals.lintProcuredMt,
+        lintSoldMt: totals.lintSoldMt,
+        lintGreyoutMT: totals.lintGreyoutMT,
+        total_qty_lint_received: totals.total_qty_lint_received, 
+        total_qty_lint_transfered: totals.total_qty_lint_transfered,
+        lintActualStockMT: totals.lintActualStockMT,
+        lintStockMt: totals.lintStockMt,
+        balesProduced: totals.balesProduced,
+        balesSold: totals.balesSold,
+        balesGreyout: totals.balesGreyout,
+        total_bales_received: totals.total_bales_received,
+        total_bales_transfered: totals.total_bales_transfered,
+        balesActualStock: totals.balesActualStock,
+        balesStock: totals.balesStock,
+      };
+     
+      currentWorksheet.addRow(Object.values(rowValues)).eachCell(cell=> cell.font = {bold: true});
+
       // Auto-adjust column widths based on content
       offset += batchSize;
+      const borderStyle = {
+        top: { style: "thin" },
+        bottom: { style: "thin" },
+        left: { style: "thin" },
+        right: { style: "thin" },
+      };
+      currentWorksheet.columns.forEach((column: any) => {
+        let maxCellLength = 0;
+        column.eachCell({ includeEmpty: true }, (cell: any) => {
+          const cellLength = (cell.value ? cell.value.toString() : '').length;
+          maxCellLength = Math.max(maxCellLength, cellLength);
+          cell.border = borderStyle;
+        });
+        column.width = Math.min(24, maxCellLength + 2); // Limit width to 30 characters
+      });
 
     }
+   
     // Save the workbook
     await workbook.commit()
       .then(() => {
@@ -3044,13 +3379,102 @@ const generateGinnerProcess = async () => {
   try {
     // Create the excel workbook file
     const workbook = new ExcelJS.stream.xlsx.WorkbookWriter({
-      stream: fs.createWriteStream("./upload/gin-bale-process-test.xlsx")
+      stream: fs.createWriteStream("./upload/gin-bale-process-test.xlsx"),
+      useStyles: true,
     });
 
     const batchSize = 5000;
     let worksheetIndex = 0;
     let offset = 0;
     let hasNextBatch = true;
+
+
+    interface Totals {
+      total_no_of_bales: number;
+      total_lint_quantity: number;
+      total_seedConsmed: number;
+      total_sold_bales: number;
+      total_lint_quantity_sold: number;
+      total_lint_qty_transfered: number;
+      total_bales_transfered: number;
+      total_lint_stock: number;
+      total_bale_stock: number;
+    }
+
+    let totals: Totals = {
+      total_no_of_bales: 0,
+      total_lint_quantity: 0,
+      total_seedConsmed: 0,
+      total_sold_bales: 0,
+      total_lint_quantity_sold: 0,
+      total_lint_qty_transfered: 0, 
+      total_bales_transfered:0,
+      total_lint_stock:0,
+      total_bale_stock:0,
+
+    };
+
+    const AddTotalRow = (currentWorksheet: ExcelJS.Worksheet | undefined, totals : Totals) =>{
+
+      if(currentWorksheet != undefined){
+        const rowValues = Object.values({
+          Index:"Total",
+          country:"",
+          state:"",
+          date:"",
+          created_date:"",
+          no_of_days:"",
+          from_date:"",
+          to_date:"",
+          seed_consumed_seasons:"",
+          season:"",
+          ginner:"",
+          heap:"",
+          lot_no:"",
+          press_no:"",
+          reel_lot_no:"",
+          reel_press_no:"",
+          noOfBales: Number(formatDecimal(totals.total_no_of_bales)),
+          lint_quantity: Number(formatDecimal(totals.total_lint_quantity)),
+          seedConsmed: Number(formatDecimal(totals.total_seedConsmed)),
+          got:"",
+          lint_quantity_sold: Number(formatDecimal(totals.total_lint_quantity_sold)),
+          sold_bales: Number(formatDecimal(totals.total_sold_bales)),
+          lint_qty_greyout:"",
+          greyout_bales:"",
+          lint_qty_transfered: Number(formatDecimal(totals.total_lint_qty_transfered)),
+          bales_transfered: Number(formatDecimal(totals.total_bales_transfered)),
+          lint_stock: Number(formatDecimal(totals.total_lint_stock)),
+          bale_stock: Number(formatDecimal(totals.total_bale_stock)),
+          program:"",
+          village_names:"",
+          greyout_status:"",
+        });
+        currentWorksheet.addRow(rowValues).eachCell((cell, colNumber) => { cell.font={bold:true}});
+        const borderStyle = {
+          top: { style: "thin" },
+          bottom: { style: "thin" },
+          left: { style: "thin" },
+          right: { style: "thin" },
+        };
+    
+        // Auto-adjust column widths based on content
+        currentWorksheet.columns.forEach((column: any) => {
+          let maxCellLength = 0;
+          column.eachCell({ includeEmpty: true }, (cell: any) => {
+            const cellLength = (cell.value ? cell.value.toString() : "").length;
+            maxCellLength = Math.max(maxCellLength, cellLength);
+            cell.border = borderStyle;
+          });
+          column.width = Math.min(15, maxCellLength + 2); // Limit width to 30 characters
+        });
+ 
+      }
+      
+    };
+
+
+    let currentWorksheet: ExcelJS.Worksheet| undefined = undefined;
 
     while (hasNextBatch) {
       const ginProcess = await sequelize.query(
@@ -3063,6 +3487,8 @@ const generateGinnerProcess = async () => {
               gp."createdAt" AS created_date,
               s.name AS season_name,
               g.name AS ginner_name,
+              g.country_id as country_id,
+              g.state_id as state_id,
               gp.heap_number,
               gp.heap_register,
               gp.weigh_bridge,
@@ -3241,8 +3667,11 @@ const generateGinnerProcess = async () => {
                 gd.from_date AS from_date,
                 gd.to_date AS to_date,
                 gd.created_date AS "createdAt",
+                EXTRACT(DAY FROM (gd.created_date - gd.date)) AS no_of_days,
                 gd.season_name AS season,
                 gd.ginner_name AS ginner_name,
+                c.county_name AS country_name,
+                s.state_name AS state_name,                
                 gd.heap_number AS heap_number,
                 gd.heap_register AS heap_register,
                 gd.bale_process AS bale_process,
@@ -3282,6 +3711,10 @@ const generateGinnerProcess = async () => {
               gin_bale_greyout_data gbg ON gd.process_id = gbg.process_id
             LEFT JOIN 
               gin_to_gin_sales_data gtg ON gd.process_id = gtg.process_id
+            LEFT JOIN
+              countries c ON gd.country_id = c.id 
+            LEFT JOIN
+              states s ON gd.state_id = s.id  
             LIMIT :limit OFFSET :offset
             `, {
         replacements: { limit: batchSize, offset },
@@ -3294,34 +3727,60 @@ const generateGinnerProcess = async () => {
       }
 
       if (offset % maxRowsPerWorksheet === 0) {
+       
+        if(currentWorksheet){
+          AddTotalRow(currentWorksheet, totals);
+        }
+        totals = {
+          total_no_of_bales: 0,
+          total_lint_quantity: 0,
+          total_seedConsmed: 0,
+          total_sold_bales: 0,
+          total_lint_quantity_sold: 0,
+          total_lint_qty_transfered: 0, 
+          total_bales_transfered:0,
+          total_lint_stock:0,
+          total_bale_stock:0,
+    
+        };   
+
         worksheetIndex++;
+
       }
 
-      let currentWorksheet = workbook.getWorksheet(`Sheet${worksheetIndex}`);
+  
+      currentWorksheet = workbook.getWorksheet(`Sheet${worksheetIndex}`);
       if (!currentWorksheet) {
         currentWorksheet = workbook.addWorksheet(`Sheet${worksheetIndex}`);
-        if (worksheetIndex == 1) {
-          currentWorksheet.mergeCells('A1:AB1');
-          const mergedCell = currentWorksheet.getCell('A1');
-          mergedCell.value = 'CottonConnect | Ginner Bale Process Report';
-          mergedCell.font = { bold: true };
-          mergedCell.alignment = { horizontal: 'center', vertical: 'middle' };
+        // if (worksheetIndex == 1) {
+        //   currentWorksheet.mergeCells('A1:AB1');
+        //   const mergedCell = currentWorksheet.getCell('A1');
+        //   mergedCell.value = 'CottonConnect | Ginner Bale Process Report';
+        //   mergedCell.font = { bold: true };
+        //   mergedCell.alignment = { horizontal: 'center', vertical: 'middle' };
 
-        }
+        // }
         // Set bold font for header row
         // Set bold font for header row
         const headerRow = currentWorksheet.addRow([
-          "Sr No.", "Process Date", "Data Entry Date", "Lint Production Start Date", "Lint Production End Date", "Seed Cotton Consumed Season", "Lint process Season choosen", "Ginner Name", "Heap Number", "Gin Lot No", "Gin Press No", "REEL Lot No", "REEL Press No", "No of Bales", "Lint Quantity(Kgs)", "Total Seed Cotton Consumed(Kgs)", "GOT", "Total lint cotton sold(Kgs)", "Total Bales Sold", "Total lint cotton rejected(Kgs)", "Total Bales Rejected", "Total lint cotton transfered(Kgs)", "Total Bales Transfered", "Total lint cotton in stock(Kgs)", "Total Bales in stock", "Programme", "Village", "Grey Out Status"
+          "Sr No.","Country","State", "Process Date", "Data Entry Date",  "No. of Days", "Lint Production Start Date", "Lint Production End Date", "Seed Cotton Consumed Season", "Lint process Season choosen", "Ginner Name", "Heap Number", "Gin Lot No", "Gin Press No", "REEL Lot No", "REEL Press No", "No of Bales", "Lint Quantity(Kgs)", "Total Seed Cotton Consumed(Kgs)", "GOT", "Total lint cotton sold(Kgs)", "Total Bales Sold", "Total lint cotton rejected(Kgs)", "Total Bales Rejected", "Total lint cotton transfered(Kgs)", "Total Bales Transfered", "Total lint cotton in stock(Kgs)", "Total Bales in stock", "Programme", "Village", "Grey Out Status"
         ]);
         headerRow.font = { bold: true };
       }
 
+
+
+     
+
       // Append data to worksheet
       for await (const [index, item] of ginProcess.entries()) {
-        const rowValues = Object.values({
+        const rowValues = {
           index: index + offset + 1,
+          country: item.country_name ? item.country_name : "",
+          state: item.state_name ? item.state_name : "",
           date: item.date ? item.date : "",
           created_date: item.createdAt ? item.createdAt : "",
+          no_of_days: item.no_of_days ? Number(item.no_of_days) : "",
           from_date: item.from_date ? item.from_date : "",
           to_date: item.to_date ? item.to_date : "",
           seed_consumed_seasons: item.seed_consumed_seasons ? item.seed_consumed_seasons : "",
@@ -3347,11 +3806,30 @@ const generateGinnerProcess = async () => {
           program: item.program ? item.program : "",
           village_names: item.village_names && item.village_names.length > 0 ? item.village_names.join(", ") : "",
           greyout_status: item.greyout_status ? "Yes" : "No",
-        });
+        };
 
-        currentWorksheet.addRow(rowValues).commit();
+        currentWorksheet.addRow(Object.values(rowValues));
+
+
+        totals.total_no_of_bales += rowValues.noOfBales;
+        totals.total_lint_quantity += rowValues.lint_quantity;
+        totals.total_seedConsmed += rowValues.seedConsmed;
+        totals.total_lint_quantity_sold +=  rowValues.lint_quantity_sold;
+        totals.total_lint_qty_transfered += rowValues.lint_qty_transfered;
+        totals.total_sold_bales += rowValues.sold_bales;
+        totals.total_bales_transfered += rowValues.bales_transfered;
+        totals.total_lint_stock += rowValues.lint_stock;
+        totals.total_bale_stock += rowValues.bale_stock;
+
       }
-      offset += batchSize;
+      offset += batchSize;  
+
+    }
+
+
+    let currentsheet = workbook.getWorksheet(`Sheet${worksheetIndex}`);
+    if(currentsheet){
+      AddTotalRow(currentsheet, totals);
     }
     // Save the workbook
     await workbook.commit()
@@ -3383,13 +3861,95 @@ const generateGinnerSales = async () => {
     const whereClause = whereCondition.length > 0 ? `WHERE ${whereCondition.join(' AND ')}` : '';
     // Create the excel workbook file
     const workbook = new ExcelJS.stream.xlsx.WorkbookWriter({
-      stream: fs.createWriteStream("./upload/Ginner-sales-report-test.xlsx")
+      stream: fs.createWriteStream("./upload/Ginner-sales-report-test.xlsx"),
+      useStyles: true,
     });
 
+    
+    
+    
+    interface Totals{
+      total_no_of_bales: 0,
+      total_lint_quantity: 0,
+      total_Sales_value: 0,
+      total_rate: 0,
+    }
+
+    
+    let totals : Totals= {
+      total_no_of_bales: 0,
+      total_lint_quantity: 0,
+      total_Sales_value: 0,
+      total_rate: 0,
+
+    };
+    
+    const AddTotalRow = (currentWorksheet: ExcelJS.Worksheet | undefined, totals : Totals) =>{
+
+      if(currentWorksheet != undefined){
+        const rowValues = Object.values({
+          Index:"Total",
+          country:"",
+          state:"",
+          date:"",
+          created_at:"",
+          no_of_days:"",
+  
+          // seed_consumed_seasons:"",
+          lint_process_seasons:"",
+          season:"",
+          ginner:"",
+          invoice:"",
+          buyer_type:"",
+          buyer:"",
+          // heap:"",
+          lot_no:"",
+          reel_lot_no:"",
+          no_of_bales: Number(formatDecimal(totals.total_no_of_bales)),
+          press_no:"",
+          rate: Number(formatDecimal(totals.total_rate)),
+          lint_quantity: Number(formatDecimal(totals.total_lint_quantity)),
+          other_season_quantity:"",
+          other_season_bales:"",
+          sales_value: Number(formatDecimal(totals.total_Sales_value)),
+          vehicle_no:"",
+          transporter_name:"",
+          program:"",
+          agentDetails:"",
+          status:"",
+        });
+        currentWorksheet.addRow(rowValues).eachCell((cell, colNumber) => { cell.font={bold:true}});;
+  
+        const borderStyle = {
+          top: { style: "thin" },
+          bottom: { style: "thin" },
+          left: { style: "thin" },
+          right: { style: "thin" },
+        };
+        // Auto-adjust column widths based on content
+        currentWorksheet.columns.forEach((column: any) => {
+          let maxCellLength = 0;
+          column.eachCell({ includeEmpty: true }, (cell: any) => {
+            const cellLength = (cell.value ? cell.value.toString() : '').length;
+            maxCellLength = Math.max(maxCellLength, cellLength);
+            cell.border = borderStyle;
+          });
+          column.width = Math.min(14, maxCellLength + 2); // Limit width to 30 characters
+        });
+ 
+      }
+      
+    };
+    
+    
     const batchSize = 5000;
     let worksheetIndex = 0;
     let offset = 0;
     let hasNextBatch = true;
+
+
+    let currentWorksheet: ExcelJS.Worksheet| undefined = undefined;
+
 
     while (hasNextBatch) {
       // const dataQuery = `
@@ -3503,11 +4063,14 @@ const generateGinnerSales = async () => {
           SELECT 
               gs.id AS ginsale_id,
               gs.date AS date,
-              gs."createdAt" AS "createdAt",
+              gs."createdAt" AS createdAt,
+              EXTRACT(DAY FROM (gs."createdAt" - gs.date)) AS no_of_days,
               season.name AS season_name,
               program.program_name AS program,
               ginner.id AS ginner_id,
               ginner.name AS ginner,
+              c.county_name AS country_name,
+              s.state_name AS state_name,              
               gs.total_qty AS total_qty,
               spinner.id AS spinner_id,
               spinner.name AS buyerdata,
@@ -3577,9 +4140,12 @@ const generateGinnerSales = async () => {
           LEFT JOIN ginners buyerginner ON gs.buyer_ginner = buyerginner.id
           LEFT JOIN spinners spinner ON gs.buyer = spinner.id
           LEFT JOIN programs program ON gs.program_id = program.id
+          LEFT JOIN countries c ON ginner.country_id = c.id
+          LEFT JOIN states s ON ginner.state_id = s.id          
           ${whereClause}
           GROUP BY 
-              gs.id, spinner.id, season.id, ginner.id, program.id, buyerginner.id
+              gs.id, spinner.id, season.id, ginner.id, program.id, buyerginner.id, c.id, s.id
+          ORDER BY ginner.name ASC
           LIMIT ${batchSize} OFFSET ${offset};`
 
 
@@ -3593,20 +4159,32 @@ const generateGinnerSales = async () => {
       }
 
       if (offset % maxRowsPerWorksheet === 0) {
+
+        if(currentWorksheet){
+          AddTotalRow(currentWorksheet, totals);
+        }
+
+        totals = {
+          total_no_of_bales: 0,
+          total_lint_quantity: 0,
+          total_Sales_value: 0,
+          total_rate: 0,
+    
+        };
         worksheetIndex++;
       }
 
-      let currentWorksheet = workbook.getWorksheet(`Sheet${worksheetIndex}`);
+       currentWorksheet = workbook.getWorksheet(`Sheet${worksheetIndex}`);
       if (!currentWorksheet) {
         currentWorksheet = workbook.addWorksheet(`Sheet${worksheetIndex}`);
-        if (worksheetIndex == 1) {
-          currentWorksheet.mergeCells('A1:U1');
-          const mergedCell = currentWorksheet.getCell('A1');
-          mergedCell.value = 'CottonConnect | Ginner Sales Report';
-          mergedCell.font = { bold: true };
-          mergedCell.alignment = { horizontal: 'center', vertical: 'middle' };
-          // Set bold font for header row
-        }
+        // if (worksheetIndex == 1) {
+        //   currentWorksheet.mergeCells('A1:U1');
+        //   const mergedCell = currentWorksheet.getCell('A1');
+        //   mergedCell.value = 'CottonConnect | Ginner Sales Report';
+        //   mergedCell.font = { bold: true };
+        //   mergedCell.alignment = { horizontal: 'center', vertical: 'middle' };
+        //   // Set bold font for header row
+        // }
         // Set bold font for header row
         // const headerRow = currentWorksheet.addRow([
         //   "Sr No.", "Process Date", "Data Entry Date", "Seed Cotton Consumed Season", "Lint Process Season", "Lint sale chosen season", "Ginner Name",
@@ -3615,20 +4193,26 @@ const generateGinnerSales = async () => {
         // ]);
 
         const headerRow = currentWorksheet.addRow([
-          "Sr No.", "Process Date", "Data Entry Date", "Lint Process Season", "Lint sale chosen season", "Ginner Name",
+          "Sr No.", "Country","State", "Process Date", "Data Entry Date", "No of Days", "Lint Process Season", "Lint sale chosen season", "Ginner Name",
           "Invoice No", "Buyer Type", "Sold To", "Bale Lot No", "REEL Lot No", "No of Bales", "Press/Bale No", "Rate/Kg",
           "Total Quantity", "Other Season Quantity (Kgs)", "Other Season Bales", "Sales Value", "Vehicle No", "Transporter Name", "Programme", "Agent Details", "Status"
         ]);
         headerRow.font = { bold: true };
       }
 
+   
+
       // Append data to worksheet
       for await (const [index, item] of rows.entries()) {
 
         const rowValues = Object.values({
           index: index + offset + 1,
+          country: item.country_name ? item.country_name : '',
+          state: item.state_name ? item.state_name : '',          
           date: item.date ? item.date : '',
           created_at: item.createdAt ? item.createdAt : '',
+          no_of_days: item.no_of_days ? Number(item.no_of_days) : '',            
+
           // seed_consumed_seasons: item.seed_consumed_seasons ? item.seed_consumed_seasons : "",
           lint_process_seasons: item.lint_process_seasons ? item.lint_process_seasons : '',
           season: item.season_name ? item.season_name : '',
@@ -3665,9 +4249,19 @@ const generateGinnerSales = async () => {
           agentDetails: item.transaction_agent ? item.transaction_agent : 'NA',
           status: item.status === 'Sold' ? 'Sold' : `Available [Stock : ${item.qty_stock ? item.qty_stock : 0}]`
         });
-        currentWorksheet.addRow(rowValues).commit();
+        currentWorksheet.addRow(rowValues);
+        totals.total_no_of_bales += item.no_of_bales ? Number(item.no_of_bales) : 0;
+        totals.total_lint_quantity += item.lint_quantity ? Number(item.lint_quantity) : 0;
+        totals.total_Sales_value += item.sale_value ? Number(item.sale_value) : 0;
+        totals.total_rate += item.rate ? Number(item.rate ): 0;
+
       }
-      offset += batchSize;
+      offset += batchSize;   
+
+    }
+
+    if(currentWorksheet){
+      AddTotalRow(currentWorksheet, totals);
     }
     // Save the workbook
     await workbook.commit()
@@ -3694,7 +4288,8 @@ const generatePendingGinnerSales = async () => {
 
     // Create the excel workbook file
     const workbook = new ExcelJS.stream.xlsx.WorkbookWriter({
-      stream: fs.createWriteStream("./upload/ginner-pending-sales-report-test.xlsx")
+      stream: fs.createWriteStream("./upload/ginner-pending-sales-report-test.xlsx"),
+      useStyles: true,      
     });
 
     const batchSize = 5000;
@@ -3708,7 +4303,19 @@ const generatePendingGinnerSales = async () => {
       {
         model: Ginner,
         as: "ginner",
-        attributes: ["id", "name", "country_id", "brand"],
+          attributes: ["id", "name", "country_id", "brand", "state_id"],
+          include: [
+            {
+              model: Country,
+              as: "country",
+              attributes:["county_name"]
+            },
+            {
+              model: State,
+              as: "state",
+              attributes:["state_name"]
+            },
+          ],
       },
       {
         model: Season,
@@ -3731,6 +4338,67 @@ const generatePendingGinnerSales = async () => {
         attributes: ["id", "name"],
       }
     ];
+
+
+    interface Totals{  
+      total_no_of_bales: 0,
+      total_lint_quantity: 0,
+      total_rate:0,
+    };
+
+    let totals: Totals = {  
+      total_no_of_bales: 0,
+      total_lint_quantity: 0,
+      total_rate:0,
+    };
+
+    const AddTotalRow = (currentWorksheet: ExcelJS.Worksheet | undefined, totals : Totals) =>{
+
+      if(currentWorksheet != undefined){
+        const rowValues = Object.values({
+          Index:"Total",
+          country:"",
+          state:"",
+          date:"",
+          season:"",
+          ginner:"",
+          invoice:"",
+          buyer_type:"",
+          buyer:"",
+          lot_no:"",
+          reel_lot_no:"",
+          no_of_bales: Number(formatDecimal(totals.total_no_of_bales)),
+          press_no:"",
+          rate: Number(formatDecimal(totals.total_rate)),
+          total_qty: Number(formatDecimal(totals.total_lint_quantity)),
+          program:"",
+          status:"",
+        });
+  
+        currentWorksheet.addRow(rowValues).eachCell((cell, colNumber) => { cell.font={bold:true}});;
+  
+  
+        const borderStyle = {
+          top: { style: "thin" },
+          bottom: { style: "thin" },
+          left: { style: "thin" },
+          right: { style: "thin" },
+        };
+        
+        // Auto-adjust column widths based on content
+        currentWorksheet.columns.forEach((column: any) => {
+          let maxCellLength = 0;
+          column.eachCell({ includeEmpty: true }, (cell: any) => {
+            const cellLength = (cell.value ? cell.value.toString() : "").length;
+            maxCellLength = Math.max(maxCellLength, cellLength);
+            cell.border = borderStyle;
+          });
+          column.width = Math.min(24, maxCellLength + 2); // Limit width to 30 characters
+        });
+      }
+    };
+
+    let currentWorksheet: ExcelJS.Worksheet| undefined = undefined;
 
 
     while (hasNextBatch) {
@@ -3759,6 +4427,8 @@ const generatePendingGinnerSales = async () => {
           [Sequelize.literal('"sales"."invoice_file"'), "invoice_file"],
           [Sequelize.literal('"sales"."status"'), "status"],
           [Sequelize.literal('"sales"."qr"'), "qr"],
+          [sequelize.col('"sales"."ginner"."country"."county_name"'), "country_name"],
+          [sequelize.col('"sales"."ginner"."state"."state_name"'), "state_name"],
         ],
         where: whereCondition,
         include: [{
@@ -3776,7 +4446,10 @@ const generatePendingGinnerSales = async () => {
             attributes: []
           }]
         }],
-        group: ['sales.id', "sales.season.id", "sales.ginner.id", "sales.buyerdata.id", "sales.program.id", "sales.buyerdata_ginner.id"],
+        group: ['sales.id', "sales.season.id", "sales.ginner.id", "sales.buyerdata.id", "sales.program.id", "sales.buyerdata_ginner.id",
+          "sales.ginner.country.id",
+          "sales.ginner.state.id",
+        ],
         offset: offset,
         limit: batchSize,
       })
@@ -3787,23 +4460,36 @@ const generatePendingGinnerSales = async () => {
       }
 
       if (offset % maxRowsPerWorksheet === 0) {
+
+        if(currentWorksheet){
+          AddTotalRow(currentWorksheet, totals);
+        }
+
+        totals = {  
+          total_no_of_bales: 0,
+          total_lint_quantity: 0,
+          total_rate:0,
+        };
+
         worksheetIndex++;
       }
 
-      let currentWorksheet = workbook.getWorksheet(`Sheet${worksheetIndex}`);
+      currentWorksheet = workbook.getWorksheet(`Sheet${worksheetIndex}`);
       if (!currentWorksheet) {
         currentWorksheet = workbook.addWorksheet(`Sheet${worksheetIndex}`);
-        if (worksheetIndex == 1) {
-          currentWorksheet.mergeCells("A1:O1");
-          const mergedCell = currentWorksheet.getCell("A1");
-          mergedCell.value = "CottonConnect | Ginner Pending Sales Report";
-          mergedCell.font = { bold: true };
-          mergedCell.alignment = { horizontal: "center", vertical: "middle" };
-          // Set bold font for header row
-        }
+        // if (worksheetIndex == 1) {
+        //   currentWorksheet.mergeCells("A1:O1");
+        //   const mergedCell = currentWorksheet.getCell("A1");
+        //   mergedCell.value = "CottonConnect | Ginner Pending Sales Report";
+        //   mergedCell.font = { bold: true };
+        //   mergedCell.alignment = { horizontal: "center", vertical: "middle" };
+        //   // Set bold font for header row
+        // }
         // Set bold font for header row
         const headerRow = currentWorksheet.addRow([
           "Sr No.",
+          "Country",
+          "State",
           "Date",
           "Season",
           "Ginner Name",
@@ -3822,10 +4508,13 @@ const generatePendingGinnerSales = async () => {
         headerRow.font = { bold: true };
       }
 
+      
       // Append data to worksheet
       for await (const [index, item] of rows.entries()) {
         const rowValues = Object.values({
           index: index + offset + 1,
+          country: item.dataValues.country_name?item.dataValues.country_name:"",
+          state: item.dataValues.state_name?item.dataValues.state_name:"",
           date: item.dataValues.date ? item.dataValues.date : "",
           season: item.dataValues.season_name ? item.dataValues.season_name : "",
           ginner: item.dataValues.ginner ? item.dataValues.ginner : "",
@@ -3841,10 +4530,20 @@ const generatePendingGinnerSales = async () => {
           program: item.dataValues.program ? item.dataValues.program : "",
           status: item.dataValues.status ? item.dataValues.status : "",
         });
-        currentWorksheet.addRow(rowValues).commit();
+        currentWorksheet.addRow(rowValues);
+        totals.total_no_of_bales += Number(item.dataValues.no_of_bales);
+        totals.total_lint_quantity += Number(item.dataValues.total_qty);
+        totals.total_rate += Number(item.dataValues.rate);
+
       }
+
       offset += batchSize;
     }
+
+    if(currentWorksheet){
+      AddTotalRow(currentWorksheet, totals);
+    }
+
 
     // Save the workbook
     await workbook.commit()
@@ -3868,7 +4567,8 @@ const generateGinnerCottonStock = async () => {
   try {
     // Create the excel workbook file
     const workbook = new ExcelJS.stream.xlsx.WorkbookWriter({
-      stream: fs.createWriteStream("./upload/ginner-seed-cotton-stock-report-test.xlsx")
+      stream: fs.createWriteStream("./upload/ginner-seed-cotton-stock-report-test.xlsx"),
+      useStyles: true,
     });
 
     const batchSize = 5000;
@@ -3880,7 +4580,17 @@ const generateGinnerCottonStock = async () => {
       {
         model: Ginner,
         as: "ginner",
-        attributes: [],
+        include: [
+          {
+            model: Country,
+            as: "country",
+          },
+          {
+            model: State,
+            as: "state",
+          }
+
+        ],
       },
       {
         model: Season,
@@ -3893,6 +4603,63 @@ const generateGinnerCottonStock = async () => {
         attributes: [],
       },
     ];
+
+
+
+    interface Totals{
+      total_cotton_procured:0,
+      total_cotton_processed:0,
+      total_cotton_stock:0,
+    };
+    
+    let totals : Totals= {
+      total_cotton_procured:0,
+      total_cotton_processed:0,
+      total_cotton_stock:0,
+    };
+
+
+
+    const AddTotalRow = (currentWorksheet: ExcelJS.Worksheet | undefined, totals : Totals) =>{
+
+      if(currentWorksheet != undefined){
+        const rowValues = Object.values({
+          index: "Total:",
+          ginner:  "",
+          season:  "",
+          country: "",
+          state: "",
+          cotton_procured: Number(formatDecimal( totals.total_cotton_procured)),
+          cotton_processed: Number(formatDecimal(totals.total_cotton_processed)),
+          cotton_stock: Number(formatDecimal(totals.total_cotton_stock)),
+        });
+        currentWorksheet.addRow(rowValues).eachCell((cell, colNumber) => { cell.font={bold:true}});;
+  
+        const borderStyle = {
+          top: { style: "thin" },
+          bottom: { style: "thin" },
+          left: { style: "thin" },
+          right: { style: "thin" },
+        };
+  
+  
+        // Auto-adjust column widths based on content
+        currentWorksheet.columns.forEach((column: any) => {
+          let maxCellLength = 0;
+          column.eachCell({ includeEmpty: true }, (cell: any) => {
+            const cellLength = (cell.value ? cell.value.toString() : "").length;
+            maxCellLength = Math.max(maxCellLength, cellLength);
+            cell.border = borderStyle;
+          });
+          column.width = Math.min(14, maxCellLength + 2); // Limit width to 30 characters
+        });
+      }
+    };
+
+    let currentWorksheet: ExcelJS.Worksheet| undefined = undefined;
+    
+
+
 
     while (hasNextBatch) {
       let { count, rows } = await GinProcess.findAndCountAll({
@@ -3912,8 +4679,8 @@ const generateGinnerCottonStock = async () => {
           // ],
         ],
         include: include,
-        group: ["ginner.id", "season.id"],
-        order: [["ginner_id", "desc"]],
+        group: ["ginner.id", "season.id", "ginner.country.id", "ginner->state.id"],
+        order: [["ginner_name", "ASC"]],
         offset: offset,
         limit: batchSize,
       });
@@ -3924,31 +4691,44 @@ const generateGinnerCottonStock = async () => {
       }
 
       if (offset % maxRowsPerWorksheet === 0) {
+
+        if(currentWorksheet){
+          AddTotalRow(currentWorksheet, totals);
+        
+        }
+        totals = {
+          total_cotton_procured:0,
+          total_cotton_processed:0,
+          total_cotton_stock:0,
+        };
         worksheetIndex++;
       }
 
-      let currentWorksheet = workbook.getWorksheet(`Sheet${worksheetIndex}`);
+      currentWorksheet = workbook.getWorksheet(`Sheet${worksheetIndex}`);
       if (!currentWorksheet) {
         currentWorksheet = workbook.addWorksheet(`Sheet${worksheetIndex}`);
-        if (worksheetIndex == 1) {
-          currentWorksheet.mergeCells("A1:F1");
-          const mergedCell = currentWorksheet.getCell("A1");
-          mergedCell.value = "CottonConnect | Ginner Seed Cotton Stock Report";
-          mergedCell.font = { bold: true };
-          mergedCell.alignment = { horizontal: "center", vertical: "middle" };
-          // Set bold font for header row
-        }
+        // if (worksheetIndex == 1) {
+        //   currentWorksheet.mergeCells("A1:F1");
+        //   const mergedCell = currentWorksheet.getCell("A1");
+        //   mergedCell.value = "CottonConnect | Ginner Seed Cotton Stock Report";
+        //   mergedCell.font = { bold: true };
+        //   mergedCell.alignment = { horizontal: "center", vertical: "middle" };
+        //   // Set bold font for header row
+        // }
         // Set bold font for header row
         const headerRow = currentWorksheet.addRow([
           "Sr No.",
           "Ginner Name",
           "Season",
+          "Country",
+          "State",
           "Total Seed Cotton Procured (Kgs)",
           "Total Seed Cotton in Processed (Kgs)",
           "Total Seed Cotton in Stock (Kgs)",
         ]);
         headerRow.font = { bold: true };
       }
+
 
       for await (let [index, item] of rows.entries()) {
         let obj: any = {};
@@ -3992,14 +4772,27 @@ const generateGinnerCottonStock = async () => {
           index: index + offset + 1,
           ginner: item?.dataValues.ginner_name ? item?.dataValues.ginner_name : "",
           season: item?.dataValues.season_name ? item?.dataValues.season_name : "",
+          country: item?.dataValues.ginner.country.county_name,
+          state: item?.dataValues.ginner.state.state_name,
           cotton_procured: obj.cotton_procured ? Number(obj.cotton_procured) : 0,
           cotton_processed: obj.cotton_processed ? Number(obj.cotton_processed) : 0,
           cotton_stock: obj.cotton_stock ? Number(obj.cotton_stock) : 0,
         });
-        currentWorksheet.addRow(rowValues).commit();
+
+        totals.total_cotton_processed += obj.cotton_processed?Number(obj.cotton_processed):0;
+        totals.total_cotton_procured += obj.cotton_procured?Number(obj.cotton_procured):0;
+        totals.total_cotton_stock += obj.cotton_stock?Number(obj.cotton_stock):0;
+
+        currentWorksheet.addRow(rowValues);
       }
 
+    
+
       offset += batchSize;
+    }
+
+    if(currentWorksheet){
+      AddTotalRow(currentWorksheet, totals);
     }
 
     // Save the workbook
@@ -4031,7 +4824,8 @@ const generateSpinnerSummary = async () => {
   try {
 
     const workbook = new ExcelJS.stream.xlsx.WorkbookWriter({
-      stream: fs.createWriteStream("./upload/spinner-summary-test.xlsx")
+      stream: fs.createWriteStream("./upload/spinner-summary-test.xlsx"),
+      useStyles: true,
     });
     let worksheetIndex = 0;
 
@@ -4039,12 +4833,104 @@ const generateSpinnerSummary = async () => {
     let offset = 0;
     let hasNextBatch = true;
 
+    interface Totals{
+      total_lint_cotton_procured:0,
+      total_lint_cotton_procured_pending:0,
+      total_lint_consumed:0,
+      total_lintGreyoutMT:0,
+      total_lintActualStockMT:0,
+      total_balance_lint_cotton:0,
+      total_yarn_procured:0,
+      total_yarn_sold:0,
+      total_yarnGreyoutMT:0,
+      total_yarnActualStockMT:0,
+      total_yarn_stock:0,
+    }
+
+
+    let totals : Totals = {
+      total_lint_cotton_procured:0,
+      total_lint_cotton_procured_pending:0,
+      total_lint_consumed:0,
+      total_lintGreyoutMT:0,
+      total_lintActualStockMT:0,
+      total_balance_lint_cotton:0,
+      total_yarn_procured:0,
+      total_yarn_sold:0,
+      total_yarnGreyoutMT:0,
+      total_yarnActualStockMT:0,
+      total_yarn_stock:0,
+    };
+
+
+
+    const AddTotalRow = (currentWorksheet: ExcelJS.Worksheet | undefined, totals : Totals) =>{
+
+      if(currentWorksheet != undefined){
+        const rowVal ={
+          index:"Totals",
+          country:"",
+          state:"",
+          name:"",
+          lint_cotton_procured:Number(formatDecimal(totals.total_lint_cotton_procured)),
+          lint_cotton_procured_pending:Number(formatDecimal(totals.total_lint_cotton_procured_pending)),
+          lint_consumed:Number(formatDecimal(totals.total_lint_consumed)),
+          lintGreyoutMT:Number(formatDecimal(totals.total_lintGreyoutMT)),
+          lintActualStockMT:Number(formatDecimal(totals.total_lintActualStockMT)),
+          balance_lint_cotton:Number(formatDecimal(totals.total_balance_lint_cotton)),
+          yarn_procured:Number(formatDecimal(totals.total_yarn_procured)),
+          yarn_sold:Number(formatDecimal(totals.total_yarn_sold)),
+          yarnGreyoutMT:Number(formatDecimal(totals.total_lintGreyoutMT)),
+          yarnActualStockMT:Number(formatDecimal(totals.total_yarnActualStockMT)),
+          yarn_stock:Number(formatDecimal(totals.total_yarn_stock)),
+        }; 
+        const rowValues = Object.values(rowVal);
+        currentWorksheet?.addRow(rowValues).eachCell((cell) => { cell.font={bold:true}});
+  
+  
+        const borderStyle = {
+          top: { style: "thin" },
+          left: { style: "thin" },
+          bottom: { style: "thin" },
+          right: { style: "thin" },      
+        }
+    
+        // Auto-adjust column widths based on content
+        currentWorksheet?.columns.forEach((column: any) => {
+          let maxCellLength = 0;
+          column.eachCell({ includeEmpty: true }, (cell: any) => {
+            const cellLength = (cell.value ? cell.value.toString() : "").length;
+            maxCellLength = Math.max(maxCellLength, cellLength);
+            cell.border = borderStyle;
+          });
+          column.width = Math.min(14, maxCellLength + 2); // Limit width to 30 characters
+        });
+      }
+    };
+
+    let currentWorksheet: ExcelJS.Worksheet| undefined = undefined;
+
+
+
     while (hasNextBatch) {
       let { count, rows } = await Spinner.findAndCountAll({
         where: whereCondition,
-        attributes: ["id", "name", "address"],
+        attributes: ["id", "name", "address", "country_id", "state_id"],
         offset: offset,
         limit: batchSize,
+        include: [
+          {
+            model: Country,
+            as: "country",
+            attributes: ["id", "county_name"],
+          },
+          {
+            model: State,
+            as: "state",
+            attributes: ["id", "state_name"],
+          }
+        ],
+        order: [["name", "asc"]],
       });
 
       if (rows.length === 0) {
@@ -4053,8 +4939,28 @@ const generateSpinnerSummary = async () => {
       }
 
       if (offset % maxRowsPerWorksheet === 0) {
+
+        if(currentWorksheet){
+          AddTotalRow(currentWorksheet, totals);        
+        }
+
+        totals = {
+          total_lint_cotton_procured:0,
+          total_lint_cotton_procured_pending:0,
+          total_lint_consumed:0,
+          total_lintGreyoutMT:0,
+          total_lintActualStockMT:0,
+          total_balance_lint_cotton:0,
+          total_yarn_procured:0,
+          total_yarn_sold:0,
+          total_yarnGreyoutMT:0,
+          total_yarnActualStockMT:0,
+          total_yarn_stock:0,
+        };
         worksheetIndex++;
       }
+
+
 
       // Append data to worksheet
       for await (const [index, item] of rows.entries()) {
@@ -4315,35 +5221,54 @@ const generateSpinnerSummary = async () => {
         obj.yarnActualStockMT = convert_kg_to_mt(obj.yarnActualStockKg);
         obj.yarnStockMT = Number(convert_kg_to_mt(obj.yarnStockKG));
 
-        const rowValues = Object.values({
-          index: index + offset + 1,
+
+        const rowVal ={
+          index: index + 1,
+          country: item.country.county_name,
+          state: item.state.state_name,
           name: item.name ? item.name : "",
-          lint_cotton_procured: obj.lintCottonProcuredMT,
-          lint_cotton_procured_pending: obj.lintCottonProcuredPendingMT,
-          lint_consumed: obj.lintConsumedMT,
+          lint_cotton_procured: obj.lintCottonProcuredMT ? Number(obj.lintCottonProcuredMT) : 0,
+          lint_cotton_procured_pending: obj.lintCottonProcuredPendingMT ? Number(obj.lintCottonProcuredPendingMT) : 0,
+          lint_consumed: obj.lintConsumedMT ? Number(obj.lintConsumedMT) : 0,
           lintGreyoutMT: obj.lintGreyoutMT ? Number(obj.lintGreyoutMT) : 0,
           lintActualStockMT: obj.lintActualStockMT ? Number(obj.lintActualStockMT) : 0,
-          balance_lint_cotton: obj.lintStockMT,
-          yarn_procured: obj.yarnProcuredMT,
-          yarn_sold: obj.yarnSoldMT,
+          balance_lint_cotton: obj.lintStockMT ? Number(obj.lintStockMT) : 0,
+          yarn_procured: obj.yarnProcuredMT ? Number(obj.yarnProcuredMT) : 0,
+          yarn_sold: obj.yarnSoldMT ? Number(obj.yarnSoldMT) : 0,
           yarnGreyoutMT: obj.yarnGreyoutMT ? Number(obj.yarnGreyoutMT) : 0,
           yarnActualStockMT: obj.yarnActualStockMT ? Number(obj.yarnActualStockMT) : 0,
-          yarn_stock: obj.yarnStockMT,
-        });
+          yarn_stock: obj.yarnStockMT ? Number(obj.yarnStockMT) : 0,
+        }; 
 
-        let currentWorksheet = workbook.getWorksheet(`Spinner Summary ${worksheetIndex}`);
+        totals.total_lint_cotton_procured+=Number(rowVal.lint_cotton_procured);
+        totals.total_lint_cotton_procured_pending+=Number(rowVal.lint_cotton_procured_pending);
+        totals.total_lint_consumed+=Number(rowVal.lint_consumed);
+        totals.total_lintGreyoutMT+=Number(rowVal.lintGreyoutMT);
+        totals.total_lintActualStockMT+=Number(rowVal.lintActualStockMT);
+        totals.total_balance_lint_cotton+=Number(rowVal.balance_lint_cotton);
+        totals.total_yarn_procured+=Number(rowVal.yarn_procured);
+        totals.total_yarn_sold+=Number(rowVal.yarn_sold);
+        totals.total_yarnGreyoutMT+=Number(rowVal.lintGreyoutMT);
+        totals.total_yarnActualStockMT+=Number(rowVal.yarnActualStockMT);
+        totals.total_yarn_stock+=Number(rowVal.yarn_stock);
+
+        const rowValues = Object.values(rowVal);
+
+        currentWorksheet = workbook.getWorksheet(`Spinner Summary ${worksheetIndex}`);
         if (!currentWorksheet) {
           currentWorksheet = workbook.addWorksheet(`Spinner Summary ${worksheetIndex}`);
-          if (worksheetIndex == 1) {
-            currentWorksheet.mergeCells("A1:M1");
-            const mergedCell = currentWorksheet.getCell("A1");
-            mergedCell.value = "CottonConnect | Spinner Summary Report";
-            mergedCell.font = { bold: true };
-            mergedCell.alignment = { horizontal: "center", vertical: "middle" };
-          }
+          // if (worksheetIndex == 1) {
+          //   currentWorksheet.mergeCells("A1:M1");
+          //   const mergedCell = currentWorksheet.getCell("A1");
+          //   mergedCell.value = "CottonConnect | Spinner Summary Report";
+          //   mergedCell.font = { bold: true };
+          //   mergedCell.alignment = { horizontal: "center", vertical: "middle" };
+          // }
 
           const headerRow = currentWorksheet.addRow([
             "Sr No.",
+            "Country",
+            "State",
             "Spinner Name",
             "Total Lint Cotton Procured MT (Accepted)",
             "Total Lint Cotton Procured MT (Pending)",
@@ -4360,9 +5285,15 @@ const generateSpinnerSummary = async () => {
           headerRow.font = { bold: true };
         }
 
-        currentWorksheet.addRow(rowValues).commit();
+        currentWorksheet.addRow(rowValues);
       }
       offset += batchSize;
+
+    
+    }
+
+    if(currentWorksheet){
+      AddTotalRow(currentWorksheet, totals);
     }
 
     // Save the workbook
@@ -4396,7 +5327,9 @@ const generateSpinnerBale = async () => {
     const whereClause = whereCondition.length > 0 ? `WHERE ${whereCondition.join(' AND ')} AND bd.total_qty > 0` : 'WHERE bd.total_qty > 0';
 
     const workbook = new ExcelJS.stream.xlsx.WorkbookWriter({
-      stream: fs.createWriteStream("./upload/Spinner-bale-receipt-report-test.xlsx")
+      stream: fs.createWriteStream("./upload/Spinner-bale-receipt-report-test.xlsx"),
+      useStyles: true,
+      
     });
     let worksheetIndex = 0;
 
@@ -4405,6 +5338,67 @@ const generateSpinnerBale = async () => {
     let offset = 0;
     let hasNextBatch = true;
 
+
+    interface Totals{
+      total_no_of_bales:0,
+      total_lint_quantity: 0,
+
+    };
+
+    let totals: Totals = {
+      total_no_of_bales:0,
+      total_lint_quantity: 0,
+
+    };
+
+    const AddTotalRow = (currentWorksheet: ExcelJS.Worksheet | undefined, totals : Totals) =>{
+
+      if(currentWorksheet != undefined){
+        const rowValues = Object.values({
+          index:"Totals: ",
+          country:"",
+          state:"",
+          accept_date:"",
+          date:"",
+          no_of_days:"",
+          season:"",
+          spinner:"",
+          ginner:"",
+          invoice:"",
+          lot_no:"",
+          reel_lot_no:"",
+          press_no:"",
+          no_of_bales: Number(formatDecimal(totals.total_no_of_bales)),
+          lint_quantity: Number(formatDecimal(totals.total_lint_quantity)),
+          program:"",
+          greyout_status:"",
+        });
+  
+        let currentWorksheet = workbook.getWorksheet(`Spinner Bale Receipt ${worksheetIndex}`);
+        currentWorksheet?.addRow(rowValues).eachCell(cell=>{ cell.font={bold:true}});
+  
+        const borderStyle = {
+          top: { style: "thin" },
+          left: { style: "thin" },
+          bottom: { style: "thin" },
+          right: { style: "thin" },      
+        }
+  
+     
+        // Auto-adjust column widths based on content
+        currentWorksheet?.columns.forEach((column: any) => {
+          let maxCellLength = 0;
+          column.eachCell({ includeEmpty: true }, (cell: any) => {
+            const cellLength = (cell.value ? cell.value.toString() : "").length;
+            maxCellLength = Math.max(maxCellLength, cellLength);
+            cell.border = borderStyle;
+          });
+          column.width = Math.min(14, maxCellLength + 2); // Limit width to 30 characters
+        });
+      }
+    };
+
+    let currentWorksheet: ExcelJS.Worksheet| undefined = undefined;
     // //fetch data with pagination
     while (hasNextBatch) {
       let dataQuery = `
@@ -4437,9 +5431,12 @@ const generateSpinnerBale = async () => {
                         bs.sales_id
                 )
                 SELECT 
-                    gs.*, 
+                    gs.*,
+                    EXTRACT(DAY FROM ( gs."accept_date" - gs."createdAt")) AS no_of_days,
                     g.id AS ginner_id, 
                     g.name AS ginner, 
+                    g.country_id as country_id,
+                    g.state_id as state_id,
                     s.id AS season_id, 
                     s.name AS season_name, 
                     p.id AS program_id, 
@@ -4465,7 +5462,7 @@ const generateSpinnerBale = async () => {
                     bale_details bd ON gs.id = bd.sales_id
                 ${whereClause}
                 ORDER BY 
-                    gs."id" ASC
+                    "spinner" asc
                 LIMIT 
                     :limit OFFSET :offset;`
 
@@ -4484,16 +5481,39 @@ const generateSpinnerBale = async () => {
       }
 
       if (offset % maxRowsPerWorksheet === 0) {
+
+        if(currentWorksheet){
+          AddTotalRow(currentWorksheet, totals);
+        }
+
+        totals = {
+          total_no_of_bales:0,
+          total_lint_quantity: 0,
+        };
         worksheetIndex++;
       }
 
+
+
       for await (const [index, item] of rows.entries()) {
+
+
+        const country = await Country.findOne({
+          where: { id: item.country_id },
+        });
+        const state = await State.findOne({
+          where: { id: item.state_id },
+        });
+
         const rowValues = Object.values({
           index: index + offset + 1,
+          country: country.dataValues.county_name,
+          state: state.dataValues.state_name,
           accept_date: item.accept_date
             ? item.accept_date
             : "",
           date: item.date ? item.date : "",
+          no_of_days: item.no_of_days? Number(item.no_of_days):"",
           season: item.season_name ? item.season_name : "",
           spinner: item.spinner ? item.spinner : "",
           ginner: item.ginner ? item.ginner : "",
@@ -4516,21 +5536,24 @@ const generateSpinnerBale = async () => {
           greyout_status: item.greyout_status ? "Yes" : "No",
         });
 
-        let currentWorksheet = workbook.getWorksheet(`Spinner Bale Receipt ${worksheetIndex}`);
+        currentWorksheet = workbook.getWorksheet(`Spinner Bale Receipt ${worksheetIndex}`);
         if (!currentWorksheet) {
           currentWorksheet = workbook.addWorksheet(`Spinner Bale Receipt ${worksheetIndex}`);
-          if (worksheetIndex == 1) {
-            currentWorksheet.mergeCells("A1:O1");
-            const mergedCell = currentWorksheet.getCell("A1");
-            mergedCell.value = "CottonConnect | Spinner Bale Receipt Report";
-            mergedCell.alignment = { horizontal: "center", vertical: "middle" };
-            mergedCell.font = { bold: true };
-          }
+          // if (worksheetIndex == 1) {
+          //   currentWorksheet.mergeCells("A1:O1");
+          //   const mergedCell = currentWorksheet.getCell("A1");
+          //   mergedCell.value = "CottonConnect | Spinner Bale Receipt Report";
+          //   mergedCell.alignment = { horizontal: "center", vertical: "middle" };
+          //   mergedCell.font = { bold: true };
+          // }
 
           const headerRow = currentWorksheet.addRow([
             "Sr No.",
+            "Country",
+            "State",
             "Date of transaction accepted",
             "Date of transaction received",
+            "No. of Days",
             "Season",
             "Spinner Name",
             "Ginner Name",
@@ -4547,10 +5570,19 @@ const generateSpinnerBale = async () => {
           headerRow.font = { bold: true };
         }
 
-        currentWorksheet.addRow(rowValues).commit();
+        totals.total_no_of_bales += Number(item.accepted_no_of_bales);
+        totals.total_lint_quantity += Number(item.accepted_total_qty);
+
+        currentWorksheet.addRow(rowValues);
       }
+
+    
       offset += batchSize;
     }
+
+    if(currentWorksheet){
+      AddTotalRow(currentWorksheet, totals);
+     }
 
     // Save the workbook
     // Save the workbook
@@ -4578,7 +5610,9 @@ const generateSpinnerYarnProcess = async () => {
   try {
 
     const workbook = new ExcelJS.stream.xlsx.WorkbookWriter({
-      stream: fs.createWriteStream("./upload/spinner-yarn-process-test.xlsx")
+      stream: fs.createWriteStream("./upload/spinner-yarn-process-test.xlsx"),
+      useStyles: true,
+
     });
     let worksheetIndex = 0;
 
@@ -4586,6 +5620,87 @@ const generateSpinnerYarnProcess = async () => {
     let offset = 0;
 
     let hasNextBatch = true;
+
+
+    interface Totals{
+      total_comber:0,
+      total_cotton_consumed:0,
+      total_comber_consumed:0,
+      total_total_lint_blend_consumed:0,
+      total_total:0,
+      total_yarn_sold:0,
+      total_yarn_stock:0,
+    };
+
+    let totals: Totals = {
+      total_comber:0,
+      total_cotton_consumed:0,
+      total_comber_consumed:0,
+      total_total_lint_blend_consumed:0,
+      total_total:0,
+      total_yarn_sold:0,
+      total_yarn_stock:0,
+    };
+
+
+    const AddTotalRow = (currentWorksheet: ExcelJS.Worksheet | undefined, totals : Totals) =>{
+
+      if(currentWorksheet != undefined){
+        let rowValues;
+        rowValues = {
+             index:"Totals: ",
+             country:"",
+             state:"",
+             createdAt:"",
+             date:"",
+             no_of_days:"",
+             from_date:"",
+             to_date:"",
+             lint_consumed_seasons:"",
+             season:"",
+             spinner:"",
+             lotNo:"",
+             reel_lot_no:"",
+             yarnType:"",
+             count:"",
+             resa:"",
+             comber: Number(formatDecimal(totals.total_comber)),
+             blend: "",
+             blendqty: "",
+             cotton_consumed: Number(formatDecimal(totals.total_cotton_consumed)),
+             comber_consumed: Number(formatDecimal(totals.total_comber_consumed)),
+             total_lint_blend_consumed: Number(formatDecimal(totals.total_total_lint_blend_consumed)),
+             program:"",
+             total: Number(formatDecimal(totals.total_total)),
+             yarn_sold: Number(formatDecimal(totals.total_yarn_sold)),
+             yarn_stock: Number(formatDecimal(totals.total_yarn_stock)),
+             greyout_status:"",
+           }
+           let currentWorksheet = workbook.getWorksheet(`Spinner Yarn Process ${worksheetIndex}`);
+           currentWorksheet?.addRow(Object.values(rowValues)).eachCell(cell=> cell.font={bold:true});
+           const borderStyle = {
+             top: { style: "thin" },
+             left: { style: "thin" },
+             bottom: { style: "thin" },
+             right: { style: "thin" },      
+           }
+       
+           // Auto-adjust column widths based on content
+           currentWorksheet?.columns.forEach((column: any) => {
+             let maxCellLength = 0;
+             column.eachCell({ includeEmpty: true }, (cell: any) => {
+               const cellLength = (cell.value ? cell.value.toString() : "").length;
+               maxCellLength = Math.max(maxCellLength, cellLength);
+               cell.border = borderStyle;
+             });
+             column.width = Math.min(14, maxCellLength + 2); // Limit width to 30 characters
+           });
+ 
+      }
+      
+    };
+
+    let currentWorksheet: ExcelJS.Worksheet| undefined = undefined;
 
     while (hasNextBatch) {
       const dataQuery = `
@@ -4596,8 +5711,11 @@ const generateSpinnerYarnProcess = async () => {
             spin_process.from_date,
             spin_process.to_date,
             spin_process."createdAt",
+            EXTRACT(DAY FROM (spin_process."createdAt" - spin_process.date)) AS no_of_days,
             season.name AS season_name,
             spinner.name AS spinner_name,
+            spinner.country_id AS country_id,
+            spinner.state_id AS state_id,
             spin_process.batch_lot_no,
             spin_process.reel_lot_no,
             spin_process.yarn_type,
@@ -4678,6 +5796,8 @@ const generateSpinnerYarnProcess = async () => {
         )
         SELECT
           spd.*,
+          c.county_name AS country,
+          s.state_name AS state,
           COALESCE(ccd.cotton_consumed, 0) AS cotton_consumed,
           COALESCE(csd.comber_consumed, 0) AS comber_consumed,
           ccd.seasons AS lint_consumed_seasons,
@@ -4693,6 +5813,12 @@ const generateSpinnerYarnProcess = async () => {
           yarn_sold_data ysd ON spd.process_id = ysd.spin_process_id
         LEFT JOIN
           yarn_count_data ycd ON spd.process_id = ycd.process_id
+        LEFT JOIN
+            countries c ON spd.country_id = c.id
+        LEFT JOIN
+            states s ON spd.state_id = s.id
+        ORDER BY
+          spd.spinner_name ASC
         LIMIT :limit OFFSET :offset
         `;
 
@@ -4708,8 +5834,26 @@ const generateSpinnerYarnProcess = async () => {
       }
 
       if (offset % maxRowsPerWorksheet === 0) {
+        if(currentWorksheet){
+          AddTotalRow(currentWorksheet, totals);
+         
+        
+        }
+
+        totals = {
+          total_comber:0,
+          total_cotton_consumed:0,
+          total_comber_consumed:0,
+          total_total_lint_blend_consumed:0,
+          total_total:0,
+          total_yarn_sold:0,
+          total_yarn_stock:0,
+        };
         worksheetIndex++;
       }
+
+      
+
 
       // Append data to worksheet
       for await (const [index, item] of rows.entries()) {
@@ -4729,10 +5873,13 @@ const generateSpinnerYarnProcess = async () => {
           }
         }
 
-        const rowValues = Object.values({
+        const rowValues = {
           index: index + offset + 1,
+          country: item.country? item.country:"",
+          state: item.state? item.state: "",
           createdAt: item.createdAt ? item.createdAt : "",
           date: item.date ? item.date : "",
+          no_of_days: item.no_of_days ? Number(item.no_of_days) : "",
           from_date: item.from_date ? item.from_date : "",
           to_date: item.to_date ? item.to_date : "",
           lint_consumed_seasons: item.lint_consumed_seasons ? item.lint_consumed_seasons : "",
@@ -4762,23 +5909,26 @@ const generateSpinnerYarnProcess = async () => {
             : 0,
           yarn_stock: item.qty_stock ? Number(item.qty_stock) : 0,
           greyout_status: item.greyout_status ? "Yes" : "No",
-        });
+        };
 
-        let currentWorksheet = workbook.getWorksheet(`Spinner Yarn Process ${worksheetIndex}`);
+         currentWorksheet = workbook.getWorksheet(`Spinner Yarn Process ${worksheetIndex}`);
         if (!currentWorksheet) {
           currentWorksheet = workbook.addWorksheet(`Spinner Yarn Process ${worksheetIndex}`);
-          if (worksheetIndex == 1) {
-            currentWorksheet.mergeCells("A1:X1");
-            const mergedCell = currentWorksheet.getCell("A1");
-            mergedCell.value = "CottonConnect | Spinner Yarn Process Report";
-            mergedCell.font = { bold: true };
-            mergedCell.alignment = { horizontal: "center", vertical: "middle" };
-          }
+          // if (worksheetIndex == 1) {
+          //   currentWorksheet.mergeCells("A1:X1");
+          //   const mergedCell = currentWorksheet.getCell("A1");
+          //   mergedCell.value = "CottonConnect | Spinner Yarn Process Report";
+          //   mergedCell.font = { bold: true };
+          //   mergedCell.alignment = { horizontal: "center", vertical: "middle" };
+          // }
 
           const headerRow = currentWorksheet.addRow([
             "Sr No.",
+            "Country",
+            "State",
             "Date and Time",
             "Process Date",
+            "No of Days",
             "Yarn Production Start Date",
             "Yarn Production End Date",
             "Lint Cotton Consumed Season",
@@ -4804,11 +5954,27 @@ const generateSpinnerYarnProcess = async () => {
           headerRow.font = { bold: true };
         }
 
-        currentWorksheet.addRow(rowValues).commit();
+        totals.total_comber+=Number(rowValues.comber);
+
+        totals.total_cotton_consumed+=Number(rowValues.cotton_consumed);
+        totals.total_comber_consumed+=Number(rowValues.comber_consumed);
+        totals.total_total_lint_blend_consumed+=Number(rowValues.total_lint_blend_consumed);
+        totals.total_total+=Number(rowValues.total);
+        totals.total_yarn_sold+=Number(rowValues.yarn_sold);
+        totals.total_yarn_stock+=Number(rowValues.yarn_stock);
+
+        currentWorksheet.addRow(Object.values(rowValues));
       }
 
       offset += batchSize;
+     
     }
+
+    if(currentWorksheet){
+      AddTotalRow(currentWorksheet, totals);
+    }
+
+
 
     // Save the workbook
     await workbook.commit()
@@ -4834,7 +6000,9 @@ const generateSpinnerSale = async () => {
   try {
 
     const workbook = new ExcelJS.stream.xlsx.WorkbookWriter({
-      stream: fs.createWriteStream("./upload/spinner-yarn-sale-test.xlsx")
+      stream: fs.createWriteStream("./upload/spinner-yarn-sale-test.xlsx"),
+      useStyles: true,
+
     });
     let worksheetIndex = 0;
 
@@ -4847,7 +6015,17 @@ const generateSpinnerSale = async () => {
       {
         model: Spinner,
         as: "spinner",
-        attributes: ["id", "name"],
+        attributes: ["id", "name", "country_id", "state_id"],
+          include:[
+            {
+              model: Country,
+              as: "country",
+            },
+            {
+              model: State,
+              as: "state",
+            }
+          ],
       },
       {
         model: Season,
@@ -4871,6 +6049,78 @@ const generateSpinnerSale = async () => {
       },
     ];
 
+
+    interface Totals{
+      total_price:0,
+      total_net_weight:0,
+    };
+
+    let totals : Totals= {
+      total_price:0,
+     total_net_weight:0,
+   };
+
+
+
+
+
+   const AddTotalRow = (currentWorksheet: ExcelJS.Worksheet | undefined, totals : Totals) =>{
+
+    if(currentWorksheet != undefined){
+      const rowValues ={
+        index:"Totals: ",
+        country:"",
+        state:"",
+        createdAt:"",
+        date:"",
+        no_of_days:"",
+        lint_consumed_seasons:"",
+        season:"",
+        spinner:"",
+        buyer_id:"",
+        invoice:"",
+        order_ref:"",
+        lotNo:"",
+        reelLot:"",
+        program:"",
+        yarnType:"",
+        count:"",
+        boxes:"",
+        boxId:"",
+        price: Number(formatDecimal(totals.total_price)),
+        total: Number(formatDecimal(totals.total_net_weight)),
+        transporter_name:"",
+        vehicle_no:"",
+        agent:"",
+
+
+        
+      };
+      let currentWorksheet = workbook.getWorksheet(`Spinner Yarn Sales ${worksheetIndex}`);
+      currentWorksheet?.addRow( Object.values(rowValues)).eachCell(cell=> cell.font={bold:true});
+      let borderStyle = {
+        top: {style: "thin"},
+        left: {style: "thin"},
+        bottom: {style: "thin"},
+        right: {style: "thin"}
+      };
+      // Auto-adjust column widths based on content
+      currentWorksheet?.columns.forEach((column: any) => {
+        let maxCellLength = 0;
+        column.eachCell({ includeEmpty: true }, (cell: any) => {
+          const cellLength = (cell.value ? cell.value.toString() : "").length;
+          maxCellLength = Math.max(maxCellLength, cellLength);
+          cell.border = borderStyle;
+        });
+        column.width = Math.min(14, maxCellLength + 2); // Limit width to 30 characters
+      });
+    }
+    
+  };
+
+  let currentWorksheet: ExcelJS.Worksheet| undefined = undefined;
+
+
     while (hasNextBatch) {
 
       const rows: any = await SpinProcessYarnSelection.findAll(
@@ -4879,10 +6129,13 @@ const generateSpinnerSale = async () => {
             [Sequelize.literal('"sales"."id"'), "sales_id"],
             [Sequelize.literal('"sales"."date"'), "date"],
             [Sequelize.literal('"sales"."createdAt"'), "createdAt"],
+            [Sequelize.literal('EXTRACT(DAY FROM ("sales"."createdAt" - "sales"."date"))'), "no_of_days"],
             [Sequelize.col('"sales"."season"."name"'), "season_name"],
             [Sequelize.col('"sales"."season"."id"'), "season_id"],
             [Sequelize.col('"sales"."spinner"."id"'), "spinner_id"],
             [Sequelize.col('"sales"."spinner"."name"'), "spinner"],
+            [sequelize.col('"sales"."spinner"."country"."county_name"'),"country"],
+            [sequelize.col('"sales"."spinner"."state"."state_name"'),"state"],
             [Sequelize.col('"sales"."program"."program_name"'), "program"],
             [Sequelize.col('"sales"."order_ref"'), "order_ref"],
             [Sequelize.col('"sales"."buyer_type"'), "buyer_type"],
@@ -4938,7 +6191,10 @@ const generateSpinnerSale = async () => {
             "sales.weaver.id",
             "sales.knitter.id",
             "sales.program.id",
+            "sales.spinner.country.id",
+            "sales.spinner.state.id",
           ],
+          order: [["spinner", "asc"]],
           offset: offset,
           limit: batchSize,
         }
@@ -4951,8 +6207,19 @@ const generateSpinnerSale = async () => {
       }
 
       if (offset % maxRowsPerWorksheet === 0) {
+
+        if(currentWorksheet){
+          AddTotalRow(currentWorksheet, totals);
+        }
+        totals = {
+          total_price:0,
+         total_net_weight:0,
+       };
+
         worksheetIndex++;
       }
+
+
 
       for await (const [index, item] of rows.entries()) {
 
@@ -5002,10 +6269,13 @@ const generateSpinnerSale = async () => {
 
         yarnTypeData =
           item.dataValues?.yarn_type?.length > 0 ? item.dataValues?.yarn_type.join(",") : "";
-        const rowValues = Object.values({
+        const rowValues ={
           index: index + offset + 1,
+          country: item.dataValues.country?item.dataValues.country:"",
+          state: item.dataValues.state?item.dataValues.state:"",
           createdAt: item.dataValues.createdAt ? item.dataValues.createdAt : "",
           date: item.dataValues.date ? formatDate(item.dataValues.date) : "",
+          no_of_days: item.no_of_days? Number(item.no_of_days):"",
           lint_consumed_seasons: seedSeason ? seedSeason[0]?.seasons : "",
           season: item.dataValues.season_name ? item.dataValues.season_name : "",
           spinner: item.dataValues.spinner ? item.dataValues.spinner : "",
@@ -5036,23 +6306,26 @@ const generateSpinnerSale = async () => {
           agent: item.dataValues.transaction_agent
             ? item.dataValues.transaction_agent
             : "",
-        });
+        };
 
-        let currentWorksheet = workbook.getWorksheet(`Spinner Yarn Sales ${worksheetIndex}`);
+        currentWorksheet = workbook.getWorksheet(`Spinner Yarn Sales ${worksheetIndex}`);
         if (!currentWorksheet) {
           currentWorksheet = workbook.addWorksheet(`Spinner Yarn Sales ${worksheetIndex}`);
-          if (worksheetIndex == 1) {
-            currentWorksheet.mergeCells("A1:U1");
-            const mergedCell = currentWorksheet.getCell("A1");
-            mergedCell.value = "CottonConnect | Spinner Yarn Sales Report";
-            mergedCell.font = { bold: true };
-            mergedCell.alignment = { horizontal: "center", vertical: "middle" };
-          }
+          // if (worksheetIndex == 1) {
+          //   currentWorksheet.mergeCells("A1:U1");
+          //   const mergedCell = currentWorksheet.getCell("A1");
+          //   mergedCell.value = "CottonConnect | Spinner Yarn Sales Report";
+          //   mergedCell.font = { bold: true };
+          //   mergedCell.alignment = { horizontal: "center", vertical: "middle" };
+          // }
 
           const headerRow = currentWorksheet.addRow([
             "Sr No.",
+            "Country",
+            "State",
             "Created Date and Time",
             "Date of transaction",
+            "No. of Days",
             "Lint Cotton Consumed Season",
             "Yarn sale season chosen",
             "Spinner Name",
@@ -5075,10 +6348,20 @@ const generateSpinnerSale = async () => {
           headerRow.font = { bold: true };
         }
 
-        currentWorksheet.addRow(rowValues).commit();
+        currentWorksheet.addRow( Object.values(rowValues));
+
+        totals.total_price += Number(rowValues.price);
+        totals.total_net_weight += Number(rowValues.total);
+
       }
 
+   
+
       offset += batchSize;
+    }
+
+    if(currentWorksheet){
+      AddTotalRow(currentWorksheet, totals);
     }
 
     // Save the workbook
@@ -5406,7 +6689,9 @@ const generatePendingSpinnerBale = async () => {
     };
 
     const workbook = new ExcelJS.stream.xlsx.WorkbookWriter({
-      stream: fs.createWriteStream("./upload/Spinner-Pending-Bales-Receipt-Report-test.xlsx")
+      stream: fs.createWriteStream("./upload/Spinner-Pending-Bales-Receipt-Report-test.xlsx"),
+      useStyles: true,
+
     });
     let worksheetIndex = 0;
 
@@ -5431,16 +6716,91 @@ const generatePendingSpinnerBale = async () => {
       {
         model: Spinner,
         as: "buyerdata",
-        attributes: ["id", "name"],
+        attributes: ["id", "name", "country_id", "state_id"],
+        include: [
+          {
+            model: Country,
+            as: "country",
+          },
+          {
+            model: State,
+            as: "state",
+          }
+        ],
       },
     ];
 
+    interface Totals {
+      no_of_bales:0,
+      total_qty:0,
+      actual_qty:0,
+    };
+
+
+    let totals : Totals = {
+      no_of_bales:0,
+      total_qty:0,
+      actual_qty:0,
+    };
+
+
+    const AddTotalRow = (currentWorksheet: ExcelJS.Worksheet | undefined, totals : Totals) =>{
+
+      if(currentWorksheet != undefined){
+        let rowValues = {
+          index:"Totals: ",
+          country:"",
+          state:"",
+          createdAt:"",
+          date:"",
+          no_of_days:"",
+          season:"",
+          ginner:"",
+          spinner:"",
+          invoice:"",
+          no_of_bales: Number(formatDecimal(totals.no_of_bales)),
+          lot_no:"",
+          reel_lot_no:"",
+          total_qty: Number(formatDecimal(totals.total_qty)),
+          actual_qty: Number(formatDecimal(totals.actual_qty)),
+          program:"",
+          village:"",
+        };
+        let currentWorksheet = workbook.getWorksheet(`Spinner Pending Bales ${worksheetIndex}`);
+        currentWorksheet?.addRow(Object.values(rowValues)).eachCell(cell=> cell.font={bold:true});
+        let borderStyle = {
+          top: {style: "thin"},
+          left: {style: "thin"},
+          bottom: {style: "thin"},
+          right: {style: "thin"}
+        }
+        // Auto-adjust column widths based on content
+        currentWorksheet?.columns.forEach((column: any) => {
+          let maxCellLength = 0;
+          column.eachCell({ includeEmpty: true }, (cell: any) => {
+            const cellLength = (cell.value ? cell.value.toString() : "").length;
+            maxCellLength = Math.max(maxCellLength, cellLength);
+            cell.border = borderStyle
+          });
+          column.width = Math.min(20, maxCellLength + 2); // Limit width to 30 characters
+        });
+ 
+      }
+      
+    };
+
+    let currentWorksheet: ExcelJS.Worksheet| undefined = undefined;
+
+
     while (hasNextBatch) {
+
+
       const rows: any = await BaleSelection.findAll({
         attributes: [
           [Sequelize.literal('"sales"."id"'), "sales_id"],
           [Sequelize.literal('"sales"."date"'), "date"],
           [Sequelize.literal('"sales"."createdAt"'), "createdAt"],
+          [Sequelize.literal('EXTRACT(DAY FROM ("sales"."createdAt" - "sales"."date"))'), "no_of_days"],
           [Sequelize.literal('"sales"."accept_date"'), "accept_date"],
           [Sequelize.col('"sales"."season"."name"'), "season_name"],
           [Sequelize.col('"sales"."ginner"."id"'), "ginner_id"],
@@ -5448,6 +6808,8 @@ const generatePendingSpinnerBale = async () => {
           [Sequelize.col('"sales"."program"."program_name"'), "program"],
           [Sequelize.col('"sales"."buyerdata"."id"'), "spinner_id"],
           [Sequelize.col('"sales"."buyerdata"."name"'), "spinner"],
+          [Sequelize.col('"sales"."buyerdata"."country"."county_name"'), "country"],
+          [Sequelize.col('"sales"."buyerdata"."state"."state_name"'), "state"],          
           [Sequelize.literal('"sales"."total_qty"'), "total_qty"],
           [Sequelize.literal('"sales"."invoice_no"'), "invoice_no"],
           [Sequelize.col('"sales"."lot_no"'), "lot_no"],
@@ -5489,8 +6851,10 @@ const generatePendingSpinnerBale = async () => {
           "sales.ginner.id",
           "sales.buyerdata.id",
           "sales.program.id",
+          "sales.buyerdata.country.id",
+          "sales.buyerdata.state.id",          
         ],
-        order: [["sales_id", "desc"]],
+        order: [["spinner", "asc"]],
         offset: offset,
         limit: batchSize,
       });
@@ -5501,15 +6865,31 @@ const generatePendingSpinnerBale = async () => {
       }
 
       if (offset % maxRowsPerWorksheet === 0) {
+
+        if(currentWorksheet){
+          AddTotalRow(currentWorksheet, totals)
+        }
+
+        totals  = {
+          no_of_bales:0,
+          total_qty:0,
+          actual_qty:0,
+        };
+
         worksheetIndex++;
       }
 
+ 
+
       // Append data to worksheet
       for await (const [index, item] of rows.entries()) {
-        const rowValues = Object.values({
+        const rowValues = {
           index: index + offset + 1,
+          country: item.dataValues.country,
+          state: item.dataValues.state,          
           createdAt: item.dataValues.createdAt ? item.dataValues.createdAt : "",
           date: item.dataValues.date ? item.dataValues.date : "",
+          no_of_days: item.dataValues.no_of_days,
           season: item.dataValues.season_name ? item.dataValues.season_name : "",
           ginner: item.dataValues.ginner ? item.dataValues.ginner : "",
           spinner: item.dataValues.spinner ? item.dataValues.spinner : "",
@@ -5529,23 +6909,26 @@ const generatePendingSpinnerBale = async () => {
             : 0,
           program: item.dataValues.program ? item.dataValues.program : "",
           village: item.dataValues.vehicle_no ? item.dataValues.vehicle_no : ""
-        });
+        };
 
-        let currentWorksheet = workbook.getWorksheet(`Spinner Pending Bales ${worksheetIndex}`);
+         currentWorksheet = workbook.getWorksheet(`Spinner Pending Bales ${worksheetIndex}`);
         if (!currentWorksheet) {
           currentWorksheet = workbook.addWorksheet(`Spinner Pending Bales ${worksheetIndex}`);
-          if (worksheetIndex == 1) {
-            currentWorksheet.mergeCells("A1:N1");
-            const mergedCell = currentWorksheet.getCell("A1");
-            mergedCell.value = "CottonConnect | Spinner Pending Bales Receipt Report";
-            mergedCell.font = { bold: true };
-            mergedCell.alignment = { horizontal: "center", vertical: "middle" };
-          }
+          // if (worksheetIndex == 1) {
+          //   currentWorksheet.mergeCells("A1:N1");
+          //   const mergedCell = currentWorksheet.getCell("A1");
+          //   mergedCell.value = "CottonConnect | Spinner Pending Bales Receipt Report";
+          //   mergedCell.font = { bold: true };
+          //   mergedCell.alignment = { horizontal: "center", vertical: "middle" };
+          // }
 
           const headerRow = currentWorksheet.addRow([
             "Sr No.",
+            "Country",
+            "State",                    
             "Date and Time",
             "Date",
+            "No of Days",
             "Season",
             "Ginner Name",
             "Spinner Name",
@@ -5560,13 +6943,21 @@ const generatePendingSpinnerBale = async () => {
           ]);
           headerRow.font = { bold: true };
         }
+        totals.no_of_bales += rowValues.no_of_bales;
+        totals.total_qty += rowValues.total_qty;
+        totals.actual_qty += rowValues.actual_qty;
 
-        currentWorksheet.addRow(rowValues).commit();
+
+        currentWorksheet.addRow(Object.values(rowValues));
       }
 
+    
       offset += batchSize;
     }
 
+    if(currentWorksheet){
+      AddTotalRow(currentWorksheet, totals)
+    }
     // Save the workbook
     await workbook.commit()
       .then(() => {
