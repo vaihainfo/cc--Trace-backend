@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { fn, col, Op, Sequelize } from "sequelize";
+import { Op } from "sequelize";
 import moment from 'moment';
 import GinnerOrder from "../../models/ginner-order.model";
 import Season from "../../models/season.model";
@@ -2272,18 +2272,20 @@ const uploadIntegrityTest = async (req: Request, res: Response) => {
                     message: "Integrity Score cannot be empty"
                 });
             } else {
-                const brand = await Brand.findOne({ where: { brand_name: data.brand } });
+                const brandName = data.brand ? data.brand.trim() : null;
+                const brand = await Brand.findOne({ where: { brand_name: brandName } });
                 let farmer;
                 let ginner;
                 let farmGroup;
                 let icsName;
-                
+   
                 if (!brand) {
                     fail.push({
                         success: false,
                         data: { brand: data.brand ? data.brand : '', farmerName: data.farmer ? data.farmer : '', farmGroupName: data.farmGroup ? data.farmGroup : '', icsName: data.icsName ? data.icsName : '' },
                         message: "Brand does not exists"
                     });
+                    continue;
                 }
 
                 if(brand && data.stageOfTesting.toLowerCase().replace(/[^a-zA-Z0-9]/g, "") !== "lintcotton") {
@@ -2294,11 +2296,12 @@ const uploadIntegrityTest = async (req: Request, res: Response) => {
                             data: { brand: data.brand ? data.brand : '', farmGroupName: data.farmGroup ? data.farmGroup : '', icsName: data.icsName ? data.icsName : '' },
                             message: "Farm Group does not exists with this brand"
                         })    
-                        return res.sendSuccess(res, { pass, fail });            
+                        continue;          
                     }
 
                     if(farmGroup){
-                        icsName = await ICS.findOne({ where: { ics_name: data.icsName, farmGroup_id: farmGroup.id }, 
+                        const ics = data.icsName ? data.icsName.trim() : null;
+                        icsName = await ICS.findOne({ where: { ics_name: ics, farmGroup_id: farmGroup.id }, 
                             include: [
                             {
                                 model: FarmGroup, as: 'farmGroup'
@@ -2311,7 +2314,7 @@ const uploadIntegrityTest = async (req: Request, res: Response) => {
                                 data: { brand: data.brand ? data.brand : '', farmGroupName: data.farmGroup ? data.farmGroup : '', icsName: data.icsName ? data.icsName : '' },
                                 message: "ICS Name does not exists with this farm group"
                             })    
-                            return res.sendSuccess(res, { pass, fail });            
+                            continue;           
                         }
                     }
                 }
@@ -2359,8 +2362,7 @@ const uploadIntegrityTest = async (req: Request, res: Response) => {
                             success: false,
                             message: "Brand is not associated with the Organic Programme"
                         });
-                        return res.sendSuccess(res, { pass, fail });
-                       
+                        continue;
                        
                     }
                 }
@@ -2395,7 +2397,7 @@ const uploadIntegrityTest = async (req: Request, res: Response) => {
                         data: { brand: data.brand ? data.brand : '', farmerName: data.farmer ? data.farmer : '', farmGroupName: data.farmGroup ? data.farmGroup : '', icsName: data.icsName ? data.icsName : '' },
                         message: "Ginner with mentioned name "+ data.farmer +" does not exists with brand "+ data.brand
                     });
-                    return res.sendSuccess(res, { pass, fail });
+                    continue;
                 }
 
                 if(check){
@@ -2406,7 +2408,7 @@ const uploadIntegrityTest = async (req: Request, res: Response) => {
                         },
                         message: "Organic Integrity already exists"
                     });
-                    return res.sendSuccess(res, { pass, fail });
+                    continue;
                 }
                 else if((farmer || ginner) && brand && season ) {
                     const obj = {
@@ -3134,8 +3136,8 @@ const uploadAllocatedGinnerVillage = async (req: Request, res: Response) => {
         console.error(error);
         return res.sendError(res, error.message, error);
     }
-}
 
+}
 function isValidDateRange(startDate: Date | string, endDate: Date | string): boolean {
     // Convert to moment objects and set to UTC
     const start = moment.utc(startDate).startOf('day');
@@ -3428,7 +3430,6 @@ const uploadPriceMapping = async (req: Request, res: Response) => {
                             endDate: data.end_date_of_week,
                             market_price: type === "cotton" ? data.convetional_market_seed_cotton_pricekg : type === "lint" ? data.convetional_market_lint_pricekg : data.convetional_market_yarn_pricekg,
                             programme_price: data.other_sustainable_programme_pricekg,
-
                        
                         };
 

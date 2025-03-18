@@ -2613,7 +2613,7 @@ const integrityReport = async (brandId: any, type: any, programId: any, countryI
         });
 
         // Save the workbook
-        await workbook.xlsx.writeFile(excelFilePath); 
+        await workbook.xlsx.writeFile(excelFilePath);
         return { path: excelFilePath, count: rows.length }
     } catch (error) {
         console.error('Error appending data:', error);

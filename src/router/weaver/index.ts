@@ -23,8 +23,7 @@ import {
     updateWeaverProcess,
     fetchWeaverProcess,
     updateWeaverSales,
-    exportWeaverTransactionList,
-    deleteWeaverProcess
+    exportWeaverTransactionList
 } from "../../controllers/weaver";
 import accessControl from "../../middleware/access-control";
 import { Router } from "express";
@@ -35,7 +34,6 @@ router.use(accessControl);
 
 router.post('/process', createWeaverProcess);
 router.put('/process', updateWeaverProcess);
-router.delete('/process', deleteWeaverProcess);
 router.get('/process', fetchWeaverProcessPagination);
 router.get('/process/get-process', fetchWeaverProcess);
 router.get('/', fetchWeaverSalesPagination);

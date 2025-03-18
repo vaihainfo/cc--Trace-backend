@@ -152,7 +152,6 @@ const getDFabricSaleWhereQuery = (
 
   if (reqData?.season)
     where.season_id = reqData.season;
-  
 
   if (reqData?.fabric)
     where.fabric_id = reqData.fabric;
@@ -193,7 +192,6 @@ const getDyingWhereQuery = (
 
   if (reqData?.season)
     where.season_id = reqData.season;
-  
 
   if (reqData?.fabric)
     where.dying_id = reqData.fabric;
@@ -235,7 +233,6 @@ const getPrintingWhereQuery = (
 
   if (reqData?.season)
     where.season_id = reqData.season;
-  
 
   if (reqData?.fabric)
     where.printing_id = reqData.fabric;
@@ -278,7 +275,6 @@ const getWashingWhereQuery = (
 
   if (reqData?.season)
     where.season_id = reqData.season;
-  
 
   if (reqData?.fabric)
     where.washing_id = reqData.fabric;
@@ -320,7 +316,6 @@ const getCompactingWhereQuery = (
 
   if (reqData?.season)
     where.season_id = reqData.season;
-  
 
   if (reqData?.fabric)
     where.compacting_id = reqData.fabric;
@@ -1222,7 +1217,6 @@ const getOverallChartDataRes = async (
     order: [
       ["id", "DESC"],
     ],
-    
   });
   if (seasonIds.length != 3 && !reqSeason) {
     for (const season of seasons) {

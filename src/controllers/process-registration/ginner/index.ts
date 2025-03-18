@@ -72,6 +72,7 @@ const createGinner = async (req: Request, res: Response) => {
 }
 
 const fetchGinnerPagination = async (req: Request, res: Response) => {
+    console.log("...................................................................................");
     const searchTerm = req.query.search || '';
     const status = req.query.status || '';
     const sortOrder = req.query.sort || 'asc';

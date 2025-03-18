@@ -17,8 +17,6 @@ import {
     fetchSpinnerYarnProcessPagination,
     fetchSpinSalesPagination,
     exportSpinnerSale,
-    exportSpinnerCombernoil,
-    fetchCombernoilPagination,
     fetchKnitterYarnPagination,
     exportKnitterYarn,
     fetchKnitterSalesPagination,
@@ -90,6 +88,7 @@ router.get('/get-transactions', fetchTransactionsReport);
 router.get('/export-procurement-report', exportProcurementReport);
 router.get('/get-procured-quantities', fetchSumOfQtyPurchasedByProgram);
 
+
 router.get('/get-organic-integrity-report', getOrganicIntegrityReport);
 
 router.get('/get-validation-project-report', fetchValidationProjectReport);
@@ -124,8 +123,6 @@ router.get('/get-spinner-yarn-report', fetchSpinnerYarnProcessPagination);
 router.get('/export-spinner-yarn-report', exportSpinnerYarnProcess);
 router.get('/get-spinner-yarn-sales-report', fetchSpinSalesPagination);
 router.get('/export-spinner-yarn-sales-report', exportSpinnerSale);
-router.get('/get-spinner-combernoil-report', fetchCombernoilPagination);
-router.get('/export-spinner-combernoil-report', exportSpinnerCombernoil);
 router.get('/get-knitter-yarn-report', fetchKnitterYarnPagination);
 router.get('/export-knitter-yarn-report', exportKnitterYarn);
 router.get('/get-knitter-yarn-process-report', fetchKnitterYarnProcess);
