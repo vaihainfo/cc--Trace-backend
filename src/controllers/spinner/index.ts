@@ -261,6 +261,7 @@ const updateSpinProcess = async (req: Request, res: Response) => {
       yarn_type: req.body.yarnType,
       yarn_count: req.body.yarnCount,
       yarn_qty_produced: req.body.yarnQtyProduced,
+      batch_lot_no: req.body.batchLotNo,
       yarn_realisation: req.body.yarnRealisation,
       net_yarn_qty: req.body.netYarnQty,
       qty_stock: req.body.netYarnQty,
