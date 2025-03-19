@@ -14759,7 +14759,7 @@ const exportSpinnerCottonStock = async (req: Request, res: Response) => {
             bale_details bd ON gs.id = bd.sales_id
         ${whereClause}
         ORDER BY 
-            gs."updatedAt" DESC
+            spinner_name ASC
         LIMIT :limit OFFSET :offset`;
 
       const [countResult, rows] = await Promise.all([
