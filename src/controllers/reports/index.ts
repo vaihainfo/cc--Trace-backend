@@ -3326,7 +3326,7 @@ const exportSpinnerProcessGreyOutReport = async (req: Request, res: Response) =>
         const idArray: number[] = programId
           .split(",")
           .map((id: any) => parseInt(id, 10));
-        whereCondition.program_id = { [Op.in]: idArray };
+        whereCondition["$program_id$"] = { [Op.in]: idArray };
       }
 
       let include = [
@@ -3498,7 +3498,7 @@ const exportSpinnerGreyOutReport = async (req: Request, res: Response) => {
         const idArray: number[] = programId
           .split(",")
           .map((id: any) => parseInt(id, 10));
-        whereCondition.program_id = { [Op.in]: idArray };
+        whereCondition["$program_id$"] = { [Op.in]: idArray };
       }
 
       whereCondition[Op.or] = [
@@ -4349,8 +4349,8 @@ const fetchSpinnerBalePagination = async (req: Request, res: Response) => {
                     EXTRACT(DAY FROM ( gs."accept_date"- gs."createdAt" )) AS no_of_days,
                     g.id AS ginner_id, 
                     g.name AS ginner, 
-                    g.country_id AS country_id,
-                    g.state_id AS state_id,
+                    sp.country_id AS country_id,
+                    sp.state_id AS state_id,
                     s.id AS season_id, 
                     s.name AS season_name, 
                     p.id AS program_id, 
@@ -4817,8 +4817,8 @@ const exportSpinnerBale = async (req: Request, res: Response) => {
                     EXTRACT(DAY FROM (  gs."accept_date" - gs."createdAt")) AS no_of_days,
                     g.id AS ginner_id, 
                     g.name AS ginner, 
-                    g.country_id as country_id,
-                    g.state_id as state_id,
+                    sp.country_id as country_id,
+                    sp.state_id as state_id,
                     s.id AS season_id, 
                     s.name AS season_name, 
                     p.id AS program_id, 
@@ -14694,7 +14694,7 @@ const fetchSpinnerLintCottonStock = async (req: Request, res: Response) => {
             bale_details bd ON gs.id = bd.sales_id
         ${whereClause}
         ORDER BY 
-            "spinner_name" DESC
+            "spinner_name" ASC
         LIMIT :limit OFFSET :offset
         )
 
@@ -14861,7 +14861,7 @@ const exportSpinnerCottonStock = async (req: Request, res: Response) => {
                 spinners sp ON gs.buyer = sp.id
         ${whereClause}`;
 
-      let dataQuery = `
+        let dataQuery = `
         WITH bale_details AS (
             SELECT 
                 bs.sales_id,
@@ -14885,8 +14885,7 @@ const exportSpinnerCottonStock = async (req: Request, res: Response) => {
                 AND (bs.spinner_status = true OR gs.status = 'Sold')
             GROUP BY 
                 bs.sales_id
-        ),
-        gin_sale_date as(
+        )
         SELECT 
             gs.*, 
             g.id AS ginner_id, 
@@ -14897,8 +14896,8 @@ const exportSpinnerCottonStock = async (req: Request, res: Response) => {
             p.program_name, 
             sp.id AS spinner_id, 
             sp.name AS spinner_name, 
-            sp.country_id as country_id,
-            sp.state_id as state_id, 
+            c.county_name as country,
+            st.state_name as state,
             sp.address AS spinner_address, 
             bd.no_of_bales AS accepted_no_of_bales, 
             bd.total_qty AS accepted_total_qty
@@ -14913,23 +14912,15 @@ const exportSpinnerCottonStock = async (req: Request, res: Response) => {
         LEFT JOIN 
             spinners sp ON gs.buyer = sp.id
         LEFT JOIN 
+            countries c ON sp.country_id = c.id
+        LEFT JOIN 
+            states st ON sp.state_id = st.id
+        LEFT JOIN 
             bale_details bd ON gs.id = bd.sales_id
         ${whereClause}
         ORDER BY 
-            "spinner_name" DESC
-        LIMIT :limit OFFSET :offset
-        )
-        Select 
-          gsd.*,
-          c.county_name as country,
-          s.state_name as state
-        from 
-          gin_sale_date gsd
-        left join
-          countries c on gsd.country_id = c.id
-        left join
-          states s on gsd.state_id = s.id
-      `;
+            gs."updatedAt" DESC
+        LIMIT :limit OFFSET :offset`;
 
       const [countResult, rows] = await Promise.all([
         sequelize.query(countQuery, {
@@ -14952,8 +14943,8 @@ const exportSpinnerCottonStock = async (req: Request, res: Response) => {
       for await (const [index, spinner] of rows.entries()) {
         const rowValues = {
           index: index + 1,
-          country: spinner.country,
-          state: spinner.state,
+          country: spinner?.country ? spinner?.country : "",
+          state: spinner?.state ? spinner?.state : "",
           date: spinner?.date ? moment(spinner.date).format('DD-MM-YYYY') : "",
           season: spinner?.season_name ? spinner?.season_name : "",
           ginner_names: spinner?.ginner_name ? spinner?.ginner_name
