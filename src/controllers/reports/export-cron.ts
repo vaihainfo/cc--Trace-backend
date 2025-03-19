@@ -71,7 +71,7 @@ import { NUMBER } from "sequelize";
 import GinHeap from "../../models/gin-heap.model";
 import ValidationProject from "../../models/validation-project.model";
 import GinToGinSale from "../../models/gin-to-gin-sale.model";
-import SpinCombernoilSale from "../../models/spin_combernoil_sale.model";
+
 
 const exportReportsTameTaking = async () => {
   // //call all export reports one by one on every cron
@@ -107,6 +107,7 @@ const exportReportsOnebyOne = async () => {
   await generatePendingGinnerSales();
   await generateGinnerCottonStock();
   await generateGinnerProcess();
+  await generateGinnerLintCottonStock()
   //spinner Reports
   await generateSpinnerSummary();
   await generateSpinnerBale();
@@ -118,7 +119,6 @@ const exportReportsOnebyOne = async () => {
   await exportGinHeapReport();
   await exportGinnerProcessGreyOutReport();
   await exportSpinnerProcessGreyOutReport();
-  await generateSpinnerCombernoilSale();
 
 
   console.log('Cron Job Completed to execute all reports.');
@@ -2351,20 +2351,25 @@ const generatePscpProcurementLiveTracker = async () => {
               CAST((COALESCE(gb.total_qty, 0) / 1000 + COALESCE(gtgr.lint_qty, 0) / 1000) - (COALESCE(gs.total_qty, 0) / 1000 + COALESCE(gbg.total_qty, 0) / 1000 + COALESCE(gtg.lint_qty, 0) / 1000) AS NUMERIC), 
               2
           ) AS DOUBLE PRECISION) AS balance_lint_quantity,
-          CASE
-            WHEN COALESCE(gb.total_qty, 0) != 0 THEN
-              CASE
-                WHEN COALESCE(gs.total_qty, 0) > COALESCE(gb.total_qty, 0) THEN 0
-                ELSE ROUND(
-                  (
+             CASE
+              WHEN COALESCE(gb.total_qty, 0) != 0 THEN
+                CASE
+                  -- Ignore minor floating-point precision differences
+                  WHEN ABS(COALESCE(gs.total_qty, 0) - COALESCE(gb.total_qty, 0)) > 0.0001 
+                  AND COALESCE(gs.total_qty, 0) > COALESCE(gb.total_qty, 0) THEN 
+                    ROUND(
+                      (
+                        COALESCE(gs.total_qty::NUMERIC, 0) / COALESCE(gb.total_qty::NUMERIC, 0)
+                      ) * 100, 2
+                    )
+                  ELSE ROUND(
                     (
-                      COALESCE(gs.total_qty, 0)
-                    ) / COALESCE(gb.total_qty, 0)
-                  ) * 100
-                )
-              END
-            ELSE 0
-          END AS ginner_sale_percentage
+                      COALESCE(gs.total_qty::NUMERIC, 0) / COALESCE(gb.total_qty::NUMERIC, 0)
+                    ) * 100, 2
+                  )
+                END
+              ELSE 0
+            END AS ginner_sale_percentage
         FROM
           filtered_ginners fg
           LEFT JOIN procurement_data pd ON fg.id = pd.mapped_ginner
@@ -3356,6 +3361,375 @@ const generateGinnerSummary = async () => {
         // Rename the temporary file to the final filename
         fs.renameSync("./upload/ginner-summary-test.xlsx", './upload/ginner-summary.xlsx');
         console.log('ginner-summary report generation completed.');
+      })
+      .catch(error => {
+        console.log('Failed generation?.');
+        throw error;
+      });
+
+  } catch (error: any) {
+    console.error("Error appending data:", error);
+  }
+
+};
+
+const generateGinnerLintCottonStock = async () => {
+  // const excelFilePath = path.join("./upload", "ginner-summary.xlsx");
+
+  const maxRowsPerWorksheet = 500000; // Maximum number of rows per worksheet in Excel
+  const transactionWhere: any = {};
+  const ginBaleWhere: any = {};
+  const baleSelectionWhere: any = {};
+
+  try {
+    const workbook = new ExcelJS.stream.xlsx.WorkbookWriter({
+      stream: fs.createWriteStream("./upload/ginner-lint-stock-test.xlsx"),
+      useStyles: true,
+
+    });
+
+    const batchSize = 5000;
+    let worksheetIndex = 0;
+    let offset = 0;
+    let hasNextBatch = true;
+
+    let include = [
+      {
+        model: Ginner,
+        as: "ginner",
+        include: [
+          {
+            model: Country,
+            as  : "country",
+          },
+          {
+            model: State,
+            as  : "state",
+          },
+          {
+            model: District,
+            as  : "district",
+          }
+        ]
+      },
+      {
+        model: Season,
+        as: "season",
+      },
+      {
+        model: Program,
+        as: "program",
+
+      },
+    ];
+
+
+    while (hasNextBatch) {
+      let rows= await GinProcess.findAll({
+        attributes: [
+          [Sequelize.literal('"ginner"."id"'), "ginner_id"],
+          [Sequelize.literal('"ginner"."name"'), "ginner_name"],
+          [Sequelize.literal('"season"."id"'), "season_id"],
+          [Sequelize.col('"season"."name"'), "season_name"],
+          [Sequelize.literal('"ginner"."country_id"'), "country_id"],
+          [Sequelize.literal('"ginner"."state_id"'), "state_id"],
+          [Sequelize.literal('"ginner"."district_id"'), "district_id"],
+          [Sequelize.literal('"program"."program_name"'), 'program_name'],
+        ],
+        include: include,
+        group: ["ginner.id", "season.id","ginner->country.id","ginner->state.id","ginner->district.id","program.id"],
+        order: [["ginner_name", "ASC"],["season_name", "DESC"]],
+        limit: batchSize,
+        offset: offset, 
+      });
+
+      if (rows.length === 0) {
+        hasNextBatch = false;
+        break;
+      }
+
+      if (offset % maxRowsPerWorksheet === 0) {
+        worksheetIndex++;
+      }
+
+      let currentWorksheet = workbook.getWorksheet(`Sheet${worksheetIndex}`);
+      if (!currentWorksheet) {
+        currentWorksheet = workbook.addWorksheet(`Sheet${worksheetIndex}`);
+        // if (worksheetIndex == 1) {
+        //   currentWorksheet.mergeCells('A1:S1');
+        //   const mergedCell = currentWorksheet.getCell('A1');
+        //   mergedCell.value = 'CottonConnect | Ginner Summary Report';
+        //   mergedCell.font = { bold: true };
+        //   mergedCell.alignment = { horizontal: 'center', vertical: 'middle' };
+        //   // Set bold font for header row
+
+        // }
+        // Set bold font for header row
+        const headerRow = currentWorksheet.addRow([
+          "S. No.", "Season", "Ginner Name", "Country", "State", "District", "Total Procured Seed Cotton (Kgs)", "Total Processed Lint (Kgs)",
+          "Total Sold Lint (Kgs)", "Total Lint in Stock (Kgs)"
+        ]);
+        headerRow.font = { bold: true };
+      }
+
+      // Append data to worksheet
+      for await (const [index, ginner] of rows.entries()) {
+        let obj: any = {};
+
+
+        let [cottonProcured, lintProcured, lintSold, [lintStock]]: any =
+          await Promise.all([
+            Transaction.findOne({
+              attributes: [
+                [
+                  sequelize.fn(
+                    "COALESCE",
+                    sequelize.fn(
+                      "SUM",
+                      Sequelize.literal("CAST(qty_purchased AS DOUBLE PRECISION)")
+                    ),
+                    0
+                  ),
+                  "qty",
+                ],
+              ],
+              where: {
+                season_id: ginner.season_id,
+                mapped_ginner: ginner.ginner_id,
+                status: "Sold",
+              },
+            }),
+            GinBale.findOne({
+              attributes: [
+                [
+                  sequelize.fn(
+                    "COALESCE",
+                    sequelize.fn(
+                      "SUM",
+                      sequelize.literal(`
+                        CASE
+                          WHEN "gin-bales"."old_weight" IS NOT NULL THEN CAST("gin-bales"."old_weight" AS DOUBLE PRECISION)
+                          ELSE CAST("gin-bales"."weight" AS DOUBLE PRECISION)
+                        END
+                      `)
+                    ),
+                    0
+                  ),
+                  "qty",
+                ],
+                [
+                  sequelize.fn(
+                    "COUNT",
+                    Sequelize.literal('DISTINCT "gin-bales"."id"')
+                  ),
+                  "bales_procured",
+                ],
+              ],
+              include: [
+                {
+                  model: GinProcess,
+                  as: "ginprocess",
+                  attributes: [],
+                },
+              ],
+              where: {
+                "$ginprocess.season_id$": ginner.season_id,
+                "$ginprocess.ginner_id$": ginner.ginner_id,
+              },
+              group: ["ginprocess.ginner_id"],
+            }),
+            BaleSelection.findOne({
+              attributes: [
+                [
+                  sequelize.fn(
+                    "COALESCE",
+                    sequelize.fn(
+                      "SUM",
+                      sequelize.literal(`
+                        CASE
+                          WHEN "bale"."old_weight" IS NOT NULL THEN CAST("bale"."old_weight" AS DOUBLE PRECISION)
+                          ELSE CAST("bale"."weight" AS DOUBLE PRECISION)
+                        END
+                      `)
+                    ),
+                    0
+                  ),
+                  "qty",
+                ],
+                [
+                  sequelize.fn("COUNT", Sequelize.literal("DISTINCT bale_id")),
+                  "bales_sold",
+                ],
+              ],
+              include: [
+                {
+                  model: GinSales,
+                  as: "sales",
+                  attributes: [],
+                },
+                {
+                  model: GinBale,
+                  as: "bale",
+                  attributes: [],
+                  include: [
+                    {
+                      model: GinProcess,
+                      as: "ginprocess",
+                      attributes: [],
+                    },
+                  ],
+                },
+              ],
+              where: {
+                "$bale.ginprocess.season_id$": ginner.season_id,
+                "$sales.ginner_id$": ginner.ginner_id,
+                "$sales.status$": { [Op.in]: ['Pending', 'Pending for QR scanning', 'Partially Accepted', 'Partially Rejected', 'Sold'] },
+                "$sales.buyer_ginner$": { [Op.is]: null }
+              },
+              group: ["sales.ginner_id"],
+            }),
+            sequelize.query(`
+              SELECT 
+                SUM(CAST(combined_data.weight AS DOUBLE PRECISION)) AS lint_stock,
+                COUNT(combined_data.bale_id) AS bales_stock
+              FROM (
+                  -- First Query: Direct gin-bales
+                  SELECT 
+                      gp.id AS process_id,
+                gp.ginner_id AS ginner_id,
+                      gb.id AS bale_id,
+                      gb.weight
+                  FROM 
+                      gin_processes gp
+                  JOIN 
+                      "gin-bales" gb ON gp.id = gb.process_id
+                  JOIN 
+                      ginners g ON gp.ginner_id = g.id
+                  JOIN 
+                      seasons s ON gp.season_id = s.id
+                  JOIN 
+                      programs p ON gp.program_id = p.id
+                  WHERE 
+                      gp.ginner_id = ${ginner.ginner_id}
+                      AND gp.season_id = ${ginner.season_id}
+                      AND gp.season_id IN (10)
+                      AND gb.sold_status = false
+                      AND gp.greyout_status = false
+                  UNION ALL
+                  -- Second Query: Gin-to-Gin sales
+                  SELECT 
+                      gp.id AS process_id,
+                      gp.ginner_id AS ginner_id,
+                      gb.id AS bale_id,
+                      gb.weight
+                  FROM 
+                      gin_to_gin_sales gtg
+                  JOIN 
+                      gin_processes gp ON gtg.process_id = gp.id
+                  JOIN 
+                      "gin-bales" gb ON gtg.bale_id = gb.id
+                  JOIN 
+                      gin_sales gs ON gtg.sales_id = gs.id
+                  JOIN 
+                      ginners g ON gtg.new_ginner_id = g.id
+                  JOIN 
+                      seasons s ON gp.season_id = s.id
+                  JOIN 
+                      programs p ON gp.program_id = p.id
+                  WHERE 
+                    (
+                      gtg.new_ginner_id = ${ginner.ginner_id}
+                      AND gp.season_id = ${ginner.season_id}
+                      AND gp.greyout_status = false
+                      AND gb.sold_status = true
+                      AND gtg.gin_accepted_status = true
+                      AND gtg.gin_sold_status IS NULL
+                    ) OR (
+                      gtg.old_ginner_id = ${ginner.ginner_id}
+                      AND gp.season_id = ${ginner.season_id}
+                      AND gp.greyout_status = false
+                      AND gb.sold_status = true
+                      AND gtg.gin_accepted_status = false
+                      AND gtg.gin_sold_status IS NULL
+                    )
+              ) combined_data
+              GROUP BY 
+                combined_data.ginner_id
+            `)
+          ]);
+
+          obj.ginner_id = ginner?.ginner_id;
+          obj.ginner_name = ginner?.ginner?.name ?? "";
+          obj.season_id = ginner?.season_id;
+          obj.season = ginner?.season?.name ?? "";
+          obj.program = ginner?.program?.program_name ?? "";
+          obj.country_id = ginner?.dataValues?.country_id;
+          obj.country = ginner?.ginner?.country?.county_name ?? "";
+          obj.state_id = ginner?.dataValues?.state_id;
+          obj.state = ginner?.ginner?.state?.state_name ?? "";
+          obj.district_id = ginner?.dataValues?.district_id;
+          obj.district = ginner?.ginner?.district?.district_name ?? "";
+          obj.cottonProcuredKg = cottonProcured?.dataValues?.qty ?? 0;
+          obj.cottonProcuredMt = convert_kg_to_mt(cottonProcured?.dataValues.qty ?? 0);
+          obj.lintProcuredKg = lintProcured?.dataValues.qty ?? 0;
+          obj.lintProcuredMt = convert_kg_to_mt(lintProcured?.dataValues.qty ?? 0);
+          obj.lintSoldKg = lintSold?.dataValues.qty ?? 0;
+          obj.lintSoldMt = convert_kg_to_mt(lintSold?.dataValues.qty ?? 0);
+          obj.lintStockKg = lintStock && lintStock[0] ? lintStock[0]?.lint_stock : 0;
+          obj.lintStockMT = convert_kg_to_mt(lintStock && lintStock[0] ? lintStock[0]?.lint_stock : 0);
+    
+          obj.balesProduced = lintProcured?.dataValues?.bales_procured
+            ? Number(lintProcured?.dataValues?.bales_procured)
+            : 0;
+          obj.balesSold = lintSold?.dataValues?.bales_sold
+            ? Number(lintSold?.dataValues?.bales_sold)
+            : 0;
+          obj.balesStock = lintStock && lintStock[0]?.bales_stock
+          ? Number(lintStock[0]?.bales_stock)
+          : 0;
+  
+          const rowValues = {
+            index: index + 1,
+            season: obj.season,
+            name: obj.ginner_name ? obj.ginner_name : '',
+            country: obj.country,
+            state: obj.state,
+            district: obj.district,
+            cottonProcuredKg: obj.cottonProcuredKg ? Number(obj.cottonProcuredKg) : 0,
+            lintProcuredKg: obj.lintProcuredKg ? Number(obj.lintProcuredKg) : 0,
+            lintSoldKg: obj.lintSoldKg ? Number(obj.lintSoldKg) : 0,
+            lintStockKg: obj.lintStockKg ? Number(obj.lintStockKg) : 0
+          };
+
+        currentWorksheet.addRow(Object.values(rowValues));
+      }
+
+      // Auto-adjust column widths based on content
+      offset += batchSize;
+      const borderStyle = {
+        top: { style: "thin" },
+        bottom: { style: "thin" },
+        left: { style: "thin" },
+        right: { style: "thin" },
+      };
+      currentWorksheet.columns.forEach((column: any) => {
+        let maxCellLength = 0;
+        column.eachCell({ includeEmpty: true }, (cell: any) => {
+          const cellLength = (cell.value ? cell.value.toString() : '').length;
+          maxCellLength = Math.max(maxCellLength, cellLength);
+          cell.border = borderStyle;
+        });
+        column.width = Math.min(24, maxCellLength + 2); // Limit width to 30 characters
+      });
+
+    }
+   
+    // Save the workbook
+    await workbook.commit()
+      .then(() => {
+        // Rename the temporary file to the final filename
+        fs.renameSync("./upload/ginner-lint-stock-test.xlsx", './upload/ginner-lint-stock.xlsx');
+        console.log('ginner-lint-stock report generation completed.');
       })
       .catch(error => {
         console.log('Failed generation?.');
@@ -6376,147 +6750,6 @@ const generateSpinnerSale = async () => {
   }
 };
 
-const generateSpinnerCombernoilSale = async () => {
-
-  const whereCondition: any = {};
-  const maxRowsPerWorksheet = 500000;
-
-  try {
-
-    const workbook = new ExcelJS.stream.xlsx.WorkbookWriter({
-      stream: fs.createWriteStream("./upload/spinner-combernoil-sale-test.xlsx")
-    });
-    let worksheetIndex = 0;
-
-
-    const batchSize = 5000;
-    let offset = 0;
-    let hasNextBatch = true;
-
-    let includes = [
-      {
-        model: Spinner,
-        as: "spinner",
-        attributes: ["id", "name"],
-      },
-      {
-        model: Season,
-        as: "season",
-        attributes: ["id", "name"],
-      },
-      {
-        model: Program,
-        as: "program",
-        attributes: ["id", "program_name"],
-      },
-    ];
-
-    while (hasNextBatch) {
-
-      const rows: any = await SpinCombernoilSale.findAll(
-        {
-          
-          where: whereCondition,
-          include: includes,
-          
-          offset: offset,
-          limit: batchSize,
-        }
-      );
-
-
-      if (rows.length === 0) {
-        hasNextBatch = false;
-        break;
-      }
-
-      if (offset % maxRowsPerWorksheet === 0) {
-        worksheetIndex++;
-      }
-
-      for await (const [index, item] of rows.entries()) {
-
-        
-
-        const formatDate = (dateString: any) => {
-          if (!dateString) return "";
-          const date = new Date(dateString);
-
-          const day = String(date.getDate()).padStart(2, '0');
-          const month = String(date.getMonth() + 1).padStart(2, '0');
-          const year = date.getFullYear();
-
-          return `${day}-${month}-${year}`;
-        };
-
-        
-        const rowValues = Object.values({
-          index: index + offset + 1,
-          createdAt: item.dataValues.createdAt ? item.dataValues.createdAt : "",
-          date: item.dataValues.date ? formatDate(item.dataValues.date) : "",
-          season: item.dataValues.season_name ? item.dataValues.season_name : "",          
-          invoice: item.dataValues.invoice_no ? item.dataValues.invoice_no : "",
-          spinner: item.dataValues.spinner ? item.dataValues.spinner.name : "",
-          buyer: item.dataValues.buyer ? item.dataValues.buyer.name : "",
-          order_ref: item.dataValues.order_ref ? item.dataValues.order_ref : "",
-          lotNo: item.dataValues.total_qty ? item.dataValues.total_qty : "",
-          program: item.dataValues.program ? item.dataValues.program.program_name : "",
-          vehicle_no: item.dataValues.vehicle_no ? item.dataValues.vehicle_no : "",
-          agent: item.dataValues.transaction_agent ? item.dataValues.transaction_agent : "NA", 
-        
-        });
-
-        let currentWorksheet = workbook.getWorksheet(`Spinner Combernoil Sales ${worksheetIndex}`);
-        if (!currentWorksheet) {
-          currentWorksheet = workbook.addWorksheet(`Spinner Combernoil Sales ${worksheetIndex}`);
-          if (worksheetIndex == 1) {
-            currentWorksheet.mergeCells("A1:U1");
-            const mergedCell = currentWorksheet.getCell("A1");
-            mergedCell.value = "CottonConnect | Spinner Combernoil Sales Report";
-            mergedCell.font = { bold: true };
-            mergedCell.alignment = { horizontal: "center", vertical: "middle" };
-          }
-
-          const headerRow = currentWorksheet.addRow([
-            "Sr No.",
-            "Created Date and Time",
-            "Date of transaction",
-            "Season",
-            "Invoice Number",
-            "Spinner Name",
-            "Sold To",
-            "Order Reference",
-            "Total weight",
-            "Programme",
-            "Vehicle No",
-            "Agent Details",
-          ]);
-          headerRow.font = { bold: true };
-        }
-
-        currentWorksheet.addRow(rowValues).commit();
-      }
-
-      offset += batchSize;
-    }
-
-    // Save the workbook
-    await workbook.commit()
-      .then(() => {
-        // Rename the temporary file to the final filename
-        fs.renameSync("./upload/spinner-combernoil-sale-test.xlsx", './upload/spinner-combernoil-sale.xlsx');
-        console.log('====== Spinner Combernoil Sales Report Generated. =======');
-      })
-      .catch(error => {
-        console.log('Failed to generate Spinner Yarn Sales Report.');
-        console.log('Failed to generate Spinner Combernoil Sales Report.');
-        throw error;
-      });
-  } catch (error: any) {
-    console.log(error)
-  }
-};
-
 const generateSpinProcessBackwardfTraceabilty = async () => {
   const maxRowsPerWorksheet = 500000;
   const whereCondition: any = {};
@@ -7503,12 +7736,3 @@ function convert_kg_to_mt(number: any) {
 }
 
 export { exportReportsTameTaking, exportReportsOnebyOne };
-
-// export {generateSpinnerSummary, generateSpinnerBale, 
-//   generateSpinnerYarnProcess, generateSpinnerSale,
-//   generatePendingSpinnerBale, generateSpinnerLintCottonStock}
-
-// export {generateGinnerSummary, generateGinnerProcess, 
-//   generateGinnerSales, generatePendingGinnerSales, generateGinnerCottonStock, exportGinHeapReport}
-
-// export {generatePscpProcurementLiveTracker}

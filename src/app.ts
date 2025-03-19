@@ -106,9 +106,7 @@ import GinProcess from "./models/gin-process.model";
 import { setupAssociations } from "./models/associations";
 import YarnBlendRouter from './router/master/yarnblend';
 import logging from "./middleware/logging";
-// import  {generateSpinnerSummary, generateSpinnerBale, 
-//   generateSpinnerYarnProcess, generateSpinnerSale,
-//   generatePendingSpinnerBale, generateSpinnerLintCottonStock} from "./controllers/reports/export-cron";
+
 
 const app = express();
 
@@ -139,23 +137,10 @@ const connectToDb = async () => {
       console.log("Time Zone", serverTimezone);
       console.log("Offset IST", differenceInMinutes);
       setupAssociations();
-
-      testCronfunc();
-
-
     } catch (error) {
     console.error("Unable to connect to the database:", error);
   }
 };
-
-const testCronfunc = () =>  {
-  // generateSpinnerSummary();
-  // generateSpinnerBale();
-  // generateSpinnerYarnProcess();
-  // generateSpinnerSale();
-  // generatePendingSpinnerBale();
-  // generateSpinnerLintCottonStock();
-}
 
 // const { spawn } = require('child_process');
 
@@ -327,7 +312,6 @@ app.use("/seed-company", seedCompanyRouter);
 app.use("/crop-current-season", cropCurrentSeasonRouter);
 app.use("/organic-program-data-digitization", organicProgramDataDigitizationRouter);
 app.use("/data-monitoring", dataMonitorRouter);
-app.use("/update-greyout", updateGreyoutData);
 app.use("/lsv", lsvRouter);
 app.use("/update-greyout", updateGreyoutData);
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument, { customCss }));

@@ -17,8 +17,6 @@ import {
     fetchSpinnerYarnProcessPagination,
     fetchSpinSalesPagination,
     exportSpinnerSale,
-    exportSpinnerCombernoil,
-    fetchCombernoilPagination,
     fetchKnitterYarnPagination,
     exportKnitterYarn,
     fetchKnitterSalesPagination,
@@ -77,6 +75,8 @@ import {
     fetchSpinnerProcessGreyOutReport,
     exportGinnerProcessGreyOutReport,
     exportSpinnerProcessGreyOutReport,
+    fetchGinnerLintStockPagination,
+    exportGinnerLintStockReport,
 } from "../../controllers/reports";
 import accessControl from "../../middleware/access-control";
 import { fetchPriceComparisonLint, fetchPriceComparisonSeedCotton, fetchPriceComparisonYarn } from "../../controllers/reports/price-comparison-report";
@@ -89,6 +89,7 @@ const router = Router();
 router.get('/get-transactions', fetchTransactionsReport);
 router.get('/export-procurement-report', exportProcurementReport);
 router.get('/get-procured-quantities', fetchSumOfQtyPurchasedByProgram);
+
 
 router.get('/get-organic-integrity-report', getOrganicIntegrityReport);
 
@@ -106,6 +107,8 @@ router.get('/get-gin-sales-report', fetchGinSalesPagination);
 router.get('/get-gin-pending-sales-report', fetchPendingGinnerSales);
 router.get('/export-pending-sales-report', exportPendingGinnerSales);
 router.get('/export-gin-sales-report', exportGinnerSales);
+router.get('/get-gin-lint-stock-report', fetchGinnerLintStockPagination);
+router.get('/export-gin-lint-stock-report', exportGinnerLintStockReport);
 
 // Grey Out Report
 
@@ -124,8 +127,6 @@ router.get('/get-spinner-yarn-report', fetchSpinnerYarnProcessPagination);
 router.get('/export-spinner-yarn-report', exportSpinnerYarnProcess);
 router.get('/get-spinner-yarn-sales-report', fetchSpinSalesPagination);
 router.get('/export-spinner-yarn-sales-report', exportSpinnerSale);
-router.get('/get-spinner-combernoil-report', fetchCombernoilPagination);
-router.get('/export-spinner-combernoil-report', exportSpinnerCombernoil);
 router.get('/get-knitter-yarn-report', fetchKnitterYarnPagination);
 router.get('/export-knitter-yarn-report', exportKnitterYarn);
 router.get('/get-knitter-yarn-process-report', fetchKnitterYarnProcess);

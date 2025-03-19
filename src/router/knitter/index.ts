@@ -22,8 +22,7 @@ import {
     updateKnitterProcess,
     updateKnitterrSales,
     fetchKnitterProcess,
-    exportKnitterTransactionList,
-    deleteKnitterProcess
+    exportKnitterTransactionList
 } from "../../controllers/knitter";
 import accessControl from "../../middleware/access-control";
 import { Router } from "express";
@@ -34,7 +33,6 @@ router.use(accessControl);
 
 router.post('/process', createKnitterProcess);
 router.put('/process', updateKnitterProcess);
-router.delete('/process', deleteKnitterProcess);
 router.get('/process/get-process', fetchKnitterProcess);
 router.get('/process', fetchKnitterProcessPagination);
 router.get('/', fetchKnitterSalesPagination);

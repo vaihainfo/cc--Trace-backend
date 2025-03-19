@@ -63,7 +63,7 @@ const formatNumber = (data: string): number => {
 
 const mtConversion = (value: number) => {
     return value > 0 ? Number((value / 1000).toFixed(2)) : 0;
-};
+}
 
 const getTopSoldData = async (
     where: any
@@ -103,6 +103,7 @@ const getGarmentWhereQuery = (
 
     };
 
+    where.status = 'Sold';
     if (reqData?.program)
         where.program_id = reqData.program;
 
@@ -147,6 +148,7 @@ const getGarmentProcuredWhereQuery = (
     };
 
     where.buyer_type = "Garment";
+    where.status = 'Sold';
 
     if (reqData?.program)
         where.program_id = reqData.program;
@@ -722,7 +724,6 @@ const getFabricCompareCountRes = async (
 const getFabricProcuredData = async (
     where: any
 ) => {
-    where.status = "Sold"
     const [
         weaverSalesData,
         knitSalesData,
@@ -1109,7 +1110,7 @@ const getFabricGarmentMonthlyData = async (
         const seasonOne = await Season.findOne({
             where: {
                 id: reqData.season ? reqData.season : '9'
-            },
+            }
         });
         reqData.season = seasonOne.id;
         const garmentWhere = getGarmentWhereQuery(reqData);

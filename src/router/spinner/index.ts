@@ -30,8 +30,7 @@ import {
     getSpinners,
     fetchTransactionAlertForComberNoil,
     updateStatusComberNoil,
-    fetchComberNoilTransactionList,
-    fetchComberNoilSoldList
+    fetchComberNoilTransactionList
 } from "../../controllers/spinner";
 import {
 
@@ -83,7 +82,6 @@ router.get('/sales-invoice', getSalesInvoice);
 router.get('/lint-invoice', getInvoiceAndReelLotNo);
 router.get('/yarn-reel-lot', getYarnReelLotNo);
 router.get('/tracing/chart', getSpinnerProcessTracingChartData);
-router.get('/sold-list-comber-noil', fetchComberNoilSoldList);
 
 // Spinner Place Lint Order Routes
 router.get('/place-lint-order', fetchSpinnerPlaceLintOrderPagination);
