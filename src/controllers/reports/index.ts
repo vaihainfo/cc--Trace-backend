@@ -63,6 +63,7 @@ import DyingFabricSelection from "../../models/dying-fabric-selection.model";
 import Country from "../../models/country.model";
 import GinHeap from "../../models/gin-heap.model";
 import GinToGinSale from "../../models/gin-to-gin-sale.model";
+import District from "../../models/district.model";
 
 const fetchBaleProcess = async (req: Request, res: Response) => {
   const searchTerm = req.query.search || "";
@@ -13244,6 +13245,355 @@ const fetchGinnerSummaryPagination = async (req: Request, res: Response) => {
 };
 
 
+const fetchGinnerLintStockPagination = async (req: Request, res: Response) => {
+  const searchTerm = req.query.search || "";
+  const page = Number(req.query.page) || 1;
+  const limit = Number(req.query.limit) || 10;
+  const offset = (page - 1) * limit;
+  const { ginnerId, seasonId, programId, brandId, countryId, stateId }: any = req.query;
+  const whereCondition: any = {};
+  const transactionWhere: any = {};
+  const ginBaleWhere: any = {};
+  const baleSelectionWhere: any = {};
+  const ginStockWhere: any = [];
+  try {
+    if (searchTerm) {
+      whereCondition[Op.or] = [
+        { "$ginner.name$": { [Op.iLike]: `%${searchTerm}%` } },
+        { "$ginner.country.county_name$": { [Op.iLike]: `%${searchTerm}%` } },
+        { "$ginner.state.state_name$": { [Op.iLike]: `%${searchTerm}%` } },
+        { "$ginner.district.district_name$": { [Op.iLike]: `%${searchTerm}%` } },
+        { "$season.name$": { [Op.iLike]: `%${searchTerm}%` } },
+    ];
+    }
+
+    if (ginnerId) {
+      const idArray: number[] = ginnerId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.ginner_id = { [Op.in]: idArray };
+    }
+
+    if (brandId) {
+      const idArray: number[] = brandId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition["$ginner.brand$"] = { [Op.overlap]: idArray };
+    }
+
+    if (countryId) {
+      const idArray: number[] = countryId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition["$ginner.country_id$"] = { [Op.in]: idArray };
+    }
+
+    if (stateId) {
+      const idArray: number[] = stateId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition["$ginner.state_id$"] = { [Op.in]: idArray };
+    }
+
+    if (programId) {
+      const idArray: number[] = programId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.program_id = { [Op.in]: idArray };
+      transactionWhere.program_id = { [Op.in]: idArray };
+      ginBaleWhere["$ginprocess.program_id$"] = { [Op.in]: idArray };
+      baleSelectionWhere["$bale.ginprocess.program_id$"] = { [Op.in]: idArray };
+      ginStockWhere.push(`gp.program_id IN (${idArray.join(',')})`);
+    }
+
+    if (seasonId) {
+      const idArray: number[] = seasonId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.season_id = { [Op.in]: idArray };
+      transactionWhere.season_id = { [Op.in]: idArray };
+      ginBaleWhere["$ginprocess.season_id$"] = { [Op.in]: idArray };
+      baleSelectionWhere["$bale.ginprocess.season_id$"] = { [Op.in]: idArray };
+      ginStockWhere.push(`gp.season_id IN (${idArray.join(',')})`);
+    }
+    
+    const whereClause = ginStockWhere.length > 0 ? `AND ${ginStockWhere.join(' AND ')}` : '';
+
+    let include = [
+      {
+        model: Ginner,
+        as: "ginner",
+        include: [
+          {
+            model: Country,
+            as  : "country",
+          },
+          {
+            model: State,
+            as  : "state",
+          },
+          {
+            model: District,
+            as  : "district",
+          }
+        ]
+      },
+      {
+        model: Season,
+        as: "season",
+      },
+      {
+        model: Program,
+        as: "program",
+
+      },
+    ];
+
+    let { count, rows } = await GinProcess.findAndCountAll({
+      attributes: [
+        [Sequelize.literal('"ginner"."id"'), "ginner_id"],
+        [Sequelize.literal('"ginner"."name"'), "ginner_name"],
+        [Sequelize.literal('"season"."id"'), "season_id"],
+        [Sequelize.col('"season"."name"'), "season_name"],
+        [Sequelize.literal('"ginner"."country_id"'), "country_id"],
+        [Sequelize.literal('"ginner"."state_id"'), "state_id"],
+        [Sequelize.literal('"ginner"."district_id"'), "district_id"],
+        [Sequelize.literal('"program"."program_name"'), 'program_name'],
+      ],
+      where: whereCondition,
+      include: include,
+      group: ["ginner.id", "season.id","ginner->country.id","ginner->state.id","ginner->district.id","program.id"],
+      order: [["ginner_name", "ASC"]],
+      limit: limit,
+      offset: offset, 
+    });
+
+    let result: any = [];
+    for await (let ginner of rows) {
+      let obj: any = {};
+
+      let [cottonProcured, lintProcured, lintSold, [lintStock]]: any =
+        await Promise.all([
+          Transaction.findOne({
+            attributes: [
+              [
+                sequelize.fn(
+                  "COALESCE",
+                  sequelize.fn(
+                    "SUM",
+                    Sequelize.literal("CAST(qty_purchased AS DOUBLE PRECISION)")
+                  ),
+                  0
+                ),
+                "qty",
+              ],
+            ],
+            where: {
+              ...transactionWhere,
+              mapped_ginner: ginner.ginner_id,
+              status: "Sold",
+            },
+          }),
+          GinBale.findOne({
+            attributes: [
+              [
+                sequelize.fn(
+                  "COALESCE",
+                  sequelize.fn(
+                    "SUM",
+                    sequelize.literal(`
+                      CASE
+                        WHEN "gin-bales"."old_weight" IS NOT NULL THEN CAST("gin-bales"."old_weight" AS DOUBLE PRECISION)
+                        ELSE CAST("gin-bales"."weight" AS DOUBLE PRECISION)
+                      END
+                    `)
+                  ),
+                  0
+                ),
+                "qty",
+              ],
+              [
+                sequelize.fn(
+                  "COUNT",
+                  Sequelize.literal('DISTINCT "gin-bales"."id"')
+                ),
+                "bales_procured",
+              ],
+            ],
+            include: [
+              {
+                model: GinProcess,
+                as: "ginprocess",
+                attributes: [],
+              },
+            ],
+            where: {
+              ...ginBaleWhere,
+              "$ginprocess.ginner_id$": ginner.ginner_id,
+            },
+            group: ["ginprocess.ginner_id"],
+          }),
+          BaleSelection.findOne({
+            attributes: [
+              [
+                sequelize.fn(
+                  "COALESCE",
+                  sequelize.fn(
+                    "SUM",
+                    sequelize.literal(`
+                      CASE
+                        WHEN "bale"."old_weight" IS NOT NULL THEN CAST("bale"."old_weight" AS DOUBLE PRECISION)
+                        ELSE CAST("bale"."weight" AS DOUBLE PRECISION)
+                      END
+                    `)
+                  ),
+                  0
+                ),
+                "qty",
+              ],
+              [
+                sequelize.fn("COUNT", Sequelize.literal("DISTINCT bale_id")),
+                "bales_sold",
+              ],
+            ],
+            include: [
+              {
+                model: GinSales,
+                as: "sales",
+                attributes: [],
+              },
+              {
+                model: GinBale,
+                as: "bale",
+                attributes: [],
+                include: [
+                  {
+                    model: GinProcess,
+                    as: "ginprocess",
+                    attributes: [],
+                  },
+                ],
+              },
+            ],
+            where: {
+              ...baleSelectionWhere,
+              "$sales.ginner_id$": ginner.ginner_id,
+              "$sales.status$": { [Op.in]: ['Pending', 'Pending for QR scanning', 'Partially Accepted', 'Partially Rejected', 'Sold'] },
+              "$sales.buyer_ginner$": { [Op.is]: null }
+            },
+            group: ["sales.ginner_id"],
+          }),
+          sequelize.query(`
+            SELECT 
+              SUM(CAST(combined_data.weight AS DOUBLE PRECISION)) AS lint_stock,
+              COUNT(combined_data.bale_id) AS bales_stock
+            FROM (
+                -- First Query: Direct gin-bales
+                SELECT 
+                    gp.id AS process_id,
+              gp.ginner_id AS ginner_id,
+                    gb.id AS bale_id,
+                    gb.weight
+                FROM 
+                    gin_processes gp
+                JOIN 
+                    "gin-bales" gb ON gp.id = gb.process_id
+                JOIN 
+                    ginners g ON gp.ginner_id = g.id
+                JOIN 
+                    seasons s ON gp.season_id = s.id
+                JOIN 
+                    programs p ON gp.program_id = p.id
+                WHERE 
+                    gp.ginner_id = ${ginner.ginner_id}
+                    ${whereClause}
+                    AND gp.season_id IN (10)
+                    AND gb.sold_status = false
+                    AND gp.greyout_status = false
+                UNION ALL
+                -- Second Query: Gin-to-Gin sales
+                SELECT 
+                    gp.id AS process_id,
+                    gp.ginner_id AS ginner_id,
+                    gb.id AS bale_id,
+                    gb.weight
+                FROM 
+                    gin_to_gin_sales gtg
+                JOIN 
+                    gin_processes gp ON gtg.process_id = gp.id
+                JOIN 
+                    "gin-bales" gb ON gtg.bale_id = gb.id
+                JOIN 
+                    gin_sales gs ON gtg.sales_id = gs.id
+                JOIN 
+                    ginners g ON gtg.new_ginner_id = g.id
+                JOIN 
+                    seasons s ON gp.season_id = s.id
+                JOIN 
+                    programs p ON gp.program_id = p.id
+                WHERE 
+                  (
+                    gtg.new_ginner_id = ${ginner.ginner_id}
+                    ${whereClause}
+                    AND gp.greyout_status = false
+                    AND gb.sold_status = true
+                    AND gtg.gin_accepted_status = true
+                    AND gtg.gin_sold_status IS NULL
+                  ) OR (
+                    gtg.old_ginner_id = ${ginner.ginner_id}
+                    ${whereClause}
+                    AND gp.greyout_status = false
+                    AND gb.sold_status = true
+                    AND gtg.gin_accepted_status = false
+                    AND gtg.gin_sold_status IS NULL
+                  )
+            ) combined_data
+            GROUP BY 
+              combined_data.ginner_id
+          `)
+        ]);
+
+      obj.ginner_id = ginner?.ginner_id;
+      obj.ginner_name = ginner?.ginner?.name ?? "";
+      obj.season_id = ginner?.season_id;
+      obj.season = ginner?.season?.name ?? "";
+      obj.program = ginner?.program?.program_name ?? "";
+      obj.country_id = ginner?.dataValues?.country_id;
+      obj.country = ginner?.ginner?.country?.county_name ?? "";
+      obj.state_id = ginner?.dataValues?.state_id;
+      obj.state = ginner?.ginner?.state?.state_name ?? "";
+      obj.district_id = ginner?.dataValues?.district_id;
+      obj.district = ginner?.ginner?.district?.district_name ?? "";
+      obj.cottonProcuredKg = cottonProcured?.dataValues?.qty ?? 0;
+      obj.cottonProcuredMt = convert_kg_to_mt(cottonProcured?.dataValues.qty ?? 0);
+      obj.lintProcuredKg = lintProcured?.dataValues.qty ?? 0;
+      obj.lintProcuredMt = convert_kg_to_mt(lintProcured?.dataValues.qty ?? 0);
+      obj.lintSoldKg = lintSold?.dataValues.qty ?? 0;
+      obj.lintSoldMt = convert_kg_to_mt(lintSold?.dataValues.qty ?? 0);
+      obj.lintStockKg = lintStock && lintStock[0] ? lintStock[0]?.lint_stock : 0;
+      obj.lintStockMT = convert_kg_to_mt(lintStock && lintStock[0] ? lintStock[0]?.lint_stock : 0);
+
+      obj.balesProduced = lintProcured?.dataValues?.bales_procured
+        ? Number(lintProcured?.dataValues?.bales_procured)
+        : 0;
+      obj.balesSold = lintSold?.dataValues?.bales_sold
+        ? Number(lintSold?.dataValues?.bales_sold)
+        : 0;
+      obj.balesStock = lintStock && lintStock[0]?.bales_stock
+      ? Number(lintStock[0]?.bales_stock)
+      : 0;
+      result.push(obj);
+    }
+    //fetch data with pagination
+
+    return res.sendPaginationSuccess(res, result, count?.length);
+  } catch (error: any) {
+    console.log(error);
+    return res.sendError(res, error.message, error);
+  }
+};
+
+
 // const exportGinnerSummary = async (req: Request, res: Response) => {
 //   const excelFilePath = path.join("./upload", "excel-ginner-summary.xlsx");
 
@@ -13964,6 +14314,7 @@ const exportGinnerSummary = async (req: Request, res: Response) => {
 
   }
 };
+
 
 const fetchGinnerCottonStock = async (req: Request, res: Response) => {
   const searchTerm = req.query.search || "";
@@ -23918,6 +24269,7 @@ export {
   fetchGinnerProcessGreyOutReport,
   fetchSpinnerProcessGreyOutReport,
   exportGinnerProcessGreyOutReport,
-  exportSpinnerProcessGreyOutReport
+  exportSpinnerProcessGreyOutReport,
+  fetchGinnerLintStockPagination
 };
 
