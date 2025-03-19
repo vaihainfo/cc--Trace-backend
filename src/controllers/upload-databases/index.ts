@@ -2293,8 +2293,8 @@ const uploadIntegrityTest = async (req: Request, res: Response) => {
                     if(!farmGroup) {
                         fail.push({
                             success: false,
-                            data: { brand: data.brand ? data.brand : '', farmGroupName: data.farmGroup ? data.farmGroup : '', icsName: data.icsName ? data.icsName : '' },
-                            message: "Farm Group does not exists with this brand"
+                            data: {farmerName: data.farmer ? data.farmer : '', brand: data.brand ? data.brand : '', farmGroupName: data.farmGroup ? data.farmGroup : '', icsName: data.icsName ? data.icsName : '' },
+                            message: "Farm Group-"+ data.farmGroup+ " does not exists with this brand-" + data.brand
                         })    
                         continue;          
                     }
@@ -2342,7 +2342,7 @@ const uploadIntegrityTest = async (req: Request, res: Response) => {
                 if (!icsName && data.stageOfTesting.toLowerCase().replace(/[^a-zA-Z0-9]/g, "") !== "lintcotton") {
                     fail.push({
                         success: false,
-                        data: { ics: data.icsName ? data.icsName : '', farmerName: data.farmer ? data.farmer : '', farmGroupName: data.farmGroup ? data.farmGroup : '', icsName: data.icsName ? data.icsName : '' },
+                        data: {farmerName: data.farmer ? data.farmer : '', farmGroupName: data.farmGroup ? data.farmGroup : '', icsName: data.icsName ? data.icsName : '' },
                         message: data.icsName +" ICS name does not exists"
                     });
                 }
@@ -2406,7 +2406,7 @@ const uploadIntegrityTest = async (req: Request, res: Response) => {
                         data: { 
                             brand: data.brand ? data.brand : '', farmerName: data.farmer ? data.farmer : '', farmGroupName: data.farmGroup ? data.farmGroup : '', icsName: data.icsName ? data.icsName : ''
                         },
-                        message: "Organic Integrity already exists"
+                        message: "Organic Integrity with Farmer name-" + data.farmer + ", Brand Name-" + data.brand +" and ICS Name-" + data.icsName + " already exists"
                     });
                     continue;
                 }

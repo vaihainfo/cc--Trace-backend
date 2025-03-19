@@ -17210,20 +17210,25 @@ const fetchPscpProcurementLiveTracker = async (req: Request, res: Response) => {
             CAST((COALESCE(gb.total_qty, 0) / 1000 + COALESCE(gtgr.lint_qty, 0) / 1000) - (COALESCE(gs.total_qty, 0) / 1000 + COALESCE(gbg.total_qty, 0) / 1000 + COALESCE(gtg.lint_qty, 0) / 1000) AS NUMERIC), 
             2
         ) AS DOUBLE PRECISION) AS balance_lint_quantity,
-        CASE
-          WHEN COALESCE(gb.total_qty, 0) != 0 THEN
-            CASE
-              WHEN COALESCE(gs.total_qty, 0) > COALESCE(gb.total_qty, 0) THEN 0
-              ELSE ROUND(
-                (
-                  (
-                    COALESCE(gs.total_qty, 0)
-                  ) / COALESCE(gb.total_qty, 0)
-                ) * 100
-              )
-            END
-          ELSE 0
-        END AS ginner_sale_percentage
+         CASE
+              WHEN COALESCE(gb.total_qty, 0) != 0 THEN
+                CASE
+                  -- Ignore minor floating-point precision differences
+                  WHEN ABS(COALESCE(gs.total_qty, 0) - COALESCE(gb.total_qty, 0)) > 0.0001 
+                  AND COALESCE(gs.total_qty, 0) > COALESCE(gb.total_qty, 0) THEN 
+                    ROUND(
+                      (
+                        COALESCE(gs.total_qty::NUMERIC, 0) / COALESCE(gb.total_qty::NUMERIC, 0)
+                      ) * 100, 2
+                    )
+                  ELSE ROUND(
+                    (
+                      COALESCE(gs.total_qty::NUMERIC, 0) / COALESCE(gb.total_qty::NUMERIC, 0)
+                    ) * 100, 2
+                  )
+                END
+              ELSE 0
+            END AS ginner_sale_percentage
       FROM
         filtered_ginners fg
         LEFT JOIN procurement_data pd ON fg.id = pd.mapped_ginner
@@ -17948,20 +17953,25 @@ const exportPscpProcurementLiveTracker = async (
               CAST((COALESCE(gb.total_qty, 0) / 1000 + COALESCE(gtgr.lint_qty, 0) / 1000) - (COALESCE(gs.total_qty, 0) / 1000 + COALESCE(gbg.total_qty, 0) / 1000 + COALESCE(gtg.lint_qty, 0) / 1000) AS NUMERIC), 
               2
           ) AS DOUBLE PRECISION) AS balance_lint_quantity,
-          CASE
-            WHEN COALESCE(gb.total_qty, 0) != 0 THEN
-              CASE
-                WHEN COALESCE(gs.total_qty, 0) > COALESCE(gb.total_qty, 0) THEN 0
-                ELSE ROUND(
-                  (
+           CASE
+              WHEN COALESCE(gb.total_qty, 0) != 0 THEN
+                CASE
+                  -- Ignore minor floating-point precision differences
+                  WHEN ABS(COALESCE(gs.total_qty, 0) - COALESCE(gb.total_qty, 0)) > 0.0001 
+                  AND COALESCE(gs.total_qty, 0) > COALESCE(gb.total_qty, 0) THEN 
+                    ROUND(
+                      (
+                        COALESCE(gs.total_qty::NUMERIC, 0) / COALESCE(gb.total_qty::NUMERIC, 0)
+                      ) * 100, 2
+                    )
+                  ELSE ROUND(
                     (
-                      COALESCE(gs.total_qty, 0)
-                    ) / COALESCE(gb.total_qty, 0)
-                  ) * 100
-                )
-              END
-            ELSE 0
-          END AS ginner_sale_percentage
+                      COALESCE(gs.total_qty::NUMERIC, 0) / COALESCE(gb.total_qty::NUMERIC, 0)
+                    ) * 100, 2
+                  )
+                END
+              ELSE 0
+            END AS ginner_sale_percentage
         FROM
           filtered_ginners fg
           LEFT JOIN procurement_data pd ON fg.id = pd.mapped_ginner
