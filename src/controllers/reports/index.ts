@@ -12991,7 +12991,7 @@ const fetchGinnerSummaryPagination = async (req: Request, res: Response) => {
     for await (let ginner of rows) {
       let obj: any = {};
 
-      let [cottonProcured, cottonProcessed, cottonProcessedByHeap, lintProcured, greyoutLint, lintSold, ginToGinSale, ginToGinReceive, old_weight]: any =
+      let [cottonProcured, cottonProcessed, cottonProcessedByHeap, lintProcured, greyoutLint, lintSold, ginToGinSale, ginToGinReceive, old_weight, lintStock]: any =
         await Promise.all([
           // Transaction.findOne({
           //   attributes: [
@@ -13340,8 +13340,62 @@ const fetchGinnerSummaryPagination = async (req: Request, res: Response) => {
             },
             raw: true // Get raw data for easier access
           }),
-        
+          GinBale.findOne({
+            attributes: [
+              [
+                sequelize.fn(
+                  "COALESCE",
+                  sequelize.fn(
+                    "SUM",
+                    sequelize.literal(`
+                      CASE 
+                        WHEN "ginprocess"."season_id" < 10 THEN 
+                          CASE 
+                            WHEN "gin-bales"."old_weight" IS NOT NULL THEN CAST("gin-bales"."old_weight" AS DOUBLE PRECISION)
+                            ELSE CAST("gin-bales"."weight" AS DOUBLE PRECISION)
+                          END
+                        ELSE 0
+                      END
+                    `)
+                  ),
+                  0
+                ),
+                "lint_stock",
+              ],
+              [
+                sequelize.fn(
+                  "COALESCE",
+                  sequelize.fn(
+                    "COUNT",
+                    sequelize.literal(`
+                      DISTINCT CASE 
+                        WHEN "ginprocess"."season_id" < 10 THEN "gin-bales"."id"
+                        ELSE NULL
+                      END
+                    `)
+                  ),
+                  0
+                ),
+                "bales_stock",
+              ],
+            ],
+            include: [
+              {
+                model: GinProcess,
+                as: "ginprocess",
+                attributes: [],
+              },
+            ],
+            where: {
+              ...ginBaleWhere,
+              "$ginprocess.ginner_id$": ginner.id,
+              "$ginprocess.greyout_status$": false,
+              sold_status: false
+            },
+            group: ["ginprocess.ginner_id"],
+          }),
         ]);
+        
       const cottonProcessedQty = isNaN(cottonProcessed?.dataValues?.qty) ? 0 : cottonProcessed?.dataValues?.qty;
       const cottonProcessedByHeapQty = isNaN(cottonProcessedByHeap?.dataValues?.qty) ? 0 : cottonProcessedByHeap?.dataValues?.qty;
       const totalCottonProcessedQty = cottonProcessedQty + cottonProcessedByHeapQty;
@@ -13366,11 +13420,21 @@ const fetchGinnerSummaryPagination = async (req: Request, res: Response) => {
       obj.total_qty_lint_received = ginToGinReceive
         ? convert_kg_to_mt(ginToGinReceive.dataValues.total_qty ?? 0)
         : 0;
-      obj.lintActualStockMT = (ginner.id === 502 && seasonId && Number(seasonId) === 9) 
-        ? 0 
-        :  (Number(obj.lintProcuredMt) + Number(obj.total_qty_lint_received)) > (Number(obj.lintSoldMt) + Number(obj.lintGreyoutMT) + Number(obj.total_qty_lint_transfered))
-          ? (Number(obj.lintProcuredMt) + Number(obj.total_qty_lint_received)) - (Number(obj.lintSoldMt) + Number(obj.lintGreyoutMT) + Number(obj.total_qty_lint_transfered))
-          : 0;
+      obj.lintStockOldSeasonsMt = lintStock
+        ? convert_kg_to_mt(lintStock.dataValues.lint_stock ?? 0)
+        : 0;
+      obj.baleStockOldSeasonsMt = lintStock
+        ? Number(lintStock.dataValues.bales_stock)
+        : 0;
+
+      if(seasonId && Number(seasonId) < 10){
+        obj.lintActualStockMT = Number(obj.lintStockOldSeasonsMt);
+      }else{
+        obj.lintActualStockMT = (Number(obj.lintProcuredMt) + Number(obj.total_qty_lint_received)) > (Number(obj.lintSoldMt) + Number(obj.lintGreyoutMT) + Number(obj.total_qty_lint_transfered))
+            ? (Number(obj.lintProcuredMt) + Number(obj.total_qty_lint_received)) - (Number(obj.lintSoldMt) + Number(obj.lintGreyoutMT) + Number(obj.total_qty_lint_transfered))
+            : 0;
+      }
+
       obj.lintStockKg =
         Number(obj.lintProcuredKg) > Number(obj.lintSoldKg)
           ? Number(obj.lintProcuredKg) - Number(obj.lintSoldKg)
@@ -13388,10 +13452,16 @@ const fetchGinnerSummaryPagination = async (req: Request, res: Response) => {
       obj.balesSold = lintSold?.dataValues?.bales_sold
         ? Number(lintSold?.dataValues?.bales_sold)
         : 0;
-      obj.balesActualStock =
-        (obj.balesProduced + obj.total_bales_received) > (obj.balesSold + obj.total_bales_transfered + obj.balesGreyout)
-          ? (obj.balesProduced + obj.total_bales_received) - (obj.balesSold + obj.total_bales_transfered + obj.balesGreyout)
-          : 0;
+
+      if(seasonId && Number(seasonId) < 10){
+        obj.balesActualStock = Number(obj.baleStockOldSeasonsMt);
+      }else{
+        obj.balesActualStock =
+          (obj.balesProduced + obj.total_bales_received) > (obj.balesSold + obj.total_bales_transfered + obj.balesGreyout)
+            ? (obj.balesProduced + obj.total_bales_received) - (obj.balesSold + obj.total_bales_transfered + obj.balesGreyout)
+            : 0;
+      }
+
       obj.balesStock =
         obj.balesProduced > obj.balesSold
           ? obj.balesProduced - obj.balesSold
@@ -14043,7 +14113,7 @@ const exportGinnerSummary = async (req: Request, res: Response) => {
         let obj: any = {};
 
 
-        let [cottonProcured, cottonProcessed, cottonProcessedByHeap, lintProcured, greyoutLint, lintSold, ginToGinSale, ginToGinReceive]: any = await Promise.all([
+        let [cottonProcured, cottonProcessed, cottonProcessedByHeap, lintProcured, greyoutLint, lintSold, ginToGinSale, ginToGinReceive, lintStock]: any = await Promise.all([
           // Transaction.findOne({
           //   attributes: [
           //     [sequelize.fn('COALESCE', sequelize.fn('SUM', Sequelize.literal("CAST(qty_purchased AS DOUBLE PRECISION)")), 0), 'qty']
@@ -14331,7 +14401,61 @@ const exportGinnerSummary = async (req: Request, res: Response) => {
               "$ginsales.buyer_type$": 'Ginner'
             },
             group: ["ginsales.buyer_ginner"]
-          }),      
+          }),
+          GinBale.findOne({
+            attributes: [
+              [
+                sequelize.fn(
+                  "COALESCE",
+                  sequelize.fn(
+                    "SUM",
+                    sequelize.literal(`
+                      CASE 
+                        WHEN "ginprocess"."season_id" < 10 THEN 
+                          CASE 
+                            WHEN "gin-bales"."old_weight" IS NOT NULL THEN CAST("gin-bales"."old_weight" AS DOUBLE PRECISION)
+                            ELSE CAST("gin-bales"."weight" AS DOUBLE PRECISION)
+                          END
+                        ELSE 0
+                      END
+                    `)
+                  ),
+                  0
+                ),
+                "lint_stock",
+              ],
+              [
+                sequelize.fn(
+                  "COALESCE",
+                  sequelize.fn(
+                    "COUNT",
+                    sequelize.literal(`
+                      DISTINCT CASE 
+                        WHEN "ginprocess"."season_id" < 10 THEN "gin-bales"."id"
+                        ELSE NULL
+                      END
+                    `)
+                  ),
+                  0
+                ),
+                "bales_stock",
+              ],
+            ],
+            include: [
+              {
+                model: GinProcess,
+                as: "ginprocess",
+                attributes: [],
+              },
+            ],
+            where: {
+              ...ginBaleWhere,
+              "$ginprocess.ginner_id$": item.id,
+              "$ginprocess.greyout_status$": false,
+              sold_status: false
+            },
+            group: ["ginprocess.ginner_id"],
+          })
         ]);
         const cottonProcessedQty = isNaN(cottonProcessed?.dataValues?.qty) ? 0 : cottonProcessed?.dataValues?.qty;
         const cottonProcessedByHeapQty = isNaN(cottonProcessedByHeap?.dataValues?.qty) ? 0 : cottonProcessedByHeap?.dataValues?.qty;
@@ -14359,11 +14483,21 @@ const exportGinnerSummary = async (req: Request, res: Response) => {
         obj.total_qty_lint_received = ginToGinReceive
           ? convert_kg_to_mt(ginToGinReceive.dataValues.total_qty ?? 0)
           : 0;
-        obj.lintActualStockMT = (item.id === 502 && seasonId && Number(seasonId) === 9) 
-        ? 0  
-        : (Number(obj.lintProcuredMt) + Number(obj.total_qty_lint_received)) > (Number(obj.lintSoldMt) + Number(obj.lintGreyoutMT) + Number(obj.total_qty_lint_transfered))
-          ? (Number(obj.lintProcuredMt) + Number(obj.total_qty_lint_received)) - (Number(obj.lintSoldMt) + Number(obj.lintGreyoutMT) + Number(obj.total_qty_lint_transfered))
+        obj.lintStockOldSeasonsMt = lintStock
+          ? convert_kg_to_mt(lintStock.dataValues.lint_stock ?? 0)
           : 0;
+        obj.baleStockOldSeasonsMt = lintStock
+          ? Number(lintStock.dataValues.bales_stock)
+          : 0;
+  
+        if(seasonId && Number(seasonId) < 10){
+          obj.lintActualStockMT = Number(obj.lintStockOldSeasonsMt);
+        }else{
+          obj.lintActualStockMT = (Number(obj.lintProcuredMt) + Number(obj.total_qty_lint_received)) > (Number(obj.lintSoldMt) + Number(obj.lintGreyoutMT) + Number(obj.total_qty_lint_transfered))
+              ? (Number(obj.lintProcuredMt) + Number(obj.total_qty_lint_received)) - (Number(obj.lintSoldMt) + Number(obj.lintGreyoutMT) + Number(obj.total_qty_lint_transfered))
+              : 0;
+        }
+
         obj.lintStockKg = Number(obj.lintProcuredKg) > Number(obj.lintSoldKg) ? Number(obj.lintProcuredKg) - Number(obj.lintSoldKg) : 0;
         obj.lintStockMt = Number(obj.lintProcuredKg) > Number(obj.lintSoldKg) ? Number(obj.lintProcuredMt) - Number(obj.lintSoldMt) : 0;
         obj.balesProduced = lintProcured?.dataValues?.bales_procured ? Number(lintProcured?.dataValues?.bales_procured) : 0;
@@ -14371,10 +14505,15 @@ const exportGinnerSummary = async (req: Request, res: Response) => {
         ? Number(greyoutLint?.dataValues?.bales_procured)
         : 0;
         obj.balesSold = lintSold?.dataValues?.bales_sold ? Number(lintSold?.dataValues?.bales_sold) : 0;
-        obj.balesActualStock =
-        (obj.balesProduced + obj.total_bales_received) > (obj.balesSold + obj.total_bales_transfered + obj.balesGreyout)
-          ? (obj.balesProduced + obj.total_bales_received) - (obj.balesSold + obj.total_bales_transfered + obj.balesGreyout)
-          : 0;
+        
+        if(seasonId && Number(seasonId) < 10){
+          obj.balesActualStock = Number(obj.baleStockOldSeasonsMt);
+        }else{
+          obj.balesActualStock =
+            (obj.balesProduced + obj.total_bales_received) > (obj.balesSold + obj.total_bales_transfered + obj.balesGreyout)
+              ? (obj.balesProduced + obj.total_bales_received) - (obj.balesSold + obj.total_bales_transfered + obj.balesGreyout)
+              : 0;
+        }
         obj.balesStock = obj.balesProduced > obj.balesSold ? obj.balesProduced - obj.balesSold : 0;
 
         obj.country = item.country.county_name;
