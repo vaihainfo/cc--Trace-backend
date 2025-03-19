@@ -76,6 +76,7 @@ import {
     exportGinnerProcessGreyOutReport,
     exportSpinnerProcessGreyOutReport,
     fetchGinnerLintStockPagination,
+    exportGinnerLintStockReport,
 } from "../../controllers/reports";
 import accessControl from "../../middleware/access-control";
 import { fetchPriceComparisonLint, fetchPriceComparisonSeedCotton, fetchPriceComparisonYarn } from "../../controllers/reports/price-comparison-report";
@@ -107,6 +108,7 @@ router.get('/get-gin-pending-sales-report', fetchPendingGinnerSales);
 router.get('/export-pending-sales-report', exportPendingGinnerSales);
 router.get('/export-gin-sales-report', exportGinnerSales);
 router.get('/get-gin-lint-stock-report', fetchGinnerLintStockPagination);
+router.get('/export-gin-lint-stock-report', exportGinnerLintStockReport);
 
 // Grey Out Report
 
