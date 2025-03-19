@@ -34,6 +34,10 @@ const SpinnerPlaceLintOrderSales = db.define('spinner_place_lint_orders_sales', 
     allowNull: false,
     comment: 'Quantity of lint used from the order'
   }
+}, {
+  underscored: true,
+  createdAt: 'created_at',
+  updatedAt: 'updated_at'
 });
 
 // Define association with GinSales

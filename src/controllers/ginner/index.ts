@@ -2210,6 +2210,7 @@ const createGinnerSales = async (req: Request, res: Response) => {
         { where: { id: bale.id }, transaction }
       );
     }
+    await transaction.commit();
 
     if(req.body.selectedLintOrders && req.body.selectedLintOrders.length > 0){
       for await (let obj of req.body.selectedLintOrders) {  
@@ -2221,7 +2222,6 @@ const createGinnerSales = async (req: Request, res: Response) => {
       }
     }
 
-    await transaction.commit();
     res.sendSuccess(res, { ginSales });
   } catch (error: any) {
     console.error(error);
