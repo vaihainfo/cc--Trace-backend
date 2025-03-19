@@ -71,6 +71,8 @@ import { NUMBER } from "sequelize";
 import GinHeap from "../../models/gin-heap.model";
 import ValidationProject from "../../models/validation-project.model";
 import GinToGinSale from "../../models/gin-to-gin-sale.model";
+import SpinSaleYarnSelected from "../../models/spin-sale-yarn-selected.model";
+import SpinYarn from "../../models/spin-yarn.model";
 
 
 const exportReportsTameTaking = async () => {
@@ -5805,8 +5807,8 @@ const generateSpinnerBale = async () => {
                     EXTRACT(DAY FROM ( gs."accept_date" - gs."createdAt")) AS no_of_days,
                     g.id AS ginner_id, 
                     g.name AS ginner, 
-                    g.country_id as country_id,
-                    g.state_id as state_id,
+                    sp.country_id as country_id,
+                    sp.state_id as state_id,
                     s.id AS season_id, 
                     s.name AS season_name, 
                     p.id AS program_id, 
@@ -6637,6 +6639,32 @@ const generateSpinnerSale = async () => {
           }
         }
 
+        const spinyarns = await SpinSaleYarnSelected.findAll({
+          where: {
+            sales_id: item?.dataValues?.sales_id,
+          },
+          include:[
+            {
+              model: SpinYarn,
+              as: "spinyarn",
+              include:[
+                {
+                  model: YarnCount,
+                  as: "yarncount",
+                }
+              ]
+            },
+            {
+              model: SpinProcess,
+              as: "process",
+            },
+          ]
+        });
+
+      let boxid = spinyarns && spinyarns.length > 0 ? spinyarns.map((obj:any) => obj.box_id).join(',') : "";
+      let price = spinyarns && spinyarns.length > 0 ? spinyarns.map((obj:any) => obj.price).join(',') : "";
+      let no_of_boxes = spinyarns && spinyarns.length > 0 ? spinyarns.map((obj:any) => obj.no_of_boxes).join(',') : "";
+
         yarnTypeData =
           item.dataValues?.yarn_type?.length > 0 ? item.dataValues?.yarn_type.join(",") : "";
         const rowValues ={
@@ -6663,9 +6691,9 @@ const generateSpinnerSale = async () => {
           count: yarnCount
             ? yarnCount
             : 0,
-          boxes: item.dataValues.no_of_boxes ? Number(item.dataValues.no_of_boxes) : 0,
-          boxId: item.dataValues.box_ids ? item.dataValues.box_ids : "",
-          price: item.dataValues.price ? Number(item.dataValues.price) : 0,
+          boxes: item.dataValues.no_of_boxes ? Number(item.dataValues.no_of_boxes) : no_of_boxes,
+          boxId: item.dataValues.box_ids ? item.dataValues.box_ids : boxid,
+          price: item.dataValues.price ? Number(item.dataValues.price) : price,
           total: item.dataValues.total_qty ? Number(item.dataValues.total_qty) : 0,
           transporter_name: item.dataValues.transporter_name
             ? item.dataValues.transporter_name

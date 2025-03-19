@@ -64,6 +64,8 @@ import Country from "../../models/country.model";
 import GinHeap from "../../models/gin-heap.model";
 import GinToGinSale from "../../models/gin-to-gin-sale.model";
 import District from "../../models/district.model";
+import SpinSaleYarnSelected from "../../models/spin-sale-yarn-selected.model";
+import SpinYarn from "../../models/spin-yarn.model";
 
 const fetchBaleProcess = async (req: Request, res: Response) => {
   const searchTerm = req.query.search || "";
@@ -3325,7 +3327,7 @@ const exportSpinnerProcessGreyOutReport = async (req: Request, res: Response) =>
         const idArray: number[] = programId
           .split(",")
           .map((id: any) => parseInt(id, 10));
-        whereCondition.program_id = { [Op.in]: idArray };
+        whereCondition["$program_id$"] = { [Op.in]: idArray };
       }
 
       let include = [
@@ -3497,7 +3499,7 @@ const exportSpinnerGreyOutReport = async (req: Request, res: Response) => {
         const idArray: number[] = programId
           .split(",")
           .map((id: any) => parseInt(id, 10));
-        whereCondition.program_id = { [Op.in]: idArray };
+        whereCondition["$program_id$"] = { [Op.in]: idArray };
       }
 
       whereCondition[Op.or] = [
@@ -4348,8 +4350,8 @@ const fetchSpinnerBalePagination = async (req: Request, res: Response) => {
                     EXTRACT(DAY FROM ( gs."accept_date"- gs."createdAt" )) AS no_of_days,
                     g.id AS ginner_id, 
                     g.name AS ginner, 
-                    g.country_id AS country_id,
-                    g.state_id AS state_id,
+                    sp.country_id AS country_id,
+                    sp.state_id AS state_id,
                     s.id AS season_id, 
                     s.name AS season_name, 
                     p.id AS program_id, 
@@ -4816,8 +4818,8 @@ const exportSpinnerBale = async (req: Request, res: Response) => {
                     EXTRACT(DAY FROM (  gs."accept_date" - gs."createdAt")) AS no_of_days,
                     g.id AS ginner_id, 
                     g.name AS ginner, 
-                    g.country_id as country_id,
-                    g.state_id as state_id,
+                    sp.country_id as country_id,
+                    sp.state_id as state_id,
                     s.id AS season_id, 
                     s.name AS season_name, 
                     p.id AS program_id, 
@@ -5584,7 +5586,15 @@ const fetchSpinnerYarnProcessPagination = async (
         spin_process.accept_date,
         spin_process.qr,
         spin_process.greyout_status,
-        program.program_name AS program
+        program.program_name AS program,
+        jsonb_agg(jsonb_build_object(
+                'id', spinyarn.id,
+                'process_id', spinyarn.process_id,
+                'yarn_count', spinyarn.yarn_count,
+                'yarncount', "yarn_count"."yarnCount_name",
+                'batch_lot_no', "spinyarn"."batch_lot_no",
+                'yarn_produced', "spinyarn"."yarn_produced"
+       )) AS spinyarns
       FROM
         spin_processes spin_process
       LEFT JOIN
@@ -5593,7 +5603,12 @@ const fetchSpinnerYarnProcessPagination = async (
         seasons season ON spin_process.season_id = season.id
       LEFT JOIN
         programs program ON spin_process.program_id = program.id
+      LEFT JOIN
+        spin_yarns spinyarn ON spin_process.id = spinyarn.process_id
+      LEFT JOIN
+        yarn_counts yarn_count ON yarn_count.id = spinyarn.yarn_count
       ${whereClause}
+      GROUP BY spin_process.id, season.id, program.id,spinner.id
     ),
     cotton_consumed_data AS (
       SELECT
@@ -5959,7 +5974,15 @@ const exportSpinnerYarnProcess = async (req: Request, res: Response) => {
         spin_process.accept_date,
         spin_process.qr,
         spin_process.greyout_status,
-        program.program_name AS program
+        program.program_name AS program,
+        jsonb_agg(jsonb_build_object(
+                'id', spinyarn.id,
+                'process_id', spinyarn.process_id,
+                'yarn_count', spinyarn.yarn_count,
+                'yarncount', "yarn_count"."yarnCount_name",
+                'batch_lot_no', "spinyarn"."batch_lot_no",
+                'yarn_produced', "spinyarn"."yarn_produced"
+       )) AS spinyarns
       FROM
         spin_processes spin_process
       LEFT JOIN
@@ -5968,7 +5991,12 @@ const exportSpinnerYarnProcess = async (req: Request, res: Response) => {
         seasons season ON spin_process.season_id = season.id
       LEFT JOIN
         programs program ON spin_process.program_id = program.id
+      LEFT JOIN
+        spin_yarns spinyarn ON spin_process.id = spinyarn.process_id
+      LEFT JOIN
+        yarn_counts yarn_count ON yarn_count.id = spinyarn.yarn_count
       ${whereClause}
+      GROUP BY spin_process.id, season.id, program.id,spinner.id
     ),
     cotton_consumed_data AS (
       SELECT
@@ -6632,10 +6660,34 @@ const fetchSpinSalesPagination = async (req: Request, res: Response) => {
           attributes: ["yarnCount_name"],
         });
       }
+
+      const spinyarns = await SpinSaleYarnSelected.findAll({
+        where: {
+          sales_id: row?.dataValues?.sales_id,
+        },
+        include:[
+          {
+            model: SpinYarn,
+            as: "spinyarn",
+            include:[
+              {
+                model: YarnCount,
+                as: "yarncount",
+              }
+            ]
+          },
+          {
+            model: SpinProcess,
+            as: "process",
+          },
+        ]
+      });
+
       data.push({
         ...row.dataValues,
         lint_consumed_seasons: seedSeason ? seedSeason[0]?.seasons : "",
         yarnCount,
+        spinyarns
       });
     }
 
@@ -7048,7 +7100,34 @@ const exportSpinnerSale = async (req: Request, res: Response) => {
       `);
         }
 
-   
+        const spinyarns = await SpinSaleYarnSelected.findAll({
+          where: {
+            sales_id: item?.dataValues?.sales_id,
+          },
+          include:[
+            {
+              model: SpinYarn,
+              as: "spinyarn",
+              include:[
+                {
+                  model: YarnCount,
+                  as: "yarncount",
+                }
+              ]
+            },
+            {
+              model: SpinProcess,
+              as: "process",
+            },
+          ]
+        });
+
+      let boxid = spinyarns && spinyarns.length > 0 ? spinyarns.map((obj:any) => obj.box_id).join(',') : "";
+      let price = spinyarns && spinyarns.length > 0 ? spinyarns.map((obj:any) => obj.price).join(',') : "";
+      let no_of_boxes = spinyarns && spinyarns.length > 0 ? spinyarns.map((obj:any) => obj.no_of_boxes).join(',') : "";
+
+      const rowStart = worksheet.rowCount + 1; // Track the starting row
+      const maxLength = spinyarns && spinyarns.length; // Number of rows to be created
 
         let rowValues;
         if (isOrganic === 'true') {
@@ -7074,9 +7153,9 @@ const exportSpinnerSale = async (req: Request, res: Response) => {
             count: yarnCount
               ? yarnCount
               : "",
-            boxes: item.dataValues.no_of_boxes ? item.dataValues.no_of_boxes : "",
-            boxId: item.dataValues.box_ids ? item.dataValues.box_ids : "",
-            price: item.dataValues.price ? item.dataValues.price : "",
+            boxes: item.dataValues.no_of_boxes ? item.dataValues.no_of_boxes : no_of_boxes,
+            boxId: item.dataValues.box_ids ? item.dataValues.box_ids : boxid,
+            price: item.dataValues.price ? item.dataValues.price : price,
             total: item.dataValues.total_qty ? item.dataValues.total_qty : 0,
             agent: item.dataValues.transaction_agent
               ? item.dataValues.transaction_agent
@@ -7107,9 +7186,9 @@ const exportSpinnerSale = async (req: Request, res: Response) => {
             count: yarnCount
               ? yarnCount
               : "",
-            boxes: item.dataValues.no_of_boxes ? item.dataValues.no_of_boxes : "",
-            boxId: item.dataValues.box_ids ? item.dataValues.box_ids : "",
-            price: item.dataValues.price ? item.dataValues.price : "",
+            boxes: item.dataValues.no_of_boxes ? item.dataValues.no_of_boxes : no_of_boxes,
+            boxId: item.dataValues.box_ids ? item.dataValues.box_ids : boxid,
+            price: item.dataValues.price ? item.dataValues.price : price,
             total: item.dataValues.total_qty ? item.dataValues.total_qty : 0,
             agent: item.dataValues.transaction_agent
               ? item.dataValues.transaction_agent
@@ -7140,9 +7219,9 @@ const exportSpinnerSale = async (req: Request, res: Response) => {
             count: yarnCount
               ? yarnCount
               : "",
-            boxes: item.dataValues.no_of_boxes ? item.dataValues.no_of_boxes : "",
-            boxId: item.dataValues.box_ids ? item.dataValues.box_ids : "",
-            price: item.dataValues.price ? item.dataValues.price : "",
+            boxes: item.dataValues.no_of_boxes ? item.dataValues.no_of_boxes : no_of_boxes,
+            boxId: item.dataValues.box_ids ? item.dataValues.box_ids : boxid,
+            price: item.dataValues.price ? item.dataValues.price : price,
             total: item.dataValues.total_qty ? item.dataValues.total_qty : 0,
             transporter_name: item.dataValues.transporter_name
               ? item.dataValues.transporter_name
@@ -7156,6 +7235,87 @@ const exportSpinnerSale = async (req: Request, res: Response) => {
           };
         }    
         else {
+          //Separate Rows for different lot no, merge cells
+          // if(maxLength > 1){
+          //   for (let i = 0; i < maxLength; i++) {
+          //     rowValues = Object.values({
+          //       index: i === 0 ? index + 1 : null,
+          //       createdAt: i === 0 ? item.dataValues.createdAt ? item.dataValues.createdAt : "" : null,
+          //       date: i === 0 ? item.dataValues.date ? formatDate(item.dataValues.date) : "" : null,
+          //       lint_consumed_seasons: i === 0 ? seedSeason ? seedSeason[0]?.seasons : "" : null,
+          //       season: i === 0 ? item.dataValues.season_name ? item.dataValues.season_name : "" : null,
+          //       spinner: i === 0 ? item.dataValues.spinner ? item.dataValues.spinner : "" : null,
+          //       buyer_id: i === 0 ?  item.dataValues.weaver
+          //         ? item.dataValues.weaver
+          //         : item.dataValues.knitter
+          //           ? item.dataValues.knitter
+          //           : item.dataValues.processor_name : null,
+          //       invoice: i === 0 ?  item.dataValues.invoice_no ? item.dataValues.invoice_no : "" : null,
+          //       order_ref: i === 0 ?  item.dataValues.order_ref ? item.dataValues.order_ref : "" : null,
+          //       lotNo: i === 0 ?  item.dataValues.batch_lot_no ? item.dataValues.batch_lot_no : "" : null,
+          //       reelLot: i === 0 ?  item.dataValues.reel_lot_no ? item.dataValues.reel_lot_no : "" : null,
+          //       program: i === 0 ?  item.dataValues.program ? item.dataValues.program : "" : null,
+          //       yarnType: i === 0 ?  yarnTypeData ? yarnTypeData : "" : null,
+          //       count: i === 0 ?  yarnCount
+          //         ? yarnCount
+          //         : "" : null,
+          //       boxes: item.dataValues.no_of_boxes ? item.dataValues.no_of_boxes : no_of_boxes[i],
+          //       boxId: item.dataValues.box_ids ? item.dataValues.box_ids : boxid[i],
+          //       price: item.dataValues.price ? item.dataValues.price : price[i],
+          //       total: i === 0 ?  item.dataValues.total_qty ? item.dataValues.total_qty : 0 : null,
+          //       transporter_name: i === 0 ?  item.dataValues.transporter_name
+          //         ? item.dataValues.transporter_name
+          //         : "" : null,
+          //       vehicle_no: i === 0 ?  item.dataValues.vehicle_no
+          //         ? item.dataValues.vehicle_no
+          //         : "" : null,
+          //       agent: i === 0 ?  item.dataValues.transaction_agent
+          //         ? item.dataValues.transaction_agent
+          //         : "" : null,
+          //     });
+          // }
+          // for(let j = 1; j<15; j++){
+
+          //   worksheet.mergeCells(rowStart, j, rowStart + maxLength - 1, j);
+          // }
+          // }else{
+          //   rowValues = Object.values({
+          //     index:index + 1,
+          //     createdAt:item.dataValues.createdAt ? item.dataValues.createdAt : "",
+          //     date:item.dataValues.date ? formatDate(item.dataValues.date) : "",
+          //     lint_consumed_seasons:seedSeason ? seedSeason[0]?.seasons : "",
+          //     season:item.dataValues.season_name ? item.dataValues.season_name : "",
+          //     spinner:item.dataValues.spinner ? item.dataValues.spinner : "",
+          //     buyer_id: item.dataValues.weaver
+          //       ? item.dataValues.weaver
+          //       : item.dataValues.knitter
+          //         ? item.dataValues.knitter
+          //         : item.dataValues.processor_name,
+          //     invoice: item.dataValues.invoice_no ? item.dataValues.invoice_no : "",
+          //     order_ref: item.dataValues.order_ref ? item.dataValues.order_ref : "",
+          //     lotNo: item.dataValues.batch_lot_no ? item.dataValues.batch_lot_no : "",
+          //     reelLot: item.dataValues.reel_lot_no ? item.dataValues.reel_lot_no : "",
+          //     program: item.dataValues.program ? item.dataValues.program : "",
+          //     yarnType: yarnTypeData ? yarnTypeData : "",
+          //     count: yarnCount
+          //       ? yarnCount
+          //       : "",
+          //     boxes: item.dataValues.no_of_boxes ? item.dataValues.no_of_boxes : '',
+          //     boxId: item.dataValues.box_ids ? item.dataValues.box_ids : '',
+          //     price: item.dataValues.price ? item.dataValues.price : '',
+          //     total: item.dataValues.total_qty ? item.dataValues.total_qty : 0,
+          //     transporter_name: item.dataValues.transporter_name
+          //       ? item.dataValues.transporter_name
+          //       : "",
+          //     vehicle_no: item.dataValues.vehicle_no
+          //       ? item.dataValues.vehicle_no
+          //       : "",
+          //     agent: item.dataValues.transaction_agent
+          //       ? item.dataValues.transaction_agent
+          //       : "",
+          //   });
+          // }
+
           rowValues = {
             index: index + 1,
             country: item.dataValues.country?item.dataValues.country:"",
@@ -7180,9 +7340,9 @@ const exportSpinnerSale = async (req: Request, res: Response) => {
             count: yarnCount
               ? yarnCount
               : "",
-            boxes: item.dataValues.no_of_boxes ? item.dataValues.no_of_boxes : "",
-            boxId: item.dataValues.box_ids ? item.dataValues.box_ids : "",
-            price: item.dataValues.price ? item.dataValues.price : "",
+            boxes: item.dataValues.no_of_boxes ? item.dataValues.no_of_boxes : no_of_boxes,
+            boxId: item.dataValues.box_ids ? item.dataValues.box_ids : boxid,
+            price: item.dataValues.price ? item.dataValues.price : price,
             total: item.dataValues.total_qty ? item.dataValues.total_qty : 0,
             transporter_name: item.dataValues.transporter_name
               ? item.dataValues.transporter_name
@@ -15318,7 +15478,7 @@ const fetchSpinnerLintCottonStock = async (req: Request, res: Response) => {
             bale_details bd ON gs.id = bd.sales_id
         ${whereClause}
         ORDER BY 
-            "spinner_name" DESC
+            "spinner_name" ASC
         LIMIT :limit OFFSET :offset
         )
 
@@ -15485,7 +15645,7 @@ const exportSpinnerCottonStock = async (req: Request, res: Response) => {
                 spinners sp ON gs.buyer = sp.id
         ${whereClause}`;
 
-      let dataQuery = `
+        let dataQuery = `
         WITH bale_details AS (
             SELECT 
                 bs.sales_id,
@@ -15509,8 +15669,7 @@ const exportSpinnerCottonStock = async (req: Request, res: Response) => {
                 AND (bs.spinner_status = true OR gs.status = 'Sold')
             GROUP BY 
                 bs.sales_id
-        ),
-        gin_sale_date as(
+        )
         SELECT 
             gs.*, 
             g.id AS ginner_id, 
@@ -15521,8 +15680,8 @@ const exportSpinnerCottonStock = async (req: Request, res: Response) => {
             p.program_name, 
             sp.id AS spinner_id, 
             sp.name AS spinner_name, 
-            sp.country_id as country_id,
-            sp.state_id as state_id, 
+            c.county_name as country,
+            st.state_name as state,
             sp.address AS spinner_address, 
             bd.no_of_bales AS accepted_no_of_bales, 
             bd.total_qty AS accepted_total_qty
@@ -15537,23 +15696,15 @@ const exportSpinnerCottonStock = async (req: Request, res: Response) => {
         LEFT JOIN 
             spinners sp ON gs.buyer = sp.id
         LEFT JOIN 
+            countries c ON sp.country_id = c.id
+        LEFT JOIN 
+            states st ON sp.state_id = st.id
+        LEFT JOIN 
             bale_details bd ON gs.id = bd.sales_id
         ${whereClause}
         ORDER BY 
-            "spinner_name" DESC
-        LIMIT :limit OFFSET :offset
-        )
-        Select 
-          gsd.*,
-          c.county_name as country,
-          s.state_name as state
-        from 
-          gin_sale_date gsd
-        left join
-          countries c on gsd.country_id = c.id
-        left join
-          states s on gsd.state_id = s.id
-      `;
+            gs."updatedAt" DESC
+        LIMIT :limit OFFSET :offset`;
 
       const [countResult, rows] = await Promise.all([
         sequelize.query(countQuery, {
@@ -15576,8 +15727,8 @@ const exportSpinnerCottonStock = async (req: Request, res: Response) => {
       for await (const [index, spinner] of rows.entries()) {
         const rowValues = {
           index: index + 1,
-          country: spinner.country,
-          state: spinner.state,
+          country: spinner?.country ? spinner?.country : "",
+          state: spinner?.state ? spinner?.state : "",
           date: spinner?.date ? moment(spinner.date).format('DD-MM-YYYY') : "",
           season: spinner?.season_name ? spinner?.season_name : "",
           ginner_names: spinner?.ginner_name ? spinner?.ginner_name

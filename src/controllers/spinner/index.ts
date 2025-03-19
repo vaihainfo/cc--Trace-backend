@@ -40,6 +40,7 @@ import { _getGinnerProcessTracingChartData } from "../ginner";
 import CombernoilGeneration from "../../models/combernoil_generation.model";
 import SpinCombernoilSale from "../../models/spin_combernoil_sale.model";
 import GinToGinSale from "../../models/gin-to-gin-sale.model";
+import SpinSaleYarnSelected from "../../models/spin-sale-yarn-selected.model";
 // import SpinSelectedBlend from "../../models/spin_selected_blend";
 
 //create Spinner Process
@@ -147,6 +148,7 @@ const createSpinnerProcess = async (req: Request, res: Response) => {
         yarn_count: yarn.yarnCount,
         yarn_produced: yarn.yarnProduced,
         yarn_qty_stock: yarn.yarnProduced,
+        batch_lot_no: yarn.batchLotNo,
       };
 
       const yarns = await SpinYarn.create(yarnData, { transaction });
@@ -259,6 +261,7 @@ const updateSpinProcess = async (req: Request, res: Response) => {
       yarn_type: req.body.yarnType,
       yarn_count: req.body.yarnCount,
       yarn_qty_produced: req.body.yarnQtyProduced,
+      batch_lot_no: req.body.batchLotNo,
       yarn_realisation: req.body.yarnRealisation,
       net_yarn_qty: req.body.netYarnQty,
       qty_stock: req.body.netYarnQty,
@@ -275,6 +278,7 @@ const updateSpinProcess = async (req: Request, res: Response) => {
         yarn_count: yarn.yarnCount,
         yarn_produced: yarn.yarnProduced,
         yarn_qty_stock: yarn.yarnProduced,
+        batch_lot_no: yarn.batchLotNo,
       };
       const yarns = await SpinYarn.create(yarnData);
       let uniqueFilename = `spin_yarn_qrcode_${Date.now()}.png`;
@@ -433,6 +437,17 @@ const fetchSpinnerProcessPagination = async (req: Request, res: Response) => {
 
       for await (let row of rows) {
         let yarncount = [];
+        let spinyarns = [];
+
+        spinyarns = await SpinYarn.findAll({
+          where: {process_id: row.dataValues?.id},
+          include:{
+            model: YarnCount,
+            as: "yarncount",
+            attributes: ["id", "yarnCount_name"],
+          },
+          attributes: ["id", "process_id", "yarn_count", "yarn_produced", "batch_lot_no"],
+        })
 
         if (row.dataValues?.yarn_count.length > 0) {
           yarncount = await YarnCount.findAll({
@@ -444,6 +459,7 @@ const fetchSpinnerProcessPagination = async (req: Request, res: Response) => {
         data.push({
           ...row.dataValues,
           yarncount,
+          spinyarns
         });
       }
 
@@ -459,6 +475,17 @@ const fetchSpinnerProcessPagination = async (req: Request, res: Response) => {
 
       for await (let row of gin) {
         let yarncount = [];
+        let spinyarns = [];
+
+        spinyarns = await SpinYarn.findAll({
+          where: {process_id: row.dataValues?.id},
+          include:{
+            model: YarnCount,
+            as: "yarncount",
+            attributes: ["id", "yarnCount_name"],
+          },
+          attributes: ["id", "process_id", "yarn_count", "yarn_produced", "batch_lot_no"],
+        })
 
         if (row.dataValues?.yarn_count.length > 0) {
           yarncount = await YarnCount.findAll({
@@ -470,6 +497,7 @@ const fetchSpinnerProcessPagination = async (req: Request, res: Response) => {
         data.push({
           ...row.dataValues,
           yarncount,
+          spinyarns
         });
       }
 
@@ -502,10 +530,6 @@ const fetchSpinnerProcess = async (req: Request, res: Response) => {
         model: Program,
         as: "program",
       },
-      // {
-      //     model: YarnCount,
-      //     as: "yarncount",
-      // }
     ];
     //fetch data with pagination
 
@@ -516,16 +540,33 @@ const fetchSpinnerProcess = async (req: Request, res: Response) => {
     });
 
     let yarncount = [];
+    let spinyarns = [];
 
-    if (gin.dataValues?.yarn_count.length > 0) {
-      yarncount = await YarnCount.findAll({
-        attributes: ["id", "yarnCount_name"],
-        where: { id: { [Op.in]: gin.dataValues?.yarn_count } },
-      });
+    if(gin){
+      spinyarns = await SpinYarn.findAll({
+        where: {process_id: gin.id},
+        include:{
+          model: YarnCount,
+          as: "yarncount",
+          attributes: ["id", "yarnCount_name"],
+        }
+      })
     }
-    gin.yarncount = yarncount;
 
-    return res.sendSuccess(res, gin);
+    let data = {
+      ...gin?.dataValues,
+      spinyarns
+    }
+
+    // if (gin.dataValues?.yarn_count.length > 0) {
+    //   yarncount = await YarnCount.findAll({
+    //     attributes: ["id", "yarnCount_name"],
+    //     where: { id: { [Op.in]: gin.dataValues?.yarn_count } },
+    //   });
+    // }
+    // gin.yarncount = yarncount;
+
+    return res.sendSuccess(res, data);
   } catch (error: any) {
     return res.sendError(res, error.message);
   }
@@ -1151,10 +1192,10 @@ const createSpinnerSales = async (req: Request, res: Response) => {
             total_qty: req.body.totalQty,
             transaction_via_trader: req.body.transactionViaTrader,
             transaction_agent: req.body.transactionAgent,
-            no_of_boxes: req.body.noOfBoxes,
+            no_of_boxes: req.body.buyerType === "Spinner" ? req.body.noOfBoxes : null,
             batch_lot_no: req.body.batchLotNo,
             reel_lot_no: req.body.reelLotNno ? req.body.reelLotNno : null,
-            box_ids: req.body.boxIds,
+            box_ids: req.body.buyerType === "Spinner" ? req.body.boxIds : null,
             yarn_type: req.body.yarnType,
             yarn_count: req.body.yarnCount,
             invoice_no: req.body.invoiceNo,
@@ -1167,7 +1208,7 @@ const createSpinnerSales = async (req: Request, res: Response) => {
             invoice_file: req.body.invoiceFile,
             delivery_notes: req.body.deliveryNotes,
             qty_stock: req.body.totalQty,
-            price: req.body.price,
+            price: req.body.buyerType === "Spinner" ?  req.body.price : null,
             letter_of_credit: req.body.letterOfCredit,
             logistics_documents: req.body.logisticsDocuments,
             yarn_quality_test_reports: req.body.yarnQualityTestReports,
@@ -1286,6 +1327,24 @@ const createSpinnerSales = async (req: Request, res: Response) => {
         }
       }
 
+      if(req.body.batchWiseData && req.body.batchWiseData.length > 0){
+        for await (let obj of req.body.batchWiseData) {
+          const batchList ={
+            process_id: obj.process_id,
+            yarn_id: obj.id,
+            sales_id: spinSales.id,
+            batch_lot_no: obj.batchLotNo,
+            price: obj.price,
+            box_id: obj.boxId,
+            no_of_boxes: obj.noOfBoxes,
+          }
+
+          await SpinSaleYarnSelected.create(
+            batchList, 
+            { transaction });
+        }
+      }
+
       if (spinSales) {
         await send_spin_mail(spinSales.id);
       }
@@ -1369,6 +1428,7 @@ const fetchSpinnerSale = async (req: Request, res: Response) => {
     });
 
     let yarnType = [];
+    let spinyarns = [];
 
     if (gin.dataValues?.yarn_count.length > 0) {
       yarnType = await YarnCount.findAll({
@@ -1376,7 +1436,31 @@ const fetchSpinnerSale = async (req: Request, res: Response) => {
         where: { id: { [Op.in]: gin.dataValues?.yarn_count } },
       });
     }
-    let data = { ...gin.dataValues, yarnType };
+
+    if(gin){
+      spinyarns = await SpinSaleYarnSelected.findAll({
+        where: {
+          sales_id: gin?.dataValues?.id,
+        },
+        include:[
+          {
+            model: SpinYarn,
+            as: "spinyarn",
+            include:[
+              {
+                model: YarnCount,
+                as: "yarncount",
+              }
+            ]
+          },
+          {
+            model: SpinProcess,
+            as: "process",
+          },
+        ]
+      });
+    }
+    let data = { ...gin.dataValues, yarnType, spinyarns };
 
     return res.sendSuccess(res, data);
   } catch (error: any) {
@@ -1514,9 +1598,33 @@ const fetchSpinSalesPagination = async (req: Request, res: Response) => {
           },
           attributes: ["id", "yarnCount_name"],
         });
+
+        const spinyarns = await SpinSaleYarnSelected.findAll({
+          where: {
+            sales_id: row?.dataValues?.id,
+          },
+          include:[
+            {
+              model: SpinYarn,
+              as: "spinyarn",
+              include:[
+                {
+                  model: YarnCount,
+                  as: "yarncount",
+                }
+              ]
+            },
+            {
+              model: SpinProcess,
+              as: "process",
+            },
+          ]
+        });
+
         data.push({
           ...row.dataValues,
           yarncount,
+          spinyarns
         });
       }
       return res.sendPaginationSuccess(res, data, count);
@@ -1537,9 +1645,33 @@ const fetchSpinSalesPagination = async (req: Request, res: Response) => {
           },
           attributes: ["id", "yarnCount_name"],
         });
+
+        const spinyarns = await SpinSaleYarnSelected.findAll({
+          where: {
+            sales_id: row?.dataValues?.id,
+          },
+          include:[
+            {
+              model: SpinYarn,
+              as: "spinyarn",
+              include:[
+                {
+                  model: YarnCount,
+                  as: "yarncount",
+                }
+              ]
+            },
+            {
+              model: SpinProcess,
+              as: "process",
+            },
+          ]
+        });
+
         data.push({
           ...row.dataValues,
           yarncount,
+          spinyarns
         });
       }
       return res.sendSuccess(res, data);
@@ -1707,8 +1839,33 @@ const exportSpinnerSale = async (req: Request, res: Response) => {
         }
       }
 
+      const spinyarns = await SpinSaleYarnSelected.findAll({
+        where: {
+          sales_id: item?.dataValues?.id,
+        },
+        include:[
+          {
+            model: SpinYarn,
+            as: "spinyarn",
+            include:[
+              {
+                model: YarnCount,
+                as: "yarncount",
+              }
+            ]
+          },
+          {
+            model: SpinProcess,
+            as: "process",
+          },
+        ]
+      });
+
       yarnTypeData =
         item?.yarn_type?.length > 0 ? item?.yarn_type.join(",") : "";
+      let boxid = spinyarns && spinyarns.length > 0 ? spinyarns.map((obj:any) => obj.box_id).join(',') : "";
+      let price = spinyarns && spinyarns.length > 0 ? spinyarns.map((obj:any) => obj.price).join(',') : "";
+      let no_of_boxes = spinyarns && spinyarns.length > 0 ? spinyarns.map((obj:any) => obj.no_of_boxes).join(',') : "";
 
       const rowValues = Object.values({
         index: index + 1,
@@ -1719,17 +1876,17 @@ const exportSpinnerSale = async (req: Request, res: Response) => {
         reelLot: item.reel_lot_no ? item.reel_lot_no : "",
         yarnType: yarnTypeData ? yarnTypeData : "",
         count: yarnCount ? yarnCount : "",
-        boxes: item.no_of_boxes ? item.no_of_boxes : "",
+        boxes: item.no_of_boxes ? item.no_of_boxes : no_of_boxes,
         buyer_id: item.knitter
           ? item.knitter.name
           : item.weaver
           ? item.weaver.name
           : item.processor_name,
-        boxId: item.box_ids ? item.box_ids : "",
+        boxId: item.box_ids ? item.box_ids : boxid,
         blend: "",
         blendqty: "",
         total: item.total_qty,
-        price: item.price ? item.price : "",
+        price: item.price ? item.price : price,
         program: item.program ? item.program.program_name : "",
         vichle: item.vehicle_no ? item.vehicle_no : "",
         transaction_via_trader: item.transaction_via_trader ? "Yes" : "No",
