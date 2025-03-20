@@ -41,3 +41,5 @@ COPY nginx.conf /etc/nginx/conf.d/
 
 # Define the command to run your compiled JavaScript file
 CMD service nginx start && npm start
+
+
