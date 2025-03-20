@@ -703,8 +703,7 @@ const exportAgentTransactions = async (req: Request, res: Response) => {
             for await (const [index, item] of transactions.entries()) {
                 const rowValues = Object.values({
                     index: index + 1,
-                    // date: moment(item.createdAt).format('DD/MM/YYYY hh:mm:ss A'),
-                    date: item.createdAt,
+                    date: moment.utc(item.createdAt).format('DD/MM/YYYY HH:mm:ss A'),
                     farmerCode: item.farmer ? item.farmer?.code : "",
                     farmerName: item.farmer ? item.farmer?.firstName + ' ' + item.farmer?.lastName : "",
                     season: item.season ? item.season.name : "",
@@ -735,7 +734,7 @@ const exportAgentTransactions = async (req: Request, res: Response) => {
                     const cellLength = (cell.value ? cell.value.toString() : '').length;
                     maxCellLength = Math.max(maxCellLength, cellLength);
                 });
-                column.width = Math.min(14, maxCellLength + 2); // Limit width to 30 characters
+                column.width = Math.min(25, maxCellLength + 2);
             });
 
             // Save the workbook
