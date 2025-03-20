@@ -152,6 +152,12 @@ const LintStockVerified = db.define('lint_stock_verifieds', {
   status: {
     type: DataTypes.STRING
   }, 
+  status_ginner: {
+    type: DataTypes.STRING
+  }, 
+  status_spinner: {
+    type: DataTypes.STRING
+  }, 
   status_bm: {
     type: DataTypes.STRING
   },
