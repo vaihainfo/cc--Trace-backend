@@ -872,8 +872,9 @@ const generateSpinnerLintCottonStock = async () => {
       offset += batchSize;
     }
 
-    if(currentWorksheet){
-      AddTotalRow(currentWorksheet, totals);
+    let currentsheet = workbook.getWorksheet(`Lint Cotton Stock Report ${worksheetIndex}`);
+    if(currentsheet){
+      AddTotalRow(currentsheet, totals);
     }
     
 
