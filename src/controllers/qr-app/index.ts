@@ -703,7 +703,8 @@ const exportAgentTransactions = async (req: Request, res: Response) => {
             for await (const [index, item] of transactions.entries()) {
                 const rowValues = Object.values({
                     index: index + 1,
-                    date: moment(item.date).format('DD/MM/YYYY'),
+                    // date: moment(item.createdAt).format('DD/MM/YYYY hh:mm:ss A'),
+                    date: item.createdAt,
                     farmerCode: item.farmer ? item.farmer?.code : "",
                     farmerName: item.farmer ? item.farmer?.firstName + ' ' + item.farmer?.lastName : "",
                     season: item.season ? item.season.name : "",
