@@ -2099,6 +2099,7 @@ const generatePscpProcurementLiveTracker = async () => {
               JOIN states s ON g.state_id = s.id
               JOIN countries c ON g.country_id = c.id
               JOIN programs p ON p.id = ANY(g.program_id)
+              WHERE g.status = true
           ),
           procurement_data AS (
             SELECT
@@ -2869,6 +2870,7 @@ const generateGinnerSummary = async () => {
         attributes: ["id", "name", "address", "state_id", "country_id"],
         offset: offset,
         limit: batchSize,
+        where: { status: true},
         include: [
                   {
                     model: Country,
@@ -2881,7 +2883,7 @@ const generateGinnerSummary = async () => {
                     as: "state"
                   }
                 ],
-        order:[["name", "ASC"]],
+        order:[[Sequelize.literal('TRIM("name")'), "ASC"]],
       });
 
       if (rows.length === 0) {
@@ -5287,7 +5289,7 @@ const generateSpinnerSummary = async () => {
 
     while (hasNextBatch) {
       let { count, rows } = await Spinner.findAndCountAll({
-        where: whereCondition,
+        where: { status: true},
         attributes: ["id", "name", "address", "country_id", "state_id"],
         offset: offset,
         limit: batchSize,
@@ -5303,7 +5305,7 @@ const generateSpinnerSummary = async () => {
             attributes: ["id", "state_name"],
           }
         ],
-        order: [["name", "asc"]],
+        order: [[Sequelize.literal('TRIM("name")'), "ASC"]],
       });
 
       if (rows.length === 0) {

@@ -12084,7 +12084,7 @@ const fetchSpinnerSummaryPagination = async (req: Request, res: Response) => {
         .map((id: any) => parseInt(id, 10));
       whereCondition.country_id = { [Op.in]: idArray };
     }
-
+    whereCondition.status = true;
     if (programId) {
       const idArray: number[] = programId
         .split(",")
@@ -12113,7 +12113,7 @@ const fetchSpinnerSummaryPagination = async (req: Request, res: Response) => {
           attributes: ["id", "state_name"],
         }
       ],
-      order: [["name", "asc"]],
+      order: [[Sequelize.literal('TRIM("name")'), "ASC"]],
     });
     let result: any = [];
     for await (let spinner of rows) {
@@ -12455,7 +12455,7 @@ const exportSpinnerSummary = async (req: Request, res: Response) => {
           .map((id: any) => parseInt(id, 10));
         whereCondition.country_id = { [Op.in]: idArray };
       }
-
+      whereCondition.status = true;
       if (programId) {
         const idArray: number[] = programId
           .split(",")
@@ -12512,7 +12512,7 @@ const exportSpinnerSummary = async (req: Request, res: Response) => {
             attributes: ["state_name"],
           },
         ],
-        order: [["name", "asc"]],
+        order: [[Sequelize.literal('TRIM("name")'), "ASC"]],
       });
 
 
@@ -12944,7 +12944,7 @@ const fetchGinnerSummaryPagination = async (req: Request, res: Response) => {
         .map((id: any) => parseInt(id, 10));
       whereCondition.country_id = { [Op.in]: idArray };
     }
-
+    whereCondition.status = true;
     if (programId) {
       const idArray: number[] = programId
         .split(",")
@@ -12972,7 +12972,7 @@ const fetchGinnerSummaryPagination = async (req: Request, res: Response) => {
       attributes: ["id", "name", "address", "state_id", "country_id"],
       offset: offset,
       limit: limit,
-      order: [["name", "ASC"]],
+      order: [[Sequelize.literal('TRIM("name")'), "ASC"]],
       include: [
         {
           model: Country,
@@ -14020,7 +14020,7 @@ const exportGinnerSummary = async (req: Request, res: Response) => {
           .map((id: any) => parseInt(id, 10));
         whereCondition.country_id = { [Op.in]: idArray };
       }
-
+      whereCondition.status = true;
       if (programId) {
         const idArray: number[] = programId
           .split(",")
@@ -14081,7 +14081,7 @@ const exportGinnerSummary = async (req: Request, res: Response) => {
             as: "state"
           }
         ],
-        order: [["name", "ASC"]]
+        order: [[Sequelize.literal('TRIM("name")'), "ASC"]]
       };
 
 
@@ -17962,8 +17962,8 @@ const fetchPscpProcurementLiveTracker = async (req: Request, res: Response) => {
                 ginners g
             JOIN states s ON g.state_id = s.id
             JOIN countries c ON g.country_id = c.id
-            JOIN programs p ON p.id = ANY(g.program_id)
-            WHERE ${brandConditionSql}
+            JOIN programs p ON p.id = ANY(g.program_id)            
+            WHERE g.status = true and ${brandConditionSql}  
           `;
 
     // if (brandId) {
@@ -18000,7 +18000,7 @@ const fetchPscpProcurementLiveTracker = async (req: Request, res: Response) => {
             JOIN states s ON g.state_id = s.id
             JOIN countries c ON g.country_id = c.id
             JOIN programs p ON p.id = ANY(g.program_id)
-          WHERE ${brandConditionSql}
+          WHERE g.status = true and ${brandConditionSql}
         ),
         procurement_data AS (
           SELECT
@@ -18759,7 +18759,7 @@ const exportPscpProcurementLiveTracker = async (
               JOIN states s ON g.state_id = s.id
               JOIN countries c ON g.country_id = c.id
               JOIN programs p ON p.id = ANY(g.program_id)
-            WHERE ${brandConditionSql}
+            WHERE g.status = true and ${brandConditionSql}
           ),
           procurement_data AS (
             SELECT
