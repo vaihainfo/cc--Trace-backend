@@ -6277,7 +6277,7 @@ const generateSpinnerSale = async () => {
           state: item.dataValues.state?item.dataValues.state:"",
           createdAt: item.dataValues.createdAt ? item.dataValues.createdAt : "",
           date: item.dataValues.date ? formatDate(item.dataValues.date) : "",
-          no_of_days: item.no_of_days? Number(item.no_of_days):"",
+          no_of_days: item.dataValues.no_of_days? Number(item.dataValues.no_of_days):"",
           lint_consumed_seasons: seedSeason ? seedSeason[0]?.seasons : "",
           season: item.dataValues.season_name ? item.dataValues.season_name : "",
           spinner: item.dataValues.spinner ? item.dataValues.spinner : "",
