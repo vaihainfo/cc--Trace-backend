@@ -733,7 +733,7 @@ const exportAgentTransactions = async (req: Request, res: Response) => {
             else{
                 rowValues = Object.values({
                     index: index + 1,
-                    date: moment(item.createdAt).format('DD-MM-YYYY HH:mm:ss A'),
+                    date: moment(item.createdAt).format('DD-MM-YYYY hh:mm:ss A'),
                     farmerCode: item.farmer ? item.farmer?.code : "",
                     farmerName: item.farmer ? item.farmer?.firstName + ' ' + item.farmer?.lastName : "",
                     season: item.season ? item.season.name : "",
