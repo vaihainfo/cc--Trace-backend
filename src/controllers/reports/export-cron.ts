@@ -875,8 +875,9 @@ const generateSpinnerLintCottonStock = async () => {
       offset += batchSize;
     }
 
-    if(currentWorksheet){
-      AddTotalRow(currentWorksheet, totals);
+    let currentsheet = workbook.getWorksheet(`Lint Cotton Stock Report ${worksheetIndex}`);
+    if(currentsheet){
+      AddTotalRow(currentsheet, totals);
     }
     
 
@@ -2802,7 +2803,7 @@ const generateAgentTransactions = async () => {
       for await (const [index, item] of transactions.entries()) {
         const rowValues = Object.values({
           index: index + offset + 1,
-          date: item.createdAt,
+          date: moment(item.createdAt).format('DD-MM-YYYY HH:mm:ss A'),
           farmerCode: item.farmer_code ? item.farmer_code : "",
           farmerName: item.firstName ? item.firstName + ' ' + `${item.lastName ? item.lastName : ""}` : item.firstName,
           season: item.season_name ? item.season_name : "",
