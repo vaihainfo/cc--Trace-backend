@@ -2718,6 +2718,7 @@ const generateAgentTransactions = async () => {
       const transactions = await sequelize.query(`
         SELECT
             tr.date,
+            tr.createdAt,
             tr.farmer_code,
             tr.qty_purchased,
             tr.rate,
@@ -2797,7 +2798,7 @@ const generateAgentTransactions = async () => {
       for await (const [index, item] of transactions.entries()) {
         const rowValues = Object.values({
           index: index + offset + 1,
-          date: moment(item.date).format('DD/MM/YYYY'),
+          date: item.createdAt,
           farmerCode: item.farmer_code ? item.farmer_code : "",
           farmerName: item.firstName ? item.firstName + ' ' + `${item.lastName ? item.lastName : ""}` : item.firstName,
           season: item.season_name ? item.season_name : "",
