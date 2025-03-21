@@ -5549,8 +5549,8 @@ const generateSpinnerBale = async () => {
 
         const rowValues = Object.values({
           index: index + offset + 1,
-          country: country.dataValues.county_name,
-          state: state.dataValues.state_name,
+          country: country ? country.dataValues.county_name : '',
+          state: state ? state.dataValues.state_name : '',
           accept_date: item.accept_date
             ? item.accept_date
             : "",

@@ -4875,8 +4875,8 @@ const exportSpinnerBale = async (req: Request, res: Response) => {
         if (isOrganic === 'true') {
        rowValues = Object.values({
           index: index + 1,
-          country: country.dataValues.county_name,
-          state: state.dataValues.state_name,
+          country: country ? country.dataValues.county_name : '',
+          state: state ? state.dataValues.state_name : '',
           accept_date: item.accept_date
             ? item.accept_date
             : "",
@@ -4904,8 +4904,8 @@ const exportSpinnerBale = async (req: Request, res: Response) => {
       else{
         rowValues = Object.values({
           index: index + 1,
-          country: country.dataValues.county_name,
-          state: state.dataValues.state_name,
+          country: country ? country.dataValues.county_name : '',
+          state: state ? state.dataValues.state_name : '',
           accept_date: item.accept_date
             ? item.accept_date
             : "",
