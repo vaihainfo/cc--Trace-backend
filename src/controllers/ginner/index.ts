@@ -32,6 +32,8 @@ import moment from "moment";
 import GinToGinSale from "../../models/gin-to-gin-sale.model";
 import Block from "../../models/block.model";
 import SpinnerPlaceLintOrderSales from "../../models/spinner-place-lint-order-sales.model";
+import GinnerLintCertificate from "../../models/ginner-lintcert.model";
+
 
 //create Ginner Process
 // const createGinnerProcess = async (req: Request, res: Response) => {
@@ -399,7 +401,7 @@ req.body.brandId }, transaction });
     console.error(error);
     return res.sendError(res, error.message || "An error occurred", error);
   }
-};
+};  
 
 const updateGinnerProcess = async (req: Request, res: Response) => {
   if (!req.body.id) {
@@ -3950,8 +3952,209 @@ const updateStatusLintSales = async (req: Request, res: Response) => {
   }
 };
 
+const createGinnerLintCertificate = async (req: Request, res: Response) => {
+  
+  try {
+
+    const data = {
+      country_id: req.body.countryId,
+      state_id: req.body.stateId,
+      brand_id: req.body.brandId,
+      season_id: req.body.seasonId,
+      ginner_id: req.body.ginnerId,
+      program_id: req.body.programId,
+      document: req.body.document
+    };
+  
+    const ginnerLintCertificate = await GinnerLintCertificate.create(data);
+
+    res.sendSuccess(res, { ginnerLintCertificate });
+    } catch (error: any) {
+        console.log(error); 
+      return res.sendError(res, error.message,error);
+    }
+  };
+
+  const fetchGinnerLintCertificatePagination = async (req: Request, res: Response) => {
+    const searchTerm = req.query.search || "";
+    const page = Number(req.query.page) || 1;
+    const limit = Number(req.query.limit) || 10;
+    const { ginnerId, seasonId, countyId, stateId, brandId }: any = req.query;
+    const offset = (page - 1) * limit;
+    const whereCondition: any = {};
+    try {
+      if (searchTerm) {
+        whereCondition[Op.or] = [
+          { "$season.name$": { [Op.iLike]: `%${searchTerm}%` } },
+          { "$country.county_name$": { [Op.iLike]: `%${searchTerm}%` } },
+          { "$state.state_name$": { [Op.iLike]: `%${searchTerm}%` } },
+          { "$brand.brand_name$": { [Op.iLike]: `%${searchTerm}%` } },
+
+          
+        ];
+      }
+      if (ginnerId) {
+        whereCondition.ginner_id = ginnerId;
+      }
+      if (seasonId) {
+        const idArray: number[] = seasonId
+          .split(",")
+          .map((id: any) => parseInt(id, 10));
+        whereCondition.season_id = { [Op.in]: idArray };
+      }
+     
+      if (countyId) {
+        const idArray: number[] = countyId
+          .split(",")
+          .map((id: any) => parseInt(id, 10));
+        whereCondition.country_id = { [Op.in]: idArray };
+      }
+      if (brandId) {
+        const idArray: number[] = brandId
+          .split(",")
+          .map((id: any) => parseInt(id, 10));
+        whereCondition.brand_id = { [Op.in]: idArray };
+      }
+      if (stateId) {
+        const idArray: number[] = stateId
+          .split(",")
+          .map((id: any) => parseInt(id, 10));
+        whereCondition.state_id = { [Op.in]: idArray };
+      }
+
+      if (seasonId) {
+        const idArray: number[] = seasonId
+          .split(",")
+          .map((id: any) => parseInt(id, 10));
+        whereCondition.season_id = { [Op.in]: idArray };
+      }
+  
+      let include = [
+        {
+          model: Ginner,
+          as: "ginner",
+        },
+        
+        {
+          model: Season,
+          as: "season",
+        },
+        {
+          model: Program,
+          as: "program",
+        },
+        {
+          model: Country,
+          as: "country",
+        },
+        {
+          model: Brand,
+          as: "brand",
+        },
+        {
+          model: State,
+          as: "state",
+        },
+
+      ];
+      //fetch data with pagination
+      if (req.query.pagination === "true") {
+        const { count, rows } = await GinnerLintCertificate.findAndCountAll({
+          where: whereCondition,
+          include: include,
+          offset: offset,
+          limit: limit,
+          order: [["id", "desc"]],
+        });
+        let sendData: any = [];
+        for await (let row of rows) {
+        const seed_cotton = await sequelize.query(
+      `  SELECT
+          COALESCE(SUM(CAST("farms"."total_estimated_cotton"AS DOUBLE PRECISION)), 0) AS expected_seed_cotton
+          FROM "ginner_allocated_villages" as gv
+                  LEFT JOIN 
+                        "villages" AS "farmer->village" ON "gv"."village_id" = "farmer->village"."id" 
+                   LEFT JOIN 
+                        "farmers" AS "farmer" ON "farmer->village"."id" = "farmer"."village_id" and "farmer"."brand_id" ="gv"."brand_id"
+                   LEFT JOIN 
+                        "farms" as "farms" on farms.farmer_id = "farmer".id and farms.season_id = gv.season_id
+                   LEFT JOIN 
+                        "seasons" AS "season" ON "gv"."season_id" = "season"."id"
+        
+        WHERE gv.ginner_id = :ginner_id and gv.season_id = :season_id
+        GROUP BY 
+          gv.ginner_id `,
+          {
+            replacements: {
+              ginner_id: row.dataValues.ginner_id,
+              season_id: row.dataValues.season_id,
+              
+            },
+            type: sequelize.QueryTypes.SELECT
+          });
+
+          const lint_cotton = await sequelize.query(
+            `  SELECT
+               gec.ginner_id,
+              SUM(CAST(gec.expected_lint AS DOUBLE PRECISION)) AS expected_lint
+              FROM
+              ginner_expected_cottons gec
+              WHERE
+              gec.ginner_id = :ginner_id and gec.season_id = :season_id
+              GROUP BY gec.ginner_id `,
+                {
+                  replacements: {
+                    ginner_id: row.dataValues.ginner_id,
+                    season_id: row.dataValues.season_id,
+                    
+                },
+                  type: sequelize.QueryTypes.SELECT
+          });
+         
+          sendData.push({
+            ...row.dataValues,
+            seed_cotton: seed_cotton.length > 0 ? seed_cotton[0] : null,
+            lint_cotton:lint_cotton.length > 0 ? lint_cotton[0] : null,
+          });
+          
+        }
+        
+        return res.sendPaginationSuccess(res, sendData, count);
+      } else {
+        const LintCertificate = await GinnerLintCertificate.findAll({
+          where: whereCondition,
+          include: include,
+          order: [["id", "desc"]],
+        });
+        return res.sendSuccess(res, LintCertificate);
+      }
+    } catch (error: any) {
+      console.error(error);
+      return res.sendError(res, error.message, error);
+    }
+  }
+
+  const deleteLintCertificate = async (req: Request, res: Response) => {
+    try{
+      await GinnerLintCertificate.destroy({
+        where: {
+          id: req.body.id,
+        },
+      });
+
+      
+        return res.sendSuccess(res, {
+          message: "Successfully deleted this Ginner certificate",
+        });
+    }
+      catch (error: any) {
+      console.error(error);
+      return res.sendError(res, error.message, error);
+    }
+  }
 
 
+ 
 export {
   createGinnerProcess,
   fetchGinProcessPagination,
@@ -3993,4 +4196,7 @@ export {
   fetchGinLintList,
   updateStatusLintSales,
   getMappedVillages,
+  createGinnerLintCertificate,
+  fetchGinnerLintCertificatePagination,
+  deleteLintCertificate
 };
