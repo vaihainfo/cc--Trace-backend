@@ -35,11 +35,10 @@ const getGinProcessLotNo = async (req: Request, res: Response) => {
           AND gb.sold_status IS FALSE
         GROUP BY gp.id`)
 
-    if (lotNo && lotNo.length > 0) {
       return res.sendSuccess(res, lotNo);
-    } else {
-      return res.sendError(res, "No Ginner Process is created for this Ginner");
-    }
+    // } else {
+    //   return res.sendError(res, "No Ginner Process is created for this Ginner");
+    // }
   } catch (error: any) {
     console.log(error);
     return res.sendError(res, error?.message);
