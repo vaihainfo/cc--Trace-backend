@@ -1321,7 +1321,7 @@ const chooseBale = async (req: Request, res: Response) => {
           JOIN 
               ginners g ON gp.ginner_id = g.id
           JOIN 
-              seasons s ON gp.season_id = s.id
+              seasons s ON gp.season_id = s.id AND gp.season_id IN (${seasonId})
           JOIN 
               programs p ON gp.program_id = p.id
           WHERE 
@@ -1382,7 +1382,7 @@ const chooseBale = async (req: Request, res: Response) => {
           JOIN 
               ginners g ON gtg.new_ginner_id = g.id
           JOIN 
-              seasons s ON gp.season_id = s.id
+              seasons s ON gp.season_id = s.id AND gp.season_id IN (${seasonId})
           JOIN 
               programs p ON gp.program_id = p.id
           WHERE 
@@ -1658,6 +1658,8 @@ const chooseCotton = async (req: Request, res: Response) => {
     }
     let villageId: any = req.query.villageId;
     let seasonId: any = req.query.seasonId;
+    let fromDt: any = req.query.fromDt;
+    let toDt: any = req.query.toDt;
     let whereCondition: any = {};
 
     let transactionCondition: any = {
@@ -1707,6 +1709,19 @@ const chooseCotton = async (req: Request, res: Response) => {
 
     for await (let row of allocated) {
 
+      const whereCondition = {
+        ...transactionCondition,
+        village_id: row?.dataValues?.village_id,
+        season_id: row?.dataValues?.season_id,
+      };
+      
+      // Add date filter only if fromDt and toDt are not null
+      if (fromDt && toDt) {
+        whereCondition.date = {
+          [Op.between]: [fromDt, toDt],
+        };
+      }
+
       const results = await Transaction.findAll({
         // attributes: [
         // [Sequelize.fn("SUM", Sequelize.col("qty_stock")), "qty_stock"],
@@ -1729,11 +1744,7 @@ const chooseCotton = async (req: Request, res: Response) => {
           { model: Program, as: "program" },
           { model: Season, as: "season" },
         ],
-        where: {
-          ...transactionCondition,
-          village_id: row?.dataValues?.village_id,
-          season_id: row?.dataValues?.season_id,
-        },
+        where: whereCondition,
         // group: ["transactions.village_id, transactions.id"],
         order: [
           ["id", "DESC"],
@@ -3229,6 +3240,35 @@ const getSpinner = async (req: Request, res: Response) => {
   });
   res.sendSuccess(res, result);
 };
+
+const getMappedVillages= async  (req: Request, res: Response) => {
+  let ginnerId = req.query.ginnerId;
+  if (!ginnerId) {
+    return res.sendError(res, "Need Ginner Id ");
+  }
+  
+  const allocated = await GinnerAllocatedVillage.findAll({
+    where: {
+      ginner_id: ginnerId,
+    },
+    include: [
+      { model: Village, as: "village" },
+    ]
+  })
+
+  try {
+    const villageData = allocated.map((item : any) => ({
+      id: item.dataValues.village.id,
+      village_name: item.dataValues.village.village_name
+    }));
+
+    res.sendSuccess(res, villageData);
+  } catch (error: any) {
+    console.error(error);
+    return res.sendError(res, error.message, error);
+  }
+}
+
 const getVillageAndFarmer = async (req: Request, res: Response) => {
   let ginnerId = req.query.ginnerId;
   if (!ginnerId) {
@@ -3951,5 +3991,6 @@ export {
   getBrands,
   fetchGinLintAlert,
   fetchGinLintList,
-  updateStatusLintSales
+  updateStatusLintSales,
+  getMappedVillages,
 };
