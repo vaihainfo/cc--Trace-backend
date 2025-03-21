@@ -15056,6 +15056,7 @@ const fetchGinnerCottonStock = async (req: Request, res: Response) => {
   const { ginnerId, seasonId, programId, brandId, countryId }: any = req.query;
   const whereCondition: any = {};
   const transactionWhere: any = {};
+  const cottenSectionWhere:any = {};
   try {
     if (searchTerm) {
       whereCondition[Op.or] = [
@@ -15085,19 +15086,21 @@ const fetchGinnerCottonStock = async (req: Request, res: Response) => {
       whereCondition["$ginner.country_id$"] = { [Op.in]: idArray };
     }
 
-    // if (programId) {
-    //   const idArray: number[] = programId
-    //     .split(",")
-    //     .map((id: any) => parseInt(id, 10));
-    //   transactionWhere.program_id = { [Op.in]: idArray };
-    //   whereCondition.program_id = { [Op.in]: idArray };
-    // }
+    if (programId) {
+      const idArray: number[] = programId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      transactionWhere.program_id = { [Op.in]: idArray };
+      whereCondition.program_id = { [Op.in]: idArray };
+      cottenSectionWhere["$ginprocess.program_id$"] = { [Op.in]: idArray };
+    }
 
     if (seasonId) {
       const idArray: number[] = seasonId
         .split(",")
         .map((id: any) => parseInt(id, 10));
       whereCondition.season_id = { [Op.in]: idArray };
+      cottenSectionWhere["$ginprocess.season_id$"] = { [Op.in]: idArray };
     }
 
     let include = [
@@ -15119,11 +15122,11 @@ const fetchGinnerCottonStock = async (req: Request, res: Response) => {
         model: Season,
         as: "season",
       },
-      // {
-      //   model: Program,
-      //   as: "program",
+      {
+        model: Program,
+        as: "program",
 
-      // },
+      },
     ];
 
     let { count, rows } = await GinProcess.findAndCountAll({
@@ -15146,7 +15149,7 @@ const fetchGinnerCottonStock = async (req: Request, res: Response) => {
       ],
       where: whereCondition,
       include: include,
-      group: ["ginner.id", "season.id"],
+      group: ["ginner.id", "season.id", "program.id"],
       order: [["ginner_name", "ASC"]],
       limit: limit,
       offset: offset,
@@ -15189,6 +15192,44 @@ const fetchGinnerCottonStock = async (req: Request, res: Response) => {
         },
       });
 
+      const cottonProcessed = await CottonSelection.findOne({
+        attributes: [
+          [sequelize.fn('COALESCE', sequelize.fn('SUM', Sequelize.literal("CAST(qty_used AS DOUBLE PRECISION)")), 0), 'qty']
+        ],
+        include: [
+          {
+            model: GinProcess,
+            as: 'ginprocess',
+            attributes: []
+          }
+        ],
+        where: {
+          ...cottenSectionWhere,
+          '$ginprocess.ginner_id$': ginner.ginner_id,
+          '$ginprocess.season_id$': ginner.season_id,
+        },
+        group: ["ginprocess.ginner_id"]
+      });
+
+      const cottonProcessedByHeap = await heapSelection.findOne({
+        attributes: [
+          [sequelize.fn('COALESCE', sequelize.fn('SUM', Sequelize.literal("CAST(qty_used AS DOUBLE PRECISION)")), 0), 'qty']
+        ],
+        include: [
+          {
+            model: GinProcess,
+            as: 'ginprocess',
+            attributes: [],
+          }
+        ],
+        where: {
+          ...cottenSectionWhere,
+          '$ginprocess.ginner_id$': ginner.ginner_id,
+          '$ginprocess.season_id$': ginner.season_id,
+        },
+        group: ["ginprocess.ginner_id"]
+      });
+
       const country_name = await Country.findOne({
         attributes: ["county_name"],
         where: {
@@ -15202,10 +15243,13 @@ const fetchGinnerCottonStock = async (req: Request, res: Response) => {
           id: ginner.ginner.state_id,
         },
       });
+      const cottonProcessedQty = isNaN(cottonProcessed?.dataValues?.qty) ? 0 : cottonProcessed?.dataValues?.qty;
+      const cottonProcessedByHeapQty = isNaN(cottonProcessedByHeap?.dataValues?.qty) ? 0 : cottonProcessedByHeap?.dataValues?.qty;
+      const totalCottonProcessedQty = cottonProcessedQty + cottonProcessedByHeapQty;
 
       obj.cotton_procured = cottonProcured?.dataValues?.cotton_procured ?? 0;
       obj.cotton_stock = cottonProcured?.dataValues?.cotton_stock ?? 0;
-      obj.cotton_processed = obj.cotton_procured - obj.cotton_stock;
+      obj.cotton_processed = totalCottonProcessedQty ?? 0;
       obj.country = country_name?.dataValues.county_name;
       obj.state = state_name?.dataValues.state_name;
       result.push({ ...ginner?.dataValues, ...obj});
@@ -15233,6 +15277,7 @@ const exportGinnerCottonStock = async (req: Request, res: Response) => {
   const { exportType, ginnerId, seasonId, programId, brandId, countryId }: any = req.query;
   const whereCondition: any = {};
   const transactionWhere: any = {};
+  const cottenSectionWhere:any = {};
   try {
     if (exportType === "all") {
 
@@ -15277,6 +15322,7 @@ const exportGinnerCottonStock = async (req: Request, res: Response) => {
           .map((id: any) => parseInt(id, 10));
         transactionWhere.program_id = { [Op.in]: idArray };
         whereCondition.program_id = { [Op.in]: idArray };
+        cottenSectionWhere["$ginprocess.program_id$"] = { [Op.in]: idArray };
       }
 
       if (seasonId) {
@@ -15328,10 +15374,10 @@ const exportGinnerCottonStock = async (req: Request, res: Response) => {
           model: Season,
           as: "season",
         },
-        // {
-        //   model: Program,
-        //   as: "program",
-        // },
+        {
+          model: Program,
+          as: "program",
+        },
       ];
 
       let { count, rows } = await GinProcess.findAndCountAll({
@@ -15352,7 +15398,7 @@ const exportGinnerCottonStock = async (req: Request, res: Response) => {
         ],
         where: whereCondition,
         include: include,
-        group: ["ginner.id", "season.id", "ginner.country.id", "ginner->state.id"],
+        group: ["ginner.id", "season.id", "ginner.country.id", "ginner->state.id", "program.id"],
         order: [["ginner_name", "ASC"]],
         limit: limit,
         offset: offset,
@@ -15399,10 +15445,50 @@ const exportGinnerCottonStock = async (req: Request, res: Response) => {
             status: "Sold",
           },
         });
-
+        const cottonProcessed = await CottonSelection.findOne({
+          attributes: [
+            [sequelize.fn('COALESCE', sequelize.fn('SUM', Sequelize.literal("CAST(qty_used AS DOUBLE PRECISION)")), 0), 'qty']
+          ],
+          include: [
+            {
+              model: GinProcess,
+              as: 'ginprocess',
+              attributes: []
+            }
+          ],
+          where: {
+            ...cottenSectionWhere,
+            '$ginprocess.ginner_id$': item.ginner_id,
+            '$ginprocess.season_id$': item.season_id,
+          },
+          group: ["ginprocess.ginner_id"]
+        });
+  
+        const cottonProcessedByHeap = await heapSelection.findOne({
+          attributes: [
+            [sequelize.fn('COALESCE', sequelize.fn('SUM', Sequelize.literal("CAST(qty_used AS DOUBLE PRECISION)")), 0), 'qty']
+          ],
+          include: [
+            {
+              model: GinProcess,
+              as: 'ginprocess',
+              attributes: [],
+            }
+          ],
+          where: {
+            ...cottenSectionWhere,
+            '$ginprocess.ginner_id$': item.ginner_id,
+            '$ginprocess.season_id$': item.season_id,
+          },
+          group: ["ginprocess.ginner_id"]
+        });
+        const cottonProcessedQty = isNaN(cottonProcessed?.dataValues?.qty) ? 0 : cottonProcessed?.dataValues?.qty;
+        const cottonProcessedByHeapQty = isNaN(cottonProcessedByHeap?.dataValues?.qty) ? 0 : cottonProcessedByHeap?.dataValues?.qty;
+        const totalCottonProcessedQty = cottonProcessedQty + cottonProcessedByHeapQty;
+  
           obj.cotton_procured = cottonProcured?.dataValues?.cotton_procured ?? 0;
           obj.cotton_stock = cottonProcured?.dataValues?.cotton_stock ?? 0;
-          obj.cotton_processed = obj.cotton_procured - obj.cotton_stock;
+          obj.cotton_processed = totalCottonProcessedQty ?? 0;
 
           const rowValues = Object.values({
           index: index + 1,
