@@ -39,6 +39,9 @@ import {
     fetchGinLintList,
     updateStatusLintSales,
     getMappedVillages,
+    createGinnerLintCertificate,
+    fetchGinnerLintCertificatePagination,
+    deleteLintCertificate
     
 } from "../../controllers/ginner";
 import accessControl from "../../middleware/access-control";
@@ -74,6 +77,9 @@ router.get('/sales/bale', fetchGinSaleBale);
 router.get('/sales/all-bales', fetchGinSaleAllBales);
 router.get('/coc/document', getCOCDocumentData);
 router.put('/coc/doc/update', updateCOCDoc);
+router.post('/add-lint-certificate',createGinnerLintCertificate);
+router.get('/lint-certificate',fetchGinnerLintCertificatePagination);
+router.delete('/lint-certificate',deleteLintCertificate);
 
 // router.post('/sales/spinner', createSpinnerProcess);
 router.put('/update-status-transaction', updateTransactionStatus);
