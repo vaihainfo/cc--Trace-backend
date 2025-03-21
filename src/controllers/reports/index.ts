@@ -4424,8 +4424,8 @@ const fetchSpinnerBalePagination = async (req: Request, res: Response) => {
 
       nData.push({
         ...item,
-        country: country.dataValues.county_name,
-        state: state.dataValues.state_name,
+        country: country ? country.dataValues.county_name : '',
+        state: state ? state.dataValues.state_name : '',
         quality_report: qualityReport ? qualityReport : null,
       });
     }
