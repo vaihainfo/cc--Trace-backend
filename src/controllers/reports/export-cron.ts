@@ -4766,9 +4766,49 @@ const generateGinnerCottonStock = async () => {
           },
         });
 
+        const cottonProcessed = await CottonSelection.findOne({
+          attributes: [
+            [sequelize.fn('COALESCE', sequelize.fn('SUM', Sequelize.literal("CAST(qty_used AS DOUBLE PRECISION)")), 0), 'qty']
+          ],
+          include: [
+            {
+              model: GinProcess,
+              as: 'ginprocess',
+              attributes: []
+            }
+          ],
+          where: {
+            '$ginprocess.ginner_id$': item.ginner_id,
+            '$ginprocess.season_id$': item.season_id,
+          },
+          group: ["ginprocess.ginner_id"]
+        });
+  
+        const cottonProcessedByHeap = await heapSelection.findOne({
+          attributes: [
+            [sequelize.fn('COALESCE', sequelize.fn('SUM', Sequelize.literal("CAST(qty_used AS DOUBLE PRECISION)")), 0), 'qty']
+          ],
+          include: [
+            {
+              model: GinProcess,
+              as: 'ginprocess',
+              attributes: [],
+            }
+          ],
+          where: {
+            '$ginprocess.ginner_id$': item.ginner_id,
+            '$ginprocess.season_id$': item.season_id,
+          },
+          group: ["ginprocess.ginner_id"]
+        });
+        const cottonProcessedQty = isNaN(cottonProcessed?.dataValues?.qty) ? 0 : cottonProcessed?.dataValues?.qty;
+        const cottonProcessedByHeapQty = isNaN(cottonProcessedByHeap?.dataValues?.qty) ? 0 : cottonProcessedByHeap?.dataValues?.qty;
+        const totalCottonProcessedQty = cottonProcessedQty + cottonProcessedByHeapQty;
+  
+
         obj.cotton_procured = cottonProcured?.dataValues?.cotton_procured ?? 0;
         obj.cotton_stock = cottonProcured?.dataValues?.cotton_stock ?? 0;
-        obj.cotton_processed = obj.cotton_procured - obj.cotton_stock;
+        obj.cotton_processed = totalCottonProcessedQty ?? 0;
 
         const rowValues = Object.values({
           index: index + offset + 1,
