@@ -509,13 +509,23 @@ const exportAgentTransactions = async (req: Request, res: Response) => {
             mergedCell.font = { bold: true };
             mergedCell.alignment = { horizontal: 'center', vertical: 'middle' };
             // Set bold font for header row
-            
+            if (isBrand === 'true') {
             const headerRow = worksheet.addRow([
                 "Sr No.", 'Date', 'Farmer Code', 'Farmer Name', 'Season', 'Country',
                 'State', 'District', 'Block', 'Village', 'Transaction Id', 'Quantity Purchased (Kgs)',
                 'Available Cotton (Kgs)', 'Price/KG(Local Currency)', 'Programme', 'Transport Vehicle No', 'Payment Method', 'Ginner Name', 'Transaction User Details', 'Status'
             ]);
-            headerRow.font = { bold: true };
+                headerRow.font = { bold: true };
+            }
+            else {
+                const headerRow = worksheet.addRow([
+                    "Sr No.", 'Date', 'Farmer Code', 'Farmer Name', 'Season', 'Country',
+                    'State', 'District', 'Block', 'Village', 'Transaction Id', 'Quantity Purchased (Kgs)',
+                    'Available Cotton (Kgs)', 'Price/KG(Local Currency)', 'Programme', 'Transport Vehicle No', 'Payment Method', 'Ginner Name', 'Transaction User Details','latitude','longitude', 'Status'
+                ]);
+                headerRow.font = { bold: true };
+            }
+            
             const whereCondition: any = {}
             if (searchTerm) {
                 whereCondition[Op.or] = [
@@ -751,8 +761,8 @@ const exportAgentTransactions = async (req: Request, res: Response) => {
                     payment_method: item.payment_method ? item.payment_method : "",
                     ginner: item.ginner ? item.ginner.name : "",
                     agent: item?.agent && ( item?.agent?.lastName ? item?.agent?.firstName + " " + item?.agent?.lastName+ "-" + item?.agent?.access_level : item?.agent?.firstName+ "-" + item?.agent?.access_level),
-                    //latitude: item.latitude ? item.latitude : "-",
-                   // longitude: item.longitude ? item.longitude : "-",
+                    latitude: item.latitude ? item.latitude : "-",
+                    longitude: item.longitude ? item.longitude : "-",
                     status: item.status ? item.status : ''
                 });
             }
