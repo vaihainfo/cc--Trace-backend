@@ -76,7 +76,9 @@ export const createSpinnerPlaceLintOrder = async (req: Request, res: Response) =
       otherDocument1,
       otherDocument2,
       orderDocumentPdfLink,
-      status: 'pending'
+      spinner_status: 'pending',
+      ginner_status: 'pending',
+      brand_status: 'pending'
     });
 
     return res.sendSuccess(res, { 
@@ -95,7 +97,9 @@ export const fetchSpinnerPlaceLintOrderPagination = async (req: Request, res: Re
     const page = req.query.page ? parseInt(req.query.page as string) : 0;
     const size = req.query.size ? parseInt(req.query.size as string) : 10;
     const search = req.query.search as string || '';
-    const status = req.query.status as string;
+    const spinnerStatus = req.query.spinnerStatus as string;
+    const ginnerStatus = req.query.ginnerStatus as string;
+    const brandStatus = req.query.brandStatus as string;
     const spinnerId = req.query.spinnerId as string;
     const ginnerId = req.query.ginnerId as string;
     const brandId = req.query.brandId as string;
@@ -115,9 +119,17 @@ export const fetchSpinnerPlaceLintOrderPagination = async (req: Request, res: Re
       ];
     }
 
-    // Add status filter if provided
-    if (status) {
-      whereClause.status = status;
+    // Add status filters if provided
+    if (spinnerStatus) {
+      whereClause.spinner_status = spinnerStatus;
+    }
+
+    if (ginnerStatus) {
+      whereClause.ginner_status = ginnerStatus;
+    }
+
+    if (brandStatus) {
+      whereClause.brand_status = brandStatus;
     }
 
     // Add spinner filter if provided
@@ -344,10 +356,10 @@ export const updateSpinnerPlaceLintOrderStatus = async (req: Request, res: Respo
       return res.sendError(res, 'Valid items array is required');
     }
 
-    // Validate each item has id and status
+    // Validate each item has id and at least one status type
     for (const item of items) {
-      if (!item.id || !item.status) {
-        return res.sendError(res, 'Each item must have id and status');
+      if (!item.id || !(item.spinnerStatus || item.ginnerStatus || item.brandStatus)) {
+        return res.sendError(res, 'Each item must have id and at least one status type (spinnerStatus, ginnerStatus, or brandStatus)');
       }
     }
 
@@ -358,13 +370,37 @@ export const updateSpinnerPlaceLintOrderStatus = async (req: Request, res: Respo
       const lintOrder = await SpinnerPlaceLintOrder.findByPk(item.id);
       
       if (lintOrder) {
-        // Update the status
-        await lintOrder.update({ status: item.status });
+        const updateData: any = {};
+        const statusUpdates = [];
+        
+        // Add spinner status if provided
+        if (item.spinnerStatus) {
+          updateData.spinner_status = item.spinnerStatus;
+          updateData.spinner_status_updated_at = new Date();
+          statusUpdates.push(`spinner status to ${item.spinnerStatus}`);
+        }
+        
+        // Add ginner status if provided
+        if (item.ginnerStatus) {
+          updateData.ginner_status = item.ginnerStatus;
+          updateData.ginner_status_updated_at = new Date();
+          statusUpdates.push(`ginner status to ${item.ginnerStatus}`);
+        }
+        
+        // Add brand status if provided
+        if (item.brandStatus) {
+          updateData.brand_status = item.brandStatus;
+          updateData.brand_status_updated_at = new Date();
+          statusUpdates.push(`brand status to ${item.brandStatus}`);
+        }
+        
+        // Update the status fields
+        await lintOrder.update(updateData);
         
         results.push({
           id: item.id,
           success: true,
-          message: `Status updated to ${item.status}`
+          message: `Updated ${statusUpdates.join(', ')}`
         });
       } else {
         results.push({
