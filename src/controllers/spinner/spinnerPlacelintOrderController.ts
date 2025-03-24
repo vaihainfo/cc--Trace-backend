@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
-import { Op } from 'sequelize';
+import { Op, Sequelize } from 'sequelize';
+import sequelize from '../../util/dbConn';
 import SpinnerPlaceLintOrder from '../../models/spinner-place-lint-order.model';
 import Spinner from '../../models/spinner.model';
 import Ginner from '../../models/ginner.model';
@@ -94,7 +95,7 @@ export const createSpinnerPlaceLintOrder = async (req: Request, res: Response) =
 // Get all lint orders with pagination
 export const fetchSpinnerPlaceLintOrderPagination = async (req: Request, res: Response) => {
   try {
-    const page = req.query.page ? parseInt(req.query.page as string) : 0;
+    const page = req.query.page ? parseInt(req.query.page as string) - 1 : 0;
     const size = req.query.size ? parseInt(req.query.size as string) : 10;
     const search = req.query.search as string || '';
     const spinnerStatus = req.query.spinnerStatus as string;
@@ -214,7 +215,6 @@ export const fetchSpinnerPlaceLintOrderPagination = async (req: Request, res: Re
         offset,
         order: [['createdAt', 'DESC']],
         include: includeOptions,
-        distinct: true
       });
 
       // Process the data to include used quantities
@@ -249,7 +249,7 @@ export const fetchSpinnerPlaceLintOrderPagination = async (req: Request, res: Re
         
         return result;
       });
-
+      console.log(rows, whereClause, limit, offset)
       return res.sendSuccess(res, { 
         message: 'Lint orders fetched successfully',
         totalItems: count,
@@ -443,6 +443,278 @@ export const deleteSpinnerPlaceLintOrder = async (req: Request, res: Response) =
     });
   } catch (error: any) {
     console.error('Error deleting lint order:', error);
+    return res.sendError(res, error.message);
+  }
+};
+
+// Get ginner chart data for lint orders by financial year with MT and Bales metrics
+export const getGinnerPlaceLintChartData = async (req: Request, res: Response) => {
+  try {
+    // Get current date and calculate financial years (April to March)
+    const currentDate = new Date();
+    const currentMonth = currentDate.getMonth();
+    const currentYear = currentDate.getFullYear();
+    
+    // Determine the current financial year
+    // If current month is January to March (0-2), we're in the previous year's financial year
+    // Otherwise, we're in the current year's financial year
+    const currentFinancialYearStart = currentMonth < 3 ? currentYear - 1 : currentYear;
+    
+    // Get the last 3 financial years
+    const financialYearStarts = [
+      currentFinancialYearStart - 2,
+      currentFinancialYearStart - 1,
+      currentFinancialYearStart
+    ];
+    
+    // Create financial year labels (e.g., "2023-2024")
+    const financialYearLabels = financialYearStarts.map(year => `${year}-${year + 1}`);
+    
+    // Prepare result structure
+    const result = {
+      years: financialYearLabels,
+      received: {
+        mt: [] as number[],
+        bales: [] as number[]
+      },
+      completed: {
+        mt: [] as number[],
+        bales: [] as number[]
+      },
+      pending: {
+        mt: [] as number[],
+        bales: [] as number[]
+      },
+      statusBreakdown: {
+        approved: [] as number[],
+        rejected: [] as number[],
+        pending: [] as number[],
+        completed: [] as number[],
+        cancelled: [] as number[],
+        // Add any other statuses you need to track
+      }
+    };
+    
+    // Process data for each financial year
+    for (const yearStart of financialYearStarts) {
+      // Financial year runs from April 1st to March 31st of the next year
+      const startDate = new Date(yearStart, 3, 1); // April 1st of the start year
+      const endDate = new Date(yearStart + 1, 3, 0); // March 31st of the end year
+      
+      // Get all orders for this financial year
+      const yearOrders = await SpinnerPlaceLintOrder.findAll({
+        where: {
+          quotationDate: {
+            [Op.gte]: startDate,
+            [Op.lte]: endDate
+          }
+        },
+        attributes: [
+          'id', 
+          'totalLintQuantity', 
+          'totalBales', 
+          'ginner_status'
+        ]
+      });
+      
+      // Calculate metrics
+      let totalMT = 0;
+      let totalBales = 0;
+      let completedMT = 0;
+      let completedBales = 0;
+      let pendingMT = 0;
+      let pendingBales = 0;
+      
+      // Initialize status counters
+      let statusCounts: Record<string, number> = {
+        approved: 0,
+        rejected: 0,
+        pending: 0,
+        completed: 0,
+        cancelled: 0,
+        // Add any other statuses you need to track
+      };
+      
+      yearOrders.forEach((order: any) => {
+        const orderData = order.toJSON();
+        const lintQuantity = parseFloat(orderData.totalLintQuantity) || 0;
+        const bales = parseInt(orderData.totalBales) || 0;
+        const status = orderData.ginner_status || 'pending';
+        
+        // Add to total counts
+        totalMT += lintQuantity;
+        totalBales += bales;
+        
+        // Process by status
+        if (status === 'completed') {
+          completedMT += lintQuantity;
+          completedBales += bales;
+        } else {
+          pendingMT += lintQuantity;
+          pendingBales += bales;
+        }
+        
+        // Increment status counter
+        if (statusCounts.hasOwnProperty(status)) {
+          statusCounts[status]++;
+        }
+      });
+      
+      // Add calculated metrics to result
+      result.received.mt.push(parseFloat(totalMT.toFixed(2)));
+      result.received.bales.push(totalBales);
+      result.completed.mt.push(parseFloat(completedMT.toFixed(2)));
+      result.completed.bales.push(completedBales);
+      result.pending.mt.push(parseFloat(pendingMT.toFixed(2)));
+      result.pending.bales.push(pendingBales);
+      
+      // Add status breakdown
+      for (const [status, count] of Object.entries(statusCounts)) {
+        if (result.statusBreakdown.hasOwnProperty(status)) {
+          (result.statusBreakdown as any)[status].push(count);
+        }
+      }
+    }
+    
+    return res.sendSuccess(res, result);
+  } catch (error: any) {
+    console.error('Error fetching ginner chart data:', error);
+    return res.sendError(res, error.message);
+  }
+};
+
+// Get spinner chart data for lint orders by financial year with MT and Bales metrics
+export const getSpinnerPlaceLintChartData = async (req: Request, res: Response) => {
+  try {
+    // Get current date and calculate financial years (April to March)
+    const currentDate = new Date();
+    const currentMonth = currentDate.getMonth();
+    const currentYear = currentDate.getFullYear();
+    
+    // Determine the current financial year
+    // If current month is January to March (0-2), we're in the previous year's financial year
+    // Otherwise, we're in the current year's financial year
+    const currentFinancialYearStart = currentMonth < 3 ? currentYear - 1 : currentYear;
+    
+    // Get the last 3 financial years
+    const financialYearStarts = [
+      currentFinancialYearStart - 2,
+      currentFinancialYearStart - 1,
+      currentFinancialYearStart
+    ];
+    
+    // Create financial year labels (e.g., "2023-2024")
+    const financialYearLabels = financialYearStarts.map(year => `${year}-${year + 1}`);
+    
+    // Prepare result structure
+    const result = {
+      years: financialYearLabels,
+      received: {
+        mt: [] as number[],
+        bales: [] as number[]
+      },
+      completed: {
+        mt: [] as number[],
+        bales: [] as number[]
+      },
+      pending: {
+        mt: [] as number[],
+        bales: [] as number[]
+      },
+      statusBreakdown: {
+        approved: [] as number[],
+        rejected: [] as number[],
+        pending: [] as number[],
+        completed: [] as number[],
+        cancelled: [] as number[],
+        // Add any other statuses you need to track
+      }
+    };
+    
+    // Process data for each financial year
+    for (const yearStart of financialYearStarts) {
+      // Financial year runs from April 1st to March 31st of the next year
+      const startDate = new Date(yearStart, 3, 1); // April 1st of the start year
+      const endDate = new Date(yearStart + 1, 3, 0); // March 31st of the end year
+      
+      // Get all orders for this financial year
+      const yearOrders = await SpinnerPlaceLintOrder.findAll({
+        where: {
+          quotationDate: {
+            [Op.gte]: startDate,
+            [Op.lte]: endDate
+          }
+        },
+        attributes: [
+          'id', 
+          'totalLintQuantity', 
+          'totalBales', 
+          'spinner_status'
+        ]
+      });
+      
+      // Calculate metrics
+      let totalMT = 0;
+      let totalBales = 0;
+      let completedMT = 0;
+      let completedBales = 0;
+      let pendingMT = 0;
+      let pendingBales = 0;
+      
+      // Initialize status counters
+      let statusCounts: Record<string, number> = {
+        approved: 0,
+        rejected: 0,
+        pending: 0,
+        completed: 0,
+        cancelled: 0,
+        // Add any other statuses you need to track
+      };
+      
+      yearOrders.forEach((order: any) => {
+        const orderData = order.toJSON();
+        const lintQuantity = parseFloat(orderData.totalLintQuantity) || 0;
+        const bales = parseInt(orderData.totalBales) || 0;
+        const status = orderData.spinner_status || 'pending';
+        
+        // Add to total counts
+        totalMT += lintQuantity;
+        totalBales += bales;
+        
+        // Process by status
+        if (status === 'completed') {
+          completedMT += lintQuantity;
+          completedBales += bales;
+        } else {
+          pendingMT += lintQuantity;
+          pendingBales += bales;
+        }
+        
+        // Increment status counter
+        if (statusCounts.hasOwnProperty(status)) {
+          statusCounts[status]++;
+        }
+      });
+      
+      // Add calculated metrics to result
+      result.received.mt.push(parseFloat(totalMT.toFixed(2)));
+      result.received.bales.push(totalBales);
+      result.completed.mt.push(parseFloat(completedMT.toFixed(2)));
+      result.completed.bales.push(completedBales);
+      result.pending.mt.push(parseFloat(pendingMT.toFixed(2)));
+      result.pending.bales.push(pendingBales);
+      
+      // Add status breakdown
+      for (const [status, count] of Object.entries(statusCounts)) {
+        if (result.statusBreakdown.hasOwnProperty(status)) {
+          (result.statusBreakdown as any)[status].push(count);
+        }
+      }
+    }
+    
+    return res.sendSuccess(res, result);
+  } catch (error: any) {
+    console.error('Error fetching spinner chart data:', error);
     return res.sendError(res, error.message);
   }
 };
