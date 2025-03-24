@@ -40,7 +40,9 @@ import {
     fetchSpinnerPlaceLintOrderPagination,
     fetchSpinnerPlaceLintOrder,
     updateSpinnerPlaceLintOrderStatus,
-    deleteSpinnerPlaceLintOrder
+    deleteSpinnerPlaceLintOrder,
+    getSpinnerPlaceLintChartData,
+    getGinnerPlaceLintChartData
 } from '../../controllers/spinner/spinnerPlacelintOrderController';
 import accessControl from "../../middleware/access-control";
 import { Router } from "express";
@@ -92,4 +94,9 @@ router.post('/place-lint-order', createSpinnerPlaceLintOrder);
 router.put('/place-lint-order/status', updateSpinnerPlaceLintOrderStatus);
 router.delete('/place-lint-order', deleteSpinnerPlaceLintOrder);
 
-export default router;
+// Ginner Routes
+router.get('/place-lint-order/ginner/chart', getGinnerPlaceLintChartData);
+router.get('/place-lint-order/spinner/chart', getSpinnerPlaceLintChartData);
+
+
+export default router;  
