@@ -3315,7 +3315,7 @@ const exportSpinnerProcessGreyOutReport = async (req: Request, res: Response) =>
         const idArray: number[] = seasonId
           .split(",")
           .map((id: any) => parseInt(id, 10));
-        whereCondition["$season_id$"] = { [Op.in]: idArray };
+        whereCondition.season_id = { [Op.in]: idArray };
       }
 
       whereCondition.greyout_status = true;
@@ -3324,8 +3324,9 @@ const exportSpinnerProcessGreyOutReport = async (req: Request, res: Response) =>
         const idArray: number[] = programId
           .split(",")
           .map((id: any) => parseInt(id, 10));
-        whereCondition["$program_id$"] = { [Op.in]: idArray };
+        whereCondition.program_id = { [Op.in]: idArray };
       }
+  
 
       let include = [
         {
@@ -3489,16 +3490,15 @@ const exportSpinnerGreyOutReport = async (req: Request, res: Response) => {
         const idArray: number[] = seasonId
           .split(",")
           .map((id: any) => parseInt(id, 10));
-        whereCondition["$season_id$"] = { [Op.in]: idArray };
+        whereCondition.season_id = { [Op.in]: idArray };
       }
 
       if (programId) {
         const idArray: number[] = programId
           .split(",")
           .map((id: any) => parseInt(id, 10));
-        whereCondition["$program_id$"] = { [Op.in]: idArray };
+        whereCondition.program_id = { [Op.in]: idArray };
       }
-
       whereCondition[Op.or] = [
         { greyout_status: true, ...searchCondition },
         {
