@@ -1456,7 +1456,8 @@ const generateProcurementReport = async () => {
           transaction.id ? transaction.id : '',
           transaction.qty_purchased ? Number(transaction.qty_purchased) : 0,
           transaction.qty_stock ? Number(transaction.qty_stock) : 0,
-          transaction.total_estimated_cotton ? (Number(transaction.total_estimated_cotton) > Number(transaction.cotton_transacted) ? Number(transaction.total_estimated_cotton) - Number(transaction.cotton_transacted) : 0) : 0,
+          // transaction.total_estimated_cotton ? (Number(transaction.total_estimated_cotton) > Number(transaction.cotton_transacted) ? Number(transaction.total_estimated_cotton) - Number(transaction.cotton_transacted) : 0) : 0,
+          transaction.available_cotton ? Number(transaction.available_cotton) : 0,
           transaction.rate ? Number(transaction.rate) : 0,
           transaction.program_name ? transaction.program_name : '',
           transaction.vehicle ? transaction.vehicle : '',
@@ -1476,6 +1477,7 @@ const generateProcurementReport = async () => {
           tr.farmer_code,
           tr.qty_purchased,
           tr.qty_stock,
+          tr.available_cotton,
           tr.rate,
           tr.id,
           tr.vehicle,
@@ -2814,7 +2816,8 @@ const generateAgentTransactions = async () => {
           village: item.village_name ? item.village_name : "",
           transactionId: item.id,
           qty_purchased: Number(item.qty_purchased) ?? 0,
-          available_cotton: item.total_estimated_cotton ? (Number(item.total_estimated_cotton) > Number(item.cotton_transacted) ? Number(item.total_estimated_cotton) - Number(item.cotton_transacted) : 0) : 0,
+          // available_cotton: item.total_estimated_cotton ? (Number(item.total_estimated_cotton) > Number(item.cotton_transacted) ? Number(item.total_estimated_cotton) - Number(item.cotton_transacted) : 0) : 0,
+          available_cotton: item.dataValues.available_cotton ? Number(item.dataValues.available_cotton) : 0,
           rate: Number(item.rate) ?? 0,
           program: item.program_name ? item.program_name : "",
           vehicle: item.vehicle ? item.vehicle : "",
@@ -5923,8 +5926,8 @@ const generateSpinnerBale = async () => {
 
         const rowValues = Object.values({
           index: index + offset + 1,
-          country: country.dataValues.county_name,
-          state: state.dataValues.state_name,
+          country: country ? country.dataValues.county_name : '',
+          state: state ? state.dataValues.state_name : '',
           accept_date: item.accept_date
             ? item.accept_date
             : "",

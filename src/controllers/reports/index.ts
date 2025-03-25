@@ -3318,7 +3318,7 @@ const exportSpinnerProcessGreyOutReport = async (req: Request, res: Response) =>
         const idArray: number[] = seasonId
           .split(",")
           .map((id: any) => parseInt(id, 10));
-        whereCondition["$season_id$"] = { [Op.in]: idArray };
+        whereCondition.season_id = { [Op.in]: idArray };
       }
 
       whereCondition.greyout_status = true;
@@ -3327,8 +3327,9 @@ const exportSpinnerProcessGreyOutReport = async (req: Request, res: Response) =>
         const idArray: number[] = programId
           .split(",")
           .map((id: any) => parseInt(id, 10));
-        whereCondition["$program_id$"] = { [Op.in]: idArray };
+        whereCondition.program_id = { [Op.in]: idArray };
       }
+  
 
       let include = [
         {
@@ -3492,16 +3493,15 @@ const exportSpinnerGreyOutReport = async (req: Request, res: Response) => {
         const idArray: number[] = seasonId
           .split(",")
           .map((id: any) => parseInt(id, 10));
-        whereCondition["$season_id$"] = { [Op.in]: idArray };
+        whereCondition.season_id = { [Op.in]: idArray };
       }
 
       if (programId) {
         const idArray: number[] = programId
           .split(",")
           .map((id: any) => parseInt(id, 10));
-        whereCondition["$program_id$"] = { [Op.in]: idArray };
+        whereCondition.program_id = { [Op.in]: idArray };
       }
-
       whereCondition[Op.or] = [
         { greyout_status: true, ...searchCondition },
         {
@@ -4427,8 +4427,8 @@ const fetchSpinnerBalePagination = async (req: Request, res: Response) => {
 
       nData.push({
         ...item,
-        country: country.dataValues.county_name,
-        state: state.dataValues.state_name,
+        country: country ? country.dataValues.county_name : '',
+        state: state ? state.dataValues.state_name : '',
         quality_report: qualityReport ? qualityReport : null,
       });
     }
@@ -4878,8 +4878,8 @@ const exportSpinnerBale = async (req: Request, res: Response) => {
         if (isOrganic === 'true') {
        rowValues = Object.values({
           index: index + 1,
-          country: country.dataValues.county_name,
-          state: state.dataValues.state_name,
+          country: country ? country.dataValues.county_name : '',
+          state: state ? state.dataValues.state_name : '',
           accept_date: item.accept_date
             ? item.accept_date
             : "",
@@ -4907,8 +4907,8 @@ const exportSpinnerBale = async (req: Request, res: Response) => {
       else{
         rowValues = Object.values({
           index: index + 1,
-          country: country.dataValues.county_name,
-          state: state.dataValues.state_name,
+          country: country ? country.dataValues.county_name : '',
+          state: state ? state.dataValues.state_name : '',
           accept_date: item.accept_date
             ? item.accept_date
             : "",
