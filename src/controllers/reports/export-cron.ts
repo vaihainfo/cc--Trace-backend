@@ -872,8 +872,9 @@ const generateSpinnerLintCottonStock = async () => {
       offset += batchSize;
     }
 
-    if(currentWorksheet){
-      AddTotalRow(currentWorksheet, totals);
+    let currentsheet = workbook.getWorksheet(`Lint Cotton Stock Report ${worksheetIndex}`);
+    if(currentsheet){
+      AddTotalRow(currentsheet, totals);
     }
     
 
@@ -1452,7 +1453,8 @@ const generateProcurementReport = async () => {
           transaction.id ? transaction.id : '',
           transaction.qty_purchased ? Number(transaction.qty_purchased) : 0,
           transaction.qty_stock ? Number(transaction.qty_stock) : 0,
-          transaction.total_estimated_cotton ? (Number(transaction.total_estimated_cotton) > Number(transaction.cotton_transacted) ? Number(transaction.total_estimated_cotton) - Number(transaction.cotton_transacted) : 0) : 0,
+          // transaction.total_estimated_cotton ? (Number(transaction.total_estimated_cotton) > Number(transaction.cotton_transacted) ? Number(transaction.total_estimated_cotton) - Number(transaction.cotton_transacted) : 0) : 0,
+          transaction.available_cotton ? Number(transaction.available_cotton) : 0,
           transaction.rate ? Number(transaction.rate) : 0,
           transaction.program_name ? transaction.program_name : '',
           transaction.vehicle ? transaction.vehicle : '',
@@ -1472,6 +1474,7 @@ const generateProcurementReport = async () => {
           tr.farmer_code,
           tr.qty_purchased,
           tr.qty_stock,
+          tr.available_cotton,
           tr.rate,
           tr.id,
           tr.vehicle,
@@ -2718,6 +2721,7 @@ const generateAgentTransactions = async () => {
       const transactions = await sequelize.query(`
         SELECT
             tr.date,
+            tr.createdAt,
             tr.farmer_code,
             tr.qty_purchased,
             tr.rate,
@@ -2797,7 +2801,7 @@ const generateAgentTransactions = async () => {
       for await (const [index, item] of transactions.entries()) {
         const rowValues = Object.values({
           index: index + offset + 1,
-          date: moment(item.date).format('DD/MM/YYYY'),
+          date: moment(item.createdAt).format('DD-MM-YYYY hh:mm:ss A'),
           farmerCode: item.farmer_code ? item.farmer_code : "",
           farmerName: item.firstName ? item.firstName + ' ' + `${item.lastName ? item.lastName : ""}` : item.firstName,
           season: item.season_name ? item.season_name : "",
@@ -2808,7 +2812,8 @@ const generateAgentTransactions = async () => {
           village: item.village_name ? item.village_name : "",
           transactionId: item.id,
           qty_purchased: Number(item.qty_purchased) ?? 0,
-          available_cotton: item.total_estimated_cotton ? (Number(item.total_estimated_cotton) > Number(item.cotton_transacted) ? Number(item.total_estimated_cotton) - Number(item.cotton_transacted) : 0) : 0,
+          // available_cotton: item.total_estimated_cotton ? (Number(item.total_estimated_cotton) > Number(item.cotton_transacted) ? Number(item.total_estimated_cotton) - Number(item.cotton_transacted) : 0) : 0,
+          available_cotton: item.dataValues.available_cotton ? Number(item.dataValues.available_cotton) : 0,
           rate: Number(item.rate) ?? 0,
           program: item.program_name ? item.program_name : "",
           vehicle: item.vehicle ? item.vehicle : "",
@@ -4764,9 +4769,49 @@ const generateGinnerCottonStock = async () => {
           },
         });
 
+        const cottonProcessed = await CottonSelection.findOne({
+          attributes: [
+            [sequelize.fn('COALESCE', sequelize.fn('SUM', Sequelize.literal("CAST(qty_used AS DOUBLE PRECISION)")), 0), 'qty']
+          ],
+          include: [
+            {
+              model: GinProcess,
+              as: 'ginprocess',
+              attributes: []
+            }
+          ],
+          where: {
+            '$ginprocess.ginner_id$': item.ginner_id,
+            '$ginprocess.season_id$': item.season_id,
+          },
+          group: ["ginprocess.ginner_id"]
+        });
+  
+        const cottonProcessedByHeap = await heapSelection.findOne({
+          attributes: [
+            [sequelize.fn('COALESCE', sequelize.fn('SUM', Sequelize.literal("CAST(qty_used AS DOUBLE PRECISION)")), 0), 'qty']
+          ],
+          include: [
+            {
+              model: GinProcess,
+              as: 'ginprocess',
+              attributes: [],
+            }
+          ],
+          where: {
+            '$ginprocess.ginner_id$': item.ginner_id,
+            '$ginprocess.season_id$': item.season_id,
+          },
+          group: ["ginprocess.ginner_id"]
+        });
+        const cottonProcessedQty = isNaN(cottonProcessed?.dataValues?.qty) ? 0 : cottonProcessed?.dataValues?.qty;
+        const cottonProcessedByHeapQty = isNaN(cottonProcessedByHeap?.dataValues?.qty) ? 0 : cottonProcessedByHeap?.dataValues?.qty;
+        const totalCottonProcessedQty = cottonProcessedQty + cottonProcessedByHeapQty;
+  
+
         obj.cotton_procured = cottonProcured?.dataValues?.cotton_procured ?? 0;
         obj.cotton_stock = cottonProcured?.dataValues?.cotton_stock ?? 0;
-        obj.cotton_processed = obj.cotton_procured - obj.cotton_stock;
+        obj.cotton_processed = totalCottonProcessedQty ?? 0;
 
         const rowValues = Object.values({
           index: index + offset + 1,
@@ -5507,8 +5552,8 @@ const generateSpinnerBale = async () => {
 
         const rowValues = Object.values({
           index: index + offset + 1,
-          country: country.dataValues.county_name,
-          state: state.dataValues.state_name,
+          country: country ? country.dataValues.county_name : '',
+          state: state ? state.dataValues.state_name : '',
           accept_date: item.accept_date
             ? item.accept_date
             : "",
@@ -6275,7 +6320,7 @@ const generateSpinnerSale = async () => {
           state: item.dataValues.state?item.dataValues.state:"",
           createdAt: item.dataValues.createdAt ? item.dataValues.createdAt : "",
           date: item.dataValues.date ? formatDate(item.dataValues.date) : "",
-          no_of_days: item.no_of_days? Number(item.no_of_days):"",
+          no_of_days: item.dataValues.no_of_days? Number(item.dataValues.no_of_days):"",
           lint_consumed_seasons: seedSeason ? seedSeason[0]?.seasons : "",
           season: item.dataValues.season_name ? item.dataValues.season_name : "",
           spinner: item.dataValues.spinner ? item.dataValues.spinner : "",

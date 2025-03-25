@@ -488,6 +488,7 @@ const exportAgentTransactions = async (req: Request, res: Response) => {
         const farmerId: string = req.query.farmerId as string;
         const villageId: string = req.query.villageId as string;
         const agentId: string = req.query.agentId as string;
+        const isBrand = req.query.isBrand || false;
         const { endDate, startDate, transactionVia, exportType }: any = req.query;
 
         if (exportType === "all") {
@@ -508,12 +509,23 @@ const exportAgentTransactions = async (req: Request, res: Response) => {
             mergedCell.font = { bold: true };
             mergedCell.alignment = { horizontal: 'center', vertical: 'middle' };
             // Set bold font for header row
+            if (isBrand === 'true') {
             const headerRow = worksheet.addRow([
                 "Sr No.", 'Date', 'Farmer Code', 'Farmer Name', 'Season', 'Country',
                 'State', 'District', 'Block', 'Village', 'Transaction Id', 'Quantity Purchased (Kgs)',
                 'Available Cotton (Kgs)', 'Price/KG(Local Currency)', 'Programme', 'Transport Vehicle No', 'Payment Method', 'Ginner Name', 'Transaction User Details', 'Status'
             ]);
-            headerRow.font = { bold: true };
+                headerRow.font = { bold: true };
+            }
+            else {
+                const headerRow = worksheet.addRow([
+                    "Sr No.", 'Date', 'Farmer Code', 'Farmer Name', 'Season', 'Country',
+                    'State', 'District', 'Block', 'Village', 'Transaction Id', 'Quantity Purchased (Kgs)',
+                    'Available Cotton (Kgs)', 'Price/KG(Local Currency)', 'Programme', 'Transport Vehicle No', 'Payment Method', 'Ginner Name', 'Transaction User Details','latitude','longitude', 'Status'
+                ]);
+                headerRow.font = { bold: true };
+            }
+            
             const whereCondition: any = {}
             if (searchTerm) {
                 whereCondition[Op.or] = [
@@ -701,9 +713,11 @@ const exportAgentTransactions = async (req: Request, res: Response) => {
 
             // Append data to worksheet
             for await (const [index, item] of transactions.entries()) {
-                const rowValues = Object.values({
+                let rowValues;
+                if (isBrand === 'true') {
+                 rowValues = Object.values({
                     index: index + 1,
-                    date: moment(item.date).format('DD/MM/YYYY'),
+                    date: moment(item.createdAt).format('DD-MM-YYYY'),
                     farmerCode: item.farmer ? item.farmer?.code : "",
                     farmerName: item.farmer ? item.farmer?.firstName + ' ' + item.farmer?.lastName : "",
                     season: item.season ? item.season.name : "",
@@ -714,7 +728,8 @@ const exportAgentTransactions = async (req: Request, res: Response) => {
                     village: item.village ? item.village.village_name : "",
                     transactionId: item.id,
                     qty_purchased: item.qty_purchased ? Number(item.qty_purchased) : 0,
-                    available_cotton: item.farm ? (Number(item.farm.total_estimated_cotton) > Number(item.farm.cotton_transacted) ? Number(item.farm.total_estimated_cotton) - Number(item.farm.cotton_transacted) : 0) : 0,
+                    // available_cotton: item.farm ? (Number(item.farm.total_estimated_cotton) > Number(item.farm.cotton_transacted) ? Number(item.farm.total_estimated_cotton) - Number(item.farm.cotton_transacted) : 0) : 0,
+                    available_cotton: item.available_cotton ? Number(item.available_cotton) : 0,
                     rate: item.rate ? Number(item.rate) : 0,
                     program: item.program ? item.program.program_name : "",
                     vehicle: item.vehicle ? item.vehicle : "",
@@ -725,6 +740,34 @@ const exportAgentTransactions = async (req: Request, res: Response) => {
                    // longitude: item.longitude ? item.longitude : "-",
                     status: item.status ? item.status : ''
                 });
+            }
+            else{
+                rowValues = Object.values({
+                    index: index + 1,
+                    date: moment(item.createdAt).format('DD-MM-YYYY hh:mm:ss A'),
+                    farmerCode: item.farmer ? item.farmer?.code : "",
+                    farmerName: item.farmer ? item.farmer?.firstName + ' ' + item.farmer?.lastName : "",
+                    season: item.season ? item.season.name : "",
+                    country: item.country ? item.country.county_name : "",
+                    state: item.state ? item.state.state_name : "",
+                    district: item.district ? item.district.district_name : "",
+                    block: item.block ? item.block.block_name : "",
+                    village: item.village ? item.village.village_name : "",
+                    transactionId: item.id,
+                    qty_purchased: item.qty_purchased ? Number(item.qty_purchased) : 0,
+                    // available_cotton: item.farm ? (Number(item.farm.total_estimated_cotton) > Number(item.farm.cotton_transacted) ? Number(item.farm.total_estimated_cotton) - Number(item.farm.cotton_transacted) : 0) : 0,
+                    available_cotton: item.available_cotton ? Number(item.available_cotton) : 0,
+                    rate: item.rate ? Number(item.rate) : 0,
+                    program: item.program ? item.program.program_name : "",
+                    vehicle: item.vehicle ? item.vehicle : "",
+                    payment_method: item.payment_method ? item.payment_method : "",
+                    ginner: item.ginner ? item.ginner.name : "",
+                    agent: item?.agent && ( item?.agent?.lastName ? item?.agent?.firstName + " " + item?.agent?.lastName+ "-" + item?.agent?.access_level : item?.agent?.firstName+ "-" + item?.agent?.access_level),
+                    latitude: item.latitude ? item.latitude : "-",
+                    longitude: item.longitude ? item.longitude : "-",
+                    status: item.status ? item.status : ''
+                });
+            }
                 worksheet.addRow(rowValues);
             }
             // Auto-adjust column widths based on content
@@ -734,7 +777,7 @@ const exportAgentTransactions = async (req: Request, res: Response) => {
                     const cellLength = (cell.value ? cell.value.toString() : '').length;
                     maxCellLength = Math.max(maxCellLength, cellLength);
                 });
-                column.width = Math.min(14, maxCellLength + 2); // Limit width to 30 characters
+                column.width = Math.min(25, maxCellLength + 2);
             });
 
             // Save the workbook
