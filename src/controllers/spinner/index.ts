@@ -211,6 +211,7 @@ const createSpinnerProcess = async (req: Request, res: Response) => {
                 date_sample_collection: req.body.dateSampleCollection,
                 data_of_sample_dispatch: req.body.dataOfSampleDispatch,
                 operator_name: req.body.operatorName,
+                healixa_lot_no: req.body.healixaLotNo || null,
                 expected_date_of_yarn_sale: req.body.expectedDateOfYarnSale,
                 physical_traceability_partner_id: req.body.physicalTraceabilityPartnerId,
                 spin_process_id: spin.id,
