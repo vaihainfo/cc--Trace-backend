@@ -350,6 +350,7 @@ req.body.endDateOfDNAMarkerApplication,
         data_of_sample_dispatch: req.body.dataOfSampleDispatch,
         operator_name: req.body.operatorName,
         cotton_connect_executive_name: req.body.cottonConnectExecutiveName,
+        healixa_lot_no: req.body.healixaLotNo || null,
         expected_date_of_lint_sale: req.body.expectedDateOfLintSale,
         physical_traceability_partner_id:
 req.body.physicalTraceabilityPartnerId,
