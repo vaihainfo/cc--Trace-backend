@@ -3202,7 +3202,6 @@ const chooseLint = async (req: Request, res: Response) => {
     };
     // whereCondition.greyout_status = { [Op.not]: true };
     whereCondition.qty_stock = { [Op.gt]: 0 };
-    whereCondition.season_id = 10 ;
 
     sqlCondition.push(
       `gs.status IN ('Sold', 'Partially Accepted', 'Partially Rejected')`
