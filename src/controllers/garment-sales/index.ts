@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import { Sequelize, Op } from "sequelize";
+import db from "../../util/dbConn";
 import GarmentSales from "../../models/garment-sales.model";
 import * as ExcelJS from "exceljs";
 import * as path from "path";
@@ -4427,6 +4428,89 @@ const updateCOCDoc = async (
   }
 }
 
+// Delete Garment Sales
+const deleteGarmentSales = async (req: Request, res: Response) => {
+  try {
+    // Get the ID from either the request body or query parameters
+    const salesId = req.body.id || req.query.id;
+    
+    if (!salesId) {
+      return res.sendError(res, "Need Sales Id");
+    }
+
+    // Start a transaction to ensure data consistency
+    const transaction = await db.transaction();
+
+    try {
+      // First, check if the garment sale exists
+      const garmentSale = await GarmentSales.findByPk(salesId, { transaction });
+      
+      if (!garmentSale) {
+        await transaction.rollback();
+        return res.sendError(res, "Garment sale not found");
+      }
+
+      // Find garment selections to restore quantities
+      const garmentSelections = await GarmentSelection.findAll({
+        where: { sales_id: salesId },
+        transaction
+      });
+
+      // Restore quantities back to GarmentProcess and GarmentFabricType
+      for (const selection of garmentSelections) {
+        // Get the garment process
+        const garmentProcess = await GarmentProcess.findByPk(selection.garment_id, { transaction });
+        if (garmentProcess) {
+          // Restore the quantity back to the process
+          await GarmentProcess.update(
+            { qty_stock: garmentProcess.qty_stock + selection.qty_used },
+            { where: { id: selection.garment_id }, transaction }
+          );
+        }
+
+        // Get the garment fabric type
+        const garmentFabricType = await GarmentFabricType.findByPk(selection.garment_type_id, { transaction });
+        if (garmentFabricType) {
+          // Restore the quantity and update sold status if needed
+          await GarmentFabricType.update(
+            { 
+              no_of_pieces_stock: garmentFabricType.no_of_pieces_stock + selection.qty_used,
+              sold_status: false // Set to false since we're restoring quantities
+            },
+            { where: { id: selection.garment_type_id }, transaction }
+          );
+        }
+      }
+
+      // Delete related garment selections
+      await GarmentSelection.destroy({
+        where: { sales_id: salesId },
+        transaction
+      });
+
+      // Finally, delete the GarmentSales record
+      await GarmentSales.destroy({
+        where: { id: salesId },
+        transaction
+      });
+
+      // Commit the transaction
+      await transaction.commit();
+
+      return res.sendSuccess(res, {
+        message: "Successfully deleted the garment sale"
+      });
+    } catch (error) {
+      // If an error occurs, rollback the transaction
+      await transaction.rollback();
+      throw error;
+    }
+  } catch (error: any) {
+    console.error("Error deleting garment sale:", error);
+    return res.sendError(res, error.message, error);
+  }
+};
+
 export {
   fetchBrandQrGarmentSalesPagination,
   exportBrandQrGarmentSales,
@@ -4439,6 +4523,7 @@ export {
   fetchGarmentProcess,
   createGarmentSales,
   updateGarmentSales,
+  deleteGarmentSales,
   fetchGarmentProcessPagination,
   fetchGarmentSalesPagination,
   chooseFabricProcess,
