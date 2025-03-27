@@ -762,7 +762,7 @@ const getProcuredProcessedMonthly = async (
     const reqData = await getQueryParams(req, res);
     const seasonOne = await Season.findOne({
       where: {
-        id: reqData.season ? reqData.season : '9'
+        id: reqData.season ? reqData.season : '10'
       }
     });
     reqData.season = seasonOne.id;
