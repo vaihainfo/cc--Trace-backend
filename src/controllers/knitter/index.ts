@@ -2031,6 +2031,118 @@ const fetchTransactions = async (ginnerId: any) => {
 
 
 
+const deleteKnitterProcess = async (req: Request, res: Response) => {
+  try {
+    // Get the ID from either the request body or query parameters
+    const processId = req.body.id || req.query.id;
+    
+    if (!processId) {
+      return res.sendError(res, "Need Process Id");
+    }
+
+    // Start a transaction to ensure data consistency
+    const transaction = await sequelize.transaction();
+
+    try {
+      // First, check if the knit process exists
+      const knitProcess = await KnitProcess.findByPk(processId, { transaction });
+      
+      if (!knitProcess) {
+        await transaction.rollback();
+        return res.sendError(res, "Knitter process not found");
+      }
+
+      // Check for related KnitFabric records
+      const knitFabrics = await KnitFabric.findAll({
+        where: { process_id: processId },
+        transaction
+      });
+
+      // If there are related KnitFabric records, we need to check if they're used in sales
+      for (const fabric of knitFabrics) {
+        const fabricSelections = await KnitFabricSelection.findAll({
+          where: { knit_fabric: fabric.id },
+          transaction
+        });
+
+        if (fabricSelections.length > 0) {
+          await transaction.rollback();
+          return res.sendError(res, "Cannot delete this process as it has related fabric sales. Please delete the sales first.");
+        }
+      }
+
+      // Find any yarn selections associated with this process
+      const yarnSelections = await KnitYarnSelection.findAll({
+        where: { sales_id: processId },
+        transaction
+      });
+
+      // Restore yarn quantities back to SpinSales
+      for (const yarnSelection of yarnSelections) {
+        const spinSale = await SpinSales.findByPk(yarnSelection.yarn_id, { transaction });
+        if (spinSale) {
+          await SpinSales.update(
+            { qty_stock: spinSale.qty_stock + yarnSelection.qty_used },
+            { where: { id: yarnSelection.yarn_id }, transaction }
+          );
+        }
+      }
+
+      // Delete the yarn selections
+      await KnitYarnSelection.destroy({
+        where: { sales_id: processId },
+        transaction
+      });
+
+      // Check for physical traceability data
+      const physicalTraceabilityData = await PhysicalTraceabilityDataKnitter.findAll({
+        where: { knit_process_id: processId },
+        transaction
+      });
+
+      // Delete physical traceability data and samples if they exist
+      for (const ptData of physicalTraceabilityData) {
+        await PhysicalTraceabilityDataKnitterSample.destroy({
+          where: { physical_traceability_data_knitter_id: ptData.id },
+          transaction
+        });
+      }
+
+      // Delete physical traceability data
+      await PhysicalTraceabilityDataKnitter.destroy({
+        where: { knit_process_id: processId },
+        transaction
+      });
+
+      // Delete KnitFabric records
+      await KnitFabric.destroy({
+        where: { process_id: processId },
+        transaction
+      });
+
+      // Finally, delete the KnitProcess record
+      await KnitProcess.destroy({
+        where: { id: processId },
+        transaction
+      });
+
+      // Commit the transaction
+      await transaction.commit();
+
+      return res.sendSuccess(res, {
+        message: "Successfully deleted the knitter process"
+      });
+    } catch (error) {
+      // If an error occurs, rollback the transaction
+      await transaction.rollback();
+      throw error;
+    }
+  } catch (error: any) {
+    console.error("Error deleting knitter process:", error);
+    return res.sendError(res, error.message, error);
+  }
+};
+
 export {
   createKnitterProcess,
   updateKnitterProcess,
@@ -2048,6 +2160,7 @@ export {
   getSpinnerAndProgram,
   getInvoiceAndyarnType,
   deleteKnitterSales,
+  deleteKnitterProcess,
   getGarments,
   fetchKnitterSale,
   getFabrics,

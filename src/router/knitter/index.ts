@@ -9,6 +9,7 @@ import {
     getSpinnerAndProgram,
     getInvoiceAndyarnType,
     deleteKnitterSales,
+    deleteKnitterProcess,
     getGarments,
     fetchKnitterSale,
     getFabrics,
@@ -33,6 +34,7 @@ router.use(accessControl);
 
 router.post('/process', createKnitterProcess);
 router.put('/process', updateKnitterProcess);
+router.delete('/process', deleteKnitterProcess);
 router.get('/process/get-process', fetchKnitterProcess);
 router.get('/process', fetchKnitterProcessPagination);
 router.get('/', fetchKnitterSalesPagination);
