@@ -30,8 +30,7 @@ import {
     exportGarmentTransactionList,
     getCOCDocumentData,
     updateCOCDoc,
-    deleteGarmentProcess,
-    deleteGarmentSales
+    deleteGarmentProcess
 } from "../../controllers/garment-sales";
 import accessControl from "../../middleware/access-control";
 import { Router } from "express";
@@ -57,7 +56,6 @@ router.get('/choose-fabric', chooseFabricProcess);
 router.get('/choose-garment', chooseGarmentSales);
 router.post('/', createGarmentSales);
 router.put('/', updateGarmentSales);
-router.delete('/', deleteGarmentSales);
 router.get('/', fetchGarmentSalesPagination);
 router.get('/export', exportGarmentSale);
 router.get('/export-process', exportGarmentProcess);
