@@ -10691,8 +10691,21 @@ const fetchGarmentFabricReceipt = async (req: Request, res: Response) => {
       {
         model: Garment,
         as: "buyer",
-        attributes: ["id", "name", "address"],
+        attributes: ["id", "name", "address", "state_id", "country_id"],
+        include: [
+          {
+            model: Country,
+            as: "country",
+            attributes: ["id", "county_name"], 
+          },
+          {
+            model: State,
+            as: "state",
+            attributes: ["id", "state_name"], 
+          },
+        ],
       },
+
     ];
 
     //fetch data with pagination
@@ -10703,6 +10716,7 @@ const fetchGarmentFabricReceipt = async (req: Request, res: Response) => {
           [Sequelize.literal('"sales"."id"'), "sales_id"],
           [Sequelize.literal('"sales"."accept_date"'), "accept_date"],
           [Sequelize.literal('"sales"."date"'), "date"],
+          [Sequelize.literal('Extract(DAY FROM ("sales"."accept_date"- "sales"."date"))'), "no_of_days"],
           [Sequelize.col('"sales"."createdAt"'), "createdAt"],
           [Sequelize.col('"sales"."season"."name"'), "season_name"],
           [Sequelize.col('"sales"."season"."id"'), "season_id"],
@@ -10715,6 +10729,8 @@ const fetchGarmentFabricReceipt = async (req: Request, res: Response) => {
           [Sequelize.col('"sales"."buyer_id"'), "garment_id"],
           [Sequelize.col('"sales"."fabric_id"'), "fabric_id"],
           [Sequelize.col('"sales"."buyer"."name"'), "garment"],
+          [Sequelize.col('"sales"."buyer"."country"."county_name"'), "country_name"], 
+          [Sequelize.col('"sales"."buyer"."state"."state_name"'), "state_name"], 
           [Sequelize.literal('"sales"."total_yarn_qty"'), "total_length_qty"],
           [Sequelize.literal('"sales"."invoice_no"'), "invoice_no"],
           [Sequelize.literal('"process"."batch_lot_no"'), "batch_lot_no"],
@@ -10768,6 +10784,7 @@ const fetchGarmentFabricReceipt = async (req: Request, res: Response) => {
           [Sequelize.literal('"sales"."id"'), "sales_id"],
           [Sequelize.literal('"sales"."accept_date"'), "accept_date"],
           [Sequelize.literal('"sales"."date"'), "date"],
+          [Sequelize.literal('Extract(DAY FROM ("sales"."accept_date"- "sales"."date"))'), "no_of_days"],
           [Sequelize.col('"sales"."season"."name"'), "season_name"],
           [Sequelize.col('"sales"."season"."id"'), "season_id"],
           [Sequelize.col('"sales"."knitter"."id"'), "knitter_id"],
@@ -10778,7 +10795,9 @@ const fetchGarmentFabricReceipt = async (req: Request, res: Response) => {
           [Sequelize.col('"sales"."buyer_type"'), "buyer_type"],
           [Sequelize.col('"sales"."buyer_id"'), "garment_id"],
           [Sequelize.col('"sales"."fabric_id"'), "fabric_id"],
-          [Sequelize.col('"sales"."buyer"."name"'), "garment"],
+          [Sequelize.col('"sales"."buyer"."name"'), "garment"],          
+          [Sequelize.col('"sales"."buyer"."country"."county_name"'), "country_name"],      
+          [Sequelize.col('"sales"."buyer"."state"."state_name"'), "state_name"], 
           [Sequelize.literal('"sales"."total_yarn_qty"'), "total_weight_qty"],
           [Sequelize.literal('"sales"."invoice_no"'), "invoice_no"],
           [Sequelize.literal('"process"."batch_lot_no"'), "batch_lot_no"],
@@ -10997,17 +11016,20 @@ const exportGarmentFabricReceipt = async (req: Request, res: Response) => {
     // Create the excel workbook file
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet("Sheet1");
-    worksheet.mergeCells("A1:L1");
+    /*worksheet.mergeCells("A1:L1");
     const mergedCell = worksheet.getCell("A1");
     mergedCell.value = "CottonConnect | Garment Fabric Fabric Receipt Report";
     mergedCell.font = { bold: true };
-    mergedCell.alignment = { horizontal: "center", vertical: "middle" };
+    mergedCell.alignment = { horizontal: "center", vertical: "middle" };*/
     // Set bold font for header row
     // Set bold font for header row
     const headerRow = worksheet.addRow([
       "Sr No.",
+      "Country",
+      "State",
       "Date of accept transaction",
       "Date",
+      "No. of Days",
       "Weave/Knit Unit",
       "Garment Processor Unit",
       "Invoice Number",
@@ -11033,11 +11055,30 @@ const exportGarmentFabricReceipt = async (req: Request, res: Response) => {
       {
         model: Garment,
         as: "buyer",
-        attributes: ["id", "name", "address"],
+        attributes: ["id", "name", "address", "state_id", "country_id"],
+        include: [
+          {
+            model: Country,
+            as: "country",
+            attributes: ["id", "county_name"], 
+          },
+          {
+            model: State,
+            as: "state",
+            attributes: ["id", "state_name"], 
+          },
+        ],
       },
     ];
 
     //fetch data with pagination
+
+    let totals = {
+      fabric_length:0,
+      total_fabric_length:0,
+      fabric_weight:0,
+      total_fabric_weight:0,
+    };
 
     let rows: any = await Promise.all([
       WeaverFabricSelection.findAll({
@@ -11045,6 +11086,7 @@ const exportGarmentFabricReceipt = async (req: Request, res: Response) => {
           [Sequelize.literal('"sales"."id"'), "sales_id"],
           [Sequelize.literal('"sales"."accept_date"'), "accept_date"],
           [Sequelize.literal('"sales"."date"'), "date"],
+          [Sequelize.literal('Extract(DAY FROM ("sales"."accept_date"- "sales"."date"))'), "no_of_days"],
           [Sequelize.col('"sales"."season"."name"'), "season_name"],
           [Sequelize.col('"sales"."season"."id"'), "season_id"],
           [Sequelize.col('"sales"."weaver"."id"'), "weaver_id"],
@@ -11056,6 +11098,8 @@ const exportGarmentFabricReceipt = async (req: Request, res: Response) => {
           [Sequelize.col('"sales"."buyer_id"'), "garment_id"],
           [Sequelize.col('"sales"."fabric_id"'), "fabric_id"],
           [Sequelize.col('"sales"."buyer"."name"'), "garment"],
+          [Sequelize.col('"sales"."buyer"."country"."county_name"'), "country_name"],
+          [Sequelize.col('"sales"."buyer"."state"."state_name"'), "state_name"],
           [Sequelize.literal('"sales"."total_yarn_qty"'), "total_length_qty"],
           [Sequelize.literal('"sales"."invoice_no"'), "invoice_no"],
           [Sequelize.literal('"process"."batch_lot_no"'), "batch_lot_no"],
@@ -11110,6 +11154,7 @@ const exportGarmentFabricReceipt = async (req: Request, res: Response) => {
           [Sequelize.literal('"sales"."id"'), "sales_id"],
           [Sequelize.literal('"sales"."accept_date"'), "accept_date"],
           [Sequelize.literal('"sales"."date"'), "date"],
+          [Sequelize.literal('Extract(DAY FROM ("sales"."accept_date"- "sales"."date"))'), "no_of_days"],
           [Sequelize.col('"sales"."season"."name"'), "season_name"],
           [Sequelize.col('"sales"."season"."id"'), "season_id"],
           [Sequelize.col('"sales"."knitter"."id"'), "knitter_id"],
@@ -11121,6 +11166,8 @@ const exportGarmentFabricReceipt = async (req: Request, res: Response) => {
           [Sequelize.col('"sales"."buyer_id"'), "garment_id"],
           [Sequelize.col('"sales"."fabric_id"'), "fabric_id"],
           [Sequelize.col('"sales"."buyer"."name"'), "garment"],
+          [Sequelize.col('"sales"."buyer"."country"."county_name"'), "country_name"],
+          [Sequelize.col('"sales"."buyer"."state"."state_name"'), "state_name"],
           [Sequelize.literal('"sales"."total_yarn_qty"'), "total_weight_qty"],
           [Sequelize.literal('"sales"."invoice_no"'), "invoice_no"],
           [Sequelize.literal('"process"."batch_lot_no"'), "batch_lot_no"],
@@ -11195,10 +11242,13 @@ const exportGarmentFabricReceipt = async (req: Request, res: Response) => {
     let result = data.slice(offset, offset + limit);
     // Append data to worksheet
     for await (const [index, item] of result.entries()) {
-      const rowValues = Object.values({
+      const rowValues = {
         index: index + 1,
+        country_name: item.country_name ? item.country_name : "",
+        state_name: item.state_name ? item.state_name : "",
         accept_date: item.accept_date ? item.accept_date : "",
         date: item.date ? item.date : "",
+        no_of_days: item.no_of_days ? Number(item.no_of_days) : "",
         weaver: item.weaver ? item.weaver : item.knitter ? item.knitter : "",
         buyer: item.garment ? item.garment : "",
         invoice: item.invoice_no ? item.invoice_no : "",
@@ -11207,16 +11257,52 @@ const exportGarmentFabricReceipt = async (req: Request, res: Response) => {
         fabric_length: item.net_length ? item.net_length : "",
         total_fabric_length: item.total_length_qty ? item.total_length_qty : "",
         fabric_weight: item.net_weight ? item.net_weight : "",
-        total_fabric_weight: item.total_weight_qty ? item.total_weight_qty : "",
-      });
-      worksheet.addRow(rowValues);
+        total_fabric_weight: item.total_weight_qty ? item.total_weight_qty : "",        
+      };
+
+      totals.fabric_length+= Number(rowValues.fabric_length); 
+      totals.total_fabric_length+= Number(rowValues.total_fabric_length); 
+      totals.fabric_weight+= Number(rowValues.fabric_weight); 
+      totals.total_fabric_weight+= Number(rowValues.total_fabric_weight); 
+      
+      worksheet.addRow(Object.values(rowValues));
     }
+
+    const rowValues = {
+      index:"Totals:",
+      country_name:"",
+      state_name:"",
+      accept_date:"",
+      date:"",
+      no_of_days:"",
+      weaver:"",
+      buyer:"",
+      invoice:"",
+      lotNo:"",
+      fabrictype:"",
+      fabric_length: totals.fabric_length,
+      total_fabric_length: totals.total_fabric_length,
+      fabric_weight: totals.fabric_weight,
+      total_fabric_weight: totals.total_fabric_weight,
+    };
+   
+    worksheet.addRow(Object.values(rowValues)).eachCell(cell=> cell.font = {bold: true});
+
+    // Define a border style
+    const borderStyle = {
+      top: { style: "thin" },
+      bottom: { style: "thin" },
+      left: { style: "thin" },
+      right: { style: "thin" },
+    };
+
     // Auto-adjust column widths based on content
     worksheet.columns.forEach((column: any) => {
       let maxCellLength = 0;
       column.eachCell({ includeEmpty: true }, (cell: any) => {
         const cellLength = (cell.value ? cell.value.toString() : "").length;
         maxCellLength = Math.max(maxCellLength, cellLength);
+        cell.border = borderStyle;
       });
       column.width = Math.min(14, maxCellLength + 2); // Limit width to 30 characters
     });
@@ -11325,7 +11411,19 @@ const fetchGarmentFabricProcess = async (req: Request, res: Response) => {
       {
         model: Garment,
         as: "garment",
-        attributes: ["id", "name", "address"],
+        attributes: ["id", "name", "address", "state_id", "country_id"],
+        include: [
+          {
+            model: Country,
+            as: "country",
+            attributes: ["id", "county_name"], 
+          },
+          {
+            model: State,
+            as: "state",
+            attributes: ["id", "state_name"], 
+          },
+        ],
       },
       {
         model: Season,
@@ -11471,17 +11569,20 @@ const exportGarmentFabricProcess = async (req: Request, res: Response) => {
     // Create the excel workbook file
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet("Sheet1");
-    worksheet.mergeCells("A1:Q1");
+    /*worksheet.mergeCells("A1:Q1");
     const mergedCell = worksheet.getCell("A1");
     mergedCell.value = "CottonConnect | Garment Fabric Process Report";
     mergedCell.font = { bold: true };
-    mergedCell.alignment = { horizontal: "center", vertical: "middle" };
+    mergedCell.alignment = { horizontal: "center", vertical: "middle" };*/
     // Set bold font for header row
     // Set bold font for header row
     const headerRow = worksheet.addRow([
       "S No.",
+      "Country",
+      "State",
       "Process Date",
       "Date",
+      "No. of Days",
       "Garment Production Start Date",
       "Garment Production End Date",
       "Season",
@@ -11503,7 +11604,19 @@ const exportGarmentFabricProcess = async (req: Request, res: Response) => {
       {
         model: Garment,
         as: "garment",
-        attributes: ["id", "name", "address"],
+        attributes: ["id", "name", "address", "state_id", "country_id"],
+        include: [
+          {
+            model: Country,
+            as: "country",
+            attributes: ["id", "county_name"], 
+          },
+          {
+            model: State,
+            as: "state",
+            attributes: ["id", "state_name"], 
+          },
+        ],
       },
       {
         model: Season,
@@ -11516,7 +11629,12 @@ const exportGarmentFabricProcess = async (req: Request, res: Response) => {
         attributes: ["id", "program_name"],
       },
     ];
-
+    let totals = {
+      noOfPieces:0,
+      noOfBoxes:0,
+      total_fabric_weight:0,
+      total_fabric_length:0,
+    };
     const { count, rows } = await GarmentProcess.findAndCountAll({
       where: whereCondition,
       include: include,
@@ -11563,12 +11681,22 @@ const exportGarmentFabricProcess = async (req: Request, res: Response) => {
     }
 
     let result = data.slice(offset, offset + limit);
-
+    const toDateOnly = (dateStr: string) => {
+      const date = new Date(dateStr);
+      date.setHours(0, 0, 0, 0); 
+      return date.getTime(); 
+    };
     for await (const [index, item] of result.entries()) {
-      const rowValues = Object.values({
+      const rowValues = {
         index: index + 1,
+        country_name: item.garment?.country?.county_name || "",
+        state_name: item.garment?.state?.state_name || "",
         createdAt: item.createdAt ? item.createdAt : "",
         date: item.date ? item.date : "",
+        no_of_days: item.createdAt && item.date ? Math.floor(
+          (toDateOnly(item.createdAt) - toDateOnly(item.date)) /
+            (1000 * 60 * 60 * 24)
+        ) : "",
         from_date: item.from_date ? item.from_date : "",
         to_date: item.to_date ? item.to_date : "",
         season: item.season ? item.season.name : "",
@@ -11587,15 +11715,54 @@ const exportGarmentFabricProcess = async (req: Request, res: Response) => {
         total_fabric_length: item.total_fabric_length
           ? item.total_fabric_length
           : "",
-      });
-      worksheet.addRow(rowValues);
+      };
+
+      totals.noOfPieces+= Number(rowValues.noOfPieces); 
+      totals.noOfBoxes+= Number(rowValues.noOfBoxes); 
+      totals.total_fabric_weight+= Number(rowValues.total_fabric_weight); 
+      totals.total_fabric_length+= Number(rowValues.total_fabric_length);
+      
+      worksheet.addRow(Object.values(rowValues));
     }
+    const rowValues = {
+      index:"Totals:",
+      country_name:"",
+      state_name:"",
+      createdAt:"",
+      date:"",
+      no_of_days:"",
+      from_date:"",
+      to_date:"",
+      season:"",
+      garment:"",
+      fabricOrderRef:"",
+      brandOrderRef:"",
+      lotNo:"",
+      reelLotNo:"",
+      garmentType:"",
+      stylemarkNo:"",
+      noOfPieces: totals.noOfPieces,
+      noOfBoxes: totals.noOfBoxes,
+      total_fabric_weight: totals.total_fabric_weight,
+      total_fabric_length: totals.total_fabric_length,
+    };
+   
+    worksheet.addRow(Object.values(rowValues)).eachCell(cell=> cell.font = {bold: true});
+
+    // Define a border style
+    const borderStyle = {
+      top: { style: "thin" },
+      bottom: { style: "thin" },
+      left: { style: "thin" },
+      right: { style: "thin" },
+    };
     // Auto-adjust column widths based on content
     worksheet.columns.forEach((column: any) => {
       let maxCellLength = 0;
       column.eachCell({ includeEmpty: true }, (cell: any) => {
         const cellLength = (cell.value ? cell.value.toString() : "").length;
         maxCellLength = Math.max(maxCellLength, cellLength);
+        cell.border = borderStyle;
       });
       column.width = Math.min(14, maxCellLength + 2); // Limit width to 30 characters
     });
@@ -11727,7 +11894,19 @@ const fetchGarmentSalesPagination = async (req: Request, res: Response) => {
       {
         model: Garment,
         as: "garment",
-        attributes: ["id", "name", "address"],
+        attributes: ["id", "name", "address", "state_id", "country_id"],
+        include: [
+          {
+            model: Country,
+            as: "country",
+            attributes: ["id", "county_name"], 
+          },
+          {
+            model: State,
+            as: "state",
+            attributes: ["id", "state_name"], 
+          },
+        ],
       },
       {
         model: Season,
@@ -11904,17 +12083,20 @@ const exportGarmentSales = async (req: Request, res: Response) => {
     // Create the excel workbook file
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet("Sheet1");
-    worksheet.mergeCells("A1:P1");
+    /*worksheet.mergeCells("A1:P1");
     const mergedCell = worksheet.getCell("A1");
     mergedCell.value = "CottonConnect | Garment Fabric Sales Report";
     mergedCell.font = { bold: true };
-    mergedCell.alignment = { horizontal: "center", vertical: "middle" };
+    mergedCell.alignment = { horizontal: "center", vertical: "middle" };*/
     // Set bold font for header row
     // Set bold font for header row
     const headerRow = worksheet.addRow([
       "S No.",
+      "Country",
+      "State",
       "Date of Sale",
       "Date",
+      "No. of Days",
       "Garment Unit Name",
       "Customer (R&B) Name",
       "Invoice No",
@@ -11933,7 +12115,19 @@ const exportGarmentSales = async (req: Request, res: Response) => {
       {
         model: Garment,
         as: "garment",
-        attributes: ["id", "name", "address"],
+        attributes: ["id", "name", "address", "state_id", "country_id"],
+        include: [
+          {
+            model: Country,
+            as: "country",
+            attributes: ["id", "county_name"], 
+          },
+          {
+            model: State,
+            as: "state",
+            attributes: ["id", "state_name"], 
+          },
+        ],
       },
       {
         model: Season,
@@ -11949,6 +12143,10 @@ const exportGarmentSales = async (req: Request, res: Response) => {
         attributes: ["id", "brand_name", "address"],
       },
     ];
+    let totals = {
+      no_of_boxes:0,
+      no_of_pieces:0,
+    };
 
     const { count, rows } = await GarmentSales.findAndCountAll({
       where: whereCondition,
@@ -11989,12 +12187,22 @@ const exportGarmentSales = async (req: Request, res: Response) => {
     }
 
     let result = data.slice(offset, offset + limit);
-
+    const toDateOnly = (dateStr: string) => {
+      const date = new Date(dateStr);
+      date.setHours(0, 0, 0, 0); 
+      return date.getTime(); 
+    };
     for await (const [index, item] of result.entries()) {
-      const rowValues = Object.values({
+      const rowValues = {
         index: index + 1,
+        country_name: item.garment?.country?.county_name || "",
+        state_name: item.garment?.state?.state_name || "",
         createdAt: item.createdAt ? item.createdAt : "",
         date: item.date ? item.date : "",
+        no_of_days: item.createdAt && item.date ? Math.floor(
+          (toDateOnly(item.createdAt) - toDateOnly(item.date)) /
+            (1000 * 60 * 60 * 24)
+        ) : "",
         garment_name: item.garment ? item.garment.name : "",
         buyer: item.buyer ? item.buyer.brand_name : item.processor_name,
         invoice: item.invoice_no ? item.invoice_no : "",
@@ -12006,15 +12214,49 @@ const exportGarmentSales = async (req: Request, res: Response) => {
         no_of_pieces: item.total_no_of_pieces ? item.total_no_of_pieces : "",
         transaction_agent: item.transaction_agent ? item.transaction_agent : "",
         color: item.qr ? process.env.BASE_URL + item.qr : "",
-      });
-      worksheet.addRow(rowValues);
+      };
+
+      totals.no_of_boxes+= Number(rowValues.no_of_boxes); 
+      totals.no_of_pieces+= Number(rowValues.no_of_pieces); 
+
+      worksheet.addRow(Object.values(rowValues));
     }
+    const rowValues = {
+      index:"Totals:",
+      country_name:"",
+      state_name:"",
+      createdAt:"",
+      date:"",
+      no_of_days:"",
+      garment_name:"",
+      buyer:"",
+      invoice:"",
+      fabricOrderRef:"",
+      brandOrderRef:"",
+      garmentType:"",
+      stylemarkNo:"",
+      no_of_boxes:totals.no_of_boxes,
+      no_of_pieces:totals.no_of_pieces,
+      transaction_agent:"",
+      color:"",
+    };
+   
+    worksheet.addRow(Object.values(rowValues)).eachCell(cell=> cell.font = {bold: true});
+    
+    // Define a border style
+    const borderStyle = {
+      top: { style: "thin" },
+      bottom: { style: "thin" },
+      left: { style: "thin" },
+      right: { style: "thin" },
+    };
     // Auto-adjust column widths based on content
     worksheet.columns.forEach((column: any) => {
       let maxCellLength = 0;
       column.eachCell({ includeEmpty: true }, (cell: any) => {
         const cellLength = (cell.value ? cell.value.toString() : "").length;
         maxCellLength = Math.max(maxCellLength, cellLength);
+        cell.border = borderStyle;
       });
       column.width = Math.min(14, maxCellLength + 2); // Limit width to 30 characters
     });
@@ -12168,7 +12410,19 @@ const fetchQrCodeTrackPagination = async (req: Request, res: Response) => {
       {
         model: Garment,
         as: "garment",
-        attributes: ["id", "name", "address"],
+        attributes: ["id", "name", "address", "state_id", "country_id"],
+        include: [
+          {
+            model: Country,
+            as: "country",
+            attributes: ["id", "county_name"], 
+          },
+          {
+            model: State,
+            as: "state",
+            attributes: ["id", "state_name"], 
+          },
+        ],
       },
     ];
 
@@ -12264,14 +12518,16 @@ const exportQrCodeTrack = async (req: Request, res: Response) => {
     // Create the excel workbook file
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet("Sheet1");
-    worksheet.mergeCells("A1:I1");
+    /*worksheet.mergeCells("A1:I1");
     const mergedCell = worksheet.getCell("A1");
     mergedCell.value = "CottonConnect | Barcode Report";
     mergedCell.font = { bold: true };
-    mergedCell.alignment = { horizontal: "center", vertical: "middle" };
+    mergedCell.alignment = { horizontal: "center", vertical: "middle" };*/
     // Set bold font for header row
     const headerRow = worksheet.addRow([
       "S No.",
+      "Country",
+      "State",
       "Qr Code",
       "Brand Name",
       "Garment unit Name",
@@ -12299,9 +12555,25 @@ const exportQrCodeTrack = async (req: Request, res: Response) => {
       {
         model: Garment,
         as: "garment",
-        attributes: ["id", "name", "address"],
+        attributes: ["id", "name", "address", "state_id", "country_id"],
+        include: [
+          {
+            model: Country,
+            as: "country",
+            attributes: ["id", "county_name"], 
+          },
+          {
+            model: State,
+            as: "state",
+            attributes: ["id", "state_name"], 
+          },
+        ],
       },
     ];
+    
+    let totals = {
+      no_of_pieces:0,
+    };
     const { count, rows } = await GarmentSales.findAndCountAll({
       where: whereCondition,
       include: include,
@@ -12311,8 +12583,10 @@ const exportQrCodeTrack = async (req: Request, res: Response) => {
     });
     // Append data to worksheet
     for await (const [index, item] of rows.entries()) {
-      const rowValues = Object.values({
+      const rowValues = {
         index: index + 1,
+        country_name: item.garment?.country?.county_name || "",
+        state_name: item.garment?.state?.state_name || "",
         qrCode: item.qr ? process.env.BASE_URL + item.qr : "",
         buyer: item.buyer ? item.buyer.brand_name : item.processor_name,
         garment: item.garment ? item.garment.name : "",
@@ -12327,15 +12601,42 @@ const exportQrCodeTrack = async (req: Request, res: Response) => {
             : "",
         no_of_pieces: item.total_no_of_pieces ? item.total_no_of_pieces : "",
         program: item.program ? item.program.program_name : "",
-      });
-      worksheet.addRow(rowValues);
+      };
+
+      totals.no_of_pieces+= Number(rowValues.no_of_pieces); 
+      worksheet.addRow(Object.values(rowValues));
     }
+    
+    const rowValues = {
+      index:"Totals:",
+      country_name:"",
+      state_name:"",
+      qrCode:"",
+      buyer:"",
+      garment:"",
+      invoice:"",
+      garmentType:"",
+      mark:"",
+      no_of_pieces:totals.no_of_pieces,
+      program:"",
+    };
+   
+    worksheet.addRow(Object.values(rowValues)).eachCell(cell=> cell.font = {bold: true});
+
+    // Define a border style
+    const borderStyle = {
+      top: { style: "thin" },
+      bottom: { style: "thin" },
+      left: { style: "thin" },
+      right: { style: "thin" },
+    };
     // Auto-adjust column widths based on content
     worksheet.columns.forEach((column: any) => {
       let maxCellLength = 0;
       column.eachCell({ includeEmpty: true }, (cell: any) => {
         const cellLength = (cell.value ? cell.value.toString() : "").length;
         maxCellLength = Math.max(maxCellLength, cellLength);
+        cell.border = borderStyle;
       });
       column.width = Math.min(24, maxCellLength + 2); // Limit width to 30 characters
     });
