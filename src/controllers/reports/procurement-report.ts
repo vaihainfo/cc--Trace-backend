@@ -90,8 +90,10 @@ const fetchTransactionsReport = async (req: Request, res: Response) => {
     }
 
     if (startDate && endDate) {
-      const startOfDay = moment(startDate).utc().startOf('day').toDate();
-      const endOfDay = moment(endDate).utc().endOf('day').toDate();
+      const startOfDay = new Date(startDate);
+      startOfDay.setUTCHours(0, 0, 0, 0);
+      const endOfDay = new Date(endDate);
+      endOfDay.setUTCHours(23, 59, 59, 999);
       whereCondition.date = { [Op.between]: [startOfDay, endOfDay] }
     }
     // apply search
