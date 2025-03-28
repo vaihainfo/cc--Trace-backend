@@ -3228,6 +3228,11 @@ const getSpinner = async (req: Request, res: Response) => {
   if (req.query.status == 'true') {
     whereCondition.status = true
   }
+  /* This condition is applied to hide those spinner's who reach there Lint Procurement CAP for season 24-25   */
+  if (req.query.capLimit == 'true') {
+    whereCondition.id =  { [Op.notIn]: ['625','626','627','628','629','630','631','632','638','639'] };
+  }
+  
 
   let ginner = await Ginner.findOne({ where: { id: ginnerId } });
   if (!ginner) {
