@@ -40,6 +40,7 @@ import { _getGinnerProcessTracingChartData } from "../ginner";
 import CombernoilGeneration from "../../models/combernoil_generation.model";
 import SpinCombernoilSale from "../../models/spin_combernoil_sale.model";
 import GinToGinSale from "../../models/gin-to-gin-sale.model";
+import moment from "moment";
 // import SpinSelectedBlend from "../../models/spin_selected_blend";
 
 //create Spinner Process
@@ -55,21 +56,28 @@ const createSpinnerProcess = async (req: Request, res: Response) => {
         }
 
         if (req.body.spinnerId && req.body.seasonId && req.body.programId && req.body.totalQty && req.body.batchLotNo) {
-            let ProcessExist = await SpinProcess.findOne(
-              { where: { 
-                spinner_id: req.body.spinnerId,
-                program_id: req.body.programId,
-                season_id: req.body.seasonId,
-                total_qty: Number(req.body.totalQty),
-                net_yarn_qty: req.body.netYarnQty,
-                batch_lot_no: req.body.batchLotNo,
-                yarn_type: req.body.yarnType,
-                yarn_realisation: req.body.yarnRealisation,
+             const normalizedDate = moment.utc(req.body.date).format('YYYY-MM-DD');
+             let ProcessExist = await SpinProcess.findOne(
+              { where: {
+                [Op.and]: [
+                  Sequelize.where(
+                    Sequelize.fn("DATE", Sequelize.col("date")), 
+                    normalizedDate
+                  ),
+                  { spinner_id: req.body.spinnerId },
+                  { program_id: req.body.programId },
+                  { season_id: req.body.seasonId },
+                  { total_qty: Number(req.body.totalQty) || 0 }, 
+                  { net_yarn_qty: req.body.netYarnQty },
+                  { batch_lot_no: req.body.batchLotNo },
+                  { yarn_type: req.body.yarnType },
+                  { yarn_realisation: req.body.yarnRealisation },
+                ],
               }, transaction },
             );
             if (ProcessExist) {
               await transaction.rollback();
-              return res.sendError(res, "Process already exist with same Lot Number, Yarn Type, Yarn Realisation, Net Yarn Quantity (Kgs) and Total Quantity(Kg/MT) for this Season.");
+              return res.sendError(res, "Process already exist with same Date, Lot Number, Yarn Type, Yarn Realisation, Net Yarn Quantity (Kgs) and Total Quantity(Kg/MT) for this Season.");
             }
       }
 
