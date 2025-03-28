@@ -291,6 +291,8 @@ const createVerifiedLintStock = async (req: Request, res: Response) => {
       uploaded_photos_te: req.body.teId ? req.body.uploadedPhotos : null,
       consent_form_be: req.body.beId ? req.body.consentForm : null,
       uploaded_photos_be: req.body.beId ? req.body.uploadedPhotos : null,
+      bank_warehouse_doc_te: req.body.teId ? req.body.bankWarehouseDoc : null,
+      bank_warehouse_doc_be: req.body.beId ? req.body.bankWarehouseDoc : null,
       status: req.body.status === "Accepted" ? "Accepted" : "Rejected",
       status_ginner: req.body.processorType?.toLowerCase() == 'ginner' ? 'Pending' : null,
       status_spinner: req.body.processorType?.toLowerCase() == 'spinner' ? 'Pending' : null,
@@ -787,6 +789,7 @@ const editGinVerifiedStockConfirm = async (
       confirmed_gin_no_of_bales: req.body.confirmedNoOfBales,
       consent_form_ginner: req.body.consentForm,
       uploaded_photos_ginner: req.body.uploadedPhotos,
+      bank_warehouse_doc_gin: req.body.bankWarehouseDoc,
       status_ginner: req.body.status === "Accepted" ? "Accepted" : "Rejected",
       status_scm: "Pending",
       reason_ginner: req.body.reason
@@ -841,6 +844,7 @@ const updateSCMVerifiedStockConfirm = async (
       confirmed_scm_no_of_bales: req.body.confirmedNoOfBales,
       consent_form_scm: req.body.consentForm,
       uploaded_photos_scm: req.body.uploadedPhotos,
+      bank_warehouse_doc_scm: req.body.bankWarehouseDoc,
       status_scm: req.body.status === "Accepted" ? "Accepted" : "Rejected",
       status_scd: "Pending",
       reason_scm: req.body.reason
@@ -894,6 +898,7 @@ const updateSCDVerifiedStockConfirm = async (
       confirmed_scd_no_of_bales: req.body.confirmedNoOfBales,
       consent_form_scd: req.body.consentForm,
       uploaded_photos_scd: req.body.uploadedPhotos,
+      bank_warehouse_doc_scd: req.body.bankWarehouseDoc,
       status_scd: req.body.status === "Accepted" ? "Accepted" : "Rejected",
       reason_scd: req.body.reason
     };
@@ -1961,6 +1966,7 @@ const updateSpinVerifiedStockConfirm = async (
       confirmed_spin_no_of_bales: req.body.confirmedNoOfBales,
       consent_form_spinner: req.body.consentForm,
       uploaded_photos_spinner: req.body.uploadedPhotos,
+      bank_warehouse_doc_spin: req.body.bankWarehouseDoc,
       status_spinner: req.body.status === "Accepted" ? "Accepted" : "Rejected",
       status_bm: "Pending",
       reason_spinner: req.body.reason
@@ -2008,6 +2014,7 @@ const updateBMVerifiedStockConfirm = async (
       confirmed_bm_no_of_bales: req.body.confirmedNoOfBales,
       consent_form_bm: req.body.consentForm,
       uploaded_photos_bm: req.body.uploadedPhotos,
+      bank_warehouse_doc_bm: req.body.bankWarehouseDoc,
       status_bm: req.body.status === "Accepted" ? "Accepted" : "Rejected",
       status_ps: "Pending",
       reason_bm: req.body.reason
@@ -2054,6 +2061,7 @@ const updatePSVerifiedStockConfirm = async (
       confirmed_ps_no_of_bales: req.body.confirmedNoOfBales,
       consent_form_ps: req.body.consentForm,
       uploaded_photos_ps: req.body.uploadedPhotos,
+      bank_warehouse_doc_ps: req.body.bankWarehouseDoc,
       status_ps: req.body.status === "Accepted" ? "Accepted" : "Rejected",
       reason_ps: req.body.reason
     };
