@@ -1325,6 +1325,7 @@ const chooseBale = async (req: Request, res: Response) => {
               ginners g ON gp.ginner_id = g.id
           JOIN 
               seasons s ON gp.season_id = s.id AND gp.season_id IN (${seasonId})
+              seasons s ON gp.season_id = s.id AND gp.season_id IN (${seasonId})
           JOIN 
               programs p ON gp.program_id = p.id
           WHERE 
@@ -2324,14 +2325,24 @@ const getCOCDocumentData = async (
 
     if (result.process_ids) {
       const ginProcess = await sequelize.query(`
-        select  gp.id,
-         gp.total_qty as seed_cotton_qty,
-                array_to_string(array_agg(distinct hp.transaction_id), ',') as transaction_ids
-        from gin_processes gp
-                left join "gin-bales" gb on gp.id = gb.process_id
-                left join heap_selections hp on gp.id = hp.process_id
-        where gp.id in (:ids)
-        group by gp.id;
+       SELECT
+              gp.id,
+              gp.total_qty AS seed_cotton_qty,
+              array_to_string(array_agg(DISTINCT combined.transaction_id), ',') AS transaction_ids
+            FROM gin_processes gp
+            LEFT JOIN (
+                SELECT
+                    cs.process_id,
+                    cs.transaction_id
+                FROM cotton_selections cs
+                UNION ALL
+                SELECT
+                    hs.process_id,
+                    unnest(hs.transaction_id) AS transaction_id
+                FROM heap_selections hs
+            ) combined ON gp.id = combined.process_id
+            WHERE gp.id in (:ids)
+            GROUP BY gp.id;
         `, {
           replacements: {
             ids: result.process_ids
