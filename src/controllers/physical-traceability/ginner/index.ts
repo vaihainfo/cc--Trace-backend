@@ -22,7 +22,9 @@ const fetchPhysicalTraceabilityGinnerPagination = async (req: Request, res: Resp
             whereCondition[Op.or] = [
                 { data_of_sample_dispatch: { [Op.iLike]: `%${searchTerm}%` } },
                 { operator_name: { [Op.iLike]: `%${searchTerm}%` } },
-                { cotton_connect_executive_name: { [Op.iLike]: `%${searchTerm}%` } }
+                { cotton_connect_executive_name: { [Op.iLike]: `%${searchTerm}%` } },
+                { healixa_lot_no: { [Op.iLike]: `%${searchTerm}%` } },
+                { '$gin_process.lot_no$': { [Op.iLike]: `%${searchTerm}%` } }
             ];
         }
 
