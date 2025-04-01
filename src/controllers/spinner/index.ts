@@ -964,7 +964,7 @@ const exportSpinnerProcess = async (req: Request, res: Response) => {
     // Create the excel workbook file
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet("Sheet1");
-    worksheet.mergeCells("A1:O1");
+    worksheet.mergeCells("A1:P1");
     const mergedCell = worksheet.getCell("A1");
     mergedCell.value = "CottonConnect | Process";
     mergedCell.font = { bold: true };
@@ -976,15 +976,16 @@ const exportSpinnerProcess = async (req: Request, res: Response) => {
       "Yarn Production Start Date",
       "Yarn Production End Date",
       "Season",
-      "Spin Lot No",
+      "Reel Lot No",
       "Yarn Type",
       "Yarn Count",
+      "Yarn Produced",
+      "Spin Lot No",
       "Yarn Realisation %",
-      "No of Boxes",
-      "Box ID",
       "Blend",
       "Blend Qty",
       "Total Yarn weight (Kgs)",
+      "Total lint + Blend Material Consumed",
       "Grey Out Status",
     ]);
     headerRow.font = { bold: true };
@@ -1048,15 +1049,16 @@ const exportSpinnerProcess = async (req: Request, res: Response) => {
         from: item.from_date ? item.from_date : "",
         to: item.to_date ? item.to_date : "",
         season: item.season ? item.season.name : "",
-        lotNo: item.batch_lot_no ? item.batch_lot_no : "",
+        reellotNo: item.reel_lot_no ? item.reel_lot_no : "",
         yarnType: item.yarn_type ? item.yarn_type : "",
         count: yarncount ? yarncount : "",
+        produce: item.yarn_produced && item.yarn_produced.length > 0 ? item.yarn_produced.join(",") : "",
+        lotNo: item.batch_lot_no ? item.batch_lot_no : "",
         resa: item.yarn_realisation ? item.yarn_realisation : "",
-        boxes: item.no_of_boxes ? item.no_of_boxes : "",
-        boxId: item.box_id ? item.box_id : "",
         blend: blendValue,
         blendqty: blendqty,
         total: item.net_yarn_qty,
+        total_qty: item.total_qty,
         grey_out_status: item.greyout_status ? "Yes" : "No",
       });
       worksheet.addRow(rowValues);
@@ -1342,9 +1344,11 @@ const createSpinnerSales = async (req: Request, res: Response) => {
             yarn_id: obj.id,
             sales_id: spinSales.id,
             batch_lot_no: obj.batchLotNo,
+            reel_lot_no: req.body.reelLotNno ? req.body.reelLotNno : null,
             price: obj.price,
             box_id: obj.boxId,
             no_of_boxes: obj.noOfBoxes,
+            qty_used: obj.qtyUsed,
           }
 
           await SpinSaleYarnSelected.create(
@@ -1782,20 +1786,20 @@ const exportSpinnerSale = async (req: Request, res: Response) => {
     // Set bold font for header row
     const headerRow = worksheet.addRow([
       "Sr No.",
+      "Created Date",
       "Date",
       "Season",
       "Invoice No",
-      "Spin Lot No",
-      "Reel Lot No",
       "Yarn Type",
+      "Reel Lot No",
       "Yarn Count",
-      "No of Boxes",
-      "Buyer Name",
+      "Spin Lot No",
       "Box ID",
-      "Blend",
-      "Blend Qty",
-      "Total weight (Kgs)",
+      "No of Boxes",
+      "Quantity (Kg)",
       "Price/Kg",
+      "Buyer Name",
+      "Total weight (Kgs)",
       "Programme",
       "Vehicle No",
       "Transcation via trader",
@@ -1874,27 +1878,28 @@ const exportSpinnerSale = async (req: Request, res: Response) => {
       let boxid = spinyarns && spinyarns.length > 0 ? spinyarns.map((obj:any) => obj.box_id).join(',') : "";
       let price = spinyarns && spinyarns.length > 0 ? spinyarns.map((obj:any) => obj.price).join(',') : "";
       let no_of_boxes = spinyarns && spinyarns.length > 0 ? spinyarns.map((obj:any) => obj.no_of_boxes).join(',') : "";
+      let qty_used = spinyarns && spinyarns.length > 0 ? spinyarns.map((obj:any) => obj.qty_used).filter((qty:any) => qty !== null && qty !== undefined).join(',') : "";
 
       const rowValues = Object.values({
         index: index + 1,
+        createdAt: item.createdAt ? item.createdAt : "",
         date: item.date ? item.date : "",
         season: item.season ? item.season.name : "",
         invoice: item.invoice_no ? item.invoice_no : "",
-        lotNo: item.batch_lot_no ? item.batch_lot_no : "",
-        reelLot: item.reel_lot_no ? item.reel_lot_no : "",
         yarnType: yarnTypeData ? yarnTypeData : "",
+        reelLot: item.reel_lot_no ? item.reel_lot_no : "",
         count: yarnCount ? yarnCount : "",
+        lotNo: item.batch_lot_no ? item.batch_lot_no : "",
+        boxId: item.box_ids ? item.box_ids : boxid,
         boxes: item.no_of_boxes ? item.no_of_boxes : no_of_boxes,
+        qty_used: qty_used ? qty_used : "",
+        price: item.price ? item.price : price,
         buyer_id: item.knitter
           ? item.knitter.name
           : item.weaver
           ? item.weaver.name
-          : item.processor_name,
-        boxId: item.box_ids ? item.box_ids : boxid,
-        blend: "",
-        blendqty: "",
+          : item.processor_name, 
         total: item.total_qty,
-        price: item.price ? item.price : price,
         program: item.program ? item.program.program_name : "",
         vichle: item.vehicle_no ? item.vehicle_no : "",
         transaction_via_trader: item.transaction_via_trader ? "Yes" : "No",
