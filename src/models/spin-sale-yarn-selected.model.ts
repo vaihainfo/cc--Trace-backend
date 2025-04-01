@@ -32,8 +32,14 @@ const SpinSaleYarnSelected = db.define('spin_sale_yarn_selecteds', {
     references: { model: 'spin_yarns', key: 'id' },
     onDelete: 'CASCADE',
   },
+  reel_lot_no: {
+    type: DataTypes.STRING
+  },
   batch_lot_no: {
     type: DataTypes.STRING
+  },
+  qty_used: {
+    type: DataTypes.DOUBLE
   },
   box_id: {
     type: DataTypes.STRING
