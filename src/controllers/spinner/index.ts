@@ -1344,7 +1344,7 @@ const createSpinnerSales = async (req: Request, res: Response) => {
             yarn_id: obj.id,
             sales_id: spinSales.id,
             batch_lot_no: obj.batchLotNo,
-            reel_lot_no: req.body.reelLotNno ? req.body.reelLotNno : null,
+            reel_lot_no: obj.reelLotNo ? obj.reelLotNo : null,
             price: obj.price,
             box_id: obj.boxId,
             no_of_boxes: obj.noOfBoxes,
@@ -1778,7 +1778,7 @@ const exportSpinnerSale = async (req: Request, res: Response) => {
     // Create the excel workbook file
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet("Sheet1");
-    worksheet.mergeCells("A1:R1");
+    worksheet.mergeCells("A1:S1");
     const mergedCell = worksheet.getCell("A1");
     mergedCell.value = "CottonConnect | Sale";
     mergedCell.font = { bold: true };
