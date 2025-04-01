@@ -1052,7 +1052,7 @@ const exportSpinnerProcess = async (req: Request, res: Response) => {
         reellotNo: item.reel_lot_no ? item.reel_lot_no : "",
         yarnType: item.yarn_type ? item.yarn_type : "",
         count: yarncount ? yarncount : "",
-        produce: item.yarn_produced && item.yarn_produced.length > 0 ? item.yarn_produced.join(",") : "",
+        produce: item.yarn_qty_produced && item.yarn_qty_produced.length > 0 ? item.yarn_qty_produced.join(",") : "",
         lotNo: item.batch_lot_no ? item.batch_lot_no : "",
         resa: item.yarn_realisation ? item.yarn_realisation : "",
         blend: blendValue,
