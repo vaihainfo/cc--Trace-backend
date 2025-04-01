@@ -11429,7 +11429,7 @@ const exportGarmentFabricReceipt = async (req: Request, res: Response) => {
     }
 
     const rowValues = {
-      index:"Totals:",
+      index:"",
       country_name:"",
       state_name:"",
       accept_date:"",
@@ -11439,7 +11439,7 @@ const exportGarmentFabricReceipt = async (req: Request, res: Response) => {
       buyer:"",
       invoice:"",
       lotNo:"",
-      fabrictype:"",
+      fabrictype:"Total",
       fabric_length: totals.fabric_length,
       total_fabric_length: totals.total_fabric_length,
       fabric_weight: totals.fabric_weight,
@@ -11885,7 +11885,7 @@ const exportGarmentFabricProcess = async (req: Request, res: Response) => {
       worksheet.addRow(Object.values(rowValues));
     }
     const rowValues = {
-      index:"Totals:",
+      index:"",
       country_name:"",
       state_name:"",
       createdAt:"",
@@ -11900,7 +11900,7 @@ const exportGarmentFabricProcess = async (req: Request, res: Response) => {
       lotNo:"",
       reelLotNo:"",
       garmentType:"",
-      stylemarkNo:"",
+      stylemarkNo:"Total",
       noOfPieces: totals.noOfPieces,
       noOfBoxes: totals.noOfBoxes,
       total_fabric_weight: totals.total_fabric_weight,
@@ -12382,7 +12382,7 @@ const exportGarmentSales = async (req: Request, res: Response) => {
       worksheet.addRow(Object.values(rowValues));
     }
     const rowValues = {
-      index:"Totals:",
+      index:"",
       country_name:"",
       state_name:"",
       createdAt:"",
@@ -12394,7 +12394,7 @@ const exportGarmentSales = async (req: Request, res: Response) => {
       fabricOrderRef:"",
       brandOrderRef:"",
       garmentType:"",
-      stylemarkNo:"",
+      stylemarkNo:"Total",
       no_of_boxes:totals.no_of_boxes,
       no_of_pieces:totals.no_of_pieces,
       transaction_agent:"",
@@ -12768,7 +12768,7 @@ const exportQrCodeTrack = async (req: Request, res: Response) => {
     }
     
     const rowValues = {
-      index:"Totals:",
+      index:"",
       country_name:"",
       state_name:"",
       qrCode:"",
@@ -12776,7 +12776,7 @@ const exportQrCodeTrack = async (req: Request, res: Response) => {
       garment:"",
       invoice:"",
       garmentType:"",
-      mark:"",
+      mark:"Total",
       no_of_pieces:totals.no_of_pieces,
       program:"",
     };
