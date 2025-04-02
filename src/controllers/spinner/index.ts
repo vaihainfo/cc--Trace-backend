@@ -40,6 +40,7 @@ import { _getGinnerProcessTracingChartData } from "../ginner";
 import CombernoilGeneration from "../../models/combernoil_generation.model";
 import SpinCombernoilSale from "../../models/spin_combernoil_sale.model";
 import GinToGinSale from "../../models/gin-to-gin-sale.model";
+import moment from "moment";
 import SpinSaleYarnSelected from "../../models/spin-sale-yarn-selected.model";
 // import SpinSelectedBlend from "../../models/spin_selected_blend";
 import SpinnerYarnOrderSales from "../../models/spinner-yarn-order-sales.model";
@@ -57,21 +58,28 @@ const createSpinnerProcess = async (req: Request, res: Response) => {
         }
 
         if (req.body.spinnerId && req.body.seasonId && req.body.programId && req.body.totalQty && req.body.batchLotNo) {
-            let ProcessExist = await SpinProcess.findOne(
-              { where: { 
-                spinner_id: req.body.spinnerId,
-                program_id: req.body.programId,
-                season_id: req.body.seasonId,
-                total_qty: Number(req.body.totalQty),
-                net_yarn_qty: req.body.netYarnQty,
-                batch_lot_no: req.body.batchLotNo,
-                yarn_type: req.body.yarnType,
-                yarn_realisation: req.body.yarnRealisation,
+             const normalizedDate = moment.utc(req.body.date).format('YYYY-MM-DD');
+             let ProcessExist = await SpinProcess.findOne(
+              { where: {
+                [Op.and]: [
+                  Sequelize.where(
+                    Sequelize.fn("DATE", Sequelize.col("date")), 
+                    normalizedDate
+                  ),
+                  { spinner_id: req.body.spinnerId },
+                  { program_id: req.body.programId },
+                  { season_id: req.body.seasonId },
+                  { total_qty: Number(req.body.totalQty) || 0 }, 
+                  { net_yarn_qty: req.body.netYarnQty },
+                  { batch_lot_no: req.body.batchLotNo },
+                  { yarn_type: req.body.yarnType },
+                  { yarn_realisation: req.body.yarnRealisation },
+                ],
               }, transaction },
             );
             if (ProcessExist) {
               await transaction.rollback();
-              return res.sendError(res, "Process already exist with same Lot Number, Yarn Type, Yarn Realisation, Net Yarn Quantity (Kgs) and Total Quantity(Kg/MT) for this Season.");
+              return res.sendError(res, "Process already exist with same Date, Lot Number, Yarn Type, Yarn Realisation, Net Yarn Quantity (Kgs) and Total Quantity(Kg/MT) for this Season.");
             }
       }
 
@@ -958,7 +966,7 @@ const exportSpinnerProcess = async (req: Request, res: Response) => {
     // Create the excel workbook file
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet("Sheet1");
-    worksheet.mergeCells("A1:O1");
+    worksheet.mergeCells("A1:P1");
     const mergedCell = worksheet.getCell("A1");
     mergedCell.value = "CottonConnect | Process";
     mergedCell.font = { bold: true };
@@ -970,15 +978,16 @@ const exportSpinnerProcess = async (req: Request, res: Response) => {
       "Yarn Production Start Date",
       "Yarn Production End Date",
       "Season",
-      "Spin Lot No",
+      "Reel Lot No",
       "Yarn Type",
       "Yarn Count",
+      "Yarn Produced",
+      "Spin Lot No",
       "Yarn Realisation %",
-      "No of Boxes",
-      "Box ID",
       "Blend",
       "Blend Qty",
       "Total Yarn weight (Kgs)",
+      "Total lint + Blend Material Consumed",
       "Grey Out Status",
     ]);
     headerRow.font = { bold: true };
@@ -1042,15 +1051,16 @@ const exportSpinnerProcess = async (req: Request, res: Response) => {
         from: item.from_date ? item.from_date : "",
         to: item.to_date ? item.to_date : "",
         season: item.season ? item.season.name : "",
-        lotNo: item.batch_lot_no ? item.batch_lot_no : "",
+        reellotNo: item.reel_lot_no ? item.reel_lot_no : "",
         yarnType: item.yarn_type ? item.yarn_type : "",
         count: yarncount ? yarncount : "",
+        produce: item.yarn_qty_produced && item.yarn_qty_produced.length > 0 ? item.yarn_qty_produced.join(",") : "",
+        lotNo: item.batch_lot_no ? item.batch_lot_no : "",
         resa: item.yarn_realisation ? item.yarn_realisation : "",
-        boxes: item.no_of_boxes ? item.no_of_boxes : "",
-        boxId: item.box_id ? item.box_id : "",
         blend: blendValue,
         blendqty: blendqty,
         total: item.net_yarn_qty,
+        total_qty: item.total_qty,
         grey_out_status: item.greyout_status ? "Yes" : "No",
       });
       worksheet.addRow(rowValues);
@@ -1336,9 +1346,11 @@ const createSpinnerSales = async (req: Request, res: Response) => {
             yarn_id: obj.id,
             sales_id: spinSales.id,
             batch_lot_no: obj.batchLotNo,
+            reel_lot_no: obj.reelLotNo ? obj.reelLotNo : null,
             price: obj.price,
             box_id: obj.boxId,
             no_of_boxes: obj.noOfBoxes,
+            qty_used: obj.qtyUsed,
           }
 
           await SpinSaleYarnSelected.create(
@@ -1795,7 +1807,7 @@ const exportSpinnerSale = async (req: Request, res: Response) => {
     // Create the excel workbook file
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet("Sheet1");
-    worksheet.mergeCells("A1:R1");
+    worksheet.mergeCells("A1:S1");
     const mergedCell = worksheet.getCell("A1");
     mergedCell.value = "CottonConnect | Sale";
     mergedCell.font = { bold: true };
@@ -1803,20 +1815,20 @@ const exportSpinnerSale = async (req: Request, res: Response) => {
     // Set bold font for header row
     const headerRow = worksheet.addRow([
       "Sr No.",
+      "Created Date",
       "Date",
       "Season",
       "Invoice No",
-      "Spin Lot No",
-      "Reel Lot No",
       "Yarn Type",
+      "Reel Lot No",
       "Yarn Count",
-      "No of Boxes",
-      "Buyer Name",
+      "Spin Lot No",
       "Box ID",
-      "Blend",
-      "Blend Qty",
-      "Total weight (Kgs)",
+      "No of Boxes",
+      "Quantity (Kg)",
       "Price/Kg",
+      "Buyer Name",
+      "Total weight (Kgs)",
       "Programme",
       "Vehicle No",
       "Transcation via trader",
@@ -1895,27 +1907,28 @@ const exportSpinnerSale = async (req: Request, res: Response) => {
       let boxid = spinyarns && spinyarns.length > 0 ? spinyarns.map((obj:any) => obj.box_id).join(',') : "";
       let price = spinyarns && spinyarns.length > 0 ? spinyarns.map((obj:any) => obj.price).join(',') : "";
       let no_of_boxes = spinyarns && spinyarns.length > 0 ? spinyarns.map((obj:any) => obj.no_of_boxes).join(',') : "";
+      let qty_used = spinyarns && spinyarns.length > 0 ? spinyarns.map((obj:any) => obj.qty_used).filter((qty:any) => qty !== null && qty !== undefined).join(',') : "";
 
       const rowValues = Object.values({
         index: index + 1,
+        createdAt: item.createdAt ? item.createdAt : "",
         date: item.date ? item.date : "",
         season: item.season ? item.season.name : "",
         invoice: item.invoice_no ? item.invoice_no : "",
-        lotNo: item.batch_lot_no ? item.batch_lot_no : "",
-        reelLot: item.reel_lot_no ? item.reel_lot_no : "",
         yarnType: yarnTypeData ? yarnTypeData : "",
+        reelLot: item.reel_lot_no ? item.reel_lot_no : "",
         count: yarnCount ? yarnCount : "",
+        lotNo: item.batch_lot_no ? item.batch_lot_no : "",
+        boxId: item.box_ids ? item.box_ids : boxid,
         boxes: item.no_of_boxes ? item.no_of_boxes : no_of_boxes,
+        qty_used: qty_used ? qty_used : "",
+        price: item.price ? item.price : price,
         buyer_id: item.knitter
           ? item.knitter.name
           : item.weaver
           ? item.weaver.name
-          : item.processor_name,
-        boxId: item.box_ids ? item.box_ids : boxid,
-        blend: "",
-        blendqty: "",
+          : item.processor_name, 
         total: item.total_qty,
-        price: item.price ? item.price : price,
         program: item.program ? item.program.program_name : "",
         vichle: item.vehicle_no ? item.vehicle_no : "",
         transaction_via_trader: item.transaction_via_trader ? "Yes" : "No",
