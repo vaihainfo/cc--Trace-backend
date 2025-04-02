@@ -1535,8 +1535,8 @@ const getTypeWiseListVerifiedStocks = async (req: Request, res: Response) => {
       whereCondition.status_scm = { [Op.in]: ['Accepted', 'Rejected'] };
     }else if(type === 'Supply_Chain_Director'){
       whereCondition.status = { [Op.in]: ['Accepted', 'Rejected'] };
-      whereCondition.status_ginner = 'Accepted';
-      whereCondition.status_scm = 'Accepted';
+      whereCondition.status_ginner = { [Op.in]: ['Accepted', 'Rejected'] };
+      whereCondition.status_scm = { [Op.in]: ['Accepted', 'Rejected'] };
       whereCondition.status_scd = { [Op.in]: ['Accepted', 'Rejected'] };
     }
 
@@ -2797,8 +2797,8 @@ const getTypeWiseSpinVerifiedStocks = async (req: Request, res: Response) => {
       whereCondition.status_bm = { [Op.in]: ['Accepted', 'Rejected'] };
     }else if(type === 'PS_Team'){
       whereCondition.status = { [Op.in]: ['Accepted', 'Rejected'] };
-      whereCondition.status_spinner = 'Accepted';
-      whereCondition.status_bm = 'Accepted';
+      whereCondition.status_spinner = { [Op.in]: ['Accepted', 'Rejected'] };
+      whereCondition.status_bm = { [Op.in]: ['Accepted', 'Rejected'] };
       whereCondition.status_ps = { [Op.in]: ['Accepted', 'Rejected'] };
     }else if(type === 'Brand_Executive'){
       whereCondition.be_id = { [Op.not]: null }
