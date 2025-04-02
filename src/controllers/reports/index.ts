@@ -7867,13 +7867,13 @@ const exportKnitterYarn = async (req: Request, res: Response) => {
     // Set bold font for header row
     const headerRow = worksheet.addRow([
       "Sr No.",
+      "Country",
+      "State",
       "Date of Transaction Receipt",
       "Date",
       "No of Days",
       "Spinner Name",
       "Knitter Unit Name",
-      "Country",
-      "State",
       "Invoice Number",
       "Lot/Batch Number",
       "Yarn Reel No",
@@ -7932,8 +7932,8 @@ const exportKnitterYarn = async (req: Request, res: Response) => {
         attributes: [
           [Sequelize.literal('"sales"."id"'), "sales_id"],
           [Sequelize.literal('"sales"."date"'), "date"],
-          [Sequelize.literal('"sales"."accept_date"'), "accept_date"],
-          [Sequelize.literal('Extract(DAY FROM ("sales"."accept_date"- "sales"."date"))'), "no_of_days"],
+          [Sequelize.literal('"sales"."createdAt"'), "createdAt"],
+          [Sequelize.literal('Extract(DAY FROM ("sales"."createdAt"- "sales"."date"))'), "no_of_days"],
           [Sequelize.col('"sales"."season"."name"'), "season_name"],
           [Sequelize.col('"sales"."season"."id"'), "season_id"],
           [Sequelize.col('"sales"."spinner"."id"'), "spinner_id"],
@@ -8035,15 +8035,15 @@ const exportKnitterYarn = async (req: Request, res: Response) => {
     for await (const [index, item] of rows.entries()) {
       const rowValues = {
         index: index + 1,
-        accept_date: item.dataValues.accept_date
-          ? item.dataValues.accept_date
+        country: item.dataValues.country ? item.dataValues.country : "",
+        state: item.dataValues.state ? item.dataValues.state : "",
+        createdAt: item.dataValues.createdAt
+          ? item.dataValues.createdAt
           : "",
         date: item.dataValues.date ? item.dataValues.date : "",
         no_of_days: item.dataValues.no_of_days ? Number(item.dataValues.no_of_days) : "",
         spinner: item.dataValues.spinner ? item.dataValues.spinner : "",
         buyer_id: item.dataValues.knitter ? item.dataValues.knitter : "",
-        country: item.dataValues.country ? item.dataValues.country : "",
-        state: item.dataValues.state ? item.dataValues.state : "",
         invoice: item.dataValues.invoice_no ? item.dataValues.invoice_no : "",
         lotNo: item.dataValues.batch_lot_no ? item.dataValues.batch_lot_no : "",
         reelLot: item.dataValues.reel_lot_no ? item.dataValues.reel_lot_no : "",
@@ -8061,13 +8061,14 @@ const exportKnitterYarn = async (req: Request, res: Response) => {
 
     const rowValues = {
       index: "",
-      accept_date: "",
+      country: "",
+      state: "",
+      createdAt: "",
       date: "",
       no_of_days: "",
       spinner: "",
       buyer_id: "",
-      country: "",
-      state: "",
+      
       invoice: "",
       reelLot: "",
       lotNo: "",
@@ -8374,14 +8375,14 @@ const exportKnitterYarnProcess = async (req: Request, res: Response) => {
     // Set bold font for header row
     const headerRow = worksheet.addRow([
       "Sr No.",
+      "Country",
+      "State",
       "Date of Process",
       "Date",
       "No of Days",
       "Fabric Production Start Date",
       "Fabric Production End Date",
       "Knitter Unit Name",
-      "Country",
-      "State",
       "Garment order reference no.",
       "Brand reference no",
       "No. of Rolls",
@@ -8466,7 +8467,6 @@ const exportKnitterYarnProcess = async (req: Request, res: Response) => {
     let totals = {
       noOfRolls:0,
       fabricWeight:0,
-      fabricGsm:0,
       total_yarn:0,
       netWeight:0
     };
@@ -8481,6 +8481,8 @@ const exportKnitterYarnProcess = async (req: Request, res: Response) => {
     for await (const [index, item] of result.entries()) {
       const rowValues = {
         index: index + 1,
+        country: item.knitter?.country?.county_name || "",
+        state: item.knitter?.state?.state_name || "",
         accept_date: item.createdAt ? item.createdAt : "",
         date: item.date ? item.date : "",
         no_of_days: item.createdAt && item.date ? Math.floor(
@@ -8490,8 +8492,6 @@ const exportKnitterYarnProcess = async (req: Request, res: Response) => {
         from_date: item.from_date ? item.from_date : "",
         to_date: item.to_date ? item.to_date : "",
         knitter: item.knitter ? item.knitter.name : "",
-        country: item.knitter?.country?.county_name || "",
-        state: item.knitter?.state?.state_name || "",
         garmentOrderRef: item.garment_order_ref ? item.garment_order_ref : "",
         brandOrderRef: item.brand_order_ref ? item.brand_order_ref : "",
         noOfRolls: item.no_of_rolls ? item.no_of_rolls : "",
@@ -8499,17 +8499,16 @@ const exportKnitterYarnProcess = async (req: Request, res: Response) => {
         reelLot: item.reel_lot_no ? item.reel_lot_no : "",
         fabricType: item.fabricType ? item.fabricType : "",
         fabricWeight: item.fabricWeight ? item.fabricWeight : "",
-        fabricGsm: item.fabricGsm ? Number(item.fabricGsm) : 0,
+        fabricGsm: item.fabricGsm ? (item.fabricGsm) : "",
         job_details_garment: item.job_details_garment
           ? item.job_details_garment
           : "",
         total_yarn: item.total_yarn_qty ? item.total_yarn_qty : "",
-        netWeight: item.total_fabric_weight ? item.total_fabric_weight : "",
+        netWeight: item.total_fabric_weight ? item.total_fabric_weight : 0,
       };
 
       totals.noOfRolls+= Number(rowValues.noOfRolls); 
       totals.fabricWeight+= Number(rowValues.fabricWeight); 
-      totals.fabricGsm+= Number(rowValues.fabricGsm); 
       totals.total_yarn+= Number(rowValues.total_yarn);
       totals.netWeight+= Number(rowValues.netWeight);
 
@@ -8530,11 +8529,11 @@ const exportKnitterYarnProcess = async (req: Request, res: Response) => {
         garmentOrderRef:  "",
         brandOrderRef: "Total",
         noOfRolls:  totals.noOfRolls,
-        lotNo: "-",
-        reelLot: "-",
-        fabricType: "-",
+        lotNo: "",
+        reelLot: "",
+        fabricType: "",
         fabricWeight: totals.fabricWeight,
-        fabricGsm: totals.fabricGsm,
+        fabricGsm: "",
         job_details_garment: "",
         total_yarn: totals.total_yarn,
         netWeight: totals.netWeight,
@@ -8904,12 +8903,12 @@ const exportKnitterSale = async (req: Request, res: Response) => {
     // Set bold font for header row
     const headerRow = worksheet.addRow([
       "Sr No.",
+      "Country",
+      "State",
       "Date of Sale ",
       "Date",
       "No of Days",
       "Knitter Name",
-      "Country",
-      "State",
       "Sold To",
       "Invoice Number",
       "Finished Batch/Lot No",
@@ -9050,12 +9049,12 @@ const exportKnitterSale = async (req: Request, res: Response) => {
     for await (const [index, item] of rows.entries()) {
       const rowValues = {
         index: index + 1,
+        country: item.country ? item.country : "",
+        state: item.state ? item.state : "",
         createdAt: item.createdAt ? item.createdAt : "",
         date: item.date ? item.date : "",
         no_of_days: item.no_of_days ? Number(item.no_of_days) : "",
         knitter: item.knitter ? item.knitter : "",
-        country: item.country ? item.country : "",
-        state: item.state ? item.state : "",
         buyer: item.garment
           ? item.garment
           : item.fabric
@@ -9081,11 +9080,11 @@ const exportKnitterSale = async (req: Request, res: Response) => {
     const rowValues = {
       index: "",
         createdAt: "",
+        country:"",
+        state: "",
         date: "",
         no_of_days: "",
         weaver: "",
-        country:"",
-        state: "",
         buyer:"" ,
         invoice: "",
         lotNo:"",
@@ -9469,13 +9468,13 @@ const exportWeaverYarn = async (req: Request, res: Response) => {
     // Set bold font for header row
     const headerRow = worksheet.addRow([
       "Sr No.",
+      "Country",
+      "State",
       "Date of Transaction Receipt",
       "Date",
       "No of Days",
       "Spinner Name",
       "Weaving Unit Name",
-      "Country",
-      "State",
       "Invoice Number",
       "Yarn Reel No",
       "Lot/Batch Number",
@@ -9538,8 +9537,8 @@ const exportWeaverYarn = async (req: Request, res: Response) => {
         attributes: [
           [Sequelize.literal('"sales"."id"'), "sales_id"],
           [Sequelize.literal('"sales"."date"'), "date"],
-          [Sequelize.literal('"sales"."accept_date"'), "accept_date"],
-          [Sequelize.literal('Extract(DAY FROM ("sales"."accept_date"- "sales"."date"))'), "no_of_days"],
+          [Sequelize.literal('"sales"."createdAt"'), "createdAt"],
+          [Sequelize.literal('Extract(DAY FROM ("sales"."createdAt"- "sales"."date"))'), "no_of_days"],
           [Sequelize.col('"sales"."season"."name"'), "season_name"],
           [Sequelize.col('"sales"."season"."id"'), "season_id"],
           [Sequelize.col('"sales"."spinner"."id"'), "spinner_id"],
@@ -9640,13 +9639,13 @@ const exportWeaverYarn = async (req: Request, res: Response) => {
       
       const rowValues = {
         index: index + 1,
-        accept_date: item.dataValues.accept_date ? item.dataValues.accept_date: "",
+        country: item.dataValues.country ? item.dataValues.country : "",
+        state: item.dataValues.state ? item.dataValues.state : "",
+        createdAt: item.dataValues.createdAt ? item.dataValues.createdAt: "",
         date: item.dataValues.date ? item.dataValues.date : "",
         no_of_days: item.dataValues.no_of_days ? Number(item.dataValues.no_of_days) : "",
         spinner: item.dataValues.spinner ? item.dataValues.spinner : "",
         buyer_id: item.dataValues.weaver ? item.dataValues.weaver : "",
-        country: item.dataValues.country ? item.dataValues.country : "",
-        state: item.dataValues.state ? item.dataValues.state : "",
         invoice: item.dataValues.invoice_no ? item.dataValues.invoice_no : "",
         reelLot: item.dataValues.reel_lot_no ? item.dataValues.reel_lot_no : "",
         count: item.dataValues.yarn_count.map((id: number) => yarnCountMap[id] || null).join(", "),
@@ -9664,13 +9663,13 @@ const exportWeaverYarn = async (req: Request, res: Response) => {
   
     const rowValues = {
       index: "",
-      accept_date: "",
+      country: "",
+      state: "",
+      createdAt: "",
       date: "",
       no_of_days: "",
       spinner: "",
       buyer_id: "",
-      country: "",
-      state: "",
       invoice: "",
       reelLot: "",
       lotNo: "",
@@ -9962,14 +9961,14 @@ const exportWeaverYarnProcess = async (req: Request, res: Response) => {
     // Set bold font for header row
     const headerRow = worksheet.addRow([
       "Sr No.",
+      "Country",
+      "State",
       "Date of Process",
       "Date",
       "No of Days",
       "Fabric Production Start Date",
       "Fabric Production End Date",
       "Weaving Unit Name",
-      "Country",
-      "State",
       "Garment order reference no.",
       "Brand reference no",
       "No. of Rolls",
@@ -10070,6 +10069,8 @@ const exportWeaverYarnProcess = async (req: Request, res: Response) => {
     for await (const [index, item] of result.entries()) {
       const rowValues = {
         index: index + 1,
+        country: item.weaver?.country?.county_name || "",
+        state: item.weaver?.state?.state_name || "",
         accept_date: item.createdAt ? item.createdAt : "",
         date: item.date ? item.date : "",
         no_of_days: item.createdAt && item.date ? Math.floor(
@@ -10079,8 +10080,6 @@ const exportWeaverYarnProcess = async (req: Request, res: Response) => {
         from_date: item.from_date ? item.from_date : "",
         to_date: item.to_date ? item.to_date : "",
         weaver: item.weaver ? item.weaver.name : "",
-        country: item.weaver?.country?.county_name || "",
-        state: item.weaver?.state?.state_name || "",
         garmentOrderRef: item.garment_order_ref ? item.garment_order_ref : "",
         brandOrderRef: item.brand_order_ref ? item.brand_order_ref : "",
         noOfRolls: item.no_of_rolls ? item.no_of_rolls : "",
@@ -10109,25 +10108,26 @@ const exportWeaverYarnProcess = async (req: Request, res: Response) => {
 
     const rowValues = {
       index: "",
+      country:  "",
+      state: "",
       accept_date:"",
-        date:  "",
-        no_of_days: "",
-        from_date:  "",
-        to_date: "",
-        weaver: "",
-        country:  "",
-        state: "",
-        garmentOrderRef:  "",
-        brandOrderRef: "Total",
-        noOfRolls:  totals.noOfRolls,
-        lotNo: "-",
-        reelLot: "-",
-        fabricType: "-",
-        fabricLength: totals.fabricLength,
-        fabricGsm: totals.fabricGsm,
-        job_details_garment: "",
-        total_yarn: totals.total_yarn,
-        netLength: totals.netLength,
+      date:  "",
+      no_of_days: "",
+      from_date:  "",
+      to_date: "",
+      weaver: "",
+      
+      garmentOrderRef:  "",
+      brandOrderRef: "Total",
+      noOfRolls:  totals.noOfRolls,
+      lotNo: "",
+      reelLot: "",
+      fabricType: "",
+      fabricLength: totals.fabricLength,
+      fabricGsm: totals.fabricGsm,
+      job_details_garment: "",
+      total_yarn: totals.total_yarn,
+      netLength: totals.netLength,
     };
    
     worksheet.addRow(Object.values(rowValues)).eachCell(cell=> cell.font = {bold: true});
@@ -10502,12 +10502,12 @@ const exportWeaverSale = async (req: Request, res: Response) => {
     // Set bold font for header row
     const headerRow = worksheet.addRow([
       "Sr No.",
+      "Country",
+      "State",
       "Date of Sale ",
       "Date",
       "No of Days",
       "Weaver Name",
-      "Country",
-      "State",
       "Sold To",
       "Invoice Number",
       "Finished Batch/Lot No",
@@ -10650,12 +10650,12 @@ const exportWeaverSale = async (req: Request, res: Response) => {
     for await (const [index, item] of rows.entries()) {
       const rowValues = {
         index: index + 1,
+        country: item.country ? item.country : "",
+        state: item.state ? item.state : "",
         createdAt: item.createdAt ? item.createdAt : "",
         date: item.date ? item.date : "",
         no_of_days: item.no_of_days ? Number(item.no_of_days) : "",
         weaver: item.weaver ? item.weaver : "",
-        country: item.country ? item.country : "",
-        state: item.state ? item.state : "",
         buyer: item.garment
           ? item.garment
           : item.fabric
@@ -10680,19 +10680,20 @@ const exportWeaverSale = async (req: Request, res: Response) => {
 
     const rowValues = {
       index: "",
-        createdAt: "",
-        date: "",
-        no_of_days: "",
-        weaver: "",
-        country:"",
-        state: "",
-        buyer:"" ,
-        invoice: "",
-        lotNo:"",
-        fabrictype:  "",
-        transaction_agent: "Total",
-        fabric_length: totals.fabric_length,
-        total_fabric_length:  totals.total_fabric_length,
+      country:"",
+      state: "",
+      createdAt: "",
+      date: "",
+      no_of_days: "",
+      weaver: "",
+      
+      buyer:"" ,
+      invoice: "",
+      lotNo:"",
+      fabrictype:  "",
+      transaction_agent: "Total",
+      fabric_length: totals.fabric_length,
+      total_fabric_length:  totals.total_fabric_length,
     };
    
     worksheet.addRow(Object.values(rowValues)).eachCell(cell=> cell.font = {bold: true});
