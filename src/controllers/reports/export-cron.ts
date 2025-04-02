@@ -89,37 +89,37 @@ const exportReportsTameTaking = async () => {
 
 const exportReportsOnebyOne = async () => {
   //call all export reports one by one on every cron
-  await generatePremiumValidationData();
+  // await generatePremiumValidationData();
 
-  await generateFaildReport("Farmer");
-  await generateFaildReport("Procurement");
-  // await generateExportFarmer();
+  // await generateFaildReport("Farmer");
+  // await generateFaildReport("Procurement");
+  // // await generateExportFarmer();
 
-  // Procurement Reports 
-  await generatePscpCottonProcurement();
-  await generatePscpProcurementLiveTracker();
+  // // Procurement Reports 
+  // await generatePscpCottonProcurement();
+  // await generatePscpProcurementLiveTracker();
 
-  await exportVillageSeedCottonAllocation();
+  // await exportVillageSeedCottonAllocation();
 
-  // //brand wise report
-  await generateBrandWiseData();
+  // // //brand wise report
+  // await generateBrandWiseData();
 
-  // // Ginner Reports 
-  await generateGinnerSummary();
-  await generatePendingGinnerSales();
-  await generateGinnerCottonStock();
-  await generateGinnerProcess();
-  //spinner Reports
-  await generateSpinnerSummary();
-  await generateSpinnerBale();
-  await generateSpinnerYarnProcess();
+  // // // Ginner Reports 
+  // await generateGinnerSummary();
+  // await generatePendingGinnerSales();
+  // await generateGinnerCottonStock();
+  // await generateGinnerProcess();
+  // //spinner Reports
+  // await generateSpinnerSummary();
+  // await generateSpinnerBale();
+  // await generateSpinnerYarnProcess();
   await generateSpinnerSale();
-  await generatePendingSpinnerBale();
-  await generateSpinnerLintCottonStock();
-  await exportSpinnerGreyOutReport();
-  await exportGinHeapReport();
-  await exportGinnerProcessGreyOutReport();
-  await exportSpinnerProcessGreyOutReport();
+  // await generatePendingSpinnerBale();
+  // await generateSpinnerLintCottonStock();
+  // await exportSpinnerGreyOutReport();
+  // await exportGinHeapReport();
+  // await exportGinnerProcessGreyOutReport();
+  // await exportSpinnerProcessGreyOutReport();
 
 
   console.log('Cron Job Completed to execute all reports.');
@@ -5706,10 +5706,11 @@ const generateSpinnerYarnProcess = async () => {
              lint_consumed_seasons:"",
              season:"",
              spinner:"",
-             lotNo:"",
              reel_lot_no:"",
              yarnType:"",
+             lotNo:"",
              count:"",
+             produce: "",
              resa:"",
              comber: Number(formatDecimal(totals.total_comber)),
              blend: "",
@@ -5781,7 +5782,15 @@ const generateSpinnerYarnProcess = async () => {
             spin_process.accept_date,
             spin_process.qr,
             spin_process.greyout_status,
-            program.program_name AS program
+            program.program_name AS program,
+             jsonb_agg(jsonb_build_object(
+                'id', spinyarn.id,
+                'process_id', spinyarn.process_id,
+                'yarn_count', spinyarn.yarn_count,
+                'yarncount', "yarn_count"."yarnCount_name",
+                'batch_lot_no', "spinyarn"."batch_lot_no",
+                'yarn_produced', "spinyarn"."yarn_produced"
+       )) AS spinyarns
           FROM
             spin_processes spin_process
           LEFT JOIN
@@ -5790,7 +5799,12 @@ const generateSpinnerYarnProcess = async () => {
             seasons season ON spin_process.season_id = season.id
           LEFT JOIN
             programs program ON spin_process.program_id = program.id
-        ),
+           LEFT JOIN
+          spin_yarns spinyarn ON spin_process.id = spinyarn.process_id
+            LEFT JOIN
+            yarn_counts yarn_count ON yarn_count.id = spinyarn.yarn_count
+          GROUP BY spin_process.id, season.id, program.id,spinner.id
+            ),
         cotton_consumed_data AS (
           SELECT
             ls.process_id,
@@ -5932,10 +5946,11 @@ const generateSpinnerYarnProcess = async () => {
           lint_consumed_seasons: item.lint_consumed_seasons ? item.lint_consumed_seasons : "",
           season: item.season_name ? item.season_name : "",
           spinner: item.spinner_name ? item.spinner_name : "",
-          lotNo: item.batch_lot_no ? item.batch_lot_no : "",
           reel_lot_no: item.reel_lot_no ? item.reel_lot_no : "",
           yarnType: item.yarn_type ? item.yarn_type : "",
+          lotNo: item.batch_lot_no ? item.batch_lot_no : "",
           count: item.yarncount ? item.yarncount : "",
+          produce: item.yarn_qty_produced && item.yarn_qty_produced.length > 0 ? item.yarn_qty_produced.join(",") : "",
           resa: item.yarn_realisation ? Number(item.yarn_realisation) : 0,
           comber: item.comber_noil ? Number(item.comber_noil) : 0,
           blend: blendValue,
@@ -5981,10 +5996,11 @@ const generateSpinnerYarnProcess = async () => {
             "Lint Cotton Consumed Season",
             "Yarn Process Season",
             "Spinner Name",
-            "Spin Lot No",
             "Yarn Reel Lot No",
             "Yarn Type",
+            "Spin Lot No",
             "Yarn Count",
+            "Yarn Produced",
             "Yarn Realisation %",
             "Comber Noil (Kgs)",
             "Blend Material",
@@ -6127,13 +6143,14 @@ const generateSpinnerSale = async () => {
         buyer_id:"",
         invoice:"",
         order_ref:"",
-        lotNo:"",
-        reelLot:"",
         program:"",
+        reelLot:"",
         yarnType:"",
         count:"",
-        boxes:"",
+        lotNo:"",
         boxId:"",
+        boxes:"",
+        qty_used:"",
         price: Number(formatDecimal(totals.total_price)),
         total: Number(formatDecimal(totals.total_net_weight)),
         transporter_name:"",
@@ -6199,6 +6216,14 @@ const generateSpinnerSale = async () => {
             [Sequelize.fn('ARRAY_AGG', Sequelize.literal('DISTINCT "process"."id"')), "process_ids"],
             [Sequelize.literal('"sales"."no_of_boxes"'), "no_of_boxes"],
             [Sequelize.literal('"sales"."price"'), "price"],
+            [
+              Sequelize.fn(
+                "COALESCE",
+                sequelize.fn("SUM", Sequelize.col("qty_used")),
+                0
+              ),
+              "yarn_weight",
+            ],
             [Sequelize.literal('"sales"."box_ids"'), "box_ids"],
             [Sequelize.literal('"sales"."yarn_type"'), "yarn_type"],
             [Sequelize.literal('"sales"."yarn_count"'), "yarn_count"],
@@ -6336,10 +6361,11 @@ const generateSpinnerSale = async () => {
           ]
         });
 
-      let boxid = spinyarns && spinyarns.length > 0 ? spinyarns.map((obj:any) => obj.box_id).join(',') : "";
-      let price = spinyarns && spinyarns.length > 0 ? spinyarns.map((obj:any) => obj.price).join(',') : "";
-      let no_of_boxes = spinyarns && spinyarns.length > 0 ? spinyarns.map((obj:any) => obj.no_of_boxes).join(',') : "";
-
+        let boxid = spinyarns && spinyarns.length > 0 ? spinyarns.map((obj:any) => obj.box_id).join(',') : "";
+        let price = spinyarns && spinyarns.length > 0 ? spinyarns.map((obj:any) => obj.price).join(',') : "";
+        let no_of_boxes = spinyarns && spinyarns.length > 0 ? spinyarns.map((obj:any) => obj.no_of_boxes).join(',') : "";
+        let qty_used = spinyarns && spinyarns.length > 0 ? spinyarns.map((obj:any) => obj.qty_used).filter((qty:any) => qty !== null && qty !== undefined).join(',') : "";
+  
         yarnTypeData =
           item.dataValues?.yarn_type?.length > 0 ? item.dataValues?.yarn_type.join(",") : "";
         const rowValues ={
@@ -6359,15 +6385,16 @@ const generateSpinnerSale = async () => {
               : item.dataValues.processor_name,
           invoice: item.dataValues.invoice_no ? item.dataValues.invoice_no : "",
           order_ref: item.dataValues.order_ref ? item.dataValues.order_ref : "",
-          lotNo: item.dataValues.batch_lot_no ? item.dataValues.batch_lot_no : "",
-          reelLot: item.dataValues.reel_lot_no ? item.dataValues.reel_lot_no : "",
           program: item.dataValues.program ? item.dataValues.program : "",
+          reelLot: item.dataValues.reel_lot_no ? item.dataValues.reel_lot_no : "",
           yarnType: yarnTypeData ? yarnTypeData : "",
           count: yarnCount
-            ? yarnCount
-            : 0,
-          boxes: item.dataValues.no_of_boxes ? Number(item.dataValues.no_of_boxes) : no_of_boxes,
+          ? yarnCount
+          : 0,
+          lotNo: item.dataValues.batch_lot_no ? item.dataValues.batch_lot_no : "",
           boxId: item.dataValues.box_ids ? item.dataValues.box_ids : boxid,
+          boxes: item.dataValues.no_of_boxes ? Number(item.dataValues.no_of_boxes) : no_of_boxes,
+          qty_used: qty_used ? qty_used : "",
           price: item.dataValues.price ? Number(item.dataValues.price) : price,
           total: item.dataValues.total_qty ? Number(item.dataValues.total_qty) : 0,
           transporter_name: item.dataValues.transporter_name
@@ -6405,14 +6432,15 @@ const generateSpinnerSale = async () => {
             "Knitter/Weaver Name",
             "Invoice Number",
             "Order Reference",
-            "Lot/Batch Number",
-            "Reel Lot No",
             "Programme",
+            "Reel Lot No",
             "Yarn Type",
             "Yarn Count",
-            "No of Boxes",
+            "Spin Lot Number",
             "Box ID",
-            "price",
+            "No of Boxes",
+            "Quantity (Kgs)",
+            "Price/Kg",
             "Yarn Net Weight(Kgs)",
             "Transporter Name",
             "Vehicle No",
