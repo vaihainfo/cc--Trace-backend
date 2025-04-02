@@ -42,6 +42,7 @@ import SpinCombernoilSale from "../../models/spin_combernoil_sale.model";
 import GinToGinSale from "../../models/gin-to-gin-sale.model";
 import SpinSaleYarnSelected from "../../models/spin-sale-yarn-selected.model";
 // import SpinSelectedBlend from "../../models/spin_selected_blend";
+import SpinnerYarnOrderSales from "../../models/spinner-yarn-order-sales.model";
 
 //create Spinner Process
 const createSpinnerProcess = async (req: Request, res: Response) => {
@@ -1346,6 +1347,16 @@ const createSpinnerSales = async (req: Request, res: Response) => {
         }
       }
 
+      if(req.body.selectedYarnOrders && req.body.selectedYarnOrders.length > 0){
+        for await (let obj of req.body.selectedYarnOrders) {  
+          await SpinnerYarnOrderSales.create({
+            spinner_yarn_order_id: obj.id,
+            quantity_used: obj.quantity, 
+            sale_id: spinSales.id
+          });
+        }
+      }
+
       if (spinSales) {
         await send_spin_mail(spinSales.id);
       }
@@ -1583,6 +1594,23 @@ const fetchSpinSalesPagination = async (req: Request, res: Response) => {
       const { count, rows } = await SpinSales.findAndCountAll({
         where: whereCondition,
         include: include,
+        attributes: {
+          include: [
+            [
+              Sequelize.literal(`(
+                SELECT json_agg(json_build_object(
+                  'quantity', sys."quantity_used",
+                  'reel_yarn_order_number', syo."reel_yarn_order_number"
+                ))
+                FROM "spinner_yarn_order_sales" sys
+                LEFT JOIN "spinner_yarn_orders" syo 
+                ON sys."spinner_yarn_order_id" = syo."id"
+                WHERE sys."sale_id" = "spin_sales"."id"
+              )`),
+              'yarnOrderNumbers'
+            ]
+          ]
+        },
         order: [["id", "desc"]],
         offset: offset,
         limit: limit,
