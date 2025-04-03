@@ -1325,7 +1325,6 @@ const chooseBale = async (req: Request, res: Response) => {
               ginners g ON gp.ginner_id = g.id
           JOIN 
               seasons s ON gp.season_id = s.id AND gp.season_id IN (${seasonId})
-              seasons s ON gp.season_id = s.id AND gp.season_id IN (${seasonId})
           JOIN 
               programs p ON gp.program_id = p.id
           WHERE 
