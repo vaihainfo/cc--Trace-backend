@@ -29,16 +29,16 @@ const getGinProcessLotNo = async (req: Request, res: Response) => {
         FROM gin_processes gp
         JOIN "gin-bales" gb ON gb.process_id = gp.id
         WHERE gp.ginner_id = ${ginnerId}
-          AND gp.te_verified_status IS NOT TRUE
+          AND gp.te_verified_status IS NULL
+          AND gb.is_all_rejected IS NOT FALSE
           AND gp.greyout_status IS FALSE
           AND gb.sold_status IS FALSE
         GROUP BY gp.id`)
 
-    if (lotNo && lotNo.length > 0) {
       return res.sendSuccess(res, lotNo);
-    } else {
-      return res.sendError(res, "No Ginner Process is created for this Ginner");
-    }
+    // } else {
+    //   return res.sendError(res, "No Ginner Process is created for this Ginner");
+    // }
   } catch (error: any) {
     console.log(error);
     return res.sendError(res, error?.message);
@@ -57,8 +57,8 @@ const getGinSaleLotNo = async (req: Request, res: Response) => {
     whereCondition.push(`gs.buyer = ${spinnerId}`)
     whereCondition.push(`gs.status IN ('Sold')`)
     whereCondition.push(`gs.greyout_status IS FALSE`)
-    whereCondition.push(`gs.te_verified_status IS NOT TRUE`)
-    whereCondition.push(`gs.be_verified_status IS NOT TRUE`)
+    whereCondition.push(`gs.te_verified_status IS NULL`)
+    whereCondition.push(`gs.be_verified_status IS NULL`)
     whereCondition.push(`gs.qty_stock > 1`)
 
 
@@ -168,6 +168,7 @@ const getGinProcessLotDetials = async (req: Request, res: Response) => {
         WHERE 
             gp.id = ${processId}
             AND gb.sold_status = false
+            AND gb.is_all_rejected IS NOT FALSE
         GROUP BY 
             gp.id, gp.lot_no, gp.date, gp.press_no, gp.reel_lot_no, g.id
         ORDER BY 
@@ -290,7 +291,11 @@ const createVerifiedLintStock = async (req: Request, res: Response) => {
       uploaded_photos_te: req.body.teId ? req.body.uploadedPhotos : null,
       consent_form_be: req.body.beId ? req.body.consentForm : null,
       uploaded_photos_be: req.body.beId ? req.body.uploadedPhotos : null,
-      status: "Pending",
+      bank_warehouse_doc_te: req.body.teId ? req.body.bankWarehouseDoc : null,
+      bank_warehouse_doc_be: req.body.beId ? req.body.bankWarehouseDoc : null,
+      status: req.body.status === "Accepted" ? "Accepted" : "Rejected",
+      status_ginner: req.body.processorType?.toLowerCase() == 'ginner' ? 'Pending' : null,
+      status_spinner: req.body.processorType?.toLowerCase() == 'spinner' ? 'Pending' : null,
     };
     const lintVerified = await LintStockVerified.create(data,{transaction});
 
@@ -312,7 +317,7 @@ const createVerifiedLintStock = async (req: Request, res: Response) => {
   
         const gin = await GinProcess.update(
           {
-            te_verified_status: true,
+            te_verified_status: req.body.status === "Accepted" ? true : false,
             te_verified_total_qty: req.body.actualTotalQty,
             te_verified_bales: req.body.actualNoOfBales,
             verification_status: 'Pending',
@@ -344,10 +349,10 @@ const createVerifiedLintStock = async (req: Request, res: Response) => {
   
         const gin = await GinSales.update(
           {
-            te_verified_status: req.body.teId ? true : null,
+            te_verified_status: req.body.teId ? req.body.status === "Accepted" ? true : false : null,
             te_verified_total_qty: req.body.teId ? req.body.actualTotalQty : null,
             te_verified_bales: req.body.teId ? req.body.actualNoOfBales : null,
-            be_verified_status: req.body.beId ? true : null,
+            be_verified_status: req.body.beId ? req.body.status === "Accepted" ? true : false : null,
             be_verified_total_qty: req.body.beId ? req.body.actualTotalQty : null,
             be_verified_bales: req.body.beId ? req.body.actualNoOfBales : null,
             verification_status: 'Pending',
@@ -709,12 +714,14 @@ const getGinnerVerifiedStocks = async (req: Request, res: Response) => {
     }
 
     if(status == 'Pending'){
-      whereCondition.status = 'Pending'
+      whereCondition.status_ginner = 'Pending'
     }else if(status == 'Rejected'){
-      whereCondition.status = 'Rejected'
+      whereCondition.status_ginner = 'Rejected'
     }else{
-      whereCondition.status = 'Accepted'
+      whereCondition.status_ginner = 'Accepted'
     }
+
+    whereCondition.status = { [Op.in]: ['Accepted', 'Rejected'] };
 
     whereCondition.processor_type = 'Ginner';
 
@@ -782,7 +789,8 @@ const editGinVerifiedStockConfirm = async (
       confirmed_gin_no_of_bales: req.body.confirmedNoOfBales,
       consent_form_ginner: req.body.consentForm,
       uploaded_photos_ginner: req.body.uploadedPhotos,
-      status: req.body.status === "Accepted" ? "Accepted" : "Rejected",
+      bank_warehouse_doc_gin: req.body.bankWarehouseDoc,
+      status_ginner: req.body.status === "Accepted" ? "Accepted" : "Rejected",
       status_scm: "Pending",
       reason_ginner: req.body.reason
     };
@@ -836,6 +844,7 @@ const updateSCMVerifiedStockConfirm = async (
       confirmed_scm_no_of_bales: req.body.confirmedNoOfBales,
       consent_form_scm: req.body.consentForm,
       uploaded_photos_scm: req.body.uploadedPhotos,
+      bank_warehouse_doc_scm: req.body.bankWarehouseDoc,
       status_scm: req.body.status === "Accepted" ? "Accepted" : "Rejected",
       status_scd: "Pending",
       reason_scm: req.body.reason
@@ -889,6 +898,7 @@ const updateSCDVerifiedStockConfirm = async (
       confirmed_scd_no_of_bales: req.body.confirmedNoOfBales,
       consent_form_scd: req.body.consentForm,
       uploaded_photos_scd: req.body.uploadedPhotos,
+      bank_warehouse_doc_scd: req.body.bankWarehouseDoc,
       status_scd: req.body.status === "Accepted" ? "Accepted" : "Rejected",
       reason_scd: req.body.reason
     };
@@ -1033,6 +1043,7 @@ const getSCMVerifiedStocks = async (req: Request, res: Response) => {
     
     // whereCondition.status = 'Accepted'
     whereCondition.status = { [Op.in]: ['Accepted', 'Rejected'] };
+    whereCondition.status_ginner = { [Op.in]: ['Accepted', 'Rejected'] };
     whereCondition.processor_type = 'Ginner';
 
     let include = [
@@ -1206,6 +1217,7 @@ const getSCDVerifiedStocks = async (req: Request, res: Response) => {
     whereCondition.status_scm = { [Op.in]: ['Accepted', 'Rejected'] };
     // whereCondition.status = 'Accepted'
     whereCondition.status = { [Op.in]: ['Accepted', 'Rejected'] };
+    whereCondition.status_ginner = { [Op.in]: ['Accepted', 'Rejected'] };
     whereCondition.processor_type = 'Ginner';
 
     let include = [
@@ -1359,6 +1371,7 @@ const getListVerifiedStocks = async (req: Request, res: Response) => {
 
     whereCondition.status_scd = 'Accepted'
     whereCondition.status_scm = 'Accepted'
+    whereCondition.status_ginner = 'Accepted'
     whereCondition.status = 'Accepted'
 
     whereCondition.processor_type = 'Ginner';
@@ -1514,12 +1527,15 @@ const getTypeWiseListVerifiedStocks = async (req: Request, res: Response) => {
     }
 
     if( type === 'Ginner'){
-      whereCondition.status = { [Op.in]: ['Accepted', 'Rejected'] };
+      whereCondition.status = 'Accepted';
+      whereCondition.status_ginner = { [Op.in]: ['Accepted', 'Rejected'] };
     }else if(type === 'Supply_Chain_Manager'){
       whereCondition.status = 'Accepted';
+      whereCondition.status_ginner = 'Accepted';
       whereCondition.status_scm = { [Op.in]: ['Accepted', 'Rejected'] };
     }else if(type === 'Supply_Chain_Director'){
       whereCondition.status = 'Accepted';
+      whereCondition.status_ginner = 'Accepted';
       whereCondition.status_scm = 'Accepted';
       whereCondition.status_scd = { [Op.in]: ['Accepted', 'Rejected'] };
     }
@@ -1950,7 +1966,8 @@ const updateSpinVerifiedStockConfirm = async (
       confirmed_spin_no_of_bales: req.body.confirmedNoOfBales,
       consent_form_spinner: req.body.consentForm,
       uploaded_photos_spinner: req.body.uploadedPhotos,
-      status: req.body.status === "Accepted" ? "Accepted" : "Rejected",
+      bank_warehouse_doc_spin: req.body.bankWarehouseDoc,
+      status_spinner: req.body.status === "Accepted" ? "Accepted" : "Rejected",
       status_bm: "Pending",
       reason_spinner: req.body.reason
     };
@@ -1997,6 +2014,7 @@ const updateBMVerifiedStockConfirm = async (
       confirmed_bm_no_of_bales: req.body.confirmedNoOfBales,
       consent_form_bm: req.body.consentForm,
       uploaded_photos_bm: req.body.uploadedPhotos,
+      bank_warehouse_doc_bm: req.body.bankWarehouseDoc,
       status_bm: req.body.status === "Accepted" ? "Accepted" : "Rejected",
       status_ps: "Pending",
       reason_bm: req.body.reason
@@ -2043,6 +2061,7 @@ const updatePSVerifiedStockConfirm = async (
       confirmed_ps_no_of_bales: req.body.confirmedNoOfBales,
       consent_form_ps: req.body.consentForm,
       uploaded_photos_ps: req.body.uploadedPhotos,
+      bank_warehouse_doc_ps: req.body.bankWarehouseDoc,
       status_ps: req.body.status === "Accepted" ? "Accepted" : "Rejected",
       reason_ps: req.body.reason
     };
@@ -2207,13 +2226,14 @@ const getSpinnerVerifiedStocks = async (req: Request, res: Response) => {
     }
 
     if(status == 'Pending'){
-      whereCondition.status = 'Pending'
+      whereCondition.status_spinner = 'Pending'
     }else if(status == 'Rejected'){
-      whereCondition.status = 'Rejected'
+      whereCondition.status_spinner = 'Rejected'
     }else{
-      whereCondition.status = 'Accepted'
+      whereCondition.status_spinner = 'Accepted'
     }
 
+    whereCondition.status = { [Op.in]: ['Accepted', 'Rejected'] };
     whereCondition.processor_type = 'Spinner';
 
     let include = [
@@ -2395,6 +2415,7 @@ const getBMVerifiedStocks = async (req: Request, res: Response) => {
     }
     
     whereCondition.status = { [Op.in]: ['Accepted', 'Rejected'] };
+    whereCondition.status_spinner = { [Op.in]: ['Accepted', 'Rejected'] };
     whereCondition.processor_type = 'Spinner';
 
     let include = [
@@ -2586,6 +2607,7 @@ const getPSVerifiedStocks = async (req: Request, res: Response) => {
     }
 
     whereCondition.status_bm = { [Op.in]: ['Accepted', 'Rejected'] };
+    whereCondition.status_spinner = { [Op.in]: ['Accepted', 'Rejected'] };
     whereCondition.status = { [Op.in]: ['Accepted', 'Rejected'] };
     whereCondition.processor_type = 'Spinner';
 
@@ -2767,12 +2789,15 @@ const getTypeWiseSpinVerifiedStocks = async (req: Request, res: Response) => {
     }
 
     if( type === 'Spinner'){
-      whereCondition.status = { [Op.in]: ['Accepted', 'Rejected'] };
+      whereCondition.status = 'Accepted';
+      whereCondition.status_spinner = { [Op.in]: ['Accepted', 'Rejected'] };
     }else if(type === 'Brand_Manager'){
       whereCondition.status = 'Accepted';
+      whereCondition.status_spinner = 'Accepted';
       whereCondition.status_bm = { [Op.in]: ['Accepted', 'Rejected'] };
     }else if(type === 'PS_Team'){
       whereCondition.status = 'Accepted';
+      whereCondition.status_spinner = 'Accepted';
       whereCondition.status_bm = 'Accepted';
       whereCondition.status_ps = { [Op.in]: ['Accepted', 'Rejected'] };
     }else if(type === 'Brand_Executive'){
@@ -2962,6 +2987,7 @@ const getBrandListSpinVerifiedStocks = async (req: Request, res: Response) => {
     whereCondition.status_ps = 'Accepted'
     whereCondition.status_bm = 'Accepted'
     whereCondition.status = 'Accepted'
+    whereCondition.status_spinner = 'Accepted'
 
     whereCondition.processor_type = 'Spinner';
 

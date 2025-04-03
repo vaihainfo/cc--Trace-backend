@@ -152,6 +152,12 @@ const LintStockVerified = db.define('lint_stock_verifieds', {
   status: {
     type: DataTypes.STRING
   }, 
+  status_ginner: {
+    type: DataTypes.STRING
+  }, 
+  status_spinner: {
+    type: DataTypes.STRING
+  }, 
   status_bm: {
     type: DataTypes.STRING
   },
@@ -205,7 +211,31 @@ const LintStockVerified = db.define('lint_stock_verifieds', {
   },
   date_initiated_be:{
     type:DataTypes.DATE
-  }
+  },
+  bank_warehouse_doc_te: {
+    type: DataTypes.ARRAY(DataTypes.STRING)
+  },
+  bank_warehouse_doc_gin: {
+    type: DataTypes.ARRAY(DataTypes.STRING)
+  },
+  bank_warehouse_doc_scm: {
+    type: DataTypes.ARRAY(DataTypes.STRING)
+  },
+  bank_warehouse_doc_scd: {
+    type: DataTypes.ARRAY(DataTypes.STRING)
+  },
+  bank_warehouse_doc_be: {
+    type: DataTypes.ARRAY(DataTypes.STRING)
+  },
+  bank_warehouse_doc_spin: {
+    type: DataTypes.ARRAY(DataTypes.STRING)
+  },
+  bank_warehouse_doc_bm: {
+    type: DataTypes.ARRAY(DataTypes.STRING)
+  },
+  bank_warehouse_doc_ps: {
+    type: DataTypes.ARRAY(DataTypes.STRING)
+  },
 });
 
 LintStockVerified.belongsTo(Country, {
