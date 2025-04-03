@@ -43,6 +43,10 @@ const OrganicIntegrity = db.define('organic_integrities', {
     allowNull: false,
     type: DataTypes.STRING
   },
+  test_type: {
+    allowNull: true,
+    type: DataTypes.STRING
+  },
   farmer: {
     type: DataTypes.INTEGER
   },
