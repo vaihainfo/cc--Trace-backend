@@ -31,6 +31,8 @@ import GinnerAllocatedVillage from "../../models/ginner-allocated-vilage.model";
 import moment from "moment";
 import GinToGinSale from "../../models/gin-to-gin-sale.model";
 import Block from "../../models/block.model";
+import logger from "../../util/logger";
+import { _getSpinnerProcessForwardChainData } from "../spinner";
 
 //create Ginner Process
 // const createGinnerProcess = async (req: Request, res: Response) => {
@@ -3367,8 +3369,9 @@ const _getGinnerProcessTracingChartData = async (
     let whereCondition: any = {};
 
     if (reelLotNo) {
-      const idArray: number[] = reelLotNo
+      const idArray: string[] = reelLotNo
         .split(",")
+        .map((it: string) => it?.trim())
       whereCondition.reel_lot_no = { [Op.in]: idArray };
     }
 
@@ -3423,10 +3426,13 @@ const _getGinnerProcessTracingChartData = async (
         })
       );
 
+      
       allGinData = allGinData.concat(ginWithTransactions);
     }
-
+    
     let formattedData: any = {};
+    let obj: any ={};
+    obj.gnr_name = allGinData && allGinData.length > 0 ?  [...new Set(allGinData.map((el: any) => el.ginner.name))].join(',') : "";
 
     allGinData.forEach((el: any) => {
       el.transaction.forEach((tx: any) => {
@@ -3447,10 +3453,13 @@ const _getGinnerProcessTracingChartData = async (
     formattedData = Object.keys(formattedData).map((key: any) => {
       return formattedData[key];
     });
+    obj.transaction = formattedData ? formattedData : [];
 
-    return formatDataForGinnerProcess(reelLotNo, formattedData);
+    return formatDataForGinnerProcess(reelLotNo, obj);
   } catch (error) {
-    console.error(error);
+    console.log(error);
+    logger.error(`ERROR - ${error} | CHAIN MGMT REEL - ${reelLotNo}`);
+    return false
   }
 };
 
@@ -3460,10 +3469,13 @@ const getGinnerProcessTracingChartData = async (
 ) => {
   const { reelLotNo }: any = req.query;
   if (!reelLotNo) {
-    return res.status(400).send({ error: "reelLotNo is required" });
+    return res.sendError(res, "reelLotNo is required");
   }
   const data = await _getGinnerProcessTracingChartData(reelLotNo);
-  res.sendSuccess(res, data);
+  if(!data){
+    return res.sendError(res, "Data not generated");
+  }
+  return res.sendSuccess(res, data);
 };
 
 
@@ -3954,6 +3966,170 @@ const updateStatusLintSales = async (req: Request, res: Response) => {
   }
 };
 
+const getGinnerProcessForwardChainingData = async (
+  req: Request,
+  res: Response
+) => {
+  const { reelLotNo }: any = req.query;
+  if (!reelLotNo) {
+    return res.sendError(res, "reelLotNo is required");
+  }
+  const data = await _getGinnerProcessForwardChainData(reelLotNo);
+  if(!data){
+    return res.sendError(res, "Data not generated");
+  }
+  return res.sendSuccess(res, data);
+};
+
+const _getGinnerProcessForwardChainData = async (
+  reelLotNo: any
+) => {
+  try {
+    //  await createIndexes();
+
+    let include = [
+      {
+        model: Ginner,
+        as: "ginner",
+        attributes: ['id', 'name'], // Only fetch necessary fields
+      },
+    ];
+
+    let transactionInclude = [
+      {
+        model: Village,
+        as: "village",
+        attributes: ['id', 'village_name'], // Only fetch necessary fields
+      },
+      {
+        model: Farmer,
+        as: "farmer",
+        attributes: ['id', 'firstName', "lastName", 'farmGroup_id', 'village_id'],
+        include: [
+          {
+            model: Village,
+            as: "village",
+            attributes: ['id', 'village_name'], // Only fetch necessary fields
+          },
+          {
+            model: FarmGroup,
+            as: "farmGroup",
+            attributes: ['id', 'name'], // Only fetch necessary fields
+          },
+        ],
+      },
+    ];
+
+    let whereCondition: any = {};
+
+    if (reelLotNo) {
+      const idArray: number[] = reelLotNo
+        .split(",")
+        .map((it: string) => it?.trim())
+      whereCondition.reel_lot_no = { [Op.in]: idArray };
+    }
+
+
+    const batchSize = 100;
+    let offset = 0;
+    let allGinData: any[] = [];
+
+    while (true) {
+      let ginBatch = await GinProcess.findAll({
+        where: whereCondition,
+        include: include,
+        order: [["id", "desc"]],
+        limit: batchSize,
+        offset: offset,
+        attributes: ['id', 'reel_lot_no'] // Only fetch necessary fields
+      });
+
+      if (ginBatch.length === 0) break;
+
+      offset += batchSize;
+
+      let ginWithTransactions = await Promise.all(
+        ginBatch.map(async (el: any) => {
+          el = el.toJSON();
+          let [spinProcess] = await sequelize.query(
+                  `SELECT
+                      ARRAY_AGG(DISTINCT ls.process_id) AS spin_process_id,
+                      STRING_AGG(DISTINCT sp.reel_lot_no, ',') AS spin_reel_lot_no
+                    FROM
+                        lint_selections ls
+                    JOIN spin_processes sp ON ls.process_id = sp.id
+                    WHERE ls.lint_id IN (
+                          SELECT 
+                            UNNEST(ARRAY_AGG(DISTINCT gs.id))
+                                        FROM 
+                                            gin_sales gs
+                          LEFT JOIN
+                            bale_selections bs ON bs.sales_id = gs.id
+                          LEFT JOIN
+                            "gin-bales" gb ON gb.id = bs.bale_id
+                          WHERE gb.process_id = ${el.id}
+                          GROUP BY
+                            gb.process_id
+                                    )
+                  `);
+
+
+            console.log(spinProcess)
+            if(spinProcess && spinProcess.length > 0){
+              const spinnerChartData = await Promise.all(
+                spinProcess?.map(async (spin: any) => {
+                  if (spin?.spin_reel_lot_no) {
+                    return await _getSpinnerProcessForwardChainData(spin?.spin_reel_lot_no);
+                  }
+                })
+              );
+              el.spin = spinnerChartData
+              console.log(spinnerChartData)
+
+            }
+          return el;
+        })
+      );
+
+      
+      allGinData = allGinData.concat(ginWithTransactions);
+    }
+    console.log(allGinData)
+    let formattedData: any = {};
+    let obj: any ={};
+    obj.gnr_name = allGinData && allGinData.length > 0 ?  [...new Set(allGinData.map((el: any) => el.ginner.name))].join(',') : "";
+    obj.spin = allGinData && allGinData.length > 0 ? allGinData.flatMap(item => item.spin) : []
+
+    // allGinData.forEach((el: any) => {
+    //   el.transaction.forEach((tx: any) => {
+    //     if (!formattedData[tx.farmer.farmGroup_id]) {
+    //       formattedData[tx.farmer.farmGroup_id] = {
+    //         farm_name: tx.farmer.farmGroup.name,
+    //         villages: [],
+    //       };
+    //     }
+
+    //     const village_name = tx.farmer.village.village_name;
+    //     if (!formattedData[tx.farmer.farmGroup_id].villages.includes(village_name)) {
+    //       formattedData[tx.farmer.farmGroup_id].villages.push(village_name);
+    //     }
+    //   });
+    // });
+
+    // formattedData = Object.keys(formattedData).map((key: any) => {
+    //   return formattedData[key];
+    // });
+    // obj.transaction = formattedData ? formattedData : [];
+
+    return formatDataForGinnerProcess(reelLotNo, obj);
+  } catch (error) {
+    console.log(error);
+    logger.error(`ERROR - ${error} | CHAIN MGMT REEL - ${reelLotNo}`);
+    return false
+  }
+};
+
+
 
 
 export {
@@ -3997,4 +4173,5 @@ export {
   fetchGinLintList,
   updateStatusLintSales,
   getMappedVillages,
+  getGinnerProcessForwardChainingData
 };

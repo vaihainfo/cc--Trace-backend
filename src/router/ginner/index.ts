@@ -39,6 +39,7 @@ import {
     fetchGinLintList,
     updateStatusLintSales,
     getMappedVillages,
+    getGinnerProcessForwardChainingData,
     
 } from "../../controllers/ginner";
 import accessControl from "../../middleware/access-control";
@@ -88,6 +89,7 @@ router.get('/get-village-farmer', getVillageAndFarmer);
 router.get('/get-villages', getMappedVillages);
 router.get('/export-ginner-transactions', exportGinnerProcurement);
 router.get('/tracing/chart', getGinnerProcessTracingChartData);
+router.get('/forward-tracing/chart', getGinnerProcessForwardChainingData);
 router.get('/check-report', checkReport);
 router.get('/get-brand', getBrands);
 

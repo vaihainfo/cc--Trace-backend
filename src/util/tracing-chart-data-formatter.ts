@@ -1,14 +1,18 @@
 export const formatDataForGinnerProcess = (reelLotNo: any, data: any): any => {
     let treeData = {
         name: reelLotNo,
-        type: 'cotton_image',
+        processor_name: data.gnr_name,
+        img_type: 'cotton_image',
+        type: 'Ginner',
         width: 300,
         height: 100,
         isRoot: true,
-        children: data.map((el: any) => {
+        children: data?.transaction && data.transaction.map((el: any) => {
             return {
                 name: el.farm_name,
-                type: 'farm',
+                processor_name: el.farm_name,
+                img_type: 'farm',
+                type: 'Farm',
                 width: 300,
                 height: 100,
                 // children: [
@@ -222,3 +226,35 @@ export const formatDataForGarment = (title: any, data: any) : any => {
     };
     return treeData;
 }
+
+//Forawrd Chaining
+
+export const formatForwardChainDataGinner = (title: any, data: any) : any => {
+    let treeData = {
+        name: title,
+        processor_name: data.gnr_name,
+        img_type: 'cotton_image',
+        type: 'Ginner',
+        width: 300,
+        height: 100,
+        isRoot: true,
+        children: data?.spin?.map((el:any) => el.fabricChart??[])
+    };
+    return treeData;
+}
+
+export const formatForwardChainDataSpinner = (title: any, data: any) : any => {
+    let treeData = {
+        name: data?.reel_lot_no,
+        processor_name: data?.spinner?.name,
+        img_type: 'spinner_image',
+        type: 'Spinner',
+        width: 300,
+        height: 100,
+        isRoot: true,
+        // children: data?.weavKnitChart?.map((el:any) => el.fabricChart??[])
+        children: []
+    };
+    return treeData;
+}
+

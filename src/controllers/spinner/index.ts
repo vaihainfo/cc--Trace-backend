@@ -30,7 +30,7 @@ import FarmGroup from "../../models/farm-group.model";
 import Village from "../../models/village.model";
 import Transaction from "../../models/transaction.model";
 import Farmer from "../../models/farmer.model";
-import { formatDataForSpinnerProcess } from "../../util/tracing-chart-data-formatter";
+import { formatDataForSpinnerProcess, formatForwardChainDataSpinner } from "../../util/tracing-chart-data-formatter";
 import PhysicalTraceabilityDataSpinner from "../../models/physical-traceability-data-spinner.model";
 import Brand from "../../models/brand.model";
 import PhysicalTraceabilityDataSpinnerSample from "../../models/physical-traceability-data-spinner-sample.model";
@@ -41,6 +41,7 @@ import CombernoilGeneration from "../../models/combernoil_generation.model";
 import SpinCombernoilSale from "../../models/spin_combernoil_sale.model";
 import GinToGinSale from "../../models/gin-to-gin-sale.model";
 import moment from "moment";
+import { _getKnitterProcessForwardChainData } from "../knitter";
 // import SpinSelectedBlend from "../../models/spin_selected_blend";
 
 //create Spinner Process
@@ -3662,7 +3663,7 @@ async function queryWithRetry(queryFunction: any, retries = 0) {
       error instanceof sequelize.ConnectionAcquireTimeoutError &&
       retries < 3
     ) {
-      console.error(
+      console.log(
         `Connection timeout, retrying... (attempt ${retries + 1}/3)`
       );
       await new Promise((resolve) => setTimeout(resolve, 1000)); // Retry after 1 second
@@ -3755,6 +3756,156 @@ const createIndexes = async () => {
   }
 };
 
+const getKnitWeavProcess= async (type: string, processId: any) =>{
+  let joinTable = type === 'knitter' ? 'knit_processes' : 'weaver_processes';
+  let table = type === 'knitter' ? 'knit_yarn_selections' : 'yarn_selections';
+  let [knitWeavProcess] = await sequelize.query(
+    `SELECT
+        ARRAY_AGG(DISTINCT ks.sales_id) AS process_ids,
+        STRING_AGG(DISTINCT kp.reel_lot_no, ',') AS reel_lot_no
+      FROM
+        ${table} ks
+      JOIN ${joinTable} kp ON ks.sales_id = kp.id
+      WHERE ks.yarn_id IN (
+                    SELECT 
+                        UNNEST(ARRAY_AGG(DISTINCT ss.id))
+                    FROM 
+                        spin_sales ss
+                    LEFT JOIN
+                      spin_process_yarn_selections sys ON sys.sales_id = ss.id
+                    WHERE sys.spin_process_id = ${processId}
+                    GROUP BY
+                      sys.spin_process_id
+                )
+    `);
+
+    return knitWeavProcess;
+}
+
+const _getSpinnerProcessForwardChainData = async (reelLotNo: any) => {
+  let offset = 0;
+  let allSpinData: any = [];
+
+  let include = [{ model: Spinner, as: "spinner", attributes: ["id", "name"] }];
+  let whereCondition: any = {};
+
+  if (reelLotNo !== null) {
+    const idArray = reelLotNo.split(",").map((it: string) => it?.trim());
+    whereCondition.reel_lot_no = { [Op.in]: idArray };
+  }
+
+  // const BATCH_SIZE = 10;
+  // while (true) {
+  let batchSpinData = await queryWithRetry(() =>
+    SpinProcess.findAll({
+      where: whereCondition,
+      include: include,
+      order: [["id", "desc"]],
+      //   limit: BATCH_SIZE,
+      //   offset: offset,
+      attributes: ["id", "reel_lot_no"],
+    })
+  );
+
+
+  //   if (batchSpinData.length === 0) break;
+
+  //   offset += BATCH_SIZE;
+
+  let spinWithGinSales = await Promise.all(
+    batchSpinData.map(async (spin: any) => {
+      spin = spin.toJSON();
+
+      let knitProcess = await getKnitWeavProcess('knitter',spin.id);
+      let weavProcess = await getKnitWeavProcess('weaver',spin.id);
+
+      console.log(knitProcess, weavProcess)
+      let knitData = [];
+      let weavData = [];
+      if(knitProcess && knitProcess.length > 0){
+        knitData = await Promise.all(knitProcess.map(async (el: any) => {
+            let knit: any = [];
+                  if (el?.reel_lot_no) {
+                    knit = await _getKnitterProcessForwardChainData(el?.reel_lot_no);
+                  
+                return {
+                  ...el,
+                  type: 'knitter',
+                  knit: knit ? knit : []
+                  // spin: []
+                }
+                }
+              })
+              )
+      }
+
+      if(weavProcess && weavProcess.length > 0){
+        weavData = await Promise.all(weavProcess.map(async (el: any) => {
+            let weav: any = [];
+                  if (el?.reel_lot_no) {
+                  //   weav = await _getSpinnerProcessForwardChainData(el?.reel_lot_no);
+                  // }
+                return {
+                  ...el,
+                  type: 'weaver',
+                  weav: weav ? weav : []
+                  // spin: []
+                }
+              }
+              })
+              )
+      }
+
+      let weavKnit = [...knitData, ...weavData].filter((item: any) => item !== null && item !== undefined)
+      spin.weavKnitChart = []
+      
+      // let weavKnitChart = weavKnit && weavKnit.length > 0 ? weavKnit.map(((el: any) => el.type === 'knitter' ? formatDataFromKnitter(el.knit_name, el) : formatDataFromWeaver(el.weav_name, el))) : [];
+
+
+      // Fetch lintSele for spin
+      // spin.lintSele = await LintSelections.findAll({
+      //   where: {
+      //     process_id: spin.id,
+      //   },
+      // });
+
+      // // Fetch ginSales for spin
+      // spin.ginSales = await Promise.all(
+      //   spin.lintSele.map(async (lintSeleItem: any) => {
+      //     let ginSales = await GinSales.findAll({
+      //       where: { id: lintSeleItem.lint_id },
+      //       include: [
+      //         { model: Ginner, as: "ginner", attributes: ["id", "name"] },
+      //       ],
+      //       attributes: ["id", "ginner_id", "reel_lot_no"],
+      //     });
+      //     return ginSales;
+      //   })
+      // );
+
+      // // Process ginSales and transactions
+      // spin.ginSales = await Promise.all(
+      //   spin.ginSales.map(async (sales: any) => {
+      //     return await Promise.all(
+      //       sales.map(async (sale: any) => {
+      //         // Assuming _getGinnerProcessTracingChartData returns data or handles async operations correctly
+      //         return await _getGinnerProcessTracingChartData(sale.reel_lot_no);
+      //       })
+      //     );
+      //   })
+      // );
+
+      return spin;
+    })
+  );
+
+  allSpinData = allSpinData.concat(spinWithGinSales);
+  console.log("object", allSpinData)
+  // }
+
+  return formatForwardChainDataSpinner(reelLotNo, allSpinData);
+};
+
 export {
   createSpinnerProcess,
   fetchSpinnerProcessPagination,
@@ -3791,4 +3942,5 @@ export {
   updateStatusComberNoil,
   fetchComberNoilTransactionList,
   _getSpinnerProcessTracingChartData,
+  _getSpinnerProcessForwardChainData
 };
