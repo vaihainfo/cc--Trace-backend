@@ -13794,7 +13794,7 @@ const fetchGinnerSummaryPagination = async (req: Request, res: Response) => {
     for await (let ginner of rows) {
       let obj: any = {};
 
-      let [cottonProcured, cottonProcessed, cottonProcessedByHeap, lintProcured, greyoutLint, lintSold, ginToGinSale, ginToGinReceive, old_weight, lintStock]: any =
+      let [cottonProcured, cottonProcessed, cottonProcessedByHeap, heapStock, lintProcured, greyoutLint, lintSold, ginToGinSale, ginToGinReceive, old_weight, lintStock]: any =
         await Promise.all([
           // Transaction.findOne({
           //   attributes: [
@@ -13827,6 +13827,17 @@ const fetchGinnerSummaryPagination = async (req: Request, res: Response) => {
                   0
                 ),
                 "qty",
+              ],
+              [
+                sequelize.fn(
+                  "COALESCE",
+                  sequelize.fn(
+                    "SUM",
+                    Sequelize.literal("CAST(qty_stock AS DOUBLE PRECISION)")
+                  ),
+                  0
+                ),
+                "cotton_stock",
               ],
             ],
             where: {
@@ -13868,6 +13879,26 @@ const fetchGinnerSummaryPagination = async (req: Request, res: Response) => {
               '$ginprocess.ginner_id$': ginner.id
             },
             group: ["ginprocess.ginner_id"]
+          }),
+          GinHeap.findOne({
+            attributes: [
+              [
+                sequelize.fn(
+                  "COALESCE",
+                  sequelize.fn(
+                    "SUM",
+                    Sequelize.literal("CAST(qty_stock AS DOUBLE PRECISION)")
+                  ),
+                  0
+                ),
+                "heap_stock",
+              ],
+            ],
+            where: {
+              ...transactionWhere,
+              ginner_id: ginner.id,
+              status: true,
+            },
           }),
           GinBale.findOne({
             attributes: [
@@ -14208,7 +14239,9 @@ const fetchGinnerSummaryPagination = async (req: Request, res: Response) => {
       obj.cottonStockKg = cottonProcured ? cottonProcured?.dataValues?.qty - (cottonProcessed ? totalCottonProcessedQty : 0) : 0;
       obj.cottonProcuredMt = convert_kg_to_mt(cottonProcured?.dataValues.qty ?? 0);
       obj.cottonProcessedeMt = convert_kg_to_mt(totalCottonProcessedQty);
-      obj.cottonStockMt = convert_kg_to_mt(cottonProcured ? cottonProcured?.dataValues?.qty - totalCottonProcessedQty : 0);
+      //obj.cottonStockMt = convert_kg_to_mt(cottonProcured ? cottonProcured?.dataValues?.qty - totalCottonProcessedQty : 0);
+      obj.heapStockMt = convert_kg_to_mt(heapStock?.dataValues.heap_stock ?? 0);
+      obj.cottonStockinProcMt = convert_kg_to_mt(cottonProcured?.dataValues.cotton_stock ?? 0);
       obj.lintProcuredKg = lintProcured?.dataValues.qty ?? 0;
       obj.lintProcuredMt = convert_kg_to_mt(lintProcured?.dataValues.qty ?? 0);
       obj.lintSoldKg = lintSold?.dataValues.qty ?? 0;
@@ -14857,7 +14890,7 @@ const exportGinnerSummary = async (req: Request, res: Response) => {
       // mergedCell.alignment = { horizontal: 'center', vertical: 'middle' };
       // Set bold font for header row
       const headerRow = worksheet.addRow([
-        "S. No.", "Ginner Name", "Country", "State", "Total seed cotton procured (MT)", "Total seed cotton processed (MT)",
+        "S. No.", "Ginner Name", "Country", "State", "Total seed cotton procured (MT)", "Total seed cotton processed (MT)", "Total Heap stock (MT)",
         "Total seed cotton in stock (MT)", "Total lint produce (MT)", "Total lint sold (MT)", "Grey-Out Lint Quantity (MT)", "Total Lint Received (MT)", "Total Lint Transfered (MT)", "Actual lint in stock (MT)", "Total lint in stock (MT)",
         "Total bales produced", "Total Bales sold", "Total Bales Greyout", "Total Bales Received", "Total Bales Transfered", "Actual Bales in stock", "Total bales in stock"
       ]);
@@ -14891,7 +14924,9 @@ const exportGinnerSummary = async (req: Request, res: Response) => {
       let totals = {
         cottonProcuredMt:0,
           cottonProcessedeMt:0,
-          cottonStockMt:0,
+          //cottonStockMt:0,
+          heapStockMt:0,
+          cottonStockinProcMt:0,
           lintProcuredMt:0,
           lintSoldMt:0,
           lintGreyoutMT:0,
@@ -14916,7 +14951,7 @@ const exportGinnerSummary = async (req: Request, res: Response) => {
         let obj: any = {};
 
 
-        let [cottonProcured, cottonProcessed, cottonProcessedByHeap, lintProcured, greyoutLint, lintSold, ginToGinSale, ginToGinReceive, lintStock]: any = await Promise.all([
+        let [cottonProcured, cottonProcessed, cottonProcessedByHeap, heapStock, lintProcured, greyoutLint, lintSold, ginToGinSale, ginToGinReceive, lintStock]: any = await Promise.all([
           // Transaction.findOne({
           //   attributes: [
           //     [sequelize.fn('COALESCE', sequelize.fn('SUM', Sequelize.literal("CAST(qty_purchased AS DOUBLE PRECISION)")), 0), 'qty']
@@ -14928,8 +14963,10 @@ const exportGinnerSummary = async (req: Request, res: Response) => {
           // }),
           Transaction.findOne({
             attributes: [
-              [sequelize.fn('COALESCE', sequelize.fn('SUM', Sequelize.literal("CAST(qty_purchased AS DOUBLE PRECISION)")), 0), 'qty']
+              [sequelize.fn('COALESCE', sequelize.fn('SUM', Sequelize.literal("CAST(qty_purchased AS DOUBLE PRECISION)")), 0), 'qty'],              
+              [sequelize.fn('COALESCE', sequelize.fn('SUM', Sequelize.literal("CAST(qty_stock AS DOUBLE PRECISION)")), 0), 'cotton_stock']
             ],
+            
             where: {
               ...transactionWhere,
               mapped_ginner: item.id,
@@ -14969,6 +15006,26 @@ const exportGinnerSummary = async (req: Request, res: Response) => {
               '$ginprocess.ginner_id$': item.id
             },
             group: ["ginprocess.ginner_id"]
+          }),
+          GinHeap.findOne({
+            attributes: [
+              [
+                sequelize.fn(
+                  "COALESCE",
+                  sequelize.fn(
+                    "SUM",
+                    Sequelize.literal("CAST(qty_stock AS DOUBLE PRECISION)")
+                  ),
+                  0
+                ),
+                "heap_stock",
+              ],
+            ],
+            where: {
+              ...transactionWhere,
+              ginner_id: item.id,
+              status: true,
+            },
           }),
           GinBale.findOne({
             attributes: [
@@ -15271,7 +15328,9 @@ const exportGinnerSummary = async (req: Request, res: Response) => {
           : 0;
         obj.cottonProcuredMt = convert_kg_to_mt(cottonProcured?.dataValues.qty ?? 0);
         obj.cottonProcessedeMt = convert_kg_to_mt(totalCottonProcessedQty ?? 0);
-        obj.cottonStockMt = convert_kg_to_mt(cottonProcured ? cottonProcured?.dataValues?.qty - totalCottonProcessedQty : 0);
+        //obj.cottonStockMt = convert_kg_to_mt(cottonProcured ? cottonProcured?.dataValues?.qty - totalCottonProcessedQty : 0);
+        obj.heapStockMt = convert_kg_to_mt(heapStock?.dataValues.heap_stock ?? 0);
+        obj.cottonStockinProcMt = convert_kg_to_mt(cottonProcured?.dataValues.cotton_stock ?? 0);
         obj.lintProcuredKg = lintProcured?.dataValues.qty ?? 0;
         obj.lintProcuredMt = convert_kg_to_mt(lintProcured?.dataValues.qty ?? 0);
         obj.lintSoldKg = lintSold?.dataValues.qty ?? 0;
@@ -15329,7 +15388,9 @@ const exportGinnerSummary = async (req: Request, res: Response) => {
           state: obj.state,
           cottonProcuredMt: obj.cottonProcuredMt ? Number(obj.cottonProcuredMt) : 0,
           cottonProcessedeMt: obj.cottonProcessedeMt ? Number(obj.cottonProcessedeMt) : 0,
-          cottonStockMt: obj.cottonStockMt ? Number(obj.cottonStockMt) : 0,
+          //cottonStockMt: obj.cottonStockMt ? Number(obj.cottonStockMt) : 0,
+          heapStockMt: obj.heapStockMt ? Number(obj.heapStockMt) : 0,
+          cottonStockinProcMt: obj.cottonStockinProcMt ? Number(obj.cottonStockinProcMt) : 0,
           lintProcuredMt: obj.lintProcuredMt ? Number(obj.lintProcuredMt) : 0,
           lintSoldMt: obj.lintSoldMt ? Number(obj.lintSoldMt) : 0,
           lintGreyoutMT: obj.lintGreyoutMT ? Number(obj.lintGreyoutMT) : 0,
@@ -15349,7 +15410,9 @@ const exportGinnerSummary = async (req: Request, res: Response) => {
 
         totals.cottonProcessedeMt+= Number(rowValues.cottonProcessedeMt ); 
         totals.cottonProcuredMt+= Number(rowValues.cottonProcuredMt );                
-        totals.cottonStockMt+= Number(rowValues.cottonStockMt );
+        //totals.cottonStockMt+= Number(rowValues.cottonStockMt );              
+        totals.heapStockMt+= Number(rowValues.heapStockMt );              
+        totals.cottonStockinProcMt+= Number(rowValues.cottonStockinProcMt );
         totals.lintProcuredMt+= Number(rowValues.lintProcuredMt );
         totals.lintSoldMt+= Number(rowValues.lintSoldMt );
         totals.lintGreyoutMT+= Number(rowValues.lintGreyoutMT );
@@ -15377,7 +15440,9 @@ const exportGinnerSummary = async (req: Request, res: Response) => {
         state:"",
         cottonProcuredMt: totals.cottonProcuredMt,
         cottonProcessedeMt: totals.cottonProcessedeMt,
-        cottonStockMt: totals.cottonStockMt,
+        //cottonStockMt: totals.cottonStockMt,
+        heapStockMt: totals.heapStockMt,
+        cottonStockinProcMt: totals.cottonStockinProcMt,
         lintProcuredMt: totals.lintProcuredMt,
         lintSoldMt: totals.lintSoldMt,
         lintGreyoutMT: totals.lintGreyoutMT,
