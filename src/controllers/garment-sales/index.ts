@@ -54,7 +54,7 @@ import District from "../../models/district.model";
 import SpinProcess from "../../models/spin-process.model";
 import CottonMix from "../../models/cotton-mix.model";
 import { _getFabricProcessTracingChartData } from '../fabric/index';
-import { formatDataForGarment } from '../../util/tracing-chart-data-formatter';
+import { formatDataForGarment, formatForwardChainDataGarment } from '../../util/tracing-chart-data-formatter';
 import PhysicalTraceabilityDataGarment from "../../models/physical-traceability-data-garment.model";
 import PhysicalTraceabilityDataGarmentSample from "../../models/physical-traceability-data-garment-sample.model";
 import FabricType from "../../models/fabric-type.model";
@@ -4511,6 +4511,89 @@ const deleteGarmentSales = async (req: Request, res: Response) => {
   }
 };
 
+
+const _getGarmentProcessForwardChainData = async (reelLotNo: string) => {
+  try {
+    let whereCondition: any = {};
+    if (reelLotNo !== null) {
+      const idArray = reelLotNo.split(",").map((it: string) => it?.trim());
+      whereCondition.reel_lot_no = { [Op.in]: idArray };
+    }
+  
+    let include = [
+      {
+        model: Garment,
+        as: "garment",
+        attributes: ["id", "name"]
+      },
+    ];
+
+    let garments = await GarmentProcess.findAll({ where: whereCondition, include });
+
+    garments = await Promise.all(garments?.map(async (el: any) => {
+      el = el?.toJSON();
+
+      let garmentSale = await GarmentSelection.findAll({
+        include: [
+          {
+            model: GarmentSales,
+            as: "garmentsales",
+            attributes: ["id", "style_mark_no"],
+            include:[
+              {
+                model: Brand,
+                as: "buyer",
+                attributes: ["id", "brand_name"],
+              }
+            ]
+          },
+        ],
+        where: {
+          garment_id: el.id
+        }
+      })
+
+      if(garmentSale && garmentSale.length > 0){
+        const brands = new Map();
+          garmentSale.forEach((it: any) => {
+            const buyer = it.dataValues.garmentsales?.buyer;
+            if (buyer && !brands.has(buyer.id)) {
+              brands.set(buyer.id, buyer);
+            }
+          });
+
+          el.brand = Array.from(brands.values());
+      }
+      return el;
+    }));
+
+    let formattedData: any = {};
+    let obj: any ={};
+    console.log("============garments", garments)
+    obj.garment_name = garments && garments.length > 0 ?  [...new Set(garments.map((el: any) => el.garment.name))].join(',') : "";
+
+    garments.forEach((el: any) => {
+      el.brand.forEach((tx: any) => {
+        if (!formattedData[tx.id]) {
+          formattedData[tx.id] = {
+            brand_name: tx.brand_name,
+          };
+        }
+      });
+    });
+
+    formattedData = Object.keys(formattedData).map((key: any) => {
+      return formattedData[key];
+    });
+    obj.brands = formattedData ? formattedData : [];
+
+    return garments && garments.length > 0 ? [formatForwardChainDataGarment(reelLotNo,obj)] : []
+  } catch (error) {
+    console.log("Error processing garment data: ", error);
+  }
+};
+
+
 export {
   fetchBrandQrGarmentSalesPagination,
   exportBrandQrGarmentSales,
@@ -4544,4 +4627,5 @@ export {
   exportGarmentTransactionList,
   getCOCDocumentData,
   updateCOCDoc,
+  _getGarmentProcessForwardChainData
 };

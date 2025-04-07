@@ -30,7 +30,7 @@ import FarmGroup from "../../models/farm-group.model";
 import Village from "../../models/village.model";
 import Transaction from "../../models/transaction.model";
 import Farmer from "../../models/farmer.model";
-import { formatDataForSpinnerProcess, formatForwardChainDataSpinner } from "../../util/tracing-chart-data-formatter";
+import { formatDataForSpinnerProcess, formatForwardChainDataKnitter, formatForwardChainDataSpinner } from "../../util/tracing-chart-data-formatter";
 import PhysicalTraceabilityDataSpinner from "../../models/physical-traceability-data-spinner.model";
 import Brand from "../../models/brand.model";
 import PhysicalTraceabilityDataSpinnerSample from "../../models/physical-traceability-data-spinner-sample.model";
@@ -3819,7 +3819,6 @@ const _getSpinnerProcessForwardChainData = async (reelLotNo: any) => {
       let knitProcess = await getKnitWeavProcess('knitter',spin.id);
       let weavProcess = await getKnitWeavProcess('weaver',spin.id);
 
-      console.log(knitProcess, weavProcess)
       let knitData = [];
       let weavData = [];
       if(knitProcess && knitProcess.length > 0){
@@ -3859,7 +3858,9 @@ const _getSpinnerProcessForwardChainData = async (reelLotNo: any) => {
       let weavKnit = [...knitData, ...weavData].filter((item: any) => item !== null && item !== undefined)
       spin.weavKnitChart = []
       
-      // let weavKnitChart = weavKnit && weavKnit.length > 0 ? weavKnit.map(((el: any) => el.type === 'knitter' ? formatDataFromKnitter(el.knit_name, el) : formatDataFromWeaver(el.weav_name, el))) : [];
+      let weavKnitChart = weavKnit && weavKnit.length > 0 ? weavKnit.flatMap(((el: any) => el.type === 'knitter' ? el.knit : formatForwardChainDataKnitter(el.weav_name, el))) : [];
+
+      spin.weavKnitChart = weavKnitChart;
 
 
       // Fetch lintSele for spin
@@ -3903,7 +3904,7 @@ const _getSpinnerProcessForwardChainData = async (reelLotNo: any) => {
   console.log("object", allSpinData)
   // }
 
-  return formatForwardChainDataSpinner(reelLotNo, allSpinData);
+  return allSpinData && allSpinData.length > 0  ? allSpinData.map((el: any) => formatForwardChainDataSpinner(reelLotNo, el) ) : formatForwardChainDataSpinner(reelLotNo, allSpinData);
 };
 
 export {

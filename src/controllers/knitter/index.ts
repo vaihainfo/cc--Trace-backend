@@ -23,7 +23,7 @@ import SpinProcess from "../../models/spin-process.model";
 import { send_knitter_mail } from "../send-emails";
 import KnitFabric from "../../models/knit_fabric.model";
 import { _getSpinnerProcessTracingChartData } from "../spinner/index";
-import { formatDataForSpinnerProcess, formatDataFromKnitter } from "../../util/tracing-chart-data-formatter";
+import { formatDataForSpinnerProcess, formatDataFromKnitter, formatForwardChainDataKnitter } from "../../util/tracing-chart-data-formatter";
 import Country from "../../models/country.model";
 import PhysicalTraceabilityDataKnitter from "../../models/physical-traceability-data-knitter.model";
 import Brand from "../../models/brand.model";
@@ -34,6 +34,7 @@ import FarmGroup from "../../models/farm-group.model";
 import Transaction from "../../models/transaction.model";
 import GinSales from "../../models/gin-sales.model";
 import Ginner from "../../models/ginner.model";
+import { _getGarmentProcessForwardChainData } from "../garment-sales";
 
 const createKnitterProcess = async (req: Request, res: Response) => {
   try {
@@ -2143,6 +2144,31 @@ const deleteKnitterProcess = async (req: Request, res: Response) => {
   }
 };
 
+const getGarmentProcess = async (id: number | string) =>{
+  let [garmentProcess] = await sequelize.query(
+    `SELECT
+        ARRAY_AGG(DISTINCT fs.sales_id) AS spin_process_id,
+        STRING_AGG(DISTINCT gp.reel_lot_no, ',') AS reel_lot_no
+          FROM
+            fabric_selections fs
+      JOIN garment_processes gp ON fs.sales_id = gp.id
+        WHERE fs.fabric_id IN (
+                SELECT 
+                    UNNEST(ARRAY_AGG(DISTINCT ks.id))
+                FROM 
+                    knit_sales ks
+                LEFT JOIN
+                    knit_fabric_selections kfs ON kfs.sales_id = ks.id
+                WHERE kfs.fabric_id = ${id}
+                GROUP BY
+                  kfs.fabric_id
+                        )
+          AND fs.processor = 'knitter'
+    `);
+
+    return garmentProcess;
+}
+
 const _getKnitterProcessForwardChainData = async (reelLotNo: string) => {
 
   let whereCondition: any = {};
@@ -2168,54 +2194,26 @@ const _getKnitterProcessForwardChainData = async (reelLotNo: string) => {
   knitters = await Promise.all(
     knitters.map(async (el: any) => {
       el = el.toJSON();
+      let garmentProcess = await getGarmentProcess(el.id);
+      let garmentData = [];
+      let weavData = [];
 
-      // el.knitSele = await KnitYarnSelection.findAll({
-      //   where: {
-      //     sales_id: el.id,
-      //   }
-      // });
-
-      // // Fetch spin sales for each yarn_id in KnitYarnSelection
-      // el.spin = await Promise.all(
-      //   el.knitSele.map(async (knitSeleItem: any) => {
-      //     let spinSales = await SpinSales.findAll({
-      //       where: {
-      //         id: knitSeleItem.yarn_id, // Use yarn_id from KnitYarnSelection
-      //       },
-      //     });
-      //     return {
-      //       yarn_id: knitSeleItem.yarn_id,
-      //       spinSales: spinSales,
-      //     };
-      //   })
-      // );
-
-      // // Count total spins and gather spin ids
-      // el.spinsCount = el.spin.reduce((total: number, item: any) => total + item.spinSales.length, 0);
-      // el.spinskIds = el.spin.map((item: any) => item.yarn_id);
-
-      // // Optional: Fetch more details for each spin (if needed)
-      // el.spin = await Promise.all(
-      //   el.spin.map(async (spinItem: any) => {
-      //     return await Promise.all(
-      //       spinItem.spinSales.map(async (sale: any) => {
-      //         if (sale.reel_lot_no) {
-      //           return _getSpinnerProcessTracingChartData(sale.reel_lot_no);
-      //         }
-      //         // Handle cases where reel_lot_no might be undefined/null
-      //         return null;
-      //       })
-      //     );
-      //   })
-      // );
+      if(garmentProcess && garmentProcess.length > 0){
+        [garmentData] = await Promise.all(garmentProcess.map(async (el: any) => {
+                  if (el?.reel_lot_no) {
+                    return await _getGarmentProcessForwardChainData(el?.reel_lot_no);
+                }
+              })
+              )
+          el.garmentChart = garmentData;
+      }
 
       return el;
     })
   );
 
-  let key = Object.keys(whereCondition)[0];
-  // return [formatDataFromKnitter(whereCondition[key], knitters)];
-  return [];
+  let data = knitters && knitters.length > 0  ? knitters.map((el: any) => formatForwardChainDataKnitter(reelLotNo, el) ) : [formatForwardChainDataKnitter(reelLotNo, knitters)]
+  return data;
 };
 
 export {

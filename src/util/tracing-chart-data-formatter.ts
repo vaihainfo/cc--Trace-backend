@@ -238,7 +238,7 @@ export const formatForwardChainDataGinner = (title: any, data: any) : any => {
         width: 300,
         height: 100,
         isRoot: true,
-        children: data?.spin?.map((el:any) => el.fabricChart??[])
+        children: data?.spin?.map((el:any) => el??[])
     };
     return treeData;
 }
@@ -252,9 +252,48 @@ export const formatForwardChainDataSpinner = (title: any, data: any) : any => {
         width: 300,
         height: 100,
         isRoot: true,
-        // children: data?.weavKnitChart?.map((el:any) => el.fabricChart??[])
-        children: []
+        children: data?.weavKnitChart?.map((el:any) => el??[])
+        // children: []
     };
+    return treeData;
+}
+
+export const formatForwardChainDataKnitter = (title: any, data: any) : any => {
+    let treeData = {
+        name: data?.reel_lot_no,
+        processor_name: data?.knitter?.name,
+        img_type: 'knitter_image',
+        type: 'Knitter',
+        width: 300,
+        height: 100,
+        isRoot: true,
+        children: data?.garmentChart?.map((el:any) => el??[])
+    };
+    return treeData;
+}
+
+
+export const formatForwardChainDataGarment = (reelLotNo: any, data: any): any => {
+    let treeData = {
+        name: reelLotNo,
+        processor_name: data.garment_name,
+        img_type: 'garment_image',
+        type: 'Garment',
+        width: 300,
+        height: 100,
+        isRoot: true,
+        children: data?.brands && data.brands.map((el: any) => {
+            return {
+                name: el.brand_name,
+                processor_name: el.brand_name,
+                img_type: 'brand',
+                type: 'Brand',
+                width: 300,
+                height: 100,
+            }
+        })
+    };
+
     return treeData;
 }
 

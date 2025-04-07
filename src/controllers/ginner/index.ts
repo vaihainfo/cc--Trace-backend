@@ -22,7 +22,7 @@ import sequelize from "../../util/dbConn";
 import Farmer from "../../models/farmer.model";
 import { send_gin_mail } from "../send-emails";
 import FarmGroup from "../../models/farm-group.model";
-import { formatDataForGinnerProcess } from "../../util/tracing-chart-data-formatter";
+import { formatDataForGinnerProcess, formatForwardChainDataGinner } from "../../util/tracing-chart-data-formatter";
 import QualityParameter from "../../models/quality-parameter.model";
 import Brand from "../../models/brand.model";
 import PhysicalTraceabilityDataGinner from "../../models/physical-traceability-data-ginner.model";
@@ -4076,7 +4076,7 @@ const _getGinnerProcessForwardChainData = async (
 
             console.log(spinProcess)
             if(spinProcess && spinProcess.length > 0){
-              const spinnerChartData = await Promise.all(
+              const [spinnerChartData] = await Promise.all(
                 spinProcess?.map(async (spin: any) => {
                   if (spin?.spin_reel_lot_no) {
                     return await _getSpinnerProcessForwardChainData(spin?.spin_reel_lot_no);
@@ -4099,6 +4099,7 @@ const _getGinnerProcessForwardChainData = async (
     let obj: any ={};
     obj.gnr_name = allGinData && allGinData.length > 0 ?  [...new Set(allGinData.map((el: any) => el.ginner.name))].join(',') : "";
     obj.spin = allGinData && allGinData.length > 0 ? allGinData.flatMap(item => item.spin) : []
+    console.log("obj",obj)
 
     // allGinData.forEach((el: any) => {
     //   el.transaction.forEach((tx: any) => {
@@ -4121,7 +4122,7 @@ const _getGinnerProcessForwardChainData = async (
     // });
     // obj.transaction = formattedData ? formattedData : [];
 
-    return formatDataForGinnerProcess(reelLotNo, obj);
+    return formatForwardChainDataGinner(reelLotNo, obj);
   } catch (error) {
     console.log(error);
     logger.error(`ERROR - ${error} | CHAIN MGMT REEL - ${reelLotNo}`);
