@@ -907,27 +907,149 @@ const deleteGarmentProcess = async (req: Request, res: Response) => {
   }
 
   const garmentProcess = await GarmentProcess.findOne({ where: { id: req.body.id } });
-    if (garmentProcess) {
-        const trans = await  sequelize.transaction();
+  if (garmentProcess) {
+    const trans = await sequelize.transaction();
+    
+    try {
+      // Get fabric selections to revert stock quantities
+      const fabricSelections = await FabricSelection.findAll({ 
+        where: { sales_id: req.body.id },
+        transaction: trans
+      });
+      
+      // Revert stock quantities for each fabric selection based on processor type
+      for (const fabricSelection of fabricSelections) {
+        if (fabricSelection.processor === "knitter") {
+          const knitSale = await KnitSales.findOne({ 
+            where: { id: fabricSelection.fabric_id },
+            transaction: trans 
+          });
+          
+          if (knitSale) {
+            await KnitSales.update(
+              { qty_stock: knitSale.dataValues.qty_stock + fabricSelection.qty_used },
+              { where: { id: fabricSelection.fabric_id }, transaction: trans }
+            );
+          }
+        } else if (fabricSelection.processor === "weaver") {
+          const weaverSale = await WeaverSales.findOne({ 
+            where: { id: fabricSelection.fabric_id },
+            transaction: trans 
+          });
+          
+          if (weaverSale) {
+            await WeaverSales.update(
+              { qty_stock: weaverSale.dataValues.qty_stock + fabricSelection.qty_used },
+              { where: { id: fabricSelection.fabric_id }, transaction: trans }
+            );
+          }
+        } else if (fabricSelection.processor === "dying") {
+          const dyingSale = await DyingSales.findOne({ 
+            where: { id: fabricSelection.fabric_id },
+            transaction: trans 
+          });
+          
+          if (dyingSale) {
+            await DyingSales.update(
+              { qty_stock: dyingSale.dataValues.qty_stock + fabricSelection.qty_used },
+              { where: { id: fabricSelection.fabric_id }, transaction: trans }
+            );
+          }
+        } else if (fabricSelection.processor === "washing") {
+          const washingSale = await WashingSales.findOne({ 
+            where: { id: fabricSelection.fabric_id },
+            transaction: trans 
+          });
+          
+          if (washingSale) {
+            await WashingSales.update(
+              { qty_stock: washingSale.dataValues.qty_stock + fabricSelection.qty_used },
+              { where: { id: fabricSelection.fabric_id }, transaction: trans }
+            );
+          }
+        } else if (fabricSelection.processor === "printing") {
+          const printingSale = await PrintingSales.findOne({ 
+            where: { id: fabricSelection.fabric_id },
+            transaction: trans 
+          });
+          
+          if (printingSale) {
+            await PrintingSales.update(
+              { qty_stock: printingSale.dataValues.qty_stock + fabricSelection.qty_used },
+              { where: { id: fabricSelection.fabric_id }, transaction: trans }
+            );
+          }
+        } else if (fabricSelection.processor === "compacting") {
+          const compactingSale = await CompactingSales.findOne({ 
+            where: { id: fabricSelection.fabric_id },
+            transaction: trans 
+          });
+          
+          if (compactingSale) {
+            await CompactingSales.update(
+              { qty_stock: compactingSale.dataValues.qty_stock + fabricSelection.qty_used },
+              { where: { id: fabricSelection.fabric_id }, transaction: trans }
+            );
+          }
+        }
+      }
+      
+      // Delete embroidering record if exists
+      if (garmentProcess.embroidering_id) {
+        await Embroidering.destroy({ 
+          where: { id: garmentProcess.embroidering_id },
+          transaction: trans 
+        });
+      }
+      
+      // Delete fabric selections
+      await FabricSelection.destroy({ 
+        where: { sales_id: req.body.id },
+        transaction: trans 
+      });
+      
+      // Delete physical traceability data
+      const physicalTraceabilityData = await PhysicalTraceabilityDataGarment.findOne({
+        where: { garm_process_id: req.body.id },
+        transaction: trans
+      });
+      
+      if (physicalTraceabilityData) {
+        // Delete physical traceability samples
+        await PhysicalTraceabilityDataGarmentSample.destroy({ 
+          where: { physical_traceability_data_garment_id: physicalTraceabilityData.id },
+          transaction: trans 
+        });
         
-        try{
-        Embroidering.destroy({ where: { id: garmentProcess.embroidering_id } },trans);
-        FabricSelection.destroy({ where: { sales_id: req.body.id}}, trans);
-        PhysicalTraceabilityDataGarment.destroy({ where: { garm_process_id: req.body.id }}, trans);
-        PhysicalTraceabilityDataGarmentSample.destroy({ where: { physical_traceability_data_garment_id: req.body.id }},trans);
-        GarmentFabricType.destroy({ where: { process_id: req.body.id}}, trans);        
-        
-        GarmentProcess.destroy({ where: { id: req.body.id }},trans);
-        trans.commit();
-        res.sendSuccess(res, { garmentProcess: "Garment Process deleted" });
+        // Delete physical traceability data
+        await PhysicalTraceabilityDataGarment.destroy({ 
+          where: { garm_process_id: req.body.id },
+          transaction: trans 
+        });
+      }
+      
+      // Delete garment fabric types
+      await GarmentFabricType.destroy({ 
+        where: { process_id: req.body.id },
+        transaction: trans 
+      });
+      
+      // Delete the garment process itself
+      await GarmentProcess.destroy({ 
+        where: { id: req.body.id },
+        transaction: trans 
+      });
+      
+      await trans.commit();
+      res.sendSuccess(res, { garmentProcess: "Garment Process deleted" });
     } catch (error: any) {
       await trans.rollback();
       console.log(error.message);
       return res.sendError(res, error.message, error);
     }
-    } else{
-      return res.sendError(res, "Garment Process not found");
-    }
+  } else {
+    return res.sendError(res, "Garment Process not found");
+  }
 }
 
 //create Garment Process

@@ -162,12 +162,45 @@ const deleteWeaverProcess = async (req: Request, res: Response) => {
     let weaver = await WeaverProcess.findOne({ where: { id: req.body.id } });
     if (weaver) {
       const trans = await db.transaction();
-      try {        
-        await WeaverFabric.destroy({ where: { process_id: req.body.id }, transaction:trans});
-        await PhysicalTraceabilityDataWeaver.destroy({ where: { weav_process_id: req.body.id }, transaction:trans});
+      try {
+        // Get yarn selections to revert SpinSales.qty_stock
+        const yarnSelections = await YarnSelection.findAll({ 
+          where: { sales_id: req.body.id, type: 'weaver' },
+          transaction: trans
+        });
+        
+        // Revert SpinSales.qty_stock for each yarn selection
+        for (const yarnSelection of yarnSelections) {
+          const spinSale = await SpinSales.findOne({ 
+            where: { id: yarnSelection.yarn_id },
+            transaction: trans
+          });
+          
+          if (spinSale) {
+            await SpinSales.update(
+              { qty_stock: spinSale.dataValues.qty_stock + yarnSelection.qty_used },
+              { where: { id: yarnSelection.yarn_id }, transaction: trans }
+            );
+          }
+        }
+        
+        // Delete yarn selections
+        await YarnSelection.destroy({ 
+          where: { sales_id: req.body.id, type: 'weaver' },
+          transaction: trans
+        });
+        
+        // Delete other related records
+        await WeaverFabric.destroy({ where: { process_id: req.body.id }, transaction: trans});
+        await PhysicalTraceabilityDataWeaver.destroy({ where: { weav_process_id: req.body.id }, transaction: trans});
         await PhysicalTraceabilityDataWeaverSample.destroy({ where: { physical_traceability_data_weaver_id: req.body.id}, transaction: trans});
-        await WeaverProcess.destroy({ where: { id: req.body.id }, transaction:trans});
-        await Dyeing.destroy({ where: { id: weaver.dyeing_id }, transaction: trans });
+        await WeaverProcess.destroy({ where: { id: req.body.id }, transaction: trans});
+        
+        // Delete dyeing record if exists
+        if (weaver.dyeing_id) {
+          await Dyeing.destroy({ where: { id: weaver.dyeing_id }, transaction: trans });
+        }
+        
         await trans.commit();
         res.sendSuccess(res, { weaver });
       } catch (error: any) {
