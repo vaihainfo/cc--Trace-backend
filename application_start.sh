@@ -9,5 +9,4 @@ npm run build
 pm2 delete 0 || true
 pm2 start npm --name "backend" -- start
 
-service nginx restart
 sudo systemctl reload nginx
