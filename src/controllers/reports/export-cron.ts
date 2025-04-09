@@ -133,7 +133,8 @@ const exportSpinnerGreyOutReport = async () => {
 
   try {
     const workbook = new ExcelJS.stream.xlsx.WorkbookWriter({
-      stream: fs.createWriteStream("./upload/spinner-grey-out-report-test.xlsx")
+      stream: fs.createWriteStream("./upload/spinner-grey-out-report-test.xlsx"),
+      useStyles: true,
     });
     let worksheetIndex = 0;
     const batchSize = 5000;
@@ -160,6 +161,16 @@ const exportSpinnerGreyOutReport = async () => {
         model: Spinner,
         as: "buyerdata",
         attributes: [],
+        include: [
+          {
+            model: Country,
+            as: "country",
+          },
+          {
+            model: State,
+            as: "state",
+          },
+        ],
       },
     ];
 
@@ -170,6 +181,55 @@ const exportSpinnerGreyOutReport = async () => {
         greyed_out_qty: { [Op.gt]: 0 }
       },
     ];
+  
+
+    interface Totals{
+      total_lint_quantity: 0,
+    };
+
+    
+    let totals: Totals = {
+      total_lint_quantity: 0,
+    };
+
+
+    const AddTotalRow = (currentWorksheet: ExcelJS.Worksheet | undefined, totals : Totals) =>{
+
+      if(currentWorksheet != undefined){
+        const rowValues = [
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "Total",
+          totals.total_lint_quantity,
+        ];
+        currentWorksheet?.addRow(rowValues).eachCell(cell=>cell.font={bold : true});
+        let borderStyle = {
+          top: {style:"thin"},
+          left: {style:"thin"},
+          bottom: {style:"thin"},
+          right: {style:"thin"}
+        };
+  
+        // Auto-adjust column widths based on content
+        currentWorksheet?.columns.forEach((column: any) => {
+          let maxCellLength = 0;
+          column.eachCell({ includeEmpty: true }, (cell: any) => {
+            const cellLength = (cell.value ? cell.value.toString() : "").length;
+            maxCellLength = Math.max(maxCellLength, cellLength);
+            cell.border = borderStyle;
+          });
+          column.width = Math.min(14, maxCellLength + 2); // Limit width to 30 characters
+        });
+       }
+    };
+
+  let currentWorksheet: ExcelJS.Worksheet| undefined = undefined;
 
   let hasNextBatch = true;
   while (hasNextBatch) {
@@ -177,6 +237,8 @@ const exportSpinnerGreyOutReport = async () => {
       where: whereCondition,
       include: include,
       attributes: [
+        [Sequelize.col('"buyerdata"."country"."county_name"'), 'country_name'],
+        [Sequelize.col('"buyerdata"."state"."state_name"'), 'state_name'],
         [Sequelize.col('"season"."name"'), 'season_name'],
         [Sequelize.literal('"ginner"."name"'), "ginner_name"],
         [Sequelize.col('"buyerdata"."name"'), 'spinner'],
@@ -208,16 +270,24 @@ const exportSpinnerGreyOutReport = async () => {
       hasNextBatch = false;
       break;
     }
-
+   
     if (offset % maxRowsPerWorksheet === 0) {
+      
+      if(currentWorksheet){
+        AddTotalRow(currentWorksheet, totals);
+      }
+      totals = { total_lint_quantity: 0 };
+
       worksheetIndex++;
     }
-
-
+   
+    
     for await (const [index, item] of rows.entries()) {
-
+      
       const rowValues = [
         offset + index + 1,
+        item?.country_name ? item?.country_name : "",
+        item?.state_name ? item?.state_name : "",
         item?.season_name ? item?.season_name : "",
         item?.ginner_name ? item?.ginner_name : "",
         item.spinner ? item.spinner : "",
@@ -226,20 +296,23 @@ const exportSpinnerGreyOutReport = async () => {
         item?.lot_no ? item?.lot_no : "",
         item.lint_greyout_qty ? Number(formatDecimal( item.lint_greyout_qty)) : 0
       ];
-
+      
+      totals.total_lint_quantity += Number(formatDecimal( item.lint_greyout_qty));
       let currentWorksheet = workbook.getWorksheet(`Spinner Lint Process Greyout Report ${worksheetIndex}`);
       if (!currentWorksheet) {
         currentWorksheet = workbook.addWorksheet(`Spinner Lint Process Greyout Report ${worksheetIndex}`);
-        if (worksheetIndex == 1) {
+       /* if (worksheetIndex == 1) {
           currentWorksheet.mergeCells("A1:H1");
           const mergedCell = currentWorksheet.getCell("A1");
           mergedCell.value = "CottonConnect | Spinner Lint Process Greyout Report";
           mergedCell.font = { bold: true };
           mergedCell.alignment = { horizontal: "center", vertical: "middle" };
-        }
+        } */
         // Set bold font for header row
         const headerRow = currentWorksheet.addRow([
           "Sr No.",
+          "Country",
+          "State",
           "Season",
           "Ginner Name",
           "Spinner Name",
@@ -250,9 +323,14 @@ const exportSpinnerGreyOutReport = async () => {
         ]);
         headerRow.font = { bold: true };
       }
-      currentWorksheet.addRow(rowValues).commit();
+      currentWorksheet.addRow(rowValues);
     }
     offset += batchSize;
+  }
+
+  let currentsheet = workbook.getWorksheet(`Spinner Lint Process Greyout Report ${worksheetIndex}`);
+  if(currentsheet){
+    AddTotalRow(currentsheet, totals);
   }
 
   await workbook.commit()
@@ -416,11 +494,60 @@ const exportGinnerProcessGreyOutReport = async () => {
 
   try {
     const workbook = new ExcelJS.stream.xlsx.WorkbookWriter({
-      stream: fs.createWriteStream("./upload/ginner-process-grey-out-report-test.xlsx")
+      stream: fs.createWriteStream("./upload/ginner-process-grey-out-report-test.xlsx"),
+      useStyles: true,
     });
     let worksheetIndex = 0;
     const batchSize = 5000;
     let offset = 0;
+
+    interface Totals{
+      total_lint_quantity: 0,
+    };
+   
+    let totals: Totals = {
+      total_lint_quantity: 0,
+    };
+
+
+    const AddTotalRow = (currentWorksheet: ExcelJS.Worksheet | undefined, totals : Totals) =>{
+
+      if(currentWorksheet != undefined){
+        const rowValues = [
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "Total", 
+          totals.total_lint_quantity,
+        ];
+        currentWorksheet?.addRow(rowValues).eachCell(cell=>cell.font={bold : true});
+        let borderStyle = {
+          top: {style:"thin"},
+          left: {style:"thin"},
+          bottom: {style:"thin"},
+          right: {style:"thin"}
+        };
+  
+        // Auto-adjust column widths based on content
+        currentWorksheet?.columns.forEach((column: any) => {
+          let maxCellLength = 0;
+          column.eachCell({ includeEmpty: true }, (cell: any) => {
+            const cellLength = (cell.value ? cell.value.toString() : "").length;
+            maxCellLength = Math.max(maxCellLength, cellLength);
+            cell.border = borderStyle;
+          });
+          column.width = Math.min(14, maxCellLength + 2); // Limit width to 30 characters
+        });
+ 
+      }
+      
+    };
+
+  let currentWorksheet: ExcelJS.Worksheet| undefined = undefined;
 
   let hasNextBatch = true;
   while (hasNextBatch) {
@@ -438,6 +565,8 @@ const exportGinnerProcessGreyOutReport = async () => {
           gp.greyout_status, 
           gp.scd_verified_status,
           gp.verification_status,
+          c.county_name AS country_name,
+          st.state_name AS state_name,
           COALESCE(
             SUM(
               CASE
@@ -457,6 +586,8 @@ const exportGinnerProcessGreyOutReport = async () => {
         LEFT JOIN "gin-bales" gb ON gb.process_id = gp.id AND gb.sold_status = false
         LEFT JOIN seasons s ON gp.season_id = s.id
         LEFT JOIN ginners g ON gp.ginner_id = g.id
+        LEFT JOIN countries c ON c.id = g.country_id
+        LEFT JOIN states st ON st.id = g.state_id
         WHERE
           (
             gp.greyout_status = true
@@ -469,8 +600,7 @@ const exportGinnerProcessGreyOutReport = async () => {
               gp.scd_verified_status = false AND gb.scd_verified_status IS FALSE
             )
           )
-        GROUP BY gp.id, gp.ginner_id, gp.season_id, gp.lot_no, gp.reel_lot_no, gp.press_no, s.name, g.name, gp.no_of_bales,gp.greyout_status, gp.scd_verified_status,gp.verification_status
-        ORDER BY gp.id ASC
+        GROUP BY gp.id, gp.ginner_id, gp.season_id, gp.lot_no, gp.reel_lot_no, gp.press_no, s.name, g.name, gp.no_of_bales,gp.greyout_status, gp.scd_verified_status,gp.verification_status,c.county_name,st.state_name
         LIMIT :limit OFFSET :offset
     `;
 
@@ -488,6 +618,12 @@ const exportGinnerProcessGreyOutReport = async () => {
     }
 
     if (offset % maxRowsPerWorksheet === 0) {
+      if(currentWorksheet){
+        AddTotalRow(currentWorksheet, totals);
+      
+      }
+      totals = {total_lint_quantity: 0};
+      
       worksheetIndex++;
     }
 
@@ -495,6 +631,8 @@ const exportGinnerProcessGreyOutReport = async () => {
     for await (const [index, item] of rows.entries()) {
       const rowValues = [
         offset + index + 1,
+        item?.country_name ? item?.country_name : "",
+        item?.state_name ? item?.state_name : "",
         item?.season_name ? item?.season_name : "",
         item?.ginner_name ? item?.ginner_name : "",
         item.reel_lot_no ? item.reel_lot_no : "",
@@ -502,20 +640,24 @@ const exportGinnerProcessGreyOutReport = async () => {
         item?.lot_no ? item?.lot_no : "",
         item.lint_quantity ? Number(formatDecimal( item.lint_quantity)) : 0
       ];
+      
+      totals.total_lint_quantity+= Number(formatDecimal( item.lint_quantity));
 
       let currentWorksheet = workbook.getWorksheet(`Ginner Process Grey Out Report ${worksheetIndex}`);
       if (!currentWorksheet) {
         currentWorksheet = workbook.addWorksheet(`Ginner Process Grey Out Report ${worksheetIndex}`);
-        if (worksheetIndex == 1) {
+        /*if (worksheetIndex == 1) {
           currentWorksheet.mergeCells("A1:G1");
           const mergedCell = currentWorksheet.getCell("A1");
           mergedCell.value = "CottonConnect | Ginner Process Grey Out Report";
           mergedCell.font = { bold: true };
           mergedCell.alignment = { horizontal: "center", vertical: "middle" };
-        }
+        } */
         // Set bold font for header row
         const headerRow = currentWorksheet.addRow([
           "Sr No.",
+          "Country",
+          "State",
           "Season",
           "Ginner Name",
           "REEL Lot No",
@@ -525,11 +667,15 @@ const exportGinnerProcessGreyOutReport = async () => {
         ]);
         headerRow.font = { bold: true };
       }
-      currentWorksheet.addRow(rowValues).commit();
+      currentWorksheet.addRow(rowValues);
     }
     offset += batchSize;
   }
 
+  let currentsheet = workbook.getWorksheet(`Ginner Process Grey Out Report ${worksheetIndex}`);
+  if(currentsheet){
+    AddTotalRow(currentsheet, totals);
+  }
   await workbook.commit()
   .then(() => {
     // Rename the temporary file to the final filename
@@ -567,20 +713,32 @@ const exportSpinnerProcessGreyOutReport = async () => {
       model: Spinner,
       as: "spinner",
       attributes: [],
+      include: [
+        {
+          model: Country,
+          as: "country",
+        },
+        {
+          model: State,
+          as: "state",
+        },
+    ],
     },
   ];
 
   // Create the excel workbook file
   const workbook = new ExcelJS.Workbook();
   const worksheet = workbook.addWorksheet("Sheet1");
-  worksheet.mergeCells("A1:G1");
+  /*worksheet.mergeCells("A1:G1");
   const mergedCell = worksheet.getCell("A1");
   mergedCell.value = "CottonConnect | Spinner Yarn Greyout Report";
   mergedCell.font = { bold: true };
-  mergedCell.alignment = { horizontal: "center", vertical: "middle" };
+  mergedCell.alignment = { horizontal: "center", vertical: "middle" }; */
   // Set bold font for header row
   const headerRow = worksheet.addRow([
     "Sr No.",
+    "Country",
+    "State",
     "Season",
     "Spinner Name",
     "REEL Lot No",
@@ -595,6 +753,8 @@ const exportSpinnerProcessGreyOutReport = async () => {
     where: { greyout_status: true },
     include: include,
     attributes: [
+      [Sequelize.col('"spinner"."country"."county_name"'), 'country_name'],
+      [Sequelize.col('"spinner"."state"."state_name"'), 'state_name'],
       [Sequelize.col('"season"."name"'), 'season_name'],
       [Sequelize.col('"season"."name"'), 'season_name'],
       [Sequelize.col('"spinner"."name"'), 'spinner_name'],
@@ -605,9 +765,13 @@ const exportSpinnerProcessGreyOutReport = async () => {
   });
 
   // // Append data to worksheet
+  let total_lint_quantity = 0 ;
   for await (const [index, item] of rows.entries()) {
+    total_lint_quantity += item.dataValues.qty_stock ? Number(item.dataValues.qty_stock) : 0;
     const rowValues = Object.values({
       index: index + 1,
+      country:item.dataValues.country_name ? item.dataValues.country_name : "",
+      state:item.dataValues.state_name ? item.dataValues.state_name : "",
       season: item.dataValues.season_name ? item.dataValues.season_name : "",
       spinner: item.dataValues.spinner_name ? item.dataValues.spinner_name : "",
       reel_lot_no: item.dataValues.reel_lot_no ? item.dataValues.reel_lot_no : "",
@@ -616,13 +780,28 @@ const exportSpinnerProcessGreyOutReport = async () => {
     });
     worksheet.addRow(rowValues);
   }
+  const rowValues = Object.values({
+    index: "", country: "", state: "", season:"",spinner:"",
+    reel_lot_no:"", batch_lot_no: "Total", 
+    lint_quantity:Number(formatDecimal(total_lint_quantity)),
+   
+  });
 
+  worksheet.addRow(rowValues).eachCell(cell  => { cell.font={bold:true}});
+
+  const borderStyle = {
+    top: { style: "thin" },
+    bottom: { style: "thin" },
+    left: { style: "thin" },
+    right: { style: "thin" },
+  };
   // Auto-adjust column widths based on content
   worksheet.columns.forEach((column: any) => {
     let maxCellLength = 0;
     column.eachCell({ includeEmpty: true }, (cell: any) => {
       const cellLength = (cell.value ? cell.value.toString() : "").length;
       maxCellLength = Math.max(maxCellLength, cellLength);
+      cell.border = borderStyle;
     });
     column.width = Math.min(14, maxCellLength + 2); // Limit width to 30 characters
   });
