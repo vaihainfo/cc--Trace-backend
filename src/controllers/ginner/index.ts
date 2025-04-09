@@ -2661,6 +2661,29 @@ const deleteGinSales = async (req: Request, res: Response) => {
                 })
               }
             }
+            else{
+              if(item){
+                alreadyGinSalesIds.push(item?.sales_id);
+                alreadyGinBalesIds.push(item?.bale_id);
+                alreadyGiProcessIds.push(item?.process_id);
+
+                await GinBale.update(
+                  { 
+                    sold_status: false,
+                    is_gin_to_gin_sale: null,
+                    gin_to_gin_sold_status: null,
+                    sold_by_sales_id: null, 
+                  },
+                  {
+                    where: {
+                      id: {
+                        [Op.in]: alreadyGinBalesIds,
+                      },
+                    }, transaction
+                  }
+                );
+              }
+            }
           }
           alreadyGinSalesIds = [...new Set(alreadyGinSalesIds)];
           alreadyGinBalesIds = [...new Set(alreadyGinBalesIds)];
@@ -2677,11 +2700,11 @@ const deleteGinSales = async (req: Request, res: Response) => {
                 transaction
               }
             );
-          }
+          }         
         }
         await GinToGinSale.destroy({ where: {sales_id: req.body.id }, transaction });
-
-      }else{
+      }
+      else{
         const bales = await GinBale.findAll(
             {
               attributes: ['id','process_id','weight','sold_status','is_gin_to_gin_sale','gin_to_gin_status','gin_to_gin_sold_status','sold_by_sales_id'],
