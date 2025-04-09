@@ -2454,6 +2454,11 @@ const updateGinnerSales = async (req: Request, res: Response) => {
     const data: any = {
       status: "Pending for QR scanning",
       weight_loss: req.body.weightLoss,
+      updatebales: req.body.updatebales,
+      no_of_bales: req.body.noofBales,
+      choosen_bale: req.body.choosenBale,
+      total_qty: req.body.totalQuantity,
+      lot_no: req.body.lot_no,
       sale_value: req.body.saleValue,
       invoice_no: req.body.invoiceNo,
       tc_file: req.body.tcFile,
@@ -2508,6 +2513,30 @@ const updateGinnerSales = async (req: Request, res: Response) => {
         let newQuantity = newSum[0]?.lint_quantity;
         data.total_qty = newQuantity;
       }
+    }
+    
+
+    for await (const bale of req.body.bales) {
+
+      let baleData = {
+        sales_id: req.body.id,
+        bale_id: bale.id,
+        gin_to_gin_sale: req.body.buyerType?.toLowerCase() === 'ginner' ? true : false
+      };
+      await BaleSelection.create(baleData);
+      await GinBale.update(
+        {
+          sold_status: true,
+          is_gin_to_gin_sale: req.body.buyerType?.toLowerCase() === 'ginner'
+            ? true
+            : bale.is_gin_to_gin
+            ? true
+            : null,
+          gin_to_gin_sold_status: bale.is_gin_to_gin ? true : null,
+          sold_by_sales_id: req.body.id,
+        },
+        { where: { id: bale.id } }
+      );
     }
 
     const ginSales = await GinSales.update(data, {

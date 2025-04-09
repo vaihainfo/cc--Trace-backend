@@ -227,6 +227,9 @@ const GinSales = db.define('gin_sales', {
     type: DataTypes.ARRAY(DataTypes.TEXT)
 
   },
+  updatebales: {
+    type: DataTypes.BOOLEAN
+  },
  
 });
 
