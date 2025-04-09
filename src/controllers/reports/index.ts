@@ -7725,6 +7725,7 @@ const fetchKnitterYarnPagination = async (req: Request, res: Response) => {
     }
 
     whereCondition["$sales.knitter_id$"] = { [Op.ne]: null };
+    whereCondition["$sales.knitter_id$"] = { [Op.ne]: 0 };
     whereCondition["$sales.status$"] = "Sold";
 
     if (knitterId) {
@@ -7960,6 +7961,7 @@ const exportKnitterYarn = async (req: Request, res: Response) => {
       whereCondition["$sales.program_id$"] = { [Op.in]: idArray };
     }
     whereCondition["$sales.knitter_id$"] = { [Op.ne]: null };
+    whereCondition["$sales.knitter_id$"] = { [Op.ne]: 0 };
     whereCondition["$sales.status$"] = "Sold";
 
     if (knitterId) {
@@ -8868,16 +8870,19 @@ const fetchKnitterSalesPagination = async (req: Request, res: Response) => {
           model: KnitSales,
           as: "sales",
           include: include,
+          required: true,
           attributes: [],
         },
         {
           model: KnitProcess,
           attributes: [],
+          required: true,
           as: "process",
         },
         {
           model: KnitFabric,
           attributes: [],
+          required: true,
           as: "knitfabric",
         },
       ],
@@ -9122,17 +9127,20 @@ const exportKnitterSale = async (req: Request, res: Response) => {
         {
           model: KnitSales,
           as: "sales",
+          required: true,
           include: include,
           attributes: [],
         },
         {
           model: KnitProcess,
           attributes: [],
+          required: true,
           as: "process",
         },
         {
           model: KnitFabric,
           attributes: [],
+          required: true,
           as: "knitfabric",
         },
       ],
@@ -9316,6 +9324,7 @@ const fetchWeaverYarnPagination = async (req: Request, res: Response) => {
       whereCondition["$sales.program_id$"] = { [Op.in]: idArray };
     }
     whereCondition["$sales.buyer_id$"] = { [Op.ne]: null };
+    whereCondition["$sales.buyer_id$"] = { [Op.ne]: 0 };
     whereCondition["$sales.status$"] = "Sold";
 
     if (weaverId) {
@@ -9560,6 +9569,7 @@ const exportWeaverYarn = async (req: Request, res: Response) => {
       whereCondition["$sales.program_id$"] = { [Op.in]: idArray };
     }
     whereCondition["$sales.buyer_id$"] = { [Op.ne]: null };
+    whereCondition["$sales.buyer_id$"] = { [Op.ne]: 0 };
     whereCondition["$sales.status$"] = "Sold";
 
     if (weaverId) {
@@ -10454,17 +10464,20 @@ const fetchWeaverSalesPagination = async (req: Request, res: Response) => {
         {
           model: WeaverSales,
           as: "sales",
+          required: true,
           include: include,
           attributes: [],
         },
         {
           model: WeaverProcess,
           attributes: [],
+          required: true,
           as: "process",
         },
         {
           model: WeaverFabric,
           attributes: [],
+          required: true,
           as: "weaverfabric",
         },
       ],
@@ -10723,16 +10736,19 @@ const exportWeaverSale = async (req: Request, res: Response) => {
         {
           model: WeaverSales,
           as: "sales",
+          required: true,
           include: include,
           attributes: [],
         },
         {
           model: WeaverProcess,
+          required: true,
           attributes: [],
           as: "process",
         },
         {
           model: WeaverFabric,
+          required: true,
           attributes: [],
           as: "weaverfabric",
         },
