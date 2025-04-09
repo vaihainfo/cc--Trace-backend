@@ -7726,6 +7726,7 @@ const fetchKnitterYarnPagination = async (req: Request, res: Response) => {
 
     whereCondition["$sales.knitter_id$"] = { [Op.ne]: null };
     whereCondition["$sales.knitter_id$"] = { [Op.ne]: 0 };
+    whereCondition["$sales.knitter.id$"] = { [Op.ne]: null };
     whereCondition["$sales.status$"] = "Sold";
 
     if (knitterId) {
@@ -7962,6 +7963,7 @@ const exportKnitterYarn = async (req: Request, res: Response) => {
     }
     whereCondition["$sales.knitter_id$"] = { [Op.ne]: null };
     whereCondition["$sales.knitter_id$"] = { [Op.ne]: 0 };
+    whereCondition["$sales.knitter.id$"] = { [Op.ne]: null };
     whereCondition["$sales.status$"] = "Sold";
 
     if (knitterId) {
@@ -9325,6 +9327,7 @@ const fetchWeaverYarnPagination = async (req: Request, res: Response) => {
     }
     whereCondition["$sales.buyer_id$"] = { [Op.ne]: null };
     whereCondition["$sales.buyer_id$"] = { [Op.ne]: 0 };
+    whereCondition["$sales.weaver.id$"] = { [Op.ne]: null };
     whereCondition["$sales.status$"] = "Sold";
 
     if (weaverId) {
@@ -9570,6 +9573,7 @@ const exportWeaverYarn = async (req: Request, res: Response) => {
     }
     whereCondition["$sales.buyer_id$"] = { [Op.ne]: null };
     whereCondition["$sales.buyer_id$"] = { [Op.ne]: 0 };
+    whereCondition["$sales.weaver.id$"] = { [Op.ne]: null };
     whereCondition["$sales.status$"] = "Sold";
 
     if (weaverId) {
