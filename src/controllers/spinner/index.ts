@@ -42,6 +42,7 @@ import SpinCombernoilSale from "../../models/spin_combernoil_sale.model";
 import GinToGinSale from "../../models/gin-to-gin-sale.model";
 import moment from "moment";
 import { _getKnitterProcessForwardChainData } from "../knitter";
+import { _getWeaverProcessForwardChainData } from "../weaver";
 // import SpinSelectedBlend from "../../models/spin_selected_blend";
 
 //create Spinner Process
@@ -3842,7 +3843,7 @@ const _getSpinnerProcessForwardChainData = async (reelLotNo: any) => {
         weavData = await Promise.all(weavProcess.map(async (el: any) => {
             let weav: any = [];
                   if (el?.reel_lot_no) {
-                  //   weav = await _getSpinnerProcessForwardChainData(el?.reel_lot_no);
+                    weav = await _getWeaverProcessForwardChainData(el?.reel_lot_no);
                   // }
                 return {
                   ...el,
@@ -3858,51 +3859,15 @@ const _getSpinnerProcessForwardChainData = async (reelLotNo: any) => {
       let weavKnit = [...knitData, ...weavData].filter((item: any) => item !== null && item !== undefined)
       spin.weavKnitChart = []
       
-      let weavKnitChart = weavKnit && weavKnit.length > 0 ? weavKnit.flatMap(((el: any) => el.type === 'knitter' ? el.knit : formatForwardChainDataKnitter(el.weav_name, el))) : [];
+      let weavKnitChart = weavKnit && weavKnit.length > 0 ? weavKnit.flatMap(((el: any) => el.type === 'knitter' ? el.knit : el.weav)) : [];
 
       spin.weavKnitChart = weavKnitChart;
-
-
-      // Fetch lintSele for spin
-      // spin.lintSele = await LintSelections.findAll({
-      //   where: {
-      //     process_id: spin.id,
-      //   },
-      // });
-
-      // // Fetch ginSales for spin
-      // spin.ginSales = await Promise.all(
-      //   spin.lintSele.map(async (lintSeleItem: any) => {
-      //     let ginSales = await GinSales.findAll({
-      //       where: { id: lintSeleItem.lint_id },
-      //       include: [
-      //         { model: Ginner, as: "ginner", attributes: ["id", "name"] },
-      //       ],
-      //       attributes: ["id", "ginner_id", "reel_lot_no"],
-      //     });
-      //     return ginSales;
-      //   })
-      // );
-
-      // // Process ginSales and transactions
-      // spin.ginSales = await Promise.all(
-      //   spin.ginSales.map(async (sales: any) => {
-      //     return await Promise.all(
-      //       sales.map(async (sale: any) => {
-      //         // Assuming _getGinnerProcessTracingChartData returns data or handles async operations correctly
-      //         return await _getGinnerProcessTracingChartData(sale.reel_lot_no);
-      //       })
-      //     );
-      //   })
-      // );
 
       return spin;
     })
   );
 
   allSpinData = allSpinData.concat(spinWithGinSales);
-  console.log("object", allSpinData)
-  // }
 
   return allSpinData && allSpinData.length > 0  ? allSpinData.map((el: any) => formatForwardChainDataSpinner(reelLotNo, el) ) : formatForwardChainDataSpinner(reelLotNo, allSpinData);
 };

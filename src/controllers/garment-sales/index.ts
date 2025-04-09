@@ -4569,17 +4569,20 @@ const _getGarmentProcessForwardChainData = async (reelLotNo: string) => {
 
     let formattedData: any = {};
     let obj: any ={};
-    console.log("============garments", garments)
     obj.garment_name = garments && garments.length > 0 ?  [...new Set(garments.map((el: any) => el.garment.name))].join(',') : "";
 
     garments.forEach((el: any) => {
-      el.brand.forEach((tx: any) => {
-        if (!formattedData[tx.id]) {
-          formattedData[tx.id] = {
-            brand_name: tx.brand_name,
-          };
-        }
-      });
+      if(el.brand){
+        el.brand.forEach((tx: any) => {
+          if (!formattedData[tx.id]) {
+            formattedData[tx.id] = {
+              brand_name: tx.brand_name,
+            };
+          }
+        });
+      }else{
+        el.brand=[]
+      }
     });
 
     formattedData = Object.keys(formattedData).map((key: any) => {

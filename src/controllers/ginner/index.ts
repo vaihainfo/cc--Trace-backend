@@ -195,7 +195,7 @@ import { _getSpinnerProcessForwardChainData } from "../spinner";
 
 //     res.sendSuccess(res, { ginprocess });
 //   } catch (error: any) {
-//     console.error(error);
+//     console.log(error);
 //     return res.sendError(res, error.message, error);
 //   }
 // };
@@ -397,7 +397,7 @@ req.body.brandId }, transaction });
   } catch (error: any) {
     // Rollback transaction in case of error
     await transaction.rollback();
-    console.error(error);
+    console.log(error);
     return res.sendError(res, error.message || "An error occurred", error);
   }
 };
@@ -578,7 +578,7 @@ const fetchGinProcessPagination = async (req: Request, res: Response) => {
       return res.sendSuccess(res, gin);
     }
   } catch (error: any) {
-    console.error(error);
+    console.log(error);
     return res.sendError(res, error.message, error);
   }
 };
@@ -688,7 +688,7 @@ const fetchGinHeapPagination = async (req: Request, res: Response) => {
       return res.sendSuccess(res, data);
     }
   } catch (error: any) {
-    console.error(error);
+    console.log(error);
     return res.sendError(res, error.message, error);
   }
 };
@@ -1065,7 +1065,7 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
       data: process.env.BASE_URL + "ginner-process.xlsx",
     });
   } catch (error: any) {
-    console.error("Error appending data:", error);
+    console.log("Error appending data:", error);
     return res.sendError(res, error.message, error);
   }
 };
@@ -1208,7 +1208,7 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
 //     const simplifiedResults = results.map((item: any) => item.result);
 //     return res.sendSuccess(res, simplifiedResults); //bales_list
 //   } catch (error: any) {
-//     console.error(error);
+//     console.log(error);
 //     return res.sendError(res, error.meessage);
 //   }
 // };
@@ -1413,7 +1413,7 @@ const chooseBale = async (req: Request, res: Response) => {
     const simplifiedResults = results.map((item: any) => item.result);
     return res.sendSuccess(res, simplifiedResults); //bales_list
   } catch (error: any) {
-    console.error(error);
+    console.log(error);
     return res.sendError(res, error.message, error);
   }
 };
@@ -1591,7 +1591,7 @@ const deleteGinnerProcess = async (req: Request, res: Response) => {
     }
   } catch (error: any) {
     await transaction.rollback();
-    console.error(error);
+    console.log(error);
     return res.sendError(res, error.message, error);
   }
 };
@@ -1621,7 +1621,7 @@ const fetchGinProcess = async (req: Request, res: Response) => {
     });
     return res.sendSuccess(res, gin);
   } catch (error: any) {
-    console.error(error);
+    console.log(error);
     return res.sendError(res, error.message, error);
   }
 };
@@ -1642,7 +1642,7 @@ const fetchGinBale = async (req: Request, res: Response) => {
     });
     return res.sendSuccess(res, gin);
   } catch (error: any) {
-    console.error(error);
+    console.log(error);
     return res.sendError(res, error.message, error);
   }
 };
@@ -1797,7 +1797,7 @@ const chooseCotton = async (req: Request, res: Response) => {
     const finalResult = Object.values(summedData);
     res.sendSuccess(res, finalResult);
   } catch (error: any) {
-    console.error("Error appending data:", error);
+    console.log("Error appending data:", error);
     return res.sendError(res, error.message, error);
   }
 };
@@ -1951,7 +1951,7 @@ const chooseHeap = async (req: Request, res: Response) => {
     const finalResult = Object.values(results);
     res.sendSuccess(res, finalResult);
   } catch (error: any) {
-    console.error("Error appending data:", error);
+    console.log("Error appending data:", error);
     return res.sendError(res, error.message, error);
   }
 };
@@ -1976,7 +1976,7 @@ const updateTransactionStatus = async (req: Request, res: Response) => {
 
     res.sendSuccess(res, trans);
   } catch (error: any) {
-    console.error("Error appending data:", error);
+    console.log("Error appending data:", error);
     return res.sendError(res, error.message, error);
   }
 };
@@ -2100,7 +2100,7 @@ const exportGinnerSales = async (req: Request, res: Response) => {
       data: process.env.BASE_URL + "lint-sale.xlsx",
     });
   } catch (error: any) {
-    console.error("Error appending data:", error);
+    console.log("Error appending data:", error);
     return res.sendError(res, error.message, error);
   }
 };
@@ -2226,7 +2226,7 @@ const createGinnerSales = async (req: Request, res: Response) => {
     await transaction.commit();
     res.sendSuccess(res, { ginSales });
   } catch (error: any) {
-    console.error(error);
+    console.log(error);
     await transaction.rollback();
     return res.sendError(res, error.message, error);
   }
@@ -2383,7 +2383,7 @@ const getCOCDocumentData = async (
     cocRes.date = moment(new Date()).format('DD-MM-YYYY');
      return res.sendSuccess(res, cocRes);
   } catch (error: any) {
-    console.error("Error appending data:", error);
+    console.log("Error appending data:", error);
     return res.sendError(res, error.message, error);
   }
 
@@ -2507,7 +2507,7 @@ const updateGinnerSales = async (req: Request, res: Response) => {
     }
     res.sendSuccess(res, { ginSales });
   } catch (error: any) {
-    console.error(error);
+    console.log(error);
     return res.sendError(res, error.message, error);
   }
 };
@@ -2528,7 +2528,7 @@ const updateGinnerSalesField = async (req: Request, res: Response) => {
 
     res.sendSuccess(res, { ginSales });
   } catch (error: any) {
-    console.error(error);
+    console.log(error);
     return res.sendError(res, error.message, error);
   }
 };
@@ -2617,7 +2617,7 @@ const fetchGinSalesPagination = async (req: Request, res: Response) => {
       return res.sendSuccess(res, gin);
     }
   } catch (error: any) {
-    console.error(error);
+    console.log(error);
     return res.sendError(res, error.message, error);
   }
 };
@@ -2778,7 +2778,7 @@ const deleteGinSales = async (req: Request, res: Response) => {
       message: "Successfully deleted this process",
     });
   } catch (error: any) {
-    console.error(error);
+    console.log(error);
     await transaction.rollback();
     return res.sendError(res, error.message, error);
   }
@@ -2841,7 +2841,7 @@ const fetchGinSale = async (req: Request, res: Response) => {
     };
     return res.sendSuccess(res, response);
   } catch (error: any) {
-    console.error(error);
+    console.log(error);
     return res.sendError(res, error.message, error);
   }
 };
@@ -2908,7 +2908,7 @@ const fetchGinSaleBale = async (req: Request, res: Response) => {
     }
     return res.sendPaginationSuccess(res, data, count);
   } catch (error: any) {
-    console.error(error);
+    console.log(error);
     return res.sendError(res, error.message, error);
   }
 };
@@ -2959,7 +2959,7 @@ const fetchGinSaleAllBales = async (req: Request, res: Response) => {
     }
     return res.sendPaginationSuccess(res, data, count);
   } catch (error: any) {
-    console.error(error);
+    console.log(error);
     return res.sendError(res, error.message, error);
   }
 };
@@ -2985,7 +2985,7 @@ const updateGinSaleBale = async (req: Request, res: Response) => {
 
     return res.sendSuccess(res, gins);
   } catch (error: any) {
-    console.error(error);
+    console.log(error);
     return res.sendError(res, error.message, error);
   }
 };
@@ -3057,7 +3057,7 @@ const dashboardGraphWithProgram = async (req: Request, res: Response) => {
 
     res.sendSuccess(res, { transaction, ginner });
   } catch (error: any) {
-    console.error(error);
+    console.log(error);
     return res.sendError(res, error.message, error);
   }
 };
@@ -3129,7 +3129,7 @@ const getReelBaleId = async (req: Request, res: Response) => {
     var reelbale_id = baleid_prefix + prcs_date + "/" + String(random_number);
     res.sendSuccess(res, { id: reelbale_id });
   } catch (error: any) {
-    console.error(error);
+    console.log(error);
     return res.sendError(res, error.message, error);
   }
 };
@@ -3192,7 +3192,7 @@ const getReelHeapId = async (req: Request, res: Response) => {
     var reelheap_id = heapid_prefix + prcs_date + "/" + String(random_number);
     res.sendSuccess(res, { id: reelheap_id });
   } catch (error: any) {
-    console.error(error);
+    console.log(error);
     return res.sendError(res, error.message, error);
   }
 };
@@ -3215,7 +3215,7 @@ const getProgram = async (req: Request, res: Response) => {
     });
     res.sendSuccess(res, data);
   } catch (error: any) {
-    console.error(error);
+    console.log(error);
     return res.sendError(res, error.message, error);
   }
 };
@@ -3270,7 +3270,7 @@ const getMappedVillages= async  (req: Request, res: Response) => {
 
     res.sendSuccess(res, villageData);
   } catch (error: any) {
-    console.error(error);
+    console.log(error);
     return res.sendError(res, error.message, error);
   }
 }
@@ -3514,7 +3514,7 @@ const checkReport = async (req: Request, res: Response) => {
       res.sendSuccess(res, { show: false });
     }
   } catch (error: any) {
-    console.error(error);
+    console.log(error);
     return res.sendError(res, error.message, error);
   }
 };
@@ -4074,7 +4074,6 @@ const _getGinnerProcessForwardChainData = async (
                   `);
 
 
-            console.log(spinProcess)
             if(spinProcess && spinProcess.length > 0){
               const [spinnerChartData] = await Promise.all(
                 spinProcess?.map(async (spin: any) => {
@@ -4084,8 +4083,6 @@ const _getGinnerProcessForwardChainData = async (
                 })
               );
               el.spin = spinnerChartData
-              console.log(spinnerChartData)
-
             }
           return el;
         })
@@ -4094,33 +4091,10 @@ const _getGinnerProcessForwardChainData = async (
       
       allGinData = allGinData.concat(ginWithTransactions);
     }
-    console.log(allGinData)
     let formattedData: any = {};
     let obj: any ={};
     obj.gnr_name = allGinData && allGinData.length > 0 ?  [...new Set(allGinData.map((el: any) => el.ginner.name))].join(',') : "";
     obj.spin = allGinData && allGinData.length > 0 ? allGinData.flatMap(item => item.spin) : []
-    console.log("obj",obj)
-
-    // allGinData.forEach((el: any) => {
-    //   el.transaction.forEach((tx: any) => {
-    //     if (!formattedData[tx.farmer.farmGroup_id]) {
-    //       formattedData[tx.farmer.farmGroup_id] = {
-    //         farm_name: tx.farmer.farmGroup.name,
-    //         villages: [],
-    //       };
-    //     }
-
-    //     const village_name = tx.farmer.village.village_name;
-    //     if (!formattedData[tx.farmer.farmGroup_id].villages.includes(village_name)) {
-    //       formattedData[tx.farmer.farmGroup_id].villages.push(village_name);
-    //     }
-    //   });
-    // });
-
-    // formattedData = Object.keys(formattedData).map((key: any) => {
-    //   return formattedData[key];
-    // });
-    // obj.transaction = formattedData ? formattedData : [];
 
     return formatForwardChainDataGinner(reelLotNo, obj);
   } catch (error) {

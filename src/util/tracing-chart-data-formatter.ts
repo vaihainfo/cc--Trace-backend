@@ -272,6 +272,20 @@ export const formatForwardChainDataKnitter = (title: any, data: any) : any => {
     return treeData;
 }
 
+export const formatForwardChainDataWeaver = (title: any, data: any) : any => {
+    let treeData = {
+        name: data?.reel_lot_no,
+        processor_name: data?.weaver?.name,
+        img_type: 'weaver_image',
+        type: 'Weaver',
+        width: 300,
+        height: 100,
+        isRoot: true,
+        children: data?.garmentChart?.map((el:any) => el??[])
+    };
+    return treeData;
+}
+
 
 export const formatForwardChainDataGarment = (reelLotNo: any, data: any): any => {
     let treeData = {
