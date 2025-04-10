@@ -63,6 +63,7 @@ import DyingFabricSelection from "../../models/dying-fabric-selection.model";
 import Country from "../../models/country.model";
 import GinHeap from "../../models/gin-heap.model";
 import GinToGinSale from "../../models/gin-to-gin-sale.model";
+import District from "../../models/district.model";
 
 const fetchBaleProcess = async (req: Request, res: Response) => {
   const searchTerm = req.query.search || "";
@@ -7418,6 +7419,8 @@ const fetchKnitterYarnPagination = async (req: Request, res: Response) => {
     }
 
     whereCondition["$sales.knitter_id$"] = { [Op.ne]: null };
+    whereCondition["$sales.knitter_id$"] = { [Op.ne]: 0 };
+    whereCondition["$sales.knitter.id$"] = { [Op.ne]: null };
     whereCondition["$sales.status$"] = "Sold";
 
     if (knitterId) {
@@ -7456,17 +7459,31 @@ const fetchKnitterYarnPagination = async (req: Request, res: Response) => {
       {
         model: Knitter,
         as: "knitter",
-        attributes: ["id", "name"],
+        attributes: ["id", "name", "address"],
+        include: [
+          {
+            model: Country,
+            as: "country",
+          },
+          {
+            model: State,
+            as: "state",
+          },
+        ],
+        
       },
+      
+      
+
     ];
     //fetch data with pagination
-
     const { count, rows }: any = await SpinProcessYarnSelection.findAndCountAll(
       {
         attributes: [
           [Sequelize.literal('"sales"."id"'), "sales_id"],
           [Sequelize.literal('"sales"."date"'), "date"],
           [Sequelize.literal('"sales"."accept_date"'), "accept_date"],
+          [Sequelize.literal('Extract(DAY FROM ("sales"."accept_date"- "sales"."date"))'), "no_of_days"],
           [Sequelize.literal('"sales"."createdAt"'), "createdAt"],
           [Sequelize.col('"sales"."season"."name"'), "season_name"],
           [Sequelize.col('"sales"."season"."id"'), "season_id"],
@@ -7478,6 +7495,8 @@ const fetchKnitterYarnPagination = async (req: Request, res: Response) => {
           [Sequelize.col('"sales"."buyer_id"'), "buyer_id"],
           [Sequelize.col('"sales"."knitter_id"'), "knitter_id"],
           [Sequelize.col('"sales"."knitter"."name'), "knitter"],
+          [Sequelize.col('"sales"."knitter"."country"."county_name"'), "country"],
+          [Sequelize.col('"sales"."knitter"."state"."state_name"'), "state"],
           [Sequelize.col('"sales"."weaver"."name'), "weaver"],
           [Sequelize.literal('"sales"."total_qty"'), "total_qty"],
           [Sequelize.literal('"sales"."invoice_no"'), "invoice_no"],
@@ -7533,8 +7552,10 @@ const fetchKnitterYarnPagination = async (req: Request, res: Response) => {
           "sales.weaver.id",
           "sales.knitter.id",
           "sales.program.id",
+          "sales.knitter.country.id",
+          "sales.knitter.state.id",
         ],
-        order: [["sales_id", "desc"]],
+        order: [["knitter", "asc"]],
         offset: offset,
         limit: limit,
       }
@@ -7635,6 +7656,8 @@ const exportKnitterYarn = async (req: Request, res: Response) => {
       whereCondition["$sales.program_id$"] = { [Op.in]: idArray };
     }
     whereCondition["$sales.knitter_id$"] = { [Op.ne]: null };
+    whereCondition["$sales.knitter_id$"] = { [Op.ne]: 0 };
+    whereCondition["$sales.knitter.id$"] = { [Op.ne]: null };
     whereCondition["$sales.status$"] = "Sold";
 
     if (knitterId) {
@@ -7654,16 +7677,19 @@ const exportKnitterYarn = async (req: Request, res: Response) => {
     // Create the excel workbook file
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet("Sheet1");
-    worksheet.mergeCells("A1:L1");
+    /*worksheet.mergeCells("A1:L1");
     const mergedCell = worksheet.getCell("A1");
     mergedCell.value = "CottonConnect | Knitter Yarn Receipt Report";
     mergedCell.font = { bold: true };
-    mergedCell.alignment = { horizontal: "center", vertical: "middle" };
+    mergedCell.alignment = { horizontal: "center", vertical: "middle" }; */
     // Set bold font for header row
     const headerRow = worksheet.addRow([
       "Sr No.",
+      "Country",
+      "State",
       "Date of Transaction Receipt",
       "Date",
+      "No of Days",
       "Spinner Name",
       "Knitter Unit Name",
       "Invoice Number",
@@ -7705,6 +7731,18 @@ const exportKnitterYarn = async (req: Request, res: Response) => {
         model: Knitter,
         as: "knitter",
         attributes: ["id", "name"],
+        include: [
+          {
+            model: Country,
+            as: "country",
+            attributes: ["id", "county_name"], 
+          },
+          {
+            model: State,
+            as: "state",
+            attributes: ["id", "state_name"], 
+          },
+        ],
       },
     ];
     const { count, rows }: any = await SpinProcessYarnSelection.findAndCountAll(
@@ -7712,7 +7750,8 @@ const exportKnitterYarn = async (req: Request, res: Response) => {
         attributes: [
           [Sequelize.literal('"sales"."id"'), "sales_id"],
           [Sequelize.literal('"sales"."date"'), "date"],
-          [Sequelize.literal('"sales"."accept_date"'), "accept_date"],
+          [Sequelize.literal('"sales"."createdAt"'), "createdAt"],
+          [Sequelize.literal('Extract(DAY FROM ("sales"."createdAt"- "sales"."date"))'), "no_of_days"],
           [Sequelize.col('"sales"."season"."name"'), "season_name"],
           [Sequelize.col('"sales"."season"."id"'), "season_id"],
           [Sequelize.col('"sales"."spinner"."id"'), "spinner_id"],
@@ -7723,6 +7762,8 @@ const exportKnitterYarn = async (req: Request, res: Response) => {
           [Sequelize.col('"sales"."buyer_id"'), "buyer_id"],
           [Sequelize.col('"sales"."knitter_id"'), "knitter_id"],
           [Sequelize.col('"sales"."knitter"."name'), "knitter"],
+          [Sequelize.col('"sales"."knitter"."country"."county_name"'), "country"],
+          [Sequelize.col('"sales"."knitter"."state"."state_name"'), "state"],
           [Sequelize.col('"sales"."weaver"."name'), "weaver"],
           [Sequelize.literal('"sales"."total_qty"'), "total_qty"],
           [Sequelize.literal('"sales"."invoice_no"'), "invoice_no"],
@@ -7781,8 +7822,10 @@ const exportKnitterYarn = async (req: Request, res: Response) => {
           "sales.weaver.id",
           "sales.knitter.id",
           "sales.program.id",
+          "sales.knitter.country.id",
+          "sales.knitter.state.id",
         ],
-        order: [["sales_id", "desc"]],
+        order: [["knitter", "asc"]],
         offset: offset,
         limit: limit,
       }
@@ -7801,14 +7844,22 @@ const exportKnitterYarn = async (req: Request, res: Response) => {
       return map;
     }, {});
 
+    let totals = {
+      boxes:0,
+      total:0,
+    };
+
     // Append data to worksheet
     for await (const [index, item] of rows.entries()) {
-      const rowValues = Object.values({
+      const rowValues = {
         index: index + 1,
-        accept_date: item.dataValues.accept_date
-          ? item.dataValues.accept_date
+        country: item.dataValues.country ? item.dataValues.country : "",
+        state: item.dataValues.state ? item.dataValues.state : "",
+        createdAt: item.dataValues.createdAt
+          ? item.dataValues.createdAt
           : "",
         date: item.dataValues.date ? item.dataValues.date : "",
+        no_of_days: item.dataValues.no_of_days ? Number(item.dataValues.no_of_days) : "",
         spinner: item.dataValues.spinner ? item.dataValues.spinner : "",
         buyer_id: item.dataValues.knitter ? item.dataValues.knitter : "",
         invoice: item.dataValues.invoice_no ? item.dataValues.invoice_no : "",
@@ -7818,15 +7869,50 @@ const exportKnitterYarn = async (req: Request, res: Response) => {
         boxes: item.dataValues.no_of_boxes ? item.dataValues.no_of_boxes : "",
         boxId: item.dataValues.box_ids ? item.dataValues.box_ids : "",
         total: item.dataValues.yarn_weight,
-      });
-      worksheet.addRow(rowValues);
+      };
+
+      totals.boxes+= Number(rowValues.boxes); 
+      totals.total+= Number(rowValues.total); 
+      
+      worksheet.addRow(Object.values(rowValues));
     }
+
+    const rowValues = {
+      index: "",
+      country: "",
+      state: "",
+      createdAt: "",
+      date: "",
+      no_of_days: "",
+      spinner: "",
+      buyer_id: "",
+      
+      invoice: "",
+      reelLot: "",
+      lotNo: "",
+      count: "Total",
+      boxes: totals.boxes,
+      boxId: "",
+      total: totals.total,
+    };
+    
+    worksheet.addRow(Object.values(rowValues)).eachCell(cell=> cell.font = {bold: true});
+    // Auto-adjust column widths based on content
+
+    // Define a border style
+    const borderStyle = {
+      top: { style: "thin" },
+      bottom: { style: "thin" },
+      left: { style: "thin" },
+      right: { style: "thin" },
+    }; 
     // Auto-adjust column widths based on content
     worksheet.columns.forEach((column: any) => {
       let maxCellLength = 0;
       column.eachCell({ includeEmpty: true }, (cell: any) => {
         const cellLength = (cell.value ? cell.value.toString() : "").length;
         maxCellLength = Math.max(maxCellLength, cellLength);
+        cell.border = borderStyle;
       });
       column.width = Math.min(14, maxCellLength + 2); // Limit width to 30 characters
     });
@@ -7939,6 +8025,18 @@ const fetchKnitterYarnProcess = async (req: Request, res: Response) => {
         model: Knitter,
         as: "knitter",
         attributes: ["id", "name", "address"],
+        include: [
+          {
+            model: Country,
+            as: "country",
+            attributes: ["id", "county_name"],
+          },
+          {
+            model: State,
+            as: "state",
+            attributes: ["id", "state_name"],
+          },
+        ],
       },
       {
         model: Season,
@@ -7955,7 +8053,7 @@ const fetchKnitterYarnProcess = async (req: Request, res: Response) => {
     const { count, rows } = await KnitProcess.findAndCountAll({
       where: whereCondition,
       include: include,
-      order: [["id", "desc"]],
+      order: [[Sequelize.literal('TRIM("knitter"."name")'), "ASC"]],
     });
 
     let data = [];
@@ -8087,16 +8185,19 @@ const exportKnitterYarnProcess = async (req: Request, res: Response) => {
     // Create the excel workbook file
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet("Sheet1");
-    worksheet.mergeCells("A1:Q1");
+    /*worksheet.mergeCells("A1:Q1");
     const mergedCell = worksheet.getCell("A1");
     mergedCell.value = "CottonConnect | Knitter Yarn Process Report";
     mergedCell.font = { bold: true };
-    mergedCell.alignment = { horizontal: "center", vertical: "middle" };
+    mergedCell.alignment = { horizontal: "center", vertical: "middle" }; */
     // Set bold font for header row
     const headerRow = worksheet.addRow([
       "Sr No.",
+      "Country",
+      "State",
       "Date of Process",
       "Date",
+      "No of Days",
       "Fabric Production Start Date",
       "Fabric Production End Date",
       "Knitter Unit Name",
@@ -8119,6 +8220,16 @@ const exportKnitterYarnProcess = async (req: Request, res: Response) => {
         model: Knitter,
         as: "knitter",
         attributes: ["id", "name", "address"],
+        include: [
+                {
+                  model: Country,
+                  as: "country",
+                },
+                {
+                  model: State,
+                  as: "state",
+                },
+        ],
       },
       {
         model: Season,
@@ -8135,7 +8246,7 @@ const exportKnitterYarnProcess = async (req: Request, res: Response) => {
     const { count, rows } = await KnitProcess.findAndCountAll({
       where: whereCondition,
       include: include,
-      order: [["id", "desc"]],
+      order: [[Sequelize.literal('LOWER(TRIM("knitter"."name"))'), "ASC"]],
     });
 
     let data = [];
@@ -8171,12 +8282,31 @@ const exportKnitterYarnProcess = async (req: Request, res: Response) => {
 
     let result = data.slice(offset, offset + limit);
 
+    let totals = {
+      noOfRolls:0,
+      fabricWeight:0,
+      total_yarn:0,
+      netWeight:0
+    };
+
+    const toDateOnly = (dateStr: string) => {
+      const date = new Date(dateStr);
+      date.setHours(0, 0, 0, 0); 
+      return date.getTime(); 
+    };
+
     // Append data to worksheet
     for await (const [index, item] of result.entries()) {
-      const rowValues = Object.values({
+      const rowValues = {
         index: index + 1,
+        country: item.knitter?.country?.county_name || "",
+        state: item.knitter?.state?.state_name || "",
         accept_date: item.createdAt ? item.createdAt : "",
         date: item.date ? item.date : "",
+        no_of_days: item.createdAt && item.date ? Math.floor(
+          (toDateOnly(item.createdAt) - toDateOnly(item.date)) /
+            (1000 * 60 * 60 * 24)
+        ) : "",
         from_date: item.from_date ? item.from_date : "",
         to_date: item.to_date ? item.to_date : "",
         knitter: item.knitter ? item.knitter.name : "",
@@ -8187,21 +8317,63 @@ const exportKnitterYarnProcess = async (req: Request, res: Response) => {
         reelLot: item.reel_lot_no ? item.reel_lot_no : "",
         fabricType: item.fabricType ? item.fabricType : "",
         fabricWeight: item.fabricWeight ? item.fabricWeight : "",
-        fabricGsm: item.fabricGsm ? Number(item.fabricGsm) : 0,
+        fabricGsm: item.fabricGsm ? (item.fabricGsm) : "",
         job_details_garment: item.job_details_garment
           ? item.job_details_garment
           : "",
         total_yarn: item.total_yarn_qty ? item.total_yarn_qty : "",
-        netWeight: item.total_fabric_weight ? item.total_fabric_weight : "",
-      });
-      worksheet.addRow(rowValues);
+        netWeight: item.total_fabric_weight ? item.total_fabric_weight : 0,
+      };
+
+      totals.noOfRolls+= Number(rowValues.noOfRolls); 
+      totals.fabricWeight+= Number(rowValues.fabricWeight); 
+      totals.total_yarn+= Number(rowValues.total_yarn);
+      totals.netWeight+= Number(rowValues.netWeight);
+
+      
+      worksheet.addRow(Object.values(rowValues));
     }
+
+    const rowValues = {
+      index: "",
+      accept_date:"",
+        date:  "",
+        no_of_days: "",
+        from_date:  "",
+        to_date: "",
+        weaver: "",
+        country:  "",
+        state: "",
+        garmentOrderRef:  "",
+        brandOrderRef: "Total",
+        noOfRolls:  totals.noOfRolls,
+        lotNo: "",
+        reelLot: "",
+        fabricType: "",
+        fabricWeight: totals.fabricWeight,
+        fabricGsm: "",
+        job_details_garment: "",
+        total_yarn: totals.total_yarn,
+        netWeight: totals.netWeight,
+    };
+   
+    worksheet.addRow(Object.values(rowValues)).eachCell(cell=> cell.font = {bold: true});
+
+    // Define a border style
+    const borderStyle = {
+      top: { style: "thin" },
+      bottom: { style: "thin" },
+      left: { style: "thin" },
+      right: { style: "thin" },
+    };
+
     // Auto-adjust column widths based on content
     worksheet.columns.forEach((column: any) => {
       let maxCellLength = 0;
       column.eachCell({ includeEmpty: true }, (cell: any) => {
         const cellLength = (cell.value ? cell.value.toString() : "").length;
         maxCellLength = Math.max(maxCellLength, cellLength);
+        cell.border = borderStyle;
       });
       column.width = Math.min(14, maxCellLength + 2); // Limit width to 30 characters
     });
@@ -8316,6 +8488,16 @@ const fetchKnitterSalesPagination = async (req: Request, res: Response) => {
         model: Knitter,
         as: "knitter",
         attributes: ["id", "name", "address"],
+        include: [
+          {
+            model: Country,
+            as: "country",
+          },
+          {
+            model: State,
+            as: "state",
+          },
+        ],
       },
       {
         model: Season,
@@ -8344,10 +8526,13 @@ const fetchKnitterSalesPagination = async (req: Request, res: Response) => {
         [Sequelize.literal('"sales"."id"'), "sales_id"],
         [Sequelize.literal('"sales"."createdAt"'), "createdAt"],
         [Sequelize.literal('"sales"."date"'), "date"],
+        [Sequelize.literal('Extract(DAY FROM ("sales"."createdAt"- "sales"."date"))'), "no_of_days"],
         [Sequelize.col('"sales"."season"."name"'), "season_name"],
         [Sequelize.col('"sales"."season"."id"'), "season_id"],
         [Sequelize.col('"sales"."knitter"."id"'), "knitter_id"],
         [Sequelize.col('"sales"."knitter"."name"'), "knitter"],
+        [Sequelize.col('"sales"."knitter"."country"."county_name"'), "country"],
+        [Sequelize.col('"sales"."knitter"."state"."state_name"'), "state"],
         [Sequelize.col('"sales"."program"."program_name"'), "program"],
         [Sequelize.col('"sales"."garment_order_ref"'), "garment_order_ref"],
         [Sequelize.col('"sales"."brand_order_ref"'), "brand_order_ref"],
@@ -8381,20 +8566,23 @@ const fetchKnitterSalesPagination = async (req: Request, res: Response) => {
           model: KnitSales,
           as: "sales",
           include: include,
+          required: true,
           attributes: [],
         },
         {
           model: KnitProcess,
           attributes: [],
+          required: true,
           as: "process",
         },
         {
           model: KnitFabric,
           attributes: [],
+          required: true,
           as: "knitfabric",
         },
       ],
-      order: [["sales_id", "desc"]],
+      order: [["knitter", "ASC"]],
       offset: offset,
       limit: limit,
     });
@@ -8528,16 +8716,19 @@ const exportKnitterSale = async (req: Request, res: Response) => {
     // Create the excel workbook file
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet("Sheet1");
-    worksheet.mergeCells("A1:K1");
+   /* worksheet.mergeCells("A1:K1");
     const mergedCell = worksheet.getCell("A1");
     mergedCell.value = "CottonConnect | Knitter Fabric Sales Report";
     mergedCell.font = { bold: true };
-    mergedCell.alignment = { horizontal: "center", vertical: "middle" };
+    mergedCell.alignment = { horizontal: "center", vertical: "middle" }; */
     // Set bold font for header row
     const headerRow = worksheet.addRow([
       "Sr No.",
+      "Country",
+      "State",
       "Date of Sale ",
       "Date",
+      "No of Days",
       "Knitter Name",
       "Sold To",
       "Invoice Number",
@@ -8553,6 +8744,18 @@ const exportKnitterSale = async (req: Request, res: Response) => {
         model: Knitter,
         as: "knitter",
         attributes: ["id", "name", "address"],
+        include: [
+        {
+          model: Country,
+          as: "country",
+          attributes: ["id", "county_name"], 
+        },
+        {
+          model: State,
+          as: "state",
+          attributes: ["id", "state_name"], 
+        },
+      ],
       },
       {
         model: Season,
@@ -8581,10 +8784,13 @@ const exportKnitterSale = async (req: Request, res: Response) => {
         [Sequelize.literal('"sales"."id"'), "sales_id"],
         [Sequelize.literal('"sales"."createdAt"'), "createdAt"],
         [Sequelize.literal('"sales"."date"'), "date"],
+        [Sequelize.literal('Extract(DAY FROM ("sales"."createdAt"- "sales"."date"))'), "no_of_days"],
         [Sequelize.col('"sales"."season"."name"'), "season_name"],
         [Sequelize.col('"sales"."season"."id"'), "season_id"],
         [Sequelize.col('"sales"."knitter"."id"'), "knitter_id"],
         [Sequelize.col('"sales"."knitter"."name"'), "knitter"],
+        [Sequelize.col('"sales"."knitter"."country"."county_name"'), "country"],
+        [Sequelize.col('"sales"."knitter"."state"."state_name"'), "state"],
         [Sequelize.col('"sales"."program"."program_name"'), "program"],
         [Sequelize.col('"sales"."garment_order_ref"'), "garment_order_ref"],
         [Sequelize.col('"sales"."brand_order_ref"'), "brand_order_ref"],
@@ -8617,21 +8823,24 @@ const exportKnitterSale = async (req: Request, res: Response) => {
         {
           model: KnitSales,
           as: "sales",
+          required: true,
           include: include,
           attributes: [],
         },
         {
           model: KnitProcess,
           attributes: [],
+          required: true,
           as: "process",
         },
         {
           model: KnitFabric,
           attributes: [],
+          required: true,
           as: "knitfabric",
         },
       ],
-      order: [["sales_id", "desc"]],
+      order: [["knitter", "ASC"]],
       offset: offset,
       limit: limit,
       raw: true
@@ -8656,12 +8865,19 @@ const exportKnitterSale = async (req: Request, res: Response) => {
       }
     }
 
+    let totals = {
+      fabric_weight:0,
+      total_fabric_weight:0,
+    };
     // Append data to worksheet
     for await (const [index, item] of rows.entries()) {
-      const rowValues = Object.values({
+      const rowValues = {
         index: index + 1,
+        country: item.country ? item.country : "",
+        state: item.state ? item.state : "",
         createdAt: item.createdAt ? item.createdAt : "",
         date: item.date ? item.date : "",
+        no_of_days: item.no_of_days ? Number(item.no_of_days) : "",
         knitter: item.knitter ? item.knitter : "",
         buyer: item.garment
           ? item.garment
@@ -8676,15 +8892,48 @@ const exportKnitterSale = async (req: Request, res: Response) => {
           : "NA",
         fabric_weight: item.net_weight ? item.net_weight : "",
         total_fabric_weight: item.total_qty ? item.total_qty : "",
-      });
-      worksheet.addRow(rowValues);
+      };
+
+      totals.fabric_weight+= Number(rowValues.fabric_weight); 
+      totals.total_fabric_weight+= Number(rowValues.total_fabric_weight); 
+      
+      
+      worksheet.addRow(Object.values(rowValues));
     }
+
+    const rowValues = {
+      index: "",
+        createdAt: "",
+        country:"",
+        state: "",
+        date: "",
+        no_of_days: "",
+        weaver: "",
+        buyer:"" ,
+        invoice: "",
+        lotNo:"",
+        fabrictype:  "",
+        transaction_agent: "Total",
+        fabric_weight: totals.fabric_weight,
+        total_fabric_weight:  totals.total_fabric_weight,
+    };
+   
+    worksheet.addRow(Object.values(rowValues)).eachCell(cell=> cell.font = {bold: true});
+
+    // Define a border style
+    const borderStyle = {
+      top: { style: "thin" },
+      bottom: { style: "thin" },
+      left: { style: "thin" },
+      right: { style: "thin" },
+    };
     // Auto-adjust column widths based on content
     worksheet.columns.forEach((column: any) => {
       let maxCellLength = 0;
       column.eachCell({ includeEmpty: true }, (cell: any) => {
         const cellLength = (cell.value ? cell.value.toString() : "").length;
         maxCellLength = Math.max(maxCellLength, cellLength);
+        cell.border = borderStyle;
       });
       column.width = Math.min(14, maxCellLength + 2); // Limit width to 30 characters
     });
@@ -8771,6 +9020,8 @@ const fetchWeaverYarnPagination = async (req: Request, res: Response) => {
       whereCondition["$sales.program_id$"] = { [Op.in]: idArray };
     }
     whereCondition["$sales.buyer_id$"] = { [Op.ne]: null };
+    whereCondition["$sales.buyer_id$"] = { [Op.ne]: 0 };
+    whereCondition["$sales.weaver.id$"] = { [Op.ne]: null };
     whereCondition["$sales.status$"] = "Sold";
 
     if (weaverId) {
@@ -8813,11 +9064,22 @@ const fetchWeaverYarnPagination = async (req: Request, res: Response) => {
         model: Weaver,
         as: "weaver",
         attributes: ["id", "name"],
+        include: [
+          {
+            model: Country,
+            as: "country",
+          },
+          {
+            model: State,
+            as: "state",
+          },
+        ],
       },
       {
         model: Knitter,
         as: "knitter",
         attributes: ["id", "name"],
+       
       },
     ];
     //fetch data with pagination
@@ -8829,6 +9091,7 @@ const fetchWeaverYarnPagination = async (req: Request, res: Response) => {
           [Sequelize.literal('"sales"."date"'), "date"],
           [Sequelize.literal('"sales"."accept_date"'), "accept_date"],
           [Sequelize.literal('"sales"."createdAt"'), "createdAt"],
+          [Sequelize.literal('Extract(DAY FROM ("sales"."createdAt"- "sales"."date"))'), "no_of_days"],
           [Sequelize.col('"sales"."season"."name"'), "season_name"],
           [Sequelize.col('"sales"."season"."id"'), "season_id"],
           [Sequelize.col('"sales"."spinner"."id"'), "spinner_id"],
@@ -8838,8 +9101,10 @@ const fetchWeaverYarnPagination = async (req: Request, res: Response) => {
           [Sequelize.col('"sales"."buyer_type"'), "buyer_type"],
           [Sequelize.col('"sales"."buyer_id"'), "buyer_id"],
           [Sequelize.col('"sales"."knitter_id"'), "knitter_id"],
-          [Sequelize.col('"sales"."knitter"."name'), "knitter"],
+          [Sequelize.col('"sales"."knitter"."name"'), "knitter"],
           [Sequelize.col('"sales"."weaver"."name'), "weaver"],
+          [Sequelize.col('"sales"."weaver"."country"."county_name"'), "country"],
+          [Sequelize.col('"sales"."weaver"."state"."state_name"'), "state"],
           [Sequelize.literal('"sales"."total_qty"'), "total_qty"],
           [Sequelize.literal('"sales"."invoice_no"'), "invoice_no"],
           [Sequelize.literal('"sales"."batch_lot_no"'), "batch_lot_no"],
@@ -8899,8 +9164,10 @@ const fetchWeaverYarnPagination = async (req: Request, res: Response) => {
           "sales.weaver.id",
           "sales.knitter.id",
           "sales.program.id",
+          "sales.weaver.country.id",
+          "sales.weaver.state.id",
         ],
-        order: [["sales_id", "desc"]],
+        order: [["weaver", "ASC"]],
         offset: offset,
         limit: limit,
       }
@@ -8999,6 +9266,8 @@ const exportWeaverYarn = async (req: Request, res: Response) => {
       whereCondition["$sales.program_id$"] = { [Op.in]: idArray };
     }
     whereCondition["$sales.buyer_id$"] = { [Op.ne]: null };
+    whereCondition["$sales.buyer_id$"] = { [Op.ne]: 0 };
+    whereCondition["$sales.weaver.id$"] = { [Op.ne]: null };
     whereCondition["$sales.status$"] = "Sold";
 
     if (weaverId) {
@@ -9019,16 +9288,19 @@ const exportWeaverYarn = async (req: Request, res: Response) => {
     // Create the excel workbook file
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet("Sheet1");
-    worksheet.mergeCells("A1:L1");
+   /* worksheet.mergeCells("A1:L1");
     const mergedCell = worksheet.getCell("A1");
     mergedCell.value = "CottonConnect | Weaver Yarn Receipt Report";
     mergedCell.font = { bold: true };
-    mergedCell.alignment = { horizontal: "center", vertical: "middle" };
+    mergedCell.alignment = { horizontal: "center", vertical: "middle" }; */
     // Set bold font for header row
     const headerRow = worksheet.addRow([
       "Sr No.",
+      "Country",
+      "State",
       "Date of Transaction Receipt",
       "Date",
+      "No of Days",
       "Spinner Name",
       "Weaving Unit Name",
       "Invoice Number",
@@ -9065,6 +9337,18 @@ const exportWeaverYarn = async (req: Request, res: Response) => {
         model: Weaver,
         as: "weaver",
         attributes: ["id", "name"],
+        include: [
+          {
+            model: Country,
+            as: "country",
+            attributes: ["id", "county_name"], 
+          },
+          {
+            model: State,
+            as: "state",
+            attributes: ["id", "state_name"], 
+          },
+        ],
       },
       {
         model: Knitter,
@@ -9074,12 +9358,15 @@ const exportWeaverYarn = async (req: Request, res: Response) => {
     ];
     //fetch data with pagination
 
+    
+
     const { count, rows }: any = await SpinProcessYarnSelection.findAndCountAll(
       {
         attributes: [
           [Sequelize.literal('"sales"."id"'), "sales_id"],
           [Sequelize.literal('"sales"."date"'), "date"],
-          [Sequelize.literal('"sales"."accept_date"'), "accept_date"],
+          [Sequelize.literal('"sales"."createdAt"'), "createdAt"],
+          [Sequelize.literal('Extract(DAY FROM ("sales"."createdAt"- "sales"."date"))'), "no_of_days"],
           [Sequelize.col('"sales"."season"."name"'), "season_name"],
           [Sequelize.col('"sales"."season"."id"'), "season_id"],
           [Sequelize.col('"sales"."spinner"."id"'), "spinner_id"],
@@ -9091,6 +9378,8 @@ const exportWeaverYarn = async (req: Request, res: Response) => {
           [Sequelize.col('"sales"."knitter_id"'), "knitter_id"],
           [Sequelize.col('"sales"."knitter"."name'), "knitter"],
           [Sequelize.col('"sales"."weaver"."name'), "weaver"],
+          [Sequelize.col('"sales"."weaver"."country"."county_name"'), "country"],
+          [Sequelize.col('"sales"."weaver"."state"."state_name"'), "state"],
           [Sequelize.literal('"sales"."total_qty"'), "total_qty"],
           [Sequelize.literal('"sales"."invoice_no"'), "invoice_no"],
           [Sequelize.literal('"sales"."batch_lot_no"'), "batch_lot_no"],
@@ -9148,7 +9437,9 @@ const exportWeaverYarn = async (req: Request, res: Response) => {
           "sales.weaver.id",
           "sales.knitter.id",
           "sales.program.id",
-        ], order: [["sales_id", "desc"]],
+          "sales.weaver.country.id",
+          "sales.weaver.state.id",
+        ], order: [["weaver", "asc"]],
         offset: offset,
         limit: limit,
       }
@@ -9166,34 +9457,73 @@ const exportWeaverYarn = async (req: Request, res: Response) => {
       map[yarnCount.id] = yarnCount.yarnCount_name;
       return map;
     }, {});
-
+    
+    let totals = {
+      boxes:0,
+      total:0,
+    };
     // Append data to worksheet
     for await (const [index, item] of rows.entries()) {
-
-      const rowValues = Object.values({
+      
+      const rowValues = {
         index: index + 1,
-        accept_date: item.dataValues.accept_date
-          ? item.dataValues.accept_date
-          : "",
+        country: item.dataValues.country ? item.dataValues.country : "",
+        state: item.dataValues.state ? item.dataValues.state : "",
+        createdAt: item.dataValues.createdAt ? item.dataValues.createdAt: "",
         date: item.dataValues.date ? item.dataValues.date : "",
+        no_of_days: item.dataValues.no_of_days ? Number(item.dataValues.no_of_days) : "",
         spinner: item.dataValues.spinner ? item.dataValues.spinner : "",
         buyer_id: item.dataValues.weaver ? item.dataValues.weaver : "",
         invoice: item.dataValues.invoice_no ? item.dataValues.invoice_no : "",
         reelLot: item.dataValues.reel_lot_no ? item.dataValues.reel_lot_no : "",
-        lotNo: item.dataValues.batch_lot_no ? item.dataValues.batch_lot_no : "",
         count: item.dataValues.yarn_count.map((id: number) => yarnCountMap[id] || null).join(", "),
+        lotNo: item.dataValues.batch_lot_no ? item.dataValues.batch_lot_no : "",
         boxes: item.dataValues.no_of_boxes ? item.dataValues.no_of_boxes : "",
         boxId: item.dataValues.box_ids ? item.dataValues.box_ids : "",
         total: item.dataValues.yarn_weight,
-      });
-      worksheet.addRow(rowValues);
+        
+      };
+      totals.boxes+= Number(rowValues.boxes); 
+      totals.total+= Number(rowValues.total); 
+      
+      worksheet.addRow(Object.values(rowValues));
     }
+  
+    const rowValues = {
+      index: "",
+      country: "",
+      state: "",
+      createdAt: "",
+      date: "",
+      no_of_days: "",
+      spinner: "",
+      buyer_id: "",
+      invoice: "",
+      reelLot: "",
+      lotNo: "",
+      count: "Total",
+      boxes: totals.boxes,
+      boxId: "",
+      total: totals.total,
+    };
+    
+    worksheet.addRow(Object.values(rowValues)).eachCell(cell=> cell.font = {bold: true});
     // Auto-adjust column widths based on content
+
+    // Define a border style
+    const borderStyle = {
+      top: { style: "thin" },
+      bottom: { style: "thin" },
+      left: { style: "thin" },
+      right: { style: "thin" },
+    }; 
+
     worksheet.columns.forEach((column: any) => {
       let maxCellLength = 0;
       column.eachCell({ includeEmpty: true }, (cell: any) => {
         const cellLength = (cell.value ? cell.value.toString() : "").length;
         maxCellLength = Math.max(maxCellLength, cellLength);
+        cell.border = borderStyle;
       });
       column.width = Math.min(14, maxCellLength + 2); // Limit width to 30 characters
     });
@@ -9299,6 +9629,16 @@ const fetchWeaverYarnProcess = async (req: Request, res: Response) => {
         model: Weaver,
         as: "weaver",
         attributes: ["id", "name", "address"],
+        include: [
+          {
+            model: Country,
+            as: "country",
+          },
+          {
+            model: State,
+            as: "state",
+          },
+        ],
       },
       {
         model: Season,
@@ -9315,7 +9655,7 @@ const fetchWeaverYarnProcess = async (req: Request, res: Response) => {
     const { count, rows } = await WeaverProcess.findAndCountAll({
       where: whereCondition,
       include: include,
-      order: [["id", "desc"]],
+      order: [[Sequelize.literal('TRIM("weaver"."name")'), "ASC"]],
     });
 
     let data = [];
@@ -9441,16 +9781,19 @@ const exportWeaverYarnProcess = async (req: Request, res: Response) => {
     // Create the excel workbook file
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet("Sheet1");
-    worksheet.mergeCells("A1:Q1");
+   /* worksheet.mergeCells("A1:Q1");
     const mergedCell = worksheet.getCell("A1");
     mergedCell.value = "CottonConnect | Weaver Yarn Process Report";
     mergedCell.font = { bold: true };
-    mergedCell.alignment = { horizontal: "center", vertical: "middle" };
+    mergedCell.alignment = { horizontal: "center", vertical: "middle" };*/
     // Set bold font for header row
     const headerRow = worksheet.addRow([
       "Sr No.",
+      "Country",
+      "State",
       "Date of Process",
       "Date",
+      "No of Days",
       "Fabric Production Start Date",
       "Fabric Production End Date",
       "Weaving Unit Name",
@@ -9473,6 +9816,18 @@ const exportWeaverYarnProcess = async (req: Request, res: Response) => {
         model: Weaver,
         as: "weaver",
         attributes: ["id", "name", "address"],
+        include: [
+          {
+            model: Country,
+            as: "country",
+            attributes: ["id", "county_name"], 
+          },
+          {
+            model: State,
+            as: "state",
+            attributes: ["id", "state_name"], 
+          },
+        ],
       },
       {
         model: Season,
@@ -9489,7 +9844,7 @@ const exportWeaverYarnProcess = async (req: Request, res: Response) => {
     const { count, rows } = await WeaverProcess.findAndCountAll({
       where: whereCondition,
       include: include,
-      order: [["id", "desc"]],
+      order: [[Sequelize.literal('LOWER(TRIM("weaver"."name"))'), "ASC"]],
     });
 
     let data = [];
@@ -9524,13 +9879,32 @@ const exportWeaverYarnProcess = async (req: Request, res: Response) => {
     }
 
     let result = data.slice(offset, offset + limit);
+    
+    let totals = {
+      noOfRolls:0,
+      fabricLength:0,
+      fabricGsm:0,
+      total_yarn:0,
+      netLength:0
+    };
 
+    const toDateOnly = (dateStr: string) => {
+      const date = new Date(dateStr);
+      date.setHours(0, 0, 0, 0); 
+      return date.getTime(); 
+    };
     // Append data to worksheet
     for await (const [index, item] of result.entries()) {
-      const rowValues = Object.values({
+      const rowValues = {
         index: index + 1,
+        country: item.weaver?.country?.county_name || "",
+        state: item.weaver?.state?.state_name || "",
         accept_date: item.createdAt ? item.createdAt : "",
         date: item.date ? item.date : "",
+        no_of_days: item.createdAt && item.date ? Math.floor(
+          (toDateOnly(item.createdAt) - toDateOnly(item.date)) /
+            (1000 * 60 * 60 * 24)
+        ) : "",
         from_date: item.from_date ? item.from_date : "",
         to_date: item.to_date ? item.to_date : "",
         weaver: item.weaver ? item.weaver.name : "",
@@ -9547,15 +9921,60 @@ const exportWeaverYarnProcess = async (req: Request, res: Response) => {
           : "",
         total_yarn: item.total_yarn_qty ? item.total_yarn_qty : "",
         netLength: item.total_fabric_length ? item.total_fabric_length : "",
-      });
-      worksheet.addRow(rowValues);
+      };
+    
+      totals.noOfRolls+= Number(rowValues.noOfRolls); 
+      totals.fabricLength+= Number(rowValues.fabricLength); 
+      totals.fabricGsm+= Number(rowValues.fabricGsm); 
+      totals.total_yarn+= Number(rowValues.total_yarn);
+      totals.netLength+= Number(rowValues.netLength);
+
+      
+      worksheet.addRow(Object.values(rowValues));
+      
     }
+
+    const rowValues = {
+      index: "",
+      country:  "",
+      state: "",
+      accept_date:"",
+      date:  "",
+      no_of_days: "",
+      from_date:  "",
+      to_date: "",
+      weaver: "",
+      
+      garmentOrderRef:  "",
+      brandOrderRef: "Total",
+      noOfRolls:  totals.noOfRolls,
+      lotNo: "",
+      reelLot: "",
+      fabricType: "",
+      fabricLength: totals.fabricLength,
+      fabricGsm: totals.fabricGsm,
+      job_details_garment: "",
+      total_yarn: totals.total_yarn,
+      netLength: totals.netLength,
+    };
+   
+    worksheet.addRow(Object.values(rowValues)).eachCell(cell=> cell.font = {bold: true});
+
+    // Define a border style
+    const borderStyle = {
+      top: { style: "thin" },
+      bottom: { style: "thin" },
+      left: { style: "thin" },
+      right: { style: "thin" },
+    };
+
     // Auto-adjust column widths based on content
     worksheet.columns.forEach((column: any) => {
       let maxCellLength = 0;
       column.eachCell({ includeEmpty: true }, (cell: any) => {
         const cellLength = (cell.value ? cell.value.toString() : "").length;
         maxCellLength = Math.max(maxCellLength, cellLength);
+        cell.border = borderStyle;
       });
       column.width = Math.min(14, maxCellLength + 2); // Limit width to 30 characters
     });
@@ -9664,6 +10083,16 @@ const fetchWeaverSalesPagination = async (req: Request, res: Response) => {
         model: Weaver,
         as: "weaver",
         attributes: ["id", "name", "address"],
+        include: [
+          {
+            model: Country,
+            as: "country",
+          },
+          {
+            model: State,
+            as: "state",
+          },
+        ],
       },
       {
         model: Season,
@@ -9694,10 +10123,13 @@ const fetchWeaverSalesPagination = async (req: Request, res: Response) => {
         [Sequelize.literal('"sales"."id"'), "sales_id"],
         [Sequelize.literal('"sales"."createdAt"'), "createdAt"],
         [Sequelize.literal('"sales"."date"'), "date"],
+        [Sequelize.literal('Extract(DAY FROM ("sales"."createdAt"- "sales"."date"))'), "no_of_days"],
         [Sequelize.col('"sales"."season"."name"'), "season_name"],
         [Sequelize.col('"sales"."season"."id"'), "season_id"],
         [Sequelize.col('"sales"."weaver"."id"'), "weaver_id"],
         [Sequelize.col('"sales"."weaver"."name"'), "weaver"],
+        [Sequelize.col('"sales"."weaver"."country"."county_name"'), "country"],
+        [Sequelize.col('"sales"."weaver"."state"."state_name"'), "state"],
         [Sequelize.col('"sales"."program"."program_name"'), "program"],
         [Sequelize.col('"sales"."garment_order_ref"'), "garment_order_ref"],
         [Sequelize.col('"sales"."brand_order_ref"'), "brand_order_ref"],
@@ -9730,21 +10162,24 @@ const fetchWeaverSalesPagination = async (req: Request, res: Response) => {
         {
           model: WeaverSales,
           as: "sales",
+          required: true,
           include: include,
           attributes: [],
         },
         {
           model: WeaverProcess,
           attributes: [],
+          required: true,
           as: "process",
         },
         {
           model: WeaverFabric,
           attributes: [],
+          required: true,
           as: "weaverfabric",
         },
       ],
-      order: [["sales_id", "desc"]],
+      order: [["weaver", "ASC"]],
       offset: offset,
       limit: limit,
     });
@@ -9890,16 +10325,19 @@ const exportWeaverSale = async (req: Request, res: Response) => {
     // Create the excel workbook file
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet("Sheet1");
-    worksheet.mergeCells("A1:K1");
+   /* worksheet.mergeCells("A1:K1");
     const mergedCell = worksheet.getCell("A1");
     mergedCell.value = "CottonConnect | Weaver Fabric Sales Report";
     mergedCell.font = { bold: true };
-    mergedCell.alignment = { horizontal: "center", vertical: "middle" };
+    mergedCell.alignment = { horizontal: "center", vertical: "middle" }; */
     // Set bold font for header row
     const headerRow = worksheet.addRow([
       "Sr No.",
+      "Country",
+      "State",
       "Date of Sale ",
       "Date",
+      "No of Days",
       "Weaver Name",
       "Sold To",
       "Invoice Number",
@@ -9915,6 +10353,18 @@ const exportWeaverSale = async (req: Request, res: Response) => {
         model: Weaver,
         as: "weaver",
         attributes: ["id", "name", "address"],
+        include: [
+          {
+            model: Country,
+            as: "country",
+            attributes: ["id", "county_name"], 
+          },
+          {
+            model: State,
+            as: "state",
+            attributes: ["id", "state_name"], 
+          },
+        ],
       },
       {
         model: Season,
@@ -9945,10 +10395,13 @@ const exportWeaverSale = async (req: Request, res: Response) => {
         [Sequelize.literal('"sales"."id"'), "sales_id"],
         [Sequelize.literal('"sales"."createdAt"'), "createdAt"],
         [Sequelize.literal('"sales"."date"'), "date"],
+        [Sequelize.literal('Extract(DAY FROM ("sales"."createdAt"- "sales"."date"))'), "no_of_days"],
         [Sequelize.col('"sales"."season"."name"'), "season_name"],
         [Sequelize.col('"sales"."season"."id"'), "season_id"],
         [Sequelize.col('"sales"."weaver"."id"'), "weaver_id"],
         [Sequelize.col('"sales"."weaver"."name"'), "weaver"],
+        [Sequelize.col('"sales"."weaver"."country"."county_name"'), "country"],
+        [Sequelize.col('"sales"."weaver"."state"."state_name"'), "state"],
         [Sequelize.col('"sales"."program"."program_name"'), "program"],
         [Sequelize.col('"sales"."garment_order_ref"'), "garment_order_ref"],
         [Sequelize.col('"sales"."brand_order_ref"'), "brand_order_ref"],
@@ -9981,21 +10434,24 @@ const exportWeaverSale = async (req: Request, res: Response) => {
         {
           model: WeaverSales,
           as: "sales",
+          required: true,
           include: include,
           attributes: [],
         },
         {
           model: WeaverProcess,
+          required: true,
           attributes: [],
           as: "process",
         },
         {
           model: WeaverFabric,
+          required: true,
           attributes: [],
           as: "weaverfabric",
         },
       ],
-      order: [["sales_id", "desc"]],
+      order: [["weaver", "ASC"]],
       offset: offset,
       limit: limit,
       raw: true
@@ -10020,12 +10476,19 @@ const exportWeaverSale = async (req: Request, res: Response) => {
       }
     }
 
+    let totals = {
+      fabric_length:0,
+      total_fabric_length:0,
+    };
     // Append data to worksheet
     for await (const [index, item] of rows.entries()) {
-      const rowValues = Object.values({
+      const rowValues = {
         index: index + 1,
+        country: item.country ? item.country : "",
+        state: item.state ? item.state : "",
         createdAt: item.createdAt ? item.createdAt : "",
         date: item.date ? item.date : "",
+        no_of_days: item.no_of_days ? Number(item.no_of_days) : "",
         weaver: item.weaver ? item.weaver : "",
         buyer: item.garment
           ? item.garment
@@ -10040,15 +10503,49 @@ const exportWeaverSale = async (req: Request, res: Response) => {
           : "NA",
         fabric_length: item.net_length ? item.net_length : "",
         total_fabric_length: item.total_qty ? item.total_qty : "",
-      });
-      worksheet.addRow(rowValues);
+      };
+      
+      totals.fabric_length+= Number(rowValues.fabric_length); 
+      totals.total_fabric_length+= Number(rowValues.total_fabric_length); 
+      
+      
+      worksheet.addRow(Object.values(rowValues));
     }
+
+    const rowValues = {
+      index: "",
+      country:"",
+      state: "",
+      createdAt: "",
+      date: "",
+      no_of_days: "",
+      weaver: "",
+      
+      buyer:"" ,
+      invoice: "",
+      lotNo:"",
+      fabrictype:  "",
+      transaction_agent: "Total",
+      fabric_length: totals.fabric_length,
+      total_fabric_length:  totals.total_fabric_length,
+    };
+   
+    worksheet.addRow(Object.values(rowValues)).eachCell(cell=> cell.font = {bold: true});
+
+    // Define a border style
+    const borderStyle = {
+      top: { style: "thin" },
+      bottom: { style: "thin" },
+      left: { style: "thin" },
+      right: { style: "thin" },
+    };
     // Auto-adjust column widths based on content
     worksheet.columns.forEach((column: any) => {
       let maxCellLength = 0;
       column.eachCell({ includeEmpty: true }, (cell: any) => {
         const cellLength = (cell.value ? cell.value.toString() : "").length;
         maxCellLength = Math.max(maxCellLength, cellLength);
+        cell.border = borderStyle;
       });
       column.width = Math.min(14, maxCellLength + 2); // Limit width to 30 characters
     });
@@ -10215,8 +10712,21 @@ const fetchGarmentFabricReceipt = async (req: Request, res: Response) => {
       {
         model: Garment,
         as: "buyer",
-        attributes: ["id", "name", "address"],
+        attributes: ["id", "name", "address", "state_id", "country_id"],
+        include: [
+          {
+            model: Country,
+            as: "country",
+            attributes: ["id", "county_name"], 
+          },
+          {
+            model: State,
+            as: "state",
+            attributes: ["id", "state_name"], 
+          },
+        ],
       },
+
     ];
 
     //fetch data with pagination
@@ -10227,6 +10737,7 @@ const fetchGarmentFabricReceipt = async (req: Request, res: Response) => {
           [Sequelize.literal('"sales"."id"'), "sales_id"],
           [Sequelize.literal('"sales"."accept_date"'), "accept_date"],
           [Sequelize.literal('"sales"."date"'), "date"],
+          [Sequelize.literal('Extract(DAY FROM ("sales"."accept_date"- "sales"."date"))'), "no_of_days"],
           [Sequelize.col('"sales"."createdAt"'), "createdAt"],
           [Sequelize.col('"sales"."season"."name"'), "season_name"],
           [Sequelize.col('"sales"."season"."id"'), "season_id"],
@@ -10239,6 +10750,8 @@ const fetchGarmentFabricReceipt = async (req: Request, res: Response) => {
           [Sequelize.col('"sales"."buyer_id"'), "garment_id"],
           [Sequelize.col('"sales"."fabric_id"'), "fabric_id"],
           [Sequelize.col('"sales"."buyer"."name"'), "garment"],
+          [Sequelize.col('"sales"."buyer"."country"."county_name"'), "country_name"], 
+          [Sequelize.col('"sales"."buyer"."state"."state_name"'), "state_name"], 
           [Sequelize.literal('"sales"."total_yarn_qty"'), "total_length_qty"],
           [Sequelize.literal('"sales"."invoice_no"'), "invoice_no"],
           [Sequelize.literal('"process"."batch_lot_no"'), "batch_lot_no"],
@@ -10292,6 +10805,7 @@ const fetchGarmentFabricReceipt = async (req: Request, res: Response) => {
           [Sequelize.literal('"sales"."id"'), "sales_id"],
           [Sequelize.literal('"sales"."accept_date"'), "accept_date"],
           [Sequelize.literal('"sales"."date"'), "date"],
+          [Sequelize.literal('Extract(DAY FROM ("sales"."accept_date"- "sales"."date"))'), "no_of_days"],
           [Sequelize.col('"sales"."season"."name"'), "season_name"],
           [Sequelize.col('"sales"."season"."id"'), "season_id"],
           [Sequelize.col('"sales"."knitter"."id"'), "knitter_id"],
@@ -10302,7 +10816,9 @@ const fetchGarmentFabricReceipt = async (req: Request, res: Response) => {
           [Sequelize.col('"sales"."buyer_type"'), "buyer_type"],
           [Sequelize.col('"sales"."buyer_id"'), "garment_id"],
           [Sequelize.col('"sales"."fabric_id"'), "fabric_id"],
-          [Sequelize.col('"sales"."buyer"."name"'), "garment"],
+          [Sequelize.col('"sales"."buyer"."name"'), "garment"],          
+          [Sequelize.col('"sales"."buyer"."country"."county_name"'), "country_name"],      
+          [Sequelize.col('"sales"."buyer"."state"."state_name"'), "state_name"], 
           [Sequelize.literal('"sales"."total_yarn_qty"'), "total_weight_qty"],
           [Sequelize.literal('"sales"."invoice_no"'), "invoice_no"],
           [Sequelize.literal('"process"."batch_lot_no"'), "batch_lot_no"],
@@ -10521,17 +11037,20 @@ const exportGarmentFabricReceipt = async (req: Request, res: Response) => {
     // Create the excel workbook file
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet("Sheet1");
-    worksheet.mergeCells("A1:L1");
+    /*worksheet.mergeCells("A1:L1");
     const mergedCell = worksheet.getCell("A1");
     mergedCell.value = "CottonConnect | Garment Fabric Fabric Receipt Report";
     mergedCell.font = { bold: true };
-    mergedCell.alignment = { horizontal: "center", vertical: "middle" };
+    mergedCell.alignment = { horizontal: "center", vertical: "middle" };*/
     // Set bold font for header row
     // Set bold font for header row
     const headerRow = worksheet.addRow([
       "Sr No.",
+      "Country",
+      "State",
       "Date of accept transaction",
       "Date",
+      "No. of Days",
       "Weave/Knit Unit",
       "Garment Processor Unit",
       "Invoice Number",
@@ -10557,11 +11076,30 @@ const exportGarmentFabricReceipt = async (req: Request, res: Response) => {
       {
         model: Garment,
         as: "buyer",
-        attributes: ["id", "name", "address"],
+        attributes: ["id", "name", "address", "state_id", "country_id"],
+        include: [
+          {
+            model: Country,
+            as: "country",
+            attributes: ["id", "county_name"], 
+          },
+          {
+            model: State,
+            as: "state",
+            attributes: ["id", "state_name"], 
+          },
+        ],
       },
     ];
 
     //fetch data with pagination
+
+    let totals = {
+      fabric_length:0,
+      total_fabric_length:0,
+      fabric_weight:0,
+      total_fabric_weight:0,
+    };
 
     let rows: any = await Promise.all([
       WeaverFabricSelection.findAll({
@@ -10569,6 +11107,7 @@ const exportGarmentFabricReceipt = async (req: Request, res: Response) => {
           [Sequelize.literal('"sales"."id"'), "sales_id"],
           [Sequelize.literal('"sales"."accept_date"'), "accept_date"],
           [Sequelize.literal('"sales"."date"'), "date"],
+          [Sequelize.literal('Extract(DAY FROM ("sales"."accept_date"- "sales"."date"))'), "no_of_days"],
           [Sequelize.col('"sales"."season"."name"'), "season_name"],
           [Sequelize.col('"sales"."season"."id"'), "season_id"],
           [Sequelize.col('"sales"."weaver"."id"'), "weaver_id"],
@@ -10580,6 +11119,8 @@ const exportGarmentFabricReceipt = async (req: Request, res: Response) => {
           [Sequelize.col('"sales"."buyer_id"'), "garment_id"],
           [Sequelize.col('"sales"."fabric_id"'), "fabric_id"],
           [Sequelize.col('"sales"."buyer"."name"'), "garment"],
+          [Sequelize.col('"sales"."buyer"."country"."county_name"'), "country_name"],
+          [Sequelize.col('"sales"."buyer"."state"."state_name"'), "state_name"],
           [Sequelize.literal('"sales"."total_yarn_qty"'), "total_length_qty"],
           [Sequelize.literal('"sales"."invoice_no"'), "invoice_no"],
           [Sequelize.literal('"process"."batch_lot_no"'), "batch_lot_no"],
@@ -10634,6 +11175,7 @@ const exportGarmentFabricReceipt = async (req: Request, res: Response) => {
           [Sequelize.literal('"sales"."id"'), "sales_id"],
           [Sequelize.literal('"sales"."accept_date"'), "accept_date"],
           [Sequelize.literal('"sales"."date"'), "date"],
+          [Sequelize.literal('Extract(DAY FROM ("sales"."accept_date"- "sales"."date"))'), "no_of_days"],
           [Sequelize.col('"sales"."season"."name"'), "season_name"],
           [Sequelize.col('"sales"."season"."id"'), "season_id"],
           [Sequelize.col('"sales"."knitter"."id"'), "knitter_id"],
@@ -10645,6 +11187,8 @@ const exportGarmentFabricReceipt = async (req: Request, res: Response) => {
           [Sequelize.col('"sales"."buyer_id"'), "garment_id"],
           [Sequelize.col('"sales"."fabric_id"'), "fabric_id"],
           [Sequelize.col('"sales"."buyer"."name"'), "garment"],
+          [Sequelize.col('"sales"."buyer"."country"."county_name"'), "country_name"],
+          [Sequelize.col('"sales"."buyer"."state"."state_name"'), "state_name"],
           [Sequelize.literal('"sales"."total_yarn_qty"'), "total_weight_qty"],
           [Sequelize.literal('"sales"."invoice_no"'), "invoice_no"],
           [Sequelize.literal('"process"."batch_lot_no"'), "batch_lot_no"],
@@ -10719,10 +11263,13 @@ const exportGarmentFabricReceipt = async (req: Request, res: Response) => {
     let result = data.slice(offset, offset + limit);
     // Append data to worksheet
     for await (const [index, item] of result.entries()) {
-      const rowValues = Object.values({
+      const rowValues = {
         index: index + 1,
+        country_name: item.country_name ? item.country_name : "",
+        state_name: item.state_name ? item.state_name : "",
         accept_date: item.accept_date ? item.accept_date : "",
         date: item.date ? item.date : "",
+        no_of_days: item.no_of_days ? Number(item.no_of_days) : "",
         weaver: item.weaver ? item.weaver : item.knitter ? item.knitter : "",
         buyer: item.garment ? item.garment : "",
         invoice: item.invoice_no ? item.invoice_no : "",
@@ -10731,16 +11278,52 @@ const exportGarmentFabricReceipt = async (req: Request, res: Response) => {
         fabric_length: item.net_length ? item.net_length : "",
         total_fabric_length: item.total_length_qty ? item.total_length_qty : "",
         fabric_weight: item.net_weight ? item.net_weight : "",
-        total_fabric_weight: item.total_weight_qty ? item.total_weight_qty : "",
-      });
-      worksheet.addRow(rowValues);
+        total_fabric_weight: item.total_weight_qty ? item.total_weight_qty : "",        
+      };
+
+      totals.fabric_length+= Number(rowValues.fabric_length); 
+      totals.total_fabric_length+= Number(rowValues.total_fabric_length); 
+      totals.fabric_weight+= Number(rowValues.fabric_weight); 
+      totals.total_fabric_weight+= Number(rowValues.total_fabric_weight); 
+      
+      worksheet.addRow(Object.values(rowValues));
     }
+
+    const rowValues = {
+      index:"",
+      country_name:"",
+      state_name:"",
+      accept_date:"",
+      date:"",
+      no_of_days:"",
+      weaver:"",
+      buyer:"",
+      invoice:"",
+      lotNo:"",
+      fabrictype:"Total",
+      fabric_length: totals.fabric_length,
+      total_fabric_length: totals.total_fabric_length,
+      fabric_weight: totals.fabric_weight,
+      total_fabric_weight: totals.total_fabric_weight,
+    };
+   
+    worksheet.addRow(Object.values(rowValues)).eachCell(cell=> cell.font = {bold: true});
+
+    // Define a border style
+    const borderStyle = {
+      top: { style: "thin" },
+      bottom: { style: "thin" },
+      left: { style: "thin" },
+      right: { style: "thin" },
+    };
+
     // Auto-adjust column widths based on content
     worksheet.columns.forEach((column: any) => {
       let maxCellLength = 0;
       column.eachCell({ includeEmpty: true }, (cell: any) => {
         const cellLength = (cell.value ? cell.value.toString() : "").length;
         maxCellLength = Math.max(maxCellLength, cellLength);
+        cell.border = borderStyle;
       });
       column.width = Math.min(14, maxCellLength + 2); // Limit width to 30 characters
     });
@@ -10849,7 +11432,19 @@ const fetchGarmentFabricProcess = async (req: Request, res: Response) => {
       {
         model: Garment,
         as: "garment",
-        attributes: ["id", "name", "address"],
+        attributes: ["id", "name", "address", "state_id", "country_id"],
+        include: [
+          {
+            model: Country,
+            as: "country",
+            attributes: ["id", "county_name"], 
+          },
+          {
+            model: State,
+            as: "state",
+            attributes: ["id", "state_name"], 
+          },
+        ],
       },
       {
         model: Season,
@@ -10995,17 +11590,20 @@ const exportGarmentFabricProcess = async (req: Request, res: Response) => {
     // Create the excel workbook file
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet("Sheet1");
-    worksheet.mergeCells("A1:Q1");
+    /*worksheet.mergeCells("A1:Q1");
     const mergedCell = worksheet.getCell("A1");
     mergedCell.value = "CottonConnect | Garment Fabric Process Report";
     mergedCell.font = { bold: true };
-    mergedCell.alignment = { horizontal: "center", vertical: "middle" };
+    mergedCell.alignment = { horizontal: "center", vertical: "middle" };*/
     // Set bold font for header row
     // Set bold font for header row
     const headerRow = worksheet.addRow([
       "S No.",
+      "Country",
+      "State",
       "Process Date",
       "Date",
+      "No. of Days",
       "Garment Production Start Date",
       "Garment Production End Date",
       "Season",
@@ -11027,7 +11625,19 @@ const exportGarmentFabricProcess = async (req: Request, res: Response) => {
       {
         model: Garment,
         as: "garment",
-        attributes: ["id", "name", "address"],
+        attributes: ["id", "name", "address", "state_id", "country_id"],
+        include: [
+          {
+            model: Country,
+            as: "country",
+            attributes: ["id", "county_name"], 
+          },
+          {
+            model: State,
+            as: "state",
+            attributes: ["id", "state_name"], 
+          },
+        ],
       },
       {
         model: Season,
@@ -11040,7 +11650,12 @@ const exportGarmentFabricProcess = async (req: Request, res: Response) => {
         attributes: ["id", "program_name"],
       },
     ];
-
+    let totals = {
+      noOfPieces:0,
+      noOfBoxes:0,
+      total_fabric_weight:0,
+      total_fabric_length:0,
+    };
     const { count, rows } = await GarmentProcess.findAndCountAll({
       where: whereCondition,
       include: include,
@@ -11087,12 +11702,22 @@ const exportGarmentFabricProcess = async (req: Request, res: Response) => {
     }
 
     let result = data.slice(offset, offset + limit);
-
+    const toDateOnly = (dateStr: string) => {
+      const date = new Date(dateStr);
+      date.setHours(0, 0, 0, 0); 
+      return date.getTime(); 
+    };
     for await (const [index, item] of result.entries()) {
-      const rowValues = Object.values({
+      const rowValues = {
         index: index + 1,
+        country_name: item.garment?.country?.county_name || "",
+        state_name: item.garment?.state?.state_name || "",
         createdAt: item.createdAt ? item.createdAt : "",
         date: item.date ? item.date : "",
+        no_of_days: item.createdAt && item.date ? Math.floor(
+          (toDateOnly(item.createdAt) - toDateOnly(item.date)) /
+            (1000 * 60 * 60 * 24)
+        ) : "",
         from_date: item.from_date ? item.from_date : "",
         to_date: item.to_date ? item.to_date : "",
         season: item.season ? item.season.name : "",
@@ -11111,15 +11736,54 @@ const exportGarmentFabricProcess = async (req: Request, res: Response) => {
         total_fabric_length: item.total_fabric_length
           ? item.total_fabric_length
           : "",
-      });
-      worksheet.addRow(rowValues);
+      };
+
+      totals.noOfPieces+= Number(rowValues.noOfPieces); 
+      totals.noOfBoxes+= Number(rowValues.noOfBoxes); 
+      totals.total_fabric_weight+= Number(rowValues.total_fabric_weight); 
+      totals.total_fabric_length+= Number(rowValues.total_fabric_length);
+      
+      worksheet.addRow(Object.values(rowValues));
     }
+    const rowValues = {
+      index:"",
+      country_name:"",
+      state_name:"",
+      createdAt:"",
+      date:"",
+      no_of_days:"",
+      from_date:"",
+      to_date:"",
+      season:"",
+      garment:"",
+      fabricOrderRef:"",
+      brandOrderRef:"",
+      lotNo:"",
+      reelLotNo:"",
+      garmentType:"",
+      stylemarkNo:"Total",
+      noOfPieces: totals.noOfPieces,
+      noOfBoxes: totals.noOfBoxes,
+      total_fabric_weight: totals.total_fabric_weight,
+      total_fabric_length: totals.total_fabric_length,
+    };
+   
+    worksheet.addRow(Object.values(rowValues)).eachCell(cell=> cell.font = {bold: true});
+
+    // Define a border style
+    const borderStyle = {
+      top: { style: "thin" },
+      bottom: { style: "thin" },
+      left: { style: "thin" },
+      right: { style: "thin" },
+    };
     // Auto-adjust column widths based on content
     worksheet.columns.forEach((column: any) => {
       let maxCellLength = 0;
       column.eachCell({ includeEmpty: true }, (cell: any) => {
         const cellLength = (cell.value ? cell.value.toString() : "").length;
         maxCellLength = Math.max(maxCellLength, cellLength);
+        cell.border = borderStyle;
       });
       column.width = Math.min(14, maxCellLength + 2); // Limit width to 30 characters
     });
@@ -11251,7 +11915,19 @@ const fetchGarmentSalesPagination = async (req: Request, res: Response) => {
       {
         model: Garment,
         as: "garment",
-        attributes: ["id", "name", "address"],
+        attributes: ["id", "name", "address", "state_id", "country_id"],
+        include: [
+          {
+            model: Country,
+            as: "country",
+            attributes: ["id", "county_name"], 
+          },
+          {
+            model: State,
+            as: "state",
+            attributes: ["id", "state_name"], 
+          },
+        ],
       },
       {
         model: Season,
@@ -11428,17 +12104,20 @@ const exportGarmentSales = async (req: Request, res: Response) => {
     // Create the excel workbook file
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet("Sheet1");
-    worksheet.mergeCells("A1:P1");
+    /*worksheet.mergeCells("A1:P1");
     const mergedCell = worksheet.getCell("A1");
     mergedCell.value = "CottonConnect | Garment Fabric Sales Report";
     mergedCell.font = { bold: true };
-    mergedCell.alignment = { horizontal: "center", vertical: "middle" };
+    mergedCell.alignment = { horizontal: "center", vertical: "middle" };*/
     // Set bold font for header row
     // Set bold font for header row
     const headerRow = worksheet.addRow([
       "S No.",
+      "Country",
+      "State",
       "Date of Sale",
       "Date",
+      "No. of Days",
       "Garment Unit Name",
       "Customer (R&B) Name",
       "Invoice No",
@@ -11457,7 +12136,19 @@ const exportGarmentSales = async (req: Request, res: Response) => {
       {
         model: Garment,
         as: "garment",
-        attributes: ["id", "name", "address"],
+        attributes: ["id", "name", "address", "state_id", "country_id"],
+        include: [
+          {
+            model: Country,
+            as: "country",
+            attributes: ["id", "county_name"], 
+          },
+          {
+            model: State,
+            as: "state",
+            attributes: ["id", "state_name"], 
+          },
+        ],
       },
       {
         model: Season,
@@ -11473,6 +12164,10 @@ const exportGarmentSales = async (req: Request, res: Response) => {
         attributes: ["id", "brand_name", "address"],
       },
     ];
+    let totals = {
+      no_of_boxes:0,
+      no_of_pieces:0,
+    };
 
     const { count, rows } = await GarmentSales.findAndCountAll({
       where: whereCondition,
@@ -11513,12 +12208,22 @@ const exportGarmentSales = async (req: Request, res: Response) => {
     }
 
     let result = data.slice(offset, offset + limit);
-
+    const toDateOnly = (dateStr: string) => {
+      const date = new Date(dateStr);
+      date.setHours(0, 0, 0, 0); 
+      return date.getTime(); 
+    };
     for await (const [index, item] of result.entries()) {
-      const rowValues = Object.values({
+      const rowValues = {
         index: index + 1,
+        country_name: item.garment?.country?.county_name || "",
+        state_name: item.garment?.state?.state_name || "",
         createdAt: item.createdAt ? item.createdAt : "",
         date: item.date ? item.date : "",
+        no_of_days: item.createdAt && item.date ? Math.floor(
+          (toDateOnly(item.createdAt) - toDateOnly(item.date)) /
+            (1000 * 60 * 60 * 24)
+        ) : "",
         garment_name: item.garment ? item.garment.name : "",
         buyer: item.buyer ? item.buyer.brand_name : item.processor_name,
         invoice: item.invoice_no ? item.invoice_no : "",
@@ -11530,15 +12235,49 @@ const exportGarmentSales = async (req: Request, res: Response) => {
         no_of_pieces: item.total_no_of_pieces ? item.total_no_of_pieces : "",
         transaction_agent: item.transaction_agent ? item.transaction_agent : "",
         color: item.qr ? process.env.BASE_URL + item.qr : "",
-      });
-      worksheet.addRow(rowValues);
+      };
+
+      totals.no_of_boxes+= Number(rowValues.no_of_boxes); 
+      totals.no_of_pieces+= Number(rowValues.no_of_pieces); 
+
+      worksheet.addRow(Object.values(rowValues));
     }
+    const rowValues = {
+      index:"",
+      country_name:"",
+      state_name:"",
+      createdAt:"",
+      date:"",
+      no_of_days:"",
+      garment_name:"",
+      buyer:"",
+      invoice:"",
+      fabricOrderRef:"",
+      brandOrderRef:"",
+      garmentType:"",
+      stylemarkNo:"Total",
+      no_of_boxes:totals.no_of_boxes,
+      no_of_pieces:totals.no_of_pieces,
+      transaction_agent:"",
+      color:"",
+    };
+   
+    worksheet.addRow(Object.values(rowValues)).eachCell(cell=> cell.font = {bold: true});
+    
+    // Define a border style
+    const borderStyle = {
+      top: { style: "thin" },
+      bottom: { style: "thin" },
+      left: { style: "thin" },
+      right: { style: "thin" },
+    };
     // Auto-adjust column widths based on content
     worksheet.columns.forEach((column: any) => {
       let maxCellLength = 0;
       column.eachCell({ includeEmpty: true }, (cell: any) => {
         const cellLength = (cell.value ? cell.value.toString() : "").length;
         maxCellLength = Math.max(maxCellLength, cellLength);
+        cell.border = borderStyle;
       });
       column.width = Math.min(14, maxCellLength + 2); // Limit width to 30 characters
     });
@@ -11692,7 +12431,19 @@ const fetchQrCodeTrackPagination = async (req: Request, res: Response) => {
       {
         model: Garment,
         as: "garment",
-        attributes: ["id", "name", "address"],
+        attributes: ["id", "name", "address", "state_id", "country_id"],
+        include: [
+          {
+            model: Country,
+            as: "country",
+            attributes: ["id", "county_name"], 
+          },
+          {
+            model: State,
+            as: "state",
+            attributes: ["id", "state_name"], 
+          },
+        ],
       },
     ];
 
@@ -11788,14 +12539,16 @@ const exportQrCodeTrack = async (req: Request, res: Response) => {
     // Create the excel workbook file
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet("Sheet1");
-    worksheet.mergeCells("A1:I1");
+    /*worksheet.mergeCells("A1:I1");
     const mergedCell = worksheet.getCell("A1");
     mergedCell.value = "CottonConnect | Barcode Report";
     mergedCell.font = { bold: true };
-    mergedCell.alignment = { horizontal: "center", vertical: "middle" };
+    mergedCell.alignment = { horizontal: "center", vertical: "middle" };*/
     // Set bold font for header row
     const headerRow = worksheet.addRow([
       "S No.",
+      "Country",
+      "State",
       "Qr Code",
       "Brand Name",
       "Garment unit Name",
@@ -11823,9 +12576,25 @@ const exportQrCodeTrack = async (req: Request, res: Response) => {
       {
         model: Garment,
         as: "garment",
-        attributes: ["id", "name", "address"],
+        attributes: ["id", "name", "address", "state_id", "country_id"],
+        include: [
+          {
+            model: Country,
+            as: "country",
+            attributes: ["id", "county_name"], 
+          },
+          {
+            model: State,
+            as: "state",
+            attributes: ["id", "state_name"], 
+          },
+        ],
       },
     ];
+    
+    let totals = {
+      no_of_pieces:0,
+    };
     const { count, rows } = await GarmentSales.findAndCountAll({
       where: whereCondition,
       include: include,
@@ -11835,8 +12604,10 @@ const exportQrCodeTrack = async (req: Request, res: Response) => {
     });
     // Append data to worksheet
     for await (const [index, item] of rows.entries()) {
-      const rowValues = Object.values({
+      const rowValues = {
         index: index + 1,
+        country_name: item.garment?.country?.county_name || "",
+        state_name: item.garment?.state?.state_name || "",
         qrCode: item.qr ? process.env.BASE_URL + item.qr : "",
         buyer: item.buyer ? item.buyer.brand_name : item.processor_name,
         garment: item.garment ? item.garment.name : "",
@@ -11851,15 +12622,42 @@ const exportQrCodeTrack = async (req: Request, res: Response) => {
             : "",
         no_of_pieces: item.total_no_of_pieces ? item.total_no_of_pieces : "",
         program: item.program ? item.program.program_name : "",
-      });
-      worksheet.addRow(rowValues);
+      };
+
+      totals.no_of_pieces+= Number(rowValues.no_of_pieces); 
+      worksheet.addRow(Object.values(rowValues));
     }
+    
+    const rowValues = {
+      index:"",
+      country_name:"",
+      state_name:"",
+      qrCode:"",
+      buyer:"",
+      garment:"",
+      invoice:"",
+      garmentType:"",
+      mark:"Total",
+      no_of_pieces:totals.no_of_pieces,
+      program:"",
+    };
+   
+    worksheet.addRow(Object.values(rowValues)).eachCell(cell=> cell.font = {bold: true});
+
+    // Define a border style
+    const borderStyle = {
+      top: { style: "thin" },
+      bottom: { style: "thin" },
+      left: { style: "thin" },
+      right: { style: "thin" },
+    };
     // Auto-adjust column widths based on content
     worksheet.columns.forEach((column: any) => {
       let maxCellLength = 0;
       column.eachCell({ includeEmpty: true }, (cell: any) => {
         const cellLength = (cell.value ? cell.value.toString() : "").length;
         maxCellLength = Math.max(maxCellLength, cellLength);
+        cell.border = borderStyle;
       });
       column.width = Math.min(24, maxCellLength + 2); // Limit width to 30 characters
     });
@@ -13244,6 +14042,362 @@ const fetchGinnerSummaryPagination = async (req: Request, res: Response) => {
 };
 
 
+const fetchGinnerLintStockPagination = async (req: Request, res: Response) => {
+  const searchTerm = req.query.search || "";
+  const page = Number(req.query.page) || 1;
+  const limit = Number(req.query.limit) || 10;
+  const offset = (page - 1) * limit;
+  const { ginnerId, seasonId, programId, brandId, countryId, stateId, districtId }: any = req.query;
+  const whereCondition: any = {};
+  const transactionWhere: any = {};
+  const ginBaleWhere: any = {};
+  const baleSelectionWhere: any = {};
+  const ginStockWhere: any = [];
+  try {
+    if (searchTerm) {
+      whereCondition[Op.or] = [
+        { "$ginner.name$": { [Op.iLike]: `%${searchTerm}%` } },
+        { "$ginner.country.county_name$": { [Op.iLike]: `%${searchTerm}%` } },
+        { "$ginner.state.state_name$": { [Op.iLike]: `%${searchTerm}%` } },
+        { "$ginner.district.district_name$": { [Op.iLike]: `%${searchTerm}%` } },
+        { "$season.name$": { [Op.iLike]: `%${searchTerm}%` } },
+    ];
+    }
+
+    if (ginnerId) {
+      const idArray: number[] = ginnerId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.ginner_id = { [Op.in]: idArray };
+    }
+
+    if (brandId) {
+      const idArray: number[] = brandId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition["$ginner.brand$"] = { [Op.overlap]: idArray };
+    }
+
+    if (countryId) {
+      const idArray: number[] = countryId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition["$ginner.country_id$"] = { [Op.in]: idArray };
+    }
+
+    if (stateId) {
+      const idArray: number[] = stateId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition["$ginner.state_id$"] = { [Op.in]: idArray };
+    }
+
+    if (districtId) {
+      const idArray: number[] = districtId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition["$ginner.district_id$"] = { [Op.in]: idArray };
+    }
+
+    if (programId) {
+      const idArray: number[] = programId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.program_id = { [Op.in]: idArray };
+      transactionWhere.program_id = { [Op.in]: idArray };
+      ginBaleWhere["$ginprocess.program_id$"] = { [Op.in]: idArray };
+      baleSelectionWhere["$bale.ginprocess.program_id$"] = { [Op.in]: idArray };
+      ginStockWhere.push(`gp.program_id IN (${idArray.join(',')})`);
+    }
+
+    if (seasonId) {
+      const idArray: number[] = seasonId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.season_id = { [Op.in]: idArray };
+      transactionWhere.season_id = { [Op.in]: idArray };
+      ginBaleWhere["$ginprocess.season_id$"] = { [Op.in]: idArray };
+      baleSelectionWhere["$bale.ginprocess.season_id$"] = { [Op.in]: idArray };
+      ginStockWhere.push(`gp.season_id IN (${idArray.join(',')})`);
+    }
+    
+    const whereClause = ginStockWhere.length > 0 ? `AND ${ginStockWhere.join(' AND ')}` : '';
+
+    let include = [
+      {
+        model: Ginner,
+        as: "ginner",
+        include: [
+          {
+            model: Country,
+            as  : "country",
+          },
+          {
+            model: State,
+            as  : "state",
+          },
+          {
+            model: District,
+            as  : "district",
+          }
+        ]
+      },
+      {
+        model: Season,
+        as: "season",
+      },
+      {
+        model: Program,
+        as: "program",
+
+      },
+    ];
+
+    let { count, rows } = await GinProcess.findAndCountAll({
+      attributes: [
+        [Sequelize.literal('"ginner"."id"'), "ginner_id"],
+        [Sequelize.literal('"ginner"."name"'), "ginner_name"],
+        [Sequelize.literal('"season"."id"'), "season_id"],
+        [Sequelize.col('"season"."name"'), "season_name"],
+        [Sequelize.literal('"ginner"."country_id"'), "country_id"],
+        [Sequelize.literal('"ginner"."state_id"'), "state_id"],
+        [Sequelize.literal('"ginner"."district_id"'), "district_id"],
+        [Sequelize.literal('"program"."program_name"'), 'program_name'],
+      ],
+      where: whereCondition,
+      include: include,
+      group: ["ginner.id", "season.id","ginner->country.id","ginner->state.id","ginner->district.id","program.id"],
+      order: [["ginner_name", "ASC"]],
+      limit: limit,
+      offset: offset, 
+    });
+
+    let result: any = [];
+    for await (let ginner of rows) {
+      let obj: any = {};
+
+      let [cottonProcured, lintProcured, lintSold, [lintStock]]: any =
+        await Promise.all([
+          Transaction.findOne({
+            attributes: [
+              [
+                sequelize.fn(
+                  "COALESCE",
+                  sequelize.fn(
+                    "SUM",
+                    Sequelize.literal("CAST(qty_purchased AS DOUBLE PRECISION)")
+                  ),
+                  0
+                ),
+                "qty",
+              ],
+            ],
+            where: {
+              ...transactionWhere,
+              mapped_ginner: ginner.ginner_id,
+              status: "Sold",
+            },
+          }),
+          GinBale.findOne({
+            attributes: [
+              [
+                sequelize.fn(
+                  "COALESCE",
+                  sequelize.fn(
+                    "SUM",
+                    sequelize.literal(`
+                      CASE
+                        WHEN "gin-bales"."old_weight" IS NOT NULL THEN CAST("gin-bales"."old_weight" AS DOUBLE PRECISION)
+                        ELSE CAST("gin-bales"."weight" AS DOUBLE PRECISION)
+                      END
+                    `)
+                  ),
+                  0
+                ),
+                "qty",
+              ],
+              [
+                sequelize.fn(
+                  "COUNT",
+                  Sequelize.literal('DISTINCT "gin-bales"."id"')
+                ),
+                "bales_procured",
+              ],
+            ],
+            include: [
+              {
+                model: GinProcess,
+                as: "ginprocess",
+                attributes: [],
+              },
+            ],
+            where: {
+              ...ginBaleWhere,
+              "$ginprocess.ginner_id$": ginner.ginner_id,
+            },
+            group: ["ginprocess.ginner_id"],
+          }),
+          BaleSelection.findOne({
+            attributes: [
+              [
+                sequelize.fn(
+                  "COALESCE",
+                  sequelize.fn(
+                    "SUM",
+                    sequelize.literal(`
+                      CASE
+                        WHEN "bale"."old_weight" IS NOT NULL THEN CAST("bale"."old_weight" AS DOUBLE PRECISION)
+                        ELSE CAST("bale"."weight" AS DOUBLE PRECISION)
+                      END
+                    `)
+                  ),
+                  0
+                ),
+                "qty",
+              ],
+              [
+                sequelize.fn("COUNT", Sequelize.literal("DISTINCT bale_id")),
+                "bales_sold",
+              ],
+            ],
+            include: [
+              {
+                model: GinSales,
+                as: "sales",
+                attributes: [],
+              },
+              {
+                model: GinBale,
+                as: "bale",
+                attributes: [],
+                include: [
+                  {
+                    model: GinProcess,
+                    as: "ginprocess",
+                    attributes: [],
+                  },
+                ],
+              },
+            ],
+            where: {
+              ...baleSelectionWhere,
+              "$sales.ginner_id$": ginner.ginner_id,
+              "$sales.status$": { [Op.in]: ['Pending', 'Pending for QR scanning', 'Partially Accepted', 'Partially Rejected', 'Sold'] },
+              "$sales.buyer_ginner$": { [Op.is]: null }
+            },
+            group: ["sales.ginner_id"],
+          }),
+          sequelize.query(`
+            SELECT 
+              SUM(CAST(combined_data.weight AS DOUBLE PRECISION)) AS lint_stock,
+              COUNT(combined_data.bale_id) AS bales_stock
+            FROM (
+                -- First Query: Direct gin-bales
+                SELECT 
+                    gp.id AS process_id,
+              gp.ginner_id AS ginner_id,
+                    gb.id AS bale_id,
+                    gb.weight
+                FROM 
+                    gin_processes gp
+                JOIN 
+                    "gin-bales" gb ON gp.id = gb.process_id
+                JOIN 
+                    ginners g ON gp.ginner_id = g.id
+                JOIN 
+                    seasons s ON gp.season_id = s.id
+                JOIN 
+                    programs p ON gp.program_id = p.id
+                WHERE 
+                    gp.ginner_id = ${ginner.ginner_id}
+                    ${whereClause}
+                    AND gp.season_id IN (10)
+                    AND gb.sold_status = false
+                    AND gp.greyout_status = false
+                UNION ALL
+                -- Second Query: Gin-to-Gin sales
+                SELECT 
+                    gp.id AS process_id,
+                    gp.ginner_id AS ginner_id,
+                    gb.id AS bale_id,
+                    gb.weight
+                FROM 
+                    gin_to_gin_sales gtg
+                JOIN 
+                    gin_processes gp ON gtg.process_id = gp.id
+                JOIN 
+                    "gin-bales" gb ON gtg.bale_id = gb.id
+                JOIN 
+                    gin_sales gs ON gtg.sales_id = gs.id
+                JOIN 
+                    ginners g ON gtg.new_ginner_id = g.id
+                JOIN 
+                    seasons s ON gp.season_id = s.id
+                JOIN 
+                    programs p ON gp.program_id = p.id
+                WHERE 
+                  (
+                    gtg.new_ginner_id = ${ginner.ginner_id}
+                    ${whereClause}
+                    AND gp.greyout_status = false
+                    AND gb.sold_status = true
+                    AND gtg.gin_accepted_status = true
+                    AND gtg.gin_sold_status IS NULL
+                  ) OR (
+                    gtg.old_ginner_id = ${ginner.ginner_id}
+                    ${whereClause}
+                    AND gp.greyout_status = false
+                    AND gb.sold_status = true
+                    AND gtg.gin_accepted_status = false
+                    AND gtg.gin_sold_status IS NULL
+                  )
+            ) combined_data
+            GROUP BY 
+              combined_data.ginner_id
+          `)
+        ]);
+
+      obj.ginner_id = ginner?.ginner_id;
+      obj.ginner_name = ginner?.ginner?.name ?? "";
+      obj.season_id = ginner?.season_id;
+      obj.season = ginner?.season?.name ?? "";
+      obj.program = ginner?.program?.program_name ?? "";
+      obj.country_id = ginner?.dataValues?.country_id;
+      obj.country = ginner?.ginner?.country?.county_name ?? "";
+      obj.state_id = ginner?.dataValues?.state_id;
+      obj.state = ginner?.ginner?.state?.state_name ?? "";
+      obj.district_id = ginner?.dataValues?.district_id;
+      obj.district = ginner?.ginner?.district?.district_name ?? "";
+      obj.cottonProcuredKg = cottonProcured?.dataValues?.qty ?? 0;
+      obj.cottonProcuredMt = convert_kg_to_mt(cottonProcured?.dataValues.qty ?? 0);
+      obj.lintProcuredKg = lintProcured?.dataValues.qty ?? 0;
+      obj.lintProcuredMt = convert_kg_to_mt(lintProcured?.dataValues.qty ?? 0);
+      obj.lintSoldKg = lintSold?.dataValues.qty ?? 0;
+      obj.lintSoldMt = convert_kg_to_mt(lintSold?.dataValues.qty ?? 0);
+      obj.lintStockKg = lintStock && lintStock[0] ? lintStock[0]?.lint_stock : 0;
+      obj.lintStockMT = convert_kg_to_mt(lintStock && lintStock[0] ? lintStock[0]?.lint_stock : 0);
+
+      obj.balesProduced = lintProcured?.dataValues?.bales_procured
+        ? Number(lintProcured?.dataValues?.bales_procured)
+        : 0;
+      obj.balesSold = lintSold?.dataValues?.bales_sold
+        ? Number(lintSold?.dataValues?.bales_sold)
+        : 0;
+      obj.balesStock = lintStock && lintStock[0]?.bales_stock
+      ? Number(lintStock[0]?.bales_stock)
+      : 0;
+      result.push(obj);
+    }
+    //fetch data with pagination
+
+    return res.sendPaginationSuccess(res, result, count?.length);
+  } catch (error: any) {
+    console.log(error);
+    return res.sendError(res, error.message, error);
+  }
+};
+
+
 // const exportGinnerSummary = async (req: Request, res: Response) => {
 //   const excelFilePath = path.join("./upload", "excel-ginner-summary.xlsx");
 
@@ -13956,6 +15110,428 @@ const exportGinnerSummary = async (req: Request, res: Response) => {
         success: true,
         messgage: "File successfully Generated",
         data: process.env.BASE_URL + "excel-ginner-summary.xlsx",
+      });
+    }
+  } catch (error: any) {
+    console.error("Error appending data:", error);
+    return res.sendError(res, error.message, error);
+
+  }
+};
+
+const exportGinnerLintStockReport = async (req: Request, res: Response) => {
+  const excelFilePath = path.join("./upload", "excel-ginner-lint-cotton-stock-report.xlsx");
+
+  const searchTerm = req.query.search || "";
+  const page = Number(req.query.page) || 1;
+  const limit = Number(req.query.limit) || 10;
+  const offset = (page - 1) * limit;
+  const { exportType, ginnerId, seasonId, programId, brandId, countryId, stateId, districtId }: any = req.query;
+  const whereCondition: any = {};
+  const transactionWhere: any = {};
+  const ginBaleWhere: any = {};
+  const baleSelectionWhere: any = {};
+  const ginStockWhere: any = [];
+  try {
+    
+      if (exportType === "all") {
+        return res.status(200).send({
+          success: true,
+          messgage: "File successfully Generated",
+          data: process.env.BASE_URL + "ginner-lint-stock.xlsx",
+        });
+  
+      } else 
+  
+    {
+      if (searchTerm) {
+        whereCondition[Op.or] = [
+          { "$ginner.name$": { [Op.iLike]: `%${searchTerm}%` } },
+          { "$ginner.country.county_name$": { [Op.iLike]: `%${searchTerm}%` } },
+          { "$ginner.state.state_name$": { [Op.iLike]: `%${searchTerm}%` } },
+          { "$ginner.district.district_name$": { [Op.iLike]: `%${searchTerm}%` } },
+          { "$season.name$": { [Op.iLike]: `%${searchTerm}%` } },
+      ];
+      }
+  
+      if (ginnerId) {
+        const idArray: number[] = ginnerId
+          .split(",")
+          .map((id: any) => parseInt(id, 10));
+        whereCondition.ginner_id = { [Op.in]: idArray };
+      }
+  
+      if (brandId) {
+        const idArray: number[] = brandId
+          .split(",")
+          .map((id: any) => parseInt(id, 10));
+        whereCondition["$ginner.brand$"] = { [Op.overlap]: idArray };
+      }
+  
+      if (countryId) {
+        const idArray: number[] = countryId
+          .split(",")
+          .map((id: any) => parseInt(id, 10));
+        whereCondition["$ginner.country_id$"] = { [Op.in]: idArray };
+      }
+  
+      if (stateId) {
+        const idArray: number[] = stateId
+          .split(",")
+          .map((id: any) => parseInt(id, 10));
+        whereCondition["$ginner.state_id$"] = { [Op.in]: idArray };
+      }
+
+      if (districtId) {
+        const idArray: number[] = districtId
+          .split(",")
+          .map((id: any) => parseInt(id, 10));
+        whereCondition["$ginner.district_id$"] = { [Op.in]: idArray };
+      }
+  
+      if (programId) {
+        const idArray: number[] = programId
+          .split(",")
+          .map((id: any) => parseInt(id, 10));
+        whereCondition.program_id = { [Op.in]: idArray };
+        transactionWhere.program_id = { [Op.in]: idArray };
+        ginBaleWhere["$ginprocess.program_id$"] = { [Op.in]: idArray };
+        baleSelectionWhere["$bale.ginprocess.program_id$"] = { [Op.in]: idArray };
+        ginStockWhere.push(`gp.program_id IN (${idArray.join(',')})`);
+      }
+  
+      if (seasonId) {
+        const idArray: number[] = seasonId
+          .split(",")
+          .map((id: any) => parseInt(id, 10));
+        whereCondition.season_id = { [Op.in]: idArray };
+        transactionWhere.season_id = { [Op.in]: idArray };
+        ginBaleWhere["$ginprocess.season_id$"] = { [Op.in]: idArray };
+        baleSelectionWhere["$bale.ginprocess.season_id$"] = { [Op.in]: idArray };
+        ginStockWhere.push(`gp.season_id IN (${idArray.join(',')})`);
+      }
+      
+      const whereClause = ginStockWhere.length > 0 ? `AND ${ginStockWhere.join(' AND ')}` : '';
+  
+      let include = [
+        {
+          model: Ginner,
+          as: "ginner",
+          include: [
+            {
+              model: Country,
+              as  : "country",
+            },
+            {
+              model: State,
+              as  : "state",
+            },
+            {
+              model: District,
+              as  : "district",
+            }
+          ]
+        },
+        {
+          model: Season,
+          as: "season",
+        },
+        {
+          model: Program,
+          as: "program",
+  
+        },
+      ];
+  
+      let { count, rows } = await GinProcess.findAndCountAll({
+        attributes: [
+          [Sequelize.literal('"ginner"."id"'), "ginner_id"],
+          [Sequelize.literal('"ginner"."name"'), "ginner_name"],
+          [Sequelize.literal('"season"."id"'), "season_id"],
+          [Sequelize.col('"season"."name"'), "season_name"],
+          [Sequelize.literal('"ginner"."country_id"'), "country_id"],
+          [Sequelize.literal('"ginner"."state_id"'), "state_id"],
+          [Sequelize.literal('"ginner"."district_id"'), "district_id"],
+          [Sequelize.literal('"program"."program_name"'), 'program_name'],
+        ],
+        where: whereCondition,
+        include: include,
+        group: ["ginner.id", "season.id","ginner->country.id","ginner->state.id","ginner->district.id","program.id"],
+        order: [["ginner_name", "ASC"]],
+        limit: limit,
+        offset: offset, 
+      });
+  
+      // Create the excel workbook file
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet("Sheet1");
+      // worksheet.mergeCells('A1:S1');
+      // const mergedCell = worksheet.getCell('A1');
+      // mergedCell.value = 'CottonConnect | Ginner Summary Report';
+      // mergedCell.font = { bold: true };
+      // mergedCell.alignment = { horizontal: 'center', vertical: 'middle' };
+      // Set bold font for header row
+      const headerRow = worksheet.addRow([
+        "S. No.", "Season", "Ginner Name", "Country", "State", "District", "Total Procured Seed Cotton (Kgs)", "Total Processed Lint (Kgs)",
+        "Total Sold Lint (Kgs)", "Total Lint in Stock (Kgs)"
+      ]);
+      headerRow.font = { bold: true };
+
+      // Append data to worksheet
+      for await (const [index, ginner] of rows.entries()) {
+        let obj: any = {};
+  
+        let [cottonProcured, lintProcured, lintSold, [lintStock]]: any =
+          await Promise.all([
+            Transaction.findOne({
+              attributes: [
+                [
+                  sequelize.fn(
+                    "COALESCE",
+                    sequelize.fn(
+                      "SUM",
+                      Sequelize.literal("CAST(qty_purchased AS DOUBLE PRECISION)")
+                    ),
+                    0
+                  ),
+                  "qty",
+                ],
+              ],
+              where: {
+                ...transactionWhere,
+                mapped_ginner: ginner.ginner_id,
+                status: "Sold",
+              },
+            }),
+            GinBale.findOne({
+              attributes: [
+                [
+                  sequelize.fn(
+                    "COALESCE",
+                    sequelize.fn(
+                      "SUM",
+                      sequelize.literal(`
+                        CASE
+                          WHEN "gin-bales"."old_weight" IS NOT NULL THEN CAST("gin-bales"."old_weight" AS DOUBLE PRECISION)
+                          ELSE CAST("gin-bales"."weight" AS DOUBLE PRECISION)
+                        END
+                      `)
+                    ),
+                    0
+                  ),
+                  "qty",
+                ],
+                [
+                  sequelize.fn(
+                    "COUNT",
+                    Sequelize.literal('DISTINCT "gin-bales"."id"')
+                  ),
+                  "bales_procured",
+                ],
+              ],
+              include: [
+                {
+                  model: GinProcess,
+                  as: "ginprocess",
+                  attributes: [],
+                },
+              ],
+              where: {
+                ...ginBaleWhere,
+                "$ginprocess.ginner_id$": ginner.ginner_id,
+              },
+              group: ["ginprocess.ginner_id"],
+            }),
+            BaleSelection.findOne({
+              attributes: [
+                [
+                  sequelize.fn(
+                    "COALESCE",
+                    sequelize.fn(
+                      "SUM",
+                      sequelize.literal(`
+                        CASE
+                          WHEN "bale"."old_weight" IS NOT NULL THEN CAST("bale"."old_weight" AS DOUBLE PRECISION)
+                          ELSE CAST("bale"."weight" AS DOUBLE PRECISION)
+                        END
+                      `)
+                    ),
+                    0
+                  ),
+                  "qty",
+                ],
+                [
+                  sequelize.fn("COUNT", Sequelize.literal("DISTINCT bale_id")),
+                  "bales_sold",
+                ],
+              ],
+              include: [
+                {
+                  model: GinSales,
+                  as: "sales",
+                  attributes: [],
+                },
+                {
+                  model: GinBale,
+                  as: "bale",
+                  attributes: [],
+                  include: [
+                    {
+                      model: GinProcess,
+                      as: "ginprocess",
+                      attributes: [],
+                    },
+                  ],
+                },
+              ],
+              where: {
+                ...baleSelectionWhere,
+                "$sales.ginner_id$": ginner.ginner_id,
+                "$sales.status$": { [Op.in]: ['Pending', 'Pending for QR scanning', 'Partially Accepted', 'Partially Rejected', 'Sold'] },
+                "$sales.buyer_ginner$": { [Op.is]: null }
+              },
+              group: ["sales.ginner_id"],
+            }),
+            sequelize.query(`
+              SELECT 
+                SUM(CAST(combined_data.weight AS DOUBLE PRECISION)) AS lint_stock,
+                COUNT(combined_data.bale_id) AS bales_stock
+              FROM (
+                  -- First Query: Direct gin-bales
+                  SELECT 
+                      gp.id AS process_id,
+                gp.ginner_id AS ginner_id,
+                      gb.id AS bale_id,
+                      gb.weight
+                  FROM 
+                      gin_processes gp
+                  JOIN 
+                      "gin-bales" gb ON gp.id = gb.process_id
+                  JOIN 
+                      ginners g ON gp.ginner_id = g.id
+                  JOIN 
+                      seasons s ON gp.season_id = s.id
+                  JOIN 
+                      programs p ON gp.program_id = p.id
+                  WHERE 
+                      gp.ginner_id = ${ginner.ginner_id}
+                      ${whereClause}
+                      AND gp.season_id IN (10)
+                      AND gb.sold_status = false
+                      AND gp.greyout_status = false
+                  UNION ALL
+                  -- Second Query: Gin-to-Gin sales
+                  SELECT 
+                      gp.id AS process_id,
+                      gp.ginner_id AS ginner_id,
+                      gb.id AS bale_id,
+                      gb.weight
+                  FROM 
+                      gin_to_gin_sales gtg
+                  JOIN 
+                      gin_processes gp ON gtg.process_id = gp.id
+                  JOIN 
+                      "gin-bales" gb ON gtg.bale_id = gb.id
+                  JOIN 
+                      gin_sales gs ON gtg.sales_id = gs.id
+                  JOIN 
+                      ginners g ON gtg.new_ginner_id = g.id
+                  JOIN 
+                      seasons s ON gp.season_id = s.id
+                  JOIN 
+                      programs p ON gp.program_id = p.id
+                  WHERE 
+                    (
+                      gtg.new_ginner_id = ${ginner.ginner_id}
+                      ${whereClause}
+                      AND gp.greyout_status = false
+                      AND gb.sold_status = true
+                      AND gtg.gin_accepted_status = true
+                      AND gtg.gin_sold_status IS NULL
+                    ) OR (
+                      gtg.old_ginner_id = ${ginner.ginner_id}
+                      ${whereClause}
+                      AND gp.greyout_status = false
+                      AND gb.sold_status = true
+                      AND gtg.gin_accepted_status = false
+                      AND gtg.gin_sold_status IS NULL
+                    )
+              ) combined_data
+              GROUP BY 
+                combined_data.ginner_id
+            `)
+          ]);
+  
+        obj.ginner_id = ginner?.ginner_id;
+        obj.ginner_name = ginner?.ginner?.name ?? "";
+        obj.season_id = ginner?.season_id;
+        obj.season = ginner?.season?.name ?? "";
+        obj.program = ginner?.program?.program_name ?? "";
+        obj.country_id = ginner?.dataValues?.country_id;
+        obj.country = ginner?.ginner?.country?.county_name ?? "";
+        obj.state_id = ginner?.dataValues?.state_id;
+        obj.state = ginner?.ginner?.state?.state_name ?? "";
+        obj.district_id = ginner?.dataValues?.district_id;
+        obj.district = ginner?.ginner?.district?.district_name ?? "";
+        obj.cottonProcuredKg = cottonProcured?.dataValues?.qty ?? 0;
+        obj.cottonProcuredMt = convert_kg_to_mt(cottonProcured?.dataValues.qty ?? 0);
+        obj.lintProcuredKg = lintProcured?.dataValues.qty ?? 0;
+        obj.lintProcuredMt = convert_kg_to_mt(lintProcured?.dataValues.qty ?? 0);
+        obj.lintSoldKg = lintSold?.dataValues.qty ?? 0;
+        obj.lintSoldMt = convert_kg_to_mt(lintSold?.dataValues.qty ?? 0);
+        obj.lintStockKg = lintStock && lintStock[0] ? lintStock[0]?.lint_stock : 0;
+        obj.lintStockMT = convert_kg_to_mt(lintStock && lintStock[0] ? lintStock[0]?.lint_stock : 0);
+  
+        obj.balesProduced = lintProcured?.dataValues?.bales_procured
+          ? Number(lintProcured?.dataValues?.bales_procured)
+          : 0;
+        obj.balesSold = lintSold?.dataValues?.bales_sold
+          ? Number(lintSold?.dataValues?.bales_sold)
+          : 0;
+        obj.balesStock = lintStock && lintStock[0]?.bales_stock
+        ? Number(lintStock[0]?.bales_stock)
+        : 0;
+
+        const rowValues = {
+          index: index + 1,
+          season: obj.season,
+          name: obj.ginner_name ? obj.ginner_name : '',
+          country: obj.country,
+          state: obj.state,
+          district: obj.district,
+          cottonProcuredKg: obj.cottonProcuredKg ? Number(obj.cottonProcuredKg) : 0,
+          lintProcuredKg: obj.lintProcuredKg ? Number(obj.lintProcuredKg) : 0,
+          lintSoldKg: obj.lintSoldKg ? Number(obj.lintSoldKg) : 0,
+          lintStockKg: obj.lintStockKg ? Number(obj.lintStockKg) : 0
+        };
+
+         worksheet.addRow(Object.values(rowValues));
+      }
+
+      // Define a border style
+      const borderStyle = {
+        top: { style: "thin" },
+        bottom: { style: "thin" },
+        left: { style: "thin" },
+        right: { style: "thin" },
+      };
+      // Auto-adjust column widths based on content
+      worksheet.columns.forEach((column: any) => {
+        let maxCellLength = 0;
+        column.eachCell({ includeEmpty: true }, (cell: any) => {
+          const cellLength = (cell.value ? cell.value.toString() : '').length;
+          maxCellLength = Math.max(maxCellLength, cellLength);
+          cell.border = borderStyle;
+        });
+        column.width = Math.min(24, maxCellLength + 2); // Limit width to 30 characters
+      });
+
+      // Save the workbook
+      await workbook.xlsx.writeFile(excelFilePath);
+      res.status(200).send({
+        success: true,
+        messgage: "File successfully Generated",
+        data: process.env.BASE_URL + "excel-ginner-lint-cotton-stock-report.xlsx",
       });
     }
   } catch (error: any) {
@@ -23995,6 +25571,8 @@ export {
   fetchGinnerProcessGreyOutReport,
   fetchSpinnerProcessGreyOutReport,
   exportGinnerProcessGreyOutReport,
-  exportSpinnerProcessGreyOutReport
+  exportSpinnerProcessGreyOutReport,
+  fetchGinnerLintStockPagination,
+  exportGinnerLintStockReport
 };
 
