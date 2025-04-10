@@ -3981,6 +3981,7 @@ const getCOCDocumentData = async (
       gnrTotalQty: '',
       date: '',
       seedCottonQty: 0,
+      fbrcProcessorType:''
     };
 
     let [result] = await sequelize.query(`
@@ -4156,6 +4157,7 @@ const getCOCDocumentData = async (
         if (!spinSalesIds.includes(sale.spin_sale_ids))
           spinSalesIds.push(sale.spin_sale_ids);
       });
+      cocRes.fbrcProcessorType = 'Weaver';
     }
 
     const knitterProcessId = kProcessIds.flatMap((id: any) => id.split(',').map((str: string) => str.trim()))
@@ -4180,6 +4182,7 @@ const getCOCDocumentData = async (
         if (!spinSalesIds.includes(sale.spin_sale_ids))
           spinSalesIds.push(sale.spin_sale_ids);
       });
+      cocRes.fbrcProcessorType = 'Knitter';
     }
 
     const spinnerSalesId = spinSalesIds.flatMap((id: any) => id.split(',').map((str: string) => str.trim()))
