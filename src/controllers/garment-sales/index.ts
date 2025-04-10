@@ -927,6 +927,7 @@ const updateGarmentProcess = async (req: Request, res: Response) => {
         garment_size: fabric.garmentSize,
         color: fabric.color,
         no_of_pieces: fabric.noOfPieces,
+        no_of_pieces_stock: fabric.noOfPieces,
         no_of_boxes: fabric.noOfBoxes,
         finished_garment_image: fabric.finishedGarmentImage,
         sold_status: false
