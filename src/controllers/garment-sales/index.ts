@@ -775,8 +775,8 @@ const createGarmentProcess = async (req: Request, res: Response) => {
       no_of_pieces: req.body.noOfPieces,
       no_of_boxes: req.body.noOfBoxes,
       finished_garment_image: req.body.finishedGarmentImage,
-      // qty_stock: req.body.totalFabricLength,
-      // total_qty: req.body.totalFabricLength,
+      qty_stock: req.body.totalFabricLength + req.body.totalFabricWeight,
+      total_qty: req.body.totalFabricLength + req.body.totalFabricWeight,
       qty_stock_weight: req.body.totalFabricWeight,
       qty_stock_length: req.body.totalFabricLength,
       embroidering_required: req.body.embroideringRequired,
@@ -1508,13 +1508,13 @@ const createGarmentSales = async (req: Request, res: Response) => {
           where: { id: obj.process_id },
         });
         if (val) {
-          let update = await GarmentProcess.update(
-            {
-              qty_stock: val.dataValues.qty_stock - obj.qtyUsed,
-              status: 'Sold'
-            },
-            { where: { id: obj.process_id } }
-          );
+          // let update = await GarmentProcess.update(
+          //   {
+          //     qty_stock: val.dataValues.qty_stock - obj.qtyUsed,
+          //     status: 'Sold'
+          //   },
+          //   { where: { id: obj.process_id } }
+          // );
 
           const GarmentFabric = await GarmentFabricType.findOne({ where: { id: obj.id } });
 
@@ -4459,14 +4459,14 @@ const deleteGarmentSales = async (req: Request, res: Response) => {
       // Restore quantities back to GarmentProcess and GarmentFabricType
       for (const selection of garmentSelections) {
         // Get the garment process
-        const garmentProcess = await GarmentProcess.findByPk(selection.garment_id, { transaction });
-        if (garmentProcess) {
-          // Restore the quantity back to the process
-          await GarmentProcess.update(
-            { qty_stock: garmentProcess.qty_stock + selection.qty_used },
-            { where: { id: selection.garment_id }, transaction }
-          );
-        }
+        // const garmentProcess = await GarmentProcess.findByPk(selection.garment_id, { transaction });
+        // if (garmentProcess) {
+        //   // Restore the quantity back to the process
+        //   await GarmentProcess.update(
+        //     { qty_stock: garmentProcess.qty_stock + selection.qty_used },
+        //     { where: { id: selection.garment_id }, transaction }
+        //   );
+        // }
 
         // Get the garment fabric type
         const garmentFabricType = await GarmentFabricType.findByPk(selection.garment_type_id, { transaction });
