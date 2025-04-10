@@ -21,7 +21,9 @@ const fetchPhysicalTraceabilitySpinnerPagination = async (req: Request, res: Res
         if (searchTerm) {
             whereCondition[Op.or] = [
                 { data_of_sample_dispatch: { [Op.iLike]: `%${searchTerm}%` } },
-                { operator_name: { [Op.iLike]: `%${searchTerm}%` } }
+                { operator_name: { [Op.iLike]: `%${searchTerm}%` } },
+                { healixa_lot_no: { [Op.iLike]: `%${searchTerm}%` } },
+                { '$spin_process.batch_lot_no$': { [Op.iLike]: `%${searchTerm}%` } }
             ];
         }
 
