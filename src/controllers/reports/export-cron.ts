@@ -379,8 +379,8 @@ const exportGinHeapReport = async () => {
   }
 
   const rowValues = Object.values({
-    index: "Totals:", country: "", state: "", created_date:"", season: "", ginner_heap_no:"",
-    reel_heap_no:"", ginner_name:"", village_name: "", 
+    index: "", country: "", state: "", created_date:"", season: "", ginner_heap_no:"",
+    reel_heap_no:"", ginner_name:"", village_name: "Total", 
     heap_weight:Number(formatDecimal(weightSum)),
     heap_starting_date: "", heap_ending_date: "", weighbridge_vehicle_no:""
   });
@@ -671,7 +671,6 @@ const generateSpinnerLintCottonStock = async () => {
 
       if(currentWorksheet != undefined){
         const rowValues = [
-          "Totals: ",
           "",
           "",
           "",
@@ -681,6 +680,7 @@ const generateSpinnerLintCottonStock = async () => {
           "",
           "",
           "",
+          "Total",
           totals.cotton_procured,
           totals.cotton_stock,
           totals.greyed_out_qty,
@@ -2530,11 +2530,11 @@ const generatePscpProcurementLiveTracker = async () => {
       let currentWorksheet = workbook.getWorksheet(`Sheet${worksheetIndex}`);
 
       const rowValues = {
-        index:"Totals:",
+        index:"",
         name:"",
         country:"",
         state:"",
-        program:"",
+        program:"Total",
         expected_seed_cotton: totals.expected_seed_cotton,
         expected_lint: totals.expected_lint,
         procurement_seed_cotton: totals.procurement_seed_cotton,
@@ -3315,10 +3315,10 @@ const generateGinnerSummary = async () => {
       }
 
       const rowValues = {
-        index:"Totals:",
+        index:"",
         name:"",
         country:"",
-        state:"",
+        state:"Total",
         cottonProcuredMt: totals.cottonProcuredMt,
         cottonProcessedeMt: totals.cottonProcessedeMt,
         cottonStockMt: totals.cottonStockMt,
@@ -5770,7 +5770,7 @@ const generateSpinnerBale = async () => {
 
       if(currentWorksheet != undefined){
         const rowValues = Object.values({
-          index:"Totals: ",
+          index:"",
           country:"",
           state:"",
           accept_date:"",
@@ -5782,7 +5782,7 @@ const generateSpinnerBale = async () => {
           invoice:"",
           lot_no:"",
           reel_lot_no:"",
-          press_no:"",
+          press_no:"Total",
           no_of_bales: Number(formatDecimal(totals.total_no_of_bales)),
           lint_quantity: Number(formatDecimal(totals.total_lint_quantity)),
           program:"",
@@ -6063,7 +6063,7 @@ const generateSpinnerYarnProcess = async () => {
       if(currentWorksheet != undefined){
         let rowValues;
         rowValues = {
-             index:"Totals: ",
+             index:"",
              country:"",
              state:"",
              createdAt:"",
@@ -6078,7 +6078,7 @@ const generateSpinnerYarnProcess = async () => {
              reel_lot_no:"",
              yarnType:"",
              count:"",
-             resa:"",
+             resa:"Total",
              comber: Number(formatDecimal(totals.total_comber)),
              blend: "",
              blendqty: "",
@@ -6483,7 +6483,7 @@ const generateSpinnerSale = async () => {
 
     if(currentWorksheet != undefined){
       const rowValues ={
-        index:"Totals: ",
+        index:"",
         country:"",
         state:"",
         createdAt:"",
@@ -6501,7 +6501,7 @@ const generateSpinnerSale = async () => {
         yarnType:"",
         count:"",
         boxes:"",
-        boxId:"",
+        boxId:"Total",
         price: Number(formatDecimal(totals.total_price)),
         total: Number(formatDecimal(totals.total_net_weight)),
         transporter_name:"",
@@ -7163,7 +7163,7 @@ const generatePendingSpinnerBale = async () => {
 
       if(currentWorksheet != undefined){
         let rowValues = {
-          index:"Totals: ",
+          index:"",
           country:"",
           state:"",
           createdAt:"",
@@ -7172,7 +7172,7 @@ const generatePendingSpinnerBale = async () => {
           season:"",
           ginner:"",
           spinner:"",
-          invoice:"",
+          invoice:"Total",
           no_of_bales: Number(formatDecimal(totals.no_of_bales)),
           lot_no:"",
           reel_lot_no:"",
