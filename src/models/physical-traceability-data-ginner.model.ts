@@ -31,6 +31,10 @@ const PhysicalTraceabilityDataGinner = db.define('physical_traceability_data_gin
         type: DataTypes.STRING,
         allowNull: false
     },
+    healixa_lot_no: {
+        type: DataTypes.STRING,
+        allowNull: true
+    },
     expected_date_of_lint_sale: {
         type: DataTypes.DATE,
         allowNull: false
