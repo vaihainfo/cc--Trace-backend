@@ -85,45 +85,49 @@ const exportReportsTameTaking = async () => {
   console.log('TameTaking Cron Job Completed to execute all reports.');
 }
 
+// const exportReportsOnebyOne = async () => {
+//   //call all export reports one by one on every cron
+//   await generatePremiumValidationData();
+
+//   await generateFaildReport("Farmer");
+//   await generateFaildReport("Procurement");
+//   // await generateExportFarmer();
+
+//   // Procurement Reports 
+//   await generatePscpCottonProcurement();
+//   await generatePscpProcurementLiveTracker();
+
+//   await exportVillageSeedCottonAllocation();
+
+//   // //brand wise report
+//   await generateBrandWiseData();
+
+//   // // Ginner Reports 
+//   await generateGinnerSummary();
+//   await generatePendingGinnerSales();
+//   await generateGinnerCottonStock();
+//   await generateGinnerProcess();
+//   await generateGinnerLintCottonStock()
+//   //spinner Reports
+//   await generateSpinnerSummary();
+//   await generateSpinnerBale();
+//   await generateSpinnerYarnProcess();
+//   await generateSpinnerSale();
+//   await generatePendingSpinnerBale();
+//   await generateSpinnerLintCottonStock();
+//   await exportSpinnerGreyOutReport();
+//   await exportGinHeapReport();
+//   await exportGinnerProcessGreyOutReport();
+//   await exportSpinnerProcessGreyOutReport();
+
+
+//   console.log('Cron Job Completed to execute all reports.');
+// }
+
 const exportReportsOnebyOne = async () => {
-  //call all export reports one by one on every cron
-  await generatePremiumValidationData();
-
-  await generateFaildReport("Farmer");
-  await generateFaildReport("Procurement");
-  // await generateExportFarmer();
-
-  // Procurement Reports 
-  await generatePscpCottonProcurement();
-  await generatePscpProcurementLiveTracker();
-
-  await exportVillageSeedCottonAllocation();
-
-  // //brand wise report
-  await generateBrandWiseData();
-
-  // // Ginner Reports 
-  await generateGinnerSummary();
-  await generatePendingGinnerSales();
-  await generateGinnerCottonStock();
-  await generateGinnerProcess();
-  await generateGinnerLintCottonStock()
-  //spinner Reports
-  await generateSpinnerSummary();
-  await generateSpinnerBale();
-  await generateSpinnerYarnProcess();
-  await generateSpinnerSale();
-  await generatePendingSpinnerBale();
-  await generateSpinnerLintCottonStock();
-  await exportSpinnerGreyOutReport();
   await exportGinHeapReport();
-  await exportGinnerProcessGreyOutReport();
-  await exportSpinnerProcessGreyOutReport();
-
-
   console.log('Cron Job Completed to execute all reports.');
 }
-
 //----------------------------------------- Spinner Reports ------------------------//
 
 const exportSpinnerGreyOutReport = async () => {
