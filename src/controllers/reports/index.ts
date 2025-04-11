@@ -1308,7 +1308,7 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
 
       if (isOrganic === 'true') {
         rowValues = Object.values({
-          index: "Total: ",
+          index: "",
           country: "",
           state: "",
           date: "",
@@ -1321,7 +1321,7 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
           heap: '',
           lot_no: "",
           press_no: "",
-          reel_press_no_no : "",
+          reel_press_no_no : "Total",
           noOfBales: Number(formatDecimal(totals.total_no_of_bales)),
           lint_quantity: Number(formatDecimal(totals.total_lint_quantity)),
           program:"",
@@ -1332,7 +1332,7 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
       }
       else if (isBrand === 'true') {
         rowValues = Object.values({
-          index: "Total: ",
+          index: "",
           country: "",
           state: "",
           date: "",
@@ -1346,7 +1346,7 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
           lot_no: "",
           press_no: "",
           reel_lot_no: "",
-          reel_press_no: "",
+          reel_press_no: "Total",
           noOfBales: Number(formatDecimal(totals.total_no_of_bales)),
           lint_quantity: Number(formatDecimal(totals.total_lint_quantity)),
           program: "",
@@ -1356,7 +1356,7 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
       }
       else if(isAdmin === 'true'){
         rowValues = Object.values({
-          index: "Total: ",
+          index: "",
           country: "",
           state: "",
           date: "",
@@ -1371,7 +1371,7 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
           lot_no: "",
           press_no: "",
           reel_lot_no: "",
-          reel_press_no: "",
+          reel_press_no: "Total",
           noOfBales: Number(formatDecimal(totals.total_no_of_bales)),
           lint_quantity: Number(formatDecimal(totals.total_lint_quantity)),
           seedConsmed: Number(formatDecimal(totals.total_seedConsmed)),
@@ -1390,7 +1390,7 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
       }
       else {
           rowValues = Object.values({
-            index: "Total: ",
+            index: "",
             country: "",
             state: "",
             date: "",
@@ -1405,7 +1405,7 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
             lot_no: "",
             press_no: "",
             reel_lot_no: "",
-            reel_press_no: "",
+            reel_press_no: "Total",
             noOfBales: Number(formatDecimal(totals.total_no_of_bales)),
             lint_quantity: Number(formatDecimal(totals.total_lint_quantity)),
             seedConsmed: Number(formatDecimal(totals.total_seedConsmed)),
@@ -1954,7 +1954,7 @@ const exportPendingGinnerSales = async (req: Request, res: Response) => {
       let rowValues;
       if(isOrganic === 'true'){
         rowValues = Object.values({
-          index: "Total: ",
+          index: "",
           country: "",
           state: "",
           date:  "",
@@ -1963,7 +1963,7 @@ const exportPendingGinnerSales = async (req: Request, res: Response) => {
           invoice:  "",
           buyer_type: "",
           buyer:  '',
-          lot_no: "",
+          lot_no: "Total",
           no_of_bales: Number(formatDecimal(totals.total_no_of_bales)),
           press_no: "",
           rate: Number(formatDecimal(totals.total_rate)),
@@ -1974,7 +1974,7 @@ const exportPendingGinnerSales = async (req: Request, res: Response) => {
       }
       else{
       rowValues = Object.values({
-        index: "Total: ",
+        index: "",
         country: "",
         state: "",
         date:  "",
@@ -1984,7 +1984,7 @@ const exportPendingGinnerSales = async (req: Request, res: Response) => {
         buyer_type: "",
         buyer:  '',
         lot_no:  "",
-        reel_lot_no: "",
+        reel_lot_no: "Total",
         no_of_bales: Number(formatDecimal(totals.total_no_of_bales)),
         press_no:  "",
         rate: Number(formatDecimal(totals.total_rate)),
@@ -4065,7 +4065,7 @@ const exportGinnerSales = async (req: Request, res: Response) => {
       let rowValues;
       if (isOrganic === 'true') {
         rowValues = Object.values({
-          index:"Total: ",
+          index:"",
           country:"",
           state:"",
           date:"",
@@ -4076,7 +4076,7 @@ const exportGinnerSales = async (req: Request, res: Response) => {
           invoice:"",
           buyer_type:"",
           buyer:"",
-          lot_no:"",
+          lot_no:"Total",
           no_of_bales: totals.total_no_of_bales,
           press_no:"",
           rate: Number(formatDecimal(totals.total_rate)),
@@ -4089,7 +4089,7 @@ const exportGinnerSales = async (req: Request, res: Response) => {
       }
       else if (isBrand === 'true') {
         rowValues = Object.values({
-          index:"Total: ",
+          index:"",
           country:"",
           state:"",            
           date:"",
@@ -4101,7 +4101,7 @@ const exportGinnerSales = async (req: Request, res: Response) => {
           buyer_type:"",
           buyer:"",
           lot_no:"",
-          reel_lot_no:"",
+          reel_lot_no:"Total",
           no_of_bales: totals.total_no_of_bales,
           press_no:"",
           rate: Number(formatDecimal(totals.total_rate)),
@@ -4114,7 +4114,7 @@ const exportGinnerSales = async (req: Request, res: Response) => {
       } else {
 
         rowValues = Object.values({
-          index:"Total: ",
+          index:"",
           country:"",
           state:"",            
           date:"",
@@ -4129,7 +4129,7 @@ const exportGinnerSales = async (req: Request, res: Response) => {
           buyer:"",
           // heap:"",
           lot_no:"",
-          reel_lot_no:"",
+          reel_lot_no:"Total",
           no_of_bales: totals.total_no_of_bales,
           press_no:"",
           rate: Number(formatDecimal(totals.total_rate)),
@@ -13483,10 +13483,10 @@ const exportSpinnerSummary = async (req: Request, res: Response) => {
 
 
       const rowVal ={
-        index:"Totals",
+        index:"",
         country:"",
         state:"",
-        name:"",
+        name:"Total",
         lint_cotton_procured:Number(formatDecimal(totals.total_lint_cotton_procured)),
         lint_cotton_procured_pending:Number(formatDecimal(totals.total_lint_cotton_procured_pending)),
         lint_consumed:Number(formatDecimal(totals.total_lint_consumed)),
@@ -16002,11 +16002,11 @@ const exportGinnerCottonStock = async (req: Request, res: Response) => {
       }
 
       const rowValues = Object.values({
-        index: "Total: ",
+        index: "",
         ginner:  "",
         season:  "",
         country: "",
-        state: "",
+        state: "Total",
         cotton_procured: Number(formatDecimal(totals.total_cotton_procured)),
         cotton_processed: Number(formatDecimal(totals.total_cotton_processed)),
         cotton_stock: Number(formatDecimal(totals.total_cotton_stock)),

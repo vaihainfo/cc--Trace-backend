@@ -5287,10 +5287,10 @@ const generateSpinnerSummary = async () => {
 
       if(currentWorksheet != undefined){
         const rowVal ={
-          index:"Totals",
+          index:"",
           country:"",
           state:"",
-          name:"",
+          name:"Total",
           lint_cotton_procured:Number(formatDecimal(totals.total_lint_cotton_procured)),
           lint_cotton_procured_pending:Number(formatDecimal(totals.total_lint_cotton_procured_pending)),
           lint_consumed:Number(formatDecimal(totals.total_lint_consumed)),
