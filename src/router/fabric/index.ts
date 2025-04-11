@@ -15,6 +15,8 @@ import {
     fetchWashingSalesPagination,
     exportWashingProcess,
     chooseWashingFabric,
+    getWashingProcessById,
+    updateWashingProcess,
     fetchPrintingTransactions,
     fetchPrintingTransactionSold,
     updatePrintingTransactionStatus,
@@ -75,6 +77,8 @@ router.get('/choose-washing-fabric', chooseWashingFabric);
 router.post('/washing-process', createWashingProcess);
 router.get('/export-washing-process', exportWashingProcess);
 router.get('/washing-process', fetchWashingSalesPagination);
+router.get('/washing-process/:id', getWashingProcessById);
+router.put('/washing-process/:id', updateWashingProcess);
 router.delete('/delete-washing-process', deleteWashingProcess);
 router.get('/washing-process/export/transaction', exportWashingTransactionList);
 

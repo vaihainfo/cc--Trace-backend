@@ -4390,6 +4390,211 @@ const updatePrintingProcess = async (req: Request, res: Response) => {
   }
 };
 
+// Get a single washing process by ID
+const getWashingProcessById = async (req: Request, res: Response) => {
+  try {
+    const id = req.params.id;
+
+    if (!id) {
+      return res.sendError(res, "Process ID is required");
+    }
+
+    // Include the same models as in fetchWashingSalesPagination for consistency
+    const include = [
+      {
+        model: Program,
+        as: "program",
+        attributes: ["id", "program_name"],
+      },
+      {
+        model: Season,
+        as: "season",
+        attributes: ["id", "name"],
+      },
+      {
+        model: Garment,
+        as: "buyer",
+        attributes: ["id", "name"],
+      },
+      {
+        model: Fabric,
+        as: "abuyer",
+        attributes: ["id", "name"],
+      },
+      {
+        model: Fabric,
+        as: "washing",
+        attributes: ["id", "name"],
+      }
+    ];
+
+    const washingProcess = await WashingSales.findOne({
+      where: { id },
+      include: include,
+    });
+
+    if (!washingProcess) {
+      return res.sendError(res, "Washing process not found");
+    }
+
+    // Get the selected fabrics for this process
+    const selectedFabrics = await WashingFabricSelection.findAll({
+      where: { sales_id: id },
+    });
+
+    // Format the response
+    const processData = washingProcess.toJSON();
+    const formattedProcess = {
+      ...processData,
+      chooseFabric: selectedFabrics,
+      buyerId: processData.buyer_id,
+      buyerName: processData.buyer?.name,
+      buyerFabricId: processData.fabric_id,
+      buyerFabricName: processData.abuyer?.name,
+      seasonId: processData.season_id,
+      programId: processData.program_id,
+      // Ensure document fields are explicitly included
+      invoiceFiles: processData.invoice_files || [],
+      otherDocs: processData.other_docs || [],
+      washInvoice: processData.wash_invoice || '',
+      washingDetails: processData.washing_details || '',
+      wash_type: processData.wash_type || '',
+      // Ensure buyer type is explicitly included
+      buyerType: processData.buyer_type || '',
+    };
+
+    // Return in pagination format for consistency with other endpoints
+    return res.sendSuccess(res, formattedProcess);
+  } catch (error) {
+    console.error("Error fetching washing process by ID:", error);
+    return res.sendError(res, "Error fetching washing process");
+  }
+};
+
+// Update a washing process
+const updateWashingProcess = async (req: Request, res: Response) => {
+  const transaction = await sequelize.transaction();
+  try {
+    const id = req.params.id;
+    const {
+      washingId,
+      programId,
+      seasonId,
+      date,
+      garmentOrderRef,
+      brandOrderRef,
+      buyerType,
+      buyerId,
+      buyerFabricId,
+      processorName,
+      processorAddress,
+      oldFabricQuantity,
+      addFabricQuantity,
+      fabricQuantity,
+      totalFabricQuantity,
+      fabricLength,
+      fabricGsm,
+      fabricNetWeight,
+      processWeight,
+      weightGain,
+      weightLoss,
+      batchLotNo,
+      jobDetails,
+      washingDetails,
+      wash_type,
+      invoiceNo,
+      orderDetails,
+      billOfLadding,
+      transportInfo,
+      invoiceFiles,
+      otherDocs,
+      washInvoice,
+      salesType,
+      from_date,
+      to_date,
+      chooseFabric,
+    } = req.body;
+
+    // Check if the washing process exists
+    const existingProcess = await WashingSales.findByPk(id);
+    if (!existingProcess) {
+      await transaction.rollback();
+      return res.sendError(res, "Washing process not found");
+    }
+
+    // Update the washing process
+    await WashingSales.update(
+      {
+        washing_id: washingId,
+        program_id: programId,
+        season_id: seasonId,
+        date,
+        garment_order_ref: garmentOrderRef,
+        brand_order_ref: brandOrderRef,
+        buyer_type: buyerType,
+        buyer_id: buyerId,
+        fabric_id: buyerFabricId,
+        processor_name: processorName,
+        processor_address: processorAddress,
+        old_fabric_quantity: oldFabricQuantity,
+        add_fabric_quantity: addFabricQuantity,
+        fabric_quantity: fabricQuantity,
+        total_fabric_quantity: totalFabricQuantity,
+        fabric_length: fabricLength,
+        gsm: fabricGsm,
+        fabric_net_weight: fabricNetWeight,
+        process_weight: processWeight,
+        weight_gain: weightGain,
+        weight_loss: weightLoss,
+        batch_lot_no: batchLotNo,
+        job_details: jobDetails,
+        washing_details: washingDetails,
+        wash_type: wash_type,
+        invoice_no: invoiceNo,
+        order_details: orderDetails,
+        bill_of_ladding: billOfLadding,
+        transport_info: transportInfo,
+        invoice_files: invoiceFiles,
+        other_docs: otherDocs,
+        wash_invoice: washInvoice,
+        sales_type: salesType,
+        from_date: from_date,
+        to_date: to_date,
+      },
+      {
+        where: { id },
+        transaction,
+      }
+    );
+
+    // Delete existing fabric selections
+    await WashingFabricSelection.destroy({
+      where: { sales_id: id },
+      transaction,
+    });
+
+    // Create new fabric selections if provided
+    if (chooseFabric && Array.isArray(chooseFabric) && chooseFabric.length > 0) {
+      const fabricSelections = chooseFabric.map((fabric: any) => ({
+        sales_id: id,
+        fabric_id: fabric.id,
+        quantity: fabric.qtyUsed,
+        total_quantity: fabric.totalQty,
+        processor: fabric.processor,
+      }));
+
+      await WashingFabricSelection.bulkCreate(fabricSelections, { transaction });
+    }
+
+    await transaction.commit();
+    return res.sendSuccess(res, { message: "Washing process updated successfully" });
+  } catch (error) {
+    await transaction.rollback();
+    console.error("Error updating washing process:", error);
+    return res.sendError(res, "Error updating washing process");
+  }
+};
+
 export {
   fetchDyingTransactions,
   getProgram,
@@ -4438,4 +4643,6 @@ export {
   updateDyingProcess,
   getPrintingProcessById,
   updatePrintingProcess,
+  getWashingProcessById,
+  updateWashingProcess,
 };
