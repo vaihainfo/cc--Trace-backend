@@ -54,7 +54,7 @@ import District from "../../models/district.model";
 import SpinProcess from "../../models/spin-process.model";
 import CottonMix from "../../models/cotton-mix.model";
 import { _getFabricProcessTracingChartData } from '../fabric/index';
-import { formatDataForGarment } from '../../util/tracing-chart-data-formatter';
+import { formatDataForGarment, formatForwardChainDataGarment } from '../../util/tracing-chart-data-formatter';
 import PhysicalTraceabilityDataGarment from "../../models/physical-traceability-data-garment.model";
 import PhysicalTraceabilityDataGarmentSample from "../../models/physical-traceability-data-garment-sample.model";
 import FabricType from "../../models/fabric-type.model";
@@ -775,8 +775,8 @@ const createGarmentProcess = async (req: Request, res: Response) => {
       no_of_pieces: req.body.noOfPieces,
       no_of_boxes: req.body.noOfBoxes,
       finished_garment_image: req.body.finishedGarmentImage,
-      // qty_stock: req.body.totalFabricLength,
-      // total_qty: req.body.totalFabricLength,
+      qty_stock: req.body.totalFabricLength + req.body.totalFabricWeight,
+      total_qty: req.body.totalFabricLength + req.body.totalFabricWeight,
       qty_stock_weight: req.body.totalFabricWeight,
       qty_stock_length: req.body.totalFabricLength,
       embroidering_required: req.body.embroideringRequired,
@@ -1080,6 +1080,7 @@ const updateGarmentProcess = async (req: Request, res: Response) => {
         garment_size: fabric.garmentSize,
         color: fabric.color,
         no_of_pieces: fabric.noOfPieces,
+        no_of_pieces_stock: fabric.noOfPieces,
         no_of_boxes: fabric.noOfBoxes,
         finished_garment_image: fabric.finishedGarmentImage,
         sold_status: false
@@ -1661,13 +1662,13 @@ const createGarmentSales = async (req: Request, res: Response) => {
           where: { id: obj.process_id },
         });
         if (val) {
-          let update = await GarmentProcess.update(
-            {
-              qty_stock: val.dataValues.qty_stock - obj.qtyUsed,
-              status: 'Sold'
-            },
-            { where: { id: obj.process_id } }
-          );
+          // let update = await GarmentProcess.update(
+          //   {
+          //     qty_stock: val.dataValues.qty_stock - obj.qtyUsed,
+          //     status: 'Sold'
+          //   },
+          //   { where: { id: obj.process_id } }
+          // );
 
           const GarmentFabric = await GarmentFabricType.findOne({ where: { id: obj.id } });
 
@@ -4133,6 +4134,7 @@ const getCOCDocumentData = async (
       gnrTotalQty: '',
       date: '',
       seedCottonQty: 0,
+      fbrcProcessorType:''
     };
 
     let [result] = await sequelize.query(`
@@ -4308,6 +4310,7 @@ const getCOCDocumentData = async (
         if (!spinSalesIds.includes(sale.spin_sale_ids))
           spinSalesIds.push(sale.spin_sale_ids);
       });
+      cocRes.fbrcProcessorType = 'Weaver';
     }
 
     const knitterProcessId = kProcessIds.flatMap((id: any) => id.split(',').map((str: string) => str.trim()))
@@ -4332,6 +4335,7 @@ const getCOCDocumentData = async (
         if (!spinSalesIds.includes(sale.spin_sale_ids))
           spinSalesIds.push(sale.spin_sale_ids);
       });
+      cocRes.fbrcProcessorType = 'Knitter';
     }
 
     const spinnerSalesId = spinSalesIds.flatMap((id: any) => id.split(',').map((str: string) => str.trim()))
@@ -4612,14 +4616,14 @@ const deleteGarmentSales = async (req: Request, res: Response) => {
       // Restore quantities back to GarmentProcess and GarmentFabricType
       for (const selection of garmentSelections) {
         // Get the garment process
-        const garmentProcess = await GarmentProcess.findByPk(selection.garment_id, { transaction });
-        if (garmentProcess) {
-          // Restore the quantity back to the process
-          await GarmentProcess.update(
-            { qty_stock: garmentProcess.qty_stock + selection.qty_used },
-            { where: { id: selection.garment_id }, transaction }
-          );
-        }
+        // const garmentProcess = await GarmentProcess.findByPk(selection.garment_id, { transaction });
+        // if (garmentProcess) {
+        //   // Restore the quantity back to the process
+        //   await GarmentProcess.update(
+        //     { qty_stock: garmentProcess.qty_stock + selection.qty_used },
+        //     { where: { id: selection.garment_id }, transaction }
+        //   );
+        // }
 
         // Get the garment fabric type
         const garmentFabricType = await GarmentFabricType.findByPk(selection.garment_type_id, { transaction });
@@ -4664,6 +4668,92 @@ const deleteGarmentSales = async (req: Request, res: Response) => {
   }
 };
 
+
+const _getGarmentProcessForwardChainData = async (reelLotNo: string) => {
+  try {
+    let whereCondition: any = {};
+    if (reelLotNo !== null) {
+      const idArray = reelLotNo.split(",").map((it: string) => it?.trim());
+      whereCondition.reel_lot_no = { [Op.in]: idArray };
+    }
+  
+    let include = [
+      {
+        model: Garment,
+        as: "garment",
+        attributes: ["id", "name"]
+      },
+    ];
+
+    let garments = await GarmentProcess.findAll({ where: whereCondition, include });
+
+    garments = await Promise.all(garments?.map(async (el: any) => {
+      el = el?.toJSON();
+
+      let garmentSale = await GarmentSelection.findAll({
+        include: [
+          {
+            model: GarmentSales,
+            as: "garmentsales",
+            attributes: ["id", "style_mark_no"],
+            include:[
+              {
+                model: Brand,
+                as: "buyer",
+                attributes: ["id", "brand_name"],
+              }
+            ]
+          },
+        ],
+        where: {
+          garment_id: el.id
+        }
+      })
+
+      if(garmentSale && garmentSale.length > 0){
+        const brands = new Map();
+          garmentSale.forEach((it: any) => {
+            const buyer = it.dataValues.garmentsales?.buyer;
+            if (buyer && !brands.has(buyer.id)) {
+              brands.set(buyer.id, buyer);
+            }
+          });
+
+          el.brand = Array.from(brands.values());
+      }
+      return el;
+    }));
+
+    let formattedData: any = {};
+    let obj: any ={};
+    obj.garment_name = garments && garments.length > 0 ?  [...new Set(garments.map((el: any) => el.garment.name))].join(',') : "";
+
+    garments.forEach((el: any) => {
+      if(el.brand){
+        el.brand.forEach((tx: any) => {
+          if (!formattedData[tx.id]) {
+            formattedData[tx.id] = {
+              brand_name: tx.brand_name,
+            };
+          }
+        });
+      }else{
+        el.brand=[]
+      }
+    });
+
+    formattedData = Object.keys(formattedData).map((key: any) => {
+      return formattedData[key];
+    });
+    obj.brands = formattedData ? formattedData : [];
+
+    return garments && garments.length > 0 ? [formatForwardChainDataGarment(reelLotNo,obj)] : []
+  } catch (error) {
+    console.log("Error processing garment data: ", error);
+  }
+};
+
+
 export {
   fetchBrandQrGarmentSalesPagination,
   exportBrandQrGarmentSales,
@@ -4697,5 +4787,6 @@ export {
   exportGarmentTransactionList,
   getCOCDocumentData,
   updateCOCDoc,
-  deleteGarmentProcess
+  deleteGarmentProcess,
+  _getGarmentProcessForwardChainData
 };

@@ -726,8 +726,8 @@ const exportGinHeapReport = async (req: Request, res: Response) => {
       }
 
       const rowValues = Object.values({
-        index: "Totals:", country: "", state: "", created_date:"", season: "", ginner_heap_no:"",
-        reel_heap_no:"", ginner_name:"", village_name: "", 
+        index: "", country: "", state: "", created_date:"", season: "", ginner_heap_no:"",
+        reel_heap_no:"", ginner_name:"", village_name: "Total", 
         heap_weight:Number(formatDecimal(weightSum)),
         heap_starting_date: "", heap_ending_date: "", weighbridge_vehicle_no:""
       });
@@ -5068,7 +5068,7 @@ const exportSpinnerBale = async (req: Request, res: Response) => {
       let rowValues;
       if (isOrganic === 'true') {
      rowValues = Object.values({
-        index:"Totals: ",
+        index:"",
         country:"",
         state:"",
         accept_date:"",
@@ -5079,7 +5079,7 @@ const exportSpinnerBale = async (req: Request, res: Response) => {
         ginner:"",
         invoice:"",
         lot_no:"",
-        press_no:"",
+        press_no:"Total",
         no_of_bales: Number(formatDecimal(totals.total_no_of_bales)),
         lint_quantity: Number(formatDecimal(totals.total_lint_quantity)),
         greyed_out_qty:"",
@@ -5089,7 +5089,7 @@ const exportSpinnerBale = async (req: Request, res: Response) => {
     }
     else{
       rowValues = Object.values({
-        index:"Totals: ",
+        index:"",
         country:"",
         state:"",
         accept_date:"",
@@ -5101,7 +5101,7 @@ const exportSpinnerBale = async (req: Request, res: Response) => {
         invoice:"",
         lot_no:"",
         reel_lot_no:"",
-        press_no:"",
+        press_no:"Total",
         no_of_bales: Number(formatDecimal(totals.total_no_of_bales)),
         lint_quantity: Number(formatDecimal(totals.total_lint_quantity)),
         greyed_out_qty:"",
@@ -5514,7 +5514,7 @@ const exportPendingSpinnerBale = async (req: Request, res: Response) => {
       let rowValues;
       if (isOrganic === 'true') {
         rowValues = {
-          index:"Totals: ",
+          index:"",
           country:"",
           state:"",
           createdAt:"",
@@ -5523,7 +5523,7 @@ const exportPendingSpinnerBale = async (req: Request, res: Response) => {
           season:"",
           ginner:"",
           spinner:"",
-          invoice:"",
+          invoice:"Total",
           no_of_bales: Number(formatDecimal(totals.no_of_bales)),
           lot_no:"",
           total_qty: Number(formatDecimal(totals.total_qty)),
@@ -5533,7 +5533,7 @@ const exportPendingSpinnerBale = async (req: Request, res: Response) => {
       }
       else if (isBrand === 'true') {
         rowValues = {
-          index:"Totals: ",
+          index:"",
           country:"",
           state:"",
           createdAt:"",
@@ -5542,7 +5542,7 @@ const exportPendingSpinnerBale = async (req: Request, res: Response) => {
           season:"",
           ginner:"",
           spinner:"",
-          invoice:"",
+          invoice:"Total",
           no_of_bales: Number(formatDecimal(totals.no_of_bales)),
           lot_no:"",
           reel_lot_no:"",
@@ -5552,7 +5552,7 @@ const exportPendingSpinnerBale = async (req: Request, res: Response) => {
         };
       } else {
         rowValues = {
-          index:"Totals: ",
+          index:"",
           country:"",
           state:"",
           createdAt:"",
@@ -5561,7 +5561,7 @@ const exportPendingSpinnerBale = async (req: Request, res: Response) => {
           season:"",
           ginner:"",
           spinner:"",
-          invoice:"",
+          invoice:"Total",
           no_of_bales: Number(formatDecimal(totals.no_of_bales)),
           lot_no:"",
           reel_lot_no:"",
@@ -6409,7 +6409,7 @@ const exportSpinnerYarnProcess = async (req: Request, res: Response) => {
       if (isOrganic === 'true') {
 
          rowValues = {
-           index:"Totals: ",
+           index:"",
            country:"",
            state:"",
            createdAt:"",
@@ -6437,7 +6437,7 @@ const exportSpinnerYarnProcess = async (req: Request, res: Response) => {
        }
        else if (isBrand === 'true' && (isOrganic === false ||  isOrganic === 'false')) {
          rowValues ={
-           index:"Totals: ",
+           index:"",
            country:"",
            state:"",
            createdAt:"",
@@ -6466,7 +6466,7 @@ const exportSpinnerYarnProcess = async (req: Request, res: Response) => {
        }
        else if(isAdmin === 'true'){
          rowValues = {
-           index:"Totals: ",
+           index:"",
            country:"",
            state:"",
            createdAt:"",
@@ -6497,7 +6497,7 @@ const exportSpinnerYarnProcess = async (req: Request, res: Response) => {
        }
        else {
          rowValues = {
-           index:"Totals: ",
+           index:"",
            country:"",
            state:"",
            createdAt:"",
@@ -7511,7 +7511,7 @@ const exportSpinnerSale = async (req: Request, res: Response) => {
       let rowValues;
       if (isOrganic === 'true') {
         rowValues = {
-          index:"Totals: ",
+          index:"",
           country:"",
           state:"",
           createdAt:"",
@@ -7538,7 +7538,7 @@ const exportSpinnerSale = async (req: Request, res: Response) => {
       } 
       else if (isBrand === 'true' &&  (isOrganic === false ||  isOrganic === 'false')) {
         rowValues = {
-          index:"Totals: ",
+          index:"",
           country:"",
           state:"",
           createdAt:"",
@@ -7564,7 +7564,7 @@ const exportSpinnerSale = async (req: Request, res: Response) => {
       }
       else if (isAdmin === 'true') {
         rowValues = {
-          index:"Totals: ",
+          index:" ",
           country:"",
           state:"",
           createdAt:"",
@@ -7592,7 +7592,7 @@ const exportSpinnerSale = async (req: Request, res: Response) => {
       }    
       else {
         rowValues = {
-          index:"Totals: ",
+          index:" ",
           country:"",
           state:"",
           createdAt:"",
@@ -15574,10 +15574,10 @@ const exportGinnerSummary = async (req: Request, res: Response) => {
 
       
       const rowValues = {
-        index:"Totals:",
+        index:"",
         name:"",
         country:"",
-        state:"",
+        state:"Total",
         cottonProcuredMt: totals.cottonProcuredMt,
         cottonProcessedeMt: totals.cottonProcessedeMt,
         //cottonStockMt: totals.cottonStockMt,
@@ -16986,7 +16986,7 @@ const exportSpinnerCottonStock = async (req: Request, res: Response) => {
 
     
       const rowValues = {
-        index:"Totals: ",
+        index:"",
         country:"",
         state:"",
         date:"",
@@ -16995,7 +16995,7 @@ const exportSpinnerCottonStock = async (req: Request, res: Response) => {
         spinner:"",
         reel_lot_no:"",
         invoice_no:"",
-        batch_lot_no:"",
+        batch_lot_no:"Total",
         cotton_procured: Number(formatDecimal(totals.cotton_procured)),
         cotton_stock: Number(formatDecimal(totals.cotton_stock)),
         greyed_out_qty: Number(formatDecimal(totals.greyed_out_qty)),
@@ -20287,11 +20287,11 @@ const exportPscpProcurementLiveTracker = async (
       let rowValues;
       if (isBrand === 'true') {
         rowValues = {
-          index:"Totals:",
+          index:"",
           name:"",
           country:"",
           state:"",
-          program:"",
+          program:"Total",
           expected_seed_cotton:totals.expected_seed_cotton,
           expected_lint:totals.expected_lint,
           procurement_seed_cotton:totals.procurement_seed_cotton,
@@ -20313,11 +20313,11 @@ const exportPscpProcurementLiveTracker = async (
         };
       } else {
         rowValues = {
-          index:"Totals:",
+          index:"",
           name:"",
           country:"",
           state:"",
-          program:"",
+          program:"Total",
           expected_seed_cotton: totals.expected_seed_cotton,
           expected_lint: totals.expected_lint,
           procurement_seed_cotton: totals.procurement_seed_cotton,
