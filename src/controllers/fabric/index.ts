@@ -4185,6 +4185,211 @@ const updateDyingProcess = async (req: Request, res: Response) => {
   }
 };
 
+// Get a single printing process by ID
+const getPrintingProcessById = async (req: Request, res: Response) => {
+  try {
+    const id = req.params.id;
+
+    if (!id) {
+      return res.sendError(res, "Process ID is required");
+    }
+
+    // Include the same models as in fetchPrintingSalesPagination for consistency
+    const include = [
+      {
+        model: Program,
+        as: "program",
+        attributes: ["id", "program_name"],
+      },
+      {
+        model: Season,
+        as: "season",
+        attributes: ["id", "name"],
+      },
+      {
+        model: Garment,
+        as: "buyer",
+        attributes: ["id", "name"],
+      },
+      {
+        model: Fabric,
+        as: "abuyer",
+        attributes: ["id", "name"],
+      },
+      {
+        model: Fabric,
+        as: "printing",
+        attributes: ["id", "name"],
+      }
+    ];
+
+    const printingProcess = await PrintingSales.findOne({
+      where: { id },
+      include: include,
+    });
+
+    if (!printingProcess) {
+      return res.sendError(res, "Printing process not found");
+    }
+
+    // Get the selected fabrics for this process
+    const selectedFabrics = await PrintingFabricSelection.findAll({
+      where: { sales_id: id },
+    });
+
+    // Format the response
+    const processData = printingProcess.toJSON();
+    const formattedProcess = {
+      ...processData,
+      chooseFabric: selectedFabrics,
+      buyerId: processData.buyer_id,
+      buyerName: processData.buyer?.name,
+      buyerFabricId: processData.buyer_fabric_id,
+      buyerFabricName: processData.abuyer?.name,
+      seasonId: processData.season_id,
+      programId: processData.program_id,
+      // Ensure document fields are explicitly included
+      invoiceFiles: processData.invoice_files || [],
+      otherDocs: processData.other_docs || [],
+      printInvoice: processData.print_invoice || '',
+      printingDetails: processData.printing_details || '',
+      printType: processData.print_type || '',
+      // Ensure buyer type is explicitly included
+      buyerType: processData.buyer_type || '',
+    };
+
+    // Return in pagination format for consistency with other endpoints
+    return res.sendSuccess(res, formattedProcess);
+  } catch (error) {
+    console.error("Error fetching printing process by ID:", error);
+    return res.sendError(res, "Error fetching printing process");
+  }
+};
+
+// Update a printing process
+const updatePrintingProcess = async (req: Request, res: Response) => {
+  const transaction = await sequelize.transaction();
+  try {
+    const id = req.params.id;
+    const {
+      fabricId,
+      programId,
+      seasonId,
+      date,
+      garmentOrderRef,
+      brandOrderRef,
+      buyerType,
+      buyerId,
+      buyerFabricId,
+      processorName,
+      processorAddress,
+      oldFabricQuantity,
+      addFabricQuantity,
+      fabricQuantity,
+      totalFabricQuantity,
+      fabricLength,
+      fabricGsm,
+      fabricNetWeight,
+      processWeight,
+      weightGain,
+      weightLoss,
+      batchLotNo,
+      jobDetails,
+      printingDetails,
+      printType,
+      invoiceNo,
+      orderDetails,
+      billOfLadding,
+      transportInfo,
+      invoiceFiles,
+      otherDocs,
+      printInvoice,
+      salesType,
+      from_date,
+      to_date,
+      chooseFabric,
+    } = req.body;
+
+    // Check if the printing process exists
+    const existingProcess = await PrintingSales.findByPk(id);
+    if (!existingProcess) {
+      await transaction.rollback();
+      return res.sendError(res, "Printing process not found");
+    }
+
+    // Update the printing process
+    await PrintingSales.update(
+      {
+        fabric_id: fabricId,
+        program_id: programId,
+        season_id: seasonId,
+        date,
+        garment_order_ref: garmentOrderRef,
+        brand_order_ref: brandOrderRef,
+        buyer_type: buyerType,
+        buyer_id: buyerId,
+        buyer_fabric_id: buyerFabricId,
+        processor_name: processorName,
+        processor_address: processorAddress,
+        old_fabric_quantity: oldFabricQuantity,
+        add_fabric_quantity: addFabricQuantity,
+        fabric_quantity: fabricQuantity,
+        total_fabric_quantity: totalFabricQuantity,
+        fabric_length: fabricLength,
+        gsm: fabricGsm,
+        fabric_net_weight: fabricNetWeight,
+        process_weight: processWeight,
+        weight_gain: weightGain,
+        weight_loss: weightLoss,
+        batch_lot_no: batchLotNo,
+        job_details: jobDetails,
+        printing_details: printingDetails,
+        print_type: printType,
+        invoice_no: invoiceNo,
+        order_details: orderDetails,
+        bill_of_ladding: billOfLadding,
+        transport_info: transportInfo,
+        invoice_files: invoiceFiles,
+        other_docs: otherDocs,
+        print_invoice: printInvoice,
+        sales_type: salesType,
+        from_date: from_date,
+        to_date: to_date,
+      },
+      {
+        where: { id },
+        transaction,
+      }
+    );
+
+    // Delete existing fabric selections
+    await PrintingFabricSelection.destroy({
+      where: { sales_id: id },
+      transaction,
+    });
+
+    // Create new fabric selections if provided
+    if (chooseFabric && Array.isArray(chooseFabric) && chooseFabric.length > 0) {
+      const fabricSelections = chooseFabric.map((fabric: any) => ({
+        sales_id: id,
+        fabric_id: fabric.id,
+        quantity: fabric.qtyUsed,
+        total_quantity: fabric.totalQty,
+        processor: fabric.processor,
+      }));
+
+      await PrintingFabricSelection.bulkCreate(fabricSelections, { transaction });
+    }
+
+    await transaction.commit();
+    return res.sendSuccess(res, { message: "Printing process updated successfully" });
+  } catch (error) {
+    await transaction.rollback();
+    console.error("Error updating printing process:", error);
+    return res.sendError(res, "Error updating printing process");
+  }
+};
+
 export {
   fetchDyingTransactions,
   getProgram,
@@ -4231,4 +4436,6 @@ export {
   exportCompactingTransactionList,
   getDyingProcessById,
   updateDyingProcess,
+  getPrintingProcessById,
+  updatePrintingProcess,
 };

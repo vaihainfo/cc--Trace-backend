@@ -39,6 +39,8 @@ import {
     getFabricProcessTracingChartData,
     exportTransactionList,
     exportPrintingTransactionList,
+    getPrintingProcessById,
+    updatePrintingProcess,
     exportWashingTransactionList,
     exportCompactingTransactionList,
     getDyingProcessById,
@@ -83,6 +85,8 @@ router.put('/update-transaction-printing', updatePrintingTransactionStatus);
 router.get('/choose-printing-fabric', choosePrintingFabric);
 router.post('/printing-process', createPrintingProcess);
 router.get('/printing-process', fetchPrintingSalesPagination);
+router.get('/printing-process/:id', getPrintingProcessById);
+router.put('/printing-process/:id', updatePrintingProcess);
 router.get('/export-printing-process', exportPrintingProcess);
 router.delete('/delete-printing-process', deletePrintingProcess);
 router.get('/printing-dashboard/export/transaction', exportPrintingTransactionList);
