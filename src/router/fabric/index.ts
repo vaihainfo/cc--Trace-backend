@@ -40,7 +40,9 @@ import {
     exportTransactionList,
     exportPrintingTransactionList,
     exportWashingTransactionList,
-    exportCompactingTransactionList
+    exportCompactingTransactionList,
+    getDyingProcessById,
+    updateDyingProcess
 } from "../../controllers/fabric";
 import accessControl from "../../middleware/access-control";
 import { Router } from "express";
@@ -58,6 +60,8 @@ router.get('/choose-dying-fabric', chooseDyingFabric);
 router.post('/dying-process', createDyingProcess);
 router.get('/export-dying-process', exportDyingProcess);
 router.get('/dying-process', fetchDyingSalesPagination);
+router.get('/dying-process/:id', getDyingProcessById);
+router.put('/dying-process/:id', updateDyingProcess);
 router.delete('/delete-dying-process', deleteDyingProcess);
 router.get('/get-program', getProgram);
 router.get('/get-fabrics', getFabrics);

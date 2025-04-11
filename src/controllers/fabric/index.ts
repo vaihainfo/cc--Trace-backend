@@ -3981,6 +3981,210 @@ const exportCompactingTransactionList = async (req: Request, res: Response) => {
   }
 };
 
+// Get a single dyeing process by ID
+const getDyingProcessById = async (req: Request, res: Response) => {
+  try {
+    const id = req.params.id;
+
+    if (!id) {
+      return res.sendError(res, "Process ID is required");
+    }
+
+    // Include the same models as in fetchDyingSalesPagination for consistency
+    const include = [
+      {
+        model: Program,
+        as: "program",
+        attributes: ["id", "program_name"],
+      },
+      {
+        model: Season,
+        as: "season",
+        attributes: ["id", "name"],
+      },
+      {
+        model: Garment,
+        as: "buyer",
+        attributes: ["id", "name"],
+      },
+      {
+        model: Fabric,
+        as: "abuyer",
+        attributes: ["id", "name"],
+      },
+      {
+        model: Fabric,
+        as: "dying_fabric",
+        attributes: ["id", "name"],
+      }
+    ];
+
+    const dyingProcess = await DyingSales.findOne({
+      where: { id },
+      include: include,
+    });
+
+    if (!dyingProcess) {
+      return res.sendError(res, "Dyeing process not found");
+    }
+
+    // Get the selected fabrics for this process
+    const selectedFabrics = await DyingFabricSelection.findAll({
+      where: { sales_id: id },
+    });
+
+    // Format the response
+    const processData = dyingProcess.toJSON();
+    const formattedProcess = {
+      ...processData,
+      chooseFabric: selectedFabrics,
+      buyerId: processData.buyer_id,
+      buyerName: processData.buyer?.name,
+      buyerFabricId: processData.buyer_fabric_id,
+      buyerFabricName: processData.abuyer?.name,
+      seasonId: processData.season_id,
+      programId: processData.program_id,
+      // Ensure document fields are explicitly included
+      invoiceFiles: processData.invoice_files || [],
+      otherDocs: processData.other_docs || [],
+      dyeInvoice: processData.dye_invoice || '',
+      // Ensure buyer type is explicitly included
+      buyerType: processData.buyer_type || '',
+    };
+
+    // Return in pagination format for consistency with other endpoints
+    // This makes it easier for the frontend to handle the response
+    return res.sendSuccess(res, formattedProcess);
+  } catch (error) {
+    console.error("Error fetching dyeing process by ID:", error);
+    return res.sendError(res, "Error fetching dyeing process");
+  }
+};
+
+// Update a dyeing process
+const updateDyingProcess = async (req: Request, res: Response) => {
+  const transaction = await sequelize.transaction();
+  try {
+    const id = req.params.id;
+    const {
+      fabricId,
+      programId,
+      seasonId,
+      date,
+      garmentOrderRef,
+      brandOrderRef,
+      buyerType,
+      buyerId,
+      buyerFabricId,
+      processorName,
+      processorAddress,
+      oldFabricQuantity,
+      addFabricQuantity,
+      fabricQuantity,
+      totalFabricQuantity,
+      fabricLength,
+      fabricGsm,
+      fabricNetWeight,
+      processWeight,
+      weightGain,
+      weightLoss,
+      batchLotNo,
+      jobDetails,
+      dyingDetails,
+      dyingColor,
+      invoiceNo,
+      orderDetails,
+      billOfLadding,
+      transportInfo,
+      invoiceFiles,
+      otherDocs,
+      dyeInvoice,
+      salesType,
+      from_date,
+      to_date,
+      chooseFabric,
+    } = req.body;
+
+    // Check if the dyeing process exists
+    const existingProcess = await DyingSales.findByPk(id);
+    if (!existingProcess) {
+      await transaction.rollback();
+      return res.sendError(res, "Dyeing process not found");
+    }
+
+    // Update the dyeing process
+    await DyingSales.update(
+      {
+        fabric_id: fabricId,
+        program_id: programId,
+        season_id: seasonId,
+        date,
+        garment_order_ref: garmentOrderRef,
+        brand_order_ref: brandOrderRef,
+        buyer_type: buyerType,
+        buyer_id: buyerId,
+        buyer_fabric_id: buyerFabricId,
+        processor_name: processorName,
+        processor_address: processorAddress,
+        old_fabric_quantity: oldFabricQuantity,
+        add_fabric_quantity: addFabricQuantity,
+        fabric_quantity: fabricQuantity,
+        total_fabric_quantity: totalFabricQuantity,
+        fabric_length: fabricLength,
+        gsm: fabricGsm,
+        fabric_net_weight: fabricNetWeight,
+        process_weight: processWeight,
+        weight_gain: weightGain,
+        weight_loss: weightLoss,
+        batch_lot_no: batchLotNo,
+        job_details: jobDetails,
+        dying_details: dyingDetails,
+        dying_color: dyingColor,
+        invoice_no: invoiceNo,
+        order_details: orderDetails,
+        bill_of_ladding: billOfLadding,
+        transport_info: transportInfo,
+        invoice_files: invoiceFiles,
+        other_docs: otherDocs,
+        dye_invoice: dyeInvoice,
+        sales_type: salesType,
+        from_date: from_date,
+        to_date: to_date,
+      },
+      {
+        where: { id },
+        transaction,
+      }
+    );
+
+    // Delete existing fabric selections
+    await DyingFabricSelection.destroy({
+      where: { sales_id: id },
+      transaction,
+    });
+
+    // Create new fabric selections if provided
+    if (chooseFabric && Array.isArray(chooseFabric) && chooseFabric.length > 0) {
+      const fabricSelections = chooseFabric.map((fabric: any) => ({
+        sales_id: id,
+        fabric_id: fabric.id,
+        quantity: fabric.qtyUsed,
+        total_quantity: fabric.totalQty,
+        processor: fabric.processor,
+      }));
+
+      await DyingFabricSelection.bulkCreate(fabricSelections, { transaction });
+    }
+
+    await transaction.commit();
+    return res.sendSuccess(res, { message: "Dyeing process updated successfully" });
+  } catch (error) {
+    await transaction.rollback();
+    console.error("Error updating dyeing process:", error);
+    return res.sendError(res, "Error updating dyeing process");
+  }
+};
+
 export {
   fetchDyingTransactions,
   getProgram,
@@ -4025,4 +4229,6 @@ export {
   exportPrintingTransactionList,
   exportWashingTransactionList,
   exportCompactingTransactionList,
+  getDyingProcessById,
+  updateDyingProcess,
 };
