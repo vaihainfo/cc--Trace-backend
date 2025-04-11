@@ -4104,6 +4104,7 @@ const _getGinnerProcessForwardChainData = async (
                   if (spin?.spin_reel_lot_no) {
                     return await _getSpinnerProcessForwardChainData(spin?.spin_reel_lot_no);
                   }
+                  return []
                 })
               );
               el.spin = spinnerChartData
