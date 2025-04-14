@@ -36,6 +36,7 @@ import GinSales from "../../models/gin-sales.model";
 import Ginner from "../../models/ginner.model";
 import { _getGarmentProcessForwardChainData } from "../garment-sales";
 import { _getFabricProcessForwardChainData } from "../fabric";
+import logger from "../../util/logger";
 
 const createKnitterProcess = async (req: Request, res: Response) => {
   try {
@@ -1676,7 +1677,7 @@ const _getKnitterProcessTracingChartData = async (query: any) => {
 
   let whereCondition: any = {};
   if (query) {
-    const idArray = query.reel_lot_no.split(",");
+    const idArray = query.reel_lot_no.split(",").map((it: string) => it?.trim());
     whereCondition.reel_lot_no = { [Op.in]: idArray };
   }
 
@@ -2204,7 +2205,7 @@ const getFabricProcess = async (type: string, id: number | string) =>{
 }
 
 const _getKnitterProcessForwardChainData = async (reelLotNo: string) => {
-
+  try {
   let whereCondition: any = {};
   if (reelLotNo !== null) {
     const idArray = reelLotNo.split(",").map((it: string) => it?.trim());
@@ -2286,6 +2287,26 @@ const _getKnitterProcessForwardChainData = async (reelLotNo: string) => {
 
   let data = knitters && knitters.length > 0  ? knitters.map((el: any) => formatForwardChainDataKnitter(reelLotNo, el) ) : [formatForwardChainDataKnitter(reelLotNo, knitters)]
   return data;
+} catch (error) {
+  console.log(error);
+  logger.error(`ERROR - ${error} | FORWARD CHAIN MGMT REEL KNITTER - ${reelLotNo}`);
+  return null
+}
+};
+
+const getKnitProcessForwardChainingData = async (
+  req: Request,
+  res: Response
+) => {
+  const { reel_lot_no }: any = req.query;
+  if (!reel_lot_no) {
+    return res.sendError(res, "Reel Lot No is required");
+  }
+  const data = await _getKnitterProcessForwardChainData(reel_lot_no);
+  if(!data){
+    return res.sendError(res, "Data not generated");
+  }
+  return res.sendSuccess(res, data);
 };
 
 export {
@@ -2315,5 +2336,6 @@ export {
   getKnitterProcessTracingChartData,
   exportKnitterTransactionList,
   _getKnitterProcessTracingChartData,
-  _getKnitterProcessForwardChainData
+  _getKnitterProcessForwardChainData,
+  getKnitProcessForwardChainingData
 };

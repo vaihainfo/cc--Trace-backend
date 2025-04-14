@@ -30,7 +30,8 @@ import {
     getSpinners,
     fetchTransactionAlertForComberNoil,
     updateStatusComberNoil,
-    fetchComberNoilTransactionList
+    fetchComberNoilTransactionList,
+    getSpinnerProcessForwardChainingData
 } from "../../controllers/spinner";
 import accessControl from "../../middleware/access-control";
 import { Router } from "express";
@@ -73,5 +74,6 @@ router.get('/sales-invoice', getSalesInvoice);
 router.get('/lint-invoice', getInvoiceAndReelLotNo);
 router.get('/yarn-reel-lot', getYarnReelLotNo);
 router.get('/tracing/chart', getSpinnerProcessTracingChartData);
+router.get('/forward-tracing/chart', getSpinnerProcessForwardChainingData);
 
 export default router;

@@ -43,6 +43,7 @@ import GinToGinSale from "../../models/gin-to-gin-sale.model";
 import moment from "moment";
 import { _getKnitterProcessForwardChainData } from "../knitter";
 import { _getWeaverProcessForwardChainData } from "../weaver";
+import logger from "../../util/logger";
 // import SpinSelectedBlend from "../../models/spin_selected_blend";
 
 //create Spinner Process
@@ -3589,7 +3590,7 @@ const _getSpinnerProcessTracingChartData = async (reelLotNo: any) => {
   let whereCondition: any = {};
 
   if (reelLotNo !== null) {
-    const idArray = reelLotNo.split(",");
+    const idArray = reelLotNo.split(",").map((it: string) => it?.trim());
     whereCondition.reel_lot_no = { [Op.in]: idArray };
   }
 
@@ -3758,33 +3759,48 @@ const createIndexes = async () => {
   }
 };
 
-const getKnitWeavProcess= async (type: string, processId: any) =>{
+const getKnitWeavProcess= async (type: string, processId: any, processType: string) =>{
   let joinTable = type === 'knitter' ? 'knit_processes' : 'weaver_processes';
   let table = type === 'knitter' ? 'knit_yarn_selections' : 'yarn_selections';
-  let [knitWeavProcess] = await sequelize.query(
-    `SELECT
-        ARRAY_AGG(DISTINCT ks.sales_id) AS process_ids,
-        STRING_AGG(DISTINCT kp.reel_lot_no, ',') AS reel_lot_no
-      FROM
-        ${table} ks
-      JOIN ${joinTable} kp ON ks.sales_id = kp.id
-      WHERE ks.yarn_id IN (
-                    SELECT 
-                        UNNEST(ARRAY_AGG(DISTINCT ss.id))
-                    FROM 
-                        spin_sales ss
-                    LEFT JOIN
-                      spin_process_yarn_selections sys ON sys.sales_id = ss.id
-                    WHERE sys.spin_process_id = ${processId}
-                    GROUP BY
-                      sys.spin_process_id
-                )
-    `);
-
-    return knitWeavProcess;
+  if(processType === 'process'){
+    let [knitWeavProcess] = await sequelize.query(
+      `SELECT
+          ARRAY_AGG(DISTINCT ks.sales_id) AS process_ids,
+          STRING_AGG(DISTINCT kp.reel_lot_no, ',') AS reel_lot_no
+        FROM
+          ${table} ks
+        JOIN ${joinTable} kp ON ks.sales_id = kp.id
+        WHERE ks.yarn_id IN (
+                      SELECT 
+                          UNNEST(ARRAY_AGG(DISTINCT ss.id))
+                      FROM 
+                          spin_sales ss
+                      LEFT JOIN
+                        spin_process_yarn_selections sys ON sys.sales_id = ss.id
+                      WHERE sys.spin_process_id = ${processId}
+                      GROUP BY
+                        sys.spin_process_id
+                  )
+      `);
+  
+      return knitWeavProcess;
+  }else if(processType === 'sales'){
+    let [knitWeavProcess] = await sequelize.query(
+      `SELECT
+          ARRAY_AGG(DISTINCT ks.sales_id) AS process_ids,
+          STRING_AGG(DISTINCT kp.reel_lot_no, ',') AS reel_lot_no
+        FROM
+          ${table} ks
+        JOIN ${joinTable} kp ON ks.sales_id = kp.id
+        WHERE ks.yarn_id IN (${processId})
+      `);
+  
+      return knitWeavProcess;
+  }
 }
 
-const _getSpinnerProcessForwardChainData = async (reelLotNo: any) => {
+const _getSpinnerProcessForwardChainData = async (reelLotNo: any, type : string = 'process') => {
+  try {
   let offset = 0;
   let allSpinData: any = [];
 
@@ -3809,6 +3825,19 @@ const _getSpinnerProcessForwardChainData = async (reelLotNo: any) => {
     })
   );
 
+  if(type === 'sales'){
+    batchSpinData = await queryWithRetry(() =>
+      SpinSales.findAll({
+        where: {reel_lot_no: reelLotNo},
+        include: include,
+        order: [["id", "desc"]],
+        //   limit: BATCH_SIZE,
+        //   offset: offset,
+        attributes: ["id", "reel_lot_no"],
+      })
+    );
+  }
+
 
   //   if (batchSpinData.length === 0) break;
 
@@ -3818,8 +3847,8 @@ const _getSpinnerProcessForwardChainData = async (reelLotNo: any) => {
     batchSpinData.map(async (spin: any) => {
       spin = spin.toJSON();
 
-      let knitProcess = await getKnitWeavProcess('knitter',spin.id);
-      let weavProcess = await getKnitWeavProcess('weaver',spin.id);
+      let knitProcess = await getKnitWeavProcess('knitter',spin.id, type);
+      let weavProcess = await getKnitWeavProcess('weaver',spin.id, type);
 
       let knitData = [];
       let weavData = [];
@@ -3871,6 +3900,26 @@ const _getSpinnerProcessForwardChainData = async (reelLotNo: any) => {
   allSpinData = allSpinData.concat(spinWithGinSales);
 
   return allSpinData && allSpinData.length > 0  ? allSpinData.map((el: any) => formatForwardChainDataSpinner(reelLotNo, el) ) : formatForwardChainDataSpinner(reelLotNo, allSpinData);
+} catch (error) {
+  console.log(error);
+  logger.error(`ERROR - ${error} | CHAIN MGMT REEL - ${reelLotNo}`);
+  return null
+}
+};
+
+const getSpinnerProcessForwardChainingData = async (
+  req: Request,
+  res: Response
+) => {
+  const { reelLotNo, type }: any = req.query;
+  if (!reelLotNo) {
+    return res.sendError(res, "reelLotNo is required");
+  }
+  const data = await _getSpinnerProcessForwardChainData(reelLotNo, type);
+  if(!data){
+    return res.sendError(res, "Data not generated");
+  }
+  return res.sendSuccess(res, data);
 };
 
 export {
@@ -3909,5 +3958,6 @@ export {
   updateStatusComberNoil,
   fetchComberNoilTransactionList,
   _getSpinnerProcessTracingChartData,
-  _getSpinnerProcessForwardChainData
+  _getSpinnerProcessForwardChainData,
+  getSpinnerProcessForwardChainingData
 };
