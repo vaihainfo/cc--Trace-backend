@@ -5473,7 +5473,7 @@ const generateSpinnerSummary = async () => {
           balance_lint_cotton:Number(formatDecimal(totals.total_balance_lint_cotton)),
           yarn_procured:Number(formatDecimal(totals.total_yarn_procured)),
           yarn_sold:Number(formatDecimal(totals.total_yarn_sold)),
-          yarnGreyoutMT:Number(formatDecimal(totals.total_lintGreyoutMT)),
+          yarnGreyoutMT:Number(formatDecimal(totals.total_yarnGreyoutMT)),
           yarnActualStockMT:Number(formatDecimal(totals.total_yarnActualStockMT)),
           yarn_stock:Number(formatDecimal(totals.total_yarn_stock)),
         }; 
@@ -5841,7 +5841,7 @@ const generateSpinnerSummary = async () => {
         totals.total_balance_lint_cotton+=Number(rowVal.balance_lint_cotton);
         totals.total_yarn_procured+=Number(rowVal.yarn_procured);
         totals.total_yarn_sold+=Number(rowVal.yarn_sold);
-        totals.total_yarnGreyoutMT+=Number(rowVal.lintGreyoutMT);
+        totals.total_yarnGreyoutMT+=Number(rowVal.yarnGreyoutMT);
         totals.total_yarnActualStockMT+=Number(rowVal.yarnActualStockMT);
         totals.total_yarn_stock+=Number(rowVal.yarn_stock);
 
