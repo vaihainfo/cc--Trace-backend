@@ -54,7 +54,9 @@ export const formatDataForSpinnerProcess = (reelLotNo: any, data: any): any => {
    let flattenedArray = data[0].ginSales.flat(); // Using flat()
     let treeData = {
         name: reelLotNo,
-        type: 'spinner_image',
+        processor_name: data[0]?.spinner?.name,
+        img_type: 'spinner_image',
+        type: 'Spinner',
         width: 300,
         height: 100,
         isRoot: true,
@@ -153,16 +155,21 @@ export const formatDataForSpinnerProcess = (reelLotNo: any, data: any): any => {
 export const formatDataFromKnitter = (title: any, data: any, width: number = 300, height: number =100,type?: any) : any => {
     let flattenedArray;
     let name;
+    let processorName = "";
     if(type=='fabric'){
       flattenedArray = data?.spin?.flat();
       name=title
+      processorName=data?.knitter?.name
     }else{
       flattenedArray = data[0]?.spin?.flat();
       name=data[0]?.reel_lot_no
+      processorName=data[0]?.knitter?.name
     }
      let treeData = {
          name: name,
-         type: 'knitter_image',
+         processor_name: processorName,
+         img_type: 'knitter_image',
+         type: 'Knitter',
          width: width,
          height: height,
          isRoot: true,

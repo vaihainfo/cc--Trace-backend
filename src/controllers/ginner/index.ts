@@ -4036,11 +4036,11 @@ const getGinnerProcessForwardChainingData = async (
   req: Request,
   res: Response
 ) => {
-  const { reelLotNo }: any = req.query;
+  const { reelLotNo, type }: any = req.query;
   if (!reelLotNo) {
     return res.sendError(res, "reelLotNo is required");
   }
-  const data = await _getGinnerProcessForwardChainData(reelLotNo);
+  const data = await _getGinnerProcessForwardChainData(reelLotNo, type);
   if(!data){
     return res.sendError(res, "Data not generated");
   }
@@ -4048,7 +4048,8 @@ const getGinnerProcessForwardChainingData = async (
 };
 
 const _getGinnerProcessForwardChainData = async (
-  reelLotNo: any
+  reelLotNo: any,
+  type: string = 'process'
 ) => {
   try {
     //  await createIndexes();
@@ -4110,6 +4111,18 @@ const _getGinnerProcessForwardChainData = async (
         attributes: ['id', 'reel_lot_no'] // Only fetch necessary fields
       });
 
+
+      if(type === 'sales'){
+        ginBatch = await GinSales.findAll({
+            where: {reel_lot_no: reelLotNo},
+            include: include,
+            order: [["id", "desc"]],
+            limit: batchSize,
+            offset: offset,
+            attributes: ["id", "reel_lot_no"],
+          })
+      }
+
       if (ginBatch.length === 0) break;
 
       offset += batchSize;
@@ -4117,27 +4130,40 @@ const _getGinnerProcessForwardChainData = async (
       let ginWithTransactions = await Promise.all(
         ginBatch.map(async (el: any) => {
           el = el.toJSON();
-          let [spinProcess] = await sequelize.query(
-                  `SELECT
-                      ARRAY_AGG(DISTINCT ls.process_id) AS spin_process_id,
-                      STRING_AGG(DISTINCT sp.reel_lot_no, ',') AS spin_reel_lot_no
-                    FROM
-                        lint_selections ls
-                    JOIN spin_processes sp ON ls.process_id = sp.id
-                    WHERE ls.lint_id IN (
-                          SELECT 
-                            UNNEST(ARRAY_AGG(DISTINCT gs.id))
-                                        FROM 
-                                            gin_sales gs
-                          LEFT JOIN
-                            bale_selections bs ON bs.sales_id = gs.id
-                          LEFT JOIN
-                            "gin-bales" gb ON gb.id = bs.bale_id
-                          WHERE gb.process_id = ${el.id}
-                          GROUP BY
-                            gb.process_id
-                                    )
-                  `);
+          let spinProcess = [];
+          if(type === 'process'){
+            [spinProcess] = await sequelize.query(
+                    `SELECT
+                        ARRAY_AGG(DISTINCT ls.process_id) AS spin_process_id,
+                        STRING_AGG(DISTINCT sp.reel_lot_no, ',') AS spin_reel_lot_no
+                      FROM
+                          lint_selections ls
+                      JOIN spin_processes sp ON ls.process_id = sp.id
+                      WHERE ls.lint_id IN (
+                            SELECT 
+                              UNNEST(ARRAY_AGG(DISTINCT gs.id))
+                                          FROM 
+                                              gin_sales gs
+                            LEFT JOIN
+                              bale_selections bs ON bs.sales_id = gs.id
+                            LEFT JOIN
+                              "gin-bales" gb ON gb.id = bs.bale_id
+                            WHERE gb.process_id = ${el.id}
+                            GROUP BY
+                              gb.process_id
+                                      )
+                    `);
+          }else if(type === 'sales'){
+            [spinProcess] = await sequelize.query(
+              `SELECT
+                  ARRAY_AGG(DISTINCT ls.process_id) AS spin_process_id,
+                  STRING_AGG(DISTINCT sp.reel_lot_no, ',') AS spin_reel_lot_no
+                FROM
+                    lint_selections ls
+                JOIN spin_processes sp ON ls.process_id = sp.id
+                WHERE ls.lint_id IN (${el.id})
+              `);
+          }
 
 
             if(spinProcess && spinProcess.length > 0){
@@ -4158,6 +4184,7 @@ const _getGinnerProcessForwardChainData = async (
       
       allGinData = allGinData.concat(ginWithTransactions);
     }
+
     let formattedData: any = {};
     let obj: any ={};
     obj.gnr_name = allGinData && allGinData.length > 0 ?  [...new Set(allGinData.map((el: any) => el.ginner.name))].join(',') : "";

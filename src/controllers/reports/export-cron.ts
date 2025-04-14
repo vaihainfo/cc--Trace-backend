@@ -125,7 +125,6 @@ const exportReportsOnebyOne = async () => {
 
   console.log('Cron Job Completed to execute all reports.');
 }
-
 //----------------------------------------- Spinner Reports ------------------------//
 
 const exportSpinnerGreyOutReport = async () => {
@@ -4007,7 +4006,7 @@ const generateGinnerProcess = async () => {
 
       if(currentWorksheet != undefined){
         const rowValues = Object.values({
-          Index:"Total",
+          Index:"",
           country:"",
           state:"",
           date:"",
@@ -4022,7 +4021,7 @@ const generateGinnerProcess = async () => {
           lot_no:"",
           press_no:"",
           reel_lot_no:"",
-          reel_press_no:"",
+          reel_press_no:"Total",
           noOfBales: Number(formatDecimal(totals.total_no_of_bales)),
           lint_quantity: Number(formatDecimal(totals.total_lint_quantity)),
           seedConsmed: Number(formatDecimal(totals.total_seedConsmed)),
@@ -4477,7 +4476,7 @@ const generateGinnerSales = async () => {
 
       if(currentWorksheet != undefined){
         const rowValues = Object.values({
-          Index:"Total",
+          Index:"",
           country:"",
           state:"",
           date:"",
@@ -4493,7 +4492,7 @@ const generateGinnerSales = async () => {
           buyer:"",
           // heap:"",
           lot_no:"",
-          reel_lot_no:"",
+          reel_lot_no:"Total",
           no_of_bales: Number(formatDecimal(totals.total_no_of_bales)),
           press_no:"",
           rate: Number(formatDecimal(totals.total_rate)),
@@ -4945,7 +4944,7 @@ const generatePendingGinnerSales = async () => {
 
       if(currentWorksheet != undefined){
         const rowValues = Object.values({
-          Index:"Total",
+          Index:"",
           country:"",
           state:"",
           date:"",
@@ -4955,7 +4954,7 @@ const generatePendingGinnerSales = async () => {
           buyer_type:"",
           buyer:"",
           lot_no:"",
-          reel_lot_no:"",
+          reel_lot_no:"Total",
           no_of_bales: Number(formatDecimal(totals.total_no_of_bales)),
           press_no:"",
           rate: Number(formatDecimal(totals.total_rate)),
@@ -5213,11 +5212,11 @@ const generateGinnerCottonStock = async () => {
 
       if(currentWorksheet != undefined){
         const rowValues = Object.values({
-          index: "Total:",
+          index: "",
           ginner:  "",
           season:  "",
           country: "",
-          state: "",
+          state: "Total",
           cotton_procured: Number(formatDecimal( totals.total_cotton_procured)),
           cotton_processed: Number(formatDecimal(totals.total_cotton_processed)),
           cotton_stock: Number(formatDecimal(totals.total_cotton_stock)),
@@ -5497,10 +5496,10 @@ const generateSpinnerSummary = async () => {
 
       if(currentWorksheet != undefined){
         const rowVal ={
-          index:"Totals",
+          index:"",
           country:"",
           state:"",
-          name:"",
+          name:"Total",
           lint_cotton_procured:Number(formatDecimal(totals.total_lint_cotton_procured)),
           lint_cotton_procured_pending:Number(formatDecimal(totals.total_lint_cotton_procured_pending)),
           lint_consumed:Number(formatDecimal(totals.total_lint_consumed)),
@@ -5509,7 +5508,7 @@ const generateSpinnerSummary = async () => {
           balance_lint_cotton:Number(formatDecimal(totals.total_balance_lint_cotton)),
           yarn_procured:Number(formatDecimal(totals.total_yarn_procured)),
           yarn_sold:Number(formatDecimal(totals.total_yarn_sold)),
-          yarnGreyoutMT:Number(formatDecimal(totals.total_lintGreyoutMT)),
+          yarnGreyoutMT:Number(formatDecimal(totals.total_yarnGreyoutMT)),
           yarnActualStockMT:Number(formatDecimal(totals.total_yarnActualStockMT)),
           yarn_stock:Number(formatDecimal(totals.total_yarn_stock)),
         }; 
@@ -5877,7 +5876,7 @@ const generateSpinnerSummary = async () => {
         totals.total_balance_lint_cotton+=Number(rowVal.balance_lint_cotton);
         totals.total_yarn_procured+=Number(rowVal.yarn_procured);
         totals.total_yarn_sold+=Number(rowVal.yarn_sold);
-        totals.total_yarnGreyoutMT+=Number(rowVal.lintGreyoutMT);
+        totals.total_yarnGreyoutMT+=Number(rowVal.yarnGreyoutMT);
         totals.total_yarnActualStockMT+=Number(rowVal.yarnActualStockMT);
         totals.total_yarn_stock+=Number(rowVal.yarn_stock);
 

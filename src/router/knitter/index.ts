@@ -23,7 +23,8 @@ import {
     updateKnitterProcess,
     updateKnitterrSales,
     fetchKnitterProcess,
-    exportKnitterTransactionList
+    exportKnitterTransactionList,
+    getKnitProcessForwardChainingData
 } from "../../controllers/knitter";
 import accessControl from "../../middleware/access-control";
 import { Router } from "express";
@@ -57,5 +58,6 @@ router.get('/get-fabric-filters', getChooseFabricFilters);
 router.get('/choose-fabric', chooseFabricProcess);
 router.get('/tracing/chart', getKnitterProcessTracingChartData);
 router.get('/export/transaction', exportKnitterTransactionList);
+router.get('/forward-tracing/chart', getKnitProcessForwardChainingData);
 
 export default router;
