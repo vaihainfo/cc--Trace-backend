@@ -186,17 +186,22 @@ export const formatDataFromKnitter = (title: any, data: any, width: number = 300
  export const formatDataFromWeaver = (title: any, data: any, width: number = 300, height: number =100,type?: any) : any => {
 
     let flattenedArray;
+    let processorName = "";
     if (data?.spin) {
         flattenedArray = data.spin.flat();
+        processorName=data?.weaver?.name
     } else if (data[0]?.spin) {
         flattenedArray = data[0].spin.flat();
+        processorName=data[0]?.weaver?.name
     } else {
         flattenedArray = [];
     }
 
     let treeData = {
          name: title,
-         type: 'weaver_image',
+         processor_name: processorName,
+         img_type: 'weaver_image',
+         type: 'Weaver',
          width: width,
          height: height,
          isRoot: true,
@@ -213,7 +218,9 @@ export const formatDataFromKnitter = (title: any, data: any, width: number = 300
  export const formartDataForFabric = (title: any, data: any, width: number = 300, height: number =100) : any => {
      let treeData = {
          name: title,
-         type: 'fabric_image',
+         processor_name: data[0] ? data[0].fabric_name : "",
+         img_type: 'fabric_image',
+         type: 'Fabric',
          width: width,
          height: height,
          isRoot: true,
@@ -285,6 +292,21 @@ export const formatForwardChainDataWeaver = (title: any, data: any) : any => {
         processor_name: data?.weaver?.name,
         img_type: 'weaver_image',
         type: 'Weaver',
+        width: 300,
+        height: 100,
+        isRoot: true,
+        children: data?.garmentChart?.map((el:any) => el??[])
+    };
+    return treeData;
+}
+
+
+export const formatForwardChainDataFabric = (title: any, data: any) : any => {
+    let treeData = {
+        name: data?.fabric_name,
+        processor_name: data?.fabric_name,
+        img_type: 'fabric_image',
+        type: 'Fabric',
         width: 300,
         height: 100,
         isRoot: true,

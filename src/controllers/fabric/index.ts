@@ -27,7 +27,7 @@ import WeaverProcess from "../../models/weaver-process.model";
 import { encrypt, generateOnlyQrCode } from "../../provider/qrcode";
 
 import { _getSpinnerProcessTracingChartData } from '../spinner/index';
-import { formatDataFromKnitter, formatDataFromWeaver, formartDataForFabric } from '../../util/tracing-chart-data-formatter';
+import { formatDataFromKnitter, formatDataFromWeaver, formartDataForFabric, formatForwardChainDataFabric } from '../../util/tracing-chart-data-formatter';
 import SpinSales from '../../models/spin-sales.model';
 import { _getGarmentProcessForwardChainData } from "../garment-sales";
 /**
@@ -3097,7 +3097,7 @@ const getWashData = async (fabrics: any) => {
           ...el,
           type: 'knitter',
           spinsCount: spinSales && spinSales.length > 0 ? spinSales.length : 0,
-          spin: spinSales && spinSales.length > 0 ? spinSales.map((it: any) => _getSpinnerProcessTracingChartData(it.reel_lot_no)) : []
+          spin: spinSales && spinSales.length > 0 ? await Promise.all(spinSales.map(async (it: any) => await _getSpinnerProcessTracingChartData(it.reel_lot_no))) : []
           // spin: []
         }
       })
@@ -3111,7 +3111,7 @@ const getWashData = async (fabrics: any) => {
           ...el,
           type: 'weaver',
           spinsCount: spinSales && spinSales.length > 0 ? spinSales.length : 0,
-          spin: spinSales && spinSales.length > 0 ? spinSales.map((it: any) => _getSpinnerProcessTracingChartData(it.reel_lot_no)) : []
+          spin: spinSales && spinSales.length > 0 ? await Promise.all(spinSales.map(async (it: any) => await _getSpinnerProcessTracingChartData(it.reel_lot_no))) : []
           // spin: []
         }
       }))
@@ -3197,7 +3197,7 @@ const getDyingData = async (fabrics: any) => {
           ...el,
           type: 'knitter',
           spinsCount: spinSales && spinSales.length > 0 ? spinSales.length : 0,
-          spin: spinSales && spinSales.length > 0 ? spinSales.map((it: any) => _getSpinnerProcessTracingChartData(it.reel_lot_no)) : []
+          spin: spinSales && spinSales.length > 0 ? await Promise.all(spinSales.map(async (it: any) => await _getSpinnerProcessTracingChartData(it.reel_lot_no))) : []
           // spin: []
         }
       })
@@ -3211,7 +3211,7 @@ const getDyingData = async (fabrics: any) => {
           ...el,
           type: 'weaver',
           spinsCount: spinSales && spinSales.length > 0 ? spinSales.length : 0,
-          spin: spinSales && spinSales.length > 0 ? spinSales.map((it: any) => _getSpinnerProcessTracingChartData(it.reel_lot_no)) : []
+          spin: spinSales && spinSales.length > 0 ? await Promise.all(spinSales.map(async (it: any) => await _getSpinnerProcessTracingChartData(it.reel_lot_no))) : []
           // spin: []
         }
       }))
@@ -4068,33 +4068,42 @@ const getGarmentProcessData = async (type:string, processIds:any) =>{
 const _getFabricProcessForwardChainData = async (type: any, id: any) => {
   let addedQuery: any ='';
   let Model;
+  let Key;
 
   switch (type) {
     case 'dying':
       addedQuery = `
             ARRAY_AGG(fs.id) FILTER (WHERE LOWER(fs.buyer_type::text) = 'washing') AS wash_sales_ids,
             ARRAY_AGG(fs.id) FILTER (WHERE LOWER(fs.buyer_type::text) = 'compacting') AS compact_sales_ids,
-            ARRAY_AGG(fs.id) FILTER (WHERE LOWER(fs.buyer_type::text) = 'garment') AS garment_process_ids`;
+            ARRAY_AGG(fs.id) FILTER (WHERE LOWER(fs.buyer_type::text) = 'garment') AS garment_process_ids,
+            STRING_AGG(DISTINCT fabric.name, ',') AS fabric_name`;
       Model = 'dying_sales';
+      Key = 'dying_id';
       break;
     case 'printing':
       addedQuery = `
             ARRAY_AGG(fs.id) FILTER (WHERE LOWER(fs.buyer_type::text) = 'compacting') AS compact_sales_ids,
-            ARRAY_AGG(fs.id) FILTER (WHERE LOWER(fs.buyer_type::text) = 'garment') AS garment_process_ids`;
+            ARRAY_AGG(fs.id) FILTER (WHERE LOWER(fs.buyer_type::text) = 'garment') AS garment_process_ids,
+            STRING_AGG(DISTINCT fabric.name, ',') AS fabric_name`;
       Model = 'printing_sales';
+      Key = 'printing_id';
       break;
     case 'washing':
       addedQuery = `
             ARRAY_AGG(fs.id) FILTER (WHERE LOWER(fs.buyer_type::text) = 'printing') AS print_sales_ids,
             ARRAY_AGG(fs.id) FILTER (WHERE LOWER(fs.buyer_type::text) = 'compacting') AS compact_sales_ids,
-            ARRAY_AGG(fs.id) FILTER (WHERE LOWER(fs.buyer_type::text) = 'garment') AS garment_process_ids`;
+            ARRAY_AGG(fs.id) FILTER (WHERE LOWER(fs.buyer_type::text) = 'garment') AS garment_process_ids,
+            STRING_AGG(DISTINCT fabric.name, ',') AS fabric_name`;
       Model = 'washing_sales';
+      Key = 'washing_id';
       break;
       break;
     case 'compacting':
       addedQuery = `
-            ARRAY_AGG(fs.id) FILTER (WHERE LOWER(fs.buyer_type::text) = 'garment') AS garment_process_ids`;
+            ARRAY_AGG(fs.id) FILTER (WHERE LOWER(fs.buyer_type::text) = 'garment') AS garment_process_ids,
+            STRING_AGG(DISTINCT fabric.name, ',') AS fabric_name`;
       Model = 'compacting_sales';
+      Key = 'compacting_id';
       break;
   }
 
@@ -4104,6 +4113,7 @@ const _getFabricProcessForwardChainData = async (type: any, id: any) => {
     SELECT 
         ${addedQuery}
     FROM ${Model} fs
+    LEFT JOIN fabrics fabric ON fabric.id = fs.${Key}
     ${whereClause}
 `);
 
@@ -4139,7 +4149,14 @@ const _getFabricProcessForwardChainData = async (type: any, id: any) => {
     if(fabrics[0].garment_process_ids && fabrics[0].garment_process_ids.length > 0){
       let garmentIds = await getGarmentProcessData(type, fabrics[0].garment_process_ids.join(","))
       if(garmentIds && garmentIds[0] && garmentIds[0]?.reel_lot_no){
-        garmentData = await _getGarmentProcessForwardChainData(garmentIds[0]?.reel_lot_no)
+        // garmentData = await _getGarmentProcessForwardChainData(garmentIds[0]?.reel_lot_no)
+        let garmentChart = await _getGarmentProcessForwardChainData(garmentIds[0]?.reel_lot_no);
+        let obj = {
+          ...fabrics[0],
+          garmentChart
+        }
+
+        garmentData = [formatForwardChainDataFabric(fabrics[0].fabric_name, obj)]
       }   
     }
     data = [...washData,...compactData,...printData,...garmentData].filter((item: any) => item !== null && item !== undefined)
