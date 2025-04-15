@@ -4107,7 +4107,15 @@ const _getFabricProcessForwardChainData = async (type: any, id: any) => {
       break;
   }
 
-  let whereClause =  `WHERE fs.id IN (${id.join(",")})`
+  let whereClause = '';
+
+if (Array.isArray(id)) {
+  whereClause = `WHERE fs.id IN (${id.join(",")})`;
+} else {
+  whereClause = `WHERE fs.id IN (${id})`;
+}
+
+  // let whereClause =  `WHERE fs.id IN (${id.join(",")})`
 
   let [fabrics] = await sequelize.query(`
     SELECT 
@@ -4165,6 +4173,11 @@ const _getFabricProcessForwardChainData = async (type: any, id: any) => {
   return data;
 }
 
+const getFabricProcessForwardChainingData = async (req: Request, res: Response) => {
+  const { type, id } = req.query;
+  res.send(await _getFabricProcessForwardChainData(type, id));
+}
+
 
 export {
   fetchDyingTransactions,
@@ -4210,5 +4223,6 @@ export {
   exportPrintingTransactionList,
   exportWashingTransactionList,
   exportCompactingTransactionList,
-  _getFabricProcessForwardChainData
+  _getFabricProcessForwardChainData,
+  getFabricProcessForwardChainingData
 };

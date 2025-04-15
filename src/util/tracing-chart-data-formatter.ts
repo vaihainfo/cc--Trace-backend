@@ -189,10 +189,10 @@ export const formatDataFromKnitter = (title: any, data: any, width: number = 300
     let processorName = "";
     if (data?.spin) {
         flattenedArray = data.spin.flat();
-        processorName=data?.weaver?.name
+        processorName=data?.weav_name
     } else if (data[0]?.spin) {
         flattenedArray = data[0].spin.flat();
-        processorName=data[0]?.weaver?.name
+        processorName=data[0]?.weav_name
     } else {
         flattenedArray = [];
     }

@@ -1733,8 +1733,6 @@ const _getWeaverProcessTracingChartData = async (
           );
         })
       );
-
-      console.log("|||||||||||||||||||||||||||||||||||||||", el, el.spin)
       return el;
     })
   );
