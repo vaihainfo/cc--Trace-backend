@@ -1,6 +1,7 @@
 export const formatDataForGinnerProcess = (reelLotNo: any, data: any): any => {
     let treeData = {
-        name: reelLotNo,
+        // name: reelLotNo,
+        name: `<div><b>${data?.gnr_name}</b><br/>${reelLotNo}<div>`,
         processor_name: data.gnr_name,
         img_type: 'cotton_image',
         type: 'Ginner',
@@ -53,7 +54,8 @@ const getVillagesForGinSales = (sales: any) => {
 export const formatDataForSpinnerProcess = (reelLotNo: any, data: any): any => {
    let flattenedArray = data[0].ginSales.flat(); // Using flat()
     let treeData = {
-        name: reelLotNo,
+        // name: reelLotNo,
+        name: `<div><b>${data[0]?.spinner?.name}</b><br/>${reelLotNo}<div>`,
         processor_name: data[0]?.spinner?.name,
         img_type: 'spinner_image',
         type: 'Spinner',
@@ -166,7 +168,8 @@ export const formatDataFromKnitter = (title: any, data: any, width: number = 300
       processorName=data[0]?.knitter?.name
     }
      let treeData = {
-         name: name,
+        //  name: name,
+        name: `<div>${processorName ? "<b>" + processorName + "</b><br/>" : ""}${name}<div>`,
          processor_name: processorName,
          img_type: 'knitter_image',
          type: 'Knitter',
@@ -198,7 +201,8 @@ export const formatDataFromKnitter = (title: any, data: any, width: number = 300
     }
 
     let treeData = {
-         name: title,
+        //  name: title,
+         name: `<div>${processorName ? "<b>" + processorName + "</b><br/>" : ""}${title}<div>`,
          processor_name: processorName,
          img_type: 'weaver_image',
          type: 'Weaver',
@@ -217,7 +221,8 @@ export const formatDataFromKnitter = (title: any, data: any, width: number = 300
  
  export const formartDataForFabric = (title: any, data: any, width: number = 300, height: number =100) : any => {
      let treeData = {
-         name: title,
+        //  name: title,
+         name: `<div>${data[0] ? "<b>" + data[0].fabric_name + "</b><br/>" : ""}${title}<div>`,
          processor_name: data[0] ? data[0].fabric_name : "",
          img_type: 'fabric_image',
          type: 'Fabric',
