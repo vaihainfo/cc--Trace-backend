@@ -245,7 +245,7 @@ export const formatDataForGarment = (title: any, data: any) : any => {
 
 export const formatForwardChainDataGinner = (title: any, data: any) : any => {
     let treeData = {
-        name: title,
+        name: `<div><b>${data.gnr_name}</b><br/>${title}<div>`,
         processor_name: data.gnr_name,
         img_type: 'cotton_image',
         type: 'Ginner',
@@ -259,7 +259,7 @@ export const formatForwardChainDataGinner = (title: any, data: any) : any => {
 
 export const formatForwardChainDataSpinner = (title: any, data: any) : any => {
     let treeData = {
-        name: data?.reel_lot_no,
+        name: `<div><b>${data?.spinner?.name}</b><br/>${data?.reel_lot_no}<div>`,
         processor_name: data?.spinner?.name,
         img_type: 'spinner_image',
         type: 'Spinner',
@@ -274,7 +274,7 @@ export const formatForwardChainDataSpinner = (title: any, data: any) : any => {
 
 export const formatForwardChainDataKnitter = (title: any, data: any) : any => {
     let treeData = {
-        name: data?.reel_lot_no,
+        name: `<div><b>${data?.knitter?.name}</b><br/>${data?.reel_lot_no}<div>`,
         processor_name: data?.knitter?.name,
         img_type: 'knitter_image',
         type: 'Knitter',
@@ -288,7 +288,7 @@ export const formatForwardChainDataKnitter = (title: any, data: any) : any => {
 
 export const formatForwardChainDataWeaver = (title: any, data: any) : any => {
     let treeData = {
-        name: data?.reel_lot_no,
+        name: `<div><b>${data?.weaver?.name}</b><br/>${data?.reel_lot_no}<div>`,
         processor_name: data?.weaver?.name,
         img_type: 'weaver_image',
         type: 'Weaver',
@@ -318,7 +318,7 @@ export const formatForwardChainDataFabric = (title: any, data: any) : any => {
 
 export const formatForwardChainDataGarment = (reelLotNo: any, data: any): any => {
     let treeData = {
-        name: reelLotNo,
+        name: `<div><b>${data?.garment_name}</b><br/>${reelLotNo}<div>`,
         processor_name: data.garment_name,
         img_type: 'garment_image',
         type: 'Garment',
