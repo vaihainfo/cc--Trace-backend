@@ -4448,6 +4448,6 @@ export {
   getMappedVillages,
   createGinnerLintCertificate,
   fetchGinnerLintCertificatePagination,
-  deleteLintCertificate
+  deleteLintCertificate,
   getGinnerProcessForwardChainingData
 };
