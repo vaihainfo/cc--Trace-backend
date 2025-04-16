@@ -41,7 +41,8 @@ import {
     getMappedVillages,
     createGinnerLintCertificate,
     fetchGinnerLintCertificatePagination,
-    deleteLintCertificate
+    deleteLintCertificate,
+    getGinnerProcessForwardChainingData,
     
 } from "../../controllers/ginner";
 import accessControl from "../../middleware/access-control";
@@ -89,11 +90,13 @@ router.get('/heap-reel', getReelHeapId);
 router.get('/get-program', getProgram);
 router.put('/sales/update-bale', updateGinSaleBale);
 router.get('/sales/choose-bale', chooseBale);
+router.get('/sales/add-bale', chooseBale);
 router.get('/get-spinner', getSpinner);
 router.get('/get-village-farmer', getVillageAndFarmer);
 router.get('/get-villages', getMappedVillages);
 router.get('/export-ginner-transactions', exportGinnerProcurement);
 router.get('/tracing/chart', getGinnerProcessTracingChartData);
+router.get('/forward-tracing/chart', getGinnerProcessForwardChainingData);
 router.get('/check-report', checkReport);
 router.get('/get-brand', getBrands);
 

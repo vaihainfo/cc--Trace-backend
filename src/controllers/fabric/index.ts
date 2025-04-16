@@ -27,8 +27,9 @@ import WeaverProcess from "../../models/weaver-process.model";
 import { encrypt, generateOnlyQrCode } from "../../provider/qrcode";
 
 import { _getSpinnerProcessTracingChartData } from '../spinner/index';
-import { formatDataFromKnitter, formatDataFromWeaver, formartDataForFabric } from '../../util/tracing-chart-data-formatter';
+import { formatDataFromKnitter, formatDataFromWeaver, formartDataForFabric, formatForwardChainDataFabric } from '../../util/tracing-chart-data-formatter';
 import SpinSales from '../../models/spin-sales.model';
+import { _getGarmentProcessForwardChainData } from "../garment-sales";
 /**
  * Dying Dashboard for fabric
  */
@@ -3286,7 +3287,7 @@ const getWashData = async (fabrics: any) => {
           ...el,
           type: 'knitter',
           spinsCount: spinSales && spinSales.length > 0 ? spinSales.length : 0,
-          spin: spinSales && spinSales.length > 0 ? spinSales.map((it: any) => _getSpinnerProcessTracingChartData(it.reel_lot_no)) : []
+          spin: spinSales && spinSales.length > 0 ? await Promise.all(spinSales.map(async (it: any) => await _getSpinnerProcessTracingChartData(it.reel_lot_no))) : []
           // spin: []
         }
       })
@@ -3300,7 +3301,7 @@ const getWashData = async (fabrics: any) => {
           ...el,
           type: 'weaver',
           spinsCount: spinSales && spinSales.length > 0 ? spinSales.length : 0,
-          spin: spinSales && spinSales.length > 0 ? spinSales.map((it: any) => _getSpinnerProcessTracingChartData(it.reel_lot_no)) : []
+          spin: spinSales && spinSales.length > 0 ? await Promise.all(spinSales.map(async (it: any) => await _getSpinnerProcessTracingChartData(it.reel_lot_no))) : []
           // spin: []
         }
       }))
@@ -3386,7 +3387,7 @@ const getDyingData = async (fabrics: any) => {
           ...el,
           type: 'knitter',
           spinsCount: spinSales && spinSales.length > 0 ? spinSales.length : 0,
-          spin: spinSales && spinSales.length > 0 ? spinSales.map((it: any) => _getSpinnerProcessTracingChartData(it.reel_lot_no)) : []
+          spin: spinSales && spinSales.length > 0 ? await Promise.all(spinSales.map(async (it: any) => await _getSpinnerProcessTracingChartData(it.reel_lot_no))) : []
           // spin: []
         }
       })
@@ -3400,7 +3401,7 @@ const getDyingData = async (fabrics: any) => {
           ...el,
           type: 'weaver',
           spinsCount: spinSales && spinSales.length > 0 ? spinSales.length : 0,
-          spin: spinSales && spinSales.length > 0 ? spinSales.map((it: any) => _getSpinnerProcessTracingChartData(it.reel_lot_no)) : []
+          spin: spinSales && spinSales.length > 0 ? await Promise.all(spinSales.map(async (it: any) => await _getSpinnerProcessTracingChartData(it.reel_lot_no))) : []
           // spin: []
         }
       }))
@@ -4784,6 +4785,202 @@ const updateWashingProcess = async (req: Request, res: Response) => {
     return res.sendError(res, "Error updating washing process");
   }
 };
+const getWashProcessData = async (processIds:any) =>{
+  try {
+    let [fabrics] = await sequelize.query(`
+      SELECT 
+          ARRAY_AGG(DISTINCT fs.sales_id) AS fabric_sale_ids
+      FROM washing_fabric_selections fs
+      JOIN washing_sales sale ON fs.sales_id = sale.id
+      WHERE fs.process_id::numeric IN (${processIds}
+                      )
+        AND fs.process_type ILIKE 'dying'
+  `);
+
+  return fabrics
+    
+  } catch (error) {
+    console.log(error)
+    return []
+  }
+}
+
+
+const getPrintProcessData = async (processIds:any) =>{
+  try {
+    let [fabrics] = await sequelize.query(`
+      SELECT 
+          ARRAY_AGG(DISTINCT fs.sales_id) AS fabric_sale_ids
+      FROM printing_fabric_selections fs
+      JOIN printing_sales sale ON fs.sales_id = sale.id
+      WHERE fs.process_id::numeric IN (${processIds}
+                      )
+        AND fs.process_type ILIKE 'washing_sales'
+  `);
+
+  return fabrics
+    
+  } catch (error) {
+    console.log(error)
+    return []
+  }
+}
+
+const getCompactProcessData = async (type:string, processIds:any) =>{
+  try {
+    let [fabrics] = await sequelize.query(`
+      SELECT 
+          ARRAY_AGG(DISTINCT fs.sales_id) AS fabric_sale_ids
+      FROM compacting_fabric_selections fs
+      JOIN compacting_sales sale ON fs.sales_id = sale.id
+      WHERE fs.process_id::numeric IN (${processIds}
+                      )
+        AND fs.process_type ILIKE '${type}'
+  `);
+
+  return fabrics
+    
+  } catch (error) {
+    console.log(error)
+    return []
+  }
+}
+
+
+const getGarmentProcessData = async (type:string, processIds:any) =>{
+  try {
+    let [fabrics] = await sequelize.query(`
+      SELECT
+        ARRAY_AGG(DISTINCT fs.sales_id) AS garment_process_id,
+        STRING_AGG(DISTINCT gp.reel_lot_no, ',') AS reel_lot_no
+      FROM
+        fabric_selections fs
+      JOIN garment_processes gp ON fs.sales_id = gp.id
+      WHERE fs.fabric_id IN (${processIds})
+        AND fs.processor ILIKE '${type}'
+  `);
+
+  return fabrics
+    
+  } catch (error) {
+    console.log(error)
+    return []
+  }
+}
+
+const _getFabricProcessForwardChainData = async (type: any, id: any) => {
+  let addedQuery: any ='';
+  let Model;
+  let Key;
+
+  switch (type) {
+    case 'dying':
+      addedQuery = `
+            ARRAY_AGG(fs.id) FILTER (WHERE LOWER(fs.buyer_type::text) = 'washing') AS wash_sales_ids,
+            ARRAY_AGG(fs.id) FILTER (WHERE LOWER(fs.buyer_type::text) = 'compacting') AS compact_sales_ids,
+            ARRAY_AGG(fs.id) FILTER (WHERE LOWER(fs.buyer_type::text) = 'garment') AS garment_process_ids,
+            STRING_AGG(DISTINCT fabric.name, ',') AS fabric_name`;
+      Model = 'dying_sales';
+      Key = 'dying_id';
+      break;
+    case 'printing':
+      addedQuery = `
+            ARRAY_AGG(fs.id) FILTER (WHERE LOWER(fs.buyer_type::text) = 'compacting') AS compact_sales_ids,
+            ARRAY_AGG(fs.id) FILTER (WHERE LOWER(fs.buyer_type::text) = 'garment') AS garment_process_ids,
+            STRING_AGG(DISTINCT fabric.name, ',') AS fabric_name`;
+      Model = 'printing_sales';
+      Key = 'printing_id';
+      break;
+    case 'washing':
+      addedQuery = `
+            ARRAY_AGG(fs.id) FILTER (WHERE LOWER(fs.buyer_type::text) = 'printing') AS print_sales_ids,
+            ARRAY_AGG(fs.id) FILTER (WHERE LOWER(fs.buyer_type::text) = 'compacting') AS compact_sales_ids,
+            ARRAY_AGG(fs.id) FILTER (WHERE LOWER(fs.buyer_type::text) = 'garment') AS garment_process_ids,
+            STRING_AGG(DISTINCT fabric.name, ',') AS fabric_name`;
+      Model = 'washing_sales';
+      Key = 'washing_id';
+      break;
+      break;
+    case 'compacting':
+      addedQuery = `
+            ARRAY_AGG(fs.id) FILTER (WHERE LOWER(fs.buyer_type::text) = 'garment') AS garment_process_ids,
+            STRING_AGG(DISTINCT fabric.name, ',') AS fabric_name`;
+      Model = 'compacting_sales';
+      Key = 'compacting_id';
+      break;
+  }
+
+  let whereClause = '';
+
+if (Array.isArray(id)) {
+  whereClause = `WHERE fs.id IN (${id.join(",")})`;
+} else {
+  whereClause = `WHERE fs.id IN (${id})`;
+}
+
+  // let whereClause =  `WHERE fs.id IN (${id.join(",")})`
+
+  let [fabrics] = await sequelize.query(`
+    SELECT 
+        ${addedQuery}
+    FROM ${Model} fs
+    LEFT JOIN fabrics fabric ON fabric.id = fs.${Key}
+    ${whereClause}
+`);
+
+  let data: any = [];
+  let washData = []
+  let printData = []
+  let compactData = []
+  let garmentData: any = []
+
+  if (fabrics && fabrics[0]) {
+    if(fabrics[0].wash_sales_ids && fabrics[0].wash_sales_ids.length > 0){
+      let washingIds = await getWashProcessData(fabrics[0].wash_sales_ids.join(","))
+      if(washingIds && washingIds[0] && washingIds[0]?.fabric_sale_ids?.length > 0){
+        washData = await _getFabricProcessForwardChainData("washing", washingIds[0]?.fabric_sale_ids)
+      }  
+    }
+      
+
+    if(fabrics[0].print_sales_ids && fabrics[0].print_sales_ids.length > 0){
+      let printingIds = await getPrintProcessData(fabrics[0].print_sales_ids.join(","))
+      if(printingIds && printingIds[0] && printingIds[0]?.fabric_sale_ids?.length > 0){
+        printData = await _getFabricProcessForwardChainData("printing", printingIds[0]?.fabric_sale_ids)
+      }   
+    }
+
+    if(fabrics[0].compact_sales_ids && fabrics[0].compact_sales_ids.length > 0){
+      let compactingIds = await getCompactProcessData(type, fabrics[0].compact_sales_ids.join(","))
+      if(compactingIds && compactingIds[0] && compactingIds[0]?.fabric_sale_ids?.length > 0){
+        compactData = await _getFabricProcessForwardChainData("compacting", compactingIds[0]?.fabric_sale_ids)
+      }    
+    }
+
+    if(fabrics[0].garment_process_ids && fabrics[0].garment_process_ids.length > 0){
+      let garmentIds = await getGarmentProcessData(type, fabrics[0].garment_process_ids.join(","))
+      if(garmentIds && garmentIds[0] && garmentIds[0]?.reel_lot_no){
+        // garmentData = await _getGarmentProcessForwardChainData(garmentIds[0]?.reel_lot_no)
+        let garmentChart = await _getGarmentProcessForwardChainData(garmentIds[0]?.reel_lot_no);
+        let obj = {
+          ...fabrics[0],
+          garmentChart
+        }
+
+        garmentData = [formatForwardChainDataFabric(fabrics[0].fabric_name, obj)]
+      }   
+    }
+    data = [...washData,...compactData,...printData,...garmentData].filter((item: any) => item !== null && item !== undefined)
+  }
+
+  return data;
+}
+
+const getFabricProcessForwardChainingData = async (req: Request, res: Response) => {
+  const { type, id } = req.query;
+  res.send(await _getFabricProcessForwardChainData(type, id));
+}
+
 
 export {
   fetchDyingTransactions,
@@ -4837,4 +5034,6 @@ export {
   updatePrintingProcess,
   getWashingProcessById,
   updateWashingProcess,
+  _getFabricProcessForwardChainData,
+  getFabricProcessForwardChainingData
 };

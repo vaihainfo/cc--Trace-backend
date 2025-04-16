@@ -726,8 +726,8 @@ const exportGinHeapReport = async (req: Request, res: Response) => {
       }
 
       const rowValues = Object.values({
-        index: "Totals:", country: "", state: "", created_date:"", season: "", ginner_heap_no:"",
-        reel_heap_no:"", ginner_name:"", village_name: "", 
+        index: "", country: "", state: "", created_date:"", season: "", ginner_heap_no:"",
+        reel_heap_no:"", ginner_name:"", village_name: "Total", 
         heap_weight:Number(formatDecimal(weightSum)),
         heap_starting_date: "", heap_ending_date: "", weighbridge_vehicle_no:""
       });
@@ -1310,7 +1310,7 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
 
       if (isOrganic === 'true') {
         rowValues = Object.values({
-          index: "Total: ",
+          index: "",
           country: "",
           state: "",
           date: "",
@@ -1323,7 +1323,7 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
           heap: '',
           lot_no: "",
           press_no: "",
-          reel_press_no_no : "",
+          reel_press_no_no : "Total",
           noOfBales: Number(formatDecimal(totals.total_no_of_bales)),
           lint_quantity: Number(formatDecimal(totals.total_lint_quantity)),
           program:"",
@@ -1334,7 +1334,7 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
       }
       else if (isBrand === 'true') {
         rowValues = Object.values({
-          index: "Total: ",
+          index: "",
           country: "",
           state: "",
           date: "",
@@ -1348,7 +1348,7 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
           lot_no: "",
           press_no: "",
           reel_lot_no: "",
-          reel_press_no: "",
+          reel_press_no: "Total",
           noOfBales: Number(formatDecimal(totals.total_no_of_bales)),
           lint_quantity: Number(formatDecimal(totals.total_lint_quantity)),
           program: "",
@@ -1358,7 +1358,7 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
       }
       else if(isAdmin === 'true'){
         rowValues = Object.values({
-          index: "Total: ",
+          index: "",
           country: "",
           state: "",
           date: "",
@@ -1373,7 +1373,7 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
           lot_no: "",
           press_no: "",
           reel_lot_no: "",
-          reel_press_no: "",
+          reel_press_no: "Total",
           noOfBales: Number(formatDecimal(totals.total_no_of_bales)),
           lint_quantity: Number(formatDecimal(totals.total_lint_quantity)),
           seedConsmed: Number(formatDecimal(totals.total_seedConsmed)),
@@ -1392,7 +1392,7 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
       }
       else {
           rowValues = Object.values({
-            index: "Total: ",
+            index: "",
             country: "",
             state: "",
             date: "",
@@ -1407,7 +1407,7 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
             lot_no: "",
             press_no: "",
             reel_lot_no: "",
-            reel_press_no: "",
+            reel_press_no: "Total",
             noOfBales: Number(formatDecimal(totals.total_no_of_bales)),
             lint_quantity: Number(formatDecimal(totals.total_lint_quantity)),
             seedConsmed: Number(formatDecimal(totals.total_seedConsmed)),
@@ -1956,7 +1956,7 @@ const exportPendingGinnerSales = async (req: Request, res: Response) => {
       let rowValues;
       if(isOrganic === 'true'){
         rowValues = Object.values({
-          index: "Total: ",
+          index: "",
           country: "",
           state: "",
           date:  "",
@@ -1965,7 +1965,7 @@ const exportPendingGinnerSales = async (req: Request, res: Response) => {
           invoice:  "",
           buyer_type: "",
           buyer:  '',
-          lot_no: "",
+          lot_no: "Total",
           no_of_bales: Number(formatDecimal(totals.total_no_of_bales)),
           press_no: "",
           rate: Number(formatDecimal(totals.total_rate)),
@@ -1976,7 +1976,7 @@ const exportPendingGinnerSales = async (req: Request, res: Response) => {
       }
       else{
       rowValues = Object.values({
-        index: "Total: ",
+        index: "",
         country: "",
         state: "",
         date:  "",
@@ -1986,7 +1986,7 @@ const exportPendingGinnerSales = async (req: Request, res: Response) => {
         buyer_type: "",
         buyer:  '',
         lot_no:  "",
-        reel_lot_no: "",
+        reel_lot_no: "Total",
         no_of_bales: Number(formatDecimal(totals.total_no_of_bales)),
         press_no:  "",
         rate: Number(formatDecimal(totals.total_rate)),
@@ -2110,6 +2110,8 @@ const fetchGinnerProcessGreyOutReport = async (req: Request, res: Response) => {
           gp.season_id, 
           s.name AS season_name, 
           g.name AS ginner_name, 
+          c.county_name AS country_name,
+          st.state_name AS state_name,
           gp.lot_no, 
           gp.reel_lot_no, 
           gp.press_no, 
@@ -2136,6 +2138,9 @@ const fetchGinnerProcessGreyOutReport = async (req: Request, res: Response) => {
         LEFT JOIN "gin-bales" gb ON gb.process_id = gp.id AND gb.sold_status = false
         LEFT JOIN seasons s ON gp.season_id = s.id
         LEFT JOIN ginners g ON gp.ginner_id = g.id
+        LEFT JOIN countries c ON c.id = g.country_id
+        LEFT JOIN states st ON st.id = g.state_id
+        
         WHERE
           (
             gp.greyout_status = true
@@ -2149,8 +2154,8 @@ const fetchGinnerProcessGreyOutReport = async (req: Request, res: Response) => {
             )
           )
           ${whereClause}
-        GROUP BY gp.id, gp.ginner_id, gp.season_id, gp.lot_no, gp.reel_lot_no, gp.press_no, s.name, g.name, gp.no_of_bales,gp.greyout_status, gp.scd_verified_status,gp.verification_status
-        ORDER BY gp.id DESC
+        GROUP BY gp.id, gp.ginner_id, gp.season_id, gp.lot_no, gp.reel_lot_no, gp.press_no, s.name, g.name, gp.no_of_bales,gp.greyout_status, gp.scd_verified_status,gp.verification_status,c.county_name,st.state_name
+        ORDER BY TRIM(g.name) ASC
         LIMIT ${limit} OFFSET ${offset}
   ;`
 
@@ -2249,6 +2254,16 @@ const fetchSpinnerProcessGreyOutReport = async (req: Request, res: Response) => 
         model: Spinner,
         as: "spinner",
         attributes: ["id", "name"],
+        include: [
+          {
+            model: Country,
+            as: "country",
+          },
+          {
+            model: State,
+            as: "state",
+          },
+      ],
       },
     ];
 
@@ -2257,7 +2272,7 @@ const fetchSpinnerProcessGreyOutReport = async (req: Request, res: Response) => 
       include: include,
       offset: offset,
       limit: limit,
-      order: [['id', 'desc']]
+      order:[[Sequelize.literal('TRIM("spinner"."name")'), 'ASC']]
     });
     return res.sendPaginationSuccess(res, rows, count);
   } catch (error: any) {
@@ -2364,6 +2379,16 @@ const fetchSpinnerGreyOutReport = async (req: Request, res: Response) => {
         model: Spinner,
         as: "buyerdata",
         attributes: ["id", "name"],
+        include: [
+          {
+            model: Country,
+            as: "country",
+          },
+          {
+            model: State,
+            as: "state",
+          },
+      ],
       },
     ];
     //fetch data with pagination
@@ -2407,7 +2432,7 @@ const fetchSpinnerGreyOutReport = async (req: Request, res: Response) => {
       attributes: attributes,
       offset: offset,
       limit: limit,
-      order: [['id', 'desc']]
+      order:[[Sequelize.literal('TRIM("buyerdata"."name")'), 'ASC']]
     });
     return res.sendPaginationSuccess(res, rows, count);
   } catch (error: any) {
@@ -3148,14 +3173,16 @@ const exportGinnerProcessGreyOutReport = async (req: Request, res: Response) => 
       // Create the excel workbook file
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet("Sheet1");
-      worksheet.mergeCells("A1:G1");
+     /* worksheet.mergeCells("A1:G1");
       const mergedCell = worksheet.getCell("A1");
       mergedCell.value = "CottonConnect | Ginner Process Grey Out Report";
       mergedCell.font = { bold: true };
-      mergedCell.alignment = { horizontal: "center", vertical: "middle" };
+      mergedCell.alignment = { horizontal: "center", vertical: "middle" }; */
       // Set bold font for header row
       const headerRow = worksheet.addRow([
         "Sr No.",
+        "Country",
+        "State",
         "Season",
         "Ginner Name",
         "REEL Lot No",
@@ -3172,6 +3199,8 @@ const exportGinnerProcessGreyOutReport = async (req: Request, res: Response) => 
           gp.season_id, 
           s.name AS season_name, 
           g.name AS ginner_name, 
+          c.county_name AS country_name,
+          st.state_name AS state_name,
           gp.lot_no, 
           gp.reel_lot_no, 
           gp.press_no, 
@@ -3198,6 +3227,9 @@ const exportGinnerProcessGreyOutReport = async (req: Request, res: Response) => 
         LEFT JOIN "gin-bales" gb ON gb.process_id = gp.id AND gb.sold_status = false
         LEFT JOIN seasons s ON gp.season_id = s.id
         LEFT JOIN ginners g ON gp.ginner_id = g.id
+        LEFT JOIN countries c ON c.id = g.country_id
+        LEFT JOIN states st ON st.id = g.state_id
+        
         WHERE
           (
             gp.greyout_status = true
@@ -3211,8 +3243,8 @@ const exportGinnerProcessGreyOutReport = async (req: Request, res: Response) => 
             )
           )
           ${whereClause}
-        GROUP BY gp.id, gp.ginner_id, gp.season_id, gp.lot_no, gp.reel_lot_no, gp.press_no, s.name, g.name, gp.no_of_bales,gp.greyout_status, gp.scd_verified_status,gp.verification_status
-        ORDER BY gp.id DESC
+        GROUP BY gp.id, gp.ginner_id, gp.season_id, gp.lot_no, gp.reel_lot_no, gp.press_no, s.name, g.name, gp.no_of_bales,gp.greyout_status, gp.scd_verified_status,gp.verification_status,c.county_name,st.state_name
+        ORDER BY TRIM(g.name) ASC
         LIMIT ${limit} OFFSET ${offset}
     ;`
 
@@ -3221,11 +3253,14 @@ const exportGinnerProcessGreyOutReport = async (req: Request, res: Response) => 
         type: sequelize.QueryTypes.SELECT,
       })
     ]);
-
+    let total_lint_quantity = 0 ;
       // Append data to worksheet
       for await (const [index, item] of rows.entries()) {
+        total_lint_quantity += item.lint_quantity ? Number(item.lint_quantity) : 0;
         const rowValues = Object.values({
           index: index + 1,
+          country:item.country_name ? item.country_name : "",
+          state:item.state_name ? item.state_name : "",
           season: item.season_name ? item.season_name : "",
           ginner: item.ginner_name ? item.ginner_name : "",
           reel_lot_no: item.reel_lot_no ? item.reel_lot_no : "",
@@ -3236,12 +3271,29 @@ const exportGinnerProcessGreyOutReport = async (req: Request, res: Response) => 
         });
         worksheet.addRow(rowValues);
       }
+
+      const rowValues = Object.values({
+        index: "", country: "", state: "", season:"", ginner: "", 
+        reel_lot_no:"", press:"", lot_no: "Total", 
+        lint_quantity:Number(formatDecimal(total_lint_quantity)),
+       
+      });
+      worksheet.addRow(rowValues).eachCell(cell  => { cell.font={bold:true}});
+
+      const borderStyle = {
+        top: { style: "thin" },
+        bottom: { style: "thin" },
+        left: { style: "thin" },
+        right: { style: "thin" },
+      };
+
       // Auto-adjust column widths based on content
       worksheet.columns.forEach((column: any) => {
         let maxCellLength = 0;
         column.eachCell({ includeEmpty: true }, (cell: any) => {
           const cellLength = (cell.value ? cell.value.toString() : "").length;
           maxCellLength = Math.max(maxCellLength, cellLength);
+          cell.border = borderStyle;
         });
         column.width = Math.min(14, maxCellLength + 2); // Limit width to 30 characters
       });
@@ -3346,20 +3398,32 @@ const exportSpinnerProcessGreyOutReport = async (req: Request, res: Response) =>
           model: Spinner,
           as: "spinner",
           attributes: [],
+          include: [
+            {
+              model: Country,
+              as: "country",
+            },
+            {
+              model: State,
+              as: "state",
+            },
+          ],
         },
       ];
 
       // Create the excel workbook file
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet("Sheet1");
-      worksheet.mergeCells("A1:G1");
+     /* worksheet.mergeCells("A1:G1");
       const mergedCell = worksheet.getCell("A1");
       mergedCell.value = "CottonConnect | Spinner Yarn Greyout Report";
       mergedCell.font = { bold: true };
-      mergedCell.alignment = { horizontal: "center", vertical: "middle" };
+      mergedCell.alignment = { horizontal: "center", vertical: "middle" };*/
       // Set bold font for header row
       const headerRow = worksheet.addRow([
         "Sr No.",
+        "Country",
+        "State",
         "Season",
         "Spinner Name",
         "REEL Lot No",
@@ -3374,6 +3438,8 @@ const exportSpinnerProcessGreyOutReport = async (req: Request, res: Response) =>
         where: whereCondition,
         include: include,
         attributes: [
+          [Sequelize.col('"spinner"."country"."county_name"'), 'country_name'],
+          [Sequelize.col('"spinner"."state"."state_name"'), 'state_name'],
           [Sequelize.col('"season"."name"'), 'season_name'],
           [Sequelize.col('"spinner"."name"'), 'spinner_name'],
           [Sequelize.col('batch_lot_no'), 'batch_lot_no'],
@@ -3383,13 +3449,16 @@ const exportSpinnerProcessGreyOutReport = async (req: Request, res: Response) =>
         // group: ['season.id', 'spinner.id'],
         offset: offset,
         limit: limit,
-        order: [['id', 'desc']]
+        order:[[Sequelize.literal('TRIM("spinner"."name")'), 'ASC']]
       });
-
+      let total_lint_quantity = 0 ;
       // // Append data to worksheet
       for await (const [index, item] of rows.entries()) {
+        total_lint_quantity += item.dataValues.qty_stock ? Number(item.dataValues.qty_stock) : 0;
         const rowValues = Object.values({
           index: index + 1,
+          country:item.dataValues.country_name ? item.dataValues.country_name : "",
+          state:item.dataValues.state_name ? item.dataValues.state_name : "",
           season: item.dataValues.season_name ? item.dataValues.season_name : "",
           spinner: item.dataValues.spinner_name ? item.dataValues.spinner_name : "",
           reel_lot_no: item.dataValues.reel_lot_no ? item.dataValues.reel_lot_no : "",
@@ -3399,12 +3468,27 @@ const exportSpinnerProcessGreyOutReport = async (req: Request, res: Response) =>
         worksheet.addRow(rowValues);
       }
 
+      const rowValues = Object.values({
+        index: "", country: "", state: "", season:"",spinner:"",
+        reel_lot_no:"", batch_lot_no: "Total", 
+        lint_quantity:Number(formatDecimal(total_lint_quantity)),
+       
+      });
+      worksheet.addRow(rowValues).eachCell(cell  => { cell.font={bold:true}});
+
+      const borderStyle = {
+        top: { style: "thin" },
+        bottom: { style: "thin" },
+        left: { style: "thin" },
+        right: { style: "thin" },
+      };
       // Auto-adjust column widths based on content
       worksheet.columns.forEach((column: any) => {
         let maxCellLength = 0;
         column.eachCell({ includeEmpty: true }, (cell: any) => {
           const cellLength = (cell.value ? cell.value.toString() : "").length;
           maxCellLength = Math.max(maxCellLength, cellLength);
+          cell.border = borderStyle;
         });
         column.width = Math.min(14, maxCellLength + 2); // Limit width to 30 characters
       });
@@ -3531,20 +3615,33 @@ const exportSpinnerGreyOutReport = async (req: Request, res: Response) => {
           model: Spinner,
           as: "buyerdata",
           attributes: [],
+          include: [
+            {
+              model: Country,
+              as: "country",
+            },
+            {
+              model: State,
+              as: "state",
+            },
+          ],
+
         },
       ];
 
       // Create the excel workbook file
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet("Sheet1");
-      worksheet.mergeCells("A1:H1");
+      /*worksheet.mergeCells("A1:H1");
       const mergedCell = worksheet.getCell("A1");
       mergedCell.value = "CottonConnect | Spinner Lint Process Greyout Report";
       mergedCell.font = { bold: true };
-      mergedCell.alignment = { horizontal: "center", vertical: "middle" };
+      mergedCell.alignment = { horizontal: "center", vertical: "middle" }; */
       // Set bold font for header row
       const headerRow = worksheet.addRow([
         "Sr No.",
+        "Country",
+        "State",
         "Season",
         "Ginner Name",
         "Spinner Name",
@@ -3560,6 +3657,8 @@ const exportSpinnerGreyOutReport = async (req: Request, res: Response) => {
         where: whereCondition,
         include: include,
         attributes: [
+          [Sequelize.col('"buyerdata"."country"."county_name"'), 'country_name'],
+          [Sequelize.col('"buyerdata"."state"."state_name"'), 'state_name'],
           [Sequelize.col('"season"."name"'), 'season_name'],
           [Sequelize.literal('"ginner"."name"'), "ginner_name"],
           [Sequelize.col('"buyerdata"."name"'), 'spinner'],
@@ -3583,13 +3682,18 @@ const exportSpinnerGreyOutReport = async (req: Request, res: Response) => {
         // group: ['season.id', 'ginner.id', 'buyerdata.id'],
         offset: offset,
         limit: limit,
-        order: [['id', 'desc']]
+        order:[[Sequelize.literal('TRIM("buyerdata"."name")'), 'ASC']]
       });
-
+      
+      let total_lint_quantity = 0 ;
       // // Append data to worksheet
       for await (const [index, item] of rows.entries()) {
+
+        total_lint_quantity += item.dataValues.lint_greyout_qty ? Number(item.dataValues.lint_greyout_qty) : 0;
         const rowValues = Object.values({
           index: index + 1,
+          country:item.dataValues.country_name ? item.dataValues.country_name : "",
+          state:item.dataValues.state_name ? item.dataValues.state_name : "",
           season: item.dataValues.season_name ? item.dataValues.season_name : "",
           ginner: item.dataValues.ginner_name ? item.dataValues.ginner_name : "",
           spinner: item.dataValues.spinner ? item.dataValues.spinner : "",
@@ -3601,12 +3705,28 @@ const exportSpinnerGreyOutReport = async (req: Request, res: Response) => {
         worksheet.addRow(rowValues);
       }
 
+      const rowValues = Object.values({
+        index: "", country: "", state: "", season:"", ginner: "", spinner:"",
+        reel_lot_no:"", invoice:"", lot_no: "Total", 
+        lint_quantity:Number(formatDecimal(total_lint_quantity)),
+       
+      });
+      worksheet.addRow(rowValues).eachCell(cell  => { cell.font={bold:true}});
+
+      const borderStyle = {
+        top: { style: "thin" },
+        bottom: { style: "thin" },
+        left: { style: "thin" },
+        right: { style: "thin" },
+      };
+
       // Auto-adjust column widths based on content
       worksheet.columns.forEach((column: any) => {
         let maxCellLength = 0;
         column.eachCell({ includeEmpty: true }, (cell: any) => {
           const cellLength = (cell.value ? cell.value.toString() : "").length;
           maxCellLength = Math.max(maxCellLength, cellLength);
+          cell.border = borderStyle;
         });
         column.width = Math.min(14, maxCellLength + 2); // Limit width to 30 characters
       });
@@ -4067,7 +4187,7 @@ const exportGinnerSales = async (req: Request, res: Response) => {
       let rowValues;
       if (isOrganic === 'true') {
         rowValues = Object.values({
-          index:"Total: ",
+          index:"",
           country:"",
           state:"",
           date:"",
@@ -4078,7 +4198,7 @@ const exportGinnerSales = async (req: Request, res: Response) => {
           invoice:"",
           buyer_type:"",
           buyer:"",
-          lot_no:"",
+          lot_no:"Total",
           no_of_bales: totals.total_no_of_bales,
           press_no:"",
           rate: Number(formatDecimal(totals.total_rate)),
@@ -4091,7 +4211,7 @@ const exportGinnerSales = async (req: Request, res: Response) => {
       }
       else if (isBrand === 'true') {
         rowValues = Object.values({
-          index:"Total: ",
+          index:"",
           country:"",
           state:"",            
           date:"",
@@ -4103,7 +4223,7 @@ const exportGinnerSales = async (req: Request, res: Response) => {
           buyer_type:"",
           buyer:"",
           lot_no:"",
-          reel_lot_no:"",
+          reel_lot_no:"Total",
           no_of_bales: totals.total_no_of_bales,
           press_no:"",
           rate: Number(formatDecimal(totals.total_rate)),
@@ -4116,7 +4236,7 @@ const exportGinnerSales = async (req: Request, res: Response) => {
       } else {
 
         rowValues = Object.values({
-          index:"Total: ",
+          index:"",
           country:"",
           state:"",            
           date:"",
@@ -4131,7 +4251,7 @@ const exportGinnerSales = async (req: Request, res: Response) => {
           buyer:"",
           // heap:"",
           lot_no:"",
-          reel_lot_no:"",
+          reel_lot_no:"Total",
           no_of_bales: totals.total_no_of_bales,
           press_no:"",
           rate: Number(formatDecimal(totals.total_rate)),
@@ -4948,7 +5068,7 @@ const exportSpinnerBale = async (req: Request, res: Response) => {
       let rowValues;
       if (isOrganic === 'true') {
      rowValues = Object.values({
-        index:"Totals: ",
+        index:"",
         country:"",
         state:"",
         accept_date:"",
@@ -4959,7 +5079,7 @@ const exportSpinnerBale = async (req: Request, res: Response) => {
         ginner:"",
         invoice:"",
         lot_no:"",
-        press_no:"",
+        press_no:"Total",
         no_of_bales: Number(formatDecimal(totals.total_no_of_bales)),
         lint_quantity: Number(formatDecimal(totals.total_lint_quantity)),
         greyed_out_qty:"",
@@ -4969,7 +5089,7 @@ const exportSpinnerBale = async (req: Request, res: Response) => {
     }
     else{
       rowValues = Object.values({
-        index:"Totals: ",
+        index:"",
         country:"",
         state:"",
         accept_date:"",
@@ -4981,7 +5101,7 @@ const exportSpinnerBale = async (req: Request, res: Response) => {
         invoice:"",
         lot_no:"",
         reel_lot_no:"",
-        press_no:"",
+        press_no:"Total",
         no_of_bales: Number(formatDecimal(totals.total_no_of_bales)),
         lint_quantity: Number(formatDecimal(totals.total_lint_quantity)),
         greyed_out_qty:"",
@@ -5394,7 +5514,7 @@ const exportPendingSpinnerBale = async (req: Request, res: Response) => {
       let rowValues;
       if (isOrganic === 'true') {
         rowValues = {
-          index:"Totals: ",
+          index:"",
           country:"",
           state:"",
           createdAt:"",
@@ -5403,7 +5523,7 @@ const exportPendingSpinnerBale = async (req: Request, res: Response) => {
           season:"",
           ginner:"",
           spinner:"",
-          invoice:"",
+          invoice:"Total",
           no_of_bales: Number(formatDecimal(totals.no_of_bales)),
           lot_no:"",
           total_qty: Number(formatDecimal(totals.total_qty)),
@@ -5413,7 +5533,7 @@ const exportPendingSpinnerBale = async (req: Request, res: Response) => {
       }
       else if (isBrand === 'true') {
         rowValues = {
-          index:"Totals: ",
+          index:"",
           country:"",
           state:"",
           createdAt:"",
@@ -5422,7 +5542,7 @@ const exportPendingSpinnerBale = async (req: Request, res: Response) => {
           season:"",
           ginner:"",
           spinner:"",
-          invoice:"",
+          invoice:"Total",
           no_of_bales: Number(formatDecimal(totals.no_of_bales)),
           lot_no:"",
           reel_lot_no:"",
@@ -5432,7 +5552,7 @@ const exportPendingSpinnerBale = async (req: Request, res: Response) => {
         };
       } else {
         rowValues = {
-          index:"Totals: ",
+          index:"",
           country:"",
           state:"",
           createdAt:"",
@@ -5441,7 +5561,7 @@ const exportPendingSpinnerBale = async (req: Request, res: Response) => {
           season:"",
           ginner:"",
           spinner:"",
-          invoice:"",
+          invoice:"Total",
           no_of_bales: Number(formatDecimal(totals.no_of_bales)),
           lot_no:"",
           reel_lot_no:"",
@@ -6289,7 +6409,7 @@ const exportSpinnerYarnProcess = async (req: Request, res: Response) => {
       if (isOrganic === 'true') {
 
          rowValues = {
-           index:"Totals: ",
+           index:"",
            country:"",
            state:"",
            createdAt:"",
@@ -6317,7 +6437,7 @@ const exportSpinnerYarnProcess = async (req: Request, res: Response) => {
        }
        else if (isBrand === 'true' && (isOrganic === false ||  isOrganic === 'false')) {
          rowValues ={
-           index:"Totals: ",
+           index:"",
            country:"",
            state:"",
            createdAt:"",
@@ -6346,7 +6466,7 @@ const exportSpinnerYarnProcess = async (req: Request, res: Response) => {
        }
        else if(isAdmin === 'true'){
          rowValues = {
-           index:"Totals: ",
+           index:"",
            country:"",
            state:"",
            createdAt:"",
@@ -6377,7 +6497,7 @@ const exportSpinnerYarnProcess = async (req: Request, res: Response) => {
        }
        else {
          rowValues = {
-           index:"Totals: ",
+           index:"",
            country:"",
            state:"",
            createdAt:"",
@@ -6575,7 +6695,8 @@ const fetchSpinSalesPagination = async (req: Request, res: Response) => {
           [Sequelize.literal('"sales"."total_qty"'), "total_qty"],
           [Sequelize.literal('"sales"."invoice_no"'), "invoice_no"],
           [Sequelize.literal('"sales"."batch_lot_no"'), "batch_lot_no"],
-          [Sequelize.fn('STRING_AGG', Sequelize.literal('DISTINCT "process"."reel_lot_no"'), ', '), "reel_lot_no"],
+          // [Sequelize.fn('STRING_AGG', Sequelize.literal('DISTINCT "process"."reel_lot_no"'), ', '), "reel_lot_no"],
+          [Sequelize.literal('"sales"."reel_lot_no"'), "reel_lot_no"],
           [Sequelize.fn('ARRAY_AGG', Sequelize.literal('DISTINCT "process"."id"')), "process_ids"],
           [Sequelize.literal('"sales"."no_of_boxes"'), "no_of_boxes"],
           [Sequelize.literal('"sales"."price"'), "price"],
@@ -6989,7 +7110,8 @@ const exportSpinnerSale = async (req: Request, res: Response) => {
             [Sequelize.literal('"sales"."total_qty"'), "total_qty"],
             [Sequelize.literal('"sales"."invoice_no"'), "invoice_no"],
             [Sequelize.literal('"sales"."batch_lot_no"'), "batch_lot_no"],
-            [Sequelize.fn('STRING_AGG', Sequelize.literal('DISTINCT "process"."reel_lot_no"'), ','), "reel_lot_no"],
+            // [Sequelize.fn('STRING_AGG', Sequelize.literal('DISTINCT "process"."reel_lot_no"'), ','), "reel_lot_no"],
+            [Sequelize.literal('"sales"."reel_lot_no"'), "reel_lot_no"],
             [Sequelize.fn('ARRAY_AGG', Sequelize.literal('DISTINCT "process"."id"')), "process_ids"],
             [Sequelize.literal('"sales"."no_of_boxes"'), "no_of_boxes"],
             [Sequelize.literal('"sales"."price"'), "price"],
@@ -7391,7 +7513,7 @@ const exportSpinnerSale = async (req: Request, res: Response) => {
       let rowValues;
       if (isOrganic === 'true') {
         rowValues = {
-          index:"Totals: ",
+          index:"",
           country:"",
           state:"",
           createdAt:"",
@@ -7418,7 +7540,7 @@ const exportSpinnerSale = async (req: Request, res: Response) => {
       } 
       else if (isBrand === 'true' &&  (isOrganic === false ||  isOrganic === 'false')) {
         rowValues = {
-          index:"Totals: ",
+          index:"",
           country:"",
           state:"",
           createdAt:"",
@@ -7444,7 +7566,7 @@ const exportSpinnerSale = async (req: Request, res: Response) => {
       }
       else if (isAdmin === 'true') {
         rowValues = {
-          index:"Totals: ",
+          index:" ",
           country:"",
           state:"",
           createdAt:"",
@@ -7472,7 +7594,7 @@ const exportSpinnerSale = async (req: Request, res: Response) => {
       }    
       else {
         rowValues = {
-          index:"Totals: ",
+          index:" ",
           country:"",
           state:"",
           createdAt:"",
@@ -7605,6 +7727,8 @@ const fetchKnitterYarnPagination = async (req: Request, res: Response) => {
     }
 
     whereCondition["$sales.knitter_id$"] = { [Op.ne]: null };
+    whereCondition["$sales.knitter_id$"] = { [Op.ne]: 0 };
+    whereCondition["$sales.knitter.id$"] = { [Op.ne]: null };
     whereCondition["$sales.status$"] = "Sold";
 
     if (knitterId) {
@@ -7686,7 +7810,8 @@ const fetchKnitterYarnPagination = async (req: Request, res: Response) => {
           [Sequelize.literal('"sales"."invoice_no"'), "invoice_no"],
           [Sequelize.literal('"sales"."batch_lot_no"'), "batch_lot_no"],
           // [Sequelize.literal('"process"."reel_lot_no"'), "reel_lot_no"],
-          [Sequelize.fn('STRING_AGG', Sequelize.literal('DISTINCT "process"."reel_lot_no"'), ', '), "reel_lot_no"],
+          // [Sequelize.fn('STRING_AGG', Sequelize.literal('DISTINCT "process"."reel_lot_no"'), ', '), "reel_lot_no"],
+          [Sequelize.literal('"sales"."reel_lot_no"'), "reel_lot_no"],
           [Sequelize.literal('"sales"."no_of_boxes"'), "no_of_boxes"],
           // [Sequelize.literal("qty_used"), "yarn_weight"],
           [
@@ -7840,6 +7965,8 @@ const exportKnitterYarn = async (req: Request, res: Response) => {
       whereCondition["$sales.program_id$"] = { [Op.in]: idArray };
     }
     whereCondition["$sales.knitter_id$"] = { [Op.ne]: null };
+    whereCondition["$sales.knitter_id$"] = { [Op.ne]: 0 };
+    whereCondition["$sales.knitter.id$"] = { [Op.ne]: null };
     whereCondition["$sales.status$"] = "Sold";
 
     if (knitterId) {
@@ -7950,7 +8077,8 @@ const exportKnitterYarn = async (req: Request, res: Response) => {
           [Sequelize.literal('"sales"."total_qty"'), "total_qty"],
           [Sequelize.literal('"sales"."invoice_no"'), "invoice_no"],
           [Sequelize.literal('"sales"."batch_lot_no"'), "batch_lot_no"],
-          [Sequelize.fn('STRING_AGG', Sequelize.literal('DISTINCT "process"."reel_lot_no"'), ', '), "reel_lot_no"],
+          // [Sequelize.fn('STRING_AGG', Sequelize.literal('DISTINCT "process"."reel_lot_no"'), ', '), "reel_lot_no"],
+          [Sequelize.literal('"sales"."reel_lot_no"'), "reel_lot_no"],
           [Sequelize.literal('"sales"."no_of_boxes"'), "no_of_boxes"],
           // [Sequelize.literal('"process"."qty_used"'), 'yarn_weight'],
           [
@@ -8748,16 +8876,19 @@ const fetchKnitterSalesPagination = async (req: Request, res: Response) => {
           model: KnitSales,
           as: "sales",
           include: include,
+          required: true,
           attributes: [],
         },
         {
           model: KnitProcess,
           attributes: [],
+          required: true,
           as: "process",
         },
         {
           model: KnitFabric,
           attributes: [],
+          required: true,
           as: "knitfabric",
         },
       ],
@@ -9002,17 +9133,20 @@ const exportKnitterSale = async (req: Request, res: Response) => {
         {
           model: KnitSales,
           as: "sales",
+          required: true,
           include: include,
           attributes: [],
         },
         {
           model: KnitProcess,
           attributes: [],
+          required: true,
           as: "process",
         },
         {
           model: KnitFabric,
           attributes: [],
+          required: true,
           as: "knitfabric",
         },
       ],
@@ -9196,6 +9330,8 @@ const fetchWeaverYarnPagination = async (req: Request, res: Response) => {
       whereCondition["$sales.program_id$"] = { [Op.in]: idArray };
     }
     whereCondition["$sales.buyer_id$"] = { [Op.ne]: null };
+    whereCondition["$sales.buyer_id$"] = { [Op.ne]: 0 };
+    whereCondition["$sales.weaver.id$"] = { [Op.ne]: null };
     whereCondition["$sales.status$"] = "Sold";
 
     if (weaverId) {
@@ -9440,6 +9576,8 @@ const exportWeaverYarn = async (req: Request, res: Response) => {
       whereCondition["$sales.program_id$"] = { [Op.in]: idArray };
     }
     whereCondition["$sales.buyer_id$"] = { [Op.ne]: null };
+    whereCondition["$sales.buyer_id$"] = { [Op.ne]: 0 };
+    whereCondition["$sales.weaver.id$"] = { [Op.ne]: null };
     whereCondition["$sales.status$"] = "Sold";
 
     if (weaverId) {
@@ -10334,17 +10472,20 @@ const fetchWeaverSalesPagination = async (req: Request, res: Response) => {
         {
           model: WeaverSales,
           as: "sales",
+          required: true,
           include: include,
           attributes: [],
         },
         {
           model: WeaverProcess,
           attributes: [],
+          required: true,
           as: "process",
         },
         {
           model: WeaverFabric,
           attributes: [],
+          required: true,
           as: "weaverfabric",
         },
       ],
@@ -10603,16 +10744,19 @@ const exportWeaverSale = async (req: Request, res: Response) => {
         {
           model: WeaverSales,
           as: "sales",
+          required: true,
           include: include,
           attributes: [],
         },
         {
           model: WeaverProcess,
+          required: true,
           attributes: [],
           as: "process",
         },
         {
           model: WeaverFabric,
+          required: true,
           attributes: [],
           as: "weaverfabric",
         },
@@ -13642,17 +13786,17 @@ const exportSpinnerSummary = async (req: Request, res: Response) => {
         totals.total_balance_lint_cotton+=Number(rowVal.balance_lint_cotton);
         totals.total_yarn_procured+=Number(rowVal.yarn_procured);
         totals.total_yarn_sold+=Number(rowVal.yarn_sold);
-        totals.total_yarnGreyoutMT+=Number(rowVal.lintGreyoutMT);
+        totals.total_yarnGreyoutMT+=Number(rowVal.yarnGreyoutMT);
         totals.total_yarnActualStockMT+=Number(rowVal.yarnActualStockMT);
         totals.total_yarn_stock+=Number(rowVal.yarn_stock);
       }
 
 
       const rowVal ={
-        index:"Totals",
+        index:"",
         country:"",
         state:"",
-        name:"",
+        name:"Total",
         lint_cotton_procured:Number(formatDecimal(totals.total_lint_cotton_procured)),
         lint_cotton_procured_pending:Number(formatDecimal(totals.total_lint_cotton_procured_pending)),
         lint_consumed:Number(formatDecimal(totals.total_lint_consumed)),
@@ -13661,7 +13805,7 @@ const exportSpinnerSummary = async (req: Request, res: Response) => {
         balance_lint_cotton:Number(formatDecimal(totals.total_balance_lint_cotton)),
         yarn_procured:Number(formatDecimal(totals.total_yarn_procured)),
         yarn_sold:Number(formatDecimal(totals.total_yarn_sold)),
-        yarnGreyoutMT:Number(formatDecimal(totals.total_lintGreyoutMT)),
+        yarnGreyoutMT:Number(formatDecimal(totals.total_yarnGreyoutMT)),
         yarnActualStockMT:Number(formatDecimal(totals.total_yarnActualStockMT)),
         yarn_stock:Number(formatDecimal(totals.total_yarn_stock)),
       }; 
@@ -15434,10 +15578,10 @@ const exportGinnerSummary = async (req: Request, res: Response) => {
 
       
       const rowValues = {
-        index:"Totals:",
+        index:"",
         name:"",
         country:"",
-        state:"",
+        state:"Total",
         cottonProcuredMt: totals.cottonProcuredMt,
         cottonProcessedeMt: totals.cottonProcessedeMt,
         //cottonStockMt: totals.cottonStockMt,
@@ -16377,11 +16521,11 @@ const exportGinnerCottonStock = async (req: Request, res: Response) => {
       }
 
       const rowValues = Object.values({
-        index: "Total: ",
+        index: "",
         ginner:  "",
         season:  "",
         country: "",
-        state: "",
+        state: "Total",
         cotton_procured: Number(formatDecimal(totals.total_cotton_procured)),
         cotton_processed: Number(formatDecimal(totals.total_cotton_processed)),
         cotton_stock: Number(formatDecimal(totals.total_cotton_stock)),
@@ -16846,7 +16990,7 @@ const exportSpinnerCottonStock = async (req: Request, res: Response) => {
 
     
       const rowValues = {
-        index:"Totals: ",
+        index:"",
         country:"",
         state:"",
         date:"",
@@ -16855,7 +16999,7 @@ const exportSpinnerCottonStock = async (req: Request, res: Response) => {
         spinner:"",
         reel_lot_no:"",
         invoice_no:"",
-        batch_lot_no:"",
+        batch_lot_no:"Total",
         cotton_procured: Number(formatDecimal(totals.cotton_procured)),
         cotton_stock: Number(formatDecimal(totals.cotton_stock)),
         greyed_out_qty: Number(formatDecimal(totals.greyed_out_qty)),
@@ -20147,11 +20291,11 @@ const exportPscpProcurementLiveTracker = async (
       let rowValues;
       if (isBrand === 'true') {
         rowValues = {
-          index:"Totals:",
+          index:"",
           name:"",
           country:"",
           state:"",
-          program:"",
+          program:"Total",
           expected_seed_cotton:totals.expected_seed_cotton,
           expected_lint:totals.expected_lint,
           procurement_seed_cotton:totals.procurement_seed_cotton,
@@ -20173,11 +20317,11 @@ const exportPscpProcurementLiveTracker = async (
         };
       } else {
         rowValues = {
-          index:"Totals:",
+          index:"",
           name:"",
           country:"",
           state:"",
-          program:"",
+          program:"Total",
           expected_seed_cotton: totals.expected_seed_cotton,
           expected_lint: totals.expected_lint,
           procurement_seed_cotton: totals.procurement_seed_cotton,
