@@ -15,6 +15,8 @@ import {
     fetchWashingSalesPagination,
     exportWashingProcess,
     chooseWashingFabric,
+    getWashingProcessById,
+    updateWashingProcess,
     fetchPrintingTransactions,
     fetchPrintingTransactionSold,
     updatePrintingTransactionStatus,
@@ -39,8 +41,14 @@ import {
     getFabricProcessTracingChartData,
     exportTransactionList,
     exportPrintingTransactionList,
+    getPrintingProcessById,
+    updatePrintingProcess,
     exportWashingTransactionList,
     exportCompactingTransactionList,
+    getDyingProcessById,
+    updateDyingProcess,
+    getCompactingProcessById,
+    updateCompactingProcess,
     getFabricProcessForwardChainingData
 } from "../../controllers/fabric";
 import accessControl from "../../middleware/access-control";
@@ -59,6 +67,8 @@ router.get('/choose-dying-fabric', chooseDyingFabric);
 router.post('/dying-process', createDyingProcess);
 router.get('/export-dying-process', exportDyingProcess);
 router.get('/dying-process', fetchDyingSalesPagination);
+router.get('/dying-process/:id', getDyingProcessById);
+router.put('/dying-process/:id', updateDyingProcess);
 router.delete('/delete-dying-process', deleteDyingProcess);
 router.get('/get-program', getProgram);
 router.get('/get-fabrics', getFabrics);
@@ -70,6 +80,8 @@ router.get('/choose-washing-fabric', chooseWashingFabric);
 router.post('/washing-process', createWashingProcess);
 router.get('/export-washing-process', exportWashingProcess);
 router.get('/washing-process', fetchWashingSalesPagination);
+router.get('/washing-process/:id', getWashingProcessById);
+router.put('/washing-process/:id', updateWashingProcess);
 router.delete('/delete-washing-process', deleteWashingProcess);
 router.get('/washing-process/export/transaction', exportWashingTransactionList);
 
@@ -80,6 +92,8 @@ router.put('/update-transaction-printing', updatePrintingTransactionStatus);
 router.get('/choose-printing-fabric', choosePrintingFabric);
 router.post('/printing-process', createPrintingProcess);
 router.get('/printing-process', fetchPrintingSalesPagination);
+router.get('/printing-process/:id', getPrintingProcessById);
+router.put('/printing-process/:id', updatePrintingProcess);
 router.get('/export-printing-process', exportPrintingProcess);
 router.delete('/delete-printing-process', deletePrintingProcess);
 router.get('/printing-dashboard/export/transaction', exportPrintingTransactionList);
@@ -91,6 +105,8 @@ router.put('/update-transaction-compacting', updateCompactingTransactionStatus);
 router.get('/choose-compacting-fabric', chooseCompactingFabric);
 router.post('/compacting-process', createCompactingProcess);
 router.get('/compacting-process', fetchCompactingSalesPagination);
+router.get('/compacting-process/:id', getCompactingProcessById);
+router.put('/compacting-process/:id', updateCompactingProcess);
 router.get('/export-compacting-process', exportCompactingProcess);
 router.delete('/delete-compacting-process', deleteCompactingProcess);
 router.get('/compacting-dashboard/export/transaction', exportCompactingTransactionList);
