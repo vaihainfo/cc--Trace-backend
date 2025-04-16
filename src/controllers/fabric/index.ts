@@ -3333,8 +3333,6 @@ const _getFabricProcessTracingChartData = async (type: any, id: any) => {
         "fabric"."id";
 `);
 
-console.log(fabrics )
-
   let data: any = {};
 
   if (fabrics && fabrics[0]) {
