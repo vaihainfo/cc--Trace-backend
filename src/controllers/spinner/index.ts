@@ -3348,6 +3348,7 @@ const chooseLint = async (req: Request, res: Response) => {
   }: any = req.query;
   const whereCondition: any = {};
   const sqlCondition: any = [];
+  const baleCondition: any = [];
   try {
     if (!spinnerId) {
       return res.sendError(res, "Spinner Id is required");
@@ -3358,6 +3359,7 @@ const chooseLint = async (req: Request, res: Response) => {
     if (spinnerId) {
       whereCondition.buyer = spinnerId;
       sqlCondition.push(`gs.buyer = ${spinnerId}`);
+      baleCondition.push(`gs.buyer = ${spinnerId}`);
     }
 
     if (seasonId) {
@@ -3365,7 +3367,10 @@ const chooseLint = async (req: Request, res: Response) => {
         .split(",")
         .map((id: any) => parseInt(id, 10));
       whereCondition.season_id = { [Op.in]: idArray };
-      sqlCondition.push(`gs.season_id IN (${idArray.join(",")})`);
+      // sqlCondition.push(`gs.season_id IN (${idArray.join(",")})`);
+      // baleCondition.push(`gs.season_id IN (${idArray.join(",")})`);
+    }else {
+      whereCondition["$season.name$"] = { [Op.gte]: "2022-23" };
     }
 
     if (programId) {
@@ -3374,6 +3379,7 @@ const chooseLint = async (req: Request, res: Response) => {
         .map((id: any) => parseInt(id, 10));
       whereCondition.program_id = { [Op.in]: idArray };
       sqlCondition.push(`gs.program_id IN (${idArray.join(",")})`);
+      baleCondition.push(`gs.program_id IN (${idArray.join(",")})`);
     }
 
     if (ginnerId) {
@@ -3382,6 +3388,7 @@ const chooseLint = async (req: Request, res: Response) => {
         .map((id: any) => parseInt(id, 10));
       whereCondition.ginner_id = { [Op.in]: idArray };
       sqlCondition.push(`gs.ginner_id IN (${idArray.join(",")})`);
+      baleCondition.push(`gs.ginner_id IN (${idArray.join(",")})`);
     }
 
     if (reelLotNo) {
@@ -3389,6 +3396,7 @@ const chooseLint = async (req: Request, res: Response) => {
       whereCondition.reel_lot_no = { [Op.in]: idArray };
       const quotedIdArray = idArray.map((id) => `'${id}'`).join(",");
       sqlCondition.push(`gs.reel_lot_no IN (${quotedIdArray})`);
+      baleCondition.push(`gs.reel_lot_no IN (${quotedIdArray})`);
     }
 
     if (invoiceNo) {
@@ -3397,6 +3405,7 @@ const chooseLint = async (req: Request, res: Response) => {
 
       const quotedIdArray = idArray.map((id) => `'${id}'`).join(",");
       sqlCondition.push(`gs.invoice_no IN (${quotedIdArray})`);
+      baleCondition.push(`gs.invoice_no IN (${quotedIdArray})`);
     }
 
     whereCondition.status = {
@@ -3413,6 +3422,9 @@ const chooseLint = async (req: Request, res: Response) => {
 
     const whereClause =
       sqlCondition.length > 0 ? `WHERE ${sqlCondition.join(" AND ")}` : "";
+
+    const whereBaleClause =
+      baleCondition.length > 0 ? `AND ${baleCondition.join(" AND ")}` : "";
 
     let include = [
       {
@@ -3456,6 +3468,8 @@ const chooseLint = async (req: Request, res: Response) => {
                     WHERE 
                         gs.status IN ('Sold', 'Partially Accepted', 'Partially Rejected')
                         AND (bs.spinner_status = true OR gs.status = 'Sold')
+                        AND gs.season_id = ${item.dataValues.season.id}
+                        ${whereBaleClause}
                     GROUP BY 
                         bs.sales_id
                 )
@@ -3485,7 +3499,7 @@ const chooseLint = async (req: Request, res: Response) => {
                 LEFT JOIN 
                     bale_details bd ON gs.id = bd.sales_id
                 ${whereClause} AND
-                    season_id = ${item.dataValues.season.id}
+                    gs.season_id = ${item.dataValues.season.id}
                 ORDER BY 
                     gs.id DESC;`;
 
