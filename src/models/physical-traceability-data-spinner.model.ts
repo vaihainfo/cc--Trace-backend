@@ -28,6 +28,10 @@ const PhysicalTraceabilityDataSpinner = db.define('physical_traceability_data_sp
         type: DataTypes.STRING,
         allowNull: false
     },
+    healixa_lot_no: {
+        type: DataTypes.STRING,
+        allowNull: true
+    },
     expected_date_of_yarn_sale: {
         type: DataTypes.DATE,
         allowNull: false

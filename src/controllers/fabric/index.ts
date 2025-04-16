@@ -27,8 +27,9 @@ import WeaverProcess from "../../models/weaver-process.model";
 import { encrypt, generateOnlyQrCode } from "../../provider/qrcode";
 
 import { _getSpinnerProcessTracingChartData } from '../spinner/index';
-import { formatDataFromKnitter, formatDataFromWeaver, formartDataForFabric } from '../../util/tracing-chart-data-formatter';
+import { formatDataFromKnitter, formatDataFromWeaver, formartDataForFabric, formatForwardChainDataFabric } from '../../util/tracing-chart-data-formatter';
 import SpinSales from '../../models/spin-sales.model';
+import { _getGarmentProcessForwardChainData } from "../garment-sales";
 /**
  * Dying Dashboard for fabric
  */
@@ -2567,6 +2568,196 @@ const deleteCompactingProcess = async (req: Request, res: Response) => {
   }
 };
 
+// Get a single compacting process by ID
+const getCompactingProcessById = async (req: Request, res: Response) => {
+  try {
+    const id = req.params.id;
+
+    // Define the include models for related data
+    const include = [
+      {
+        model: Program,
+        as: "program",
+        attributes: ["id", "program_name"],
+      },
+      {
+        model: Season,
+        as: "season",
+        attributes: ["id", "name"],
+      },
+      {
+        model: Garment,
+        as: "buyer",
+        attributes: ["id", "name"],
+      },
+      {
+        model: Fabric,
+        as: "buyer_fabric",
+        attributes: ["id", "name"],
+      }
+    ];
+
+    const compactingProcess = await CompactingSales.findOne({
+      where: { id },
+      include: include,
+    });
+
+    if (!compactingProcess) {
+      return res.sendError(res, "Compacting process not found");
+    }
+
+    // Get the selected fabrics for this process
+    const selectedFabrics = await CompactingFabricSelections.findAll({
+      where: { sales_id: id },
+    });
+
+    // Format the response
+    const processData = compactingProcess.toJSON();
+    const formattedProcess = {
+      ...processData,
+      chooseFabric: selectedFabrics,
+      buyerId: processData.buyer_id,
+      buyerName: processData.buyer?.name,
+      buyerFabricId: processData.buyer_fabric_id,
+      buyerFabricName: processData.buyer_fabric?.name,
+      seasonId: processData.season_id,
+      programId: processData.program_id,
+      // Ensure document fields are explicitly included
+      invoiceFiles: processData.invoice_files || [],
+      otherDocs: processData.other_docs || [],
+      // Ensure buyer type is explicitly included
+      buyerType: processData.buyer_type || '',
+    };
+
+    // Return in pagination format for consistency with other endpoints
+    return res.sendSuccess(res, formattedProcess);
+  } catch (error) {
+    console.error("Error fetching compacting process by ID:", error);
+    return res.sendError(res, "Error fetching compacting process");
+  }
+};
+
+// Update a compacting process
+const updateCompactingProcess = async (req: Request, res: Response) => {
+  const transaction = await sequelize.transaction();
+  try {
+    const id = req.params.id;
+    const {
+      compactingId,
+      programId,
+      seasonId,
+      date,
+      garmentOrderRef,
+      brandOrderRef,
+      buyerType,
+      buyerId,
+      buyerFabricId,
+      processorName,
+      processorAddress,
+      oldFabricQuantity,
+      addFabricQuantity,
+      fabricQuantity,
+      totalFabricQuantity,
+      fabricLength,
+      fabricGsm,
+      fabricNetWeight,
+      processWeight,
+      weightGain,
+      weightLoss,
+      batchLotNo,
+      jobDetails,
+      compactingDetails,
+      typeOfCompact,
+      invoiceNo,
+      orderDetails,
+      billOfLadding,
+      transportInfo,
+      invoiceFiles,
+      otherDocs,
+      chooseFabric,
+      from_date,
+      to_date,
+      salesType
+    } = req.body;
+
+    // Check if the compacting process exists
+    const existingProcess = await CompactingSales.findByPk(id);
+    if (!existingProcess) {
+      await transaction.rollback();
+      return res.sendError(res, "Compacting process not found");
+    }
+
+    // Update the compacting process
+    await CompactingSales.update(
+      {
+        compacting_id: compactingId,
+        program_id: programId,
+        season_id: seasonId,
+        date,
+        from_date,
+        to_date,
+        brand_order_ref: brandOrderRef,
+        garment_order_ref: garmentOrderRef,
+        buyer_type: buyerType,
+        buyer_id: buyerId,
+        buyer_fabric_id: buyerFabricId,
+        processor_name: processorName,
+        processor_address: processorAddress,
+        old_fabric_quantity: oldFabricQuantity,
+        add_fabric_quantity: addFabricQuantity,
+        fabric_quantity: fabricQuantity,
+        total_fabric_quantity: totalFabricQuantity,
+        fabric_length: fabricLength,
+        gsm: fabricGsm,
+        fabric_net_weight: fabricNetWeight,
+        process_weight: processWeight,
+        weight_gain: weightGain,
+        weight_loss: weightLoss,
+        batch_lot_no: batchLotNo,
+        job_details: jobDetails,
+        compacting_details: compactingDetails,
+        type_of_compact: typeOfCompact,
+        invoice_no: invoiceNo,
+        order_details: orderDetails,
+        bill_of_lading: billOfLadding,
+        transport_info: transportInfo,
+        invoice_files: invoiceFiles,
+        other_docs: otherDocs,
+        sales_type: salesType
+      },
+      {
+        where: { id },
+        transaction,
+      }
+    );
+
+    // Delete existing fabric selections
+    await CompactingFabricSelections.destroy({
+      where: { sales_id: id },
+      transaction,
+    });
+
+    // Add new fabric selections
+    if (chooseFabric && Array.isArray(chooseFabric) && chooseFabric.length > 0) {
+      const fabricSelections = chooseFabric.map((fabric: any) => ({
+        process_id: fabric.id,
+        process_type: fabric.salesType,
+        sales_id: id,
+        qty_used: fabric.qtyUsed,
+      }));
+
+      await CompactingFabricSelections.bulkCreate(fabricSelections, { transaction });
+    }
+
+    await transaction.commit();
+    return res.sendSuccess(res, { message: "Compacting process updated successfully" });
+  } catch (error) {
+    await transaction.rollback();
+    console.error("Error updating compacting process:", error);
+    return res.sendError(res, "Error updating compacting process");
+  }
+};
+
 const getGarments = async (req: Request, res: Response) => {
   let fabricId = req.query.fabricId;
   let whereCondition: any = {};
@@ -3096,7 +3287,7 @@ const getWashData = async (fabrics: any) => {
           ...el,
           type: 'knitter',
           spinsCount: spinSales && spinSales.length > 0 ? spinSales.length : 0,
-          spin: spinSales && spinSales.length > 0 ? spinSales.map((it: any) => _getSpinnerProcessTracingChartData(it.reel_lot_no)) : []
+          spin: spinSales && spinSales.length > 0 ? await Promise.all(spinSales.map(async (it: any) => await _getSpinnerProcessTracingChartData(it.reel_lot_no))) : []
           // spin: []
         }
       })
@@ -3110,7 +3301,7 @@ const getWashData = async (fabrics: any) => {
           ...el,
           type: 'weaver',
           spinsCount: spinSales && spinSales.length > 0 ? spinSales.length : 0,
-          spin: spinSales && spinSales.length > 0 ? spinSales.map((it: any) => _getSpinnerProcessTracingChartData(it.reel_lot_no)) : []
+          spin: spinSales && spinSales.length > 0 ? await Promise.all(spinSales.map(async (it: any) => await _getSpinnerProcessTracingChartData(it.reel_lot_no))) : []
           // spin: []
         }
       }))
@@ -3196,7 +3387,7 @@ const getDyingData = async (fabrics: any) => {
           ...el,
           type: 'knitter',
           spinsCount: spinSales && spinSales.length > 0 ? spinSales.length : 0,
-          spin: spinSales && spinSales.length > 0 ? spinSales.map((it: any) => _getSpinnerProcessTracingChartData(it.reel_lot_no)) : []
+          spin: spinSales && spinSales.length > 0 ? await Promise.all(spinSales.map(async (it: any) => await _getSpinnerProcessTracingChartData(it.reel_lot_no))) : []
           // spin: []
         }
       })
@@ -3210,7 +3401,7 @@ const getDyingData = async (fabrics: any) => {
           ...el,
           type: 'weaver',
           spinsCount: spinSales && spinSales.length > 0 ? spinSales.length : 0,
-          spin: spinSales && spinSales.length > 0 ? spinSales.map((it: any) => _getSpinnerProcessTracingChartData(it.reel_lot_no)) : []
+          spin: spinSales && spinSales.length > 0 ? await Promise.all(spinSales.map(async (it: any) => await _getSpinnerProcessTracingChartData(it.reel_lot_no))) : []
           // spin: []
         }
       }))
@@ -3981,6 +4172,816 @@ const exportCompactingTransactionList = async (req: Request, res: Response) => {
   }
 };
 
+// Get a single dyeing process by ID
+const getDyingProcessById = async (req: Request, res: Response) => {
+  try {
+    const id = req.params.id;
+
+    if (!id) {
+      return res.sendError(res, "Process ID is required");
+    }
+
+    // Include the same models as in fetchDyingSalesPagination for consistency
+    const include = [
+      {
+        model: Program,
+        as: "program",
+        attributes: ["id", "program_name"],
+      },
+      {
+        model: Season,
+        as: "season",
+        attributes: ["id", "name"],
+      },
+      {
+        model: Garment,
+        as: "buyer",
+        attributes: ["id", "name"],
+      },
+      {
+        model: Fabric,
+        as: "abuyer",
+        attributes: ["id", "name"],
+      },
+      {
+        model: Fabric,
+        as: "dying_fabric",
+        attributes: ["id", "name"],
+      }
+    ];
+
+    const dyingProcess = await DyingSales.findOne({
+      where: { id },
+      include: include,
+    });
+
+    if (!dyingProcess) {
+      return res.sendError(res, "Dyeing process not found");
+    }
+
+    // Get the selected fabrics for this process
+    const selectedFabrics = await DyingFabricSelection.findAll({
+      where: { sales_id: id },
+    });
+
+    // Format the response
+    const processData = dyingProcess.toJSON();
+    const formattedProcess = {
+      ...processData,
+      chooseFabric: selectedFabrics,
+      buyerId: processData.buyer_id,
+      buyerName: processData.buyer?.name,
+      buyerFabricId: processData.buyer_fabric_id,
+      buyerFabricName: processData.abuyer?.name,
+      seasonId: processData.season_id,
+      programId: processData.program_id,
+      // Ensure document fields are explicitly included
+      invoiceFiles: processData.invoice_files || [],
+      otherDocs: processData.other_docs || [],
+      dyeInvoice: processData.dye_invoice || '',
+      // Ensure buyer type is explicitly included
+      buyerType: processData.buyer_type || '',
+    };
+
+    // Return in pagination format for consistency with other endpoints
+    // This makes it easier for the frontend to handle the response
+    return res.sendSuccess(res, formattedProcess);
+  } catch (error) {
+    console.error("Error fetching dyeing process by ID:", error);
+    return res.sendError(res, "Error fetching dyeing process");
+  }
+};
+
+// Update a dyeing process
+const updateDyingProcess = async (req: Request, res: Response) => {
+  const transaction = await sequelize.transaction();
+  try {
+    const id = req.params.id;
+    const {
+      fabricId,
+      programId,
+      seasonId,
+      date,
+      garmentOrderRef,
+      brandOrderRef,
+      buyerType,
+      buyerId,
+      buyerFabricId,
+      processorName,
+      processorAddress,
+      oldFabricQuantity,
+      addFabricQuantity,
+      fabricQuantity,
+      totalFabricQuantity,
+      fabricLength,
+      fabricGsm,
+      fabricNetWeight,
+      processWeight,
+      weightGain,
+      weightLoss,
+      batchLotNo,
+      jobDetails,
+      dyingDetails,
+      dyingColor,
+      invoiceNo,
+      orderDetails,
+      billOfLadding,
+      transportInfo,
+      invoiceFiles,
+      otherDocs,
+      dyeInvoice,
+      salesType,
+      from_date,
+      to_date,
+      chooseFabric,
+    } = req.body;
+
+    // Check if the dyeing process exists
+    const existingProcess = await DyingSales.findByPk(id);
+    if (!existingProcess) {
+      await transaction.rollback();
+      return res.sendError(res, "Dyeing process not found");
+    }
+
+    // Update the dyeing process
+    await DyingSales.update(
+      {
+        fabric_id: fabricId,
+        program_id: programId,
+        season_id: seasonId,
+        date,
+        garment_order_ref: garmentOrderRef,
+        brand_order_ref: brandOrderRef,
+        buyer_type: buyerType,
+        buyer_id: buyerId,
+        buyer_fabric_id: buyerFabricId,
+        processor_name: processorName,
+        processor_address: processorAddress,
+        old_fabric_quantity: oldFabricQuantity,
+        add_fabric_quantity: addFabricQuantity,
+        fabric_quantity: fabricQuantity,
+        total_fabric_quantity: totalFabricQuantity,
+        fabric_length: fabricLength,
+        gsm: fabricGsm,
+        fabric_net_weight: fabricNetWeight,
+        process_weight: processWeight,
+        weight_gain: weightGain,
+        weight_loss: weightLoss,
+        batch_lot_no: batchLotNo,
+        job_details: jobDetails,
+        dying_details: dyingDetails,
+        dying_color: dyingColor,
+        invoice_no: invoiceNo,
+        order_details: orderDetails,
+        bill_of_ladding: billOfLadding,
+        transport_info: transportInfo,
+        invoice_files: invoiceFiles,
+        other_docs: otherDocs,
+        dye_invoice: dyeInvoice,
+        sales_type: salesType,
+        from_date: from_date,
+        to_date: to_date,
+      },
+      {
+        where: { id },
+        transaction,
+      }
+    );
+
+    // Delete existing fabric selections
+    await DyingFabricSelection.destroy({
+      where: { sales_id: id },
+      transaction,
+    });
+
+    // Create new fabric selections if provided
+    if (chooseFabric && Array.isArray(chooseFabric) && chooseFabric.length > 0) {
+      const fabricSelections = chooseFabric.map((fabric: any) => ({
+        sales_id: id,
+        fabric_id: fabric.id,
+        quantity: fabric.qtyUsed,
+        total_quantity: fabric.totalQty,
+        processor: fabric.processor,
+      }));
+
+      await DyingFabricSelection.bulkCreate(fabricSelections, { transaction });
+    }
+
+    await transaction.commit();
+    return res.sendSuccess(res, { message: "Dyeing process updated successfully" });
+  } catch (error) {
+    await transaction.rollback();
+    console.error("Error updating dyeing process:", error);
+    return res.sendError(res, "Error updating dyeing process");
+  }
+};
+
+// Get a single printing process by ID
+const getPrintingProcessById = async (req: Request, res: Response) => {
+  try {
+    const id = req.params.id;
+
+    if (!id) {
+      return res.sendError(res, "Process ID is required");
+    }
+
+    // Include the same models as in fetchPrintingSalesPagination for consistency
+    const include = [
+      {
+        model: Program,
+        as: "program",
+        attributes: ["id", "program_name"],
+      },
+      {
+        model: Season,
+        as: "season",
+        attributes: ["id", "name"],
+      },
+      {
+        model: Garment,
+        as: "buyer",
+        attributes: ["id", "name"],
+      },
+      {
+        model: Fabric,
+        as: "abuyer",
+        attributes: ["id", "name"],
+      },
+      {
+        model: Fabric,
+        as: "printing",
+        attributes: ["id", "name"],
+      }
+    ];
+
+    const printingProcess = await PrintingSales.findOne({
+      where: { id },
+      include: include,
+    });
+
+    if (!printingProcess) {
+      return res.sendError(res, "Printing process not found");
+    }
+
+    // Get the selected fabrics for this process
+    const selectedFabrics = await PrintingFabricSelection.findAll({
+      where: { sales_id: id },
+    });
+
+    // Format the response
+    const processData = printingProcess.toJSON();
+    const formattedProcess = {
+      ...processData,
+      chooseFabric: selectedFabrics,
+      buyerId: processData.buyer_id,
+      buyerName: processData.buyer?.name,
+      buyerFabricId: processData.buyer_fabric_id,
+      buyerFabricName: processData.abuyer?.name,
+      seasonId: processData.season_id,
+      programId: processData.program_id,
+      // Ensure document fields are explicitly included
+      invoiceFiles: processData.invoice_files || [],
+      otherDocs: processData.other_docs || [],
+      printInvoice: processData.print_invoice || '',
+      printingDetails: processData.printing_details || '',
+      printType: processData.print_type || '',
+      // Ensure buyer type is explicitly included
+      buyerType: processData.buyer_type || '',
+    };
+
+    // Return in pagination format for consistency with other endpoints
+    return res.sendSuccess(res, formattedProcess);
+  } catch (error) {
+    console.error("Error fetching printing process by ID:", error);
+    return res.sendError(res, "Error fetching printing process");
+  }
+};
+
+// Update a printing process
+const updatePrintingProcess = async (req: Request, res: Response) => {
+  const transaction = await sequelize.transaction();
+  try {
+    const id = req.params.id;
+    const {
+      fabricId,
+      programId,
+      seasonId,
+      date,
+      garmentOrderRef,
+      brandOrderRef,
+      buyerType,
+      buyerId,
+      buyerFabricId,
+      processorName,
+      processorAddress,
+      oldFabricQuantity,
+      addFabricQuantity,
+      fabricQuantity,
+      totalFabricQuantity,
+      fabricLength,
+      fabricGsm,
+      fabricNetWeight,
+      processWeight,
+      weightGain,
+      weightLoss,
+      batchLotNo,
+      jobDetails,
+      printingDetails,
+      printType,
+      invoiceNo,
+      orderDetails,
+      billOfLadding,
+      transportInfo,
+      invoiceFiles,
+      otherDocs,
+      printInvoice,
+      salesType,
+      from_date,
+      to_date,
+      chooseFabric,
+    } = req.body;
+
+    // Check if the printing process exists
+    const existingProcess = await PrintingSales.findByPk(id);
+    if (!existingProcess) {
+      await transaction.rollback();
+      return res.sendError(res, "Printing process not found");
+    }
+
+    // Update the printing process
+    await PrintingSales.update(
+      {
+        fabric_id: fabricId,
+        program_id: programId,
+        season_id: seasonId,
+        date,
+        garment_order_ref: garmentOrderRef,
+        brand_order_ref: brandOrderRef,
+        buyer_type: buyerType,
+        buyer_id: buyerId,
+        buyer_fabric_id: buyerFabricId,
+        processor_name: processorName,
+        processor_address: processorAddress,
+        old_fabric_quantity: oldFabricQuantity,
+        add_fabric_quantity: addFabricQuantity,
+        fabric_quantity: fabricQuantity,
+        total_fabric_quantity: totalFabricQuantity,
+        fabric_length: fabricLength,
+        gsm: fabricGsm,
+        fabric_net_weight: fabricNetWeight,
+        process_weight: processWeight,
+        weight_gain: weightGain,
+        weight_loss: weightLoss,
+        batch_lot_no: batchLotNo,
+        job_details: jobDetails,
+        printing_details: printingDetails,
+        print_type: printType,
+        invoice_no: invoiceNo,
+        order_details: orderDetails,
+        bill_of_ladding: billOfLadding,
+        transport_info: transportInfo,
+        invoice_files: invoiceFiles,
+        other_docs: otherDocs,
+        print_invoice: printInvoice,
+        sales_type: salesType,
+        from_date: from_date,
+        to_date: to_date,
+      },
+      {
+        where: { id },
+        transaction,
+      }
+    );
+
+    // Delete existing fabric selections
+    await PrintingFabricSelection.destroy({
+      where: { sales_id: id },
+      transaction,
+    });
+
+    // Create new fabric selections if provided
+    if (chooseFabric && Array.isArray(chooseFabric) && chooseFabric.length > 0) {
+      const fabricSelections = chooseFabric.map((fabric: any) => ({
+        sales_id: id,
+        fabric_id: fabric.id,
+        quantity: fabric.qtyUsed,
+        total_quantity: fabric.totalQty,
+        processor: fabric.processor,
+      }));
+
+      await PrintingFabricSelection.bulkCreate(fabricSelections, { transaction });
+    }
+
+    await transaction.commit();
+    return res.sendSuccess(res, { message: "Printing process updated successfully" });
+  } catch (error) {
+    await transaction.rollback();
+    console.error("Error updating printing process:", error);
+    return res.sendError(res, "Error updating printing process");
+  }
+};
+
+// Get a single washing process by ID
+const getWashingProcessById = async (req: Request, res: Response) => {
+  try {
+    const id = req.params.id;
+
+    if (!id) {
+      return res.sendError(res, "Process ID is required");
+    }
+
+    // Include the same models as in fetchWashingSalesPagination for consistency
+    const include = [
+      {
+        model: Program,
+        as: "program",
+        attributes: ["id", "program_name"],
+      },
+      {
+        model: Season,
+        as: "season",
+        attributes: ["id", "name"],
+      },
+      {
+        model: Garment,
+        as: "buyer",
+        attributes: ["id", "name"],
+      },
+      {
+        model: Fabric,
+        as: "abuyer",
+        attributes: ["id", "name"],
+      },
+      {
+        model: Fabric,
+        as: "washing",
+        attributes: ["id", "name"],
+      }
+    ];
+
+    const washingProcess = await WashingSales.findOne({
+      where: { id },
+      include: include,
+    });
+
+    if (!washingProcess) {
+      return res.sendError(res, "Washing process not found");
+    }
+
+    // Get the selected fabrics for this process
+    const selectedFabrics = await WashingFabricSelection.findAll({
+      where: { sales_id: id },
+    });
+
+    // Format the response
+    const processData = washingProcess.toJSON();
+    const formattedProcess = {
+      ...processData,
+      chooseFabric: selectedFabrics,
+      buyerId: processData.buyer_id,
+      buyerName: processData.buyer?.name,
+      buyerFabricId: processData.fabric_id,
+      buyerFabricName: processData.abuyer?.name,
+      seasonId: processData.season_id,
+      programId: processData.program_id,
+      // Ensure document fields are explicitly included
+      invoiceFiles: processData.invoice_files || [],
+      otherDocs: processData.other_docs || [],
+      washInvoice: processData.wash_invoice || '',
+      washingDetails: processData.washing_details || '',
+      wash_type: processData.wash_type || '',
+      // Ensure buyer type is explicitly included
+      buyerType: processData.buyer_type || '',
+    };
+
+    // Return in pagination format for consistency with other endpoints
+    return res.sendSuccess(res, formattedProcess);
+  } catch (error) {
+    console.error("Error fetching washing process by ID:", error);
+    return res.sendError(res, "Error fetching washing process");
+  }
+};
+
+// Update a washing process
+const updateWashingProcess = async (req: Request, res: Response) => {
+  const transaction = await sequelize.transaction();
+  try {
+    const id = req.params.id;
+    const {
+      washingId,
+      programId,
+      seasonId,
+      date,
+      garmentOrderRef,
+      brandOrderRef,
+      buyerType,
+      buyerId,
+      buyerFabricId,
+      processorName,
+      processorAddress,
+      oldFabricQuantity,
+      addFabricQuantity,
+      fabricQuantity,
+      totalFabricQuantity,
+      fabricLength,
+      fabricGsm,
+      fabricNetWeight,
+      processWeight,
+      weightGain,
+      weightLoss,
+      batchLotNo,
+      jobDetails,
+      washingDetails,
+      wash_type,
+      invoiceNo,
+      orderDetails,
+      billOfLadding,
+      transportInfo,
+      invoiceFiles,
+      otherDocs,
+      washInvoice,
+      salesType,
+      from_date,
+      to_date,
+      chooseFabric,
+    } = req.body;
+
+    // Check if the washing process exists
+    const existingProcess = await WashingSales.findByPk(id);
+    if (!existingProcess) {
+      await transaction.rollback();
+      return res.sendError(res, "Washing process not found");
+    }
+
+    // Update the washing process
+    await WashingSales.update(
+      {
+        washing_id: washingId,
+        program_id: programId,
+        season_id: seasonId,
+        date,
+        garment_order_ref: garmentOrderRef,
+        brand_order_ref: brandOrderRef,
+        buyer_type: buyerType,
+        buyer_id: buyerId,
+        fabric_id: buyerFabricId,
+        processor_name: processorName,
+        processor_address: processorAddress,
+        old_fabric_quantity: oldFabricQuantity,
+        add_fabric_quantity: addFabricQuantity,
+        fabric_quantity: fabricQuantity,
+        total_fabric_quantity: totalFabricQuantity,
+        fabric_length: fabricLength,
+        gsm: fabricGsm,
+        fabric_net_weight: fabricNetWeight,
+        process_weight: processWeight,
+        weight_gain: weightGain,
+        weight_loss: weightLoss,
+        batch_lot_no: batchLotNo,
+        job_details: jobDetails,
+        washing_details: washingDetails,
+        wash_type: wash_type,
+        invoice_no: invoiceNo,
+        order_details: orderDetails,
+        bill_of_ladding: billOfLadding,
+        transport_info: transportInfo,
+        invoice_files: invoiceFiles,
+        other_docs: otherDocs,
+        wash_invoice: washInvoice,
+        sales_type: salesType,
+        from_date: from_date,
+        to_date: to_date,
+      },
+      {
+        where: { id },
+        transaction,
+      }
+    );
+
+    // Delete existing fabric selections
+    await WashingFabricSelection.destroy({
+      where: { sales_id: id },
+      transaction,
+    });
+
+    // Create new fabric selections if provided
+    if (chooseFabric && Array.isArray(chooseFabric) && chooseFabric.length > 0) {
+      const fabricSelections = chooseFabric.map((fabric: any) => ({
+        sales_id: id,
+        fabric_id: fabric.id,
+        quantity: fabric.qtyUsed,
+        total_quantity: fabric.totalQty,
+        processor: fabric.processor,
+      }));
+
+      await WashingFabricSelection.bulkCreate(fabricSelections, { transaction });
+    }
+
+    await transaction.commit();
+    return res.sendSuccess(res, { message: "Washing process updated successfully" });
+  } catch (error) {
+    await transaction.rollback();
+    console.error("Error updating washing process:", error);
+    return res.sendError(res, "Error updating washing process");
+  }
+};
+const getWashProcessData = async (processIds:any) =>{
+  try {
+    let [fabrics] = await sequelize.query(`
+      SELECT 
+          ARRAY_AGG(DISTINCT fs.sales_id) AS fabric_sale_ids
+      FROM washing_fabric_selections fs
+      JOIN washing_sales sale ON fs.sales_id = sale.id
+      WHERE fs.process_id::numeric IN (${processIds}
+                      )
+        AND fs.process_type ILIKE 'dying'
+  `);
+
+  return fabrics
+    
+  } catch (error) {
+    console.log(error)
+    return []
+  }
+}
+
+
+const getPrintProcessData = async (processIds:any) =>{
+  try {
+    let [fabrics] = await sequelize.query(`
+      SELECT 
+          ARRAY_AGG(DISTINCT fs.sales_id) AS fabric_sale_ids
+      FROM printing_fabric_selections fs
+      JOIN printing_sales sale ON fs.sales_id = sale.id
+      WHERE fs.process_id::numeric IN (${processIds}
+                      )
+        AND fs.process_type ILIKE 'washing_sales'
+  `);
+
+  return fabrics
+    
+  } catch (error) {
+    console.log(error)
+    return []
+  }
+}
+
+const getCompactProcessData = async (type:string, processIds:any) =>{
+  try {
+    let [fabrics] = await sequelize.query(`
+      SELECT 
+          ARRAY_AGG(DISTINCT fs.sales_id) AS fabric_sale_ids
+      FROM compacting_fabric_selections fs
+      JOIN compacting_sales sale ON fs.sales_id = sale.id
+      WHERE fs.process_id::numeric IN (${processIds}
+                      )
+        AND fs.process_type ILIKE '${type}'
+  `);
+
+  return fabrics
+    
+  } catch (error) {
+    console.log(error)
+    return []
+  }
+}
+
+
+const getGarmentProcessData = async (type:string, processIds:any) =>{
+  try {
+    let [fabrics] = await sequelize.query(`
+      SELECT
+        ARRAY_AGG(DISTINCT fs.sales_id) AS garment_process_id,
+        STRING_AGG(DISTINCT gp.reel_lot_no, ',') AS reel_lot_no
+      FROM
+        fabric_selections fs
+      JOIN garment_processes gp ON fs.sales_id = gp.id
+      WHERE fs.fabric_id IN (${processIds})
+        AND fs.processor ILIKE '${type}'
+  `);
+
+  return fabrics
+    
+  } catch (error) {
+    console.log(error)
+    return []
+  }
+}
+
+const _getFabricProcessForwardChainData = async (type: any, id: any) => {
+  let addedQuery: any ='';
+  let Model;
+  let Key;
+
+  switch (type) {
+    case 'dying':
+      addedQuery = `
+            ARRAY_AGG(fs.id) FILTER (WHERE LOWER(fs.buyer_type::text) = 'washing') AS wash_sales_ids,
+            ARRAY_AGG(fs.id) FILTER (WHERE LOWER(fs.buyer_type::text) = 'compacting') AS compact_sales_ids,
+            ARRAY_AGG(fs.id) FILTER (WHERE LOWER(fs.buyer_type::text) = 'garment') AS garment_process_ids,
+            STRING_AGG(DISTINCT fabric.name, ',') AS fabric_name`;
+      Model = 'dying_sales';
+      Key = 'dying_id';
+      break;
+    case 'printing':
+      addedQuery = `
+            ARRAY_AGG(fs.id) FILTER (WHERE LOWER(fs.buyer_type::text) = 'compacting') AS compact_sales_ids,
+            ARRAY_AGG(fs.id) FILTER (WHERE LOWER(fs.buyer_type::text) = 'garment') AS garment_process_ids,
+            STRING_AGG(DISTINCT fabric.name, ',') AS fabric_name`;
+      Model = 'printing_sales';
+      Key = 'printing_id';
+      break;
+    case 'washing':
+      addedQuery = `
+            ARRAY_AGG(fs.id) FILTER (WHERE LOWER(fs.buyer_type::text) = 'printing') AS print_sales_ids,
+            ARRAY_AGG(fs.id) FILTER (WHERE LOWER(fs.buyer_type::text) = 'compacting') AS compact_sales_ids,
+            ARRAY_AGG(fs.id) FILTER (WHERE LOWER(fs.buyer_type::text) = 'garment') AS garment_process_ids,
+            STRING_AGG(DISTINCT fabric.name, ',') AS fabric_name`;
+      Model = 'washing_sales';
+      Key = 'washing_id';
+      break;
+      break;
+    case 'compacting':
+      addedQuery = `
+            ARRAY_AGG(fs.id) FILTER (WHERE LOWER(fs.buyer_type::text) = 'garment') AS garment_process_ids,
+            STRING_AGG(DISTINCT fabric.name, ',') AS fabric_name`;
+      Model = 'compacting_sales';
+      Key = 'compacting_id';
+      break;
+  }
+
+  let whereClause = '';
+
+if (Array.isArray(id)) {
+  whereClause = `WHERE fs.id IN (${id.join(",")})`;
+} else {
+  whereClause = `WHERE fs.id IN (${id})`;
+}
+
+  // let whereClause =  `WHERE fs.id IN (${id.join(",")})`
+
+  let [fabrics] = await sequelize.query(`
+    SELECT 
+        ${addedQuery}
+    FROM ${Model} fs
+    LEFT JOIN fabrics fabric ON fabric.id = fs.${Key}
+    ${whereClause}
+`);
+
+  let data: any = [];
+  let washData = []
+  let printData = []
+  let compactData = []
+  let garmentData: any = []
+
+  if (fabrics && fabrics[0]) {
+    if(fabrics[0].wash_sales_ids && fabrics[0].wash_sales_ids.length > 0){
+      let washingIds = await getWashProcessData(fabrics[0].wash_sales_ids.join(","))
+      if(washingIds && washingIds[0] && washingIds[0]?.fabric_sale_ids?.length > 0){
+        washData = await _getFabricProcessForwardChainData("washing", washingIds[0]?.fabric_sale_ids)
+      }  
+    }
+      
+
+    if(fabrics[0].print_sales_ids && fabrics[0].print_sales_ids.length > 0){
+      let printingIds = await getPrintProcessData(fabrics[0].print_sales_ids.join(","))
+      if(printingIds && printingIds[0] && printingIds[0]?.fabric_sale_ids?.length > 0){
+        printData = await _getFabricProcessForwardChainData("printing", printingIds[0]?.fabric_sale_ids)
+      }   
+    }
+
+    if(fabrics[0].compact_sales_ids && fabrics[0].compact_sales_ids.length > 0){
+      let compactingIds = await getCompactProcessData(type, fabrics[0].compact_sales_ids.join(","))
+      if(compactingIds && compactingIds[0] && compactingIds[0]?.fabric_sale_ids?.length > 0){
+        compactData = await _getFabricProcessForwardChainData("compacting", compactingIds[0]?.fabric_sale_ids)
+      }    
+    }
+
+    if(fabrics[0].garment_process_ids && fabrics[0].garment_process_ids.length > 0){
+      let garmentIds = await getGarmentProcessData(type, fabrics[0].garment_process_ids.join(","))
+      if(garmentIds && garmentIds[0] && garmentIds[0]?.reel_lot_no){
+        // garmentData = await _getGarmentProcessForwardChainData(garmentIds[0]?.reel_lot_no)
+        let garmentChart = await _getGarmentProcessForwardChainData(garmentIds[0]?.reel_lot_no);
+        let obj = {
+          ...fabrics[0],
+          garmentChart
+        }
+
+        garmentData = [formatForwardChainDataFabric(fabrics[0].fabric_name, obj)]
+      }   
+    }
+    data = [...washData,...compactData,...printData,...garmentData].filter((item: any) => item !== null && item !== undefined)
+  }
+
+  return data;
+}
+
+const getFabricProcessForwardChainingData = async (req: Request, res: Response) => {
+  const { type, id } = req.query;
+  res.send(await _getFabricProcessForwardChainData(type, id));
+}
+
+
 export {
   fetchDyingTransactions,
   getProgram,
@@ -4012,6 +5013,8 @@ export {
   chooseCompactingFabric,
   fetchCompactingSalesPagination,
   exportCompactingProcess,
+  getCompactingProcessById,
+  updateCompactingProcess,
   fetchWashingTransactions,
   deleteCompactingProcess,
   deleteDyingProcess,
@@ -4025,4 +5028,12 @@ export {
   exportPrintingTransactionList,
   exportWashingTransactionList,
   exportCompactingTransactionList,
+  getDyingProcessById,
+  updateDyingProcess,
+  getPrintingProcessById,
+  updatePrintingProcess,
+  getWashingProcessById,
+  updateWashingProcess,
+  _getFabricProcessForwardChainData,
+  getFabricProcessForwardChainingData
 };

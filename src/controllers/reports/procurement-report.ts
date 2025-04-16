@@ -90,8 +90,10 @@ const fetchTransactionsReport = async (req: Request, res: Response) => {
     }
 
     if (startDate && endDate) {
-      const startOfDay = moment(startDate).utc().startOf('day').toDate();
-      const endOfDay = moment(endDate).utc().endOf('day').toDate();
+      const startOfDay = new Date(startDate);
+      startOfDay.setUTCHours(0, 0, 0, 0);
+      const endOfDay = new Date(endDate);
+      endOfDay.setUTCHours(23, 59, 59, 999);
       whereCondition.date = { [Op.between]: [startOfDay, endOfDay] }
     }
     // apply search
@@ -520,7 +522,8 @@ const exportProcurementReport = async (req: Request, res: Response) => {
             id: item.dataValues.id ? item.dataValues.id : '',
             qty_purchased: item.dataValues.qty_purchased ? Number(item.dataValues.qty_purchased) : 0,
             qty_stock: item.dataValues.qty_stock ? Number(item.dataValues.qty_stock) : 0,
-            available_cotton: item.dataValues.farm ? (Number(item.dataValues.farm.total_estimated_cotton) > Number(item.dataValues.farm.cotton_transacted) ? Number(item.dataValues.farm.total_estimated_cotton) - Number(item.dataValues.farm.cotton_transacted) : 0) : 0,
+            // available_cotton: item.dataValues.farm ? (Number(item.dataValues.farm.total_estimated_cotton) > Number(item.dataValues.farm.cotton_transacted) ? Number(item.dataValues.farm.total_estimated_cotton) - Number(item.dataValues.farm.cotton_transacted) : 0) : 0,
+            available_cotton: item.dataValues.available_cotton ? Number(item.dataValues.available_cotton) : 0,
             rate: item.dataValues.rate ? Number(item.dataValues.rate) : 0,
             program: item.dataValues.program ? item.dataValues.program.program_name : '',
             vehicle: item.dataValues.vehicle ? item.dataValues.vehicle : '',
@@ -544,7 +547,8 @@ const exportProcurementReport = async (req: Request, res: Response) => {
           id: item.dataValues.id ? item.dataValues.id : '',
           qty_purchased: item.dataValues.qty_purchased ? Number(item.dataValues.qty_purchased) : 0,
           qty_stock: item.dataValues.qty_stock ? Number(item.dataValues.qty_stock) : 0,
-          available_cotton: item.dataValues.farm ? (Number(item.dataValues.farm.total_estimated_cotton) > Number(item.dataValues.farm.cotton_transacted) ? Number(item.dataValues.farm.total_estimated_cotton) - Number(item.dataValues.farm.cotton_transacted) : 0) : 0,
+          // available_cotton: item.dataValues.farm ? (Number(item.dataValues.farm.total_estimated_cotton) > Number(item.dataValues.farm.cotton_transacted) ? Number(item.dataValues.farm.total_estimated_cotton) - Number(item.dataValues.farm.cotton_transacted) : 0) : 0,
+          available_cotton: item.dataValues.available_cotton ? Number(item.dataValues.available_cotton) : 0,
           rate: item.dataValues.rate ? Number(item.dataValues.rate) : 0,
           program: item.dataValues.program ? item.dataValues.program.program_name : '',
           vehicle: item.dataValues.vehicle ? item.dataValues.vehicle : '',

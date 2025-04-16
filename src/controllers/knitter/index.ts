@@ -23,7 +23,7 @@ import SpinProcess from "../../models/spin-process.model";
 import { send_knitter_mail } from "../send-emails";
 import KnitFabric from "../../models/knit_fabric.model";
 import { _getSpinnerProcessTracingChartData } from "../spinner/index";
-import { formatDataForSpinnerProcess, formatDataFromKnitter } from "../../util/tracing-chart-data-formatter";
+import { formatDataForSpinnerProcess, formatDataFromKnitter, formatForwardChainDataKnitter } from "../../util/tracing-chart-data-formatter";
 import Country from "../../models/country.model";
 import PhysicalTraceabilityDataKnitter from "../../models/physical-traceability-data-knitter.model";
 import Brand from "../../models/brand.model";
@@ -34,6 +34,9 @@ import FarmGroup from "../../models/farm-group.model";
 import Transaction from "../../models/transaction.model";
 import GinSales from "../../models/gin-sales.model";
 import Ginner from "../../models/ginner.model";
+import { _getGarmentProcessForwardChainData } from "../garment-sales";
+import { _getFabricProcessForwardChainData } from "../fabric";
+import logger from "../../util/logger";
 
 const createKnitterProcess = async (req: Request, res: Response) => {
   try {
@@ -1674,7 +1677,7 @@ const _getKnitterProcessTracingChartData = async (query: any) => {
 
   let whereCondition: any = {};
   if (query) {
-    const idArray = query.reel_lot_no.split(",");
+    const idArray = query.reel_lot_no.split(",").map((it: string) => it?.trim());
     whereCondition.reel_lot_no = { [Op.in]: idArray };
   }
 
@@ -1726,7 +1729,7 @@ const _getKnitterProcessTracingChartData = async (query: any) => {
           return await Promise.all(
             spinItem.spinSales.map(async (sale: any) => {
               if (sale.reel_lot_no) {
-                return _getSpinnerProcessTracingChartData(sale.reel_lot_no);
+                return await _getSpinnerProcessTracingChartData(sale.reel_lot_no);
               }
               // Handle cases where reel_lot_no might be undefined/null
               return null;
@@ -2031,6 +2034,281 @@ const fetchTransactions = async (ginnerId: any) => {
 
 
 
+const deleteKnitterProcess = async (req: Request, res: Response) => {
+  try {
+    // Get the ID from either the request body or query parameters
+    const processId = req.body.id || req.query.id;
+    
+    if (!processId) {
+      return res.sendError(res, "Need Process Id");
+    }
+
+    // Start a transaction to ensure data consistency
+    const transaction = await sequelize.transaction();
+
+    try {
+      // First, check if the knit process exists
+      const knitProcess = await KnitProcess.findByPk(processId, { transaction });
+      
+      if (!knitProcess) {
+        await transaction.rollback();
+        return res.sendError(res, "Knitter process not found");
+      }
+
+      // Check for related KnitFabric records
+      const knitFabrics = await KnitFabric.findAll({
+        where: { process_id: processId },
+        transaction
+      });
+
+      // If there are related KnitFabric records, we need to check if they're used in sales
+      for (const fabric of knitFabrics) {
+        const fabricSelections = await KnitFabricSelection.findAll({
+          where: { knit_fabric: fabric.id },
+          transaction
+        });
+
+        if (fabricSelections.length > 0) {
+          await transaction.rollback();
+          return res.sendError(res, "Cannot delete this process as it has related fabric sales. Please delete the sales first.");
+        }
+      }
+
+      // Find any yarn selections associated with this process
+      const yarnSelections = await KnitYarnSelection.findAll({
+        where: { sales_id: processId },
+        transaction
+      });
+
+      // Restore yarn quantities back to SpinSales
+      for (const yarnSelection of yarnSelections) {
+        const spinSale = await SpinSales.findByPk(yarnSelection.yarn_id, { transaction });
+        if (spinSale) {
+          await SpinSales.update(
+            { qty_stock: spinSale.qty_stock + yarnSelection.qty_used },
+            { where: { id: yarnSelection.yarn_id }, transaction }
+          );
+        }
+      }
+
+      // Delete the yarn selections
+      await KnitYarnSelection.destroy({
+        where: { sales_id: processId },
+        transaction
+      });
+
+      // Check for physical traceability data
+      const physicalTraceabilityData = await PhysicalTraceabilityDataKnitter.findAll({
+        where: { knit_process_id: processId },
+        transaction
+      });
+
+      // Delete physical traceability data and samples if they exist
+      for (const ptData of physicalTraceabilityData) {
+        await PhysicalTraceabilityDataKnitterSample.destroy({
+          where: { physical_traceability_data_knitter_id: ptData.id },
+          transaction
+        });
+      }
+
+      // Delete physical traceability data
+      await PhysicalTraceabilityDataKnitter.destroy({
+        where: { knit_process_id: processId },
+        transaction
+      });
+
+      // Delete KnitFabric records
+      await KnitFabric.destroy({
+        where: { process_id: processId },
+        transaction
+      });
+
+      // Finally, delete the KnitProcess record
+      await KnitProcess.destroy({
+        where: { id: processId },
+        transaction
+      });
+
+      // Commit the transaction
+      await transaction.commit();
+
+      return res.sendSuccess(res, {
+        message: "Successfully deleted the knitter process"
+      });
+    } catch (error) {
+      // If an error occurs, rollback the transaction
+      await transaction.rollback();
+      throw error;
+    }
+  } catch (error: any) {
+    console.error("Error deleting knitter process:", error);
+    return res.sendError(res, error.message, error);
+  }
+};
+
+const getGarmentProcess = async (id: number | string) =>{
+  let [garmentProcess] = await sequelize.query(
+    `SELECT
+        ARRAY_AGG(DISTINCT fs.sales_id) AS garment_process_id,
+        STRING_AGG(DISTINCT gp.reel_lot_no, ',') AS reel_lot_no
+          FROM
+            fabric_selections fs
+      JOIN garment_processes gp ON fs.sales_id = gp.id
+        WHERE fs.fabric_id IN (
+                SELECT 
+                    UNNEST(ARRAY_AGG(DISTINCT ks.id))
+                FROM 
+                    knit_sales ks
+                LEFT JOIN
+                    knit_fabric_selections kfs ON kfs.sales_id = ks.id
+                WHERE kfs.fabric_id = ${id}
+                GROUP BY
+                  kfs.fabric_id
+                        )
+          AND fs.processor = 'knitter'
+    `);
+
+    return garmentProcess;
+}
+
+const getFabricProcess = async (type: string, id: number | string) =>{
+  let Model;
+  let Sales: any;
+  let JoinConditon: any;
+  let addedQuery: any;
+  switch (type) {
+    case 'dying': Model = 'dying_fabric_selections'; Sales = 'dying_sales'; break;
+    case 'washing': Model = 'washing_fabric_selections'; Sales = 'washing_sales'; break;
+  };
+
+  let [garmentProcess] = await sequelize.query(
+    `SELECT
+        ARRAY_AGG(DISTINCT fs.sales_id) AS fabric_sale_ids
+          FROM
+            ${Model} fs
+      JOIN ${Sales} sale ON fs.sales_id = sale.id
+        WHERE fs.process_id::numeric IN (
+                SELECT 
+                    UNNEST(ARRAY_AGG(DISTINCT ks.id))
+                FROM 
+                    knit_sales ks
+                LEFT JOIN
+                    knit_fabric_selections kfs ON kfs.sales_id = ks.id
+                WHERE kfs.fabric_id = ${id}
+                GROUP BY
+                  kfs.fabric_id
+                        )
+          AND fs.process_type ILIKE 'knitter'
+    `);
+
+    return garmentProcess;
+}
+
+const _getKnitterProcessForwardChainData = async (reelLotNo: string) => {
+  try {
+  let whereCondition: any = {};
+  if (reelLotNo !== null) {
+    const idArray = reelLotNo.split(",").map((it: string) => it?.trim());
+    whereCondition.reel_lot_no = { [Op.in]: idArray };
+  }
+
+  let include = [
+    {
+      model: Knitter,
+      as: "knitter",
+      attributes: ["id", "name"]
+    },
+  ];
+
+  let knitters = await KnitProcess.findAll({
+    where: whereCondition,
+    include,
+  });
+
+  // Fetching yarn_ids from KnitYarnSelection for each KnitProcess
+  knitters = await Promise.all(
+    knitters.map(async (el: any) => {
+      el = el.toJSON();
+      let garmentProcess = await getGarmentProcess(el.id);
+      let dyingProcess = await getFabricProcess('dying',el.id);
+      let washProcess = await getFabricProcess('washing',el.id);
+      let garmentData = [];
+      let dyingData = [];
+      let washData = [];
+
+      if(garmentProcess && garmentProcess.length > 0){
+        [garmentData] = await Promise.all(garmentProcess.map(async (el: any) => {
+                  if (el?.reel_lot_no) {
+                    return await _getGarmentProcessForwardChainData(el?.reel_lot_no);
+                }
+                return []
+              })
+              )
+      }
+      if(dyingProcess && dyingProcess.length > 0){
+        [dyingData] = await Promise.all(dyingProcess.map(async (el: any) => {
+              if (el?.fabric_sale_ids) {
+                return await _getFabricProcessForwardChainData("dying", el?.fabric_sale_ids);
+            }
+            return []
+          })
+        )
+      }
+
+      if(washProcess && washProcess.length > 0){
+          [washData] = await Promise.all(washProcess.map(async (el: any) => {
+                if (el?.fabric_sale_ids) {
+                  return await _getFabricProcessForwardChainData("washing", el?.fabric_sale_ids);
+              }
+              return []
+            })
+          )
+        }
+
+
+        // el.garmentChart = [...garmentData,...dyingData,...washData].filter((item: any) => item !== null && item !== undefined)
+        let nData = [...garmentData,...dyingData,...washData].filter((item: any) => item !== null && item !== undefined)
+
+        if(nData && nData.length > 0){
+          const chart = new Map();
+          nData.forEach((it: any) => {
+              const buyer = it;
+              if (buyer && !chart.has(buyer.name)) {
+                chart.set(buyer.name, buyer);
+              }
+            });
+  
+            el.garmentChart = Array.from(chart.values());
+        }
+
+      return el;
+    })
+  );
+
+  let data = knitters && knitters.length > 0  ? knitters.map((el: any) => formatForwardChainDataKnitter(reelLotNo, el) ) : [formatForwardChainDataKnitter(reelLotNo, knitters)]
+  return data;
+} catch (error) {
+  console.log(error);
+  logger.error(`ERROR - ${error} | FORWARD CHAIN MGMT REEL KNITTER - ${reelLotNo}`);
+  return null
+}
+};
+
+const getKnitProcessForwardChainingData = async (
+  req: Request,
+  res: Response
+) => {
+  const { reel_lot_no }: any = req.query;
+  if (!reel_lot_no) {
+    return res.sendError(res, "Reel Lot No is required");
+  }
+  const data = await _getKnitterProcessForwardChainData(reel_lot_no);
+  if(!data){
+    return res.sendError(res, "Data not generated");
+  }
+  return res.sendSuccess(res, data);
+};
+
 export {
   createKnitterProcess,
   updateKnitterProcess,
@@ -2048,6 +2326,7 @@ export {
   getSpinnerAndProgram,
   getInvoiceAndyarnType,
   deleteKnitterSales,
+  deleteKnitterProcess,
   getGarments,
   fetchKnitterSale,
   getFabrics,
@@ -2056,5 +2335,7 @@ export {
   chooseFabricProcess,
   getKnitterProcessTracingChartData,
   exportKnitterTransactionList,
-  _getKnitterProcessTracingChartData
+  _getKnitterProcessTracingChartData,
+  _getKnitterProcessForwardChainData,
+  getKnitProcessForwardChainingData
 };

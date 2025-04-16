@@ -23,7 +23,9 @@ import {
     updateWeaverProcess,
     fetchWeaverProcess,
     updateWeaverSales,
-    exportWeaverTransactionList
+    exportWeaverTransactionList,
+    deleteWeaverProcess,
+    getWeavProcessForwardChainingData
 } from "../../controllers/weaver";
 import accessControl from "../../middleware/access-control";
 import { Router } from "express";
@@ -34,6 +36,7 @@ router.use(accessControl);
 
 router.post('/process', createWeaverProcess);
 router.put('/process', updateWeaverProcess);
+router.delete('/process', deleteWeaverProcess);
 router.get('/process', fetchWeaverProcessPagination);
 router.get('/process/get-process', fetchWeaverProcess);
 router.get('/', fetchWeaverSalesPagination);
@@ -56,6 +59,7 @@ router.get('/get-reel-lot-no', fetchFabricReelLotNo);
 router.get('/get-fabric-filters', getChooseFabricFilters);
 router.get('/choose-fabric', chooseWeaverFabric);
 router.get('/tracing/chart', getWeaverProcessTracingChartData);
+router.get('/forward-tracing/chart', getWeavProcessForwardChainingData);
 router.get('/export/transaction', exportWeaverTransactionList);
 
 export default router;

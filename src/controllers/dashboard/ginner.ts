@@ -236,6 +236,51 @@ const getGinBaleQuery = (
   return where;
 };
 
+const getLintAllocatedQuery = (
+  reqData: any
+) => {
+  const where: any = {
+
+  };
+
+  //where['$ginprocess.status$'] = "Sold";
+  if (reqData?.program)
+    where['$ginner_expected_cotton.program_id$'] = reqData.program;
+
+  if (reqData?.brand)
+    where['$ginner_expected_cotton.brand$'] = {
+      [Op.contains]: Sequelize.literal(`ARRAY [${reqData.brand}]`)
+    };
+
+  if (reqData?.season) {
+    if (Array.isArray(reqData.season)) {
+      where['$season_id$'] = {
+        [Op.in]: reqData.season
+      };
+    } else {
+      where['$season_id$'] = reqData.season;
+    }
+  } else {
+    where['$season_id$'] = {
+      [Op.not]: null,
+    };
+  }
+
+  if (reqData?.country)
+    where['$ginner_expected_cotton.country_id$'] = reqData.country;
+
+  if (reqData?.state)
+    where['$ginner_expected_cotton.state_id$'] = reqData.state;
+
+  if (reqData?.district)
+    where['$ginner_expected_cotton.district_id$'] = reqData.district;
+
+  if (reqData?.ginner)
+    where['$ginner_expected_cotton.id$'] = reqData.ginner;
+
+  return where;
+};
+
 const getBaleProducedQuery = (
   reqData: any
 ) => {
@@ -763,6 +808,7 @@ const getProcuredProcessedData = async (
   const result = await Transaction.findAll({
     attributes: [
       [Sequelize.fn('SUM', Sequelize.literal('CAST(qty_purchased  as numeric)')), 'procured'],
+      [Sequelize.fn('SUM', Sequelize.literal('CAST(qty_stock  as numeric)')), 'pending'],
       [Sequelize.col('season.name'), 'seasonName'],
       [Sequelize.col('season.id'), 'seasonId']
     ],
@@ -791,15 +837,22 @@ const getLintProcuredSold = async (
 ) => {
   try {
     const reqData = await getQueryParams(req, res);
+    console.log('reqData1',reqData);
     const seasonLimit = reqData.seasonLimit ? parseInt(reqData.seasonLimit.toString()) : 3;
     const seasons: any = reqData.seasonLimit ? await getLastSeasons(seasonLimit) : {};
-    const procuredWhere = await getGinBaleQuery({...reqData, season: seasons!.ids});
-    const baleSel = getBaleSelLintSoldQuery({...reqData, season: seasons!.ids});
+    const procuredWhere = await getGinBaleQuery({...reqData, season: reqData.season ?? seasons?.ids});
+    const baleSel = getBaleSelLintSoldQuery({...reqData, season: reqData.season ?? seasons?.ids});
+    const baleWhere = await getGinBaleQuery({...reqData, season: reqData.season ?? seasons?.ids});
+    const allocatedwhere = getLintAllocatedQuery({...reqData, season: reqData.season ?? seasons?.ids});
     const procuredData = await getBaleProcuredData(procuredWhere);
+    const greyoutData = await getLintBaleGreyoutData(baleWhere);
+    const allocatedData = await getLintAllocatedData(allocatedwhere);
     const soldData = await getBaleSoldData(baleSel);
     let data = await getLintProcuredSoldRes(
       procuredData,
       soldData,
+      allocatedData,
+      greyoutData,
       reqData.season
     );
     if(reqData.seasonLimit && seasons!.names) {
@@ -809,6 +862,7 @@ const getLintProcuredSold = async (
           data.procured.push(0);
           data.sold.push(0);
           data.stock.push(0);
+          data.allocated.push(0);
         }
       });
       const indices = data.season.map((_: any, index: any) => index);
@@ -821,6 +875,7 @@ const getLintProcuredSold = async (
       data.procured = indices.map((i: any) => data.procured[i]);
       data.sold = indices.map((i: any) => data.sold[i]);
       data.stock = indices.map((i: any) => data.stock[i]);
+      data.allocated = indices.map((i: any) => data.allocated[i]);
     }
     return res.sendSuccess(res, data);
 
@@ -835,6 +890,8 @@ const getLintProcuredSold = async (
 const getLintProcuredSoldRes = async (
   procuredList: any[],
   soldList: any[],
+  allocatedList:any[],
+  greyoutList:any[],
   reqSeason: any
 ) => {
   let seasonIds: number[] = [];
@@ -843,19 +900,25 @@ const getLintProcuredSoldRes = async (
     if (procured.dataValues.seasonId)
       seasonIds.push(procured.dataValues.seasonId);
   });
-
+  
   soldList.forEach((sold: any) => {
     if (!seasonIds.includes(sold.seasonId))
       seasonIds.push(sold.seasonId);
   });
-
+  
+  allocatedList.forEach((allocated: any) => {
+    if (!seasonIds.includes(allocated.dataValues.seasonId))
+      seasonIds.push(allocated.dataValues.seasonId);
+  });
+ 
 
   const seasons = await Season.findAll({
-    // limit: 3,
+     limit: 3,
     order: [
       ["id", "DESC"],
     ],
   });
+ 
   if (seasonIds.length != 3 && !reqSeason) {
     for (const season of seasons) {
       let currentDate = moment(); // Current date using moment
@@ -866,14 +929,19 @@ const getLintProcuredSoldRes = async (
       } else if(currentDate.isBefore(checkDate) && season.name === '2024-25' && seasonIds.includes(season.id)){
         seasonIds = seasonIds.filter((id: number) => id != season.id)
       }
+     
     }
   }
+ 
   seasonIds = seasonIds.sort((a, b) => a - b).slice(-3);
+  
 
   let season: any = [];
   let procured: any = [];
   let sold: any = [];
   let stock: any = [];
+  let allocated: any = [];
+  let greyout: any = [];
 
   for (const sessionId of seasonIds) {
     const fProcured = procuredList.find((production: any) =>
@@ -882,11 +950,21 @@ const getLintProcuredSoldRes = async (
     const fSold = soldList.find((estimate: any) =>
       estimate.seasonId == sessionId
     );
+   
+    const fAllocated = allocatedList.find((allocatedlint: any) =>
+      allocatedlint.dataValues.seasonId == sessionId
+    );
+
+    const fgreyout = greyoutList.find((greyoutlint: any) =>
+      greyoutlint.dataValues.seasonId == sessionId
+    );
     let data = {
       seasonName: '',
       procured: 0,
       sold: 0,
       stock: 0,
+      allocated:0,
+      greyout:0
     };
     if (fProcured) {
       data.seasonName = fProcured.dataValues.seasonName;
@@ -898,7 +976,19 @@ const getLintProcuredSoldRes = async (
       data.sold = mtConversion(fSold.lintSold);
     }
 
-    data.stock = data.procured > data.sold ? Number((data.procured - data.sold).toFixed(2)) : 0;
+    if (fAllocated) {
+      data.seasonName = fAllocated.seasonName;
+      data.allocated = mtConversion(fAllocated.expected_lint);
+    }
+
+    if (fgreyout) {
+      data.seasonName = fgreyout.dataValues.seasonName;
+      data.greyout = mtConversion(fgreyout.dataValues.lint_qty);
+    }
+
+    data.stock = data.procured > (data.sold + data.greyout)? Number((data.procured - (data.sold +data.greyout)).toFixed(2)) : 0;
+
+
 
     if (!data.seasonName) {
       const fSeason = seasons.find((season: any) =>
@@ -913,13 +1003,15 @@ const getLintProcuredSoldRes = async (
     procured.push(data.procured);
     sold.push(data.sold);
     stock.push(data.stock);
+    allocated.push(data.allocated);
   }
 
   return {
     season,
     procured,
     sold,
-    stock
+    stock,
+    allocated
   };
 
 };
@@ -1382,6 +1474,47 @@ const getBaleProcuredData = async (
   return result;
 
 };
+
+
+const getLintAllocatedData = async (
+  where: any
+) => {
+
+  const result = await GinnerExpectedCotton.findAll({
+    attributes: [
+      [
+        sequelize.fn(
+          "SUM",
+          Sequelize.literal('CAST(expected_lint AS DOUBLE PRECISION)')
+        ),
+        "expected_lint",
+      ],
+     
+      [Sequelize.col('season.name'), 'seasonName'],
+      [Sequelize.col('season.id'), 'seasonId']
+    ],
+    include: [
+      {
+        model: Season,
+        as: "season",
+        attributes: [],
+      },
+      {
+        model: Ginner,
+        as: "ginner_expected_cotton",
+        attributes: [],
+      },
+    ],
+    where,
+    // limit: 3,
+    order: [['seasonId', 'desc']],
+    group: ['ginner_expected_cotton.id','season.id'],
+    
+  });
+  return result;
+
+};
+
 
 
 
@@ -2190,8 +2323,8 @@ const getProcuredAllocated = async (
     const seasonLimit = reqData.seasonLimit ? parseInt(reqData.seasonLimit.toString()) : 3;
     const seasons: any = reqData.seasonLimit ? await getLastSeasons(seasonLimit) : {};
     const where = getTransactionDataQuery(reqData);
-    const allocationWhere = getGinnerAllocationQuery({...reqData, season: seasons?.ids});
-    const transactionWhere = getTransactionDataQuery({...reqData, season: seasons!.ids});
+    const allocationWhere = getGinnerAllocationQuery({...reqData, season: reqData.season ?? seasons?.ids});
+    const transactionWhere = getTransactionDataQuery({...reqData, season: reqData.season ?? seasons?.ids});
     const procuredData = await getProcuredProcessedData(transactionWhere);
     const allocatedData = await getAllocatedData(allocationWhere);
     let data = await getProcuredAllocatedRes(
@@ -2205,6 +2338,7 @@ const getProcuredAllocated = async (
           data.season.push(season.name);
           data.allocated.push(0);
           data.procured.push(0);
+          data.pending.push(0);
         }
       });
       const indices = data.season.map((_: any, index: any) => index);
@@ -2216,6 +2350,7 @@ const getProcuredAllocated = async (
       data.season = indices.map((i: any) => data.season[i]);
       data.procured = indices.map((i: any) => data.procured[i]);
       data.allocated = indices.map((i: any) => data.allocated[i]);
+      data.pending = indices.map((i: any) => data.pending[i]);
     }
     return res.sendSuccess(res, data);
 
@@ -2322,6 +2457,7 @@ const getProcuredAllocatedRes = async (
   let season: any = [];
   let procured: any = [];
   let allocated: any = [];
+  let pending: any = [];
 
   for (const sessionId of seasonIds) {
     const gProcured = procuredData.find((production: any) =>
@@ -2333,11 +2469,13 @@ const getProcuredAllocatedRes = async (
     let data = {
       seasonName: '',
       procured: 0,
-      allocated: 0
+      allocated: 0,
+      pending: 0,
     };
     if (gProcured) {
       data.seasonName = gProcured.dataValues.seasonName;
       data.procured = mtConversion(gProcured.dataValues.procured);
+      data.pending = mtConversion(gProcured.dataValues.pending);
     }
 
     if (gAllocated) {
@@ -2357,13 +2495,15 @@ const getProcuredAllocatedRes = async (
     season.push(data.seasonName);
     procured.push(data.procured);
     allocated.push(data.allocated);
+    pending.push(data.pending);
 
   }
 
   return {
     season,
     procured,
-    allocated
+    allocated,
+    pending
   };
 };
 

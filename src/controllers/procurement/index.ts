@@ -22,6 +22,7 @@ import sequelize from "../../util/dbConn";
 import UserApp from "../../models/users-app.model";
 import { saveFailedRecord } from "../failed-records";
 import GinnerAllocatedVillage from "../../models/ginner-allocated-vilage.model";
+import moment from "moment";
 
 
 const createTransaction = async (req: Request, res: Response) => {
@@ -102,7 +103,29 @@ const createTransaction = async (req: Request, res: Response) => {
       estimated_cotton: Number(farm.total_estimated_cotton),
     };
 
-    const transaction = await Transaction.create(transactionData, { transaction: t });
+    const normalizedDate = moment.utc(req.body.date).format('YYYY-MM-DD');
+
+    const transactionExist = await Transaction.findOne({
+      where: {
+        [Op.and]: [
+          Sequelize.where(
+            Sequelize.fn("DATE", Sequelize.col("date")), 
+            normalizedDate
+          ),
+          { farmer_id: Number(req.body.farmerId) },  
+          { qty_purchased: String(qty_purchased) },  
+          { season_id: Number(req.body.season) },
+          { rate: String(req.body.rate) },           
+          { vehicle: String(req.body.vehicle) }    
+        ]
+      }
+    });
+    
+    if(transactionExist) {
+      return res.sendError(res, "Transaction with same Date, Farmer,Season, Qty. Purchased, Rate and Vehicle is already exist");
+    }
+
+      const transaction = await Transaction.create(transactionData, { transaction: t });
 
     // Update farm's transacted cotton
     const updateResult = await Farm.update(
@@ -1384,15 +1407,34 @@ const uploadTransactionBulk = async (req: Request, res: Response) => {
           season &&
           farm
         ) {
+          // const transactionExist = await Transaction.findOne({
+          //   where: {
+          //     date: new Date(data.date).toISOString(),
+          //     farmer_id: farmer.id,
+          //     qty_purchased: data.qtyPurchased,
+          //     rate: data.rate,
+          //     vehicle: data.vehicle ? data.vehicle : "",
+          //   }
+          // });
+
+          const normalizedDate = moment.utc(req.body.date).format('YYYY-MM-DD');
+
           const transactionExist = await Transaction.findOne({
             where: {
-              date: new Date(data.date).toISOString(),
-              farmer_id: farmer.id,
-              qty_purchased: data.qtyPurchased,
-              rate: data.rate,
-              vehicle: data.vehicle ? data.vehicle : "",
+              [Op.and]: [
+                Sequelize.where(
+                  Sequelize.fn("DATE", Sequelize.col("date")), 
+                  normalizedDate
+                ),
+                { farmer_id: Number(farmer.id) },  
+                { qty_purchased: String(data.qtyPurchased) }, 
+                { rate: String(data.rate) },           
+                { vehicle: data.vehicle ? String(data.vehicle) : "" }    
+              ]
             }
           });
+
+
           if (transactionExist) {
             fail.push({
               success: false,

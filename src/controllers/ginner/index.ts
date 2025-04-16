@@ -22,7 +22,7 @@ import sequelize from "../../util/dbConn";
 import Farmer from "../../models/farmer.model";
 import { send_gin_mail } from "../send-emails";
 import FarmGroup from "../../models/farm-group.model";
-import { formatDataForGinnerProcess } from "../../util/tracing-chart-data-formatter";
+import { formatDataForGinnerProcess, formatForwardChainDataGinner } from "../../util/tracing-chart-data-formatter";
 import QualityParameter from "../../models/quality-parameter.model";
 import Brand from "../../models/brand.model";
 import PhysicalTraceabilityDataGinner from "../../models/physical-traceability-data-ginner.model";
@@ -32,6 +32,10 @@ import moment from "moment";
 import GinToGinSale from "../../models/gin-to-gin-sale.model";
 import Block from "../../models/block.model";
 import SpinnerPlaceLintOrderSales from "../../models/spinner-place-lint-order-sales.model";
+import GinnerLintCertificate from "../../models/ginner-lintcert.model";
+
+import logger from "../../util/logger";
+import { _getSpinnerProcessForwardChainData } from "../spinner";
 
 //create Ginner Process
 // const createGinnerProcess = async (req: Request, res: Response) => {
@@ -194,7 +198,7 @@ import SpinnerPlaceLintOrderSales from "../../models/spinner-place-lint-order-sa
 
 //     res.sendSuccess(res, { ginprocess });
 //   } catch (error: any) {
-//     console.error(error);
+//     console.log(error);
 //     return res.sendError(res, error.message, error);
 //   }
 // };
@@ -351,6 +355,7 @@ req.body.endDateOfDNAMarkerApplication,
         data_of_sample_dispatch: req.body.dataOfSampleDispatch,
         operator_name: req.body.operatorName,
         cotton_connect_executive_name: req.body.cottonConnectExecutiveName,
+        healixa_lot_no: req.body.healixaLotNo || null,
         expected_date_of_lint_sale: req.body.expectedDateOfLintSale,
         physical_traceability_partner_id:
 req.body.physicalTraceabilityPartnerId,
@@ -396,10 +401,10 @@ req.body.brandId }, transaction });
   } catch (error: any) {
     // Rollback transaction in case of error
     await transaction.rollback();
-    console.error(error);
+    console.log(error);
     return res.sendError(res, error.message || "An error occurred", error);
   }
-};
+};  
 
 const updateGinnerProcess = async (req: Request, res: Response) => {
   if (!req.body.id) {
@@ -577,7 +582,7 @@ const fetchGinProcessPagination = async (req: Request, res: Response) => {
       return res.sendSuccess(res, gin);
     }
   } catch (error: any) {
-    console.error(error);
+    console.log(error);
     return res.sendError(res, error.message, error);
   }
 };
@@ -687,7 +692,7 @@ const fetchGinHeapPagination = async (req: Request, res: Response) => {
       return res.sendSuccess(res, data);
     }
   } catch (error: any) {
-    console.error(error);
+    console.log(error);
     return res.sendError(res, error.message, error);
   }
 };
@@ -1064,7 +1069,7 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
       data: process.env.BASE_URL + "ginner-process.xlsx",
     });
   } catch (error: any) {
-    console.error("Error appending data:", error);
+    console.log("Error appending data:", error);
     return res.sendError(res, error.message, error);
   }
 };
@@ -1207,7 +1212,7 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
 //     const simplifiedResults = results.map((item: any) => item.result);
 //     return res.sendSuccess(res, simplifiedResults); //bales_list
 //   } catch (error: any) {
-//     console.error(error);
+//     console.log(error);
 //     return res.sendError(res, error.meessage);
 //   }
 // };
@@ -1321,7 +1326,7 @@ const chooseBale = async (req: Request, res: Response) => {
           JOIN 
               ginners g ON gp.ginner_id = g.id
           JOIN 
-              seasons s ON gp.season_id = s.id
+              seasons s ON gp.season_id = s.id AND gp.season_id IN (${seasonId})
           JOIN 
               programs p ON gp.program_id = p.id
           WHERE 
@@ -1382,7 +1387,7 @@ const chooseBale = async (req: Request, res: Response) => {
           JOIN 
               ginners g ON gtg.new_ginner_id = g.id
           JOIN 
-              seasons s ON gp.season_id = s.id
+              seasons s ON gp.season_id = s.id AND gp.season_id IN (${seasonId})
           JOIN 
               programs p ON gp.program_id = p.id
           WHERE 
@@ -1412,7 +1417,7 @@ const chooseBale = async (req: Request, res: Response) => {
     const simplifiedResults = results.map((item: any) => item.result);
     return res.sendSuccess(res, simplifiedResults); //bales_list
   } catch (error: any) {
-    console.error(error);
+    console.log(error);
     return res.sendError(res, error.message, error);
   }
 };
@@ -1590,7 +1595,7 @@ const deleteGinnerProcess = async (req: Request, res: Response) => {
     }
   } catch (error: any) {
     await transaction.rollback();
-    console.error(error);
+    console.log(error);
     return res.sendError(res, error.message, error);
   }
 };
@@ -1620,7 +1625,7 @@ const fetchGinProcess = async (req: Request, res: Response) => {
     });
     return res.sendSuccess(res, gin);
   } catch (error: any) {
-    console.error(error);
+    console.log(error);
     return res.sendError(res, error.message, error);
   }
 };
@@ -1641,7 +1646,7 @@ const fetchGinBale = async (req: Request, res: Response) => {
     });
     return res.sendSuccess(res, gin);
   } catch (error: any) {
-    console.error(error);
+    console.log(error);
     return res.sendError(res, error.message, error);
   }
 };
@@ -1658,6 +1663,8 @@ const chooseCotton = async (req: Request, res: Response) => {
     }
     let villageId: any = req.query.villageId;
     let seasonId: any = req.query.seasonId;
+    let fromDt: any = req.query.fromDt;
+    let toDt: any = req.query.toDt;
     let whereCondition: any = {};
 
     let transactionCondition: any = {
@@ -1707,6 +1714,19 @@ const chooseCotton = async (req: Request, res: Response) => {
 
     for await (let row of allocated) {
 
+      const whereCondition = {
+        ...transactionCondition,
+        village_id: row?.dataValues?.village_id,
+        season_id: row?.dataValues?.season_id,
+      };
+      
+      // Add date filter only if fromDt and toDt are not null
+      if (fromDt && toDt) {
+        whereCondition.date = {
+          [Op.between]: [fromDt, toDt],
+        };
+      }
+
       const results = await Transaction.findAll({
         // attributes: [
         // [Sequelize.fn("SUM", Sequelize.col("qty_stock")), "qty_stock"],
@@ -1729,11 +1749,7 @@ const chooseCotton = async (req: Request, res: Response) => {
           { model: Program, as: "program" },
           { model: Season, as: "season" },
         ],
-        where: {
-          ...transactionCondition,
-          village_id: row?.dataValues?.village_id,
-          season_id: row?.dataValues?.season_id,
-        },
+        where: whereCondition,
         // group: ["transactions.village_id, transactions.id"],
         order: [
           ["id", "DESC"],
@@ -1785,7 +1801,7 @@ const chooseCotton = async (req: Request, res: Response) => {
     const finalResult = Object.values(summedData);
     res.sendSuccess(res, finalResult);
   } catch (error: any) {
-    console.error("Error appending data:", error);
+    console.log("Error appending data:", error);
     return res.sendError(res, error.message, error);
   }
 };
@@ -1939,7 +1955,7 @@ const chooseHeap = async (req: Request, res: Response) => {
     const finalResult = Object.values(results);
     res.sendSuccess(res, finalResult);
   } catch (error: any) {
-    console.error("Error appending data:", error);
+    console.log("Error appending data:", error);
     return res.sendError(res, error.message, error);
   }
 };
@@ -1964,7 +1980,7 @@ const updateTransactionStatus = async (req: Request, res: Response) => {
 
     res.sendSuccess(res, trans);
   } catch (error: any) {
-    console.error("Error appending data:", error);
+    console.log("Error appending data:", error);
     return res.sendError(res, error.message, error);
   }
 };
@@ -2088,7 +2104,7 @@ const exportGinnerSales = async (req: Request, res: Response) => {
       data: process.env.BASE_URL + "lint-sale.xlsx",
     });
   } catch (error: any) {
-    console.error("Error appending data:", error);
+    console.log("Error appending data:", error);
     return res.sendError(res, error.message, error);
   }
 };
@@ -2224,7 +2240,7 @@ const createGinnerSales = async (req: Request, res: Response) => {
 
     res.sendSuccess(res, { ginSales });
   } catch (error: any) {
-    console.error(error);
+    console.log(error);
     await transaction.rollback();
     return res.sendError(res, error.message, error);
   }
@@ -2310,14 +2326,24 @@ const getCOCDocumentData = async (
 
     if (result.process_ids) {
       const ginProcess = await sequelize.query(`
-        select  gp.id,
-         gp.total_qty as seed_cotton_qty,
-                array_to_string(array_agg(distinct hp.transaction_id), ',') as transaction_ids
-        from gin_processes gp
-                left join "gin-bales" gb on gp.id = gb.process_id
-                left join heap_selections hp on gp.id = hp.process_id
-        where gp.id in (:ids)
-        group by gp.id;
+       SELECT
+              gp.id,
+              gp.total_qty AS seed_cotton_qty,
+              array_to_string(array_agg(DISTINCT combined.transaction_id), ',') AS transaction_ids
+            FROM gin_processes gp
+            LEFT JOIN (
+                SELECT
+                    cs.process_id,
+                    cs.transaction_id
+                FROM cotton_selections cs
+                UNION ALL
+                SELECT
+                    hs.process_id,
+                    unnest(hs.transaction_id) AS transaction_id
+                FROM heap_selections hs
+            ) combined ON gp.id = combined.process_id
+            WHERE gp.id in (:ids)
+            GROUP BY gp.id;
         `, {
           replacements: {
             ids: result.process_ids
@@ -2371,7 +2397,7 @@ const getCOCDocumentData = async (
     cocRes.date = moment(new Date()).format('DD-MM-YYYY');
      return res.sendSuccess(res, cocRes);
   } catch (error: any) {
-    console.error("Error appending data:", error);
+    console.log("Error appending data:", error);
     return res.sendError(res, error.message, error);
   }
 
@@ -2430,6 +2456,11 @@ const updateGinnerSales = async (req: Request, res: Response) => {
     const data: any = {
       status: "Pending for QR scanning",
       weight_loss: req.body.weightLoss,
+      updatebales: req.body.updatebales,
+      no_of_bales: req.body.noofBales,
+      choosen_bale: req.body.choosenBale,
+      total_qty: req.body.totalQuantity,
+      lot_no: req.body.lot_no,
       sale_value: req.body.saleValue,
       invoice_no: req.body.invoiceNo,
       tc_file: req.body.tcFile,
@@ -2485,6 +2516,30 @@ const updateGinnerSales = async (req: Request, res: Response) => {
         data.total_qty = newQuantity;
       }
     }
+    
+
+    for await (const bale of req.body.bales) {
+
+      let baleData = {
+        sales_id: req.body.id,
+        bale_id: bale.id,
+        gin_to_gin_sale: req.body.buyerType?.toLowerCase() === 'ginner' ? true : false
+      };
+      await BaleSelection.create(baleData);
+      await GinBale.update(
+        {
+          sold_status: true,
+          is_gin_to_gin_sale: req.body.buyerType?.toLowerCase() === 'ginner'
+            ? true
+            : bale.is_gin_to_gin
+            ? true
+            : null,
+          gin_to_gin_sold_status: bale.is_gin_to_gin ? true : null,
+          sold_by_sales_id: req.body.id,
+        },
+        { where: { id: bale.id } }
+      );
+    }
 
     const ginSales = await GinSales.update(data, {
       where: { id: req.body.id },
@@ -2495,7 +2550,7 @@ const updateGinnerSales = async (req: Request, res: Response) => {
     }
     res.sendSuccess(res, { ginSales });
   } catch (error: any) {
-    console.error(error);
+    console.log(error);
     return res.sendError(res, error.message, error);
   }
 };
@@ -2516,7 +2571,7 @@ const updateGinnerSalesField = async (req: Request, res: Response) => {
 
     res.sendSuccess(res, { ginSales });
   } catch (error: any) {
-    console.error(error);
+    console.log(error);
     return res.sendError(res, error.message, error);
   }
 };
@@ -2605,7 +2660,7 @@ const fetchGinSalesPagination = async (req: Request, res: Response) => {
       return res.sendSuccess(res, gin);
     }
   } catch (error: any) {
-    console.error(error);
+    console.log(error);
     return res.sendError(res, error.message, error);
   }
 };
@@ -2651,6 +2706,29 @@ const deleteGinSales = async (req: Request, res: Response) => {
                 })
               }
             }
+            else{
+              if(item){
+                alreadyGinSalesIds.push(item?.sales_id);
+                alreadyGinBalesIds.push(item?.bale_id);
+                alreadyGiProcessIds.push(item?.process_id);
+
+                await GinBale.update(
+                  { 
+                    sold_status: false,
+                    is_gin_to_gin_sale: null,
+                    gin_to_gin_sold_status: null,
+                    sold_by_sales_id: null, 
+                  },
+                  {
+                    where: {
+                      id: {
+                        [Op.in]: alreadyGinBalesIds,
+                      },
+                    }, transaction
+                  }
+                );
+              }
+            }
           }
           alreadyGinSalesIds = [...new Set(alreadyGinSalesIds)];
           alreadyGinBalesIds = [...new Set(alreadyGinBalesIds)];
@@ -2667,11 +2745,11 @@ const deleteGinSales = async (req: Request, res: Response) => {
                 transaction
               }
             );
-          }
+          }         
         }
         await GinToGinSale.destroy({ where: {sales_id: req.body.id }, transaction });
-
-      }else{
+      }
+      else{
         const bales = await GinBale.findAll(
             {
               attributes: ['id','process_id','weight','sold_status','is_gin_to_gin_sale','gin_to_gin_status','gin_to_gin_sold_status','sold_by_sales_id'],
@@ -2766,7 +2844,7 @@ const deleteGinSales = async (req: Request, res: Response) => {
       message: "Successfully deleted this process",
     });
   } catch (error: any) {
-    console.error(error);
+    console.log(error);
     await transaction.rollback();
     return res.sendError(res, error.message, error);
   }
@@ -2829,7 +2907,7 @@ const fetchGinSale = async (req: Request, res: Response) => {
     };
     return res.sendSuccess(res, response);
   } catch (error: any) {
-    console.error(error);
+    console.log(error);
     return res.sendError(res, error.message, error);
   }
 };
@@ -2896,7 +2974,7 @@ const fetchGinSaleBale = async (req: Request, res: Response) => {
     }
     return res.sendPaginationSuccess(res, data, count);
   } catch (error: any) {
-    console.error(error);
+    console.log(error);
     return res.sendError(res, error.message, error);
   }
 };
@@ -2947,7 +3025,7 @@ const fetchGinSaleAllBales = async (req: Request, res: Response) => {
     }
     return res.sendPaginationSuccess(res, data, count);
   } catch (error: any) {
-    console.error(error);
+    console.log(error);
     return res.sendError(res, error.message, error);
   }
 };
@@ -2973,7 +3051,7 @@ const updateGinSaleBale = async (req: Request, res: Response) => {
 
     return res.sendSuccess(res, gins);
   } catch (error: any) {
-    console.error(error);
+    console.log(error);
     return res.sendError(res, error.message, error);
   }
 };
@@ -3045,7 +3123,7 @@ const dashboardGraphWithProgram = async (req: Request, res: Response) => {
 
     res.sendSuccess(res, { transaction, ginner });
   } catch (error: any) {
-    console.error(error);
+    console.log(error);
     return res.sendError(res, error.message, error);
   }
 };
@@ -3117,7 +3195,7 @@ const getReelBaleId = async (req: Request, res: Response) => {
     var reelbale_id = baleid_prefix + prcs_date + "/" + String(random_number);
     res.sendSuccess(res, { id: reelbale_id });
   } catch (error: any) {
-    console.error(error);
+    console.log(error);
     return res.sendError(res, error.message, error);
   }
 };
@@ -3180,7 +3258,7 @@ const getReelHeapId = async (req: Request, res: Response) => {
     var reelheap_id = heapid_prefix + prcs_date + "/" + String(random_number);
     res.sendSuccess(res, { id: reelheap_id });
   } catch (error: any) {
-    console.error(error);
+    console.log(error);
     return res.sendError(res, error.message, error);
   }
 };
@@ -3203,7 +3281,7 @@ const getProgram = async (req: Request, res: Response) => {
     });
     res.sendSuccess(res, data);
   } catch (error: any) {
-    console.error(error);
+    console.log(error);
     return res.sendError(res, error.message, error);
   }
 };
@@ -3218,6 +3296,11 @@ const getSpinner = async (req: Request, res: Response) => {
   if (req.query.status == 'true') {
     whereCondition.status = true
   }
+  /* This condition is applied to hide those spinner's who reach there Lint Procurement CAP for season 24-25   */
+  if (req.query.capLimit == 'true') {
+    whereCondition.id =  { [Op.notIn]: ['625','626','627','628','629','630','631','632','638','639'] };
+  }
+  
 
   let ginner = await Ginner.findOne({ where: { id: ginnerId } });
   if (!ginner) {
@@ -3229,6 +3312,35 @@ const getSpinner = async (req: Request, res: Response) => {
   });
   res.sendSuccess(res, result);
 };
+
+const getMappedVillages= async  (req: Request, res: Response) => {
+  let ginnerId = req.query.ginnerId;
+  if (!ginnerId) {
+    return res.sendError(res, "Need Ginner Id ");
+  }
+  
+  const allocated = await GinnerAllocatedVillage.findAll({
+    where: {
+      ginner_id: ginnerId,
+    },
+    include: [
+      { model: Village, as: "village" },
+    ]
+  })
+
+  try {
+    const villageData = allocated.map((item : any) => ({
+      id: item.dataValues.village.id,
+      village_name: item.dataValues.village.village_name
+    }));
+
+    res.sendSuccess(res, villageData);
+  } catch (error: any) {
+    console.log(error);
+    return res.sendError(res, error.message, error);
+  }
+}
+
 const getVillageAndFarmer = async (req: Request, res: Response) => {
   let ginnerId = req.query.ginnerId;
   if (!ginnerId) {
@@ -3323,8 +3435,9 @@ const _getGinnerProcessTracingChartData = async (
     let whereCondition: any = {};
 
     if (reelLotNo) {
-      const idArray: number[] = reelLotNo
+      const idArray: string[] = reelLotNo
         .split(",")
+        .map((it: string) => it?.trim())
       whereCondition.reel_lot_no = { [Op.in]: idArray };
     }
 
@@ -3379,10 +3492,13 @@ const _getGinnerProcessTracingChartData = async (
         })
       );
 
+      
       allGinData = allGinData.concat(ginWithTransactions);
     }
-
+    
     let formattedData: any = {};
+    let obj: any ={};
+    obj.gnr_name = allGinData && allGinData.length > 0 ?  [...new Set(allGinData.map((el: any) => el.ginner.name))].join(',') : "";
 
     allGinData.forEach((el: any) => {
       el.transaction.forEach((tx: any) => {
@@ -3403,10 +3519,13 @@ const _getGinnerProcessTracingChartData = async (
     formattedData = Object.keys(formattedData).map((key: any) => {
       return formattedData[key];
     });
+    obj.transaction = formattedData ? formattedData : [];
 
-    return formatDataForGinnerProcess(reelLotNo, formattedData);
+    return formatDataForGinnerProcess(reelLotNo, obj);
   } catch (error) {
-    console.error(error);
+    console.log(error);
+    logger.error(`ERROR - ${error} | CHAIN MGMT REEL - ${reelLotNo}`);
+    return false
   }
 };
 
@@ -3416,10 +3535,13 @@ const getGinnerProcessTracingChartData = async (
 ) => {
   const { reelLotNo }: any = req.query;
   if (!reelLotNo) {
-    return res.status(400).send({ error: "reelLotNo is required" });
+    return res.sendError(res, "reelLotNo is required");
   }
   const data = await _getGinnerProcessTracingChartData(reelLotNo);
-  res.sendSuccess(res, data);
+  if(!data){
+    return res.sendError(res, "Data not generated");
+  }
+  return res.sendSuccess(res, data);
 };
 
 
@@ -3458,7 +3580,7 @@ const checkReport = async (req: Request, res: Response) => {
       res.sendSuccess(res, { show: false });
     }
   } catch (error: any) {
-    console.error(error);
+    console.log(error);
     return res.sendError(res, error.message, error);
   }
 };
@@ -3910,8 +4032,379 @@ const updateStatusLintSales = async (req: Request, res: Response) => {
   }
 };
 
+const getGinnerProcessForwardChainingData = async (
+  req: Request,
+  res: Response
+) => {
+  const { reelLotNo, type }: any = req.query;
+  if (!reelLotNo) {
+    return res.sendError(res, "reelLotNo is required");
+  }
+  const data = await _getGinnerProcessForwardChainData(reelLotNo, type);
+  if(!data){
+    return res.sendError(res, "Data not generated");
+  }
+  return res.sendSuccess(res, data);
+};
+
+const _getGinnerProcessForwardChainData = async (
+  reelLotNo: any,
+  type: string = 'process'
+) => {
+  try {
+    //  await createIndexes();
+
+    let include = [
+      {
+        model: Ginner,
+        as: "ginner",
+        attributes: ['id', 'name'], // Only fetch necessary fields
+      },
+    ];
+
+    let transactionInclude = [
+      {
+        model: Village,
+        as: "village",
+        attributes: ['id', 'village_name'], // Only fetch necessary fields
+      },
+      {
+        model: Farmer,
+        as: "farmer",
+        attributes: ['id', 'firstName', "lastName", 'farmGroup_id', 'village_id'],
+        include: [
+          {
+            model: Village,
+            as: "village",
+            attributes: ['id', 'village_name'], // Only fetch necessary fields
+          },
+          {
+            model: FarmGroup,
+            as: "farmGroup",
+            attributes: ['id', 'name'], // Only fetch necessary fields
+          },
+        ],
+      },
+    ];
+
+    let whereCondition: any = {};
+
+    if (reelLotNo) {
+      const idArray: number[] = reelLotNo
+        .split(",")
+        .map((it: string) => it?.trim())
+      whereCondition.reel_lot_no = { [Op.in]: idArray };
+    }
 
 
+    const batchSize = 100;
+    let offset = 0;
+    let allGinData: any[] = [];
+
+    while (true) {
+      let ginBatch = await GinProcess.findAll({
+        where: whereCondition,
+        include: include,
+        order: [["id", "desc"]],
+        limit: batchSize,
+        offset: offset,
+        attributes: ['id', 'reel_lot_no'] // Only fetch necessary fields
+      });
+
+
+      if(type === 'sales'){
+        ginBatch = await GinSales.findAll({
+            where: {reel_lot_no: reelLotNo},
+            include: include,
+            order: [["id", "desc"]],
+            limit: batchSize,
+            offset: offset,
+            attributes: ["id", "reel_lot_no"],
+          })
+      }
+
+      if (ginBatch.length === 0) break;
+
+      offset += batchSize;
+
+      let ginWithTransactions = await Promise.all(
+        ginBatch.map(async (el: any) => {
+          el = el.toJSON();
+          let spinProcess = [];
+          if(type === 'process'){
+            [spinProcess] = await sequelize.query(
+                    `SELECT
+                        ARRAY_AGG(DISTINCT ls.process_id) AS spin_process_id,
+                        STRING_AGG(DISTINCT sp.reel_lot_no, ',') AS spin_reel_lot_no
+                      FROM
+                          lint_selections ls
+                      JOIN spin_processes sp ON ls.process_id = sp.id
+                      WHERE ls.lint_id IN (
+                            SELECT 
+                              UNNEST(ARRAY_AGG(DISTINCT gs.id))
+                                          FROM 
+                                              gin_sales gs
+                            LEFT JOIN
+                              bale_selections bs ON bs.sales_id = gs.id
+                            LEFT JOIN
+                              "gin-bales" gb ON gb.id = bs.bale_id
+                            WHERE gb.process_id = ${el.id}
+                            GROUP BY
+                              gb.process_id
+                                      )
+                    `);
+          }else if(type === 'sales'){
+            [spinProcess] = await sequelize.query(
+              `SELECT
+                  ARRAY_AGG(DISTINCT ls.process_id) AS spin_process_id,
+                  STRING_AGG(DISTINCT sp.reel_lot_no, ',') AS spin_reel_lot_no
+                FROM
+                    lint_selections ls
+                JOIN spin_processes sp ON ls.process_id = sp.id
+                WHERE ls.lint_id IN (${el.id})
+              `);
+          }
+
+
+            if(spinProcess && spinProcess.length > 0){
+              const [spinnerChartData] = await Promise.all(
+                spinProcess?.map(async (spin: any) => {
+                  if (spin?.spin_reel_lot_no) {
+                    return await _getSpinnerProcessForwardChainData(spin?.spin_reel_lot_no);
+                  }
+                  return []
+                })
+              );
+              el.spin = spinnerChartData
+            }
+          return el;
+        })
+      );
+
+      
+      allGinData = allGinData.concat(ginWithTransactions);
+    }
+
+    let formattedData: any = {};
+    let obj: any ={};
+    obj.gnr_name = allGinData && allGinData.length > 0 ?  [...new Set(allGinData.map((el: any) => el.ginner.name))].join(',') : "";
+    obj.spin = allGinData && allGinData.length > 0 ? allGinData.flatMap(item => item.spin) : []
+
+    return formatForwardChainDataGinner(reelLotNo, obj);
+  } catch (error) {
+    console.log(error);
+    logger.error(`ERROR - ${error} | CHAIN MGMT REEL - ${reelLotNo}`);
+    return false
+  }
+};
+
+
+
+
+
+const createGinnerLintCertificate = async (req: Request, res: Response) => {
+  
+  try {
+
+    const data = {
+      country_id: req.body.countryId,
+      state_id: req.body.stateId,
+      brand_id: req.body.brandId,
+      season_id: req.body.seasonId,
+      ginner_id: req.body.ginnerId,
+      program_id: req.body.programId,
+      document: req.body.document
+    };
+  
+    const ginnerLintCertificate = await GinnerLintCertificate.create(data);
+
+    res.sendSuccess(res, { ginnerLintCertificate });
+    } catch (error: any) {
+        console.log(error); 
+      return res.sendError(res, error.message,error);
+    }
+  };
+
+  const fetchGinnerLintCertificatePagination = async (req: Request, res: Response) => {
+    const searchTerm = req.query.search || "";
+    const page = Number(req.query.page) || 1;
+    const limit = Number(req.query.limit) || 10;
+    const { ginnerId, seasonId, countyId, stateId, brandId }: any = req.query;
+    const offset = (page - 1) * limit;
+    const whereCondition: any = {};
+    try {
+      if (searchTerm) {
+        whereCondition[Op.or] = [
+          { "$season.name$": { [Op.iLike]: `%${searchTerm}%` } },
+          { "$country.county_name$": { [Op.iLike]: `%${searchTerm}%` } },
+          { "$state.state_name$": { [Op.iLike]: `%${searchTerm}%` } },
+          { "$brand.brand_name$": { [Op.iLike]: `%${searchTerm}%` } },
+
+          
+        ];
+      }
+      if (ginnerId) {
+        whereCondition.ginner_id = ginnerId;
+      }
+      if (seasonId) {
+        const idArray: number[] = seasonId
+          .split(",")
+          .map((id: any) => parseInt(id, 10));
+        whereCondition.season_id = { [Op.in]: idArray };
+      }
+     
+      if (countyId) {
+        const idArray: number[] = countyId
+          .split(",")
+          .map((id: any) => parseInt(id, 10));
+        whereCondition.country_id = { [Op.in]: idArray };
+      }
+      if (brandId) {
+        const idArray: number[] = brandId
+          .split(",")
+          .map((id: any) => parseInt(id, 10));
+        whereCondition.brand_id = { [Op.in]: idArray };
+      }
+      if (stateId) {
+        const idArray: number[] = stateId
+          .split(",")
+          .map((id: any) => parseInt(id, 10));
+        whereCondition.state_id = { [Op.in]: idArray };
+      }
+
+      if (seasonId) {
+        const idArray: number[] = seasonId
+          .split(",")
+          .map((id: any) => parseInt(id, 10));
+        whereCondition.season_id = { [Op.in]: idArray };
+      }
+  
+      let include = [
+        {
+          model: Ginner,
+          as: "ginner",
+        },
+        
+        {
+          model: Season,
+          as: "season",
+        },
+        {
+          model: Program,
+          as: "program",
+        },
+        {
+          model: Country,
+          as: "country",
+        },
+        {
+          model: Brand,
+          as: "brand",
+        },
+        {
+          model: State,
+          as: "state",
+        },
+
+      ];
+      //fetch data with pagination
+      if (req.query.pagination === "true") {
+        const { count, rows } = await GinnerLintCertificate.findAndCountAll({
+          where: whereCondition,
+          include: include,
+          offset: offset,
+          limit: limit,
+          order: [["id", "desc"]],
+        });
+        let sendData: any = [];
+        for await (let row of rows) {
+        const seed_cotton = await sequelize.query(
+      `  SELECT
+          COALESCE(SUM(CAST("farms"."total_estimated_cotton"AS DOUBLE PRECISION)), 0) AS expected_seed_cotton
+          FROM "ginner_allocated_villages" as gv
+                  LEFT JOIN 
+                        "villages" AS "farmer->village" ON "gv"."village_id" = "farmer->village"."id" 
+                   LEFT JOIN 
+                        "farmers" AS "farmer" ON "farmer->village"."id" = "farmer"."village_id" and "farmer"."brand_id" ="gv"."brand_id"
+                   LEFT JOIN 
+                        "farms" as "farms" on farms.farmer_id = "farmer".id and farms.season_id = gv.season_id
+                   LEFT JOIN 
+                        "seasons" AS "season" ON "gv"."season_id" = "season"."id"
+        
+        WHERE gv.ginner_id = :ginner_id and gv.season_id = :season_id
+        GROUP BY 
+          gv.ginner_id `,
+          {
+            replacements: {
+              ginner_id: row.dataValues.ginner_id,
+              season_id: row.dataValues.season_id,
+              
+            },
+            type: sequelize.QueryTypes.SELECT
+          });
+
+          const lint_cotton = await sequelize.query(
+            `  SELECT
+               gec.ginner_id,
+              SUM(CAST(gec.expected_lint AS DOUBLE PRECISION)) AS expected_lint
+              FROM
+              ginner_expected_cottons gec
+              WHERE
+              gec.ginner_id = :ginner_id and gec.season_id = :season_id
+              GROUP BY gec.ginner_id `,
+                {
+                  replacements: {
+                    ginner_id: row.dataValues.ginner_id,
+                    season_id: row.dataValues.season_id,
+                    
+                },
+                  type: sequelize.QueryTypes.SELECT
+          });
+         
+          sendData.push({
+            ...row.dataValues,
+            seed_cotton: seed_cotton.length > 0 ? seed_cotton[0] : null,
+            lint_cotton:lint_cotton.length > 0 ? lint_cotton[0] : null,
+          });
+          
+        }
+        
+        return res.sendPaginationSuccess(res, sendData, count);
+      } else {
+        const LintCertificate = await GinnerLintCertificate.findAll({
+          where: whereCondition,
+          include: include,
+          order: [["id", "desc"]],
+        });
+        return res.sendSuccess(res, LintCertificate);
+      }
+    } catch (error: any) {
+      console.error(error);
+      return res.sendError(res, error.message, error);
+    }
+  }
+
+  const deleteLintCertificate = async (req: Request, res: Response) => {
+    try{
+      await GinnerLintCertificate.destroy({
+        where: {
+          id: req.body.id,
+        },
+      });
+
+      
+        return res.sendSuccess(res, {
+          message: "Successfully deleted this Ginner certificate",
+        });
+    }
+      catch (error: any) {
+      console.error(error);
+      return res.sendError(res, error.message, error);
+    }
+  }
+
+
+ 
 export {
   createGinnerProcess,
   fetchGinProcessPagination,
@@ -3951,5 +4444,10 @@ export {
   getBrands,
   fetchGinLintAlert,
   fetchGinLintList,
-  updateStatusLintSales
+  updateStatusLintSales,
+  getMappedVillages,
+  createGinnerLintCertificate,
+  fetchGinnerLintCertificatePagination,
+  deleteLintCertificate
+  getGinnerProcessForwardChainingData
 };

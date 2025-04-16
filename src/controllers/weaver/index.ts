@@ -23,11 +23,14 @@ import SpinProcessYarnSelection from "../../models/spin-process-yarn-seletions.m
 import { send_weaver_mail } from "../send-emails";
 import WeaverFabric from "../../models/weaver_fabric.model";
 import { _getSpinnerProcessTracingChartData } from "../spinner/index";
-import { formatDataFromWeaver } from "../../util/tracing-chart-data-formatter";
+import { formatDataFromWeaver, formatForwardChainDataWeaver } from "../../util/tracing-chart-data-formatter";
 import Country from "../../models/country.model";
 import PhysicalTraceabilityDataWeaver from "../../models/physical-traceability-data-weaver.model";
 import Brand from "../../models/brand.model";
 import PhysicalTraceabilityDataWeaverSample from "../../models/physical-traceability-data-weaver-sample.model";
+import db from "../../util/dbConn";
+import { _getGarmentProcessForwardChainData } from "../garment-sales";
+import { _getFabricProcessForwardChainData } from "../fabric";
 
 const createWeaverProcess = async (req: Request, res: Response) => {
   try {
@@ -149,6 +152,68 @@ const createWeaverProcess = async (req: Request, res: Response) => {
     console.log(error)
     return res.sendError(res, error.message, error);
   }
+}
+
+const deleteWeaverProcess = async (req: Request, res: Response) => {
+
+  if (!req.body.id) {
+      return res.sendError(res, "need process id");
+      
+    }
+
+    let weaver = await WeaverProcess.findOne({ where: { id: req.body.id } });
+    if (weaver) {
+      const trans = await db.transaction();
+      try {
+        // Get yarn selections to revert SpinSales.qty_stock
+        const yarnSelections = await YarnSelection.findAll({ 
+          where: { sales_id: req.body.id, type: 'weaver' },
+          transaction: trans
+        });
+        
+        // Revert SpinSales.qty_stock for each yarn selection
+        for (const yarnSelection of yarnSelections) {
+          const spinSale = await SpinSales.findOne({ 
+            where: { id: yarnSelection.yarn_id },
+            transaction: trans
+          });
+          
+          if (spinSale) {
+            await SpinSales.update(
+              { qty_stock: spinSale.dataValues.qty_stock + yarnSelection.qty_used },
+              { where: { id: yarnSelection.yarn_id }, transaction: trans }
+            );
+          }
+        }
+        
+        // Delete yarn selections
+        await YarnSelection.destroy({ 
+          where: { sales_id: req.body.id, type: 'weaver' },
+          transaction: trans
+        });
+        
+        // Delete other related records
+        await WeaverFabric.destroy({ where: { process_id: req.body.id }, transaction: trans});
+        await PhysicalTraceabilityDataWeaver.destroy({ where: { weav_process_id: req.body.id }, transaction: trans});
+        await PhysicalTraceabilityDataWeaverSample.destroy({ where: { physical_traceability_data_weaver_id: req.body.id}, transaction: trans});
+        await WeaverProcess.destroy({ where: { id: req.body.id }, transaction: trans});
+        
+        // Delete dyeing record if exists
+        if (weaver.dyeing_id) {
+          await Dyeing.destroy({ where: { id: weaver.dyeing_id }, transaction: trans });
+        }
+        
+        await trans.commit();
+        res.sendSuccess(res, { weaver });
+      } catch (error: any) {
+        await trans.rollback();
+        return res.sendError(res, error.message);
+      }
+
+    } else {
+      return res.sendError(res, "Process not found");
+    }
+
 }
 
 const updateWeaverProcess = async (req: Request, res: Response) => {
@@ -1723,7 +1788,7 @@ const _getWeaverProcessTracingChartData = async (
           return await Promise.all(
             spinItem.spinSales.map(async (sale: any) => {
               if (sale.dataValues.reel_lot_no) {
-                return _getSpinnerProcessTracingChartData(sale.dataValues.reel_lot_no);
+                return await _getSpinnerProcessTracingChartData(sale.dataValues.reel_lot_no);
               }
               // Handle cases where reel_lot_no might be undefined/null
               return null;
@@ -1906,6 +1971,163 @@ const exportWeaverTransactionList = async (req: Request, res: Response) => {
   }
 };
 
+const getGarmentProcess = async (id: number | string) =>{
+  let [garmentProcess] = await sequelize.query(
+    `SELECT
+        ARRAY_AGG(DISTINCT fs.sales_id) AS garment_process_id,
+        STRING_AGG(DISTINCT gp.reel_lot_no, ',') AS reel_lot_no
+          FROM
+            fabric_selections fs
+      JOIN garment_processes gp ON fs.sales_id = gp.id
+        WHERE fs.fabric_id IN (
+                SELECT 
+                    UNNEST(ARRAY_AGG(DISTINCT ws.id))
+                FROM 
+                    weaver_sales ws
+                LEFT JOIN
+                    weaver_fabric_selections wfs ON wfs.sales_id = ws.id
+                WHERE wfs.fabric_id = ${id}
+                GROUP BY
+                  wfs.fabric_id
+                        )
+          AND fs.processor = 'weaver'
+    `);
+
+    return garmentProcess;
+}
+
+const getFabricProcess = async (type: string, id: number | string) =>{
+  let Model;
+  let Sales: any;
+  let JoinConditon: any;
+  let addedQuery: any;
+  switch (type) {
+    case 'dying': Model = 'dying_fabric_selections'; Sales = 'dying_sales'; break;
+    case 'washing': Model = 'washing_fabric_selections'; Sales = 'washing_sales'; break;
+  };
+
+  let [garmentProcess] = await sequelize.query(
+    `SELECT
+        ARRAY_AGG(DISTINCT fs.sales_id) AS fabric_sale_ids
+          FROM
+            ${Model} fs
+      JOIN ${Sales} sale ON fs.sales_id = sale.id
+        WHERE fs.process_id::numeric IN (
+                SELECT 
+                    UNNEST(ARRAY_AGG(DISTINCT ws.id))
+                FROM 
+                    weaver_sales ws
+                LEFT JOIN
+                    weaver_fabric_selections wfs ON wfs.sales_id = ws.id
+                WHERE wfs.fabric_id = ${id}
+                GROUP BY
+                  wfs.fabric_id
+                        )
+          AND fs.process_type ILIKE 'weaver'
+    `);
+
+    return garmentProcess;
+}
+
+const _getWeaverProcessForwardChainData = async (reelLotNo: string) => {
+
+  let whereCondition: any = {};
+  if (reelLotNo !== null) {
+    const idArray = reelLotNo.split(",").map((it: string) => it?.trim());
+    whereCondition.reel_lot_no = { [Op.in]: idArray };
+  }
+
+  let include = [
+    {
+      model: Weaver,
+      as: "weaver",
+      attributes: ["id", "name"]
+    },
+  ];
+
+  let weavers = await WeaverProcess.findAll({
+    where: whereCondition,
+    include,
+  });
+
+  // Fetching yarn_ids from KnitYarnSelection for each KnitProcess
+  weavers = await Promise.all(
+    weavers.map(async (el: any) => {
+      el = el.toJSON();
+      let garmentProcess = await getGarmentProcess(el.id);
+      let dyingProcess = await getFabricProcess('dying',el.id);
+      let washProcess = await getFabricProcess('washing',el.id);
+      let garmentData = [];
+      let dyingData = [];
+      let washData = [];
+
+      if(garmentProcess && garmentProcess.length > 0){
+        [garmentData] = await Promise.all(garmentProcess.map(async (el: any) => {
+                  if (el?.reel_lot_no) {
+                    return await _getGarmentProcessForwardChainData(el?.reel_lot_no);
+                }
+                return []
+              })
+              )
+      }
+      if(dyingProcess && dyingProcess.length > 0){
+        [dyingData] = await Promise.all(dyingProcess.map(async (el: any) => {
+              if (el?.fabric_sale_ids) {
+                return await _getFabricProcessForwardChainData("dying", el?.fabric_sale_ids);
+            }
+            return []
+          })
+        )
+      }
+
+      if(washProcess && washProcess.length > 0){
+          [washData] = await Promise.all(washProcess.map(async (el: any) => {
+                if (el?.fabric_sale_ids) {
+                  return await _getFabricProcessForwardChainData("washing", el?.fabric_sale_ids);
+              }
+              return []
+            })
+          )
+        }
+
+        // el.garmentChart = [...garmentData,...dyingData,...washData].filter((item: any) => item !== null && item !== undefined)
+        let nData = [...garmentData,...dyingData,...washData].filter((item: any) => item !== null && item !== undefined)
+
+        if(nData && nData.length > 0){
+          const chart = new Map();
+          nData.forEach((it: any) => {
+              const buyer = it;
+              if (buyer && !chart.has(buyer.name)) {
+                chart.set(buyer.name, buyer);
+              }
+            });
+  
+            el.garmentChart = Array.from(chart.values());
+        }
+        
+        return el;
+    })
+  );
+
+  let data = weavers && weavers.length > 0  ? weavers.map((el: any) => formatForwardChainDataWeaver(reelLotNo, el) ) : [formatForwardChainDataWeaver(reelLotNo, weavers)]
+  return data;
+};
+
+const getWeavProcessForwardChainingData = async (
+  req: Request,
+  res: Response
+) => {
+  const { reel_lot_no }: any = req.query;
+  if (!reel_lot_no) {
+    return res.sendError(res, "Reel Lot No is required");
+  }
+  const data = await _getWeaverProcessForwardChainData(reel_lot_no);
+  if(!data){
+    return res.sendError(res, "Data not generated");
+  }
+  return res.sendSuccess(res, data);
+};
+
 export {
   createWeaverProcess,
   updateWeaverProcess,
@@ -1932,5 +2154,8 @@ export {
   chooseWeaverFabric,
   getWeaverProcessTracingChartData,
   exportWeaverTransactionList,
-  _getWeaverProcessTracingChartData
+  _getWeaverProcessTracingChartData,
+  deleteWeaverProcess,
+  _getWeaverProcessForwardChainData,
+  getWeavProcessForwardChainingData
 };

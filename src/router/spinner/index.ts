@@ -30,7 +30,8 @@ import {
     getSpinners,
     fetchTransactionAlertForComberNoil,
     updateStatusComberNoil,
-    fetchComberNoilTransactionList
+    fetchComberNoilTransactionList,
+    getSpinnerProcessForwardChainingData
 } from "../../controllers/spinner";
 import {
 
@@ -39,7 +40,9 @@ import {
     fetchSpinnerPlaceLintOrderPagination,
     fetchSpinnerPlaceLintOrder,
     updateSpinnerPlaceLintOrderStatus,
-    deleteSpinnerPlaceLintOrder
+    deleteSpinnerPlaceLintOrder,
+    getSpinnerPlaceLintChartData,
+    getGinnerPlaceLintChartData
 } from '../../controllers/spinner/spinnerPlacelintOrderController';
 import accessControl from "../../middleware/access-control";
 import { Router } from "express";
@@ -82,6 +85,7 @@ router.get('/sales-invoice', getSalesInvoice);
 router.get('/lint-invoice', getInvoiceAndReelLotNo);
 router.get('/yarn-reel-lot', getYarnReelLotNo);
 router.get('/tracing/chart', getSpinnerProcessTracingChartData);
+router.get('/forward-tracing/chart', getSpinnerProcessForwardChainingData);
 
 // Spinner Place Lint Order Routes
 router.get('/place-lint-order', fetchSpinnerPlaceLintOrderPagination);
@@ -90,4 +94,9 @@ router.post('/place-lint-order', createSpinnerPlaceLintOrder);
 router.put('/place-lint-order/status', updateSpinnerPlaceLintOrderStatus);
 router.delete('/place-lint-order', deleteSpinnerPlaceLintOrder);
 
-export default router;
+// Ginner Routes
+router.get('/place-lint-order/ginner/chart', getGinnerPlaceLintChartData);
+router.get('/place-lint-order/spinner/chart', getSpinnerPlaceLintChartData);
+
+
+export default router;  

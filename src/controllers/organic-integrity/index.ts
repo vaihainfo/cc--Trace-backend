@@ -18,6 +18,7 @@ const createOrganicIntegrity = async (req: Request, res: Response) => {
             farmGroup_id: req.body.farmGroupId ? req.body.farmGroupId : null,
             ics_id: req.body.icsId ? req.body.icsId : null,
             test_stage: req.body.testStage,
+            test_type: req.body.testType,
             ginner_id: req.body.ginnerId ? req.body.ginnerId : undefined,
             farmer: req.body.farmer ? req.body.farmer : undefined,
             seal_no: req.body.sealNo,
@@ -45,6 +46,7 @@ const fetchOrganicIntegrityPagination = async (req: Request, res: Response) => {
         if (searchTerm) {
             whereCondition[Op.or] = [
                 { test_stage: { [Op.iLike]: `%${searchTerm}%` } }, // Search by test_stage 
+                { test_type: { [Op.iLike]: `%${searchTerm}%` } }, // Search by test_type
                 { seal_no: { [Op.iLike]: `%${searchTerm}%` } }, // Search by seal_no
                 { sample_code: { [Op.iLike]: `%${searchTerm}%` } }, // Search by sample_code
                 { seed_lot: { [Op.iLike]: `%${searchTerm}%` } },// Search by seed_lot
@@ -174,6 +176,7 @@ const updateOrganicIntegrity = async (req: Request, res: Response) => {
             farmGroup_id: req.body.farmGroupId ? req.body.farmGroupId : undefined,
             ics_id: req.body.icsId ? req.body.icsId : undefined,
             test_stage: req.body.testStage,
+            test_type: req.body.testType,
             ginner_id: req.body.ginnerId ? req.body.ginnerId : undefined,
             farmer: req.body.farmer ? req.body.farmer : undefined,
             seal_no: req.body.sealNo,

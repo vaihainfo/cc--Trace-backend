@@ -146,10 +146,32 @@ const SpinnerPlaceLintOrder = db.define('spinner_place_lint_orders', {
     type: DataTypes.TEXT,
     allowNull: true,
   },
-  status: {
-    type: DataTypes.ENUM('pending', 'approved', 'rejected', 'accepted by Brand', 'Lint Dispatch'),
+  spinner_status: {
+    type: DataTypes.ENUM('pending', 'approved', 'rejected', 'lint_dispatch'),
     defaultValue: 'pending',
     allowNull: false,
+  },
+  spinner_status_updated_at: {
+    type: DataTypes.DATE,
+    allowNull: true,
+  },
+  ginner_status: {
+    type: DataTypes.ENUM('pending', 'approved', 'rejected'),
+    defaultValue: 'pending',
+    allowNull: false,
+  },
+  ginner_status_updated_at: {
+    type: DataTypes.DATE,
+    allowNull: true,
+  },
+  brand_status: {
+    type: DataTypes.ENUM('pending', 'approved', 'rejected'),
+    defaultValue: 'pending',
+    allowNull: false,
+  },
+  brand_status_updated_at: {
+    type: DataTypes.DATE,
+    allowNull: true,
   }
 }, {
   timestamps: true,

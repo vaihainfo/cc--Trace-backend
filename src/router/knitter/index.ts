@@ -9,6 +9,7 @@ import {
     getSpinnerAndProgram,
     getInvoiceAndyarnType,
     deleteKnitterSales,
+    deleteKnitterProcess,
     getGarments,
     fetchKnitterSale,
     getFabrics,
@@ -22,7 +23,8 @@ import {
     updateKnitterProcess,
     updateKnitterrSales,
     fetchKnitterProcess,
-    exportKnitterTransactionList
+    exportKnitterTransactionList,
+    getKnitProcessForwardChainingData
 } from "../../controllers/knitter";
 import accessControl from "../../middleware/access-control";
 import { Router } from "express";
@@ -33,6 +35,7 @@ router.use(accessControl);
 
 router.post('/process', createKnitterProcess);
 router.put('/process', updateKnitterProcess);
+router.delete('/process', deleteKnitterProcess);
 router.get('/process/get-process', fetchKnitterProcess);
 router.get('/process', fetchKnitterProcessPagination);
 router.get('/', fetchKnitterSalesPagination);
@@ -55,5 +58,6 @@ router.get('/get-fabric-filters', getChooseFabricFilters);
 router.get('/choose-fabric', chooseFabricProcess);
 router.get('/tracing/chart', getKnitterProcessTracingChartData);
 router.get('/export/transaction', exportKnitterTransactionList);
+router.get('/forward-tracing/chart', getKnitProcessForwardChainingData);
 
 export default router;
