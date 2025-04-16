@@ -1729,7 +1729,7 @@ const _getKnitterProcessTracingChartData = async (query: any) => {
           return await Promise.all(
             spinItem.spinSales.map(async (sale: any) => {
               if (sale.reel_lot_no) {
-                return _getSpinnerProcessTracingChartData(sale.reel_lot_no);
+                return await _getSpinnerProcessTracingChartData(sale.reel_lot_no);
               }
               // Handle cases where reel_lot_no might be undefined/null
               return null;

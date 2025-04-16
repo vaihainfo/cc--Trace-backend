@@ -1788,7 +1788,7 @@ const _getWeaverProcessTracingChartData = async (
           return await Promise.all(
             spinItem.spinSales.map(async (sale: any) => {
               if (sale.dataValues.reel_lot_no) {
-                return _getSpinnerProcessTracingChartData(sale.dataValues.reel_lot_no);
+                return await _getSpinnerProcessTracingChartData(sale.dataValues.reel_lot_no);
               }
               // Handle cases where reel_lot_no might be undefined/null
               return null;
@@ -2113,6 +2113,21 @@ const _getWeaverProcessForwardChainData = async (reelLotNo: string) => {
   return data;
 };
 
+const getWeavProcessForwardChainingData = async (
+  req: Request,
+  res: Response
+) => {
+  const { reel_lot_no }: any = req.query;
+  if (!reel_lot_no) {
+    return res.sendError(res, "Reel Lot No is required");
+  }
+  const data = await _getWeaverProcessForwardChainData(reel_lot_no);
+  if(!data){
+    return res.sendError(res, "Data not generated");
+  }
+  return res.sendSuccess(res, data);
+};
+
 export {
   createWeaverProcess,
   updateWeaverProcess,
@@ -2141,5 +2156,6 @@ export {
   exportWeaverTransactionList,
   _getWeaverProcessTracingChartData,
   deleteWeaverProcess,
-  _getWeaverProcessForwardChainData
+  _getWeaverProcessForwardChainData,
+  getWeavProcessForwardChainingData
 };

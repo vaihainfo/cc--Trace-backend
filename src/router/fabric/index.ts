@@ -40,7 +40,8 @@ import {
     exportTransactionList,
     exportPrintingTransactionList,
     exportWashingTransactionList,
-    exportCompactingTransactionList
+    exportCompactingTransactionList,
+    getFabricProcessForwardChainingData
 } from "../../controllers/fabric";
 import accessControl from "../../middleware/access-control";
 import { Router } from "express";
@@ -97,6 +98,7 @@ router.get('/compacting-dashboard/export/transaction', exportCompactingTransacti
 router.get('/get-processors', getProcessName);
 router.get('/get-batch-lot', getBatchLot);
 router.get('/tracing/chart', getFabricProcessTracingChartData);
+router.get('/forward-tracing/chart', getFabricProcessForwardChainingData);
 
 
 export default router;
