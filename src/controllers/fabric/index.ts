@@ -2567,6 +2567,196 @@ const deleteCompactingProcess = async (req: Request, res: Response) => {
   }
 };
 
+// Get a single compacting process by ID
+const getCompactingProcessById = async (req: Request, res: Response) => {
+  try {
+    const id = req.params.id;
+
+    // Define the include models for related data
+    const include = [
+      {
+        model: Program,
+        as: "program",
+        attributes: ["id", "program_name"],
+      },
+      {
+        model: Season,
+        as: "season",
+        attributes: ["id", "name"],
+      },
+      {
+        model: Garment,
+        as: "buyer",
+        attributes: ["id", "name"],
+      },
+      {
+        model: Fabric,
+        as: "buyer_fabric",
+        attributes: ["id", "name"],
+      }
+    ];
+
+    const compactingProcess = await CompactingSales.findOne({
+      where: { id },
+      include: include,
+    });
+
+    if (!compactingProcess) {
+      return res.sendError(res, "Compacting process not found");
+    }
+
+    // Get the selected fabrics for this process
+    const selectedFabrics = await CompactingFabricSelections.findAll({
+      where: { sales_id: id },
+    });
+
+    // Format the response
+    const processData = compactingProcess.toJSON();
+    const formattedProcess = {
+      ...processData,
+      chooseFabric: selectedFabrics,
+      buyerId: processData.buyer_id,
+      buyerName: processData.buyer?.name,
+      buyerFabricId: processData.buyer_fabric_id,
+      buyerFabricName: processData.buyer_fabric?.name,
+      seasonId: processData.season_id,
+      programId: processData.program_id,
+      // Ensure document fields are explicitly included
+      invoiceFiles: processData.invoice_files || [],
+      otherDocs: processData.other_docs || [],
+      // Ensure buyer type is explicitly included
+      buyerType: processData.buyer_type || '',
+    };
+
+    // Return in pagination format for consistency with other endpoints
+    return res.sendSuccess(res, formattedProcess);
+  } catch (error) {
+    console.error("Error fetching compacting process by ID:", error);
+    return res.sendError(res, "Error fetching compacting process");
+  }
+};
+
+// Update a compacting process
+const updateCompactingProcess = async (req: Request, res: Response) => {
+  const transaction = await sequelize.transaction();
+  try {
+    const id = req.params.id;
+    const {
+      compactingId,
+      programId,
+      seasonId,
+      date,
+      garmentOrderRef,
+      brandOrderRef,
+      buyerType,
+      buyerId,
+      buyerFabricId,
+      processorName,
+      processorAddress,
+      oldFabricQuantity,
+      addFabricQuantity,
+      fabricQuantity,
+      totalFabricQuantity,
+      fabricLength,
+      fabricGsm,
+      fabricNetWeight,
+      processWeight,
+      weightGain,
+      weightLoss,
+      batchLotNo,
+      jobDetails,
+      compactingDetails,
+      typeOfCompact,
+      invoiceNo,
+      orderDetails,
+      billOfLadding,
+      transportInfo,
+      invoiceFiles,
+      otherDocs,
+      chooseFabric,
+      from_date,
+      to_date,
+      salesType
+    } = req.body;
+
+    // Check if the compacting process exists
+    const existingProcess = await CompactingSales.findByPk(id);
+    if (!existingProcess) {
+      await transaction.rollback();
+      return res.sendError(res, "Compacting process not found");
+    }
+
+    // Update the compacting process
+    await CompactingSales.update(
+      {
+        compacting_id: compactingId,
+        program_id: programId,
+        season_id: seasonId,
+        date,
+        from_date,
+        to_date,
+        brand_order_ref: brandOrderRef,
+        garment_order_ref: garmentOrderRef,
+        buyer_type: buyerType,
+        buyer_id: buyerId,
+        buyer_fabric_id: buyerFabricId,
+        processor_name: processorName,
+        processor_address: processorAddress,
+        old_fabric_quantity: oldFabricQuantity,
+        add_fabric_quantity: addFabricQuantity,
+        fabric_quantity: fabricQuantity,
+        total_fabric_quantity: totalFabricQuantity,
+        fabric_length: fabricLength,
+        gsm: fabricGsm,
+        fabric_net_weight: fabricNetWeight,
+        process_weight: processWeight,
+        weight_gain: weightGain,
+        weight_loss: weightLoss,
+        batch_lot_no: batchLotNo,
+        job_details: jobDetails,
+        compacting_details: compactingDetails,
+        type_of_compact: typeOfCompact,
+        invoice_no: invoiceNo,
+        order_details: orderDetails,
+        bill_of_lading: billOfLadding,
+        transport_info: transportInfo,
+        invoice_files: invoiceFiles,
+        other_docs: otherDocs,
+        sales_type: salesType
+      },
+      {
+        where: { id },
+        transaction,
+      }
+    );
+
+    // Delete existing fabric selections
+    await CompactingFabricSelections.destroy({
+      where: { sales_id: id },
+      transaction,
+    });
+
+    // Add new fabric selections
+    if (chooseFabric && Array.isArray(chooseFabric) && chooseFabric.length > 0) {
+      const fabricSelections = chooseFabric.map((fabric: any) => ({
+        process_id: fabric.id,
+        process_type: fabric.salesType,
+        sales_id: id,
+        qty_used: fabric.qtyUsed,
+      }));
+
+      await CompactingFabricSelections.bulkCreate(fabricSelections, { transaction });
+    }
+
+    await transaction.commit();
+    return res.sendSuccess(res, { message: "Compacting process updated successfully" });
+  } catch (error) {
+    await transaction.rollback();
+    console.error("Error updating compacting process:", error);
+    return res.sendError(res, "Error updating compacting process");
+  }
+};
+
 const getGarments = async (req: Request, res: Response) => {
   let fabricId = req.query.fabricId;
   let whereCondition: any = {};
@@ -4626,6 +4816,8 @@ export {
   chooseCompactingFabric,
   fetchCompactingSalesPagination,
   exportCompactingProcess,
+  getCompactingProcessById,
+  updateCompactingProcess,
   fetchWashingTransactions,
   deleteCompactingProcess,
   deleteDyingProcess,

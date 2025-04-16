@@ -46,7 +46,9 @@ import {
     exportWashingTransactionList,
     exportCompactingTransactionList,
     getDyingProcessById,
-    updateDyingProcess
+    updateDyingProcess,
+    getCompactingProcessById,
+    updateCompactingProcess
 } from "../../controllers/fabric";
 import accessControl from "../../middleware/access-control";
 import { Router } from "express";
@@ -102,6 +104,8 @@ router.put('/update-transaction-compacting', updateCompactingTransactionStatus);
 router.get('/choose-compacting-fabric', chooseCompactingFabric);
 router.post('/compacting-process', createCompactingProcess);
 router.get('/compacting-process', fetchCompactingSalesPagination);
+router.get('/compacting-process/:id', getCompactingProcessById);
+router.put('/compacting-process/:id', updateCompactingProcess);
 router.get('/export-compacting-process', exportCompactingProcess);
 router.delete('/delete-compacting-process', deleteCompactingProcess);
 router.get('/compacting-dashboard/export/transaction', exportCompactingTransactionList);
