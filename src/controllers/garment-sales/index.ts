@@ -2553,6 +2553,7 @@ const getGarmentProcessTracingChartData = async (req: Request, res: Response) =>
 
       const fabricChartPromises = garmentSelection?.map(async (process: any) => {
         const { processor, fabric_id } = process?.dataValues;
+        console.log(process?.dataValues)
 
         if (['dying', 'printing', 'washing', 'compacting'].includes(processor)) {
           if (fabric_id) {
