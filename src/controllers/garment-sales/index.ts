@@ -2535,7 +2535,15 @@ const getGarmentProcessTracingChartData = async (req: Request, res: Response) =>
       return res.sendError(res, "Need Reel Lot No");
     }
 
-    let garments = await GarmentProcess.findAll({ where: query });
+    let include = [
+      {
+        model: Garment,
+        as: "garment",
+        attributes: ["id", "name"]
+      },
+    ];
+
+    let garments = await GarmentProcess.findAll({ where: query, include });
 
     garments = await Promise.all(garments?.map(async (el: any) => {
       el = el?.toJSON();
@@ -2593,10 +2601,11 @@ const getGarmentProcessTracingChartData = async (req: Request, res: Response) =>
     }));
 
     const key = Object.keys(req.query)[0];
-    res.send(formatDataForGarment(req.query[key], garments));
-  } catch (error) {
-    console.error("Error processing garment data: ", error);
-    res.status(500).send({ error: "An error occurred while processing garment data." });
+    let data = formatDataForGarment(req.query[key], garments);  
+    return res.sendSuccess(res, data);
+  } catch (error: any) {
+    console.log(error);
+    return res.sendError(res, "An error occurred while processing garment data.", error);
   }
 };
 
@@ -4597,8 +4606,25 @@ const _getGarmentProcessForwardChainData = async (reelLotNo: string) => {
     return garments && garments.length > 0 ? [formatForwardChainDataGarment(reelLotNo,obj)] : []
   } catch (error) {
     console.log("Error processing garment data: ", error);
+    return null
   }
 };
+
+const getGarmentProcessForwardChainingData = async (
+  req: Request,
+  res: Response
+) => {
+  const { reel_lot_no }: any = req.query;
+  if (!reel_lot_no) {
+    return res.sendError(res, "Reel Lot No is required");
+  }
+  const data = await _getGarmentProcessForwardChainData(reel_lot_no);
+  if(!data){
+    return res.sendError(res, "Data not generated");
+  }
+  return res.sendSuccess(res, data);
+};
+
 
 
 export {
@@ -4634,5 +4660,6 @@ export {
   exportGarmentTransactionList,
   getCOCDocumentData,
   updateCOCDoc,
-  _getGarmentProcessForwardChainData
+  _getGarmentProcessForwardChainData,
+  getGarmentProcessForwardChainingData
 };

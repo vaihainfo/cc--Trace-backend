@@ -246,8 +246,10 @@ export const formatDataFromKnitter = (title: any, data: any, type?: string, widt
 
 export const formatDataForGarment = (title: any, data: any) : any => {
     let treeData = {
-        name: title,
-        type: 'garment_image',
+        name: `<div><b>${data[0]?.garment?.name}</b><br/>${title}<div>`,
+        processor_name: data[0]?.garment?.name,
+        img_type: 'garment_image',
+        type: 'Garment',
         width: 300,
         height: 100,
         isRoot: true,
