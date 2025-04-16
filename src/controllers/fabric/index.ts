@@ -3118,7 +3118,7 @@ const getWashData = async (fabrics: any) => {
     }
     let weavKnit = [...knitData, ...weavData];
 
-    let weavKnitChart = weavKnit && weavKnit.length > 0 ? weavKnit.map(((el: any) => el.type === 'knitter' ? formatDataFromKnitter(el.knit_name, el) : formatDataFromWeaver(el.weav_name, el))) : [];
+    let weavKnitChart = weavKnit && weavKnit.length > 0 ? weavKnit.map(((el: any) => el.type === 'knitter' ? formatDataFromKnitter(el.knit_name, el, "fabric") : formatDataFromWeaver(el.weav_name, el, "fabric"))) : [];
 
     data.weavKnit = data && data.weavKnitChart ? [...data.weavKnit, ...weavKnit] : weavKnit;
     data.weavKnitChart = data && data.weavKnitChart ? [...data.weavKnitChart, ...weavKnitChart] : weavKnitChart;
@@ -3218,7 +3218,7 @@ const getDyingData = async (fabrics: any) => {
     }
     let weavKnit = [...knitData, ...weavData];
 
-    let weavKnitChart = weavKnit && weavKnit.length > 0 ? weavKnit.map(((el: any) => el.type === 'knitter' ? formatDataFromKnitter(el.knit_name, el) : formatDataFromWeaver(el.weav_name, el))) : [];
+    let weavKnitChart = weavKnit && weavKnit.length > 0 ? weavKnit.map(((el: any) => el.type === 'knitter' ? formatDataFromKnitter(el.knit_name, el, "fabric") : formatDataFromWeaver(el.weav_name, el, "fabric"))) : [];
 
     data = {
       weavKnit,
@@ -3399,7 +3399,14 @@ const _getFabricProcessTracingChartData = async (type: any, id: any) => {
 
 const getFabricProcessTracingChartData = async (req: Request, res: Response) => {
   const { type, id } = req.query;
-  res.send(await _getFabricProcessTracingChartData(type, id));
+  if (!type) {
+    return res.sendError(res, "type is required");
+  }
+  if (!id) {
+    return res.sendError(res, "Id is missing");
+  }
+  let data = await _getFabricProcessTracingChartData(type, id);
+  return res.sendSuccess(res, data);
 }
 
 
@@ -4175,7 +4182,14 @@ if (Array.isArray(id)) {
 
 const getFabricProcessForwardChainingData = async (req: Request, res: Response) => {
   const { type, id } = req.query;
-  res.send(await _getFabricProcessForwardChainData(type, id));
+  if (!type) {
+    return res.sendError(res, "type is required");
+  }
+  if (!id) {
+    return res.sendError(res, "Id is missing");
+  }
+  let data = await _getFabricProcessForwardChainData(type, id);
+  return res.sendSuccess(res, data);
 }
 
 

@@ -154,14 +154,14 @@ export const formatDataForSpinnerProcess = (reelLotNo: any, data: any): any => {
     // return treeData;
 }
 
-export const formatDataFromKnitter = (title: any, data: any, width: number = 300, height: number =100,type?: any) : any => {
+export const formatDataFromKnitter = (title: any, data: any, type?: string, width: number = 300, height: number =100,) : any => {
     let flattenedArray;
     let name;
     let processorName = "";
     if(type=='fabric'){
       flattenedArray = data?.spin?.flat();
-      name=title
-      processorName=data?.knitter?.name
+      name=""
+      processorName=data?.knit_name
     }else{
       flattenedArray = data[0]?.spin?.flat();
       name=data[0]?.reel_lot_no
@@ -186,23 +186,33 @@ export const formatDataFromKnitter = (title: any, data: any, width: number = 300
  }
  
  
- export const formatDataFromWeaver = (title: any, data: any, width: number = 300, height: number =100,type?: any) : any => {
+ export const formatDataFromWeaver = (title: any, data: any, type?: string, width: number = 300, height: number =100) : any => {
 
     let flattenedArray;
+    let name;
     let processorName = "";
-    if (data?.spin) {
-        flattenedArray = data.spin.flat();
-        processorName=data?.weav_name
-    } else if (data[0]?.spin) {
-        flattenedArray = data[0].spin.flat();
-        processorName=data[0]?.weav_name
-    } else {
-        flattenedArray = [];
+    if(type=='fabric'){
+      flattenedArray = data?.spin?.flat();
+      name=""
+      processorName=data?.weav_name
+    }else{
+      flattenedArray = data[0]?.spin?.flat();
+      name=data[0]?.reel_lot_no
+      processorName=data[0]?.weaver?.name
     }
+    // if (data?.spin) {
+    //     flattenedArray = data.spin.flat();
+    //     processorName=data?.weav_name
+    // } else if (data[0]?.spin) {
+    //     flattenedArray = data[0].spin.flat();
+    //     processorName=data[0]?.weav_name
+    // } else {
+    //     flattenedArray = [];
+    // }
 
     let treeData = {
         //  name: title,
-         name: `<div>${processorName ? "<b>" + processorName + "</b><br/>" : ""}${title}<div>`,
+         name: `<div>${processorName ? "<b>" + processorName + "</b><br/>" : ""}${name}<div>`,
          processor_name: processorName,
          img_type: 'weaver_image',
          type: 'Weaver',
@@ -222,7 +232,7 @@ export const formatDataFromKnitter = (title: any, data: any, width: number = 300
  export const formartDataForFabric = (title: any, data: any, width: number = 300, height: number =100) : any => {
      let treeData = {
         //  name: title,
-         name: `<div>${data[0] ? "<b>" + data[0].fabric_name + "</b><br/>" : ""}${title}<div>`,
+         name: `<div>${data[0] ? "<b>" + data[0].fabric_name + "</b>" : ""}<div>`,
          processor_name: data[0] ? data[0].fabric_name : "",
          img_type: 'fabric_image',
          type: 'Fabric',
