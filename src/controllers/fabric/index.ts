@@ -2577,23 +2577,19 @@ const getCompactingProcessById = async (req: Request, res: Response) => {
     const include = [
       {
         model: Program,
-        as: "program",
-        attributes: ["id", "program_name"],
+        as: "program"
       },
       {
         model: Season,
         as: "season",
-        attributes: ["id", "name"],
+      },
+      {
+        model: Fabric,
+        as: "compacting",
       },
       {
         model: Garment,
         as: "buyer",
-        attributes: ["id", "name"],
-      },
-      {
-        model: Fabric,
-        as: "buyer_fabric",
-        attributes: ["id", "name"],
       }
     ];
 
