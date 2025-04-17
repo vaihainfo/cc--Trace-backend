@@ -2265,20 +2265,23 @@ const generatePscpProcurementLiveTracker = async () => {
       const data = await sequelize.query(
         `
         WITH
-          filtered_ginners AS (
-            SELECT
-              g.id,
-              g.name,
-              g.program_id,
-              s.state_name,
-              c.county_name,
-              p.program_name
-            FROM
-              ginners g
-              JOIN states s ON g.state_id = s.id
-              JOIN countries c ON g.country_id = c.id
-              JOIN programs p ON p.id = ANY(g.program_id)
-          ),
+        filtered_ginners AS (
+          SELECT
+            g.id,
+            g.name,
+            g.program_id,
+            s.state_name,
+            c.county_name,
+            (
+              SELECT STRING_AGG(p.program_name, ', ')
+              FROM programs p
+              WHERE p.id = ANY(g.program_id)
+            ) AS program_name
+          FROM
+            ginners g
+            JOIN states s ON g.state_id = s.id
+            JOIN countries c ON g.country_id = c.id
+        ),
           procurement_data AS (
             SELECT
               t.mapped_ginner,
