@@ -1,6 +1,7 @@
 import { DataTypes  } from 'sequelize';
 import db  from '../util/dbConn';
 import Season from './season.model';
+import Ginner from './ginner.model';
 
 const FailedRecords = db.define('failed_records', {
   id: {
@@ -28,11 +29,18 @@ const FailedRecords = db.define('failed_records', {
   body:{
     type: DataTypes.JSON,
   },
+  ginner_id:{
+    type: DataTypes.INTEGER,
+  },
 });
 
 FailedRecords.belongsTo(Season, {
   foreignKey: "season_id",
   as: "season",
+});
+FailedRecords.belongsTo(Ginner, {
+  foreignKey: "ginner_id",
+  as: "ginner",
 });
 
 FailedRecords.sync();

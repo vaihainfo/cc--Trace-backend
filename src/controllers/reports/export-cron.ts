@@ -92,8 +92,8 @@ const exportReportsOnebyOne = async () => {
  
   await generatePremiumValidationData();
 
-  await generateFaildReport("Farmer");
-  await generateFaildReport("Procurement");
+  await generateFaildFarmerReport();
+  await generateFaildProcurementReport();
   // await generateExportFarmer();
 
   // Procurement Reports 
@@ -1509,13 +1509,13 @@ const generateNonOrganicFarmerReport = async () => {
   }
 };
 
-const generateFaildReport = async (type: string) => {
+const generateFaildFarmerReport = async () => {
 
   try {
     const maxRowsPerWorksheet = 500000; // Maximum number of rows per worksheet in Excel
 
     const workbook = new ExcelJS.stream.xlsx.WorkbookWriter({
-      stream: fs.createWriteStream(`./upload/${type}-failed-records-test.xlsx`)
+      stream: fs.createWriteStream(`./upload/Farmer-failed-records-test.xlsx`)
     });
 
     let worksheetIndex = 0;
@@ -1523,7 +1523,7 @@ const generateFaildReport = async (type: string) => {
     let offset = 0;
 
     const whereCondition = {
-      type: type
+      type: 'Farmer'
     };
 
     let hasNextBatch = true;
@@ -1590,8 +1590,122 @@ const generateFaildReport = async (type: string) => {
     await workbook.commit()
       .then(() => {
         // Rename the temporary file to the final filename
-        fs.renameSync(`./upload/${type}-failed-records-test.xlsx`, `./upload/${type}-failed-records.xlsx`);
-        console.log(`${type} report generation completed.`);
+        fs.renameSync(`./upload/Farmer-failed-records-test.xlsx`, `./upload/Farmer-failed-records.xlsx`);
+        console.log(`Farmer report generation completed.`);
+      })
+      .catch(error => {
+        console.log('Failed generation?.');
+        throw error;
+      });
+  } catch (error: any) {
+    console.log(error);
+  }
+}
+
+
+const generateFaildProcurementReport = async () => {
+
+  try {
+    const maxRowsPerWorksheet = 500000; // Maximum number of rows per worksheet in Excel
+
+    const workbook = new ExcelJS.stream.xlsx.WorkbookWriter({
+      stream: fs.createWriteStream(`./upload/Procurement-failed-records-test.xlsx`)
+    });
+
+    let worksheetIndex = 0;
+    const batchSize = 5000;
+    let offset = 0;
+
+    const whereCondition = {
+      type: 'Procurement'
+    };
+
+    let hasNextBatch = true;
+    while (hasNextBatch) {
+      const farmers = await FailedRecords.findAll({
+        where: whereCondition,
+        attributes: ['createdAt', 'type', 'farmer_code', 'farmer_name', 'reason','ginner_id'],
+        include: [{
+          model: Season,
+          as: "season",
+          attributes: ["id", "name"]
+        },
+        {
+            model: Ginner,
+            as: "ginner",
+            attributes: ["id", "name","country_id","state_id"],
+            include: [{
+                model: Country,
+                as: "country",
+                attributes: ["id", "county_name"]
+                },
+                { 
+                model: State,
+                as: "state",
+                attributes: ["id", "state_name"],
+                },
+            ],
+        }
+      ],
+        // order: [
+        //   ['id', "desc"]
+        // ],
+        offset: offset,
+        limit: batchSize,
+      });
+
+      if (farmers.length === 0) {
+        hasNextBatch = false;
+        break;
+      }
+
+      if (offset % maxRowsPerWorksheet === 0) {
+        worksheetIndex++;
+      }
+
+      let currentWorksheet = workbook.getWorksheet(`Sheet${worksheetIndex}`);
+      if (!currentWorksheet) {
+        currentWorksheet = workbook.addWorksheet(`Sheet${worksheetIndex}`);
+        if (worksheetIndex == 1) {
+          currentWorksheet.mergeCells('A1:J1');
+          const mergedCell = currentWorksheet.getCell('A1');
+          mergedCell.value = 'CottonConnect | Failed Records';
+          mergedCell.font = { bold: true };
+          mergedCell.alignment = { horizontal: 'center', vertical: 'middle' };
+        }
+        // Set bold font for header row
+        const headerRow = currentWorksheet.addRow([
+          "Sr No.", "Country", "State", "Upload Date", "Upload Type", "Season", "Farmer Code", "Farmer Name", "Ginner", "Reason" 
+        ]);
+        headerRow.font = { bold: true };
+      }
+
+      for await (const [index, rows] of farmers.entries()) {
+        const rowValues = [
+          offset + index + 1,
+          rows.ginner ? rows.ginner.country.county_name : '',
+          rows.ginner? rows.ginner.state.state_name : '',
+          rows.createdAt ? rows.createdAt.toISOString() : '',
+          rows.type ? rows.type : '',
+          rows.season ? rows.season.name : '',
+          rows.farmer_code ? rows.farmer_code : '',
+          rows.farmer_name ? rows.farmer_name : '',
+          rows.ginner ? rows.ginner.name : '',
+          rows.reason ? rows.reason : '',
+        ];
+
+        currentWorksheet.addRow(rowValues).commit();
+      }
+
+      offset += batchSize;
+    }
+
+    // Save the workbook
+    await workbook.commit()
+      .then(() => {
+        // Rename the temporary file to the final filename
+        fs.renameSync(`./upload/Procurement-failed-records-test.xlsx`, `./upload/Procurement-failed-records.xlsx`);
+        console.log(`Procurement report generation completed.`);
       })
       .catch(error => {
         console.log('Failed generation?.');
