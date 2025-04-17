@@ -89,3 +89,4 @@ jobs:
           SSH_HOST: ${{ secrets.SSH_HOST_STAGING_SERVER }}
         run: |
           ssh ${SSH_USER}@${SSH_HOST} "sudo ls -la /home/ubuntu/tracebalebackend-staging"
+          

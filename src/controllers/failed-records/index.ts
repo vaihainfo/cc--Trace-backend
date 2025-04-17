@@ -5,6 +5,9 @@ import * as fs from "fs";
 import * as path from "path";
 import FailedRecords from "../../models/failed-records.model";
 import Season from "../../models/season.model";
+import Ginner from "../../models/ginner.model";
+import Country from "../../models/country.model";
+import State from "../../models/state.model";
 import ExportData from "../../models/export-data-check.model";
 
 const saveFailedRecord = async (data: any) => {
@@ -15,6 +18,7 @@ const saveFailedRecord = async (data: any) => {
             type: data.type,
             farmer_code: data.farmerCode ? data.farmerCode : null,
             farmer_name: data.farmerName ? data.farmerName : null,
+            ginner_id: data.ginnerID ? data.ginnerID : null,
             reason: data.reason ? data.reason : null,
             body: body
         };
@@ -30,7 +34,7 @@ const fetchFailedRecords = async (req: Request, res: Response) => {
     const searchTerm = req.query.search || "";
     const page = Number(req.query.page) || 1;
     const limit = Number(req.query.limit) || 10;
-    const { type, seasonId, startDate, endDate }: any = req.query;
+    const { type, seasonId, startDate, endDate, ginnerId, countyId, stateId }: any = req.query;
     const offset = (page - 1) * limit;
     const whereCondition: any = {};
 
@@ -50,6 +54,25 @@ const fetchFailedRecords = async (req: Request, res: Response) => {
                 .map((id: any) => parseInt(id, 10));
             whereCondition.season_id = { [Op.in]: idArray };
         }
+
+        if (ginnerId) {
+            whereCondition.ginner_id = ginnerId;
+        }
+                   
+          if (countyId) {
+            const idArray: number[] = countyId
+              .split(",")
+              .map((id: any) => parseInt(id, 10));
+            whereCondition["$ginner.country_id$"] = { [Op.in]: idArray };
+          }
+          
+          if (stateId) {
+            console.log('stateId',stateId);
+            const idArray: number[] = stateId
+              .split(",")
+              .map((id: any) => parseInt(id, 10));
+            whereCondition["$ginner.state_id$"] = { [Op.in]: idArray };
+          }
 
         if (type) {
             const idArray: string[] = type
@@ -72,7 +95,24 @@ const fetchFailedRecords = async (req: Request, res: Response) => {
                 model: Season,
                 as: "season",
                 attributes: ["id", "name"]
-            }],
+            },
+            {
+                model: Ginner,
+                as: "ginner",
+                attributes: ["id", "name","country_id","state_id"],
+                include: [{
+                    model: Country,
+                    as: "country",
+                    attributes: ["id", "county_name"]
+                    },
+                    { 
+                    model: State,
+                    as: "state",
+                    attributes: ["id", "state_name"],
+                    },
+                ],
+            }
+        ],
             order: [
                 ['id', "desc"]
             ],
@@ -91,7 +131,7 @@ const exportFailedRecords = async (req: Request, res: Response) => {
     const searchTerm = req.query.search || "";
     const page = Number(req.query.page) || 1;
     const limit = Number(req.query.limit) || 10;
-    const { exportType, type, seasonId, startDate, endDate }: any = req.query;
+    const { exportType, type, seasonId, startDate, endDate, ginnerId, countyId, stateId }: any = req.query;
     const offset = (page - 1) * limit;
     const whereCondition: any = {};
 
@@ -121,6 +161,24 @@ const exportFailedRecords = async (req: Request, res: Response) => {
                 whereCondition.season_id = { [Op.in]: idArray };
             }
 
+            if (ginnerId) {
+                whereCondition.ginner_id = ginnerId;
+            }
+                       
+            if (countyId) {
+            const idArray: number[] = countyId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition["$ginner.country_id$"] = { [Op.in]: idArray };
+            }
+            
+            if (stateId) {
+            const idArray: number[] = stateId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition["$ginner.state_id$"] = { [Op.in]: idArray };
+            }
+
             if (type) {
                 const idArray: string[] = type
                     .split(",")
@@ -139,25 +197,42 @@ const exportFailedRecords = async (req: Request, res: Response) => {
             // Create the excel workbook file
             const workbook = new ExcelJS.Workbook();
             const worksheet = workbook.addWorksheet("Sheet1");
-            worksheet.mergeCells('A1:G1');
+            worksheet.mergeCells('A1:J1');
             const mergedCell = worksheet.getCell('A1');
             mergedCell.value = 'CottonConnect | Failed Records';
             mergedCell.font = { bold: true };
             mergedCell.alignment = { horizontal: 'center', vertical: 'middle' };
             // Set bold font for header row
             const headerRow = worksheet.addRow([
-                "Sr No.", "Upload Date", "Upload Type", "Season", "Farmer Code", "Farmer Name", "Reason"
+                "Sr No.", "Country", "State", "Upload Date", "Upload Type", "Season", "Farmer Code", "Farmer Name", "Ginner", "Reason" 
             ]);
             headerRow.font = { bold: true };
 
             const { count, rows } = await FailedRecords.findAndCountAll({
                 where: whereCondition,
-                attributes: ['createdAt', 'type', 'farmer_code', 'farmer_name', 'reason'],
+                attributes: ['createdAt', 'type', 'farmer_code', 'farmer_name', 'reason','ginner_id'],
                 include: [{
                     model: Season,
                     as: "season",
-                    attributes: ["id", "name"]
-                }],
+                    attributes: ["id", "name"],
+                },
+                {
+                    model: Ginner,
+                    as: "ginner",
+                    attributes: ["id", "name","country_id","state_id"],
+                    include: [{
+                        model: Country,
+                        as: "country",
+                        attributes: ["id", "county_name"]
+                        },
+                        { 
+                        model: State,
+                        as: "state",
+                        attributes: ["id", "state_name"],
+                        },
+                    ],
+                }
+                ],
                 order: [
                     ['id', "desc"]
                 ],
@@ -171,11 +246,14 @@ const exportFailedRecords = async (req: Request, res: Response) => {
                 if (row && row.createdAt) {
                     const rowValues = Object.values({
                         index: i + 1,
+                        country:row.ginner ? row.ginner.country.county_name : '',
+                        state:row.ginner? row.ginner.state.state_name : '',
                         date: row.createdAt,
                         type: row.type || '',
                         season: row.season ? row.season.name : '',
                         code: row.farmer_code || '',
                         name: row.farmer_name || '',
+                        ginnername: row.ginner ? row.ginner.name : '',
                         reason: row.reason || '',
                     });
                     worksheet.addRow(rowValues);

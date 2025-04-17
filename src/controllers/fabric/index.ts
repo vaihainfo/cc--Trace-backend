@@ -2577,7 +2577,7 @@ const getCompactingProcessById = async (req: Request, res: Response) => {
     const include = [
       {
         model: Program,
-        as: "program",
+        as: "program"
       },
       {
         model: Season,
@@ -2614,8 +2614,8 @@ const getCompactingProcessById = async (req: Request, res: Response) => {
       chooseFabric: selectedFabrics,
       buyerId: processData.buyer_id,
       buyerName: processData.buyer?.name,
-      buyerFabricId: processData.compacting_id,
-      buyerFabricName: processData.compacting?.name,
+      buyerFabricId: processData.buyer_fabric_id,
+      buyerFabricName: processData.buyer_fabric?.name,
       seasonId: processData.season_id,
       programId: processData.program_id,
       // Ensure document fields are explicitly included

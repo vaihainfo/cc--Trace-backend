@@ -17,6 +17,7 @@ import {
     getProgram,
     updateGinSaleBale,
     chooseBale,
+    updateBale,
     deleteGinnerProcess,
     getSpinner,
     getVillageAndFarmer,
@@ -90,7 +91,7 @@ router.get('/heap-reel', getReelHeapId);
 router.get('/get-program', getProgram);
 router.put('/sales/update-bale', updateGinSaleBale);
 router.get('/sales/choose-bale', chooseBale);
-router.get('/sales/add-bale', chooseBale);
+router.get('/sales/add-bale', updateBale);
 router.get('/get-spinner', getSpinner);
 router.get('/get-village-farmer', getVillageAndFarmer);
 router.get('/get-villages', getMappedVillages);

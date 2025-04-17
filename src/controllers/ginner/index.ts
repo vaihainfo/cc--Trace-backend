@@ -1422,6 +1422,237 @@ const chooseBale = async (req: Request, res: Response) => {
   }
 };
 
+const updateBale = async (req: Request, res: Response) => {
+  const searchTerm = req.query.search || "";
+  const { ginnerId, seasonId, programId, saleId }: any = req.query;
+  const whereCondition: any = {};
+  try {
+
+    if (!ginnerId) {
+      return res.sendError(res, "Ginner Id is required");
+    }
+    if (!programId) {
+      return res.sendError(res, "Programme Id is required");
+    }
+
+    const [results, metadata] = await sequelize.query(
+      `SELECT 
+          jsonb_build_object(
+              'ginprocess', jsonb_build_object(
+                  'id', combined_data.process_id,
+                  'lot_no', combined_data.lot_no,
+                  'date', combined_data.date,
+                  'season_id', combined_data.season_id,
+                  'season_name', combined_data.season_name,
+                  'press_no', combined_data.press_no,
+                  'reel_lot_no', combined_data.reel_lot_no,
+                  'greyout_status', combined_data.greyout_status,
+                  'verification_status', combined_data.verification_status,
+                  'te_process_verified_status', combined_data.te_process_verified_status,
+                  'te_verified_total_qty', combined_data.te_verified_total_qty,
+                  'te_verified_bales', combined_data.te_verified_bales,
+                  'gin_process_verified_status', combined_data.gin_process_verified_status,
+                  'gin_verified_total_qty', combined_data.gin_verified_total_qty,
+                  'gin_verified_bales', combined_data.gin_verified_bales,
+                  'scm_process_verified_status', combined_data.scm_process_verified_status,
+                  'scm_verified_total_qty', combined_data.scm_verified_total_qty,
+                  'scm_verified_bales', combined_data.scm_verified_bales,
+                  'scd_process_verified_status', combined_data.scd_process_verified_status,
+                  'scd_verified_total_qty', combined_data.scd_verified_total_qty,
+                  'scd_verified_bales', combined_data.scd_verified_bales
+              ),
+             'weight', SUM(CAST(combined_data.weight AS DOUBLE PRECISION)),
+            'bales', jsonb_agg(jsonb_build_object(
+                'id', combined_data.bale_id,
+                'process_id', combined_data.process_id,
+                'bale_no', combined_data.bale_no,
+                'weight', combined_data.weight,
+                'is_all_rejected', combined_data.is_all_rejected,
+                'sold_status', combined_data.sold_status,
+                'greyout_status', combined_data.greyout_status,
+                'sales_id', combined_data.sales_id,
+                'is_gin_to_gin', combined_data.is_gin_to_gin,
+                'te_verified_status', combined_data.te_verified_status,
+                'te_verified_weight', combined_data.te_verified_weight,
+                'gin_verified_status', combined_data.gin_verified_status,
+                'gin_verified_weight', combined_data.gin_verified_weight,
+                'scm_verified_status', combined_data.scm_verified_status,
+                'scm_verified_weight', combined_data.scm_verified_weight,
+                'scd_verified_status', combined_data.scd_verified_status,
+                'scd_verified_weight', combined_data.scd_verified_weight
+            ) ORDER BY combined_data.bale_id ASC)
+          ) AS result
+      FROM (
+          -- First Query: Direct gin-bales
+          SELECT 
+              gp.id AS process_id,
+              gp.lot_no,
+              gp.date,
+              gp.press_no,
+              gp.reel_lot_no,
+              gp.greyout_status,
+              gp.verification_status,
+              gp.te_verified_status AS te_process_verified_status,
+              gp.te_verified_total_qty,
+              gp.te_verified_bales,
+              gp."gin_verified_status" AS gin_process_verified_status,
+              gp."gin_verified_total_qty",
+              gp."gin_verified_bales",
+              gp."scm_verified_status" AS scm_process_verified_status,
+              gp."scm_verified_total_qty",
+              gp."scm_verified_bales",
+              gp."scd_verified_status" AS scd_process_verified_status,
+              gp."scd_verified_total_qty",
+              gp."scd_verified_bales",
+              gb.id AS bale_id,
+              gb.bale_no,
+              gb.weight,
+              gb.sold_status,
+              gb.te_verified_status,
+              gb.te_verified_weight,
+              gb."gin_verified_status",
+              gb."gin_verified_weight",
+              gb."scm_verified_status",
+              gb."scm_verified_weight",
+              gb."scd_verified_status",
+              gb."scd_verified_weight",
+              gb."gin_level_verify",
+              gb.is_all_rejected,
+              g.id AS ginner_id,
+              gp.program_id,
+              gp.season_id,
+              s.name AS season_name,
+              null AS sales_id,
+              false AS is_gin_to_gin -- Add a flag to identify the source
+          FROM 
+              gin_processes gp
+          JOIN 
+              "gin-bales" gb ON gp.id = gb.process_id
+          LEFT JOIN 
+              "bale_selections" bs ON bs.bale_id = gb.id AND bs.sales_id = ${saleId}
+          JOIN 
+              ginners g ON gp.ginner_id = g.id
+          JOIN 
+              seasons s ON gp.season_id = s.id AND gp.season_id IN (${seasonId})
+          JOIN 
+              programs p ON gp.program_id = p.id
+          WHERE 
+              gp.ginner_id = ${ginnerId}
+              AND gp.program_id IN (${programId})              
+	            AND (gb.sold_by_sales_id = ${saleId} OR gb.sold_by_sales_id IS NULL)
+              AND gp.id IN (
+                SELECT gp_sub.id
+                FROM "bale_selections" bs_sub
+                JOIN "gin-bales" gb_sub ON gb_sub.id = bs_sub.bale_id
+                JOIN gin_processes gp_sub ON gp_sub.id = gb_sub.process_id
+                WHERE bs_sub.sales_id = ${saleId}
+            )
+
+          UNION ALL
+
+          -- Second Query: Gin-to-Gin sales
+          SELECT 
+              gp.id AS process_id,
+              gp.lot_no,
+              gp.date,
+              gp.press_no,
+              gp.reel_lot_no,
+              gp.greyout_status,
+              gp.verification_status,
+              gp.te_verified_status AS te_process_verified_status,
+              gp.te_verified_total_qty,
+              gp.te_verified_bales,
+              gp."gin_verified_status" AS gin_process_verified_status,
+              gp."gin_verified_total_qty",
+              gp."gin_verified_bales",
+              gp."scm_verified_status" AS scm_process_verified_status,
+              gp."scm_verified_total_qty",
+              gp."scm_verified_bales",
+              gp."scd_verified_status" AS scd_process_verified_status,
+              gp."scd_verified_total_qty",
+              gp."scd_verified_bales",
+              gb.id AS bale_id,
+              gb.bale_no,
+              gb.weight,
+              gb.sold_status,
+              gb.te_verified_status,
+              gb.te_verified_weight,
+              gb."gin_verified_status",
+              gb."gin_verified_weight",
+              gb."scm_verified_status",
+              gb."scm_verified_weight",
+              gb."scd_verified_status",
+              gb."scd_verified_weight",
+              gb."gin_level_verify",
+              gb.is_all_rejected,
+              g.id AS ginner_id,
+              gp.program_id,
+              gp.season_id,
+              s.name AS season_name,
+              gs.id AS sales_id,
+              true AS is_gin_to_gin -- Add a flag to identify the source
+          FROM 
+              gin_to_gin_sales gtg
+          JOIN 
+              gin_processes gp ON gtg.process_id = gp.id
+          JOIN 
+              "gin-bales" gb ON gtg.bale_id = gb.id
+          LEFT JOIN 
+              "bale_selections" bs ON bs.bale_id = gb.id AND bs.sales_id = ${saleId}
+          JOIN 
+              gin_sales gs ON gtg.sales_id = gs.id
+          JOIN 
+              ginners g ON gtg.new_ginner_id = g.id
+          JOIN 
+              seasons s ON gp.season_id = s.id AND gp.season_id IN (${seasonId})
+          JOIN 
+              programs p ON gp.program_id = p.id
+          WHERE 
+          (
+              gtg.new_ginner_id = ${ginnerId}
+              AND gp.program_id IN (${programId})
+              AND gb.sold_status = true
+              AND gtg.gin_accepted_status = true
+              AND gtg.gin_sold_status IS NULL
+              AND gp.id IN (
+                SELECT gp_sub.id
+                FROM "bale_selections" bs_sub
+                JOIN "gin-bales" gb_sub ON gb_sub.id = bs_sub.bale_id
+                JOIN gin_processes gp_sub ON gp_sub.id = gb_sub.process_id
+                WHERE bs_sub.sales_id = ${saleId}
+            )
+          ) OR (
+              gtg.old_ginner_id = ${ginnerId}
+              AND gp.program_id IN (${programId})
+              AND gb.sold_status = true
+              AND gtg.gin_accepted_status = false
+              AND gtg.gin_sold_status IS NULL
+              AND gp.id IN (
+                SELECT gp_sub.id
+                FROM "bale_selections" bs_sub
+                JOIN "gin-bales" gb_sub ON gb_sub.id = bs_sub.bale_id
+                JOIN gin_processes gp_sub ON gp_sub.id = gb_sub.process_id
+                WHERE bs_sub.sales_id = ${saleId}
+            )
+           )
+      ) combined_data
+      GROUP BY 
+          combined_data.process_id, combined_data.season_name, combined_data.season_id, combined_data.lot_no, combined_data.date, combined_data.press_no, combined_data.reel_lot_no, combined_data.greyout_status,
+          combined_data.te_process_verified_status, combined_data.te_verified_total_qty, combined_data.te_verified_bales, combined_data.gin_process_verified_status, combined_data.gin_verified_total_qty, combined_data.gin_verified_bales, 
+          combined_data.scm_process_verified_status, combined_data.scm_verified_total_qty, combined_data.scm_verified_bales, combined_data.scd_process_verified_status, combined_data.scd_verified_total_qty, combined_data.scd_verified_bales, combined_data.verification_status
+      ORDER BY 
+          combined_data.process_id DESC;
+    `
+    )
+
+    const simplifiedResults = results.map((item: any) => item.result);
+    return res.sendSuccess(res, simplifiedResults); //bales_list
+  } catch (error: any) {
+    console.log(error);
+    return res.sendError(res, error.message, error);
+  }
+};
+
 // const deleteGinnerProcess = async (req: Request, res: Response) => {
 //   try {
 //     let ids = await BaleSelection.count({
@@ -2517,6 +2748,41 @@ const updateGinnerSales = async (req: Request, res: Response) => {
       }
     }
     
+    const [baleRows] = await sequelize.query(
+      `SELECT bale_id FROM bale_selections WHERE sales_id = :saleId`,
+      {
+        replacements: { saleId: req.body.id },
+      }
+    );
+
+    const baleIds = baleRows.map((row: any) => row.bale_id);
+
+    if (baleIds.length > 0) {
+      await GinBale.update(
+        {
+          sold_status: false,
+          is_gin_to_gin_sale:
+            req.body.buyerType?.toLowerCase() === 'ginner' ? false : null,
+          gin_to_gin_sold_status:
+            req.body.buyerType?.toLowerCase() === 'ginner' ? false : null,
+          sold_by_sales_id: null,
+        },
+        {
+          where: {
+            id: {
+              [Op.in]: baleIds,
+            },
+          },
+        }
+      );
+    }
+
+    await sequelize.query(
+      `DELETE FROM bale_selections WHERE sales_id = :saleId`,
+      {
+        replacements: { saleId: req.body.id },
+      }
+    );
 
     for await (const bale of req.body.bales) {
 
@@ -4428,6 +4694,7 @@ export {
   getProgram,
   updateGinSaleBale,
   chooseBale,
+  updateBale,
   deleteGinnerProcess,
   deleteGinSales,
   getSpinner,
@@ -4448,6 +4715,6 @@ export {
   getMappedVillages,
   createGinnerLintCertificate,
   fetchGinnerLintCertificatePagination,
-  deleteLintCertificate
+  deleteLintCertificate,
   getGinnerProcessForwardChainingData
 };
