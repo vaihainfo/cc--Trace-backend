@@ -2578,22 +2578,18 @@ const getCompactingProcessById = async (req: Request, res: Response) => {
       {
         model: Program,
         as: "program",
-        attributes: ["id", "program_name"],
       },
       {
         model: Season,
         as: "season",
-        attributes: ["id", "name"],
+      },
+      {
+        model: Fabric,
+        as: "compacting",
       },
       {
         model: Garment,
         as: "buyer",
-        attributes: ["id", "name"],
-      },
-      {
-        model: Fabric,
-        as: "buyer_fabric",
-        attributes: ["id", "name"],
       }
     ];
 
@@ -2618,8 +2614,8 @@ const getCompactingProcessById = async (req: Request, res: Response) => {
       chooseFabric: selectedFabrics,
       buyerId: processData.buyer_id,
       buyerName: processData.buyer?.name,
-      buyerFabricId: processData.buyer_fabric_id,
-      buyerFabricName: processData.buyer_fabric?.name,
+      buyerFabricId: processData.compacting_id,
+      buyerFabricName: processData.compacting?.name,
       seasonId: processData.season_id,
       programId: processData.program_id,
       // Ensure document fields are explicitly included
