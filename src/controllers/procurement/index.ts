@@ -923,7 +923,25 @@ const uploadTransactionBulk = async (req: Request, res: Response) => {
           reason: "Season cannot be empty"
         }
         saveFailedRecord(failedRecord)
-      } else if (!data.date) {
+      } 
+      else if (!GinnerId) {
+        fail.push({
+          success: false,
+          data: { farmerName: data.farmerName ? data.farmerName : '', farmerCode: data.farmerCode ? data.farmerCode : ''},
+          message: "Ginner name is not correct",
+        });
+        let failedRecord = {
+          type: 'Procurement',
+          season: '',
+          farmerCode: data.farmerCode ? data.farmerCode : '',
+          farmerName: data.farmerName ? data.farmerName : '',
+          ginnerID: GinnerId ? GinnerId.id : '', 
+          body: { ...data },
+          reason: "Ginner name is not correct"
+        }
+        saveFailedRecord(failedRecord)
+      }      
+      else if (!data.date) {
         fail.push({
           success: false,
           data: { farmerName: data.farmerName ? data.farmerName : '', farmerCode: data.farmerCode ? data.farmerCode : ''},
