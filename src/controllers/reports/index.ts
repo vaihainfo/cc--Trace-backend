@@ -3845,14 +3845,14 @@ const exportGinnerSales = async (req: Request, res: Response) => {
         headerRow = worksheet.addRow([
           "Sr No.", "Country", "State", "Process Date", "Data Entry Date", "No of Days", "Lint sale chosen season", "Ginner Name",
           "Invoice No", "Buyer Type", "Sold To", "Bale Lot No", "No of Bales", "Press/Bale No", "Rate/Kg",
-          "Total Quantity", "Vehicle No", "Transporter Name", "Programme", "Agent Detials"
+          "Total Quantity", "Total old weight", "Vehicle No", "Transporter Name", "Programme", "Agent Detials"
         ]);
       }
       else if (isBrand === 'true') {
         headerRow = worksheet.addRow([
           "Sr No.", "Country", "State", "Process Date", "Data Entry Date", "No of Days", "Lint sale chosen season", "Ginner Name",
           "Invoice No", "Buyer Type", "Sold To", "Bale Lot No", "REEL Lot No", "No of Bales", "Press/Bale No", "Rate/Kg",
-          "Total Quantity", "Vehicle No", "Transporter Name", "Programme", "Agent Detials"
+          "Total Quantity", "Total old weight", "Vehicle No", "Transporter Name", "Programme", "Agent Detials"
         ]);
       } else {
         // headerRow = worksheet.addRow([
@@ -3864,7 +3864,7 @@ const exportGinnerSales = async (req: Request, res: Response) => {
         headerRow = worksheet.addRow([
           "Sr No.", "Country", "State", "Process Date", "Data Entry Date", "No of Days", "Lint Process Season", "Lint sale chosen season", "Ginner Name",
           "Invoice No", "Buyer Type", "Sold To", "Bale Lot No", "REEL Lot No", "No of Bales", "Press/Bale No", "Rate/Kg",
-          "Total Quantity", "Other Season Quantity (Kgs)", "Other Season Bales", "Sales Value", "Vehicle No", "Transporter Name", "Programme", "Agent Detials", "Status"
+          "Total Quantity", "Total old weight", "Other Season Quantity (Kgs)", "Other Season Bales", "Sales Value", "Vehicle No", "Transporter Name", "Programme", "Agent Detials", "Status"
         ]);
       }
       headerRow.font = { bold: true };
@@ -4097,6 +4097,7 @@ const exportGinnerSales = async (req: Request, res: Response) => {
             press_no: item.press_no ? item.press_no : '',
             rate: item.rate ? Number(item.rate) : 0,
             lint_quantity: item.lint_quantity ? item.lint_quantity : '',
+            old_weight: item.total_old_weight ? Number(item.total_old_weight) : 0,
             vehicle_no: item.vehicle_no ? item.vehicle_no : '',
             transporter_name: item.transporter_name ? item.transporter_name : '',
             program: item.program ? item.program : '',
@@ -4122,6 +4123,7 @@ const exportGinnerSales = async (req: Request, res: Response) => {
             press_no: item.press_no ? item.press_no : '',
             rate: item.rate ? Number(item.rate) : 0,
             lint_quantity: item.lint_quantity ? item.lint_quantity : '',
+            old_weight: item.total_old_weight ? Number(item.total_old_weight) : 0,
             vehicle_no: item.vehicle_no ? item.vehicle_no : '',
             transporter_name: item.transporter_name ? item.transporter_name : '',
             program: item.program ? item.program : '',
@@ -4150,6 +4152,7 @@ const exportGinnerSales = async (req: Request, res: Response) => {
             press_no: item.press_no ? item.press_no : '',
             rate: item.rate ? Number(item.rate) : 0,
             lint_quantity: item.lint_quantity ? item.lint_quantity : '',
+            old_weight: item.total_old_weight ? Number(item.total_old_weight) : 0,
             other_season_quantity: item.lint_process_seasons?.split(',').length > 1
               ? Number(item.other_season_quantity || item.previous_season_quantity || item.future_season_quantity || null)
               : item.previous_season_quantity
@@ -4201,6 +4204,7 @@ const exportGinnerSales = async (req: Request, res: Response) => {
           press_no: "",
           rate: Number(formatDecimal(totals.total_rate)),
           lint_quantity: Number(formatDecimal(totals.total_lint_quantity)),
+          old_weight: "",
           vehicle_no: "",
           transporter_name: "",
           program: "",
@@ -4226,6 +4230,7 @@ const exportGinnerSales = async (req: Request, res: Response) => {
           press_no: "",
           rate: Number(formatDecimal(totals.total_rate)),
           lint_quantity: Number(formatDecimal(totals.total_lint_quantity)),
+          old_weight: "",
           vehicle_no: "",
           transporter_name: "",
           program: "",
@@ -4254,6 +4259,7 @@ const exportGinnerSales = async (req: Request, res: Response) => {
           press_no: "",
           rate: Number(formatDecimal(totals.total_rate)),
           lint_quantity: Number(formatDecimal(totals.total_lint_quantity)),
+          old_weight: "",
           other_season_quantity: "",
           other_season_bales: "",
           sales_value: Number(formatDecimal(totals.total_Sales_value)),
