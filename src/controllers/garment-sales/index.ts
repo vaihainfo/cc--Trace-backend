@@ -3981,7 +3981,11 @@ const getCOCDocumentData = async (
       gnrTotalQty: '',
       date: '',
       seedCottonQty: 0,
-      fbrcProcessorType:''
+      fbrcProcessorType:'',
+      dyingProcessor: '',
+      dyingTotal: '',
+      dyingBatchLotNo: '',
+      dyingProcess:false
     };
 
     let [result] = await sequelize.query(`
@@ -4042,12 +4046,24 @@ const getCOCDocumentData = async (
       SELECT array_to_string(array_agg(distinct case
                                               when fs.processor = 'knitter' and fs.fabric_id is not null
                                                   then fs.fabric_id
-                end), ',')        as knit_sale_ids,
+                 end), ',')        as knit_sale_ids,
               array_to_string(array_agg(distinct case
                                                       when fs.processor = 'weaver' and fs.fabric_id is not null
                                                           then fs.fabric_id
-                  end), ',') as weaver_sale_ids
-      FROM garment_processes gp
+                  end), ',') as weaver_sale_ids,
+              array_to_string(array_agg(distinct case
+                                                      when fs.processor = 'dying' and fs.fabric_id is not null
+                                                          then fs.fabric_id
+                 end), ',') as dying_sale_ids,
+              array_to_string(array_agg(distinct case
+                                                      when fs.processor = 'printing' and fs.fabric_id is not null
+                                                          then fs.fabric_id
+                  end), ',') as printing_sale_ids,
+               array_to_string(array_agg(distinct case
+                                                      when fs.processor = 'washing' and fs.fabric_id is not null
+                                                          then fs.fabric_id
+                  end), ',') as washing_sale_ids
+              FROM garment_processes gp
               LEFT JOIN fabric_selections fs on gp.id = fs.sales_id
       where gp.id IN (:ids);
     `, {
@@ -4055,6 +4071,35 @@ const getCOCDocumentData = async (
         type: sequelize.QueryTypes.SELECT,
         raw: true
       });
+    }
+
+    if (knitOrWeaData && knitOrWeaData.dying_sale_ids) {
+      [knitOrWeaData]  = await sequelize.query(`
+       SELECT array_to_string(array_agg(distinct case
+                                              when dfs.process_type = 'Knitter' and dfs.process_id is not null
+                                                  then dfs.process_id
+                 end), ',')  as knit_sale_ids,
+              array_to_string(array_agg(distinct case
+                                              when dfs.process_type = 'Weaver' and dfs.process_id is not null
+                                                  then dfs.process_id
+                  end), ',') as weaver_sale_ids,
+              STRING_AGG (ds.batch_lot_no,',') as dyeingbatchlotno,
+              dy.name  as dyeing_processor,
+              sum(dfs.qty_used) as total_dying_weight              
+      from dying_sales ds
+              left join fabrics dy on dy.id = ds.dying_id
+              left join dying_fabric_selections dfs on dfs.sales_id = ds.id
+      where ds.id in (:ids)
+      group by dy.id,dy.name;
+      `, {
+        replacements: { ids: knitOrWeaData.dying_sale_ids.split(',') },
+        type: sequelize.QueryTypes.SELECT
+      });
+      
+      cocRes.dyingProcess = true;
+      cocRes.dyingProcessor = knitOrWeaData.dyeing_processor;
+      cocRes.dyingTotal = knitOrWeaData.total_dying_weight;
+      cocRes.dyingBatchLotNo = knitOrWeaData.dyeingbatchlotno;
     }
 
     const spinSalesIds: any[] = [];
