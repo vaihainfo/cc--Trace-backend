@@ -4507,21 +4507,18 @@ const updatePrintingProcess = async (req: Request, res: Response) => {
     // Update the printing process
     await PrintingSales.update(
       {
-        fabric_id: fabricId,
+        fabric_id: typeof fabricId === 'object' && fabricId !== null ? fabricId.value || null : fabricId,
         program_id: programId,
         season_id: seasonId,
         date,
         garment_order_ref: garmentOrderRef,
         brand_order_ref: brandOrderRef,
         buyer_type: buyerType,
-        buyer_id: buyerId,
-        buyer_fabric_id: buyerFabricId,
+        buyer_id: typeof buyerId === 'object' && buyerId !== null ? buyerId.value || null : buyerId,
+        buyer_fabric_id: typeof buyerFabricId === 'object' && buyerFabricId !== null ? buyerFabricId.value || null : buyerFabricId,
         processor_name: processorName,
         processor_address: processorAddress,
-        old_fabric_quantity: oldFabricQuantity,
-        add_fabric_quantity: addFabricQuantity,
-        fabric_quantity: fabricQuantity,
-        total_fabric_quantity: totalFabricQuantity,
+        
         fabric_length: fabricLength,
         gsm: fabricGsm,
         fabric_net_weight: fabricNetWeight,
