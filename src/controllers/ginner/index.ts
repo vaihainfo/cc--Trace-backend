@@ -3411,7 +3411,7 @@ const _getGinnerProcessTracingChartData = async (
         order: [["id", "desc"]],
         limit: batchSize,
         offset: offset,
-        attributes: ['id', 'reel_lot_no'] // Only fetch necessary fields
+        attributes: ['id', 'reel_lot_no', 'heap_number'] // Only fetch necessary fields
       });
 
       if (ginBatch.length === 0) break;
@@ -3457,6 +3457,7 @@ const _getGinnerProcessTracingChartData = async (
     let formattedData: any = {};
     let obj: any ={};
     obj.gnr_name = allGinData && allGinData.length > 0 ?  [...new Set(allGinData.map((el: any) => el.ginner.name))].join(',') : "";
+    obj.heap_no = allGinData && allGinData.length > 0 ?  [...new Set(allGinData.map((el: any) => el?.heap_number).filter((item: any) => item !== null && item !== undefined))].join(',') : "";
 
     allGinData.forEach((el: any) => {
       el.transaction.forEach((tx: any) => {
@@ -4066,7 +4067,7 @@ const _getGinnerProcessForwardChainData = async (
         order: [["id", "desc"]],
         limit: batchSize,
         offset: offset,
-        attributes: ['id', 'reel_lot_no'] // Only fetch necessary fields
+        attributes: ['id', 'reel_lot_no', 'heap_number'] // Only fetch necessary fields
       });
 
 
@@ -4121,6 +4122,19 @@ const _getGinnerProcessForwardChainData = async (
                 JOIN spin_processes sp ON ls.process_id = sp.id
                 WHERE ls.lint_id IN (${el.id})
               `);
+
+              let [heap] = await sequelize.query(
+                `SELECT STRING_AGG(DISTINCT gp.heap_number, ',') AS heap_number FROM bale_selections bs
+                  LEFT JOIN "gin-bales" gb ON bs.bale_id = gb.id
+                  LEFT JOIN gin_processes gp ON gb.process_id = gp.id
+                  WHERE bs.sales_id IN (${el.id})
+                `);
+
+                if(heap && heap.length > 0){
+                  el.heap_number = heap[0].heap_number;
+                }else{
+                  el.heap_number = null
+                }
           }
 
 
@@ -4146,6 +4160,7 @@ const _getGinnerProcessForwardChainData = async (
     let formattedData: any = {};
     let obj: any ={};
     obj.gnr_name = allGinData && allGinData.length > 0 ?  [...new Set(allGinData.map((el: any) => el.ginner.name))].join(',') : "";
+    obj.heap_no = allGinData && allGinData.length > 0 ?  [...new Set(allGinData.map((el: any) => el?.heap_number).filter((item: any) => item !== null && item !== undefined))].join(',') : "";
     obj.spin = allGinData && allGinData.length > 0 ? allGinData.flatMap(item => item.spin) : []
 
     return formatForwardChainDataGinner(reelLotNo, obj);

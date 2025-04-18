@@ -1,7 +1,9 @@
 export const formatDataForGinnerProcess = (reelLotNo: any, data: any): any => {
     let treeData = {
         // name: reelLotNo,
-        name: `<div><b>${data?.gnr_name}</b><br/>${reelLotNo}<div>`,
+        name: `<div><b>${data?.gnr_name}</b><br/>${reelLotNo}${
+            data.heap_no ? "<br/>" + data.heap_no : ""
+        }<div>`,
         processor_name: data.gnr_name,
         img_type: 'cotton_image',
         type: 'Ginner',
@@ -262,7 +264,9 @@ export const formatDataForGarment = (title: any, data: any) : any => {
 
 export const formatForwardChainDataGinner = (title: any, data: any) : any => {
     let treeData = {
-        name: `<div><b>${data.gnr_name}</b><br/>${title}<div>`,
+        name: `<div><b>${data.gnr_name}</b><br/>${title}${
+            data.heap_no ? "<br/>" + data.heap_no : ""
+        }<div>`,
         processor_name: data.gnr_name,
         img_type: 'cotton_image',
         type: 'Ginner',
