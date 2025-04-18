@@ -3304,7 +3304,7 @@ const getWashData = async (fabrics: any) => {
     }
     let weavKnit = [...knitData, ...weavData];
 
-    let weavKnitChart = weavKnit && weavKnit.length > 0 ? weavKnit.map(((el: any) => el.type === 'knitter' ? formatDataFromKnitter(el.knit_name, el) : formatDataFromWeaver(el.weav_name, el))) : [];
+    let weavKnitChart = weavKnit && weavKnit.length > 0 ? weavKnit.map(((el: any) => el.type === 'knitter' ? formatDataFromKnitter(el.knit_name, el, "fabric") : formatDataFromWeaver(el.weav_name, el, "fabric"))) : [];
 
     data.weavKnit = data && data.weavKnitChart ? [...data.weavKnit, ...weavKnit] : weavKnit;
     data.weavKnitChart = data && data.weavKnitChart ? [...data.weavKnitChart, ...weavKnitChart] : weavKnitChart;
@@ -3404,7 +3404,7 @@ const getDyingData = async (fabrics: any) => {
     }
     let weavKnit = [...knitData, ...weavData];
 
-    let weavKnitChart = weavKnit && weavKnit.length > 0 ? weavKnit.map(((el: any) => el.type === 'knitter' ? formatDataFromKnitter(el.knit_name, el) : formatDataFromWeaver(el.weav_name, el))) : [];
+    let weavKnitChart = weavKnit && weavKnit.length > 0 ? weavKnit.map(((el: any) => el.type === 'knitter' ? formatDataFromKnitter(el.knit_name, el, "fabric") : formatDataFromWeaver(el.weav_name, el, "fabric"))) : [];
 
     data = {
       weavKnit,
@@ -3556,11 +3556,39 @@ const _getFabricProcessTracingChartData = async (type: any, id: any) => {
     if (type === 'compacting') {
       if (fabrics && fabrics[0]) {
         if (fabrics[0].dying_sales_ids && fabrics[0].dying_sales_ids.length > 0) {
-          let ndata = await getDyingData(fabrics);
+          let [compactFabrics] = await sequelize.query(`
+            SELECT 
+                        "fabricprocess"."id" AS "fabricprocess_id",
+                        "fabricprocess"."batch_lot_no" AS "batch_lot_no",
+                        "fabric"."id" AS "fabric_id",
+                        "fabric"."name" AS "fabric_name",
+                        ARRAY_AGG(CAST(CASE 
+                            WHEN LOWER("fabric_selections"."process_type") = 'knitter'
+                            THEN "fabric_selections"."process_id" 
+                            ELSE NULL END AS INTEGER) 
+                        ) FILTER (WHERE LOWER("fabric_selections"."process_type") = 'knitter') 
+                        AS "knit_sales_ids",
+                        ARRAY_AGG(CAST(CASE 
+                            WHEN LOWER("fabric_selections"."process_type") = 'weaver' 
+                            THEN "fabric_selections"."process_id" 
+                            ELSE NULL END AS INTEGER) 
+                        ) FILTER (WHERE LOWER("fabric_selections"."process_type") = 'weaver') 
+                        AS "weav_sales_ids"
+                        FROM dying_fabric_selections fabric_selections
+                        INNER JOIN dying_sales AS "fabricprocess" ON "fabric_selections"."sales_id" = "fabricprocess"."id"
+                        LEFT JOIN "fabrics" AS "fabric" ON "fabricprocess"."dying_id" = "fabric"."id"
+                         WHERE fabric_selections.sales_id IN (${fabrics[0].dying_sales_ids})
+                        GROUP BY 
+                            "fabricprocess"."id",
+                            "fabric"."id";`)
+    
+          if (compactFabrics) {
+            let ndata = await getDyingData(compactFabrics);
 
-          data = {
-            ...data,
-            ...ndata
+            data = {
+              ...data,
+              ...ndata
+            }
           }
         }
         if (fabrics[0].wash_sales_ids && fabrics[0].wash_sales_ids.length > 0) {
@@ -3585,7 +3613,14 @@ const _getFabricProcessTracingChartData = async (type: any, id: any) => {
 
 const getFabricProcessTracingChartData = async (req: Request, res: Response) => {
   const { type, id } = req.query;
-  res.send(await _getFabricProcessTracingChartData(type, id));
+  if (!type) {
+    return res.sendError(res, "type is required");
+  }
+  if (!id) {
+    return res.sendError(res, "Id is missing");
+  }
+  let data = await _getFabricProcessTracingChartData(type, id);
+  return res.sendSuccess(res, data);
 }
 
 
@@ -4935,7 +4970,14 @@ if (Array.isArray(id)) {
       let washingIds = await getWashProcessData(fabrics[0].wash_sales_ids.join(","))
       if(washingIds && washingIds[0] && washingIds[0]?.fabric_sale_ids?.length > 0){
         washData = await _getFabricProcessForwardChainData("washing", washingIds[0]?.fabric_sale_ids)
-      }  
+      }else{
+        let obj = {
+          ...fabrics[0],
+          garmentChart: []
+        }
+
+        washData = [formatForwardChainDataFabric(fabrics[0].fabric_name, obj)]
+      }    
     }
       
 
@@ -4943,6 +4985,13 @@ if (Array.isArray(id)) {
       let printingIds = await getPrintProcessData(fabrics[0].print_sales_ids.join(","))
       if(printingIds && printingIds[0] && printingIds[0]?.fabric_sale_ids?.length > 0){
         printData = await _getFabricProcessForwardChainData("printing", printingIds[0]?.fabric_sale_ids)
+      }else{
+        let obj = {
+          ...fabrics[0],
+          garmentChart: []
+        }
+
+        printData = [formatForwardChainDataFabric(fabrics[0].fabric_name, obj)]
       }   
     }
 
@@ -4950,7 +4999,14 @@ if (Array.isArray(id)) {
       let compactingIds = await getCompactProcessData(type, fabrics[0].compact_sales_ids.join(","))
       if(compactingIds && compactingIds[0] && compactingIds[0]?.fabric_sale_ids?.length > 0){
         compactData = await _getFabricProcessForwardChainData("compacting", compactingIds[0]?.fabric_sale_ids)
-      }    
+      }else{
+        let obj = {
+          ...fabrics[0],
+          garmentChart: []
+        }
+
+        compactData = [formatForwardChainDataFabric(fabrics[0].fabric_name, obj)]
+      } 
     }
 
     if(fabrics[0].garment_process_ids && fabrics[0].garment_process_ids.length > 0){
@@ -4974,7 +5030,14 @@ if (Array.isArray(id)) {
 
 const getFabricProcessForwardChainingData = async (req: Request, res: Response) => {
   const { type, id } = req.query;
-  res.send(await _getFabricProcessForwardChainData(type, id));
+  if (!type) {
+    return res.sendError(res, "type is required");
+  }
+  if (!id) {
+    return res.sendError(res, "Id is missing");
+  }
+  let data = await _getFabricProcessForwardChainData(type, id);
+  return res.sendSuccess(res, data);
 }
 
 

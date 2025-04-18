@@ -31,7 +31,8 @@ import {
     getCOCDocumentData,
     updateCOCDoc,
     deleteGarmentProcess,
-    deleteGarmentSales
+    deleteGarmentSales,
+    getGarmentProcessForwardChainingData
 } from "../../controllers/garment-sales";
 import accessControl from "../../middleware/access-control";
 import { Router } from "express";
@@ -75,5 +76,6 @@ router.get('/tracing/chart', getGarmentProcessTracingChartData);
 router.get('/export/transaction', exportGarmentTransactionList);
 router.get('/coc/document', getCOCDocumentData);
 router.put('/coc/doc/update', updateCOCDoc);
+router.get('/forward-tracing/chart', getGarmentProcessForwardChainingData);
 
 export default router;
