@@ -1681,7 +1681,7 @@ const generateFaildFarmerReport = async () => {
         }
         // Set bold font for header row
         const headerRow = currentWorksheet.addRow([
-          "Sr No.", "Upload Date", "Upload Type", "Season", "Farmer Code", "Farmer Name", "Reason"
+          "Sr No.", "Date and Time", "Upload Date", "Upload Type", "Season", "Farmer Code", "Farmer Name", "Reason"
         ]);
         headerRow.font = { bold: true };
       }
@@ -1689,6 +1689,7 @@ const generateFaildFarmerReport = async () => {
       for await (const [index, rows] of farmers.entries()) {
         const rowValues = [
           offset + index + 1,
+          rows.createdAt ? rows.createdAt.toISOString() : '',
           rows.createdAt ? rows.createdAt.toISOString() : '',
           rows.type ? rows.type : '',
           rows.season ? rows.season.name : '',

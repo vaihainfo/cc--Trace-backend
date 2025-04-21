@@ -203,10 +203,18 @@ const exportFailedRecords = async (req: Request, res: Response) => {
             //mergedCell.font = { bold: true };
             //mergedCell.alignment = { horizontal: 'center', vertical: 'middle' };
             // Set bold font for header row
-            const headerRow = worksheet.addRow([
-                "Sr No.", "Country", "State", "Upload Date", "Upload Type", "Season", "Farmer Code", "Farmer Name", "Ginner", "Reason" 
-            ]);
-            headerRow.font = { bold: true };
+            if(type == 'Farmer') {
+                const headerRow = worksheet.addRow([
+                "Sr No.", "Date and Time", "Upload Date", "Upload Type", "Season", "Farmer Code", "Farmer Name", "Reason" 
+            ]);            
+                headerRow.font = { bold: true };
+            } 
+            if(type == 'Procurement') {
+                const headerRow = worksheet.addRow([
+                    "Sr No.", "Country", "State", "Upload Date", "Upload Type", "Season", "Farmer Code", "Farmer Name", "Ginner", "Reason" 
+                ]);            
+                headerRow.font = { bold: true };
+            } 
 
             const { count, rows } = await FailedRecords.findAndCountAll({
                 where: whereCondition,
@@ -239,24 +247,45 @@ const exportFailedRecords = async (req: Request, res: Response) => {
                 offset: offset,
                 limit: limit,
             });
-
+            if(type == 'Farmer') {
             // Append data to worksheet
             for (let i = 0; i < count; i++) {
                 const row = rows[i];
                 if (row && row.createdAt) {
                     const rowValues = Object.values({
                         index: i + 1,
-                        country:row.ginner ? row.ginner.country.county_name : '',
-                        state:row.ginner? row.ginner.state.state_name : '',
                         date: row.createdAt,
+                        upload_date: row.createdAt,
                         type: row.type || '',
                         season: row.season ? row.season.name : '',
                         code: row.farmer_code || '',
                         name: row.farmer_name || '',
-                        ginnername: row.ginner ? row.ginner.name : '',
                         reason: row.reason || '',
                     });
                     worksheet.addRow(rowValues);
+                }
+            }
+            }
+            
+            if(type == 'Procurement') {
+                // Append data to worksheet
+                for (let i = 0; i < count; i++) {
+                    const row = rows[i];
+                    if (row && row.createdAt) {
+                        const rowValues = Object.values({
+                            index: i + 1,
+                            country:row.ginner ? row.ginner.country.county_name : '',
+                            state:row.ginner? row.ginner.state.state_name : '',
+                            date: row.createdAt,
+                            type: row.type || '',
+                            season: row.season ? row.season.name : '',
+                            code: row.farmer_code || '',
+                            name: row.farmer_name || '',
+                            ginnername: row.ginner ? row.ginner.name : '',
+                            reason: row.reason || '',
+                        });
+                        worksheet.addRow(rowValues);
+                    }
                 }
             }
 
