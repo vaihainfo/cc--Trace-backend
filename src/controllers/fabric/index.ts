@@ -4227,7 +4227,7 @@ const getDyingProcessById = async (req: Request, res: Response) => {
       chooseFabric: selectedFabrics,
       buyerId: processData.buyer_id,
       buyerName: processData.buyer?.name,
-      buyerFabricId: processData.buyer_fabric_id,
+      buyerFabricId: processData.abuyer?.id,
       buyerFabricName: processData.abuyer?.name,
       seasonId: processData.season_id,
       programId: processData.program_id,
