@@ -207,11 +207,11 @@ const exportNonOrganicFarmerReport = async (req: Request, res: Response) => {
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet("Sheet1");
       //mergin the cells for first row
-      worksheet.mergeCells("A1:M1");
-      const mergedCell = worksheet.getCell("A1");
-      mergedCell.value = "Cotton Connect | Farmer Report";
-      mergedCell.font = { bold: true };
-      mergedCell.alignment = { horizontal: "center", vertical: "middle" };
+      //worksheet.mergeCells("A1:M1");
+      //const mergedCell = worksheet.getCell("A1");
+      //mergedCell.value = "Cotton Connect | Farmer Report";
+      //mergedCell.font = { bold: true };
+      //mergedCell.alignment = { horizontal: "center", vertical: "middle" };
 
       // Set bold font for header row
       const headerRow = worksheet.addRow([
@@ -227,7 +227,9 @@ const exportNonOrganicFarmerReport = async (req: Request, res: Response) => {
         "Programme Name",
         "Total Area",
         "Cotton Area",
+        "Total Estimated Cotton",
         "Total Estimated Production",
+        "Estimated Yield per Acre",
       ]);
       headerRow.font = { bold: true };
 
@@ -369,12 +371,22 @@ const exportNonOrganicFarmerReport = async (req: Request, res: Response) => {
             "agri_total_area",
             "cotton_total_area",
             "total_estimated_cotton",
+            "agri_estimated_prod",
+            "agri_estimated_yeld",
           ],
         });
-      }
+      } 
+
+      let totals = {
+        totalArea:0,
+        cottonArea:0,
+        totalEstimatedCotton:0,
+        totalEstimatedProduction:0,
+        totalEstimatedYield:0
+      };
       // Append data to worksheet
       for await (const [index, item] of farmer.entries()) {
-        const rowValues = Object.values({
+        const rowValues = {
           index: index + 1,
           farmerName: item.firstName + " " + `${item.lastName ? item.lastName : ""}`,
           Code: item.code,
@@ -388,15 +400,54 @@ const exportNonOrganicFarmerReport = async (req: Request, res: Response) => {
           totalArea: item ? Number(item.agri_total_area) : 0,
           cottonArea: item ? Number(item.cotton_total_area) : 0,
           totalEstimatedCotton: item ? Number(item.total_estimated_cotton) : 0,
-        });
-        worksheet.addRow(rowValues);
+          totalEstimatedProduction: item ? Number(item.agri_estimated_prod) : 0,
+          totalEstimatedYield: item ? Number(item.agri_estimated_yeld) : 0,
+        };
+
+        totals.totalArea+= Number(rowValues.totalArea); 
+        totals.cottonArea+= Number(rowValues.cottonArea); 
+        totals.totalEstimatedCotton+= Number(rowValues.totalEstimatedCotton); 
+        totals.totalEstimatedProduction+= Number(rowValues.totalEstimatedProduction); 
+        totals.totalEstimatedYield+= Number(rowValues.totalEstimatedYield); 
+
+        worksheet.addRow(Object.values(rowValues));
       }
+
+      const rowValues = {
+        index:"",
+        farmerName:"",
+        Code:"",
+        village:"",
+        block:"",
+        district:"",
+        state:"",
+        country:"",
+        brand:"",
+        program:"Total",
+        totalArea:totals.totalArea,
+        cottonArea: totals.cottonArea,
+        totalEstimatedCotton: totals.totalEstimatedCotton,
+        totalEstimatedProduction: totals.totalEstimatedProduction,
+        totalEstimatedYield: totals.totalEstimatedYield,
+      };
+
+      worksheet.addRow(Object.values(rowValues)).eachCell(cell=> cell.font = {bold: true});
+
+      // Define a border style
+      const borderStyle = {
+        top: { style: "thin" },
+        bottom: { style: "thin" },
+        left: { style: "thin" },
+        right: { style: "thin" },
+      };
+
       // // Auto-adjust column widths based on content
       worksheet.columns.forEach((column: any) => {
         let maxCellLength = 0;
         column.eachCell({ includeEmpty: true }, (cell: any) => {
           const cellLength = (cell.value ? cell.value.toString() : "").length;
           maxCellLength = Math.max(maxCellLength, cellLength);
+          cell.border = borderStyle;
         });
         column.width = Math.min(15, maxCellLength + 2); // Limit width to 30 characters
       });
@@ -452,11 +503,11 @@ const exportOrganicFarmerReport = async (req: Request, res: Response) => {
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet("Sheet1");
       //mergin the cells for first row
-      worksheet.mergeCells("A1:O1");
-      const mergedCell = worksheet.getCell("A1");
-      mergedCell.value = "Cotton Connect | Farmer Report";
-      mergedCell.font = { bold: true };
-      mergedCell.alignment = { horizontal: "center", vertical: "middle" };
+      //worksheet.mergeCells("A1:O1");
+      //const mergedCell = worksheet.getCell("A1");
+      //mergedCell.value = "Cotton Connect | Farmer Report";
+      //mergedCell.font = { bold: true };
+      //mergedCell.alignment = { horizontal: "center", vertical: "middle" };
 
       // Set bold font for header row
       const headerRow = worksheet.addRow([
@@ -472,7 +523,9 @@ const exportOrganicFarmerReport = async (req: Request, res: Response) => {
         "Brand Name",
         "Total Area",
         "Cotton Area",
+        "Total Estimated Cotton",
         "Total Estimated Production",
+        "Estimated Yield per Acre",
         "ICS Name",
         "ICS Status",
       ]);
@@ -627,15 +680,24 @@ const exportOrganicFarmerReport = async (req: Request, res: Response) => {
             "agri_total_area",
             "cotton_total_area",
             "total_estimated_cotton",
+            "agri_estimated_prod",
+            "agri_estimated_yeld",
           ],
           where: whereCondition,
           include: include,
         });
-      }
+      }     
 
+      let totals = {
+        totalArea:0,
+        cottonArea:0,
+        totalEstimatedCotton:0,
+        totalEstimatedProduction:0,
+        totalEstimatedYield:0
+      };
       // Append data to worksheet
       for await (const [index, item] of farmer.entries()) {
-        const rowValues = Object.values({
+        const rowValues = {
           index: index + 1,
           farmerName: item.firstName + " " + `${item.lastName ? item.lastName : ""}`,
           farmGroup: item.farmGroup.name,
@@ -649,17 +711,58 @@ const exportOrganicFarmerReport = async (req: Request, res: Response) => {
           totalArea: item ? Number(item.agri_total_area) : 0,
           cottonArea: item ? Number(item.cotton_total_area) : 0,
           totalEstimatedCotton: item ? Number(item.total_estimated_cotton) : 0,
+          totalEstimatedProduction: item ? Number(item.agri_estimated_prod) : 0,
+          totalEstimatedYield: item ? Number(item.agri_estimated_yeld) : 0,
           icsName: item.ics ? item.ics.ics_name : "",
           icsStatus: item.cert_status ? item.cert_status : "",
-        });
-        worksheet.addRow(rowValues);
+        };
+
+        totals.totalArea+= Number(rowValues.totalArea); 
+        totals.cottonArea+= Number(rowValues.cottonArea); 
+        totals.totalEstimatedCotton+= Number(rowValues.totalEstimatedCotton);
+        totals.totalEstimatedProduction+= Number(rowValues.totalEstimatedProduction);
+        totals.totalEstimatedYield+= Number(rowValues.totalEstimatedYield); 
+
+        worksheet.addRow(Object.values(rowValues));
       }
+
+      const rowValues = {
+        index:"",
+        farmerName:"",
+        farmGroup:"",
+        tranid:"",
+        village:"",
+        block:"",
+        district:"",
+        state:"",
+        country:"",
+        brand:"Total",
+        totalArea:totals.totalArea,
+        cottonArea: totals.cottonArea,
+        totalEstimatedCotton: totals.totalEstimatedCotton,
+        totalEstimatedProduction: totals.totalEstimatedProduction,
+        totalEstimatedYield: totals.totalEstimatedYield,
+        icsName: "",
+        icsStatus: "",
+      };
+
+      worksheet.addRow(Object.values(rowValues)).eachCell(cell=> cell.font = {bold: true});
+
+      // Define a border style
+      const borderStyle = {
+        top: { style: "thin" },
+        bottom: { style: "thin" },
+        left: { style: "thin" },
+        right: { style: "thin" },
+      };
+
       // // Auto-adjust column widths based on content
       worksheet.columns.forEach((column: any) => {
         let maxCellLength = 0;
         column.eachCell({ includeEmpty: true }, (cell: any) => {
           const cellLength = (cell.value ? cell.value.toString() : '').length;
           maxCellLength = Math.max(maxCellLength, cellLength);
+        cell.border = borderStyle;
         });
         column.width = Math.min(15, maxCellLength + 2); // Limit width to 30 characters
       });

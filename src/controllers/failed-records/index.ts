@@ -197,11 +197,11 @@ const exportFailedRecords = async (req: Request, res: Response) => {
             // Create the excel workbook file
             const workbook = new ExcelJS.Workbook();
             const worksheet = workbook.addWorksheet("Sheet1");
-            worksheet.mergeCells('A1:J1');
-            const mergedCell = worksheet.getCell('A1');
-            mergedCell.value = 'CottonConnect | Failed Records';
-            mergedCell.font = { bold: true };
-            mergedCell.alignment = { horizontal: 'center', vertical: 'middle' };
+            //worksheet.mergeCells('A1:J1');
+            //const mergedCell = worksheet.getCell('A1');
+            //mergedCell.value = 'CottonConnect | Failed Records';
+            //mergedCell.font = { bold: true };
+            //mergedCell.alignment = { horizontal: 'center', vertical: 'middle' };
             // Set bold font for header row
             const headerRow = worksheet.addRow([
                 "Sr No.", "Country", "State", "Upload Date", "Upload Type", "Season", "Farmer Code", "Farmer Name", "Ginner", "Reason" 
@@ -260,12 +260,21 @@ const exportFailedRecords = async (req: Request, res: Response) => {
                 }
             }
 
+            // Define a border style
+            const borderStyle = {
+              top: { style: "thin" },
+              bottom: { style: "thin" },
+              left: { style: "thin" },
+              right: { style: "thin" },
+            };
+
             // Auto-adjust column widths based on content
             worksheet.columns.forEach((column: any) => {
                 let maxCellLength = 0;
                 column.eachCell({ includeEmpty: true }, (cell: any) => {
                     const cellLength = (cell.value ? cell.value.toString() : '').length;
                     maxCellLength = Math.max(maxCellLength, cellLength);
+                    cell.border = borderStyle;
                 });
                 column.width = Math.min(15, maxCellLength + 2); // Limit width to 30 characters
             });

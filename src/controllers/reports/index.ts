@@ -15796,7 +15796,14 @@ const exportGinnerLintStockReport = async (req: Request, res: Response) => {
         "S. No.", "Season", "Ginner Name", "Country", "State", "District", "Total Procured Seed Cotton (Kgs)", "Total Processed Lint (Kgs)",
         "Total Sold Lint (Kgs)", "Total Lint in Stock (Kgs)"
       ]);
-      headerRow.font = { bold: true };
+      headerRow.font = { bold: true };    
+
+      let totals = {
+        cottonProcuredKg:0,
+        lintProcuredKg:0,
+        lintSoldKg:0,
+        lintStockKg:0
+      };
 
       // Append data to worksheet
       for await (const [index, ginner] of rows.entries()) {
@@ -16026,8 +16033,28 @@ const exportGinnerLintStockReport = async (req: Request, res: Response) => {
           lintStockKg: obj.lintStockKg ? Number(obj.lintStockKg) : 0
         };
 
-        worksheet.addRow(Object.values(rowValues));
+        totals.cottonProcuredKg+= Number(rowValues.cottonProcuredKg); 
+        totals.lintProcuredKg+= Number(rowValues.lintProcuredKg); 
+        totals.lintSoldKg+= Number(rowValues.lintSoldKg); 
+        totals.lintStockKg+= Number(rowValues.lintStockKg); 
+
+         worksheet.addRow(Object.values(rowValues));
       }
+
+      const rowValues = {
+        index:"",
+        season:"",
+        name:"",
+        country:"",
+        state:"",
+        district:"Total",
+        cottonProcuredKg:totals.cottonProcuredKg,
+        lintProcuredKg: totals.lintProcuredKg,
+        lintSoldKg: totals.lintSoldKg,
+        lintStockKg: totals.lintStockKg,
+      };
+
+      worksheet.addRow(Object.values(rowValues)).eachCell(cell=> cell.font = {bold: true});
 
       // Define a border style
       const borderStyle = {
@@ -17703,11 +17730,11 @@ const exportPscpCottonProcurement = async (req: Request, res: Response) => {
       // Create the excel workbook file
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet("Sheet1");
-      worksheet.mergeCells("A1:T1");
-      const mergedCell = worksheet.getCell("A1");
-      mergedCell.value = "CottonConnect | PSCP Cotton Procurement Tracker";
-      mergedCell.font = { bold: true };
-      mergedCell.alignment = { horizontal: "center", vertical: "middle" };
+      //worksheet.mergeCells("A1:T1");
+      //const mergedCell = worksheet.getCell("A1");
+      //mergedCell.value = "CottonConnect | PSCP Cotton Procurement Tracker";
+      //mergedCell.font = { bold: true };
+      //mergedCell.alignment = { horizontal: "center", vertical: "middle" };
       // Set bold font for header row
       const headerRow = worksheet.addRow([
         "Sr No.",
@@ -17759,6 +17786,29 @@ const exportPscpCottonProcurement = async (req: Request, res: Response) => {
         where: whereCondition,
         group: ["season.id"],
       });
+      
+
+      let totals = {
+        estimated_seed_cotton:0,
+        estimated_lint:0,
+        procurement_seed_cotton:0,
+        procurement:0,
+        procured_lint_cotton:0,
+        no_of_bales:0,
+        total_qty_lint_produced:0,
+        sold_bales:0,
+        average_weight:0,
+        total_qty_sold_lint:0,
+        balace_stock:0,
+        balance_lint_quantity:0,
+        greyout_bales:0,
+        greyout_qty:0,
+        total_bales_received:0,
+        total_qty_lint_received:0,
+        total_bales_transfered:0,
+        total_qty_lint_transfered:0
+      };
+      let rowCount = 0;
       // Append data to worksheet
       for await (const [index, item] of result.entries()) {
         let obj: any = {};
@@ -18113,11 +18163,11 @@ const exportPscpCottonProcurement = async (req: Request, res: Response) => {
         obj.balace_stock =
           (obj.no_of_bales + obj.total_bales_received) > (obj.sold_bales + obj.total_bales_transfered + obj.greyout_bales) ? Number((obj.no_of_bales + obj.total_bales_received) - (obj.sold_bales + obj.total_bales_transfered + obj.greyout_bales)) : 0;
         obj.balance_lint_quantity =
-          (obj.total_qty_lint_produced + obj.total_qty_lint_received) > (obj.total_qty_sold_lint + obj.total_qty_lint_transfered + obj.greyout_qty)
+          (obj.total_qty_lint_produced + obj.total_qty_lint_received) > (obj.total_qty_sold_lint + obj.total_qty_lint_transfered + obj.greyout_qty) 
             ? (obj.total_qty_lint_produced + obj.total_qty_lint_received) - (obj.total_qty_sold_lint + obj.total_qty_lint_transfered + obj.greyout_qty)
             : 0;
 
-        const rowValues = Object.values({
+        const rowValues = {
           index: index + 1,
           name: item.dataValues.season_name ? item.dataValues.season_name : "",
           estimated_seed_cotton: Number(formatDecimal(obj.estimated_seed_cotton)),
@@ -18142,15 +18192,73 @@ const exportPscpCottonProcurement = async (req: Request, res: Response) => {
           total_qty_lint_received: obj.total_qty_lint_received ? Number(formatDecimal(obj.total_qty_lint_received)) : 0,
           total_bales_transfered: obj.total_bales_transfered ? Number(obj.total_bales_transfered) : 0,
           total_qty_lint_transfered: obj.total_qty_lint_transfered ? Number(formatDecimal(obj.total_qty_lint_transfered)) : 0,
-        });
-        worksheet.addRow(rowValues);
+        };
+
+        totals.estimated_seed_cotton+= Number(rowValues.estimated_seed_cotton); 
+        totals.estimated_lint+= Number(rowValues.estimated_lint); 
+        totals.procurement_seed_cotton+= Number(rowValues.procurement_seed_cotton); 
+        totals.procurement+= Number(rowValues.procurement); 
+        totals.procured_lint_cotton+= Number(rowValues.procured_lint_cotton); 
+        totals.no_of_bales+= Number(rowValues.no_of_bales); 
+        totals.total_qty_lint_produced+= Number(rowValues.total_qty_lint_produced); 
+        totals.sold_bales+= Number(rowValues.sold_bales); 
+        totals.average_weight+= Number(rowValues.average_weight); 
+        totals.total_qty_sold_lint+= Number(rowValues.total_qty_sold_lint); 
+        totals.balace_stock+= Number(rowValues.balace_stock); 
+        totals.balance_lint_quantity+= Number(rowValues.balance_lint_quantity); 
+        totals.greyout_bales+= Number(rowValues.greyout_bales); 
+        totals.greyout_qty+= Number(rowValues.greyout_qty); 
+        totals.total_bales_received+= Number(rowValues.total_bales_received); 
+        totals.total_qty_lint_received+= Number(rowValues.total_qty_lint_received); 
+        totals.total_bales_transfered+= Number(rowValues.total_bales_transfered); 
+        totals.total_qty_lint_transfered+= Number(rowValues.total_qty_lint_transfered); 
+        rowCount++;
+        worksheet.addRow(Object.values(rowValues));
       }
+      let averageProcurementPercentage = 0;
+      if (rowCount > 0) {
+          averageProcurementPercentage = totals.procurement / rowCount;
+      }
+
+      const rowValues = {
+        index:"",
+        name:"Total",
+        estimated_seed_cotton:totals.estimated_seed_cotton,
+        estimated_lint:totals.estimated_lint,
+        procurement_seed_cotton:totals.procurement_seed_cotton,
+        procurement:totals.procurement,
+        procured_lint_cotton:totals.procured_lint_cotton,
+        no_of_bales:totals.no_of_bales,
+        total_qty_lint_produced:totals.total_qty_lint_produced,
+        sold_bales:totals.sold_bales,
+        average_weight:totals.average_weight,
+        total_qty_sold_lint:totals.total_qty_sold_lint,
+        balace_stock: totals.balace_stock,
+        balance_lint_quantity: totals.balance_lint_quantity,
+        greyout_bales: totals.greyout_bales,
+        greyout_qty: totals.greyout_qty,
+        total_bales_received: totals.total_bales_received,
+        total_qty_lint_received: totals.total_qty_lint_received,
+        total_bales_transfered: totals.total_bales_transfered,
+        total_qty_lint_transfered: totals.total_qty_lint_transfered,
+      };
+
+      worksheet.addRow(Object.values(rowValues)).eachCell(cell=> cell.font = {bold: true});
+
+      // Define a border style
+      const borderStyle = {
+        top: { style: "thin" },
+        bottom: { style: "thin" },
+        left: { style: "thin" },
+        right: { style: "thin" },
+      };
       // Auto-adjust column widths based on content
       worksheet.columns.forEach((column: any) => {
         let maxCellLength = 0;
         column.eachCell({ includeEmpty: true }, (cell: any) => {
           const cellLength = (cell.value ? cell.value.toString() : "").length;
           maxCellLength = Math.max(maxCellLength, cellLength);
+          cell.border = borderStyle;
         });
         column.width = Math.min(24, maxCellLength + 2); // Limit width to 30 characters
       });

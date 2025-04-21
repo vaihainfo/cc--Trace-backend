@@ -503,11 +503,11 @@ const exportAgentTransactions = async (req: Request, res: Response) => {
             // Create the excel workbook file
             const workbook = new ExcelJS.Workbook();
             const worksheet = workbook.addWorksheet("Sheet1");
-            worksheet.mergeCells('A1:T1');
-            const mergedCell = worksheet.getCell('A1');
-            mergedCell.value = 'CottonConnect | QR App Procurement Report';
-            mergedCell.font = { bold: true };
-            mergedCell.alignment = { horizontal: 'center', vertical: 'middle' };
+            //worksheet.mergeCells('A1:T1');
+            //const mergedCell = worksheet.getCell('A1');
+            //mergedCell.value = 'CottonConnect | QR App Procurement Report';
+            //mergedCell.font = { bold: true };
+            //mergedCell.alignment = { horizontal: 'center', vertical: 'middle' };
             // Set bold font for header row
             if (isBrand === 'true') {
             const headerRow = worksheet.addRow([
@@ -709,13 +709,19 @@ const exportAgentTransactions = async (req: Request, res: Response) => {
             } else {
                 // fetch without filters
                 transactions = await Transaction.findAll(queryOptions);
-            }
+            }     
+
+            let totals = {
+              qty_purchased:0,
+              available_cotton:0,
+              rate:0
+            };
 
             // Append data to worksheet
             for await (const [index, item] of transactions.entries()) {
                 let rowValues;
                 if (isBrand === 'true') {
-                 rowValues = Object.values({
+                 rowValues = {
                     index: index + 1,
                     date: moment(item.createdAt).format('DD-MM-YYYY'),
                     farmerCode: item.farmer ? item.farmer?.code : "",
@@ -739,10 +745,10 @@ const exportAgentTransactions = async (req: Request, res: Response) => {
                     //latitude: item.latitude ? item.latitude : "-",
                    // longitude: item.longitude ? item.longitude : "-",
                     status: item.status ? item.status : ''
-                });
+                };
             }
             else{
-                rowValues = Object.values({
+                rowValues = {
                     index: index + 1,
                     date: moment(item.createdAt).format('DD-MM-YYYY hh:mm:ss A'),
                     farmerCode: item.farmer ? item.farmer?.code : "",
@@ -766,16 +772,57 @@ const exportAgentTransactions = async (req: Request, res: Response) => {
                     latitude: item.latitude ? item.latitude : "-",
                     longitude: item.longitude ? item.longitude : "-",
                     status: item.status ? item.status : ''
-                });
+                };
+            }                
+
+                totals.qty_purchased+= Number(rowValues.qty_purchased); 
+                totals.available_cotton+= Number(rowValues.available_cotton); 
+                totals.rate+= Number(rowValues.rate); 
+
+                worksheet.addRow(Object.values(rowValues));
             }
-                worksheet.addRow(rowValues);
-            }
+
+            const rowValues = {
+              index:"",
+              date:"",
+              farmerCode:"",
+              farmerName:"",
+              season:"",
+              country:"",
+              state:"",
+              district:"",
+              block:"",
+              village:"",
+              transactionId:"Total",
+              qty_purchased:totals.qty_purchased,
+              available_cotton:totals.available_cotton,
+              rate:totals.rate,
+              program:"",
+              vehicle: "",
+              payment_method: "",
+              ginner: "",
+              agent: "",
+              latitude: "",
+              longitude: "",
+              status: "",
+            };
+      
+            worksheet.addRow(Object.values(rowValues)).eachCell(cell=> cell.font = {bold: true});
+      
+            // Define a border style
+            const borderStyle = {
+              top: { style: "thin" },
+              bottom: { style: "thin" },
+              left: { style: "thin" },
+              right: { style: "thin" },
+            };
             // Auto-adjust column widths based on content
             worksheet.columns.forEach((column: any) => {
                 let maxCellLength = 0;
                 column.eachCell({ includeEmpty: true }, (cell: any) => {
                     const cellLength = (cell.value ? cell.value.toString() : '').length;
                     maxCellLength = Math.max(maxCellLength, cellLength);
+                    cell.border = borderStyle;
                 });
                 column.width = Math.min(25, maxCellLength + 2);
             });

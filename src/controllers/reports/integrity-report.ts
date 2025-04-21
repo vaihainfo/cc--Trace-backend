@@ -55,6 +55,7 @@ const getOrganicIntegrityReport = async (req: Request, res: Response) => {
         "test_stage",
         [Sequelize.col("farmGroup.name"), "farmGroup_name"],
         [Sequelize.col("ginner.name"), "ginner_name"],
+        [Sequelize.col("brand.brand_name"), "brand_name"],
         [
           Sequelize.fn(
             "SUM",
@@ -81,6 +82,11 @@ const getOrganicIntegrityReport = async (req: Request, res: Response) => {
           attributes: [],
         },
         {
+          model: Brand,
+          as: "brand",
+          attributes: [],
+        },
+        {
           model: Ginner,
           as: "ginner",
           attributes: [],
@@ -97,6 +103,7 @@ const getOrganicIntegrityReport = async (req: Request, res: Response) => {
         "test_stage",
         Sequelize.col("farmGroup.name"),
         Sequelize.col("ginner.name"),
+        Sequelize.col("brand.brand_name"),
       ],
       order: [
         [Sequelize.col("farmGroup.name"), sortOrder === "desc" ? "DESC" : "ASC"],
@@ -107,7 +114,7 @@ const getOrganicIntegrityReport = async (req: Request, res: Response) => {
 
     // Return required fields
     const formattedReports = reports.rows.map((report: any) => {
-      const { farmGroup_id, test_stage, farmGroup_name, positives, negatives, ginner_name } = report.dataValues;
+      const { farmGroup_id, test_stage, farmGroup_name, positives, negatives, ginner_name, brand_name } = report.dataValues;
       const total = Number(positives) + Number(negatives);
 
       // Calculate percentage of negative integrity
@@ -120,6 +127,7 @@ const getOrganicIntegrityReport = async (req: Request, res: Response) => {
         positives,
         negatives,
         ginner_name,
+        brand_name,
         negativePercentage: negativePercentage.toFixed(2),
       };
     });

@@ -18,6 +18,7 @@ import * as path from "path";
 import UserApp from "../../models/users-app.model";
 import sequelize from "../../util/dbConn";
 import moment from "moment";
+import fs from 'fs';
 
 
 const fetchTransactionsReport = async (req: Request, res: Response) => {
@@ -367,16 +368,16 @@ const exportProcurementReport = async (req: Request, res: Response) => {
     // Create the excel workbook file
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet("Sheet1");
-    if(isBrand === 'true'){
+    /*if(isBrand === 'true'){
       worksheet.mergeCells('A1:T1');
     }else{
       worksheet.mergeCells('A1:U1');
-    }
+    }*/
     
-    const mergedCell = worksheet.getCell('A1');
-    mergedCell.value = 'CottonConnect | Procurement Report';
-    mergedCell.font = { bold: true };
-    mergedCell.alignment = { horizontal: 'center', vertical: 'middle' };
+    //const mergedCell = worksheet.getCell('A1');
+    //mergedCell.value = 'CottonConnect | Procurement Report';
+    //mergedCell.font = { bold: true };
+    //mergedCell.alignment = { horizontal: 'center', vertical: 'middle' };
 
     // Set bold font for header row
     let headerRow;
@@ -502,13 +503,20 @@ const exportProcurementReport = async (req: Request, res: Response) => {
       ],
       offset: offset,
       limit: limit,
-    });
+    }); 
+
+    let totals = {
+      qty_purchased:0,
+      qty_stock:0,
+      available_cotton:0,
+      rate:0
+    };
 
     // Append data to worksheet
     for await (const [index, item] of transaction.entries()) {
       let rowValues;
         if(isBrand === 'true'){
-          rowValues = Object.values({
+          rowValues = {
             index: index + 1,
             date: item.dataValues.date ? item.dataValues.date : '',
             farmer_code: item.dataValues.farmer_code ? item.dataValues.farmer_code : '',
@@ -530,9 +538,9 @@ const exportProcurementReport = async (req: Request, res: Response) => {
             payment_method: item.dataValues.payment_method ? item.dataValues.payment_method : '',
             ginner: item.dataValues.ginner ? item.dataValues.ginner.name : '',
             agent: item?.dataValues?.agent && ( item?.dataValues?.agent?.lastName ? item?.dataValues?.agent?.firstName + " " + item?.dataValues?.agent?.lastName+ "-" + item?.dataValues?.agent?.access_level : item?.dataValues?.agent?.firstName+ "-" + item?.dataValues?.agent?.access_level),
-          });
+          };
         }else{
-        rowValues = Object.values({
+        rowValues = {
           index: index + 1,
           date: item.dataValues.date ? item.dataValues.date : '',
           farmer_name: item.dataValues.farmer ? item.dataValues.farmer.firstName + ' ' + `${item.dataValues.farmer.lastName ? item.dataValues.farmer.lastName : ""}` : item.dataValues.farmer_name,
@@ -555,16 +563,58 @@ const exportProcurementReport = async (req: Request, res: Response) => {
           payment_method: item.dataValues.payment_method ? item.dataValues.payment_method : '',
           ginner: item.dataValues.ginner ? item.dataValues.ginner.name : '',
           agent: item?.dataValues?.agent && ( item?.dataValues?.agent?.lastName ? item?.dataValues?.agent?.firstName + " " + item?.dataValues?.agent?.lastName+ "-" + item?.dataValues?.agent?.access_level : item?.dataValues?.agent?.firstName+ "-" + item?.dataValues?.agent?.access_level),
-        });
+        };
       }
-      worksheet.addRow(rowValues);
+      
+
+      totals.qty_purchased+= Number(rowValues.qty_purchased); 
+      totals.qty_stock+= Number(rowValues.qty_stock); 
+      totals.available_cotton+= Number(rowValues.available_cotton);
+      totals.rate+= Number(rowValues.rate);
+      worksheet.addRow(Object.values(rowValues));
     }
+
+    const rowValues = {
+      index:"",
+      date:"",
+      farmer_name:"",
+      farmer_code:"",
+      season:"",
+      brand:"",
+      country:"",
+      state:"",
+      district:"",
+      block:"",
+      village:"",
+      id: "Total",
+      qty_purchased: totals.qty_purchased,
+      qty_stock: totals.qty_stock,
+      available_cotton: totals.available_cotton,
+      rate: totals.rate,
+      program: "",
+      vehicle: "",
+      payment_method: "",
+      ginner: "",
+      agent: "",
+    };
+
+    worksheet.addRow(Object.values(rowValues)).eachCell(cell=> cell.font = {bold: true});
+
+    // Define a border style
+    const borderStyle = {
+      top: { style: "thin" },
+      bottom: { style: "thin" },
+      left: { style: "thin" },
+      right: { style: "thin" },
+    };
+
     // Auto-adjust column widths based on content
     worksheet.columns.forEach((column: any) => {
       let maxCellLength = 0;
       column.eachCell({ includeEmpty: true }, (cell: any) => {
         const cellLength = (cell.value ? cell.value.toString() : '').length;
         maxCellLength = Math.max(maxCellLength, cellLength);
+        cell.border = borderStyle;
       });
       column.width = Math.min(20, maxCellLength + 2); // Limit width to 30 characters
     });

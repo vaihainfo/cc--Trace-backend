@@ -1317,7 +1317,15 @@ const generateOrganicFarmerReport = async () => {
 
       if (farmer.length === 0) {
         break; // No more records to fetch, exit the loop
-      }
+      }      
+
+      let totals = {
+        totalArea:0,
+        cottonArea:0,
+        totalEstimatedCotton:0,
+        totalEstimatedProduction:0,
+        totalEstimatedYield:0
+      };
 
       for (const [index, item] of farmer.entries()) {
         if (currentRow % maxRowsPerWorksheet === 0) {
@@ -1329,22 +1337,22 @@ const generateOrganicFarmerReport = async () => {
         if (!currentWorksheet) {
           currentWorksheet = workbook.addWorksheet(`Procurement Report ${worksheetIndex}`);
           if (worksheetIndex == 1) {
-            currentWorksheet.mergeCells('A1:O1');
-            const mergedCell = currentWorksheet.getCell('A1');
-            mergedCell.value = 'Cotton Connect | Farmer Report';
-            mergedCell.font = { bold: true };
-            mergedCell.alignment = { horizontal: 'center', vertical: 'middle' };
+            //currentWorksheet.mergeCells('A1:O1');
+            //const mergedCell = currentWorksheet.getCell('A1');
+            //mergedCell.value = 'Cotton Connect | Farmer Report';
+            //mergedCell.font = { bold: true };
+            //mergedCell.alignment = { horizontal: 'center', vertical: 'middle' };
           }
           // Set bold font for header row
           const headerRow = currentWorksheet.addRow([
             'S.No', 'Farmer Name', 'Farm Group', 'Tracenet Id', 'Village',
             'Block', 'District', 'State', 'Country', 'Brand Name', 'Total Area',
-            'Cotton Area', 'Total Estimated Cotton', 'Total Estimated Production', 'ICS Name', 'ICS Status'
+            'Cotton Area', 'Total Estimated Cotton', 'Total Estimated Production', 'Estimated Yield per Acre', 'ICS Name', 'ICS Status'
           ]);
           headerRow.font = { bold: true };
         }
 
-        const rowValues = Object.values({
+        const rowValues = {
           index: (offset + index + 1),
           farmerName: item["Farmer Name"] + " " + (item["Farmer Last Name"] ? item["Farmer Last Name"] : ""),
           farmGroup: item["Farm Group Name"],
@@ -1359,13 +1367,65 @@ const generateOrganicFarmerReport = async () => {
           cottonArea: item ? +item["Total Cotton Area"] : 0,
           totalEstimatedCotton: item ? +item["Total Estimated Cotton"] : 0,
           totalEstimatedProduction: item ? +item.agri_estimated_prod : 0,
+          totalEstimatedYield: item ? +item.agri_estimated_yeld : 0,
           icsName: item["ICS Name"] ? item["ICS Name"] : '',
           icsStatus: item.cert_status ? item.cert_status : '',
-        });
+        };
 
-        currentWorksheet.addRow(rowValues).commit();
+        totals.totalArea+= Number(rowValues.totalArea); 
+        totals.cottonArea+= Number(rowValues.cottonArea); 
+        totals.totalEstimatedCotton+= Number(rowValues.totalEstimatedCotton); 
+        totals.totalEstimatedProduction+= Number(rowValues.totalEstimatedProduction);
+        totals.totalEstimatedYield+= Number(rowValues.totalEstimatedYield); 
+
+        //currentWorksheet.addRow(Object.values(rowValues)).commit();
+        currentWorksheet.addRow(Object.values(rowValues));
         currentRow++;
       }
+
+      
+      let currentWorksheet = workbook.getWorksheet(`Sheet${worksheetIndex}`);
+
+      const rowValues = {
+        index:"",
+        farmerName:"",
+        farmGroup:"",
+        tranid:"",
+        village:"",
+        block: "",
+        district: "",
+        state: "",
+        country: "",
+        brand: "Total",
+        totalArea: totals.totalArea,
+        cottonArea: totals.cottonArea,
+        totalEstimatedCotton: totals.totalEstimatedCotton,
+        totalEstimatedProduction: totals.totalEstimatedProduction,
+        totalEstimatedYield: totals.totalEstimatedYield,
+        icsName: "",
+        icsStatus: ""
+      };
+
+      currentWorksheet?.addRow(Object.values(rowValues)).eachCell(cell=>cell.font={bold:true});
+
+      let borderStyle = {
+        top: {style: "thin"},
+        left: {style: "thin"},
+        bottom: {style: "thin"},
+        right: {style: "thin"}
+      };
+
+      // Auto-adjust column widths based on content
+      currentWorksheet?.columns.forEach((column: any) => {
+        let maxCellLength = 0;
+        column.eachCell({ includeEmpty: true }, (cell: any) => {
+          const cellLength = (cell.value ? cell.value.toString() : "").length;
+          maxCellLength = Math.max(maxCellLength, cellLength);
+          cell.border = borderStyle;
+        });
+        column.width = Math.min(24, maxCellLength + 2); // Limit width to 30 characters
+      });
+
 
       offset += batchSize;
     }
@@ -1445,6 +1505,14 @@ const generateNonOrganicFarmerReport = async () => {
         break; // No more records to fetch, exit the loop
       }
 
+      let totals = {
+        totalArea:0,
+        cottonArea:0,
+        totalEstimatedCotton:0,
+        totalEstimatedProduction:0,
+        totalEstimatedYield:0
+      };
+
       for (const item of farmer) {
         if (currentRow % maxRowsPerWorksheet === 0) {
           worksheetIndex++;
@@ -1455,22 +1523,22 @@ const generateNonOrganicFarmerReport = async () => {
         if (!currentWorksheet) {
           currentWorksheet = workbook.addWorksheet(`Procurement Report ${worksheetIndex}`);
           if (worksheetIndex == 1) {
-            currentWorksheet.mergeCells('A1:O1');
-            const mergedCell = currentWorksheet.getCell('A1');
-            mergedCell.value = 'Cotton Connect | Farmer Report';
-            mergedCell.font = { bold: true };
-            mergedCell.alignment = { horizontal: 'center', vertical: 'middle' };
+            //currentWorksheet.mergeCells('A1:O1');
+            //const mergedCell = currentWorksheet.getCell('A1');
+            //mergedCell.value = 'Cotton Connect | Farmer Report';
+            //mergedCell.font = { bold: true };
+            //mergedCell.alignment = { horizontal: 'center', vertical: 'middle' };
           }
           // Set bold font for header row
           const headerRow = currentWorksheet.addRow([
             'S.No', 'Farmer Name', 'Farmer Code', 'Village',
             'Block', 'District', 'State', 'Country', 'Brand Name', 'Programme Name', 'Total Area',
-            'Cotton Area', 'Total Estimated Cotton', 'Total Estimated Production'
+            'Cotton Area', 'Total Estimated Cotton', 'Total Estimated Production', 'Estimated Yield per Acre'
           ]);
           headerRow.font = { bold: true };
         }
 
-        const rowValues = Object.values({
+        const rowValues = {
           index: (offset + currentRow + 1),
           farmerName: item["Farmer Name"] + " " + (item["Farmer Last Name"] ? item["Farmer Last Name"] : ""),
           code: item.code ? item.code : '',
@@ -1485,11 +1553,60 @@ const generateNonOrganicFarmerReport = async () => {
           cottonArea: item ? +item["Total Cotton Area"] : 0,
           totalEstimatedProduction: item ? +item.agri_estimated_prod : 0,
           totalEstimatedCotton: item ? +item["Total Estimated Cotton"] : 0,
-        });
+          totalEstimatedYield: item ? +item.agri_estimated_yeld : 0,
+        };
 
-        currentWorksheet.addRow(rowValues).commit();
+        totals.totalArea+= Number(rowValues.totalArea); 
+        totals.cottonArea+= Number(rowValues.cottonArea); 
+        totals.totalEstimatedCotton+= Number(rowValues.totalEstimatedCotton); 
+        totals.totalEstimatedProduction+= Number(rowValues.totalEstimatedProduction); 
+        totals.totalEstimatedYield+= Number(rowValues.totalEstimatedYield); 
+
+        //currentWorksheet.addRow(rowValues).commit();
+        currentWorksheet.addRow(Object.values(rowValues));
         currentRow++;
       }
+
+      
+      let currentWorksheet = workbook.getWorksheet(`Sheet${worksheetIndex}`);
+
+      const rowValues = {
+        index:"",
+        farmerName:"",
+        code:"",
+        village:"",
+        block: "",
+        district: "",
+        state: "",
+        country: "",
+        brand: "",
+        program: "Total",
+        totalArea: totals.totalArea,
+        cottonArea: totals.cottonArea,
+        totalEstimatedCotton: totals.totalEstimatedCotton,
+        totalEstimatedProduction: totals.totalEstimatedProduction,
+        totalEstimatedYield: totals.totalEstimatedYield,
+      };
+
+      currentWorksheet?.addRow(Object.values(rowValues)).eachCell(cell=>cell.font={bold:true});
+
+      let borderStyle = {
+        top: {style: "thin"},
+        left: {style: "thin"},
+        bottom: {style: "thin"},
+        right: {style: "thin"}
+      };
+
+      // Auto-adjust column widths based on content
+      currentWorksheet?.columns.forEach((column: any) => {
+        let maxCellLength = 0;
+        column.eachCell({ includeEmpty: true }, (cell: any) => {
+          const cellLength = (cell.value ? cell.value.toString() : "").length;
+          maxCellLength = Math.max(maxCellLength, cellLength);
+          cell.border = borderStyle;
+        });
+        column.width = Math.min(24, maxCellLength + 2); // Limit width to 30 characters
+      });
 
       offset += batchSize;
     }
@@ -1556,11 +1673,11 @@ const generateFaildFarmerReport = async () => {
       if (!currentWorksheet) {
         currentWorksheet = workbook.addWorksheet(`Sheet${worksheetIndex}`);
         if (worksheetIndex == 1) {
-          currentWorksheet.mergeCells('A1:G1');
-          const mergedCell = currentWorksheet.getCell('A1');
-          mergedCell.value = 'CottonConnect | Failed Records';
-          mergedCell.font = { bold: true };
-          mergedCell.alignment = { horizontal: 'center', vertical: 'middle' };
+          //currentWorksheet.mergeCells('A1:G1');
+          //const mergedCell = currentWorksheet.getCell('A1');
+          //mergedCell.value = 'CottonConnect | Failed Records';
+          //mergedCell.font = { bold: true };
+          //mergedCell.alignment = { horizontal: 'center', vertical: 'middle' };
         }
         // Set bold font for header row
         const headerRow = currentWorksheet.addRow([
@@ -1581,7 +1698,25 @@ const generateFaildFarmerReport = async () => {
         ];
 
         currentWorksheet.addRow(rowValues).commit();
-      }
+      }      
+
+      let borderStyle = {
+        top: {style: "thin"},
+        left: {style: "thin"},
+        bottom: {style: "thin"},
+        right: {style: "thin"}
+      };
+
+      // Auto-adjust column widths based on content
+      currentWorksheet?.columns.forEach((column: any) => {
+        let maxCellLength = 0;
+        column.eachCell({ includeEmpty: true }, (cell: any) => {
+          const cellLength = (cell.value ? cell.value.toString() : "").length;
+          maxCellLength = Math.max(maxCellLength, cellLength);
+          cell.border = borderStyle;
+        });
+        column.width = Math.min(24, maxCellLength + 2); // Limit width to 30 characters
+      });
 
       offset += batchSize;
     }
@@ -1667,11 +1802,11 @@ const generateFaildProcurementReport = async () => {
       if (!currentWorksheet) {
         currentWorksheet = workbook.addWorksheet(`Sheet${worksheetIndex}`);
         if (worksheetIndex == 1) {
-          currentWorksheet.mergeCells('A1:J1');
-          const mergedCell = currentWorksheet.getCell('A1');
-          mergedCell.value = 'CottonConnect | Failed Records';
-          mergedCell.font = { bold: true };
-          mergedCell.alignment = { horizontal: 'center', vertical: 'middle' };
+          //currentWorksheet.mergeCells('A1:J1');
+          //const mergedCell = currentWorksheet.getCell('A1');
+          //mergedCell.value = 'CottonConnect | Failed Records';
+          //mergedCell.font = { bold: true };
+          //mergedCell.alignment = { horizontal: 'center', vertical: 'middle' };
         }
         // Set bold font for header row
         const headerRow = currentWorksheet.addRow([
@@ -1696,6 +1831,24 @@ const generateFaildProcurementReport = async () => {
 
         currentWorksheet.addRow(rowValues).commit();
       }
+
+      let borderStyle = {
+        top: {style: "thin"},
+        left: {style: "thin"},
+        bottom: {style: "thin"},
+        right: {style: "thin"}
+      };
+
+      // Auto-adjust column widths based on content
+      currentWorksheet?.columns.forEach((column: any) => {
+        let maxCellLength = 0;
+        column.eachCell({ includeEmpty: true }, (cell: any) => {
+          const cellLength = (cell.value ? cell.value.toString() : "").length;
+          maxCellLength = Math.max(maxCellLength, cellLength);
+          cell.border = borderStyle;
+        });
+        column.width = Math.min(24, maxCellLength + 2); // Limit width to 30 characters
+      });
 
       offset += batchSize;
     }
@@ -1730,9 +1883,21 @@ const generateProcurementReport = async () => {
 
     let worksheetIndex = 0;
     let offset = 0;
+
+    let totalQtyPurchased = 0;
+    let totalQtyStock = 0;
+    let totalAvailableCotton = 0;
+    let totalrate = 0;
+
     // Function to write a batch of transactions to the worksheet
     const writeBatchToWorksheet = (transactions: any, worksheet: any) => {
       for (const [index, transaction] of transactions.entries()) {
+
+        totalQtyPurchased += Number(transaction.qty_purchased) || 0;
+        totalQtyStock += Number(transaction.qty_stock) || 0;
+        totalAvailableCotton += Number(transaction.available_cotton) || 0;
+        totalrate += Number(transaction.rate) || 0;
+
         worksheet.addRow([
           index + offset + 1,
           transaction.date ? moment(transaction.date).format('DD/MM/YYYY') : '',
@@ -1828,13 +1993,13 @@ const generateProcurementReport = async () => {
       if (!currentWorksheet) {
         currentWorksheet = workbook.addWorksheet(`Procurement Report ${worksheetIndex}`);
 
-        if (worksheetIndex == 1) {
+        /*if (worksheetIndex == 1) {
           currentWorksheet.mergeCells('A1:T1');
           const mergedCell = currentWorksheet.getCell('A1');
           mergedCell.value = 'Cotton Connect | Procurement Report';
           mergedCell.font = { bold: true };
           mergedCell.alignment = { horizontal: 'center', vertical: 'middle' };
-        }
+        }*/
         // Set bold font for header row
 
         currentWorksheet.addRow([
@@ -1866,6 +2031,10 @@ const generateProcurementReport = async () => {
       writeBatchToWorksheet(transactions, currentWorksheet);
     }
 
+    const finalWorksheet = workbook.getWorksheet(`Procurement Report ${worksheetIndex}`)!;
+    finalWorksheet.addRow(['', '', '', '', '', '', '', '', '', '', '', 'Total', totalQtyPurchased, totalAvailableCotton, totalQtyStock, totalrate, '', '', '', '', ''])
+      .commit();
+
     await workbook.commit()
       .then(() => {
         // Rename the temporary file to the final filename
@@ -1895,6 +2064,25 @@ const generatePscpCottonProcurement = async () => {
     let Count = 0;
 
     let offset = 0;
+
+    let totalEstimatedSeedCotton = 0;
+    let totalEstimatedLint = 0;
+    let totalProcurementSeedCotton = 0;
+    let totalProcurement = 0;
+    let totalProcuredLintCotton = 0;
+    let totalNoOfBales = 0;
+    let totalQtyLintProduced = 0;
+    let totalSoldBales = 0;
+    let totalAverageWeight = 0;
+    let totalQtySoldLint = 0;
+    let totalBaleStock = 0;
+    let totalBalanceLintQuantity = 0;
+    let totalGreyoutBales = 0;
+    let totalGreyoutQty = 0;
+    let totalBalesReceived = 0;
+    let totalQtyLintReceived = 0;
+    let totalBalesTransferred = 0;
+    let totalQtyLintTransferred = 0;
 
     while (true) {
       // Fetch a batch of records
@@ -2252,6 +2440,25 @@ const generatePscpCottonProcurement = async () => {
             ? (obj.total_qty_lint_produced + obj.total_qty_lint_received) - (obj.total_qty_sold_lint + obj.total_qty_lint_transfered + obj.greyout_qty)
             : 0;
 
+        totalEstimatedSeedCotton += obj.estimated_seed_cotton;
+        totalEstimatedLint += obj.estimated_lint;
+        totalProcurementSeedCotton += obj.procurement_seed_cotton;
+        totalProcurement += obj.procurement;
+        totalProcuredLintCotton += obj.procured_lint_cotton;
+        totalNoOfBales += obj.no_of_bales;
+        totalQtyLintProduced += obj.total_qty_lint_produced;
+        totalSoldBales += obj.sold_bales;
+        totalAverageWeight += obj.average_weight;
+        totalQtySoldLint += obj.total_qty_sold_lint;
+        totalBaleStock += obj.balace_stock;
+        totalBalanceLintQuantity += obj.balance_lint_quantity;
+        totalGreyoutBales += obj.greyout_bales;
+        totalGreyoutQty += obj.greyout_qty;
+        totalBalesReceived += obj.total_bales_received;
+        totalQtyLintReceived += obj.total_qty_lint_received;
+        totalBalesTransferred += obj.total_bales_transfered;
+        totalQtyLintTransferred += obj.total_qty_lint_transfered;
+
         // Add the row to the worksheet
         const rowValues = [
           Count + 1,
@@ -2279,13 +2486,13 @@ const generatePscpCottonProcurement = async () => {
         let currentWorksheet = workbook.getWorksheet(`Procurement Report ${worksheetIndex}`);
         if (!currentWorksheet) {
           currentWorksheet = workbook.addWorksheet(`Procurement Report ${worksheetIndex}`);
-          if (worksheetIndex == 1) {
+          /*if (worksheetIndex == 1) {
             currentWorksheet.mergeCells('A1:T1');
             const mergedCell = currentWorksheet.getCell('A1');
             mergedCell.value = 'Cotton Connect | PSCP Cotton Procurement Report';
             mergedCell.font = { bold: true };
             mergedCell.alignment = { horizontal: 'center', vertical: 'middle' };
-          }
+          }*/
           const newHeaderRow = currentWorksheet.addRow([
             "Sr No.",
             "Season",
@@ -2316,6 +2523,10 @@ const generatePscpCottonProcurement = async () => {
 
       offset += batchSize;
     }
+    const finalWorksheet = workbook.getWorksheet(`Procurement Report ${worksheetIndex}`)!;
+    finalWorksheet.addRow(['', 'Total', totalEstimatedLint, totalProcurementSeedCotton, totalProcurement, totalProcuredLintCotton, totalNoOfBales, totalQtyLintProduced, totalSoldBales, totalAverageWeight, totalQtySoldLint, totalBaleStock, totalBalanceLintQuantity, totalGreyoutBales, totalGreyoutQty, totalBalesReceived, totalQtyLintReceived, totalBalesTransferred, totalQtyLintTransferred ])
+      .commit();
+
     await workbook.commit()
       .then(() => {
         // Rename the temporary file to the final filename
@@ -2381,24 +2592,21 @@ const generatePscpProcurementLiveTracker = async () => {
       const data = await sequelize.query(
         `
         WITH
-        filtered_ginners AS (
-          SELECT
-            g.id,
-            g.name,
-            g.program_id,
-            s.state_name,
-            c.county_name,
-            (
-              SELECT STRING_AGG(p.program_name, ', ')
-              FROM programs p
-              WHERE p.id = ANY(g.program_id)
-            ) AS program_name
-          FROM
-            ginners g
-            JOIN states s ON g.state_id = s.id
-            JOIN countries c ON g.country_id = c.id
+          filtered_ginners AS (
+            SELECT
+              g.id,
+              g.name,
+              g.program_id,
+              s.state_name,
+              c.county_name,
+              p.program_name
+            FROM
+              ginners g
+              JOIN states s ON g.state_id = s.id
+              JOIN countries c ON g.country_id = c.id
+              JOIN programs p ON p.id = ANY(g.program_id)
               WHERE g.status = true
-        ),
+          ),
           procurement_data AS (
             SELECT
               t.mapped_ginner,
@@ -3014,7 +3222,11 @@ const generateAgentTransactions = async () => {
       stream: fs.createWriteStream("./upload/agent-transactions-test.xlsx")
     });
     let worksheetIndex = 0;
-    let offset = 0;
+    let offset = 0;    
+
+    let totalQtyPurchased = 0;
+    let totalAvailableCotton = 0;
+    let totalrate = 0;
 
     do {
       const transactions = await sequelize.query(`
@@ -3098,6 +3310,11 @@ const generateAgentTransactions = async () => {
 
       // Append data to worksheet
       for await (const [index, item] of transactions.entries()) {
+
+        totalQtyPurchased += Number(item.qty_purchased) || 0;
+        totalAvailableCotton += Number(item.available_cotton) || 0;
+        totalrate += Number(item.rate) || 0;
+
         const rowValues = Object.values({
           index: index + offset + 1,
           date: moment(item.createdAt).format('DD-MM-YYYY hh:mm:ss A'),
@@ -3125,6 +3342,10 @@ const generateAgentTransactions = async () => {
       offset += batchSize;
     } while (true);
     // Save the workbook
+    const finalWorksheet =  workbook.getWorksheet(`Sheet${worksheetIndex}`)!;
+    finalWorksheet.addRow([]).commit();
+    finalWorksheet.addRow(['', '', '', '', '', '', '', '', '', '', 'Total', totalQtyPurchased, totalAvailableCotton, totalrate, '', '', '', '', ''])
+      .commit();
     await workbook.commit()
       .then(() => {
         // Rename the temporary file to the final filename
@@ -3726,6 +3947,12 @@ const generateGinnerLintCottonStock = async () => {
     const batchSize = 5000;
     let worksheetIndex = 0;
     let offset = 0;
+
+    let totalProcuredSeedCotton = 0;
+    let totalProcessedLint = 0;
+    let totalSoldLint = 0;
+    let totalLintStock = 0;
+
     let hasNextBatch = true;
 
     let include = [
@@ -4036,6 +4263,11 @@ const generateGinnerLintCottonStock = async () => {
             lintStockKg: obj.lintStockKg ? Number(obj.lintStockKg) : 0
           };
 
+        totalProcuredSeedCotton += Number(obj.cottonProcuredKg) || 0;
+        totalProcessedLint += Number(obj.lintProcuredKg) || 0;
+        totalSoldLint += Number(obj.lintSoldKg) || 0;
+        totalLintStock += Number(obj.lintStockKg) || 0;
+
         currentWorksheet.addRow(Object.values(rowValues));
       }
 
@@ -4059,6 +4291,10 @@ const generateGinnerLintCottonStock = async () => {
 
     }
    
+    const finalWorksheet = workbook.getWorksheet(`Sheet${worksheetIndex}`)!;
+    finalWorksheet.addRow(['', '', '', '', '', 'Total', totalProcuredSeedCotton, totalProcessedLint, totalSoldLint, totalLintStock])
+      .commit();
+
     // Save the workbook
     await workbook.commit()
       .then(() => {
@@ -4614,7 +4850,6 @@ const generateGinnerSales = async () => {
           press_no:"",
           rate: Number(formatDecimal(totals.total_rate)),
           lint_quantity: Number(formatDecimal(totals.total_lint_quantity)),
-          old_weight: "",
           other_season_quantity:"",
           other_season_bales:"",
           sales_value: Number(formatDecimal(totals.total_Sales_value)),
@@ -4901,7 +5136,7 @@ const generateGinnerSales = async () => {
         const headerRow = currentWorksheet.addRow([
           "Sr No.", "Country","State", "Process Date", "Data Entry Date", "No of Days", "Lint Process Season", "Lint sale chosen season", "Ginner Name",
           "Invoice No", "Buyer Type", "Sold To", "Bale Lot No", "REEL Lot No", "No of Bales", "Press/Bale No", "Rate/Kg",
-          "Total Quantity", "Total old weight", "Other Season Quantity (Kgs)", "Other Season Bales", "Sales Value", "Vehicle No", "Transporter Name", "Programme", "Agent Details", "Status"
+          "Total Quantity", "Other Season Quantity (Kgs)", "Other Season Bales", "Sales Value", "Vehicle No", "Transporter Name", "Programme", "Agent Details", "Status"
         ]);
         headerRow.font = { bold: true };
       }
@@ -4933,7 +5168,6 @@ const generateGinnerSales = async () => {
           press_no: item.press_no ? item.press_no : '',
           rate: item.rate ? item.rate : 0,
           lint_quantity: item.lint_quantity ? Number(item.lint_quantity) : '',
-          old_weight: item.total_old_weight ? Number(item.total_old_weight) : 0,
           other_season_quantity: item.lint_process_seasons?.split(',').length > 1
           ? Number(item.other_season_quantity || item.previous_season_quantity || item.future_season_quantity || null)
           : item.previous_season_quantity
@@ -4986,7 +5220,6 @@ const generateGinnerSales = async () => {
     console.error("Error appending data:", error);
   }
 };
-
 
 const generatePendingGinnerSales = async () => {
   const maxRowsPerWorksheet = 500000; // Maximum number of rows per worksheet in Excel
