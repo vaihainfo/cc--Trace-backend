@@ -4180,7 +4180,7 @@ const getCOCDocumentData = async (
 
       cocRes.fbrcNetWeight = fbrcNetWeight.length ? fbrcNetWeight?.join(', ') : '';
     }
-
+    let totalSpinNetWeight = 0;
     const weaverProcessId = wProcessIds.flatMap((id: any) => id.split(',').map((str: string) => str.trim()))
       .filter(id => id !== '')
       .map(Number)
@@ -4188,7 +4188,8 @@ const getCOCDocumentData = async (
 
     if (weaverProcessId && weaverProcessId?.length) {
       const WeaverProcess = await sequelize.query(`
-        select wp.id, array_to_string(array_agg(distinct ys.yarn_id), ',') as spin_sale_ids
+        select wp.id, array_to_string(array_agg(distinct ys.yarn_id), ',') as spin_sale_ids,
+                 sum (ys.qty_used) as spin_yarn_qty_used
         from weaver_processes wp
                 left join yarn_selections ys on ys.sales_id = wp.id
         where wp.id in (:ids)
@@ -4200,9 +4201,12 @@ const getCOCDocumentData = async (
 
       WeaverProcess?.forEach((sale: any) => {
         if (!spinSalesIds.includes(sale.spin_sale_ids))
+          totalSpinNetWeight += sale.spin_yarn_qty_used;
+        if (!spinSalesIds.includes(sale.spin_sale_ids))
           spinSalesIds.push(sale.spin_sale_ids);
       });
       cocRes.fbrcProcessorType = 'Weaver';
+      cocRes.spnrNetWeight = String(totalSpinNetWeight);
     }
 
     const knitterProcessId = kProcessIds.flatMap((id: any) => id.split(',').map((str: string) => str.trim()))
@@ -4213,7 +4217,8 @@ const getCOCDocumentData = async (
     if (knitterProcessId && knitterProcessId?.length) {
       const KnitProcess = await sequelize.query(`
       select  kp.id, 
-              array_to_string(array_agg(distinct kys.yarn_id), ',') as spin_sale_ids
+              array_to_string(array_agg(distinct kys.yarn_id), ',') as spin_sale_ids,
+              sum (kys.qty_used) as spin_yarn_qty_used
       from knit_processes kp
               left join knit_yarn_selections kys on kys.sales_id = kp.id
       where kp.id in (:ids)
@@ -4224,10 +4229,12 @@ const getCOCDocumentData = async (
       });
 
       KnitProcess?.forEach((sale: any) => {
+        totalSpinNetWeight += sale.spin_yarn_qty_used;
         if (!spinSalesIds.includes(sale.spin_sale_ids))
           spinSalesIds.push(sale.spin_sale_ids);
       });
       cocRes.fbrcProcessorType = 'Knitter';
+      cocRes.spnrNetWeight = String(totalSpinNetWeight);
     }
 
     const spinnerSalesId = spinSalesIds.flatMap((id: any) => id.split(',').map((str: string) => str.trim()))
@@ -4305,7 +4312,6 @@ const getCOCDocumentData = async (
 
         });
       }
-      cocRes.spnrNetWeight = spinNetWeight.length ? spinNetWeight.join(', ') : '';
       cocRes.spinnerReelLotNo = spinLotNo.length ? spinLotNo.join(', ') : '';
       cocRes.spnrName = spiName.length ? spiName.join(', ') : '';
     }
