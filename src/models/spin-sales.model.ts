@@ -114,6 +114,9 @@ const SpinSales = db.define('spin_sales', {
   delivery_notes: {
     type: DataTypes.STRING
   },
+  EWayBillDoc: {
+    type: DataTypes.STRING
+  },
   qty_stock: {
     type: DataTypes.DOUBLE
   },

@@ -733,7 +733,7 @@ const fetchComberNoilPagination = async (req: Request, res: Response) => {
             as: "spinProcess",
             where: whereCondition,
             required: false,
-            attributes: ["id", "batch_lot_no", "program_id"],
+            attributes: ["id", "batch_lot_no", "program_id","reel_lot_no"],
             include: [
               {
                 model : Program,
@@ -795,7 +795,7 @@ const fetchComberNoilPagination = async (req: Request, res: Response) => {
             [Op.in]: processIds,
           },
         },
-        attributes: ["id", "batch_lot_no"],
+        attributes: ["id","batch_lot_no","reel_lot_no"],
       });
 
       // Transform the rows with additional data
@@ -812,6 +812,7 @@ const fetchComberNoilPagination = async (req: Request, res: Response) => {
 
         return {
           ...rowJson,
+          reel_lot_no:spinProcess?.reel_lot_no || row.spinProcess?.reel_lot_no || null,
           batch_lot_no:
             spinProcess?.batch_lot_no || row.spinProcess?.batch_lot_no || null,
           program_id: row.spinProcess?.program_id || null,
@@ -826,7 +827,7 @@ const fetchComberNoilPagination = async (req: Request, res: Response) => {
             model: SpinProcess,
             as: "spinProcess",
             where: whereCondition,
-            attributes: ["id", "batch_lot_no", "program_id"],
+            attributes: ["id", "batch_lot_no", "program_id","reel_lot_no"],
             required: false,
           },
           {
@@ -880,7 +881,7 @@ const fetchComberNoilPagination = async (req: Request, res: Response) => {
             [Op.in]: processIds,
           },
         },
-        attributes: ["id", "batch_lot_no"],
+        attributes: ["id", "batch_lot_no","reel_lot_no"],
       });
 
       // Transform the data with additional information
@@ -896,10 +897,12 @@ const fetchComberNoilPagination = async (req: Request, res: Response) => {
           : null;
 
         return {
-          ...itemJson,
+          ...itemJson, 
           batch_lot_no:
             spinProcess?.batch_lot_no || item.spinProcess?.batch_lot_no || null,
           program_id: item.spinProcess?.program_id || null,
+          reel_lot_no:
+          spinProcess?.reel_lot_no || item.spinProcess?.reel_lot_no || null,
         };
       });
 
@@ -1222,6 +1225,7 @@ const createSpinnerSales = async (req: Request, res: Response) => {
             contract_file: req.body.contractFile,
             invoice_file: req.body.invoiceFile,
             delivery_notes: req.body.deliveryNotes,
+            EWayBillDoc: req.body.EWayBillDoc,
             qty_stock: req.body.totalQty,
             price: req.body.buyerType === "Spinner" ?  req.body.price : null,
             letter_of_credit: req.body.letterOfCredit,

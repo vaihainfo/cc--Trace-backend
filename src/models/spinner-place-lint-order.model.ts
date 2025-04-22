@@ -76,7 +76,7 @@ const SpinnerPlaceLintOrder = db.define('spinner_place_lint_orders', {
   },
   mat: {
     type: DataTypes.STRING,
-    allowNull: false,
+    allowNull: true,
   },
   ui: {
     type: DataTypes.STRING,
@@ -92,7 +92,7 @@ const SpinnerPlaceLintOrder = db.define('spinner_place_lint_orders', {
   },
   sfi: {
     type: DataTypes.STRING,
-    allowNull: false,
+    allowNull: true,
   },
   rdValue: {
     type: DataTypes.STRING,
@@ -100,7 +100,7 @@ const SpinnerPlaceLintOrder = db.define('spinner_place_lint_orders', {
   },
   totalLintQuantity: {
     type: DataTypes.STRING,
-    allowNull: false,
+    allowNull: true,
   },
   totalBales: {
     type: DataTypes.STRING,
@@ -108,19 +108,19 @@ const SpinnerPlaceLintOrder = db.define('spinner_place_lint_orders', {
   },
   pricePerCandy: {
     type: DataTypes.STRING,
-    allowNull: false,
+    allowNull: true,
   },
   dispatchWithinDays: {
     type: DataTypes.STRING,
-    allowNull: false,
+    allowNull: true,
   },
   tentativeDispatchDate: {
     type: DataTypes.DATE,
-    allowNull: false,
+    allowNull: true,
   },
   quotationValidTillDate: {
     type: DataTypes.DATE,
-    allowNull: false,
+    allowNull: true,
   },
   insuranceCoverageDetails: {
     type: DataTypes.TEXT,
