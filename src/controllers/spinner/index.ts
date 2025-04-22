@@ -827,7 +827,7 @@ const fetchComberNoilPagination = async (req: Request, res: Response) => {
             model: SpinProcess,
             as: "spinProcess",
             where: whereCondition,
-            attributes: ["id", "batch_lot_no", "program_id","reel_lot_no"],
+            attributes: ["id", "batch_lot_no", "program_id","reel_lot_no","season_id"],
             required: false,
           },
           {
@@ -881,7 +881,7 @@ const fetchComberNoilPagination = async (req: Request, res: Response) => {
             [Op.in]: processIds,
           },
         },
-        attributes: ["id", "batch_lot_no","reel_lot_no"],
+        attributes: ["id", "batch_lot_no","reel_lot_no","season_id"],
       });
 
       // Transform the data with additional information
@@ -903,6 +903,8 @@ const fetchComberNoilPagination = async (req: Request, res: Response) => {
           program_id: item.spinProcess?.program_id || null,
           reel_lot_no:
           spinProcess?.reel_lot_no || item.spinProcess?.reel_lot_no || null,
+          season_id:
+          spinProcess?.season_id || item.spinProcess?.season_id || null,
         };
       });
 
