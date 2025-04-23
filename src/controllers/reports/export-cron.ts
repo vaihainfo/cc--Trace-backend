@@ -7414,7 +7414,7 @@ const generatePendingSpinnerBale = async () => {
           [Sequelize.fn('STRING_AGG', Sequelize.literal('DISTINCT "bale->ginprocess"."reel_lot_no"'), ','), "reel_lot_no"],
           [Sequelize.literal('"sales"."rate"'), "rate"],
           [Sequelize.literal('"sales"."candy_rate"'), "candy_rate"],
-          [Sequelize.literal('"sales"."total_qty"'), "lint_quantity"],
+          [Sequelize.fn("SUM", Sequelize.literal('CAST("bale"."weight" AS DOUBLE PRECISION)')), "lint_quantity"],
           [Sequelize.literal('"sales"."no_of_bales"'), "no_of_bales"],
           [Sequelize.literal('"sales"."sale_value"'), "sale_value"],
           [Sequelize.literal('"sales"."press_no"'), "press_no"],
