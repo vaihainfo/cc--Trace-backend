@@ -20,6 +20,8 @@ import Knitter from "../../models/knitter.model";
 import WeaverSales from "../../models/weaver-sales.model";
 import Weaver from "../../models/weaver.model";
 import GarmentSales from "../../models/garment-sales.model";
+import GarmentSelection from "../../models/garment-selection.model";
+import GarmentFabricType from "../../models/garment_fabric_type.model";
 import Garment from "../../models/garment.model";
 import FabricSelection from "../../models/fabric-selections.model";
 import GinProcess from "../../models/gin-process.model";
@@ -1016,6 +1018,31 @@ const updateStatusBrandSale = async (req: Request, res: Response) => {
             };
             let result = await GarmentSales.update(data, { where: { id: obj.id } });
             update.push(result);
+            
+            // If the status is Rejected, we need to restore the stock count
+            if (obj.status === 'Rejected') {
+                // Find the garment selections associated with this sale
+                const garmentSelections = await GarmentSelection.findAll({
+                    where: { sales_id: obj.id }
+                });
+                
+                // For each selection, restore the stock count in GarmentFabricType
+                for (const selection of garmentSelections) {
+                    const fabricType = await GarmentFabricType.findOne({
+                        where: { id: selection.garment_type_id }
+                    });
+                    
+                    if (fabricType) {
+                        // Restore the stock count
+                        await GarmentFabricType.update({
+                            no_of_pieces_stock: fabricType.no_of_pieces_stock + selection.qty_used,
+                            sold_status: false // Reset sold status if it was previously set to true
+                        }, { 
+                            where: { id: selection.garment_type_id } 
+                        });
+                    }
+                }
+            }
         }
 
         res.sendSuccess(res, { update });
