@@ -718,11 +718,16 @@ export const send_knitter_mail = async (salesId: number) => {
             let buyer = sales.dataValues?.buyer;
             let adminEmail = await User.findAll({ where: { role: 1 }, attributes: ['email'] });
             const userEmail = await UserEmailAdresses(buyer , buyer.garmentUser_id );
+            console.log("buyer raw result:", buyer);
+            console.log("adminEmail raw result:", adminEmail);
+            console.log("userEmail raw result:", userEmail);
 
             const emailJob = await is_email_job_available(template.dataValues.id, buyer.brand, [buyer.country_id], buyer.program_id);
             if (emailJob) {
                 let emails = await User.findAll({ where: { id: { [Op.in]: emailJob.dataValues.user_ids } }, attributes: ['email'] });
                 emails = emails.map((obj: any) => obj.email);
+                console.log("emails raw result:", emails);
+                console.log("userEmail raw result:", userEmail);
                 adminEmail = adminEmail.map((obj: any) => obj.email);
                 let  to = userEmail ? userEmail : adminEmail;
                 let ccEmails = [...adminEmail,...emails];
