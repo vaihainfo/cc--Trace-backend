@@ -123,7 +123,6 @@ const exportReportsOnebyOne = async () => {
 
   console.log('Cron Job Completed to execute all reports.');
 }
-
 //----------------------------------------- Spinner Reports ------------------------//
 
 const exportSpinnerGreyOutReport = async () => {
@@ -131,7 +130,8 @@ const exportSpinnerGreyOutReport = async () => {
 
   try {
     const workbook = new ExcelJS.stream.xlsx.WorkbookWriter({
-      stream: fs.createWriteStream("./upload/spinner-grey-out-report-test.xlsx")
+      stream: fs.createWriteStream("./upload/spinner-grey-out-report-test.xlsx"),
+      useStyles: true,
     });
     let worksheetIndex = 0;
     const batchSize = 5000;
@@ -158,6 +158,16 @@ const exportSpinnerGreyOutReport = async () => {
         model: Spinner,
         as: "buyerdata",
         attributes: [],
+        include: [
+          {
+            model: Country,
+            as: "country",
+          },
+          {
+            model: State,
+            as: "state",
+          },
+        ],
       },
     ];
 
@@ -168,6 +178,55 @@ const exportSpinnerGreyOutReport = async () => {
         greyed_out_qty: { [Op.gt]: 0 }
       },
     ];
+  
+
+    interface Totals{
+      total_lint_quantity: 0,
+    };
+
+    
+    let totals: Totals = {
+      total_lint_quantity: 0,
+    };
+
+
+    const AddTotalRow = (currentWorksheet: ExcelJS.Worksheet | undefined, totals : Totals) =>{
+
+      if(currentWorksheet != undefined){
+        const rowValues = [
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "Total",
+          totals.total_lint_quantity,
+        ];
+        currentWorksheet?.addRow(rowValues).eachCell(cell=>cell.font={bold : true});
+        let borderStyle = {
+          top: {style:"thin"},
+          left: {style:"thin"},
+          bottom: {style:"thin"},
+          right: {style:"thin"}
+        };
+  
+        // Auto-adjust column widths based on content
+        currentWorksheet?.columns.forEach((column: any) => {
+          let maxCellLength = 0;
+          column.eachCell({ includeEmpty: true }, (cell: any) => {
+            const cellLength = (cell.value ? cell.value.toString() : "").length;
+            maxCellLength = Math.max(maxCellLength, cellLength);
+            cell.border = borderStyle;
+          });
+          column.width = Math.min(14, maxCellLength + 2); // Limit width to 30 characters
+        });
+       }
+    };
+
+  let currentWorksheet: ExcelJS.Worksheet| undefined = undefined;
 
   let hasNextBatch = true;
   while (hasNextBatch) {
@@ -175,6 +234,8 @@ const exportSpinnerGreyOutReport = async () => {
       where: whereCondition,
       include: include,
       attributes: [
+        [Sequelize.col('"buyerdata"."country"."county_name"'), 'country_name'],
+        [Sequelize.col('"buyerdata"."state"."state_name"'), 'state_name'],
         [Sequelize.col('"season"."name"'), 'season_name'],
         [Sequelize.literal('"ginner"."name"'), "ginner_name"],
         [Sequelize.col('"buyerdata"."name"'), 'spinner'],
@@ -206,16 +267,24 @@ const exportSpinnerGreyOutReport = async () => {
       hasNextBatch = false;
       break;
     }
-
+   
     if (offset % maxRowsPerWorksheet === 0) {
+      
+      if(currentWorksheet){
+        AddTotalRow(currentWorksheet, totals);
+      }
+      totals = { total_lint_quantity: 0 };
+
       worksheetIndex++;
     }
-
-
+   
+    
     for await (const [index, item] of rows.entries()) {
-
+      
       const rowValues = [
         offset + index + 1,
+        item?.country_name ? item?.country_name : "",
+        item?.state_name ? item?.state_name : "",
         item?.season_name ? item?.season_name : "",
         item?.ginner_name ? item?.ginner_name : "",
         item.spinner ? item.spinner : "",
@@ -224,20 +293,23 @@ const exportSpinnerGreyOutReport = async () => {
         item?.lot_no ? item?.lot_no : "",
         item.lint_greyout_qty ? Number(formatDecimal( item.lint_greyout_qty)) : 0
       ];
-
+      
+      totals.total_lint_quantity += Number(formatDecimal( item.lint_greyout_qty));
       let currentWorksheet = workbook.getWorksheet(`Spinner Lint Process Greyout Report ${worksheetIndex}`);
       if (!currentWorksheet) {
         currentWorksheet = workbook.addWorksheet(`Spinner Lint Process Greyout Report ${worksheetIndex}`);
-        if (worksheetIndex == 1) {
+       /* if (worksheetIndex == 1) {
           currentWorksheet.mergeCells("A1:H1");
           const mergedCell = currentWorksheet.getCell("A1");
           mergedCell.value = "CottonConnect | Spinner Lint Process Greyout Report";
           mergedCell.font = { bold: true };
           mergedCell.alignment = { horizontal: "center", vertical: "middle" };
-        }
+        } */
         // Set bold font for header row
         const headerRow = currentWorksheet.addRow([
           "Sr No.",
+          "Country",
+          "State",
           "Season",
           "Ginner Name",
           "Spinner Name",
@@ -248,9 +320,14 @@ const exportSpinnerGreyOutReport = async () => {
         ]);
         headerRow.font = { bold: true };
       }
-      currentWorksheet.addRow(rowValues).commit();
+      currentWorksheet.addRow(rowValues);
     }
     offset += batchSize;
+  }
+
+  let currentsheet = workbook.getWorksheet(`Spinner Lint Process Greyout Report ${worksheetIndex}`);
+  if(currentsheet){
+    AddTotalRow(currentsheet, totals);
   }
 
   await workbook.commit()
@@ -379,8 +456,8 @@ const exportGinHeapReport = async () => {
   }
 
   const rowValues = Object.values({
-    index: "Totals:", country: "", state: "", created_date:"", season: "", ginner_heap_no:"",
-    reel_heap_no:"", ginner_name:"", village_name: "", 
+    index: "", country: "", state: "", created_date:"", season: "", ginner_heap_no:"",
+    reel_heap_no:"", ginner_name:"", village_name: "Total", 
     heap_weight:Number(formatDecimal(weightSum)),
     heap_starting_date: "", heap_ending_date: "", weighbridge_vehicle_no:""
   });
@@ -414,11 +491,60 @@ const exportGinnerProcessGreyOutReport = async () => {
 
   try {
     const workbook = new ExcelJS.stream.xlsx.WorkbookWriter({
-      stream: fs.createWriteStream("./upload/ginner-process-grey-out-report-test.xlsx")
+      stream: fs.createWriteStream("./upload/ginner-process-grey-out-report-test.xlsx"),
+      useStyles: true,
     });
     let worksheetIndex = 0;
     const batchSize = 5000;
     let offset = 0;
+
+    interface Totals{
+      total_lint_quantity: 0,
+    };
+   
+    let totals: Totals = {
+      total_lint_quantity: 0,
+    };
+
+
+    const AddTotalRow = (currentWorksheet: ExcelJS.Worksheet | undefined, totals : Totals) =>{
+
+      if(currentWorksheet != undefined){
+        const rowValues = [
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "Total", 
+          totals.total_lint_quantity,
+        ];
+        currentWorksheet?.addRow(rowValues).eachCell(cell=>cell.font={bold : true});
+        let borderStyle = {
+          top: {style:"thin"},
+          left: {style:"thin"},
+          bottom: {style:"thin"},
+          right: {style:"thin"}
+        };
+  
+        // Auto-adjust column widths based on content
+        currentWorksheet?.columns.forEach((column: any) => {
+          let maxCellLength = 0;
+          column.eachCell({ includeEmpty: true }, (cell: any) => {
+            const cellLength = (cell.value ? cell.value.toString() : "").length;
+            maxCellLength = Math.max(maxCellLength, cellLength);
+            cell.border = borderStyle;
+          });
+          column.width = Math.min(14, maxCellLength + 2); // Limit width to 30 characters
+        });
+ 
+      }
+      
+    };
+
+  let currentWorksheet: ExcelJS.Worksheet| undefined = undefined;
 
   let hasNextBatch = true;
   while (hasNextBatch) {
@@ -436,6 +562,8 @@ const exportGinnerProcessGreyOutReport = async () => {
           gp.greyout_status, 
           gp.scd_verified_status,
           gp.verification_status,
+          c.county_name AS country_name,
+          st.state_name AS state_name,
           COALESCE(
             SUM(
               CASE
@@ -455,6 +583,8 @@ const exportGinnerProcessGreyOutReport = async () => {
         LEFT JOIN "gin-bales" gb ON gb.process_id = gp.id AND gb.sold_status = false
         LEFT JOIN seasons s ON gp.season_id = s.id
         LEFT JOIN ginners g ON gp.ginner_id = g.id
+        LEFT JOIN countries c ON c.id = g.country_id
+        LEFT JOIN states st ON st.id = g.state_id
         WHERE
           (
             gp.greyout_status = true
@@ -467,8 +597,7 @@ const exportGinnerProcessGreyOutReport = async () => {
               gp.scd_verified_status = false AND gb.scd_verified_status IS FALSE
             )
           )
-        GROUP BY gp.id, gp.ginner_id, gp.season_id, gp.lot_no, gp.reel_lot_no, gp.press_no, s.name, g.name, gp.no_of_bales,gp.greyout_status, gp.scd_verified_status,gp.verification_status
-        ORDER BY gp.id ASC
+        GROUP BY gp.id, gp.ginner_id, gp.season_id, gp.lot_no, gp.reel_lot_no, gp.press_no, s.name, g.name, gp.no_of_bales,gp.greyout_status, gp.scd_verified_status,gp.verification_status,c.county_name,st.state_name
         LIMIT :limit OFFSET :offset
     `;
 
@@ -486,6 +615,12 @@ const exportGinnerProcessGreyOutReport = async () => {
     }
 
     if (offset % maxRowsPerWorksheet === 0) {
+      if(currentWorksheet){
+        AddTotalRow(currentWorksheet, totals);
+      
+      }
+      totals = {total_lint_quantity: 0};
+      
       worksheetIndex++;
     }
 
@@ -493,6 +628,8 @@ const exportGinnerProcessGreyOutReport = async () => {
     for await (const [index, item] of rows.entries()) {
       const rowValues = [
         offset + index + 1,
+        item?.country_name ? item?.country_name : "",
+        item?.state_name ? item?.state_name : "",
         item?.season_name ? item?.season_name : "",
         item?.ginner_name ? item?.ginner_name : "",
         item.reel_lot_no ? item.reel_lot_no : "",
@@ -500,20 +637,24 @@ const exportGinnerProcessGreyOutReport = async () => {
         item?.lot_no ? item?.lot_no : "",
         item.lint_quantity ? Number(formatDecimal( item.lint_quantity)) : 0
       ];
+      
+      totals.total_lint_quantity+= Number(formatDecimal( item.lint_quantity));
 
       let currentWorksheet = workbook.getWorksheet(`Ginner Process Grey Out Report ${worksheetIndex}`);
       if (!currentWorksheet) {
         currentWorksheet = workbook.addWorksheet(`Ginner Process Grey Out Report ${worksheetIndex}`);
-        if (worksheetIndex == 1) {
+        /*if (worksheetIndex == 1) {
           currentWorksheet.mergeCells("A1:G1");
           const mergedCell = currentWorksheet.getCell("A1");
           mergedCell.value = "CottonConnect | Ginner Process Grey Out Report";
           mergedCell.font = { bold: true };
           mergedCell.alignment = { horizontal: "center", vertical: "middle" };
-        }
+        } */
         // Set bold font for header row
         const headerRow = currentWorksheet.addRow([
           "Sr No.",
+          "Country",
+          "State",
           "Season",
           "Ginner Name",
           "REEL Lot No",
@@ -523,11 +664,15 @@ const exportGinnerProcessGreyOutReport = async () => {
         ]);
         headerRow.font = { bold: true };
       }
-      currentWorksheet.addRow(rowValues).commit();
+      currentWorksheet.addRow(rowValues);
     }
     offset += batchSize;
   }
 
+  let currentsheet = workbook.getWorksheet(`Ginner Process Grey Out Report ${worksheetIndex}`);
+  if(currentsheet){
+    AddTotalRow(currentsheet, totals);
+  }
   await workbook.commit()
   .then(() => {
     // Rename the temporary file to the final filename
@@ -565,20 +710,32 @@ const exportSpinnerProcessGreyOutReport = async () => {
       model: Spinner,
       as: "spinner",
       attributes: [],
+      include: [
+        {
+          model: Country,
+          as: "country",
+        },
+        {
+          model: State,
+          as: "state",
+        },
+    ],
     },
   ];
 
   // Create the excel workbook file
   const workbook = new ExcelJS.Workbook();
   const worksheet = workbook.addWorksheet("Sheet1");
-  worksheet.mergeCells("A1:G1");
+  /*worksheet.mergeCells("A1:G1");
   const mergedCell = worksheet.getCell("A1");
   mergedCell.value = "CottonConnect | Spinner Yarn Greyout Report";
   mergedCell.font = { bold: true };
-  mergedCell.alignment = { horizontal: "center", vertical: "middle" };
+  mergedCell.alignment = { horizontal: "center", vertical: "middle" }; */
   // Set bold font for header row
   const headerRow = worksheet.addRow([
     "Sr No.",
+    "Country",
+    "State",
     "Season",
     "Spinner Name",
     "REEL Lot No",
@@ -593,6 +750,8 @@ const exportSpinnerProcessGreyOutReport = async () => {
     where: { greyout_status: true },
     include: include,
     attributes: [
+      [Sequelize.col('"spinner"."country"."county_name"'), 'country_name'],
+      [Sequelize.col('"spinner"."state"."state_name"'), 'state_name'],
       [Sequelize.col('"season"."name"'), 'season_name'],
       [Sequelize.col('"season"."name"'), 'season_name'],
       [Sequelize.col('"spinner"."name"'), 'spinner_name'],
@@ -603,9 +762,13 @@ const exportSpinnerProcessGreyOutReport = async () => {
   });
 
   // // Append data to worksheet
+  let total_lint_quantity = 0 ;
   for await (const [index, item] of rows.entries()) {
+    total_lint_quantity += item.dataValues.qty_stock ? Number(item.dataValues.qty_stock) : 0;
     const rowValues = Object.values({
       index: index + 1,
+      country:item.dataValues.country_name ? item.dataValues.country_name : "",
+      state:item.dataValues.state_name ? item.dataValues.state_name : "",
       season: item.dataValues.season_name ? item.dataValues.season_name : "",
       spinner: item.dataValues.spinner_name ? item.dataValues.spinner_name : "",
       reel_lot_no: item.dataValues.reel_lot_no ? item.dataValues.reel_lot_no : "",
@@ -614,13 +777,28 @@ const exportSpinnerProcessGreyOutReport = async () => {
     });
     worksheet.addRow(rowValues);
   }
+  const rowValues = Object.values({
+    index: "", country: "", state: "", season:"",spinner:"",
+    reel_lot_no:"", batch_lot_no: "Total", 
+    lint_quantity:Number(formatDecimal(total_lint_quantity)),
+   
+  });
 
+  worksheet.addRow(rowValues).eachCell(cell  => { cell.font={bold:true}});
+
+  const borderStyle = {
+    top: { style: "thin" },
+    bottom: { style: "thin" },
+    left: { style: "thin" },
+    right: { style: "thin" },
+  };
   // Auto-adjust column widths based on content
   worksheet.columns.forEach((column: any) => {
     let maxCellLength = 0;
     column.eachCell({ includeEmpty: true }, (cell: any) => {
       const cellLength = (cell.value ? cell.value.toString() : "").length;
       maxCellLength = Math.max(maxCellLength, cellLength);
+      cell.border = borderStyle;
     });
     column.width = Math.min(14, maxCellLength + 2); // Limit width to 30 characters
   });
@@ -671,7 +849,6 @@ const generateSpinnerLintCottonStock = async () => {
 
       if(currentWorksheet != undefined){
         const rowValues = [
-          "Totals: ",
           "",
           "",
           "",
@@ -681,6 +858,7 @@ const generateSpinnerLintCottonStock = async () => {
           "",
           "",
           "",
+          "Total",
           totals.cotton_procured,
           totals.cotton_stock,
           totals.greyed_out_qty,
@@ -2087,20 +2265,23 @@ const generatePscpProcurementLiveTracker = async () => {
       const data = await sequelize.query(
         `
         WITH
-          filtered_ginners AS (
-            SELECT
-              g.id,
-              g.name,
-              g.program_id,
-              s.state_name,
-              c.county_name,
-              p.program_name
-            FROM
-              ginners g
-              JOIN states s ON g.state_id = s.id
-              JOIN countries c ON g.country_id = c.id
-              JOIN programs p ON p.id = ANY(g.program_id)
-          ),
+        filtered_ginners AS (
+          SELECT
+            g.id,
+            g.name,
+            g.program_id,
+            s.state_name,
+            c.county_name,
+            (
+              SELECT STRING_AGG(p.program_name, ', ')
+              FROM programs p
+              WHERE p.id = ANY(g.program_id)
+            ) AS program_name
+          FROM
+            ginners g
+            JOIN states s ON g.state_id = s.id
+            JOIN countries c ON g.country_id = c.id
+        ),
           procurement_data AS (
             SELECT
               t.mapped_ginner,
@@ -2530,11 +2711,11 @@ const generatePscpProcurementLiveTracker = async () => {
       let currentWorksheet = workbook.getWorksheet(`Sheet${worksheetIndex}`);
 
       const rowValues = {
-        index:"Totals:",
+        index:"",
         name:"",
         country:"",
         state:"",
-        program:"",
+        program:"Total",
         expected_seed_cotton: totals.expected_seed_cotton,
         expected_lint: totals.expected_lint,
         procurement_seed_cotton: totals.procurement_seed_cotton,
@@ -3315,10 +3496,10 @@ const generateGinnerSummary = async () => {
       }
 
       const rowValues = {
-        index:"Totals:",
+        index:"",
         name:"",
         country:"",
-        state:"",
+        state:"Total",
         cottonProcuredMt: totals.cottonProcuredMt,
         cottonProcessedeMt: totals.cottonProcessedeMt,
         cottonStockMt: totals.cottonStockMt,
@@ -3793,7 +3974,7 @@ const generateGinnerProcess = async () => {
 
       if(currentWorksheet != undefined){
         const rowValues = Object.values({
-          Index:"Total",
+          Index:"",
           country:"",
           state:"",
           date:"",
@@ -3808,7 +3989,7 @@ const generateGinnerProcess = async () => {
           lot_no:"",
           press_no:"",
           reel_lot_no:"",
-          reel_press_no:"",
+          reel_press_no:"Total",
           noOfBales: Number(formatDecimal(totals.total_no_of_bales)),
           lint_quantity: Number(formatDecimal(totals.total_lint_quantity)),
           seedConsmed: Number(formatDecimal(totals.total_seedConsmed)),
@@ -4263,7 +4444,7 @@ const generateGinnerSales = async () => {
 
       if(currentWorksheet != undefined){
         const rowValues = Object.values({
-          Index:"Total",
+          Index:"",
           country:"",
           state:"",
           date:"",
@@ -4279,11 +4460,12 @@ const generateGinnerSales = async () => {
           buyer:"",
           // heap:"",
           lot_no:"",
-          reel_lot_no:"",
+          reel_lot_no:"Total",
           no_of_bales: Number(formatDecimal(totals.total_no_of_bales)),
           press_no:"",
           rate: Number(formatDecimal(totals.total_rate)),
           lint_quantity: Number(formatDecimal(totals.total_lint_quantity)),
+          old_weight: "",
           other_season_quantity:"",
           other_season_bales:"",
           sales_value: Number(formatDecimal(totals.total_Sales_value)),
@@ -4570,7 +4752,7 @@ const generateGinnerSales = async () => {
         const headerRow = currentWorksheet.addRow([
           "Sr No.", "Country","State", "Process Date", "Data Entry Date", "No of Days", "Lint Process Season", "Lint sale chosen season", "Ginner Name",
           "Invoice No", "Buyer Type", "Sold To", "Bale Lot No", "REEL Lot No", "No of Bales", "Press/Bale No", "Rate/Kg",
-          "Total Quantity", "Other Season Quantity (Kgs)", "Other Season Bales", "Sales Value", "Vehicle No", "Transporter Name", "Programme", "Agent Details", "Status"
+          "Total Quantity", "Total old weight", "Other Season Quantity (Kgs)", "Other Season Bales", "Sales Value", "Vehicle No", "Transporter Name", "Programme", "Agent Details", "Status"
         ]);
         headerRow.font = { bold: true };
       }
@@ -4602,6 +4784,7 @@ const generateGinnerSales = async () => {
           press_no: item.press_no ? item.press_no : '',
           rate: item.rate ? item.rate : 0,
           lint_quantity: item.lint_quantity ? Number(item.lint_quantity) : '',
+          old_weight: item.total_old_weight ? Number(item.total_old_weight) : 0,
           other_season_quantity: item.lint_process_seasons?.split(',').length > 1
           ? Number(item.other_season_quantity || item.previous_season_quantity || item.future_season_quantity || null)
           : item.previous_season_quantity
@@ -4731,7 +4914,7 @@ const generatePendingGinnerSales = async () => {
 
       if(currentWorksheet != undefined){
         const rowValues = Object.values({
-          Index:"Total",
+          Index:"",
           country:"",
           state:"",
           date:"",
@@ -4741,7 +4924,7 @@ const generatePendingGinnerSales = async () => {
           buyer_type:"",
           buyer:"",
           lot_no:"",
-          reel_lot_no:"",
+          reel_lot_no:"Total",
           no_of_bales: Number(formatDecimal(totals.total_no_of_bales)),
           press_no:"",
           rate: Number(formatDecimal(totals.total_rate)),
@@ -4999,11 +5182,11 @@ const generateGinnerCottonStock = async () => {
 
       if(currentWorksheet != undefined){
         const rowValues = Object.values({
-          index: "Total:",
+          index: "",
           ginner:  "",
           season:  "",
           country: "",
-          state: "",
+          state: "Total",
           cotton_procured: Number(formatDecimal( totals.total_cotton_procured)),
           cotton_processed: Number(formatDecimal(totals.total_cotton_processed)),
           cotton_stock: Number(formatDecimal(totals.total_cotton_stock)),
@@ -5283,10 +5466,10 @@ const generateSpinnerSummary = async () => {
 
       if(currentWorksheet != undefined){
         const rowVal ={
-          index:"Totals",
+          index:"",
           country:"",
           state:"",
-          name:"",
+          name:"Total",
           lint_cotton_procured:Number(formatDecimal(totals.total_lint_cotton_procured)),
           lint_cotton_procured_pending:Number(formatDecimal(totals.total_lint_cotton_procured_pending)),
           lint_consumed:Number(formatDecimal(totals.total_lint_consumed)),
@@ -5295,7 +5478,7 @@ const generateSpinnerSummary = async () => {
           balance_lint_cotton:Number(formatDecimal(totals.total_balance_lint_cotton)),
           yarn_procured:Number(formatDecimal(totals.total_yarn_procured)),
           yarn_sold:Number(formatDecimal(totals.total_yarn_sold)),
-          yarnGreyoutMT:Number(formatDecimal(totals.total_lintGreyoutMT)),
+          yarnGreyoutMT:Number(formatDecimal(totals.total_yarnGreyoutMT)),
           yarnActualStockMT:Number(formatDecimal(totals.total_yarnActualStockMT)),
           yarn_stock:Number(formatDecimal(totals.total_yarn_stock)),
         }; 
@@ -5663,7 +5846,7 @@ const generateSpinnerSummary = async () => {
         totals.total_balance_lint_cotton+=Number(rowVal.balance_lint_cotton);
         totals.total_yarn_procured+=Number(rowVal.yarn_procured);
         totals.total_yarn_sold+=Number(rowVal.yarn_sold);
-        totals.total_yarnGreyoutMT+=Number(rowVal.lintGreyoutMT);
+        totals.total_yarnGreyoutMT+=Number(rowVal.yarnGreyoutMT);
         totals.total_yarnActualStockMT+=Number(rowVal.yarnActualStockMT);
         totals.total_yarn_stock+=Number(rowVal.yarn_stock);
 
@@ -5770,7 +5953,7 @@ const generateSpinnerBale = async () => {
 
       if(currentWorksheet != undefined){
         const rowValues = Object.values({
-          index:"Totals: ",
+          index:"",
           country:"",
           state:"",
           accept_date:"",
@@ -5782,7 +5965,7 @@ const generateSpinnerBale = async () => {
           invoice:"",
           lot_no:"",
           reel_lot_no:"",
-          press_no:"",
+          press_no:"Total",
           no_of_bales: Number(formatDecimal(totals.total_no_of_bales)),
           lint_quantity: Number(formatDecimal(totals.total_lint_quantity)),
           program:"",
@@ -6063,7 +6246,7 @@ const generateSpinnerYarnProcess = async () => {
       if(currentWorksheet != undefined){
         let rowValues;
         rowValues = {
-             index:"Totals: ",
+             index:"",
              country:"",
              state:"",
              createdAt:"",
@@ -6078,7 +6261,7 @@ const generateSpinnerYarnProcess = async () => {
              reel_lot_no:"",
              yarnType:"",
              count:"",
-             resa:"",
+             resa:"Total",
              comber: Number(formatDecimal(totals.total_comber)),
              blend: "",
              blendqty: "",
@@ -6483,7 +6666,7 @@ const generateSpinnerSale = async () => {
 
     if(currentWorksheet != undefined){
       const rowValues ={
-        index:"Totals: ",
+        index:"",
         country:"",
         state:"",
         createdAt:"",
@@ -6501,7 +6684,7 @@ const generateSpinnerSale = async () => {
         yarnType:"",
         count:"",
         boxes:"",
-        boxId:"",
+        boxId:"Total",
         price: Number(formatDecimal(totals.total_price)),
         total: Number(formatDecimal(totals.total_net_weight)),
         transporter_name:"",
@@ -7163,7 +7346,7 @@ const generatePendingSpinnerBale = async () => {
 
       if(currentWorksheet != undefined){
         let rowValues = {
-          index:"Totals: ",
+          index:"",
           country:"",
           state:"",
           createdAt:"",
@@ -7172,7 +7355,7 @@ const generatePendingSpinnerBale = async () => {
           season:"",
           ginner:"",
           spinner:"",
-          invoice:"",
+          invoice:"Total",
           no_of_bales: Number(formatDecimal(totals.no_of_bales)),
           lot_no:"",
           reel_lot_no:"",
@@ -7231,7 +7414,7 @@ const generatePendingSpinnerBale = async () => {
           [Sequelize.fn('STRING_AGG', Sequelize.literal('DISTINCT "bale->ginprocess"."reel_lot_no"'), ','), "reel_lot_no"],
           [Sequelize.literal('"sales"."rate"'), "rate"],
           [Sequelize.literal('"sales"."candy_rate"'), "candy_rate"],
-          [Sequelize.literal('"sales"."total_qty"'), "lint_quantity"],
+          [Sequelize.fn("SUM", Sequelize.literal('CAST("bale"."weight" AS DOUBLE PRECISION)')), "lint_quantity"],
           [Sequelize.literal('"sales"."no_of_bales"'), "no_of_bales"],
           [Sequelize.literal('"sales"."sale_value"'), "sale_value"],
           [Sequelize.literal('"sales"."press_no"'), "press_no"],

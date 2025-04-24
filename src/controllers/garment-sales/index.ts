@@ -775,8 +775,8 @@ const createGarmentProcess = async (req: Request, res: Response) => {
       no_of_pieces: req.body.noOfPieces,
       no_of_boxes: req.body.noOfBoxes,
       finished_garment_image: req.body.finishedGarmentImage,
-      // qty_stock: req.body.totalFabricLength,
-      // total_qty: req.body.totalFabricLength,
+      qty_stock: req.body.totalFabricLength + req.body.totalFabricWeight,
+      total_qty: req.body.totalFabricLength + req.body.totalFabricWeight,
       qty_stock_weight: req.body.totalFabricWeight,
       qty_stock_length: req.body.totalFabricLength,
       embroidering_required: req.body.embroideringRequired,
@@ -927,6 +927,7 @@ const updateGarmentProcess = async (req: Request, res: Response) => {
         garment_size: fabric.garmentSize,
         color: fabric.color,
         no_of_pieces: fabric.noOfPieces,
+        no_of_pieces_stock: fabric.noOfPieces,
         no_of_boxes: fabric.noOfBoxes,
         finished_garment_image: fabric.finishedGarmentImage,
         sold_status: false
@@ -1508,13 +1509,13 @@ const createGarmentSales = async (req: Request, res: Response) => {
           where: { id: obj.process_id },
         });
         if (val) {
-          let update = await GarmentProcess.update(
-            {
-              qty_stock: val.dataValues.qty_stock - obj.qtyUsed,
-              status: 'Sold'
-            },
-            { where: { id: obj.process_id } }
-          );
+          // let update = await GarmentProcess.update(
+          //   {
+          //     qty_stock: val.dataValues.qty_stock - obj.qtyUsed,
+          //     status: 'Sold'
+          //   },
+          //   { where: { id: obj.process_id } }
+          // );
 
           const GarmentFabric = await GarmentFabricType.findOne({ where: { id: obj.id } });
 
@@ -3980,6 +3981,11 @@ const getCOCDocumentData = async (
       gnrTotalQty: '',
       date: '',
       seedCottonQty: 0,
+      fbrcProcessorType:'',
+      dyingProcessor: '',
+      dyingTotal: '',
+      dyingBatchLotNo: '',
+      dyingProcess:false
     };
 
     let [result] = await sequelize.query(`
@@ -4040,12 +4046,24 @@ const getCOCDocumentData = async (
       SELECT array_to_string(array_agg(distinct case
                                               when fs.processor = 'knitter' and fs.fabric_id is not null
                                                   then fs.fabric_id
-                end), ',')        as knit_sale_ids,
+                 end), ',')        as knit_sale_ids,
               array_to_string(array_agg(distinct case
                                                       when fs.processor = 'weaver' and fs.fabric_id is not null
                                                           then fs.fabric_id
-                  end), ',') as weaver_sale_ids
-      FROM garment_processes gp
+                  end), ',') as weaver_sale_ids,
+              array_to_string(array_agg(distinct case
+                                                      when fs.processor = 'dying' and fs.fabric_id is not null
+                                                          then fs.fabric_id
+                 end), ',') as dying_sale_ids,
+              array_to_string(array_agg(distinct case
+                                                      when fs.processor = 'printing' and fs.fabric_id is not null
+                                                          then fs.fabric_id
+                  end), ',') as printing_sale_ids,
+               array_to_string(array_agg(distinct case
+                                                      when fs.processor = 'washing' and fs.fabric_id is not null
+                                                          then fs.fabric_id
+                  end), ',') as washing_sale_ids
+              FROM garment_processes gp
               LEFT JOIN fabric_selections fs on gp.id = fs.sales_id
       where gp.id IN (:ids);
     `, {
@@ -4053,6 +4071,35 @@ const getCOCDocumentData = async (
         type: sequelize.QueryTypes.SELECT,
         raw: true
       });
+    }
+
+    if (knitOrWeaData && knitOrWeaData.dying_sale_ids) {
+      [knitOrWeaData]  = await sequelize.query(`
+       SELECT array_to_string(array_agg(distinct case
+                                              when dfs.process_type = 'Knitter' and dfs.process_id is not null
+                                                  then dfs.process_id
+                 end), ',')  as knit_sale_ids,
+              array_to_string(array_agg(distinct case
+                                              when dfs.process_type = 'Weaver' and dfs.process_id is not null
+                                                  then dfs.process_id
+                  end), ',') as weaver_sale_ids,
+              STRING_AGG (ds.batch_lot_no,',') as dyeingbatchlotno,
+              dy.name  as dyeing_processor,
+              sum(dfs.qty_used) as total_dying_weight              
+      from dying_sales ds
+              left join fabrics dy on dy.id = ds.dying_id
+              left join dying_fabric_selections dfs on dfs.sales_id = ds.id
+      where ds.id in (:ids)
+      group by dy.id,dy.name;
+      `, {
+        replacements: { ids: knitOrWeaData.dying_sale_ids.split(',') },
+        type: sequelize.QueryTypes.SELECT
+      });
+      
+      cocRes.dyingProcess = true;
+      cocRes.dyingProcessor = knitOrWeaData.dyeing_processor;
+      cocRes.dyingTotal = knitOrWeaData.total_dying_weight;
+      cocRes.dyingBatchLotNo = knitOrWeaData.dyeingbatchlotno;
     }
 
     const spinSalesIds: any[] = [];
@@ -4133,7 +4180,7 @@ const getCOCDocumentData = async (
 
       cocRes.fbrcNetWeight = fbrcNetWeight.length ? fbrcNetWeight?.join(', ') : '';
     }
-
+    let totalSpinNetWeight = 0;
     const weaverProcessId = wProcessIds.flatMap((id: any) => id.split(',').map((str: string) => str.trim()))
       .filter(id => id !== '')
       .map(Number)
@@ -4141,7 +4188,8 @@ const getCOCDocumentData = async (
 
     if (weaverProcessId && weaverProcessId?.length) {
       const WeaverProcess = await sequelize.query(`
-        select wp.id, array_to_string(array_agg(distinct ys.yarn_id), ',') as spin_sale_ids
+        select wp.id, array_to_string(array_agg(distinct ys.yarn_id), ',') as spin_sale_ids,
+                 sum (ys.qty_used) as spin_yarn_qty_used
         from weaver_processes wp
                 left join yarn_selections ys on ys.sales_id = wp.id
         where wp.id in (:ids)
@@ -4153,8 +4201,12 @@ const getCOCDocumentData = async (
 
       WeaverProcess?.forEach((sale: any) => {
         if (!spinSalesIds.includes(sale.spin_sale_ids))
+          totalSpinNetWeight += sale.spin_yarn_qty_used;
+        if (!spinSalesIds.includes(sale.spin_sale_ids))
           spinSalesIds.push(sale.spin_sale_ids);
       });
+      cocRes.fbrcProcessorType = 'Weaver';
+      cocRes.spnrNetWeight = String(totalSpinNetWeight);
     }
 
     const knitterProcessId = kProcessIds.flatMap((id: any) => id.split(',').map((str: string) => str.trim()))
@@ -4165,7 +4217,8 @@ const getCOCDocumentData = async (
     if (knitterProcessId && knitterProcessId?.length) {
       const KnitProcess = await sequelize.query(`
       select  kp.id, 
-              array_to_string(array_agg(distinct kys.yarn_id), ',') as spin_sale_ids
+              array_to_string(array_agg(distinct kys.yarn_id), ',') as spin_sale_ids,
+              sum (kys.qty_used) as spin_yarn_qty_used
       from knit_processes kp
               left join knit_yarn_selections kys on kys.sales_id = kp.id
       where kp.id in (:ids)
@@ -4176,9 +4229,12 @@ const getCOCDocumentData = async (
       });
 
       KnitProcess?.forEach((sale: any) => {
+        totalSpinNetWeight += sale.spin_yarn_qty_used;
         if (!spinSalesIds.includes(sale.spin_sale_ids))
           spinSalesIds.push(sale.spin_sale_ids);
       });
+      cocRes.fbrcProcessorType = 'Knitter';
+      cocRes.spnrNetWeight = String(totalSpinNetWeight);
     }
 
     const spinnerSalesId = spinSalesIds.flatMap((id: any) => id.split(',').map((str: string) => str.trim()))
@@ -4256,7 +4312,6 @@ const getCOCDocumentData = async (
 
         });
       }
-      cocRes.spnrNetWeight = spinNetWeight.length ? spinNetWeight.join(', ') : '';
       cocRes.spinnerReelLotNo = spinLotNo.length ? spinLotNo.join(', ') : '';
       cocRes.spnrName = spiName.length ? spiName.join(', ') : '';
     }
@@ -4459,14 +4514,14 @@ const deleteGarmentSales = async (req: Request, res: Response) => {
       // Restore quantities back to GarmentProcess and GarmentFabricType
       for (const selection of garmentSelections) {
         // Get the garment process
-        const garmentProcess = await GarmentProcess.findByPk(selection.garment_id, { transaction });
-        if (garmentProcess) {
-          // Restore the quantity back to the process
-          await GarmentProcess.update(
-            { qty_stock: garmentProcess.qty_stock + selection.qty_used },
-            { where: { id: selection.garment_id }, transaction }
-          );
-        }
+        // const garmentProcess = await GarmentProcess.findByPk(selection.garment_id, { transaction });
+        // if (garmentProcess) {
+        //   // Restore the quantity back to the process
+        //   await GarmentProcess.update(
+        //     { qty_stock: garmentProcess.qty_stock + selection.qty_used },
+        //     { where: { id: selection.garment_id }, transaction }
+        //   );
+        // }
 
         // Get the garment fabric type
         const garmentFabricType = await GarmentFabricType.findByPk(selection.garment_type_id, { transaction });
