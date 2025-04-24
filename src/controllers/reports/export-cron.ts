@@ -4042,6 +4042,7 @@ const generateGinnerProcess = async () => {
               gp.to_date,
               gp."createdAt" AS created_date,
               s.name AS season_name,
+              g.id AS ginner_id,
               g.name AS ginner_name,
               g.country_id as country_id,
               g.state_id as state_id,
@@ -4069,52 +4070,58 @@ const generateGinnerProcess = async () => {
               programs pr ON gp.program_id = pr.id
             ),
           gin_bale_data AS (
-                SELECT
-                    gb.process_id,
-                    COALESCE(
+              SELECT
+                  gb.process_id,
+                  COALESCE(
+              SUM(
+                  CASE
+                    WHEN gb.old_weight IS NOT NULL THEN CAST(gb.old_weight AS DOUBLE PRECISION)
+                    ELSE CAST(gb.weight AS DOUBLE PRECISION)
+                  END
+                  ), 0
+                  ) AS lint_quantity,
+                  COALESCE(
+                    SUM(
+                      CAST(gb.old_weight AS DOUBLE PRECISION)
+                    ), 0
+                  ) AS old_weight_total,
+               MIN(gb.bale_no) AS pressno_from,
+             MAX(LPAD(gb.bale_no, 10, ' ')) AS pressno_to
+              FROM
+                  "gin-bales" gb
+              GROUP BY
+                  gb.process_id
+          ),
+          gin_bale_greyout_data AS (
+            SELECT
+              gb.process_id,
+			  gp.ginner_id,
+              COUNT(gb.id) AS no_of_bales,
+              COALESCE(
                     SUM(
                       CASE
                         WHEN gb.old_weight IS NOT NULL THEN CAST(gb.old_weight AS DOUBLE PRECISION)
                         ELSE CAST(gb.weight AS DOUBLE PRECISION)
                       END
-                      ), 0
-                    ) AS lint_quantity,
-                    MIN(gb.bale_no) AS pressno_from,
-               MAX(LPAD(gb.bale_no, 10, ' ')) AS pressno_to 
-               FROM
-                    "gin-bales" gb
-                GROUP BY
-                    gb.process_id
-            ),
-            gin_bale_greyout_data AS (
-              SELECT
-                gb.process_id,
-                COUNT(gb.id) AS no_of_bales,
-                COALESCE(
-                      SUM(
-                        CASE
-                          WHEN gb.old_weight IS NOT NULL THEN CAST(gb.old_weight AS DOUBLE PRECISION)
-                          ELSE CAST(gb.weight AS DOUBLE PRECISION)
-                        END
-                      ), 0
-                  ) AS total_qty
-              FROM
-                "gin-bales" gb
-              JOIN gin_processes gp ON gb.process_id = gp.id
-              WHERE
+                    ), 0
+                ) AS total_qty
+            FROM
+              "gin-bales" gb
+            JOIN gin_processes gp ON gb.process_id = gp.id
+            WHERE
+              (
                 (
-                  (
-                    gp.scd_verified_status = true AND gb.scd_verified_status IS NOT TRUE
-                  )
-                  OR
-                  (
-                    gp.scd_verified_status = false AND gb.scd_verified_status IS FALSE
-                  )
+                  gp.scd_verified_status = true AND gb.scd_verified_status IS NOT TRUE
                 )
-              GROUP BY
-                gb.process_id
-            ),
-            cotton_selection_data AS (
+                OR
+                (
+                  gp.scd_verified_status = false AND gb.scd_verified_status IS FALSE
+                )
+              )
+            GROUP BY
+              gb.process_id, gp.ginner_id
+          ),
+          cotton_selection_data AS (
             SELECT
                 cs.process_id,
                 ARRAY_AGG(DISTINCT t.village_id) AS villages
@@ -4168,11 +4175,12 @@ const generateGinnerProcess = async () => {
             GROUP BY
                 cv.process_id
           ),
-            sold_data AS (
-                SELECT
-                    gb.process_id,
-                    COUNT(gb.id) AS sold_bales,
-                    COALESCE(
+          sold_data AS (
+              SELECT
+                  gb.process_id,
+                  gs.ginner_id,
+                  COUNT(gb.id) AS sold_bales,
+                 COALESCE(
                   SUM(
                     CASE
                       WHEN gb.old_weight IS NOT NULL THEN CAST(gb.old_weight AS DOUBLE PRECISION)
@@ -4180,6 +4188,31 @@ const generateGinnerProcess = async () => {
                     END
                   ), 0
               ) AS lint_quantity_sold
+              FROM
+                  "gin-bales" gb
+              LEFT JOIN 
+                  bale_selections bs ON gb.id = bs.bale_id
+              LEFT JOIN 
+                  gin_sales gs ON gs.id = bs.sales_id
+              WHERE
+                  gs.status in ('Pending', 'Pending for QR scanning', 'Partially Accepted', 'Partially Rejected','Sold')
+                  AND gs.buyer_ginner IS NULL
+              GROUP BY
+                  gb.process_id, gs.ginner_id
+          ),
+          gin_to_gin_sales_data AS (
+                SELECT
+                    gb.process_id,
+					          gs.ginner_id,
+                    COUNT(gb.id) AS no_of_bales,
+                    COALESCE(
+                      SUM(
+                        CASE
+                          WHEN gb.old_weight IS NOT NULL THEN CAST(gb.old_weight AS DOUBLE PRECISION)
+                          ELSE CAST(gb.weight AS DOUBLE PRECISION)
+                        END
+                      ), 0
+                    ) AS lint_qty
                 FROM
                     "gin-bales" gb
                 LEFT JOIN 
@@ -4188,88 +4221,69 @@ const generateGinnerProcess = async () => {
                     gin_sales gs ON gs.id = bs.sales_id
                 WHERE
                     gs.status in ('Pending', 'Pending for QR scanning', 'Partially Accepted', 'Partially Rejected','Sold')
-                     AND gs.buyer_ginner IS NULL
+                    AND gs.buyer_ginner IS NOT NULL
+                    AND gs.buyer_type = 'Ginner'
                 GROUP BY
-                    gb.process_id
-           ),
-          gin_to_gin_sales_data AS (
-              SELECT
-                  gb.process_id,
-                  COUNT(gb.id) AS no_of_bales,
-                  COALESCE(
-                    SUM(
-                      CASE
-                        WHEN gb.old_weight IS NOT NULL THEN CAST(gb.old_weight AS DOUBLE PRECISION)
-                        ELSE CAST(gb.weight AS DOUBLE PRECISION)
-                      END
-                    ), 0
-                  ) AS lint_qty
-              FROM
-                  "gin-bales" gb
-              LEFT JOIN 
-                bale_selections bs ON gb.id = bs.bale_id
-              LEFT JOIN 
-                  gin_sales gs ON gs.id = bs.sales_id
-              WHERE
-                  gs.status in ('Pending', 'Pending for QR scanning', 'Partially Accepted', 'Partially Rejected','Sold')
-                  AND gs.buyer_ginner IS NOT NULL
-                  AND gs.buyer_type = 'Ginner'
-              GROUP BY
-                  gb.process_id
+                    gb.process_id, gs.ginner_id
             )
-            SELECT
-                gd.process_id,
-                gd.date AS date,
-                gd.from_date AS from_date,
-                gd.to_date AS to_date,
-                gd.created_date AS "createdAt",
-                EXTRACT(DAY FROM (gd.created_date - gd.date)) AS no_of_days,
-                gd.season_name AS season,
-                gd.ginner_name AS ginner_name,
-                c.county_name AS country_name,
-                s.state_name AS state_name,                
-                gd.heap_number AS heap_number,
-                gd.heap_register AS heap_register,
-                gd.bale_process AS bale_process,
-                gd.lot_no AS lot_no,
-                gd.press_no AS press_no,
-                CONCAT(gb.pressno_from, '-', gb.pressno_to) AS gin_press_no,
-                gd.reel_lot_no AS reel_lot_no,
-                CONCAT('001-', LPAD(gd.no_of_bales::TEXT, 3, '0')) AS reel_press_no,
-                gd.no_of_bales AS no_of_bales,
-                gb.lint_quantity AS lint_quantity,
-                gd.seed_consumed AS total_qty,
-                gd.got AS gin_out_turn,
-                COALESCE(sd.lint_quantity_sold, 0) AS lint_quantity_sold,
-                COALESCE(sd.sold_bales, 0) AS sold_bales,
-                COALESCE(gbg.no_of_bales, 0) AS greyout_bales,
-                COALESCE(gbg.total_qty, 0) AS lint_qty_greyout,
-                COALESCE(gtg.no_of_bales, 0) AS bales_transfered,
-                COALESCE(gtg.lint_qty, 0) AS lint_qty_transfered,
-                (COALESCE(gb.lint_quantity, 0) - (COALESCE(sd.lint_quantity_sold, 0) + COALESCE(gbg.total_qty, 0) + COALESCE(gtg.lint_qty, 0))) AS lint_stock,
-                (COALESCE(gd.no_of_bales, 0) - (COALESCE(sd.sold_bales, 0) + COALESCE(gbg.no_of_bales, 0) + COALESCE(gtg.no_of_bales, 0))) AS bale_stock,
-                gd.program AS program,
-                vnd.village_names AS village_names,
-                gd.season_name AS seed_consumed_seasons,
-                gd.weigh_bridge,
-                gd.delivery_challan,
-                gd.qr,
-                gd.greyout_status
-            FROM
-                gin_process_data gd
-            LEFT JOIN
-                gin_bale_data gb ON gd.process_id = gb.process_id
-            LEFT JOIN
+          SELECT
+              gd.process_id,
+              gd.date AS date,
+              gd.from_date AS from_date,
+              gd.to_date AS to_date,
+              gd.created_date AS "createdAt",
+              EXTRACT(DAY FROM (gd.created_date - gd.date)) AS no_of_days,
+              gd.season_name AS season,
+              gd.ginner_name AS ginner_name,
+
+              gd.got_from AS got_from,
+              gd.got_to AS got_to,
+              c.county_name AS country_name,
+              s.state_name AS state_name,
+
+              gd.heap_number AS heap_number,
+              gd.heap_register AS heap_register,
+              gd.bale_process AS bale_process,
+              gd.lot_no AS lot_no,
+              gd.press_no AS press_no,
+              CONCAT(gb.pressno_from, '-', gb.pressno_to) AS gin_press_no,
+              gd.reel_lot_no AS reel_lot_no,
+              CONCAT('001-', LPAD(gd.no_of_bales::TEXT, 3, '0')) AS reel_press_no,
+              gd.no_of_bales AS no_of_bales,
+              gb.lint_quantity AS lint_quantity,
+              gd.seed_consumed AS total_qty,
+              gd.got AS gin_out_turn,
+              COALESCE(sd.lint_quantity_sold, 0) AS lint_quantity_sold,
+              gb.old_weight_total AS old_weight_total,
+              COALESCE(sd.sold_bales, 0) AS sold_bales,
+              COALESCE(gbg.no_of_bales, 0) AS greyout_bales,
+              COALESCE(gbg.total_qty, 0) AS lint_qty_greyout,
+              COALESCE(gtg.no_of_bales, 0) AS bales_transfered,
+              COALESCE(gtg.lint_qty, 0) AS lint_qty_transfered,
+              (COALESCE(gb.lint_quantity, 0) - (COALESCE(sd.lint_quantity_sold, 0) + COALESCE(gbg.total_qty, 0) + COALESCE(gtg.lint_qty, 0))) AS lint_stock,
+              (COALESCE(gd.no_of_bales, 0) - (COALESCE(sd.sold_bales, 0) + COALESCE(gbg.no_of_bales, 0) + COALESCE(gtg.no_of_bales, 0))) AS bale_stock,
+              gd.program AS program,
+              vnd.village_names AS village_names,
+              gd.season_name AS seed_consumed_seasons,
+              gd.weigh_bridge,
+              gd.delivery_challan,
+              gd.qr,
+              gd.greyout_status
+          FROM
+              gin_process_data gd
+          LEFT JOIN
+              gin_bale_data gb ON gd.process_id = gb.process_id
+          LEFT JOIN
               village_names_data vnd ON gd.process_id = vnd.process_id 
-            LEFT JOIN
-                sold_data sd ON gd.process_id = sd.process_id
-            LEFT JOIN 
-              gin_bale_greyout_data gbg ON gd.process_id = gbg.process_id
-            LEFT JOIN 
-              gin_to_gin_sales_data gtg ON gd.process_id = gtg.process_id
-            LEFT JOIN
+          LEFT JOIN
+              sold_data sd ON gd.process_id = sd.process_id AND sd.ginner_id = gd.ginner_id
+          LEFT JOIN 
+              gin_bale_greyout_data gbg ON gd.process_id = gbg.process_id AND gbg.ginner_id = gd.ginner_id
+          LEFT JOIN 
+              gin_to_gin_sales_data gtg ON gd.process_id = gtg.process_id AND gtg.ginner_id = gd.ginner_id
+          LEFT JOIN
               countries c ON gd.country_id = c.id 
-            LEFT JOIN
+          LEFT JOIN
               states s ON gd.state_id = s.id  
             LIMIT :limit OFFSET :offset
             `, {
