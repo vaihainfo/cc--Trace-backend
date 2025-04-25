@@ -1294,13 +1294,11 @@ const createSpinnerSales = async (req: Request, res: Response) => {
           }, { transaction });
         }
       }
-
+       // Commit transaction
+      await transaction.commit();
       if (spinSales) {
         await send_spin_mail(spinSales.id);
       }
-
-         // Commit transaction
-        await transaction.commit();
       res.sendSuccess(res, { spinSales });
     }
   } catch (error: any) {

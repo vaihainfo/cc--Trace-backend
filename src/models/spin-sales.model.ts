@@ -153,6 +153,11 @@ SpinSales.belongsTo(Season, {
   as: "season",
 });
 
+SpinSales.belongsTo(YarnCount, {
+  foreignKey: "yarn_count",
+  as: "yarncount",
+});
+
 SpinSales.belongsTo(Program, {
   foreignKey: "program_id",
   as: "program",
