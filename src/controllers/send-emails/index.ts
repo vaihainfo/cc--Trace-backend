@@ -623,9 +623,15 @@ export const send_spin_mail = async (salesId: number) => {
                         model: Knitter,
                         as: "knitter",
                     },
-                   
+                    {
+                        model: Weaver,
+                        as: "weaver",
+                    },
+                    {
+                        model: Trader,
+                        as: "trader",
+                    }
                 ],
-               
                 
             }); 
 
