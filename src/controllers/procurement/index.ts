@@ -38,6 +38,11 @@ const createTransaction = async (req: Request, res: Response) => {
       return res.sendError(res, 'Rate should be greater than 0');
     }
 
+    if (!req.body.date) {
+      await t.rollback();
+      return res.sendError(res, "Date is required");
+    }
+
     // Fetch farm
     if (!req.body.farmId) {
       await t.rollback();
@@ -1417,8 +1422,7 @@ const uploadTransactionBulk = async (req: Request, res: Response) => {
           //   }
           // });
 
-          const normalizedDate = moment.utc(req.body.date).format('YYYY-MM-DD');
-
+          const normalizedDate = moment.utc(data.date).format('YYYY-MM-DD');
           const transactionExist = await Transaction.findOne({
             where: {
               [Op.and]: [

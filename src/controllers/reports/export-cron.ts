@@ -2349,6 +2349,8 @@ const generatePscpProcurementLiveTracker = async () => {
               gp.program_id = ANY (filtered_ginners.program_id)
               AND
               (
+              (gp.greyout_status = true AND gb.sold_status = false AND gb.is_all_rejected IS NULL) 
+              OR
                 (
                 gp.scd_verified_status = true AND gb.scd_verified_status IS NOT TRUE
                 )
