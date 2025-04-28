@@ -582,14 +582,20 @@ export const send_gin_mail = async (salesId: number) => {
             let buyertype = sales?.dataValues?.buyer_type;
           
             let buyer = buyertype === 'Ginner' ? sales?.dataValues?.buyerdata_ginner : sales?.dataValues?.buyerdata;
+
+            let buyer_userId = buyertype === 'Ginner' ? sales?.dataValues?.buyerdata_ginner?.ginnerUser_id : sales?.dataValues?.buyerdata?.spinnerUser_id;
             
+           
             let adminEmail = await User.findAll({ where: { role: 1 }, attributes: ['email'] });
+            const userEmail = await UserEmailAdresses(buyer ,buyer_userId );
+
             const emailJob = await is_email_job_available(template.dataValues.id, buyer?.brand, [buyer?.country_id], buyer?.program_id);
             if (emailJob) {
                 let emails = await User.findAll({ where: { id: { [Op.in]: emailJob.dataValues?.user_ids } }, attributes: ['email'] });
                 emails = emails.map((obj: any) => obj.email);
                 adminEmail = adminEmail.map((obj: any) => obj.email);
-                let to = buyer.email ? [buyer.email] : adminEmail
+                let  to = userEmail ? userEmail : adminEmail;
+                //let to = buyer.email ? [buyer.email] : adminEmail
                 let ccEmails = [...adminEmail,...emails];
                 let body = get_init_email_subject(buyer?.name, sales?.dataValues?.ginner?.name, sales?.dataValues?.total_qty, 'lint', sales?.dataValues?.invoice_no, to, ccEmails)
                 let subject = 'Acknowledge incoming transaction'
@@ -607,7 +613,8 @@ export const send_spin_mail = async (salesId: number) => {
         let template = await EmailTemplate.findOne({ where: { template_name: { [Op.iLike]: 'Whenever spin sales happen' } } });
         if (template) {
             let sales = await SpinSales.findOne({
-                where: { id: salesId, status: 'Pending for QR scanning' }, include: [
+                where: { id: salesId, status: 'Pending for QR scanning' }, 
+                include: [
                     {
                         model: Spinner,
                         as: "spinner",
@@ -624,16 +631,22 @@ export const send_spin_mail = async (salesId: number) => {
                         model: Trader,
                         as: "trader",
                     }
-                ]
-            });
-            let buyer = sales.dataValues.knitter ? sales.dataValues.knitter : sales.dataValues.weaver ? sales.dataValues.weaver : sales.dataValues.trader
+                ],
+                
+            }); 
+
+            let buyer = sales?.dataValues.knitter ? sales?.dataValues?.knitter : sales?.dataValues?.weaver ? sales?.dataValues?.weaver : sales?.dataValues?.trader;
+           
+            let buyer_userId = sales?.dataValues?.knitter ? sales?.dataValues?.knitter?.knitterUser_id : sales?.dataValues?.weaver ? sales?.dataValues?.weaver?.weaverUser_id : sales?.dataValues?.trader?.traderUser_id;
+          
             let adminEmail = await User.findAll({ where: { role: 1 }, attributes: ['email'] });
+            const userEmail = await UserEmailAdresses(buyer ,buyer_userId );
             const emailJob = await is_email_job_available(template.dataValues.id, buyer.brand, [buyer.country_id], buyer.program_id);
             if (emailJob) {
                 let emails = await User.findAll({ where: { id: { [Op.in]: emailJob.dataValues?.user_ids } }, attributes: ['email'] });
                 emails = emails.map((obj: any) => obj.email);
                 adminEmail = adminEmail.map((obj: any) => obj.email);
-                let to = buyer.email ? [buyer.email] : adminEmail;
+                let  to = userEmail ? userEmail : adminEmail;
                 let ccEmails = [...adminEmail,...emails];
                 let body = get_init_email_subject(buyer?.name, sales?.dataValues?.spinner.name, sales?.dataValues?.total_qty, 'yarn', sales?.dataValues?.invoice_no, to, ccEmails)
                 let subject = 'Acknowledge incoming transaction'
@@ -664,14 +677,14 @@ export const send_weaver_mail = async (salesId: number) => {
             });
 
             let buyer = sales.dataValues?.buyer;
-            console.log(buyer);
             let adminEmail = await User.findAll({ where: { role: 1 }, attributes: ['email'] });
+            const userEmail = await UserEmailAdresses(buyer , buyer.garmentUser_id );
             const emailJob = await is_email_job_available(template.dataValues.id, buyer?.brand, [buyer?.country_id], buyer?.program_id);
             if (emailJob) {
                 let emails = await User.findAll({ where: { id: { [Op.in]: emailJob.dataValues?.user_ids } }, attributes: ['email'] });
                 emails = emails.map((obj: any) => obj.email);
                 adminEmail = adminEmail.map((obj: any) => obj.email);
-                let to = buyer.email ? [buyer.email] : adminEmail;
+                let  to = userEmail ? userEmail : adminEmail;
                 let ccEmails = [...adminEmail,...emails];
                 let body = get_init_email_subject(buyer?.name, sales?.dataValues?.weaver?.name, sales?.dataValues?.total_yarn_qty, 'fabric', sales?.dataValues?.invoice_no, to, ccEmails)
                 let subject = 'Acknowledge incoming transaction'
@@ -703,12 +716,15 @@ export const send_knitter_mail = async (salesId: number) => {
 
             let buyer = sales.dataValues?.buyer;
             let adminEmail = await User.findAll({ where: { role: 1 }, attributes: ['email'] });
+            const userEmail = await UserEmailAdresses(buyer , buyer.garmentUser_id );
             const emailJob = await is_email_job_available(template.dataValues.id, buyer.brand, [buyer.country_id], buyer.program_id);
             if (emailJob) {
                 let emails = await User.findAll({ where: { id: { [Op.in]: emailJob.dataValues.user_ids } }, attributes: ['email'] });
                 emails = emails.map((obj: any) => obj.email);
+                console.log("emails raw result:", emails);
+                console.log("userEmail raw result:", userEmail);
                 adminEmail = adminEmail.map((obj: any) => obj.email);
-                let to = buyer.email ? [buyer.email] : adminEmail;
+                let  to = userEmail ? userEmail : adminEmail;
                 let ccEmails = [...adminEmail,...emails];
                 let body = get_init_email_subject(buyer.name, sales.dataValues.knitter.name, sales.dataValues.total_yarn_qty, 'fabric', sales.dataValues.invoice_no, to, ccEmails)
                 let subject = 'Acknowledge incoming transaction'
@@ -740,12 +756,14 @@ export const send_garment_mail = async (salesId: number) => {
 
             let buyer = sales.dataValues?.buyer;
             let adminEmail = await User.findAll({ where: { role: 1 }, attributes: ['email'] });
+            const userEmail = await UserEmailAdresses(buyer , buyer.brandUser_id );
+            
             const emailJob = await is_email_job_available(template.dataValues.id, [buyer.id], buyer.countries_id, buyer.programs_id);
             if (emailJob) {
                 let emails = await User.findAll({ where: { id: { [Op.in]: emailJob.dataValues.user_ids } }, attributes: ['email'] });
                 emails = emails.map((obj: any) => obj.email);
                 adminEmail = adminEmail.map((obj: any) => obj.email);
-                let to = buyer.email ? [buyer.email] : adminEmail;
+                let  to = userEmail ? userEmail : adminEmail;
                 let ccEmails = [...adminEmail,...emails];
                 let body = get_init_email_subject(buyer.brand_name, sales.dataValues.garment.name, sales.dataValues.total_no_of_pieces, 'finished product', sales.dataValues.invoice_no, to, ccEmails)
                 let subject = 'Acknowledge incoming transaction'
@@ -820,7 +838,8 @@ export const processAndSentTicketReminder = async (jobId?: number) => {
 
 
 const get_reminder_email_subject = (ginner: any, date: any, spinner: any, to: any, cc: any) => {
-    let body = `<html> <body> Hi ${ginner}, <br/><br/>${add_mail_id_to_email(to, cc)}
+  //  let body = `<html> <body> Hi ${ginner}, <br/><br/>${add_mail_id_to_email(to, cc)}
+    let body = `<html> <body> Hi ${ginner}, <br/>
 			You have not completed the sale process saved on ${date} for  ${spinner}.<br/><br/> Kindly declare the sale at the earliest. <br/><br/> If you have any query, please contact noreply@cottonconnect.org ${add_admin_text(to)}
 			<br/><br/>
 		Thank you <br/>
@@ -837,13 +856,15 @@ function add_admin_text(to: any) {
 }
 
 function get_init_email_subject(buyer: any, seller: any, qty: any, product: any, invoice: any, to: any, cc: any) {
-    let body = ` <html> <body> Hi ${buyer}, <br/><br/>  ${add_mail_id_to_email(to, cc)}
+   // let body = ` <html> <body> Hi ${buyer}, <br/><br/>  ${add_mail_id_to_email(to, cc)}
+    let body = ` <html> <body> Hi ${buyer}, <br/>
 		${seller} has sold ${qty} (Kgs/mts/no's) of ${product} vide Invoice no : ${invoice}. <br/><br/> Please accept through transaction Alert. <br/><br/> If you have any query, please contact noreply@cottonconnect.org ${add_admin_text(to)} </body> </html>`;
     return body;
 }
 
 function get_process_report_body(processor_type: any, time: any, to: any, cc: any) {
-    let body = `<html> <body> Hi, <br/><br/> ${add_mail_id_to_email(to, cc)}
+  //  let body = `<html> <body> Hi, <br/><br/> ${add_mail_id_to_email(to, cc)}
+    let body = `<html> <body> Hi,<br>
 		Please find the process report of ${processor_type} for the current  time ${time}. <br/><br/>
 		Thank you <br/>
 		TraceBale team <br/>									
@@ -852,7 +873,8 @@ function get_process_report_body(processor_type: any, time: any, to: any, cc: an
 }
 
 function get_procurement_report_body(processor_type: any, time: any, to: any, cc: any) {
-    let body = `<html> <body> Hi, <br/><br/> ${add_mail_id_to_email(to, cc)}
+  // let body = `<html> <body> Hi, <br/><br/> ${add_mail_id_to_email(to, cc)}
+    let body = `<html> <body> Hi, <br/>
 		Please find the ${processor_type} for the current  time ${time}. <br/><br/>
 		Thank you <br/>
 		TraceBale team <br/>									
@@ -879,6 +901,31 @@ const is_email_job_available = async (id: String, brand: any, country: any, prog
         })
 
         return emailJob
+    } catch (error) {
+        console.log(error);
+    }
+
+}
+
+const UserEmailAdresses = async (buyer: any,buyer_userId: any) => {
+    try {
+        let userData = [];
+        if (buyer) {
+        for await (let user of buyer_userId) {
+            let us = await User.findOne({
+                where: { id: user }, attributes: {
+                    include: ["email"]
+                }
+            });
+            userData.push(us)
+        }
+       }
+       let userEmailArray = userData.map((user: any) => user.dataValues.email);
+       if (buyer.email) {
+           userEmailArray.push(buyer.email);
+       }
+       const userEmail = userEmailArray.join(', '); 
+       return userEmail;
     } catch (error) {
         console.log(error);
     }
