@@ -6275,6 +6275,7 @@ const generateSpinnerYarnProcess = async () => {
       total_total:0,
       total_yarn_sold:0,
       total_yarn_stock:0,
+      total_blend_qty:0
     };
 
     let totals: Totals = {
@@ -6285,6 +6286,7 @@ const generateSpinnerYarnProcess = async () => {
       total_total:0,
       total_yarn_sold:0,
       total_yarn_stock:0,
+      total_blend_qty:0
     };
 
 
@@ -6312,6 +6314,7 @@ const generateSpinnerYarnProcess = async () => {
              comber: Number(formatDecimal(totals.total_comber)),
              blend: "",
              blendqty: "",
+             total_blend_qty:Number(formatDecimal(totals.total_blend_qty)),
              cotton_consumed: Number(formatDecimal(totals.total_cotton_consumed)),
              comber_consumed: Number(formatDecimal(totals.total_comber_consumed)),
              total_lint_blend_consumed: Number(formatDecimal(totals.total_total_lint_blend_consumed)),
@@ -6438,6 +6441,17 @@ const generateSpinnerYarnProcess = async () => {
             yarn_counts yarn_count ON yarn_count.id = ANY(spin_process.yarn_count)
           GROUP BY
             spin_process.id
+        ),
+        total_blend_data AS (
+          SELECT
+            spin_process.id AS process_id,
+            SUM(val) AS total_blend_qty
+          FROM
+            spin_processes spin_process
+          LEFT JOIN
+            LATERAL unnest(spin_process.cottonmix_qty) AS val ON true
+          GROUP BY
+            spin_process.id
         )
         SELECT
           spd.*,
@@ -6447,6 +6461,7 @@ const generateSpinnerYarnProcess = async () => {
           COALESCE(csd.comber_consumed, 0) AS comber_consumed,
           ccd.seasons AS lint_consumed_seasons,
           COALESCE(ysd.yarn_sold, 0) AS yarn_sold,
+          COALESCE(tbd.total_blend_qty, 0) AS total_blend_qty,
           ycd.yarncount
         FROM
           spin_process_data spd
@@ -6458,6 +6473,8 @@ const generateSpinnerYarnProcess = async () => {
           yarn_sold_data ysd ON spd.process_id = ysd.spin_process_id
         LEFT JOIN
           yarn_count_data ycd ON spd.process_id = ycd.process_id
+        LEFT JOIN
+          total_blend_data tbd ON spd.process_id = tbd.process_id
         LEFT JOIN
             countries c ON spd.country_id = c.id
         LEFT JOIN
@@ -6493,6 +6510,7 @@ const generateSpinnerYarnProcess = async () => {
           total_total:0,
           total_yarn_sold:0,
           total_yarn_stock:0,
+          total_blend_qty:0,
         };
         worksheetIndex++;
       }
@@ -6538,6 +6556,9 @@ const generateSpinnerYarnProcess = async () => {
           comber: item.comber_noil ? Number(item.comber_noil) : 0,
           blend: blendValue,
           blendqty: blendqty,
+          total_blend_qty:item?.total_blend_qty
+          ? Number(item?.total_blend_qty)
+          : 0,
           cotton_consumed: item?.cotton_consumed
             ? Number(item?.cotton_consumed)
             : 0,
@@ -6587,6 +6608,7 @@ const generateSpinnerYarnProcess = async () => {
             "Comber Noil (Kgs)",
             "Blend Material",
             "Blend Quantity (Kgs)",
+            "Total Blend Quantity(Kgs)",
             "Total Lint cotton consumed (Kgs)",
             "Total Comber Noil Consumed(kgs)",
             "Total lint+Blend material + Comber Noil consumed",
@@ -6607,6 +6629,7 @@ const generateSpinnerYarnProcess = async () => {
         totals.total_total+=Number(rowValues.total);
         totals.total_yarn_sold+=Number(rowValues.yarn_sold);
         totals.total_yarn_stock+=Number(rowValues.yarn_stock);
+        totals.total_blend_qty += Number(rowValues.total_blend_qty);
 
         currentWorksheet.addRow(Object.values(rowValues));
       }
