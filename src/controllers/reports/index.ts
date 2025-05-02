@@ -21347,13 +21347,29 @@ const exportConsolidatedTraceability = async (req: Request, res: Response) => {
     "./upload",
     "consolidated-traceabilty-report.xlsx"
   );
-
+  const searchTerm = req.query.search || "";
   const whereCondition: any = {};
   const { garmentId, brandId, styleMarkNo, garmentType, startDate, endDate, seasonId }: any = req.query;
   let baseurl = process.env.BASE_URL;
   try {
+    if (searchTerm) {
+      whereCondition[Op.or] = [
+        { "$season.name$": { [Op.iLike]: `%${searchTerm}%` } },
+        { invoice_no: { [Op.iLike]: `%${searchTerm}%` } },
+        { "$program.program_name$": { [Op.iLike]: `%${searchTerm}%` } },
+        { "$buyer.brand_name$": { [Op.iLike]: `%${searchTerm}%` } },
+        { "$garment.name$": { [Op.iLike]: `%${searchTerm}%` } },
+        { style_mark_no: { [Op.contains]: [`${searchTerm}`] } },
+        { garment_type: { [Op.contains]: [`${searchTerm}`] } },
+      ];
+    }
     whereCondition.status = "Sold";
-
+    if (garmentId) {
+      const idArray: number[] = garmentId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.garment_id = { [Op.in]: idArray };
+    }
     if (brandId) {
       const idArray: number[] = brandId
         .split(",")
@@ -21374,6 +21390,16 @@ const exportConsolidatedTraceability = async (req: Request, res: Response) => {
       const endOfDay = new Date(endDate);
       endOfDay.setUTCHours(23, 59, 59, 999);
       whereCondition.createdAt = { [Op.between]: [startOfDay, endOfDay] }
+    }
+
+    if (styleMarkNo) {
+      const idArray: any[] = styleMarkNo.split(",").map((id: any) => id);
+      whereCondition.style_mark_no = { [Op.overlap]: idArray };
+    }
+
+    if (garmentType) {
+      const idArray: any[] = garmentType.split(",").map((id: any) => id);
+      whereCondition.garment_type = { [Op.overlap]: idArray };
     }
 
     let include = [
@@ -21687,11 +21713,11 @@ const exportConsolidatedTraceability = async (req: Request, res: Response) => {
           raw: true,
         });
         let knitter_fabric = selection
-          .filter((obj: any) => obj?.process_type === "knitter")
+          .filter((obj: any) => obj?.process_type === "knitter" || obj?.process_type === "Knitter")
           .map((obj: any) => obj?.process_id);
         knit_fabric_ids = [...knit_fabric_ids, ...knitter_fabric];
         let weaver_fabric = selection
-          .filter((obj: any) => obj?.process_type === "weaver")
+          .filter((obj: any) => obj?.process_type === "weaver" || obj?.process_type === "Weaver")
           .map((obj: any) => obj?.process_id);
         weaver_fabric_ids = [...weaver_fabric_ids, ...weaver_fabric];
       }
@@ -21800,20 +21826,20 @@ const exportConsolidatedTraceability = async (req: Request, res: Response) => {
         for await (let row of rows) {
           let fabrictypes: any = [];
           if (
-            row.dataValues?.fabric_type &&
-            row.dataValues?.fabric_type.length > 0
+            row?.fabric_type &&
+            row?.fabric_type.length > 0
           ) {
             fabrictypes = await FabricType.findAll({
               where: {
                 id: {
-                  [Op.in]: row.dataValues.fabric_type,
+                  [Op.in]: row.fabric_type,
                 },
               },
               attributes: ["id", "fabricType_name"],
             });
           }
           weaverSales.push({
-            ...row.dataValues,
+            ...row,
             fabrictypes,
           });
         }
@@ -21826,7 +21852,7 @@ const exportConsolidatedTraceability = async (req: Request, res: Response) => {
         });
         let weaverYarn = await YarnSelection.findAll({
           where: {
-            sales_id: weaveProcess.map((obj: any) => obj.id),
+            sales_id: weaveProcess.map((obj: any) => obj.fabric_id),
           },
           attributes: ["id", "yarn_id"],
         });
@@ -22234,7 +22260,7 @@ const exportConsolidatedTraceability = async (req: Request, res: Response) => {
       let weaverName =
         weaverSales && weaverSales.length > 0
           ? weaverSales
-            .map((val: any) => val?.weaver?.name)
+            .map((val: any) => val['weaver.name'])
             .filter((item: any) => item !== null && item !== undefined)
           : [];
       let knitInvoice =
