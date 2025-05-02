@@ -124,6 +124,9 @@ const GinBale = db.define('gin-bales', {
   sold_by_sales_id: {
     type: DataTypes.INTEGER,
   },
+  print: {
+    type: DataTypes.BOOLEAN,
+  },
 });
 
 GinBale.belongsTo(GinProcess, {
