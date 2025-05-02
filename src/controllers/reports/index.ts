@@ -13739,6 +13739,7 @@ const fetchGinnerSummaryPagination = async (req: Request, res: Response) => {
   const transactionWhere: any = {};
   const ginBaleWhere: any = {};
   const baleSelectionWhere: any = {};
+  const baleSaleSelectionWhere: any = {};
   const cottenSectionWhere: any = {};
   const ginToGinWhere: any = {};
   try {
@@ -13775,6 +13776,7 @@ const fetchGinnerSummaryPagination = async (req: Request, res: Response) => {
       ginBaleWhere["$ginprocess.program_id$"] = { [Op.in]: idArray };
       baleSelectionWhere["$sales.program_id$"] = { [Op.in]: idArray };
       cottenSectionWhere["$ginprocess.program_id$"] = { [Op.in]: idArray };
+      baleSaleSelectionWhere["$bale.ginprocess.program_id$"] = { [Op.in]: idArray };
       ginToGinWhere["$ginsales.program_id$"] = { [Op.in]: idArray };
     }
 
@@ -13786,6 +13788,7 @@ const fetchGinnerSummaryPagination = async (req: Request, res: Response) => {
       ginBaleWhere["$ginprocess.season_id$"] = { [Op.in]: idArray };
       baleSelectionWhere["$sales.season_id$"] = { [Op.in]: idArray };
       cottenSectionWhere["$ginprocess.season_id$"] = { [Op.in]: idArray };
+      baleSaleSelectionWhere["$bale.ginprocess.season_id$"] = { [Op.in]: idArray };
       ginToGinWhere["$ginsales.season_id$"] = { [Op.in]: idArray };
     }
 
@@ -14051,10 +14054,17 @@ const fetchGinnerSummaryPagination = async (req: Request, res: Response) => {
                 model: GinBale,
                 as: "bale",
                 attributes: [],
+                include: [
+                  {
+                    model: GinProcess,
+                    as: "ginprocess",
+                    attributes: [],
+                  },
+                ],
               },
             ],
             where: {
-              ...baleSelectionWhere,
+              ...baleSaleSelectionWhere,
               "$sales.ginner_id$": ginner.id,
               "$sales.status$": { [Op.in]: ['Pending', 'Pending for QR scanning', 'Partially Accepted', 'Partially Rejected', 'Sold'] },
               "$sales.buyer_ginner$": { [Op.is]: null }
@@ -14767,6 +14777,7 @@ const exportGinnerSummary = async (req: Request, res: Response) => {
   const transactionWhere: any = {};
   const ginBaleWhere: any = {};
   const baleSelectionWhere: any = {};
+  const baleSaleSelectionWhere: any = {};
   const cottenSectionWhere: any = {};
   const ginToGinWhere: any = {};
   try {
@@ -14812,6 +14823,7 @@ const exportGinnerSummary = async (req: Request, res: Response) => {
         ginBaleWhere["$ginprocess.program_id$"] = { [Op.in]: idArray };
         baleSelectionWhere["$sales.program_id$"] = { [Op.in]: idArray };
         cottenSectionWhere["$ginprocess.program_id$"] = { [Op.in]: idArray };
+        baleSaleSelectionWhere["$bale.ginprocess.program_id$"] = { [Op.in]: idArray };
         ginToGinWhere["$ginsales.program_id$"] = { [Op.in]: idArray };
       }
 
@@ -14823,6 +14835,7 @@ const exportGinnerSummary = async (req: Request, res: Response) => {
         ginBaleWhere["$ginprocess.season_id$"] = { [Op.in]: idArray };
         baleSelectionWhere["$sales.season_id$"] = { [Op.in]: idArray };
         cottenSectionWhere["$ginprocess.season_id$"] = { [Op.in]: idArray };
+        baleSaleSelectionWhere["$bale.ginprocess.season_id$"] = { [Op.in]: idArray };
         ginToGinWhere["$ginsales.season_id$"] = { [Op.in]: idArray };
       }
 
@@ -15094,6 +15107,13 @@ const exportGinnerSummary = async (req: Request, res: Response) => {
                 model: GinBale,
                 as: "bale",
                 attributes: [],
+                include: [
+                  {
+                    model: GinProcess,
+                    as: "ginprocess",
+                    attributes: [],
+                  },
+                ],
               },
             ],
             where: {
