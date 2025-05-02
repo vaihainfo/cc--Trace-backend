@@ -889,7 +889,7 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
       let headerRow;
       if (isOrganic === 'true') {
         headerRow = worksheet.addRow([
-          "Sr No.", "Country", "State", "Process Date", "Data Entry Date and Time", "No. of Days", "Lint Production Start Date", "Lint Production End Date", "Lint process Season choosen", "Ginner Name", "Heap Number", "Gin Lot No", "Gin Press No", "No of Bales", "Lint Quantity(Kgs)", "Programme", "Grey Out Status"
+          "Sr No.", "Country", "State", "Process Date", "Data Entry Date and Time", "No. of Days", "Lint Production Start Date", "Lint Production End Date", "Lint process Season choosen", "Ginner Name", "Heap Number", "Gin Lot No", "Gin Press No", "REEL Press Nos", "No of Bales", "Lint Quantity(Kgs)", "Programme", "Grey Out Status"
         ]);
       }
       else if (isBrand === 'true') {
