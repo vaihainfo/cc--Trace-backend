@@ -1263,7 +1263,7 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
             press_no: item.press_no !== "NaN-NaN" ? item.press_no : item?.gin_press_no,
             reel_press_no: item.reel_press_no ? item.reel_press_no : "",
             noOfBales: item.no_of_bales ? Number(item.no_of_bales) : 0,
-            lint_quantity: item.lint_quantity ? Number(item.lint_quantity) : 0,
+            lint_quantity: item.lint_quantity  && Number(item.lint_stock) > 1 ? Number(item.lint_quantity) : 0,
             program: item.program ? item.program : "",
             greyout_status: item.greyout_status ? "Yes" : "No",
           };
@@ -1288,7 +1288,7 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
             reel_lot_no: item.reel_lot_no ? item.reel_lot_no : "",
             reel_press_no: item.reel_press_no ? item.reel_press_no : "",
             noOfBales: item.no_of_bales ? Number(item.no_of_bales) : 0,
-            lint_quantity: item.lint_quantity ? Number(item.lint_quantity) : 0,
+            lint_quantity: item.lint_quantity  && Number(item.lint_stock) > 1 ? Number(item.lint_quantity) : 0,
             program: item.program ? item.program : "",
             greyout_status: item.greyout_status ? "Yes" : "No",
           };
@@ -1324,7 +1324,7 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
             bales_transfered: item.bales_transfered ? Number(item.bales_transfered) : 0,
             lint_qty_to_be_submitted: item.lint_qty_to_be_submitted ? Number(formatDecimal(item.lint_qty_to_be_submitted)) : 0,
             bales_to_be_submitted: item.bales_to_be_submitted ? Number(item.bales_to_be_submitted) : 0,
-            lint_stock: item.lint_stock && Number(item.lint_stock) > 0 ? Number(item.lint_stock) : 0,
+            lint_stock: item.lint_stock && Number(item.lint_stock) > 1 ? Number(item.lint_stock) : 0,
             bale_stock: item.bale_stock && Number(item.bale_stock) > 0 ? Number(item.bale_stock) : 0,
             program: item.program ? item.program : "",
             greyout_status: item.greyout_status ? "Yes" : "No",
@@ -1360,7 +1360,7 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
             bales_transfered: item.bales_transfered ? Number(item.bales_transfered) : 0,
             lint_qty_to_be_submitted: item.lint_qty_to_be_submitted ? Number(formatDecimal(item.lint_qty_to_be_submitted)) : 0,
             bales_to_be_submitted: item.bales_to_be_submitted ? Number(item.bales_to_be_submitted) : 0,
-            lint_stock: item.lint_stock && Number(item.lint_stock) > 0 ? Number(item.lint_stock) : 0,
+            lint_stock: item.lint_stock && Number(item.lint_stock) > 1 ? Number(item.lint_stock) : 0,
             bale_stock: item.bale_stock && Number(item.bale_stock) > 0 ? Number(item.bale_stock) : 0,
             program: item.program ? item.program : "",
             village_names: item.village_names && item.village_names.length > 0 ? item.village_names.join(", ") : "",
@@ -15297,7 +15297,7 @@ const exportGinnerSummary = async (req: Request, res: Response) => {
               },
             ],
             where: {
-              ...baleSelectionWhere,
+              ...baleSaleSelectionWhere,
               "$sales.ginner_id$": item.id,
               "$sales.status$": { [Op.in]: ['Pending', 'Pending for QR scanning', 'Partially Accepted', 'Partially Rejected', 'Sold'] },
               "$sales.buyer_ginner$": { [Op.is]: null }

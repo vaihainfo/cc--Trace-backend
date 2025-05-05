@@ -4404,7 +4404,7 @@ const generateGinnerProcess = async () => {
           greyout_bales: item.greyout_bales ? Number(item.greyout_bales) : 0,
           lint_qty_transfered: item.lint_qty_transfered ? Number(formatDecimal(item.lint_qty_transfered)) : 0,
           bales_transfered: item.bales_transfered ? Number(item.bales_transfered) : 0,
-          lint_stock: item.lint_stock && Number(item.lint_stock) > 0 ? Number(item.lint_stock) : 0,
+          lint_stock: item.lint_stock && Number(item.lint_stock) > 1 ? Number(item.lint_stock) : 0,
           bale_stock: item.bale_stock && Number(item.bale_stock) > 0 ? Number(item.bale_stock) : 0,
           program: item.program ? item.program : "",
           village_names: item.village_names && item.village_names.length > 0 ? item.village_names.join(", ") : "",
