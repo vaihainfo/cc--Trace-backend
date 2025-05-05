@@ -15117,7 +15117,7 @@ const exportGinnerSummary = async (req: Request, res: Response) => {
               },
             ],
             where: {
-              ...baleSelectionWhere,
+              ...baleSaleSelectionWhere,
               "$sales.ginner_id$": item.id,
               "$sales.status$": { [Op.in]: ['Pending', 'Pending for QR scanning', 'Partially Accepted', 'Partially Rejected', 'Sold'] },
               "$sales.buyer_ginner$": { [Op.is]: null }
