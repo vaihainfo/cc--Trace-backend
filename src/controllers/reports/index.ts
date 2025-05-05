@@ -334,6 +334,30 @@ const fetchBaleProcess = async (req: Request, res: Response) => {
                     AND gs.buyer_type = 'Ginner'
                 GROUP BY
                     gb.process_id, gs.ginner_id
+            ),
+            gin_to_be_submitted_data AS (
+                SELECT
+                    gb.process_id,
+					          gs.ginner_id,
+                    COUNT(gb.id) AS no_of_bales,
+                    COALESCE(
+                      SUM(
+                        CASE
+                          WHEN gb.old_weight IS NOT NULL THEN CAST(gb.old_weight AS DOUBLE PRECISION)
+                          ELSE CAST(gb.weight AS DOUBLE PRECISION)
+                        END
+                      ), 0
+                    ) AS lint_qty
+                FROM
+                    "gin-bales" gb
+                LEFT JOIN 
+                  bale_selections bs ON gb.id = bs.bale_id
+                LEFT JOIN 
+                    gin_sales gs ON gs.id = bs.sales_id
+                WHERE
+                    gs.status in ('To be Submitted')
+                GROUP BY
+                    gb.process_id, gs.ginner_id
             )
           SELECT
               gd.process_id,
@@ -369,8 +393,10 @@ const fetchBaleProcess = async (req: Request, res: Response) => {
               COALESCE(gbg.total_qty, 0) AS lint_qty_greyout,
               COALESCE(gtg.no_of_bales, 0) AS bales_transfered,
               COALESCE(gtg.lint_qty, 0) AS lint_qty_transfered,
-              (COALESCE(gb.lint_quantity, 0) - (COALESCE(sd.lint_quantity_sold, 0) + COALESCE(gbg.total_qty, 0) + COALESCE(gtg.lint_qty, 0))) AS lint_stock,
-              (COALESCE(gd.no_of_bales, 0) - (COALESCE(sd.sold_bales, 0) + COALESCE(gbg.no_of_bales, 0) + COALESCE(gtg.no_of_bales, 0))) AS bale_stock,
+              COALESCE(gtsg.no_of_bales, 0) AS bales_to_be_submitted,
+              COALESCE(gtsg.lint_qty, 0) AS lint_qty_to_be_submitted,
+              (COALESCE(gb.lint_quantity, 0) - (COALESCE(sd.lint_quantity_sold, 0) + COALESCE(gbg.total_qty, 0) + COALESCE(gtg.lint_qty, 0) + COALESCE(gtsg.lint_qty, 0))) AS lint_stock,
+              (COALESCE(gd.no_of_bales, 0) - (COALESCE(sd.sold_bales, 0) + COALESCE(gbg.no_of_bales, 0) + COALESCE(gtg.no_of_bales, 0) + COALESCE(gtsg.no_of_bales, 0))) AS bale_stock,
               gd.program AS program,
               vnd.village_names AS village_names,
               gd.season_name AS seed_consumed_seasons,
@@ -390,6 +416,8 @@ const fetchBaleProcess = async (req: Request, res: Response) => {
               gin_bale_greyout_data gbg ON gd.process_id = gbg.process_id AND gbg.ginner_id = gd.ginner_id
           LEFT JOIN 
               gin_to_gin_sales_data gtg ON gd.process_id = gtg.process_id AND gtg.ginner_id = gd.ginner_id
+          LEFT JOIN 
+              gin_to_be_submitted_data gtsg ON gd.process_id = gtsg.process_id AND gtsg.ginner_id = gd.ginner_id
           LEFT JOIN
               countries c ON gd.country_id = c.id 
           LEFT JOIN
@@ -899,11 +927,11 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
       }
       else if (isAdmin === 'true') {
         headerRow = worksheet.addRow([
-          "Sr No.", "Country", "State", "Process Date", "Data Entry Date and Time", "No. of Days", "Lint Production Start Date", "Lint Production End Date", "Seed Cotton Consumed Season", "Lint process Season choosen", "Ginner Name", "Heap Number", "Gin Lot No", "Gin Press No", "REEL Lot No", "REEL Press Nos", "No of Bales", "Lint Quantity(Kgs)", "Total Seed Cotton Consumed(Kgs)", "GOT", "Total lint cotton sold(Kgs)", "Total Bales Sold", "Total lint cotton rejected(Kgs)", "Total Bales Rejected", "Total lint cotton transfered(Kgs)", "Total Bales Transfered", "Total lint cotton in stock(Kgs)", "Total Bales in stock", "Programme", "Grey Out Status"
+          "Sr No.", "Country", "State", "Process Date", "Data Entry Date and Time", "No. of Days", "Lint Production Start Date", "Lint Production End Date", "Seed Cotton Consumed Season", "Lint process Season choosen", "Ginner Name", "Heap Number", "Gin Lot No", "Gin Press No", "REEL Lot No", "REEL Press Nos", "No of Bales", "Lint Quantity(Kgs)", "Total Seed Cotton Consumed(Kgs)", "GOT", "Total lint cotton sold(Kgs)", "Total Bales Sold", "Total lint cotton rejected(Kgs)", "Total Bales Rejected", "Total lint cotton transfered(Kgs)", "Total Bales Transfered", "Total Lint Cotton in To be Submitted Status(Kgs)", "Total Bales in To be Submitted Status(Kgs)", "Total lint cotton in stock(Kgs)", "Total Bales in stock", "Programme", "Grey Out Status"
         ]);
       } else {
         headerRow = worksheet.addRow([
-          "Sr No.", "Country", "State", "Process Date", "Data Entry Date and Time", "No. of Days", "Lint Production Start Date", "Lint Production End Date", "Seed Cotton Consumed Season", "Lint process Season choosen", "Ginner Name", "Heap Number", "Gin Lot No", "Gin Press No", "REEL Lot No", "REEL Press Nos", "No of Bales", "Lint Quantity(Kgs)", "Total Seed Cotton Consumed(Kgs)", "GOT", "Total lint cotton sold(Kgs)", "Total Bales Sold", "Total lint cotton rejected(Kgs)", "Total Bales Rejected", "Total lint cotton transfered(Kgs)", "Total Bales Transfered", "Total lint cotton in stock(Kgs)", "Total Bales in stock", "Programme", "Village", "Grey Out Status"
+          "Sr No.", "Country", "State", "Process Date", "Data Entry Date and Time", "No. of Days", "Lint Production Start Date", "Lint Production End Date", "Seed Cotton Consumed Season", "Lint process Season choosen", "Ginner Name", "Heap Number", "Gin Lot No", "Gin Press No", "REEL Lot No", "REEL Press Nos", "No of Bales", "Lint Quantity(Kgs)", "Total Seed Cotton Consumed(Kgs)", "GOT", "Total lint cotton sold(Kgs)", "Total Bales Sold", "Total lint cotton rejected(Kgs)", "Total Bales Rejected", "Total lint cotton transfered(Kgs)", "Total Bales Transfered", "Total Lint Cotton in To be Submitted Status(Kgs)", "Total Bales in To be Submitted Status(Kgs)",  "Total lint cotton in stock(Kgs)", "Total Bales in stock", "Programme", "Village", "Grey Out Status"
         ]);
       }
       headerRow.font = { bold: true };
@@ -1104,7 +1132,31 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
                       AND gs.buyer_type = 'Ginner'
                   GROUP BY
                       gb.process_id, gs.ginner_id
-              )
+              ),
+              gin_to_be_submitted_data AS (
+                SELECT
+                    gb.process_id,
+					          gs.ginner_id,
+                    COUNT(gb.id) AS no_of_bales,
+                    COALESCE(
+                      SUM(
+                        CASE
+                          WHEN gb.old_weight IS NOT NULL THEN CAST(gb.old_weight AS DOUBLE PRECISION)
+                          ELSE CAST(gb.weight AS DOUBLE PRECISION)
+                        END
+                      ), 0
+                    ) AS lint_qty
+                FROM
+                    "gin-bales" gb
+                LEFT JOIN 
+                  bale_selections bs ON gb.id = bs.bale_id
+                LEFT JOIN 
+                    gin_sales gs ON gs.id = bs.sales_id
+                WHERE
+                    gs.status in ('To be Submitted')
+                GROUP BY
+                    gb.process_id, gs.ginner_id
+            )
             SELECT
                 gd.process_id,
                 gd.date AS date,
@@ -1139,8 +1191,10 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
                 COALESCE(gbg.total_qty, 0) AS lint_qty_greyout,
                 COALESCE(gtg.no_of_bales, 0) AS bales_transfered,
                 COALESCE(gtg.lint_qty, 0) AS lint_qty_transfered,
-                (COALESCE(gb.lint_quantity, 0) - (COALESCE(sd.lint_quantity_sold, 0) + COALESCE(gbg.total_qty, 0) + COALESCE(gtg.lint_qty, 0))) AS lint_stock,
-                (COALESCE(gd.no_of_bales, 0) - (COALESCE(sd.sold_bales, 0) + COALESCE(gbg.no_of_bales, 0) + COALESCE(gtg.no_of_bales, 0))) AS bale_stock,
+                COALESCE(gtsg.no_of_bales, 0) AS bales_to_be_submitted,
+                COALESCE(gtsg.lint_qty, 0) AS lint_qty_to_be_submitted,
+                (COALESCE(gb.lint_quantity, 0) - (COALESCE(sd.lint_quantity_sold, 0) + COALESCE(gbg.total_qty, 0) + COALESCE(gtg.lint_qty, 0) + COALESCE(gtsg.lint_qty, 0))) AS lint_stock,
+                (COALESCE(gd.no_of_bales, 0) - (COALESCE(sd.sold_bales, 0) + COALESCE(gbg.no_of_bales, 0) + COALESCE(gtg.no_of_bales, 0) + COALESCE(gtsg.no_of_bales, 0))) AS bale_stock,
                 gd.program AS program,
                 vnd.village_names AS village_names,
                 gd.season_name AS seed_consumed_seasons,
@@ -1160,6 +1214,8 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
                 gin_bale_greyout_data gbg ON gd.process_id = gbg.process_id AND gbg.ginner_id = gd.ginner_id
             LEFT JOIN 
                 gin_to_gin_sales_data gtg ON gd.process_id = gtg.process_id AND gtg.ginner_id = gd.ginner_id
+            LEFT JOIN 
+              gin_to_be_submitted_data gtsg ON gd.process_id = gtsg.process_id AND gtsg.ginner_id = gd.ginner_id
             LEFT JOIN
                 countries c ON gd.country_id = c.id 
             LEFT JOIN
@@ -1179,6 +1235,8 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
         total_lint_quantity_sold: 0,
         total_lint_qty_transfered: 0,
         total_bales_transfered: 0,
+        total_lint_qty_to_be_submitted: 0,
+        total_bales_to_be_submitted: 0,
         total_lint_stock: 0,
         total_bale_stock: 0,
       };
@@ -1264,6 +1322,8 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
             greyout_bales: item.greyout_bales ? Number(item.greyout_bales) : 0,
             lint_qty_transfered: item.lint_qty_transfered ? Number(formatDecimal(item.lint_qty_transfered)) : 0,
             bales_transfered: item.bales_transfered ? Number(item.bales_transfered) : 0,
+            lint_qty_to_be_submitted: item.lint_qty_to_be_submitted ? Number(formatDecimal(item.lint_qty_to_be_submitted)) : 0,
+            bales_to_be_submitted: item.bales_to_be_submitted ? Number(item.bales_to_be_submitted) : 0,
             lint_stock: item.lint_stock && Number(item.lint_stock) > 0 ? Number(item.lint_stock) : 0,
             bale_stock: item.bale_stock && Number(item.bale_stock) > 0 ? Number(item.bale_stock) : 0,
             program: item.program ? item.program : "",
@@ -1298,6 +1358,8 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
             greyout_bales: item.greyout_bales ? Number(item.greyout_bales) : 0,
             lint_qty_transfered: item.lint_qty_transfered ? Number(formatDecimal(item.lint_qty_transfered)) : 0,
             bales_transfered: item.bales_transfered ? Number(item.bales_transfered) : 0,
+            lint_qty_to_be_submitted: item.lint_qty_to_be_submitted ? Number(formatDecimal(item.lint_qty_to_be_submitted)) : 0,
+            bales_to_be_submitted: item.bales_to_be_submitted ? Number(item.bales_to_be_submitted) : 0,
             lint_stock: item.lint_stock && Number(item.lint_stock) > 0 ? Number(item.lint_stock) : 0,
             bale_stock: item.bale_stock && Number(item.bale_stock) > 0 ? Number(item.bale_stock) : 0,
             program: item.program ? item.program : "",
@@ -1310,8 +1372,10 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
         totals.total_seedConsmed += item.total_qty ? Number(item.total_qty) : 0;
         totals.total_lint_quantity_sold += item.lint_quantity_sold ? Number(item.lint_quantity_sold) : 0;
         totals.total_lint_qty_transfered += item.lint_qty_transfered ? Number(item.lint_qty_transfered) : 0;
+        totals.total_lint_qty_to_be_submitted += item.lint_qty_to_be_submitted ? Number(item.lint_qty_to_be_submitted) : 0;
         totals.total_sold_bales += item.sold_bales ? Number(item.sold_bales) : 0;
         totals.total_bales_transfered += item.bales_transfered ? Number(item.bales_transfered) : 0;
+        totals.total_bales_to_be_submitted += item.bales_to_be_submitted ? Number(item.bales_to_be_submitted) : 0;
         totals.total_lint_stock += item.lint_stock ? Number(item.lint_stock) : 0;
         totals.total_bale_stock += item.bale_stock ? Number(item.bale_stock) : 0;
 
@@ -1396,6 +1460,8 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
           greyout_bales: "",
           lint_qty_transfered: Number(formatDecimal(totals.total_lint_qty_transfered)),
           bales_transfered: Number(formatDecimal(totals.total_bales_transfered)),
+          lint_qty_to_be_submitted: Number(formatDecimal(totals.total_lint_qty_to_be_submitted)),
+          bales_to_be_submitted: Number(formatDecimal(totals.total_bales_to_be_submitted)),
           lint_stock: Number(formatDecimal(totals.total_lint_stock)),
           bale_stock: Number(formatDecimal(totals.total_bale_stock)),
           program: "",
@@ -1430,6 +1496,8 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
           greyout_bales: "",
           lint_qty_transfered: Number(formatDecimal(totals.total_lint_qty_transfered)),
           bales_transfered: Number(formatDecimal(totals.total_bales_transfered)),
+          lint_qty_to_be_submitted: Number(formatDecimal(totals.total_lint_qty_to_be_submitted)),
+          bales_to_be_submitted: Number(formatDecimal(totals.total_bales_to_be_submitted)),
           lint_stock: Number(formatDecimal(totals.total_lint_stock)),
           bale_stock: Number(formatDecimal(totals.total_bale_stock)),
           program: "",
@@ -13816,7 +13884,7 @@ const fetchGinnerSummaryPagination = async (req: Request, res: Response) => {
     for await (let ginner of rows) {
       let obj: any = {};
 
-      let [cottonProcured, cottonProcessed, cottonProcessedByHeap, heapStock, lintProcured, greyoutLint, lintSold, ginToGinSale, ginToGinReceive, old_weight]: any =
+      let [cottonProcured, cottonProcessed, cottonProcessedByHeap, heapStock, lintProcured, greyoutLint, lintSold, ginToGinSale, ginToGinReceive, old_weight, ginToBeSubmitted]: any =
         await Promise.all([
           // Transaction.findOne({
           //   attributes: [
@@ -14203,6 +14271,58 @@ const fetchGinnerSummaryPagination = async (req: Request, res: Response) => {
             },
             raw: true // Get raw data for easier access
           }),
+          BaleSelection.findOne({
+            attributes: [
+              [
+                sequelize.fn(
+                  "COALESCE",
+                  sequelize.fn(
+                    "SUM",
+                    sequelize.literal(`
+                      CASE
+                        WHEN "bale"."old_weight" IS NOT NULL THEN CAST("bale"."old_weight" AS DOUBLE PRECISION)
+                        ELSE CAST("bale"."weight" AS DOUBLE PRECISION)
+                      END
+                    `)
+                  ),
+                  0
+                ),
+                "total_qty",
+              ],
+              [
+                sequelize.fn("COUNT", Sequelize.literal("DISTINCT bale_id")),
+                "no_of_bales",
+              ],
+            ],
+            include: [
+              {
+                model: GinSales,
+                as: "sales",
+                attributes: [],
+                include: [{
+                  model: Ginner,
+                  as: "ginner",
+                  attributes: [],
+                }]
+              },
+              {
+                model: GinBale,
+                as: "bale",
+                attributes: [],
+                include: [{
+                  model: GinProcess,
+                  as: "ginprocess",
+                  attributes: [],
+                }]
+              },
+            ],
+            where: {
+              ...baleSaleSelectionWhere,
+              "$sales.ginner_id$": ginner.id,
+              "$sales.status$": { [Op.in]: ['To be Submitted'] }
+            },
+            group: ["sales.ginner_id"]
+          }),
 
         ]);
       const cottonProcessedQty = isNaN(cottonProcessed?.dataValues?.qty) ? 0 : cottonProcessed?.dataValues?.qty;
@@ -14231,10 +14351,14 @@ const fetchGinnerSummaryPagination = async (req: Request, res: Response) => {
       obj.total_qty_lint_received = ginToGinReceive
         ? convert_kg_to_mt(ginToGinReceive.dataValues.total_qty ?? 0)
         : 0;
+      obj.total_bales_to_be_submitted = ginToBeSubmitted?.dataValues.no_of_bales ? Number (ginToBeSubmitted?.dataValues.no_of_bales) : 0;
+      obj.total_qty_lint_to_be_submitted = ginToBeSubmitted
+          ? convert_kg_to_mt(ginToBeSubmitted.dataValues.total_qty ?? 0)
+          : 0;
       obj.lintActualStockMT = (ginner.id === 502 && seasonId && Number(seasonId) === 9)
         ? 0
-        : (Number(obj.lintProcuredMt) + Number(obj.total_qty_lint_received)) > (Number(obj.lintSoldMt) + Number(obj.lintGreyoutMT) + Number(obj.total_qty_lint_transfered))
-          ? (Number(obj.lintProcuredMt) + Number(obj.total_qty_lint_received)) - (Number(obj.lintSoldMt) + Number(obj.lintGreyoutMT) + Number(obj.total_qty_lint_transfered))
+        : (Number(obj.lintProcuredMt) + Number(obj.total_qty_lint_received)) > (Number(obj.lintSoldMt) + Number(obj.lintGreyoutMT) + Number(obj.total_qty_lint_transfered) + Number(obj.total_qty_lint_to_be_submitted))
+          ? (Number(obj.lintProcuredMt) + Number(obj.total_qty_lint_received)) - (Number(obj.lintSoldMt) + Number(obj.lintGreyoutMT) + Number(obj.total_qty_lint_transfered) + Number(obj.total_qty_lint_to_be_submitted))
           : 0;
       obj.lintStockKg =
         Number(obj.lintProcuredKg) > Number(obj.lintSoldKg)
@@ -14254,8 +14378,8 @@ const fetchGinnerSummaryPagination = async (req: Request, res: Response) => {
         ? Number(lintSold?.dataValues?.bales_sold)
         : 0;
       obj.balesActualStock =
-        (obj.balesProduced + obj.total_bales_received) > (obj.balesSold + obj.total_bales_transfered + obj.balesGreyout)
-          ? (obj.balesProduced + obj.total_bales_received) - (obj.balesSold + obj.total_bales_transfered + obj.balesGreyout)
+        (obj.balesProduced + obj.total_bales_received) > (obj.balesSold + obj.total_bales_transfered + obj.balesGreyout + obj.total_bales_to_be_submitted)
+          ? (obj.balesProduced + obj.total_bales_received) - (obj.balesSold + obj.total_bales_transfered + obj.balesGreyout + obj.total_bales_to_be_submitted)
           : 0;
       obj.balesStock =
         obj.balesProduced > obj.balesSold
@@ -14409,7 +14533,7 @@ const fetchGinnerLintStockPagination = async (req: Request, res: Response) => {
     for await (let ginner of rows) {
       let obj: any = {};
 
-      let [cottonProcured, lintProcured, lintSold, [lintStock]]: any =
+      let [cottonProcured, lintProcured, lintSold, lintToBeSubmitted, [lintStock]]: any =
         await Promise.all([
           Transaction.findOne({
             attributes: [
@@ -14520,6 +14644,55 @@ const fetchGinnerLintStockPagination = async (req: Request, res: Response) => {
             },
             group: ["sales.ginner_id"],
           }),
+          BaleSelection.findOne({
+            attributes: [
+              [
+                sequelize.fn(
+                  "COALESCE",
+                  sequelize.fn(
+                    "SUM",
+                    sequelize.literal(`
+                      CASE
+                        WHEN "bale"."old_weight" IS NOT NULL THEN CAST("bale"."old_weight" AS DOUBLE PRECISION)
+                        ELSE CAST("bale"."weight" AS DOUBLE PRECISION)
+                      END
+                    `)
+                  ),
+                  0
+                ),
+                "qty",
+              ],
+              [
+                sequelize.fn("COUNT", Sequelize.literal("DISTINCT bale_id")),
+                "bales_sold",
+              ],
+            ],
+            include: [
+              {
+                model: GinSales,
+                as: "sales",
+                attributes: [],
+              },
+              {
+                model: GinBale,
+                as: "bale",
+                attributes: [],
+                include: [
+                  {
+                    model: GinProcess,
+                    as: "ginprocess",
+                    attributes: [],
+                  },
+                ],
+              },
+            ],
+            where: {
+              ...baleSelectionWhere,
+              "$sales.ginner_id$": ginner.ginner_id,
+              "$sales.status$": { [Op.in]: ['To be Submitted'] },
+            },
+            group: ["sales.ginner_id"],
+          }),
           sequelize.query(`
             SELECT 
               SUM(CAST(combined_data.weight AS DOUBLE PRECISION)) AS lint_stock,
@@ -14607,6 +14780,8 @@ const fetchGinnerLintStockPagination = async (req: Request, res: Response) => {
       obj.lintProcuredMt = convert_kg_to_mt(lintProcured?.dataValues.qty ?? 0);
       obj.lintSoldKg = lintSold?.dataValues.qty ?? 0;
       obj.lintSoldMt = convert_kg_to_mt(lintSold?.dataValues.qty ?? 0);
+      obj.lintToBeSubmittedKg = lintToBeSubmitted?.dataValues.qty ?? 0;
+      obj.lintToBeSubmittedMt = convert_kg_to_mt(lintToBeSubmitted?.dataValues.qty ?? 0);
       obj.lintStockKg = lintStock && lintStock[0] ? lintStock[0]?.lint_stock : 0;
       obj.lintStockMT = convert_kg_to_mt(lintStock && lintStock[0] ? lintStock[0]?.lint_stock : 0);
 
@@ -14615,6 +14790,9 @@ const fetchGinnerLintStockPagination = async (req: Request, res: Response) => {
         : 0;
       obj.balesSold = lintSold?.dataValues?.bales_sold
         ? Number(lintSold?.dataValues?.bales_sold)
+        : 0;
+      obj.balesToBeSubmitted = lintToBeSubmitted?.dataValues?.bales_sold
+        ? Number(lintToBeSubmitted?.dataValues?.bales_sold)
         : 0;
       obj.balesStock = lintStock && lintStock[0]?.bales_stock
         ? Number(lintStock[0]?.bales_stock)
@@ -14851,8 +15029,8 @@ const exportGinnerSummary = async (req: Request, res: Response) => {
       // Set bold font for header row
       const headerRow = worksheet.addRow([
         "S. No.", "Ginner Name", "Country", "State", "Total seed cotton procured (MT)", "Total seed cotton processed (MT)", "Total Heap stock (MT)",
-        "Total seed cotton in stock (MT)", "Total lint produce (MT)", "Total lint sold (MT)", "Grey-Out Lint Quantity (MT)", "Total Lint Received (MT)", "Total Lint Transfered (MT)", "Actual lint in stock (MT)", "Total lint in stock (MT)",
-        "Total bales produced", "Total Bales sold", "Total Bales Greyout", "Total Bales Received", "Total Bales Transfered", "Actual Bales in stock", "Total bales in stock"
+        "Total seed cotton in stock (MT)", "Total lint produce (MT)", "Total lint sold (MT)", "Grey-Out Lint Quantity (MT)", "Total Lint Received (MT)", "Total Lint Transfered (MT)", "Total Lint Quantity in To be Submitted Status (MT)", "Actual lint in stock (MT)", "Total lint in stock (MT)",
+        "Total bales produced", "Total Bales sold", "Total Bales Greyout", "Total Bales Received", "Total Bales Transfered", "Total Bales in To be Submitted Status (MT)", "Actual Bales in stock", "Total bales in stock"
       ]);
       headerRow.font = { bold: true };
       let options = /*(exportType === "all") ? {
@@ -14892,6 +15070,7 @@ const exportGinnerSummary = async (req: Request, res: Response) => {
           lintGreyoutMT:0,
           total_qty_lint_received:0,
           total_qty_lint_transfered:0,
+          total_qty_lint_to_be_submitted:0,
           lintActualStockMT:0,
           lintStockMt:0,
           balesProduced:0,
@@ -14899,6 +15078,7 @@ const exportGinnerSummary = async (req: Request, res: Response) => {
           balesGreyout:0,
           total_bales_received:0,
           total_bales_transfered:0,
+          total_bales_to_be_submitted:0,
           balesActualStock:0,
           balesStock:0,
       };
@@ -14911,7 +15091,7 @@ const exportGinnerSummary = async (req: Request, res: Response) => {
         let obj: any = {};
 
 
-        let [cottonProcured, cottonProcessed, cottonProcessedByHeap, heapStock, lintProcured, greyoutLint, lintSold, ginToGinSale, ginToGinReceive]: any = await Promise.all([
+        let [cottonProcured, cottonProcessed, cottonProcessedByHeap, heapStock, lintProcured, greyoutLint, lintSold, ginToGinSale, ginToGinReceive, ginToBeSubmitted]: any = await Promise.all([
           // Transaction.findOne({
           //   attributes: [
           //     [sequelize.fn('COALESCE', sequelize.fn('SUM', Sequelize.literal("CAST(qty_purchased AS DOUBLE PRECISION)")), 0), 'qty']
@@ -15229,6 +15409,58 @@ const exportGinnerSummary = async (req: Request, res: Response) => {
             },
             group: ["ginsales.buyer_ginner"]
           }),
+          BaleSelection.findOne({
+            attributes: [
+              [
+                sequelize.fn(
+                  "COALESCE",
+                  sequelize.fn(
+                    "SUM",
+                    sequelize.literal(`
+                      CASE
+                        WHEN "bale"."old_weight" IS NOT NULL THEN CAST("bale"."old_weight" AS DOUBLE PRECISION)
+                        ELSE CAST("bale"."weight" AS DOUBLE PRECISION)
+                      END
+                    `)
+                  ),
+                  0
+                ),
+                "total_qty",
+              ],
+              [
+                sequelize.fn("COUNT", Sequelize.literal("DISTINCT bale_id")),
+                "no_of_bales",
+              ],
+            ],
+            include: [
+              {
+                model: GinSales,
+                as: "sales",
+                attributes: [],
+                include: [{
+                  model: Ginner,
+                  as: "ginner",
+                  attributes: [],
+                }]
+              },
+              {
+                model: GinBale,
+                as: "bale",
+                attributes: [],
+                include: [{
+                  model: GinProcess,
+                  as: "ginprocess",
+                  attributes: [],
+                }]
+              },
+            ],
+            where: {
+              ...baleSaleSelectionWhere,
+              "$sales.ginner_id$": item.id,
+              "$sales.status$": { [Op.in]: ['To be Submitted'] }
+            },
+            group: ["sales.ginner_id"]
+          }),
         ]);
         const cottonProcessedQty = isNaN(cottonProcessed?.dataValues?.qty) ? 0 : cottonProcessed?.dataValues?.qty;
         const cottonProcessedByHeapQty = isNaN(cottonProcessedByHeap?.dataValues?.qty) ? 0 : cottonProcessedByHeap?.dataValues?.qty;
@@ -15258,10 +15490,14 @@ const exportGinnerSummary = async (req: Request, res: Response) => {
         obj.total_qty_lint_received = ginToGinReceive
           ? convert_kg_to_mt(ginToGinReceive.dataValues.total_qty ?? 0)
           : 0;
+        obj.total_bales_to_be_submitted = ginToBeSubmitted?.dataValues.no_of_bales ? Number (ginToBeSubmitted?.   dataValues.no_of_bales) : 0;
+        obj.total_qty_lint_to_be_submitted = ginToBeSubmitted
+              ? convert_kg_to_mt(ginToBeSubmitted.dataValues.total_qty ?? 0)
+              : 0;
         obj.lintActualStockMT = (item.id === 502 && seasonId && Number(seasonId) === 9)
           ? 0
-          : (Number(obj.lintProcuredMt) + Number(obj.total_qty_lint_received)) > (Number(obj.lintSoldMt) + Number(obj.lintGreyoutMT) + Number(obj.total_qty_lint_transfered))
-            ? (Number(obj.lintProcuredMt) + Number(obj.total_qty_lint_received)) - (Number(obj.lintSoldMt) + Number(obj.lintGreyoutMT) + Number(obj.total_qty_lint_transfered))
+          : (Number(obj.lintProcuredMt) + Number(obj.total_qty_lint_received)) > (Number(obj.lintSoldMt) + Number(obj.lintGreyoutMT) + Number(obj.total_qty_lint_transfered) + Number(obj.total_qty_lint_to_be_submitted))
+            ? (Number(obj.lintProcuredMt) + Number(obj.total_qty_lint_received)) - (Number(obj.lintSoldMt) + Number(obj.lintGreyoutMT) + Number(obj.total_qty_lint_transfered) + Number(obj.total_qty_lint_to_be_submitted))
             : 0;
         obj.lintStockKg = Number(obj.lintProcuredKg) > Number(obj.lintSoldKg) ? Number(obj.lintProcuredKg) - Number(obj.lintSoldKg) : 0;
         obj.lintStockMt = Number(obj.lintProcuredKg) > Number(obj.lintSoldKg) ? Number(obj.lintProcuredMt) - Number(obj.lintSoldMt) : 0;
@@ -15271,8 +15507,8 @@ const exportGinnerSummary = async (req: Request, res: Response) => {
           : 0;
         obj.balesSold = lintSold?.dataValues?.bales_sold ? Number(lintSold?.dataValues?.bales_sold) : 0;
         obj.balesActualStock =
-          (obj.balesProduced + obj.total_bales_received) > (obj.balesSold + obj.total_bales_transfered + obj.balesGreyout)
-            ? (obj.balesProduced + obj.total_bales_received) - (obj.balesSold + obj.total_bales_transfered + obj.balesGreyout)
+          (obj.balesProduced + obj.total_bales_received) > (obj.balesSold + obj.total_bales_transfered + obj.balesGreyout + obj.total_bales_to_be_submitted)
+            ? (obj.balesProduced + obj.total_bales_received) - (obj.balesSold + obj.total_bales_transfered + obj.balesGreyout + obj.total_bales_to_be_submitted)
             : 0;
         obj.balesStock = obj.balesProduced > obj.balesSold ? obj.balesProduced - obj.balesSold : 0;
 
@@ -15294,6 +15530,7 @@ const exportGinnerSummary = async (req: Request, res: Response) => {
           lintGreyoutMT: obj.lintGreyoutMT ? Number(obj.lintGreyoutMT) : 0,
           total_qty_lint_received: obj.total_qty_lint_received ? Number(obj.total_qty_lint_received) : 0,
           total_qty_lint_transfered: obj.total_qty_lint_transfered ? Number(obj.total_qty_lint_transfered) : 0,
+          total_qty_lint_to_be_submitted: obj.total_qty_lint_to_be_submitted ? Number(obj.total_qty_lint_to_be_submitted) : 0,
           lintActualStockMT: obj.lintActualStockMT ? Number(obj.lintActualStockMT) : 0,
           lintStockMt: obj.lintStockMt,
           balesProduced: obj.balesProduced,
@@ -15301,6 +15538,7 @@ const exportGinnerSummary = async (req: Request, res: Response) => {
           balesGreyout: obj.balesGreyout,
           total_bales_received: obj.total_bales_received,
           total_bales_transfered: obj.total_bales_transfered,
+          total_bales_to_be_submitted: obj.total_bales_to_be_submitted,
           balesActualStock: obj.balesActualStock,
           balesStock: obj.balesStock
         };
@@ -15316,6 +15554,7 @@ const exportGinnerSummary = async (req: Request, res: Response) => {
         totals.lintGreyoutMT+= Number(rowValues.lintGreyoutMT );
         totals.total_qty_lint_received+= Number(rowValues.total_qty_lint_received );
         totals.total_qty_lint_transfered+= Number(rowValues.total_qty_lint_transfered );
+        totals.total_qty_lint_to_be_submitted+= Number(rowValues.total_qty_lint_to_be_submitted );
         totals.lintActualStockMT+= Number(rowValues.lintActualStockMT );
         totals.lintStockMt+= Number(rowValues.lintStockMt );
         totals.balesProduced+= Number(rowValues.balesProduced );
@@ -15323,6 +15562,7 @@ const exportGinnerSummary = async (req: Request, res: Response) => {
         totals.balesGreyout+= Number(rowValues.balesGreyout );
         totals.total_bales_received+= Number(rowValues.total_bales_received );
         totals.total_bales_transfered+= Number(rowValues.total_bales_transfered );
+        totals.total_bales_to_be_submitted+= Number(rowValues.total_bales_to_be_submitted );
         totals.balesActualStock+= Number(rowValues.balesActualStock );
         totals.balesStock+= Number(rowValues.balesStock );
 
@@ -15346,6 +15586,7 @@ const exportGinnerSummary = async (req: Request, res: Response) => {
         lintGreyoutMT: totals.lintGreyoutMT,
         total_qty_lint_received: totals.total_qty_lint_received,
         total_qty_lint_transfered: totals.total_qty_lint_transfered,
+        total_qty_lint_to_be_submitted: totals.total_qty_lint_to_be_submitted,
         lintActualStockMT: totals.lintActualStockMT,
         lintStockMt: totals.lintStockMt,
         balesProduced: totals.balesProduced,
@@ -15353,6 +15594,7 @@ const exportGinnerSummary = async (req: Request, res: Response) => {
         balesGreyout: totals.balesGreyout,
         total_bales_received: totals.total_bales_received,
         total_bales_transfered: totals.total_bales_transfered,
+        total_bales_to_be_submitted: totals.total_bales_to_be_submitted,
         balesActualStock: totals.balesActualStock,
         balesStock: totals.balesStock,
       };
@@ -15544,7 +15786,7 @@ const exportGinnerLintStockReport = async (req: Request, res: Response) => {
       // Set bold font for header row
       const headerRow = worksheet.addRow([
         "S. No.", "Season", "Ginner Name", "Country", "State", "District", "Total Procured Seed Cotton (Kgs)", "Total Processed Lint (Kgs)",
-        "Total Sold Lint (Kgs)", "Total Lint in Stock (Kgs)"
+        "Total Sold Lint (Kgs)", "Total Lint in To be Submitted Status (Kgs)", "Total Lint in Stock (Kgs)"
       ]);
       headerRow.font = { bold: true };
 
@@ -15552,7 +15794,7 @@ const exportGinnerLintStockReport = async (req: Request, res: Response) => {
       for await (const [index, ginner] of rows.entries()) {
         let obj: any = {};
 
-        let [cottonProcured, lintProcured, lintSold, [lintStock]]: any =
+        let [cottonProcured, lintProcured, lintSold, lintToBeSubmitted, [lintStock]]: any =
           await Promise.all([
             Transaction.findOne({
               attributes: [
@@ -15663,6 +15905,55 @@ const exportGinnerLintStockReport = async (req: Request, res: Response) => {
               },
               group: ["sales.ginner_id"],
             }),
+            BaleSelection.findOne({
+              attributes: [
+                [
+                  sequelize.fn(
+                    "COALESCE",
+                    sequelize.fn(
+                      "SUM",
+                      sequelize.literal(`
+                        CASE
+                          WHEN "bale"."old_weight" IS NOT NULL THEN CAST("bale"."old_weight" AS DOUBLE PRECISION)
+                          ELSE CAST("bale"."weight" AS DOUBLE PRECISION)
+                        END
+                      `)
+                    ),
+                    0
+                  ),
+                  "qty",
+                ],
+                [
+                  sequelize.fn("COUNT", Sequelize.literal("DISTINCT bale_id")),
+                  "bales_sold",
+                ],
+              ],
+              include: [
+                {
+                  model: GinSales,
+                  as: "sales",
+                  attributes: [],
+                },
+                {
+                  model: GinBale,
+                  as: "bale",
+                  attributes: [],
+                  include: [
+                    {
+                      model: GinProcess,
+                      as: "ginprocess",
+                      attributes: [],
+                    },
+                  ],
+                },
+              ],
+              where: {
+                ...baleSelectionWhere,
+                "$sales.ginner_id$": ginner.ginner_id,
+                "$sales.status$": { [Op.in]: ['To be Submitted'] },
+              },
+              group: ["sales.ginner_id"],
+            }),
             sequelize.query(`
               SELECT 
                 SUM(CAST(combined_data.weight AS DOUBLE PRECISION)) AS lint_stock,
@@ -15750,6 +16041,8 @@ const exportGinnerLintStockReport = async (req: Request, res: Response) => {
         obj.lintProcuredMt = convert_kg_to_mt(lintProcured?.dataValues.qty ?? 0);
         obj.lintSoldKg = lintSold?.dataValues.qty ?? 0;
         obj.lintSoldMt = convert_kg_to_mt(lintSold?.dataValues.qty ?? 0);
+        obj.lintToBeSubmittedKg = lintToBeSubmitted?.dataValues.qty ?? 0;
+        obj.lintToBeSubmittedMt = convert_kg_to_mt(lintToBeSubmitted?.dataValues.qty ?? 0);
         obj.lintStockKg = lintStock && lintStock[0] ? lintStock[0]?.lint_stock : 0;
         obj.lintStockMT = convert_kg_to_mt(lintStock && lintStock[0] ? lintStock[0]?.lint_stock : 0);
 
@@ -15758,6 +16051,9 @@ const exportGinnerLintStockReport = async (req: Request, res: Response) => {
           : 0;
         obj.balesSold = lintSold?.dataValues?.bales_sold
           ? Number(lintSold?.dataValues?.bales_sold)
+          : 0;
+        obj.balesToBeSubmitted = lintToBeSubmitted?.dataValues?.bales_sold
+          ? Number(lintToBeSubmitted?.dataValues?.bales_sold)
           : 0;
         obj.balesStock = lintStock && lintStock[0]?.bales_stock
           ? Number(lintStock[0]?.bales_stock)
@@ -15773,6 +16069,7 @@ const exportGinnerLintStockReport = async (req: Request, res: Response) => {
           cottonProcuredKg: obj.cottonProcuredKg ? Number(obj.cottonProcuredKg) : 0,
           lintProcuredKg: obj.lintProcuredKg ? Number(obj.lintProcuredKg) : 0,
           lintSoldKg: obj.lintSoldKg ? Number(obj.lintSoldKg) : 0,
+          lintToBeSubmittedKg: obj.lintToBeSubmittedKg ? Number(obj.lintToBeSubmittedKg) : 0,
           lintStockKg: obj.lintStockKg ? Number(obj.lintStockKg) : 0
         };
 
@@ -19038,6 +19335,33 @@ const fetchPscpProcurementLiveTracker = async (req: Request, res: Response) => {
                 GROUP BY 
                   filtered_ginners.id
             ),
+            gin_to_be_submitted_data AS (
+                SELECT
+                    gs.ginner_id,
+                    COUNT(gb.id) AS no_of_bales,
+                    COALESCE(
+                      SUM(
+                        CASE
+                          WHEN gb.old_weight IS NOT NULL THEN CAST(gb.old_weight AS DOUBLE PRECISION)
+                          ELSE CAST(gb.weight AS DOUBLE PRECISION)
+                        END
+                      ), 0
+                    ) AS total_qty
+                FROM
+                    "gin-bales" gb
+                LEFT JOIN 
+                  bale_selections bs ON gb.id = bs.bale_id
+                LEFT JOIN 
+                    gin_sales gs ON gs.id = bs.sales_id
+                JOIN filtered_ginners ON gs.ginner_id = filtered_ginners.id
+                LEFT JOIN gin_processes gp ON gb.process_id = gp.id
+                WHERE
+                    gs.program_id = ANY (filtered_ginners.program_id)
+                    AND ${baleSaleConditionSql}
+                    AND gs.status in ('To be Submitted')
+                GROUP BY
+                    gs.ginner_id
+            ),
         expected_cotton_data AS (
           SELECT
             gv.ginner_id,
@@ -19133,10 +19457,12 @@ const fetchPscpProcurementLiveTracker = async (req: Request, res: Response) => {
           ELSE 0
         END AS average_weight,
         COALESCE(gs.total_qty, 0) / 1000 AS total_qty_sold_lint,
+        COALESCE(gtsg.no_of_bales, 0) AS bales_to_be_submitted,
+        COALESCE(gtsg.total_qty, 0) / 1000 AS lint_qty_to_be_submitted,
         COALESCE(go.confirmed_lint_order, 0) AS order_in_hand,
-        CAST((COALESCE(gp.no_of_bales, 0) + COALESCE(gtgr.no_of_bales, 0)) - (COALESCE(gs.no_of_bales, 0) + COALESCE(gbg.no_of_bales, 0) + COALESCE(gtg.no_of_bales, 0)) AS INTEGER) AS balace_stock,
+        CAST((COALESCE(gp.no_of_bales, 0) + COALESCE(gtgr.no_of_bales, 0)) - (COALESCE(gs.no_of_bales, 0) + COALESCE(gbg.no_of_bales, 0) + COALESCE(gtg.no_of_bales, 0) + COALESCE(gtsg.no_of_bales, 0)) AS INTEGER) AS balace_stock,
         CAST(ROUND(
-            CAST((COALESCE(gb.total_qty, 0) / 1000 + COALESCE(gtgr.lint_qty, 0) / 1000) - (COALESCE(gs.total_qty, 0) / 1000 + COALESCE(gbg.total_qty, 0) / 1000 + COALESCE(gtg.lint_qty, 0) / 1000) AS NUMERIC), 
+            CAST((COALESCE(gb.total_qty, 0) / 1000 + COALESCE(gtgr.lint_qty, 0) / 1000) - (COALESCE(gs.total_qty, 0) / 1000 + COALESCE(gbg.total_qty, 0) / 1000 + COALESCE(gtg.lint_qty, 0) / 1000 + COALESCE(gtsg.total_qty, 0) / 1000) AS NUMERIC), 
             2
         ) AS DOUBLE PRECISION) AS balance_lint_quantity,
          CASE
@@ -19172,6 +19498,7 @@ const fetchPscpProcurementLiveTracker = async (req: Request, res: Response) => {
         LEFT JOIN gin_bale_greyout_data gbg ON fg.id = gbg.ginner_id
         LEFT JOIN gin_to_gin_sales_data gtg ON fg.id = gtg.ginner_id
         LEFT JOIN gin_to_gin_recieved_data gtgr ON fg.id = gtgr.ginner_id
+        LEFT JOIN gin_to_be_submitted_data gtsg ON fg.id = gtsg.ginner_id
       ORDER BY
         fg.name asc
       LIMIT :limit OFFSET :offset
@@ -19565,6 +19892,8 @@ const exportPscpProcurementLiveTracker = async (
           "Lint Received (MT)",
           "No. of Bales Transfered",
           "Lint Transfered (MT)",
+          "No. of Bales in To be Submitted Status",
+          "Lint Quantity in To be Submitted Status (MT)",
           "Ginner Sale %",
         ]);
       } else {
@@ -19592,6 +19921,8 @@ const exportPscpProcurementLiveTracker = async (
           "Lint Received (MT)",
           "No. of Bales Transfered",
           "Lint Transfered (MT)",
+          "No. of Bales in To be Submitted Status",
+          "Lint Quantity in To be Submitted Status (MT)",
           "Ginner Sale %",
         ]);
       }
@@ -19802,6 +20133,33 @@ const exportPscpProcurementLiveTracker = async (
                   GROUP BY 
                     filtered_ginners.id
               ),
+              gin_to_be_submitted_data AS (
+                SELECT
+                    gs.ginner_id,
+                    COUNT(gb.id) AS no_of_bales,
+                    COALESCE(
+                      SUM(
+                        CASE
+                          WHEN gb.old_weight IS NOT NULL THEN CAST(gb.old_weight AS DOUBLE PRECISION)
+                          ELSE CAST(gb.weight AS DOUBLE PRECISION)
+                        END
+                      ), 0
+                    ) AS total_qty
+                FROM
+                    "gin-bales" gb
+                LEFT JOIN 
+                  bale_selections bs ON gb.id = bs.bale_id
+                LEFT JOIN 
+                    gin_sales gs ON gs.id = bs.sales_id
+                JOIN filtered_ginners ON gs.ginner_id = filtered_ginners.id
+                LEFT JOIN gin_processes gp ON gb.process_id = gp.id
+                WHERE
+                    gs.program_id = ANY (filtered_ginners.program_id)
+                    AND ${baleSaleConditionSql}
+                    AND gs.status in ('To be Submitted')
+                GROUP BY
+                    gs.ginner_id
+            ),
           expected_cotton_data AS (
             SELECT
               gv.ginner_id,
@@ -19881,10 +20239,12 @@ const exportPscpProcurementLiveTracker = async (
             ELSE 0
           END AS average_weight,
           COALESCE(gs.total_qty, 0) / 1000 AS total_qty_sold_lint,
+          COALESCE(gtsg.no_of_bales, 0) AS bales_to_be_submitted,
+          COALESCE(gtsg.total_qty, 0) / 1000 AS lint_qty_to_be_submitted,
           COALESCE(go.confirmed_lint_order, 0) AS order_in_hand,
-          CAST((COALESCE(gp.no_of_bales, 0) + COALESCE(gtgr.no_of_bales, 0)) - (COALESCE(gs.no_of_bales, 0) + COALESCE(gbg.no_of_bales, 0) + COALESCE(gtg.no_of_bales, 0)) AS INTEGER) AS balace_stock,
+          CAST((COALESCE(gp.no_of_bales, 0) + COALESCE(gtgr.no_of_bales, 0)) - (COALESCE(gs.no_of_bales, 0) + COALESCE(gbg.no_of_bales, 0) + COALESCE(gtg.no_of_bales, 0) + COALESCE(gtsg.no_of_bales, 0)) AS INTEGER) AS balace_stock,
           CAST(ROUND(
-              CAST((COALESCE(gb.total_qty, 0) / 1000 + COALESCE(gtgr.lint_qty, 0) / 1000) - (COALESCE(gs.total_qty, 0) / 1000 + COALESCE(gbg.total_qty, 0) / 1000 + COALESCE(gtg.lint_qty, 0) / 1000) AS NUMERIC), 
+              CAST((COALESCE(gb.total_qty, 0) / 1000 + COALESCE(gtgr.lint_qty, 0) / 1000) - (COALESCE(gs.total_qty, 0) / 1000 + COALESCE(gbg.total_qty, 0) / 1000 + COALESCE(gtg.lint_qty, 0) / 1000 + COALESCE(gtsg.total_qty, 0) / 1000) AS NUMERIC), 
               2
           ) AS DOUBLE PRECISION) AS balance_lint_quantity,
            CASE
@@ -19919,6 +20279,7 @@ const exportPscpProcurementLiveTracker = async (
           LEFT JOIN gin_bale_greyout_data gbg ON fg.id = gbg.ginner_id
           LEFT JOIN gin_to_gin_sales_data gtg ON fg.id = gtg.ginner_id
           LEFT JOIN gin_to_gin_recieved_data gtgr ON fg.id = gtgr.ginner_id
+          LEFT JOIN gin_to_be_submitted_data gtsg ON fg.id = gtsg.ginner_id
         ORDER BY
           fg.name asc
         LIMIT :limit OFFSET :offset
@@ -19955,6 +20316,8 @@ const exportPscpProcurementLiveTracker = async (
         total_qty_lint_received: 0,
         total_bales_transfered: 0,
         total_qty_lint_transfered: 0,
+        total_bales_to_be_submitted: 0,
+        total_qty_lint_to_be_submitted: 0,
         ginner_sale_percentage: 0,
         order_in_hand: 0,
       };
@@ -19990,6 +20353,8 @@ const exportPscpProcurementLiveTracker = async (
             total_qty_lint_received: obj.total_qty_lint_received ? Number(formatDecimal(obj.total_qty_lint_received)) : 0,
             total_bales_transfered: obj.total_bales_transfered ? Number(obj.total_bales_transfered) : 0,
             total_qty_lint_transfered: obj.total_qty_lint_transfered ? Number(formatDecimal(obj.total_qty_lint_transfered)) : 0,
+            bales_to_be_submitted: obj.bales_to_be_submitted ? Number(obj.bales_to_be_submitted) : 0,
+            lint_qty_to_be_submitted: obj.lint_qty_to_be_submitted ? Number(formatDecimal(obj.lint_qty_to_be_submitted)) : 0,
             ginner_sale_percentage: Number(obj.ginner_sale_percentage),
           };
         } else {
@@ -20021,6 +20386,8 @@ const exportPscpProcurementLiveTracker = async (
             total_qty_lint_received: obj.total_qty_lint_received ? Number(formatDecimal(obj.total_qty_lint_received)) : 0,
             total_bales_transfered: obj.total_bales_transfered ? Number(obj.total_bales_transfered) : 0,
             total_qty_lint_transfered: obj.total_qty_lint_transfered ? Number(formatDecimal(obj.total_qty_lint_transfered)) : 0,
+            bales_to_be_submitted: obj.bales_to_be_submitted ? Number(obj.bales_to_be_submitted) : 0,
+            lint_qty_to_be_submitted: obj.lint_qty_to_be_submitted ? Number(formatDecimal(obj.lint_qty_to_be_submitted)) : 0,
             ginner_sale_percentage: Number(obj.ginner_sale_percentage),
           };
         }
@@ -20044,6 +20411,8 @@ const exportPscpProcurementLiveTracker = async (
         totals.total_qty_lint_received += rowValues.total_qty_lint_received;
         totals.total_bales_transfered += rowValues.total_bales_transfered;
         totals.total_qty_lint_transfered += rowValues.total_qty_lint_transfered;
+        totals.total_bales_to_be_submitted += rowValues.bales_to_be_submitted;
+        totals.total_qty_lint_to_be_submitted += rowValues.lint_qty_to_be_submitted;
         totals.ginner_sale_percentage += rowValues.ginner_sale_percentage;
         totals.order_in_hand += rowValues.order_in_hand ? rowValues.order_in_hand : 0;
 
@@ -20075,6 +20444,8 @@ const exportPscpProcurementLiveTracker = async (
           total_qty_lint_received: totals.total_qty_lint_received,
           total_bales_transfered: totals.total_bales_transfered,
           total_qty_lint_transfered: totals.total_qty_lint_transfered,
+          total_bales_to_be_submitted: totals.total_bales_to_be_submitted,
+          total_qty_lint_to_be_submitted: totals.total_qty_lint_to_be_submitted,
           ginner_sale_percentage: totals.ginner_sale_percentage,
         };
       } else {
@@ -20102,6 +20473,8 @@ const exportPscpProcurementLiveTracker = async (
           total_qty_lint_received: totals.total_qty_lint_received,
           total_bales_transfered: totals.total_bales_transfered,
           total_qty_lint_transfered: totals.total_qty_lint_transfered,
+          total_bales_to_be_submitted: totals.total_bales_to_be_submitted,
+          total_qty_lint_to_be_submitted: totals.total_qty_lint_to_be_submitted,
           ginner_sale_percentage: totals.ginner_sale_percentage,
         };
       }
