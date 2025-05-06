@@ -1628,7 +1628,7 @@ const fetchGinProcess = async (req: Request, res: Response) => {
 const fetchGinBale = async (req: Request, res: Response) => {
   try {
     //fetch data with process id
-    const gin = await GinBale.findAll({
+    const rows = await GinBale.findAll({
       where: {
         process_id: req.query.processId,
       },
@@ -1636,10 +1636,26 @@ const fetchGinBale = async (req: Request, res: Response) => {
         {
           model: GinProcess,
           as: "ginprocess",
+          include: [
+            {
+              model: Ginner,
+              as: "ginner",
+              attributes: ["id", "name", "address", "brand"],
+            },
+          ],
         },
       ],
     });
-    return res.sendSuccess(res, gin);
+    let data = [];
+    for await (let obj of rows) {
+      if (obj.dataValues.ginprocess.ginner) {
+        let brands = await Brand.findAll({
+          where: { id: obj.dataValues.ginprocess.ginner.brand },
+        });
+        data.push({ ...obj.dataValues, brands });
+      }
+    }
+    return res.sendSuccess(res, data);
   } catch (error: any) {
     console.error(error);
     return res.sendError(res, error.message, error);
@@ -3012,6 +3028,31 @@ const updateGinSaleBale = async (req: Request, res: Response) => {
   }
 };
 
+const updateGinProcessBale = async (req: Request, res: Response) => {
+  try {
+    //fetch data with process id
+    let gins: any = [];
+    for await (let obj of req.body.printData) {
+      const gin = await GinBale.update(
+        {
+          print: obj.print,
+        },
+        {
+          where: {
+            id: obj.id,
+          },
+        }
+      );
+      gins.push(gin);
+    }
+
+    return res.sendSuccess(res, gins);
+  } catch (error: any) {
+    console.log(error);
+    return res.sendError(res, error.message, error);
+  }
+};
+
 const dashboardGraphWithProgram = async (req: Request, res: Response) => {
   try {
     let whereCondition: any = {};
@@ -4002,6 +4043,7 @@ export {
   getReelHeapId,
   getProgram,
   updateGinSaleBale,
+  updateGinProcessBale,
   chooseBale,
   deleteGinnerProcess,
   deleteGinSales,
