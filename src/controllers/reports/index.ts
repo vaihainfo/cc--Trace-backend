@@ -15100,7 +15100,7 @@ const exportGinnerSummary = async (req: Request, res: Response) => {
       const headerRow = worksheet.addRow([
         "S. No.", "Ginner Name", "Country", "State", "Total seed cotton procured (MT)", "Total seed cotton processed (MT)", "Total Heap stock (MT)",
         "Total seed cotton in stock (MT)", "Total lint produce (MT)", "Total lint sold (MT)", "Grey-Out Lint Quantity (MT)", "Total Lint Received (MT)", "Total Lint Transfered (MT)", "Total Lint Quantity in To be Submitted Status (MT)", "Actual lint in stock (MT)", "Total lint in stock (MT)",
-        "Total bales produced", "Total Bales sold", "Total Bales Greyout", "Total Bales Received", "Total Bales Transfered", "Total Bales in To be Submitted Status (MT)", "Actual Bales in stock", "Total bales in stock"
+        "Total bales produced", "Total Bales sold", "Total Bales Greyout", "Total Bales Received", "Total Bales Transfered", "Total Bales in To be Submitted Status", "Actual Bales in stock", "Total bales in stock"
       ]);
       headerRow.font = { bold: true };
       let options = /*(exportType === "all") ? {
