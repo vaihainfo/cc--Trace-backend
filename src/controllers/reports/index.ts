@@ -1205,7 +1205,7 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
             press_no: item.press_no !== "NaN-NaN" ? item.press_no : item?.gin_press_no,
             reel_press_no: item.reel_press_no ? item.reel_press_no : "",
             noOfBales: item.no_of_bales ? Number(item.no_of_bales) : 0,
-            lint_quantity: item.lint_quantity  && Number(item.lint_stock) > 1 ? Number(item.lint_quantity) : 0,
+            lint_quantity: item.lint_quantity  && Number(item.lint_quantity) > 1 ? Number(item.lint_quantity) : 0,
             program: item.program ? item.program : "",
             greyout_status: item.greyout_status ? "Yes" : "No",
           };
@@ -1230,7 +1230,7 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
             reel_lot_no: item.reel_lot_no ? item.reel_lot_no : "",
             reel_press_no: item.reel_press_no ? item.reel_press_no : "",
             noOfBales: item.no_of_bales ? Number(item.no_of_bales) : 0,
-            lint_quantity: item.lint_quantity  && Number(item.lint_stock) > 1 ? Number(item.lint_quantity) : 0,
+            lint_quantity: item.lint_quantity  && Number(item.lint_quantity) > 1 ? Number(item.lint_quantity) : 0,
             program: item.program ? item.program : "",
             greyout_status: item.greyout_status ? "Yes" : "No",
           };
