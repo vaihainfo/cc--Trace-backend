@@ -85,8 +85,14 @@ const fetchPhysicalTraceabilitySpinner = async (req: Request, res: Response) => 
         const physicalTraceabilitySpinnerSample = await PhysicalTraceabilityDataSpinnerSample.findAll({
             where: { physical_traceability_data_spinner_id: physicalTraceabilitySpinner.id }
         });
+        
+        const responseData = {
+            ...physicalTraceabilitySpinner.dataValues,
+            haelixa_id: physicalTraceabilitySpinner.haelixa_id, 
+            physical_traceability_data_spinner_sample: physicalTraceabilitySpinnerSample
+        };
 
-        return res.sendSuccess(res, { ...physicalTraceabilitySpinner.dataValues, physical_traceability_data_spinner_sample: physicalTraceabilitySpinnerSample });
+        return res.sendSuccess(res, responseData);
     } catch (error) {
         console.log(error);
         return res.sendError(res, "ERR_INTERNAL_SERVER_ERROR");
