@@ -585,7 +585,7 @@ const exportGinnerProcessGreyOutReport = async () => {
         LEFT JOIN ginners g ON gp.ginner_id = g.id
         LEFT JOIN countries c ON c.id = g.country_id
         LEFT JOIN states st ON st.id = g.state_id
-        WHERE
+        WHERE 
           (
             gp.greyout_status = true
             OR
@@ -2348,16 +2348,19 @@ const generatePscpProcurementLiveTracker = async () => {
             WHERE
               gp.program_id = ANY (filtered_ginners.program_id)
               AND
+            gb.sold_status = FALSE AND (
               (
-              (gp.greyout_status = true AND gb.sold_status = false AND gb.is_all_rejected IS NULL) 
-              OR
-                (
-                gp.scd_verified_status = true AND gb.scd_verified_status IS NOT TRUE
-                )
-                OR
-                (
-                gp.scd_verified_status = false AND gb.scd_verified_status IS FALSE
-                )
+                gp.greyout_status = TRUE AND  
+                gb.is_all_rejected IS NULL
+              )
+              OR (
+                gp.scd_verified_status = TRUE AND
+                gb.scd_verified_status IS NOT TRUE
+              )
+              OR (
+                gp.scd_verified_status = FALSE AND
+                gb.scd_verified_status IS FALSE
+              )
               )
             GROUP BY
               gp.ginner_id
@@ -3303,11 +3306,11 @@ const generateGinnerSummary = async () => {
             where: {
               ...ginBaleWhere,
               '$ginprocess.ginner_id$': item.id,
+              sold_status: false ,
               [Op.or]: [
                 {
                   [Op.and]: [
                     { "$ginprocess.greyout_status$": true },
-                    { sold_status: false },
                     { is_all_rejected: null }
                   ]
                 },
@@ -4307,14 +4310,19 @@ const generateGinnerProcess = async () => {
               "gin-bales" gb
             JOIN gin_processes gp ON gb.process_id = gp.id
             WHERE
+             gb.sold_status = FALSE AND (
               (
-                (
-                  gp.scd_verified_status = true AND gb.scd_verified_status IS NOT TRUE
-                )
-                OR
-                (
-                  gp.scd_verified_status = false AND gb.scd_verified_status IS FALSE
-                )
+                gp.greyout_status = TRUE AND  
+                gb.is_all_rejected IS NULL
+              )
+              OR (
+                gp.scd_verified_status = TRUE AND
+                gb.scd_verified_status IS NOT TRUE
+              )
+              OR (
+                gp.scd_verified_status = FALSE AND
+                gb.scd_verified_status IS FALSE
+              )
               )
             GROUP BY
               gb.process_id, gp.ginner_id

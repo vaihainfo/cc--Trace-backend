@@ -129,6 +129,11 @@ const getKnitterWhereQuery = (
   if (reqData?.district)
     where['$dyingwashing.district_id$'] = reqData.district;
 
+  if (reqData?.brand)
+    where['$dyingwashing.brand$'] = {
+      [Op.contains]: Sequelize.literal(`ARRAY [${reqData.brand}]`)
+    }
+
   return where;
 
 
@@ -171,6 +176,10 @@ const getDFabricSaleWhereQuery = (
   if (reqData?.district)
     where['$abuyer.district_id$'] = reqData.district;
 
+  if (reqData?.brand)
+    where['$abuyer.brand$'] = {
+      [Op.contains]: Sequelize.literal(`ARRAY [${reqData.brand}]`)
+  }
   return where;
 
 
@@ -210,7 +219,12 @@ const getDyingWhereQuery = (
 
   if (reqData?.district)
     where['$dying_fabric.district_id$'] = reqData.district;
-
+ 
+  if (reqData?.brand)
+    where['$dying_fabric.brand$'] = {
+      [Op.contains]: Sequelize.literal(`ARRAY [${reqData.brand}]`)
+  }
+  
   return where;
 
 
@@ -251,6 +265,11 @@ const getPrintingWhereQuery = (
 
   if (reqData?.district)
     where['$printing.district_id$'] = reqData.district;
+
+  if (reqData?.brand)
+    where['$printing.brand$'] = {
+      [Op.contains]: Sequelize.literal(`ARRAY [${reqData.brand}]`)
+  }
 
   return where;
 
@@ -294,6 +313,11 @@ const getWashingWhereQuery = (
   if (reqData?.district)
     where['$washing.district_id$'] = reqData.district;
 
+  if (reqData?.brand)
+    where['$washing.brand$'] = {
+      [Op.contains]: Sequelize.literal(`ARRAY [${reqData.brand}]`)
+  }
+
   return where;
 
 
@@ -334,6 +358,11 @@ const getCompactingWhereQuery = (
 
   if (reqData?.district)
     where['$compacting.district_id$'] = reqData.district;
+
+  if (reqData?.brand)
+    where['$compacting.brand$'] = {
+      [Op.contains]: Sequelize.literal(`ARRAY [${reqData.brand}]`)
+  }
 
   return where;
 
