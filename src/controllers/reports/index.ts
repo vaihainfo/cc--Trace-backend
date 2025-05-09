@@ -217,15 +217,19 @@ const fetchBaleProcess = async (req: Request, res: Response) => {
             FROM
               "gin-bales" gb
             JOIN gin_processes gp ON gb.process_id = gp.id
-            WHERE
+           WHERE gb.sold_status = FALSE AND (
               (
-                (
-                  gp.scd_verified_status = true AND gb.scd_verified_status IS NOT TRUE
-                )
-                OR
-                (
-                  gp.scd_verified_status = false AND gb.scd_verified_status IS FALSE
-                )
+                gp.greyout_status = TRUE AND  
+                gb.is_all_rejected IS NULL
+              )
+              OR (
+                gp.scd_verified_status = TRUE AND
+                gb.scd_verified_status IS NOT TRUE
+              )
+              OR (
+                gp.scd_verified_status = FALSE AND
+                gb.scd_verified_status IS FALSE
+              )
               )
             GROUP BY
               gb.process_id, gp.ginner_id
@@ -987,16 +991,21 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
               FROM
                 "gin-bales" gb
               JOIN gin_processes gp ON gb.process_id = gp.id
-              WHERE
-                (
-                  (
-                    gp.scd_verified_status = true AND gb.scd_verified_status IS NOT TRUE
-                  )
-                  OR
-                  (
-                    gp.scd_verified_status = false AND gb.scd_verified_status IS FALSE
-                  )
-                )
+              WHERE gb.sold_status = FALSE 
+              AND (
+              (
+                gp.greyout_status = TRUE AND  
+                gb.is_all_rejected IS NULL
+              )
+              OR (
+                gp.scd_verified_status = TRUE AND
+                gb.scd_verified_status IS NOT TRUE
+              )
+              OR (
+                gp.scd_verified_status = FALSE AND
+                gb.scd_verified_status IS FALSE
+              )
+              )
               GROUP BY
                 gb.process_id, gp.ginner_id
             ),
@@ -1312,7 +1321,7 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
         totals.total_lint_qty_transfered += item.lint_qty_transfered ? Number(item.lint_qty_transfered) : 0;
         totals.total_sold_bales += item.sold_bales ? Number(item.sold_bales) : 0;
         totals.total_bales_transfered += item.bales_transfered ? Number(item.bales_transfered) : 0;
-        totals.total_lint_stock += item.lint_stock ? Number(item.lint_stock) : 0;
+        totals.total_lint_stock += item.lint_stock >= 1 ? Number(item.lint_stock) : 0;
         totals.total_bale_stock += item.bale_stock ? Number(item.bale_stock) : 0;
 
         worksheet.addRow(Object.values(rowValues));
@@ -13997,11 +14006,11 @@ const fetchGinnerSummaryPagination = async (req: Request, res: Response) => {
             where: {
               ...ginBaleWhere,
               "$ginprocess.ginner_id$": ginner.id,
+               sold_status: false,
               [Op.or]: [
                 {
                   [Op.and]: [
                     { "$ginprocess.greyout_status$": true },
-                    { sold_status: false },
                     { is_all_rejected: null }
                   ]
                 },
@@ -19062,19 +19071,21 @@ const fetchPscpProcurementLiveTracker = async (req: Request, res: Response) => {
           JOIN gin_processes gp ON gb.process_id = gp.id
           JOIN filtered_ginners ON gp.ginner_id = filtered_ginners.id
           WHERE
-            gp.program_id = ANY (filtered_ginners.program_id)
-            AND
-            (
-              (gp.greyout_status = true AND gb.sold_status = false AND gb.is_all_rejected IS NULL) 
-              OR
+            gp.program_id = ANY (filtered_ginners.program_id) AND
+            gb.sold_status = FALSE AND (
               (
-              gp.scd_verified_status = true AND gb.scd_verified_status IS NOT TRUE
+                gp.greyout_status = TRUE AND  
+                gb.is_all_rejected IS NULL
               )
-              OR
-              (
-              gp.scd_verified_status = false AND gb.scd_verified_status IS FALSE
+              OR (
+                gp.scd_verified_status = TRUE AND
+                gb.scd_verified_status IS NOT TRUE
               )
-            )
+              OR (
+                gp.scd_verified_status = FALSE AND
+                gb.scd_verified_status IS FALSE
+              )
+              )
             AND ${baleConditionSql}
           GROUP BY
             gp.ginner_id
@@ -19827,17 +19838,19 @@ const exportPscpProcurementLiveTracker = async (
             JOIN filtered_ginners ON gp.ginner_id = filtered_ginners.id
             WHERE
               gp.program_id = ANY (filtered_ginners.program_id)
-              AND
+              AND gb.sold_status = FALSE AND (
               (
-              (gp.greyout_status = true AND gb.sold_status = false AND gb.is_all_rejected IS NULL) 
-              OR
-                (
-                gp.scd_verified_status = true AND gb.scd_verified_status IS NOT TRUE
-                )
-                OR
-                (
-                gp.scd_verified_status = false AND gb.scd_verified_status IS FALSE
-                )
+                gp.greyout_status = TRUE AND  
+                gb.is_all_rejected IS NULL
+              )
+              OR (
+                gp.scd_verified_status = TRUE AND
+                gb.scd_verified_status IS NOT TRUE
+              )
+              OR (
+                gp.scd_verified_status = FALSE AND
+                gb.scd_verified_status IS FALSE
+              )
               )
               AND ${baleConditionSql}
             GROUP BY
