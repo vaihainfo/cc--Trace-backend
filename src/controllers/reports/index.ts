@@ -14796,9 +14796,20 @@ const fetchGinnerLintStockPagination = async (req: Request, res: Response) => {
                 WHERE 
                     gp.ginner_id = ${ginner.ginner_id}
                     ${whereClause}
-                    AND gp.season_id IN (10)
+                    AND gp.season_id >= 10
                     AND gb.sold_status = false
                     AND gp.greyout_status = false
+                    AND (
+                      gp.verification_status = 'Pending'
+                      OR gp.verification_status IS NULL
+                      OR (
+                        gp.verification_status = 'Completed' AND (
+                          (gp.scd_verified_status = TRUE AND gb.scd_verified_status IS TRUE)
+                          OR
+                          (gp.scd_verified_status = FALSE AND gb.scd_verified_status IS NOT FALSE)
+                        )
+                      )
+                    )
                 UNION ALL
                 -- Second Query: Gin-to-Gin sales
                 SELECT 
@@ -15934,7 +15945,7 @@ const exportGinnerLintStockReport = async (req: Request, res: Response) => {
       // Set bold font for header row
       const headerRow = worksheet.addRow([
         "S. No.", "Season", "Ginner Name", "Country", "State", "District", "Total Procured Seed Cotton (Kgs)", "Total Processed Lint (Kgs)",
-        "Total Sold Lint (Kgs)", "Total Lint in To be Submitted Status (Kgs)", "Total Lint in Stock (Kgs)"
+        "Total Sold Lint (Kgs)", "Total Lint in To be Submitted Status (Kgs)", "Actual Lint in Stock (Kgs)"
       ]);
       headerRow.font = { bold: true };
 
@@ -16126,9 +16137,20 @@ const exportGinnerLintStockReport = async (req: Request, res: Response) => {
                   WHERE 
                       gp.ginner_id = ${ginner.ginner_id}
                       ${whereClause}
-                      AND gp.season_id IN (10)
-                      AND gb.sold_status = false
-                      AND gp.greyout_status = false
+                        AND gp.season_id >= 10
+                        AND gb.sold_status = false
+                        AND gp.greyout_status = false
+                        AND (
+                          gp.verification_status = 'Pending'
+                          OR gp.verification_status IS NULL
+                          OR (
+                            gp.verification_status = 'Completed' AND (
+                              (gp.scd_verified_status = TRUE AND gb.scd_verified_status IS TRUE)
+                              OR
+                              (gp.scd_verified_status = FALSE AND gb.scd_verified_status IS NOT FALSE)
+                            )
+                          )
+                        )
                   UNION ALL
                   -- Second Query: Gin-to-Gin sales
                   SELECT 
