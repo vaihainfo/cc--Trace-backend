@@ -2037,7 +2037,14 @@ const generatePscpCottonProcurement = async () => {
           ],
           where: {
             "$ginprocess.season_id$": farm.season_id, 
+             sold_status: false ,
             [Op.or]: [
+               {
+                  [Op.and]: [
+                    { "$ginprocess.greyout_status$": true },
+                    { is_all_rejected: null }
+                  ]
+                },
               {
                 [Op.and]: [
                   { "$ginprocess.scd_verified_status$": true },

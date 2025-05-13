@@ -3607,11 +3607,11 @@ const getLintBaleGreyoutData = async (
     ],
     where:{
       ...where,
+       sold_status: false ,
       [Op.or]: [
         {
           [Op.and]: [
             { "$ginprocess.greyout_status$": true },
-            { sold_status: false },
             { is_all_rejected: null }
           ]
         },

@@ -15320,11 +15320,11 @@ const exportGinnerSummary = async (req: Request, res: Response) => {
             where: {
               ...ginBaleWhere,
               '$ginprocess.ginner_id$': item.id,
+               sold_status: false ,
               [Op.or]: [
                 {
                   [Op.and]: [
                     { "$ginprocess.greyout_status$": true },
-                    { sold_status: false },
                     { is_all_rejected: null }
                   ]
                 },
@@ -17706,7 +17706,14 @@ const fetchPscpPrecurement = async (req: Request, res: Response) => {
         where: {
           "$ginprocess.season_id$": item.season_id,
           ...ginnernewCondition,
+           sold_status: false ,
           [Op.or]: [
+             {
+              [Op.and]: [
+                { "$ginprocess.greyout_status$": true },
+                { is_all_rejected: null }
+              ]
+            },
             {
               [Op.and]: [
                 { "$ginprocess.scd_verified_status$": true },
@@ -18212,7 +18219,14 @@ const exportPscpCottonProcurement = async (req: Request, res: Response) => {
           where: {
             "$ginprocess.season_id$": item.season_id,
             ...ginnernewCondition,
-            [Op.or]: [
+              sold_status: false ,
+              [Op.or]: [
+                {
+                  [Op.and]: [
+                    { "$ginprocess.greyout_status$": true },
+                    { is_all_rejected: null }
+                  ]
+                },
               {
                 [Op.and]: [
                   { "$ginprocess.scd_verified_status$": true },
@@ -18647,7 +18661,14 @@ const fetchPscpGinnerPrecurement = async (req: Request, res: Response) => {
         where: {
           "$ginprocess.season_id$": seasonId,
           "$ginprocess.ginner_id$": item.dataValues.ginner.id,
+          sold_status: false ,
           [Op.or]: [
+             {
+                  [Op.and]: [
+                    { "$ginprocess.greyout_status$": true },
+                    { is_all_rejected: null }
+                  ]
+                },
             {
               [Op.and]: [
                 { "$ginprocess.scd_verified_status$": true },
@@ -19049,7 +19070,14 @@ const exportPscpGinnerCottonProcurement = async (
         where: {
           "$ginprocess.season_id$": seasonId,
           "$ginprocess.ginner_id$": item.dataValues.ginner.id,
+           sold_status: false ,
           [Op.or]: [
+             {
+                  [Op.and]: [
+                    { "$ginprocess.greyout_status$": true },
+                    { is_all_rejected: null }
+                  ]
+                },
             {
               [Op.and]: [
                 { "$ginprocess.scd_verified_status$": true },
