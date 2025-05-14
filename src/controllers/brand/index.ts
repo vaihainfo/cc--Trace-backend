@@ -1124,6 +1124,7 @@ const productionUpdate = async (req: Request, res: Response) => {
                     attributes: [],
                 }
             ],
+             order: [[{ model: Season, as: 'season' }, 'id', 'DESC']],
             group: ["ginner.id", 'season.id']
         });
         if (countryId) {
@@ -1162,6 +1163,7 @@ const productionUpdate = async (req: Request, res: Response) => {
                     attributes: [],
                 },
             ],
+              order: [[{ model: Season, as: 'season' }, 'id', 'DESC']],
             group: ["spinner.id", 'season.id']
         });
         if (countryId) {
@@ -1199,6 +1201,7 @@ const productionUpdate = async (req: Request, res: Response) => {
                 ...whereCondition,
                 ...knitterWhere
             },
+              order: [[{ model: Season, as: 'season' }, 'id', 'DESC']],
             group: ['knitter.id', 'season.id']
         })
         
@@ -1237,6 +1240,7 @@ const productionUpdate = async (req: Request, res: Response) => {
                 ...whereCondition,
                 ...weaverWhere
             },
+              order: [[{ model: Season, as: 'season' }, 'id', 'DESC']],
             group: ['weaver.id', 'season.id']
         })
        
@@ -1275,13 +1279,15 @@ const productionUpdate = async (req: Request, res: Response) => {
                 status: 'Sold',
                 ...whereCondition,
                 ...garmentWhere
-            },
+            },    
+              order: [[{ model: Season, as: 'season' }, 'id', 'DESC']],     
             group: ['garment.id', 'season.id']
         })
 
-        let data = [...ginnerList, ...spinnerList, ...knitterList, ...weaverList, ...garmentList];
-        let ndata = data.length > 0 ? data.slice(offset, offset + limit) : [];
-        return res.sendPaginationSuccess(res, ndata, data.length > 0 ? data.length : 0);
+        let combinedList = [...ginnerList, ...spinnerList, ...knitterList, ...weaverList, ...garmentList];
+        combinedList.sort((a, b) => b.season.id - a.season.id);
+        let ndata = combinedList.length > 0 ? combinedList.slice(offset, offset + limit) : [];
+        return res.sendPaginationSuccess(res, ndata, combinedList.length > 0 ? combinedList.length : 0);
     } catch (error: any) {
         console.log(error);
         return res.sendError(res, error.message, error);
