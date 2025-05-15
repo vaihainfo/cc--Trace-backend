@@ -22,6 +22,7 @@ import UserApp from "../../../models/users-app.model";
 import BrandExecutive from "../../../models/brand-executive.model";
 import BrandManager from "../../../models/brand-manager.model";
 import PSTeam from "../../../models/ps-team.model";
+import Program from "../../../models/program.model";
 
 const getUserInfo = async (req: Request, res: Response) => {
     try {
@@ -276,7 +277,7 @@ const getUserInfo = async (req: Request, res: Response) => {
             BrandManager.findOne({ where: { bmUser_id: { [Op.contains]: [user.dataValues.id] } } }),
             PSTeam.findOne({ where: { psUser_id: { [Op.contains]: [user.dataValues.id] } } }),
         ]);
-
+ 
         let processor = [];
         spinner ? processor.push('Spinner') : "";
         ginner ? processor.push('Ginner') : "";
@@ -294,6 +295,66 @@ const getUserInfo = async (req: Request, res: Response) => {
         brandManager ? processor.push('Brand_Manager') : "";
         psTeam ? processor.push('PS_Team') : "";
 
+        const attachProgramsToEntity = async (entity:any) => {
+            const programId = entity?.program_id || entity?.programs_id;
+            if (!programId?.length) return entity;
+
+            const programs = await Program.findAll({
+                where: { id: programId },
+                attributes: ['id', 'program_name'],
+            });
+
+            const entityJson = entity.toJSON?.() || entity;
+            return { ...entityJson, programs };
+            };
+
+            if(ginner) {
+                ginner = await attachProgramsToEntity(ginner);
+            }
+            if(spinner){
+                spinner = await attachProgramsToEntity(spinner);
+            }
+            if(weaver){
+                weaver = await attachProgramsToEntity(weaver);
+            }
+            if(knitter){
+                knitter = await attachProgramsToEntity(knitter);
+            }
+            if(garment){
+                garment = await attachProgramsToEntity(garment);
+            }
+            if(trader){
+                trader = await attachProgramsToEntity(trader);
+            }
+            if(fabric){
+                fabric = await attachProgramsToEntity(fabric);
+            }
+            if(brand){
+                brand = await attachProgramsToEntity(brand);
+            }
+            if(physicalPartner){
+                physicalPartner = await attachProgramsToEntity(physicalPartner);
+            }
+            if(traceabilityExecutive){
+                traceabilityExecutive = await attachProgramsToEntity(traceabilityExecutive);
+            }
+            if(supplyChainManager){
+                supplyChainManager = await attachProgramsToEntity(supplyChainManager);
+            }
+            if(supplyChainDirector){
+                supplyChainDirector = await attachProgramsToEntity(supplyChainDirector);
+            }
+            if(brandExecutive){
+                brandExecutive = await attachProgramsToEntity(brandExecutive);
+            }
+            if(brandManager){
+                brandManager = await attachProgramsToEntity(brandManager);
+            }
+            if(psTeam){
+                psTeam = await attachProgramsToEntity(psTeam);
+            }
+
+            
         if (req.query.ginnerId) {
             ginner = await Ginner.findOne({ where: { id: req.query.ginnerId } })
         }
