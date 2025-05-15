@@ -14437,10 +14437,13 @@ const fetchGinnerSummaryPagination = async (req: Request, res: Response) => {
         Number(obj.lintProcuredKg) > Number(obj.lintSoldKg)
           ? Number(obj.lintProcuredKg) - Number(obj.lintSoldKg)
           : 0;
+      // obj.lintStockMt =
+      //   Number(obj.lintProcuredKg) > Number(obj.lintSoldKg)
+      //     ? Number(obj.lintProcuredMt) - Number(obj.lintSoldMt)
+      //     : 0;
       obj.lintStockMt =
-        Number(obj.lintProcuredKg) > Number(obj.lintSoldKg)
-          ? Number(obj.lintProcuredMt) - Number(obj.lintSoldMt)
-          : 0;
+          (Number(obj.lintActualStockMT) > 0 ? Number(obj.lintActualStockMT) : 0) +
+          (Number(obj.total_qty_lint_to_be_submitted) > 0 ? Number(obj.total_qty_lint_to_be_submitted) : 0);
       obj.balesProduced = lintProcured?.dataValues?.bales_procured
         ? Number(lintProcured?.dataValues?.bales_procured)
         : 0;
@@ -15654,7 +15657,10 @@ const exportGinnerSummary = async (req: Request, res: Response) => {
         }
 
         obj.lintStockKg = Number(obj.lintProcuredKg) > Number(obj.lintSoldKg) ? Number(obj.lintProcuredKg) - Number(obj.lintSoldKg) : 0;
-        obj.lintStockMt = Number(obj.lintProcuredKg) > Number(obj.lintSoldKg) ? Number(obj.lintProcuredMt) - Number(obj.lintSoldMt) : 0;
+        // obj.lintStockMt = Number(obj.lintProcuredKg) > Number(obj.lintSoldKg) ? Number(obj.lintProcuredMt) - Number(obj.lintSoldMt) : 0;
+       obj.lintStockMt =
+          (Number(obj.lintActualStockMT) > 0 ? Number(obj.lintActualStockMT) : 0) +
+          (Number(obj.total_qty_lint_to_be_submitted) > 0 ? Number(obj.total_qty_lint_to_be_submitted) : 0);
         obj.balesProduced = lintProcured?.dataValues?.bales_procured ? Number(lintProcured?.dataValues?.bales_procured) : 0;
         obj.balesGreyout = greyoutLint?.dataValues?.bales_procured
           ? Number(greyoutLint?.dataValues?.bales_procured)
