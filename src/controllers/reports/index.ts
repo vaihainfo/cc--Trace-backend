@@ -901,7 +901,7 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
       const worksheet = workbook.addWorksheet("Sheet1");
 
       /*
-      if (isOrganic === 'true') {
+      if (isNotReel === 'true') {
         worksheet.mergeCells('A1:N1');
       }else if (isBrand === 'true') {
         worksheet.mergeCells('A1:Q1');
@@ -1749,7 +1749,7 @@ const exportPendingGinnerSales = async (req: Request, res: Response) => {
   const status = req.query.status || "To be Submitted";
   const { exportType, ginnerId, seasonId, programId, brandId, countryId, startDate, endDate }: any = req.query;
   const whereCondition: any = {};
-  const isOrganic = req.query.isOrganic || false;
+  const isNotReel = req.query.isNotReel || false;
 
   const page = Number(req.query.page) || 1;
   const limit = Number(req.query.limit) || 10;
@@ -1823,7 +1823,7 @@ const exportPendingGinnerSales = async (req: Request, res: Response) => {
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet("Sheet1");
       /*
-      if (isOrganic === 'true') {
+      if (isNotReel === 'true') {
         worksheet.mergeCells('A1:N1');
       } else {
         worksheet.mergeCells("A1:O1");
@@ -1836,7 +1836,7 @@ const exportPendingGinnerSales = async (req: Request, res: Response) => {
       */
       // Set bold font for header row
       let headerRow;
-      if (isOrganic === 'true') {
+      if (isNotReel === 'true') {
         headerRow = worksheet.addRow([
           "Sr No.",
           "Country",
@@ -1993,7 +1993,7 @@ const exportPendingGinnerSales = async (req: Request, res: Response) => {
       // Append data to worksheet
       for await (const [index, item] of rows.entries()) {
         let rowValues;
-        if (isOrganic === 'true') {
+        if (isNotReel === 'true') {
           rowValues = Object.values({
             index: index + 1,
             country: item.dataValues.country_name ? item.dataValues.country_name : "",
@@ -2043,7 +2043,7 @@ const exportPendingGinnerSales = async (req: Request, res: Response) => {
       }
 
       let rowValues;
-      if (isOrganic === 'true') {
+      if (isNotReel === 'true') {
         rowValues = Object.values({
           index: "",
           country: "",
@@ -3839,7 +3839,7 @@ const exportGinnerSales = async (req: Request, res: Response) => {
   const searchTerm = req.query.search || "";
   const page = Number(req.query.page) || 1;
   const limit = Number(req.query.limit) || 10;
-  const isOrganic = req.query.isOrganic || false;
+  const isNotReel = req.query.isNotReel || false;
 
   const isBrand = req.query.isBrand || false;
   const { exportType, ginnerId, seasonId, programId, brandId, countryId, startDate, endDate }: any = req.query;
@@ -3918,7 +3918,7 @@ const exportGinnerSales = async (req: Request, res: Response) => {
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet("Sheet1");
       /*
-        if (isOrganic === 'true') {
+        if (isNotReel === 'true') {
           worksheet.mergeCells('A1:P1');
         } else if (isBrand === 'true') {
           worksheet.mergeCells('A1:Q1');
@@ -3932,7 +3932,7 @@ const exportGinnerSales = async (req: Request, res: Response) => {
       */
       // Set bold font for header row
       let headerRow;
-      if (isOrganic === 'true') {
+      if (isNotReel === 'true') {
         headerRow = worksheet.addRow([
           "Sr No.", "Country", "State", "Process Date", "Data Entry Date", "No of Days", "Lint sale chosen season", "Ginner Name",
           "Invoice No", "Buyer Type", "Sold To", "Bale Lot No", "No of Bales", "Press/Bale No", "Rate/Kg",
@@ -4170,7 +4170,7 @@ const exportGinnerSales = async (req: Request, res: Response) => {
       // Append data to worksheet
       for await (const [index, item] of rows.entries()) {
         let rowValues;
-        if (isOrganic === 'true') {
+        if (isNotReel === 'true') {
           rowValues = Object.values({
             index: index + 1,
             country: item.country_name ? item.country_name : '',
@@ -4277,7 +4277,7 @@ const exportGinnerSales = async (req: Request, res: Response) => {
       }
 
       let rowValues;
-      if (isOrganic === 'true') {
+      if (isNotReel === 'true') {
         rowValues = Object.values({
           index: "",
           country: "",
@@ -4858,7 +4858,7 @@ const exportSpinnerBale = async (req: Request, res: Response) => {
   const searchTerm = req.query.search || "";
   const page = Number(req.query.page) || 1;
   const limit = Number(req.query.limit) || 10;
-  const isOrganic = req.query.isOrganic || false;
+  const isNotReel = req.query.isNotReel || false;
 
   const { exportType, ginnerId, spinnerId, seasonId, programId, brandId, countryId, startDate, endDate }: any =
     req.query;
@@ -4942,7 +4942,7 @@ const exportSpinnerBale = async (req: Request, res: Response) => {
       // Create the excel workbook file
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet("Sheet1");
-      // if (isOrganic === 'true') {
+      // if (isNotReel === 'true') {
       //   worksheet.mergeCells('A1:N1');
       // } else{
       //   worksheet.mergeCells("A1:O1");
@@ -4953,7 +4953,7 @@ const exportSpinnerBale = async (req: Request, res: Response) => {
       // mergedCell.alignment = { horizontal: "center", vertical: "middle" };
       // Set bold font for header row
       let headerRow;
-      if (isOrganic === 'true') {
+      if (isNotReel === 'true') {
         headerRow = worksheet.addRow([
           "Sr No.",
           "Country",
@@ -5090,7 +5090,7 @@ const exportSpinnerBale = async (req: Request, res: Response) => {
         });
 
         let rowValues;
-        if (isOrganic === 'true') {
+        if (isNotReel === 'true') {
           rowValues = Object.values({
             index: index + 1,
             country: country ? country.dataValues.county_name : '',
@@ -5161,7 +5161,7 @@ const exportSpinnerBale = async (req: Request, res: Response) => {
 
 
       let rowValues;
-      if (isOrganic === 'true') {
+      if (isNotReel === 'true') {
         rowValues = Object.values({
           index: "",
           country: "",
@@ -5248,7 +5248,7 @@ const exportPendingSpinnerBale = async (req: Request, res: Response) => {
   const page = Number(req.query.page) || 1;
   const limit = Number(req.query.limit) || 10;
   const pagination = req.query.pagination;
-  const isOrganic = req.query.isOrganic || false;
+  const isNotReel = req.query.isNotReel || false;
 
   const isBrand = req.query.isBrand || false;
   const { exportType, ginnerId, spinnerId, seasonId, programId, brandId, countryId, startDate, endDate }: any =
@@ -5342,7 +5342,7 @@ const exportPendingSpinnerBale = async (req: Request, res: Response) => {
       // Create the excel workbook file
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet("Sheet1");
-      //  if (isOrganic === 'true') {
+      //  if (isNotReel === 'true') {
       //   worksheet.mergeCells('A1:L1');
       // } else if (isBrand === 'true') {
       //   worksheet.mergeCells('A1:M1');
@@ -5355,7 +5355,7 @@ const exportPendingSpinnerBale = async (req: Request, res: Response) => {
       // mergedCell.alignment = { horizontal: "center", vertical: "middle" };
       // Set bold font for header row
       let headerRow;
-      if (isOrganic === 'true') {
+      if (isNotReel === 'true') {
         headerRow = worksheet.addRow([
           "Sr No.",
           "Country",
@@ -5518,7 +5518,7 @@ const exportPendingSpinnerBale = async (req: Request, res: Response) => {
       // Append data to worksheet
       for await (const [index, item] of rows.entries()) {
         let rowValues;
-        if (isOrganic === 'true') {
+        if (isNotReel === 'true') {
           rowValues = {
             index: index + 1,
             country: item.dataValues.country,
@@ -5607,7 +5607,7 @@ const exportPendingSpinnerBale = async (req: Request, res: Response) => {
 
 
       let rowValues;
-      if (isOrganic === 'true') {
+      if (isNotReel === 'true') {
         rowValues = {
           index: "",
           country: "",
@@ -5932,7 +5932,7 @@ const exportSpinnerYarnProcess = async (req: Request, res: Response) => {
   const searchTerm = req.query.search || "";
   const page = Number(req.query.page) || 1;
   const limit = Number(req.query.limit) || 10;
-  const isOrganic = req.query.isOrganic || false;
+  const isNotReel = req.query.isNotReel || false;
 
   const isBrand = req.query.isBrand || false;
   const isAdmin = req.query.isAdmin || false;
@@ -6000,9 +6000,9 @@ const exportSpinnerYarnProcess = async (req: Request, res: Response) => {
       // Create the excel workbook file
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet("Sheet1");
-      // if (isOrganic === 'true') {
+      // if (isNotReel === 'true') {
       //   worksheet.mergeCells('A1:S1');
-      // } else if (isBrand === 'true' &&  (isOrganic === false ||  isOrganic === 'false')) {
+      // } else if (isBrand === 'true' &&  (isNotReel === false ||  isNotReel === 'false')) {
       //   worksheet.mergeCells('A1:T1');
       // } 
       // else if (isAdmin === 'true'){
@@ -6018,7 +6018,7 @@ const exportSpinnerYarnProcess = async (req: Request, res: Response) => {
       // Set bold font for header row
       let headerRow;
 
-      if (isOrganic === 'true') {
+      if (isNotReel === 'true') {
         headerRow = worksheet.addRow([
           "Sr No.",
           "Country",
@@ -6046,7 +6046,7 @@ const exportSpinnerYarnProcess = async (req: Request, res: Response) => {
           "Grey Out Status",
         ]);
       }
-      else if (isBrand === 'true' && (isOrganic === false || isOrganic === 'false')) {
+      else if (isBrand === 'true' && (isNotReel === false || isNotReel === 'false')) {
         headerRow = worksheet.addRow([
           "Sr No.",
           "Country",
@@ -6336,7 +6336,7 @@ const exportSpinnerYarnProcess = async (req: Request, res: Response) => {
         }
 
         let rowValues;
-        if (isOrganic === 'true') {
+        if (isNotReel === 'true') {
 
           rowValues = {
             index: index + 1,
@@ -6375,7 +6375,7 @@ const exportSpinnerYarnProcess = async (req: Request, res: Response) => {
             greyout_status: item.greyout_status ? "Yes" : "No",
           };
         }
-        else if (isBrand === 'true' && (isOrganic === false || isOrganic === 'false')) {
+        else if (isBrand === 'true' && (isNotReel === false || isNotReel === 'false')) {
           rowValues = {
             index: index + 1,
             country: item.country ? item.country : "",
@@ -6513,7 +6513,7 @@ const exportSpinnerYarnProcess = async (req: Request, res: Response) => {
 
 
       let rowValues;
-      if (isOrganic === 'true') {
+      if (isNotReel === 'true') {
 
         rowValues = {
           index: "",
@@ -6542,7 +6542,7 @@ const exportSpinnerYarnProcess = async (req: Request, res: Response) => {
           greyout_status: "",
         };
       }
-      else if (isBrand === 'true' && (isOrganic === false || isOrganic === 'false')) {
+      else if (isBrand === 'true' && (isNotReel === false || isNotReel === 'false')) {
         rowValues = {
           index: "",
           country: "",
@@ -6920,7 +6920,7 @@ const exportSpinnerSale = async (req: Request, res: Response) => {
   const searchTerm = req.query.search || "";
   const page = Number(req.query.page) || 1;
   const limit = Number(req.query.limit) || 10;
-  const isOrganic = req.query.isOrganic || false;
+  const isNotReel = req.query.isNotReel || false;
   const isAdmin = req.query.isAdmin || false;
 
   const isBrand = req.query.isBrand || false;
@@ -6999,9 +6999,9 @@ const exportSpinnerSale = async (req: Request, res: Response) => {
       // Create the excel workbook file
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet("Sheet1");
-      // if(isOrganic === 'true') {
+      // if(isNotReel === 'true') {
       //   worksheet.mergeCells('A1:Q1');
-      // } else if (isBrand === 'true' &&  (isOrganic === false ||  isOrganic === 'false')) {
+      // } else if (isBrand === 'true' &&  (isNotReel === false ||  isNotReel === 'false')) {
       //   worksheet.mergeCells('A1:R1');
       // }
       // else if(isAdmin === 'true'){
@@ -7016,7 +7016,7 @@ const exportSpinnerSale = async (req: Request, res: Response) => {
       // mergedCell.alignment = { horizontal: "center", vertical: "middle" };
       // Set bold font for header row
       let headerRow;
-      if (isOrganic === 'true') {
+      if (isNotReel === 'true') {
         headerRow = worksheet.addRow([
           "Sr No.",
           "Country",
@@ -7040,7 +7040,7 @@ const exportSpinnerSale = async (req: Request, res: Response) => {
           "Agent Details",
         ]);
       }
-      else if (isBrand === 'true' && (isOrganic === false || isOrganic === 'false')) {
+      else if (isBrand === 'true' && (isNotReel === false || isNotReel === 'false')) {
         headerRow = worksheet.addRow([
           "Sr No.",
           "Country",
@@ -7318,7 +7318,7 @@ const exportSpinnerSale = async (req: Request, res: Response) => {
 
 
         let rowValues;
-        if (isOrganic === 'true') {
+        if (isNotReel === 'true') {
           rowValues = {
             index: index + 1,
             country: item.dataValues.country ? item.dataValues.country : "",
@@ -7350,7 +7350,7 @@ const exportSpinnerSale = async (req: Request, res: Response) => {
               : "",
           };
         }
-        else if (isBrand === 'true' && (isOrganic === false || isOrganic === 'false')) {
+        else if (isBrand === 'true' && (isNotReel === false || isNotReel === 'false')) {
           rowValues = {
             index: index + 1,
             country: item.dataValues.country ? item.dataValues.country : "",
@@ -7474,7 +7474,7 @@ const exportSpinnerSale = async (req: Request, res: Response) => {
 
 
       let rowValues;
-      if (isOrganic === 'true') {
+      if (isNotReel === 'true') {
         rowValues = {
           index: "",
           country: "",
@@ -7500,7 +7500,7 @@ const exportSpinnerSale = async (req: Request, res: Response) => {
 
         };
       }
-      else if (isBrand === 'true' && (isOrganic === false || isOrganic === 'false')) {
+      else if (isBrand === 'true' && (isNotReel === false || isNotReel === 'false')) {
         rowValues = {
           index: "",
           country: "",
