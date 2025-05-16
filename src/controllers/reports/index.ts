@@ -3260,6 +3260,7 @@ const exportGinnerProcessGreyOutReport = async (req: Request, res: Response) => 
   const searchTerm = req.query.search || "";
   const page = Number(req.query.page) || 1;
   const limit = Number(req.query.limit) || 10;
+  const isNotReel = req.query.isNotReel || false;
   const { exportType, ginnerId, seasonId, programId, brandId, countryId }: any =
     req.query;
   const offset = (page - 1) * limit;
@@ -3322,17 +3323,32 @@ const exportGinnerProcessGreyOutReport = async (req: Request, res: Response) => 
        mergedCell.font = { bold: true };
        mergedCell.alignment = { horizontal: "center", vertical: "middle" }; */
       // Set bold font for header row
-      const headerRow = worksheet.addRow([
-        "Sr No.",
-        "Country",
-        "State",
-        "Season",
-        "Ginner Name",
-        "REEL Lot No",
-        "Press Number",
-        "Bale Lot No",
-        "Total Lint Greyout Quantity (Kgs)",
-      ]);
+      let headerRow;
+      if (isNotReel === 'true') {
+        headerRow = worksheet.addRow([
+          "Sr No.",
+          "Country",
+          "State",
+          "Season",
+          "Ginner Name",
+          "Press Number",
+          "Bale Lot No",
+          "Total Lint Greyout Quantity (Kgs)",
+        ]);
+      }
+      else{
+        headerRow = worksheet.addRow([
+          "Sr No.",
+          "Country",
+          "State",
+          "Season",
+          "Ginner Name",
+          "REEL Lot No",
+          "Press Number",
+          "Bale Lot No",
+          "Total Lint Greyout Quantity (Kgs)",
+        ]);
+      }
       headerRow.font = { bold: true };
 
       const dataQuery = `
@@ -3400,27 +3416,51 @@ const exportGinnerProcessGreyOutReport = async (req: Request, res: Response) => 
       // Append data to worksheet
       for await (const [index, item] of rows.entries()) {
         total_lint_quantity += item.lint_quantity ? Number(item.lint_quantity) : 0;
-        const rowValues = Object.values({
-          index: index + 1,
-          country: item.country_name ? item.country_name : "",
-          state: item.state_name ? item.state_name : "",
-          season: item.season_name ? item.season_name : "",
-          ginner: item.ginner_name ? item.ginner_name : "",
-          reel_lot_no: item.reel_lot_no ? item.reel_lot_no : "",
-          press: item.press_no ? item.press_no : "",
-          // lot_no: item.lot_no ? item.lot_no : "",
-          lot_no: item.press_no?.toLowerCase().trim() !== "nan-nan" ? item.press_no : item?.pressno_from && item?.pressno_to ? item?.pressno_from + ' - ' + item?.pressno_to : '',
-          lint_quantity: item.lint_quantity ? item.lint_quantity : 0,
-        });
+        let rowValues;
+        if (isNotReel === 'true') {
+          rowValues = Object.values({
+            index: index + 1,
+            country: item.country_name ? item.country_name : "",
+            state: item.state_name ? item.state_name : "",
+            season: item.season_name ? item.season_name : "",
+            ginner: item.ginner_name ? item.ginner_name : "",
+            press: item.press_no ? item.press_no : "",
+            // lot_no: item.lot_no ? item.lot_no : "",
+            lot_no: item.press_no?.toLowerCase().trim() !== "nan-nan" ? item.press_no : item?.pressno_from && item?.pressno_to ? item?.pressno_from + ' - ' + item?.pressno_to : '',
+            lint_quantity: item.lint_quantity ? item.lint_quantity : 0,
+          });
+        }
+        else{
+          rowValues = Object.values({
+            index: index + 1,
+            country: item.country_name ? item.country_name : "",
+            state: item.state_name ? item.state_name : "",
+            season: item.season_name ? item.season_name : "",
+            ginner: item.ginner_name ? item.ginner_name : "",
+            reel_lot_no: item.reel_lot_no ? item.reel_lot_no : "",
+            press: item.press_no ? item.press_no : "",
+            // lot_no: item.lot_no ? item.lot_no : "",
+            lot_no: item.press_no?.toLowerCase().trim() !== "nan-nan" ? item.press_no : item?.pressno_from && item?.pressno_to ? item?.pressno_from + ' - ' + item?.pressno_to : '',
+            lint_quantity: item.lint_quantity ? item.lint_quantity : 0,
+          });
+        }
         worksheet.addRow(rowValues);
       }
 
-      const rowValues = Object.values({
-        index: "", country: "", state: "", season: "", ginner: "",
-        reel_lot_no: "", press: "", lot_no: "Total",
-        lint_quantity: Number(formatDecimal(total_lint_quantity)),
-
-      });
+      let rowValues;
+        if (isNotReel === 'true') {
+          rowValues = Object.values({
+            index: "", country: "", state: "", season: "", ginner: "",
+            press: "", lot_no: "Total",
+            lint_quantity: Number(formatDecimal(total_lint_quantity)),
+          });
+        }else{
+          rowValues = Object.values({
+            index: "", country: "", state: "", season: "", ginner: "",
+            reel_lot_no: "", press: "", lot_no: "Total",
+            lint_quantity: Number(formatDecimal(total_lint_quantity)),
+          });
+        }
       worksheet.addRow(rowValues).eachCell(cell => { cell.font = { bold: true } });
 
       const borderStyle = {
@@ -3465,6 +3505,7 @@ const exportSpinnerProcessGreyOutReport = async (req: Request, res: Response) =>
   const searchTerm = req.query.search || "";
   const page = Number(req.query.page) || 1;
   const limit = Number(req.query.limit) || 10;
+  const isNotReel = req.query.isNotReel || false;
   const { exportType, spinnerId, seasonId, programId, brandId, countryId }: any =
     req.query;
   const offset = (page - 1) * limit;
@@ -3563,7 +3604,21 @@ const exportSpinnerProcessGreyOutReport = async (req: Request, res: Response) =>
        mergedCell.font = { bold: true };
        mergedCell.alignment = { horizontal: "center", vertical: "middle" };*/
       // Set bold font for header row
-      const headerRow = worksheet.addRow([
+
+    let headerRow;
+    if (isNotReel === 'true') {
+      headerRow = worksheet.addRow([
+        "Sr No.",
+        "Country",
+        "State",
+        "Season",
+        "Spinner Name",
+        "Spin Lot No",
+        "Total Yarn Greyout Quantity (KGs)",
+      ]);
+    }
+    else{
+      headerRow = worksheet.addRow([
         "Sr No.",
         "Country",
         "State",
@@ -3573,6 +3628,8 @@ const exportSpinnerProcessGreyOutReport = async (req: Request, res: Response) =>
         "Spin Lot No",
         "Total Yarn Greyout Quantity (KGs)",
       ]);
+      }
+      
       headerRow.font = { bold: true };
 
       // //fetch data with pagination
@@ -3598,25 +3655,49 @@ const exportSpinnerProcessGreyOutReport = async (req: Request, res: Response) =>
       // // Append data to worksheet
       for await (const [index, item] of rows.entries()) {
         total_lint_quantity += item.dataValues.qty_stock ? Number(item.dataValues.qty_stock) : 0;
-        const rowValues = Object.values({
-          index: index + 1,
-          country: item.dataValues.country_name ? item.dataValues.country_name : "",
-          state: item.dataValues.state_name ? item.dataValues.state_name : "",
-          season: item.dataValues.season_name ? item.dataValues.season_name : "",
-          spinner: item.dataValues.spinner_name ? item.dataValues.spinner_name : "",
-          reel_lot_no: item.dataValues.reel_lot_no ? item.dataValues.reel_lot_no : "",
-          batch_lot_no: item.dataValues.batch_lot_no ? item.dataValues.batch_lot_no : "",
-          lint_quantity: item.dataValues.qty_stock ? item.dataValues.qty_stock : 0,
-        });
+        let rowValues;
+        if (isNotReel === 'true') {
+          rowValues = Object.values({
+            index: index + 1,
+            country: item.dataValues.country_name ? item.dataValues.country_name : "",
+            state: item.dataValues.state_name ? item.dataValues.state_name : "",
+            season: item.dataValues.season_name ? item.dataValues.season_name : "",
+            spinner: item.dataValues.spinner_name ? item.dataValues.spinner_name : "",
+            batch_lot_no: item.dataValues.batch_lot_no ? item.dataValues.batch_lot_no : "",
+            lint_quantity: item.dataValues.qty_stock ? item.dataValues.qty_stock : 0,
+          });
+        }
+        else{
+          rowValues = Object.values({
+            index: index + 1,
+            country: item.dataValues.country_name ? item.dataValues.country_name : "",
+            state: item.dataValues.state_name ? item.dataValues.state_name : "",
+            season: item.dataValues.season_name ? item.dataValues.season_name : "",
+            spinner: item.dataValues.spinner_name ? item.dataValues.spinner_name : "",
+            reel_lot_no: item.dataValues.reel_lot_no ? item.dataValues.reel_lot_no : "",
+            batch_lot_no: item.dataValues.batch_lot_no ? item.dataValues.batch_lot_no : "",
+            lint_quantity: item.dataValues.qty_stock ? item.dataValues.qty_stock : 0,
+          });
+        }
         worksheet.addRow(rowValues);
       }
 
-      const rowValues = Object.values({
-        index: "", country: "", state: "", season: "", spinner: "",
-        reel_lot_no: "", batch_lot_no: "Total",
-        lint_quantity: Number(formatDecimal(total_lint_quantity)),
+      let rowValues;
 
-      });
+      if (isNotReel === 'true') {
+        rowValues = Object.values({
+          index: "", country: "", state: "", season: "", spinner: "",
+          batch_lot_no: "Total",
+          lint_quantity: Number(formatDecimal(total_lint_quantity)),
+        });
+      }
+      else{
+        rowValues = Object.values({
+          index: "", country: "", state: "", season: "", spinner: "",
+          reel_lot_no: "", batch_lot_no: "Total",
+          lint_quantity: Number(formatDecimal(total_lint_quantity)),
+        });
+      }
       worksheet.addRow(rowValues).eachCell(cell => { cell.font = { bold: true } });
 
       const borderStyle = {
@@ -3661,6 +3742,7 @@ const exportSpinnerGreyOutReport = async (req: Request, res: Response) => {
   const searchTerm = req.query.search || "";
   const page = Number(req.query.page) || 1;
   const limit = Number(req.query.limit) || 10;
+  const isNotReel = req.query.isNotReel || false;
   const { exportType, ginnerId, spinnerId, seasonId, programId, brandId, countryId }: any =
     req.query;
   const offset = (page - 1) * limit;
@@ -3781,7 +3863,21 @@ const exportSpinnerGreyOutReport = async (req: Request, res: Response) => {
       mergedCell.font = { bold: true };
       mergedCell.alignment = { horizontal: "center", vertical: "middle" }; */
       // Set bold font for header row
-      const headerRow = worksheet.addRow([
+    let headerRow;
+    if (isNotReel === 'true') {
+      headerRow = worksheet.addRow([
+        "Sr No.",
+        "Country",
+        "State",
+        "Season",
+        "Ginner Name",
+        "Spinner Name",
+        "Invoice Number",
+        "Bale Lot No",
+        "Total Lint Greyout Quantity (KGs)",
+      ]);
+    }else{
+      headerRow = worksheet.addRow([
         "Sr No.",
         "Country",
         "State",
@@ -3793,6 +3889,8 @@ const exportSpinnerGreyOutReport = async (req: Request, res: Response) => {
         "Bale Lot No",
         "Total Lint Greyout Quantity (KGs)",
       ]);
+    }
+      
       headerRow.font = { bold: true };
 
       // //fetch data with pagination
@@ -3833,7 +3931,22 @@ const exportSpinnerGreyOutReport = async (req: Request, res: Response) => {
       for await (const [index, item] of rows.entries()) {
 
         total_lint_quantity += item.dataValues.lint_greyout_qty ? Number(item.dataValues.lint_greyout_qty) : 0;
-        const rowValues = Object.values({
+        let rowValues;
+      if (isNotReel === 'true') {
+        rowValues = Object.values({
+          index: index + 1,
+          country: item.dataValues.country_name ? item.dataValues.country_name : "",
+          state: item.dataValues.state_name ? item.dataValues.state_name : "",
+          season: item.dataValues.season_name ? item.dataValues.season_name : "",
+          ginner: item.dataValues.ginner_name ? item.dataValues.ginner_name : "",
+          spinner: item.dataValues.spinner ? item.dataValues.spinner : "",
+          invoice: item.dataValues.invoice_no ? item.dataValues.invoice_no : "",
+          lot_no: item.dataValues.lot_no ? item.dataValues.lot_no : "",
+          lint_quantity: item.dataValues.lint_greyout_qty ? item.dataValues.lint_greyout_qty : 0,
+        });
+      }
+      else{
+        rowValues = Object.values({
           index: index + 1,
           country: item.dataValues.country_name ? item.dataValues.country_name : "",
           state: item.dataValues.state_name ? item.dataValues.state_name : "",
@@ -3845,15 +3958,24 @@ const exportSpinnerGreyOutReport = async (req: Request, res: Response) => {
           lot_no: item.dataValues.lot_no ? item.dataValues.lot_no : "",
           lint_quantity: item.dataValues.lint_greyout_qty ? item.dataValues.lint_greyout_qty : 0,
         });
+      }
         worksheet.addRow(rowValues);
       }
 
-      const rowValues = Object.values({
+      let rowValues;
+        if (isNotReel === 'true') {
+        rowValues = Object.values({
+        index: "", country: "", state: "", season: "", ginner: "", spinner: "",
+        invoice: "", lot_no: "Total",
+        lint_quantity: Number(formatDecimal(total_lint_quantity)),
+      });
+        }else{
+        rowValues = Object.values({
         index: "", country: "", state: "", season: "", ginner: "", spinner: "",
         reel_lot_no: "", invoice: "", lot_no: "Total",
         lint_quantity: Number(formatDecimal(total_lint_quantity)),
-
       });
+        }
       worksheet.addRow(rowValues).eachCell(cell => { cell.font = { bold: true } });
 
       const borderStyle = {
@@ -7920,6 +8042,7 @@ const exportKnitterYarn = async (req: Request, res: Response) => {
   const searchTerm = req.query.search || "";
   const page = Number(req.query.page) || 1;
   const limit = Number(req.query.limit) || 10;
+  const isNotReel = req.query.isNotReel || false;
   const { knitterId, spinnerId, seasonId, programId, brandId, countryId, startDate, endDate }: any =
     req.query;
   const offset = (page - 1) * limit;
@@ -8004,23 +8127,45 @@ const exportKnitterYarn = async (req: Request, res: Response) => {
     mergedCell.font = { bold: true };
     mergedCell.alignment = { horizontal: "center", vertical: "middle" }; */
     // Set bold font for header row
-    const headerRow = worksheet.addRow([
-      "Sr No.",
-      "Country",
-      "State",
-      "Date of Transaction Receipt",
-      "Date",
-      "No of Days",
-      "Spinner Name",
-      "Knitter Unit Name",
-      "Invoice Number",
-      "Lot/Batch Number",
-      "Yarn Reel No",
-      "Yarn Count",
-      "No of Boxes",
-      "Box ID",
-      "Net Weight(Kgs)",
-    ]);
+    let headerRow;
+        if (isNotReel === 'true') {
+          headerRow = worksheet.addRow([
+            "Sr No.",
+            "Country",
+            "State",
+            "Date of Transaction Receipt",
+            "Date",
+            "No of Days",
+            "Spinner Name",
+            "Knitter Unit Name",
+            "Invoice Number",
+            "Lot/Batch Number",
+            "Yarn Count",
+            "No of Boxes",
+            "Box ID",
+            "Net Weight(Kgs)",
+          ]);
+        }
+    else{
+      headerRow = worksheet.addRow([
+        "Sr No.",
+        "Country",
+        "State",
+        "Date of Transaction Receipt",
+        "Date",
+        "No of Days",
+        "Spinner Name",
+        "Knitter Unit Name",
+        "Invoice Number",
+        "Lot/Batch Number",
+        "Yarn Reel No",
+        "Yarn Count",
+        "No of Boxes",
+        "Box ID",
+        "Net Weight(Kgs)",
+      ]);
+    } 
+
     headerRow.font = { bold: true };
     let include = [
       {
@@ -8172,25 +8317,47 @@ const exportKnitterYarn = async (req: Request, res: Response) => {
 
     // Append data to worksheet
     for await (const [index, item] of rows.entries()) {
-      const rowValues = {
-        index: index + 1,
-        country: item.dataValues.country ? item.dataValues.country : "",
-        state: item.dataValues.state ? item.dataValues.state : "",
-        createdAt: item.dataValues.createdAt
-          ? item.dataValues.createdAt
-          : "",
-        date: item.dataValues.date ? item.dataValues.date : "",
-        no_of_days: item.dataValues.no_of_days ? Number(item.dataValues.no_of_days) : "",
-        spinner: item.dataValues.spinner ? item.dataValues.spinner : "",
-        buyer_id: item.dataValues.knitter ? item.dataValues.knitter : "",
-        invoice: item.dataValues.invoice_no ? item.dataValues.invoice_no : "",
-        lotNo: item.dataValues.batch_lot_no ? item.dataValues.batch_lot_no : "",
-        reelLot: item.dataValues.reel_lot_no ? item.dataValues.reel_lot_no : "",
-        count: item.dataValues.yarn_count.map((id: number) => yarnCountMap[id] || null).join(", "),
-        boxes: item.dataValues.no_of_boxes ? item.dataValues.no_of_boxes : "",
-        boxId: item.dataValues.box_ids ? item.dataValues.box_ids : "",
-        total: item.dataValues.yarn_weight,
-      };
+      let rowValues;
+        if (isNotReel === 'true') {
+          rowValues = {
+            index: index + 1,
+            country: item.dataValues.country ? item.dataValues.country : "",
+            state: item.dataValues.state ? item.dataValues.state : "",
+            createdAt: item.dataValues.createdAt
+              ? item.dataValues.createdAt
+              : "",
+            date: item.dataValues.date ? item.dataValues.date : "",
+            no_of_days: item.dataValues.no_of_days ? Number(item.dataValues.no_of_days) : "",
+            spinner: item.dataValues.spinner ? item.dataValues.spinner : "",
+            buyer_id: item.dataValues.knitter ? item.dataValues.knitter : "",
+            invoice: item.dataValues.invoice_no ? item.dataValues.invoice_no : "",
+            lotNo: item.dataValues.batch_lot_no ? item.dataValues.batch_lot_no : "",
+            count: item.dataValues.yarn_count.map((id: number) => yarnCountMap[id] || null).join(", "),
+            boxes: item.dataValues.no_of_boxes ? item.dataValues.no_of_boxes : "",
+            boxId: item.dataValues.box_ids ? item.dataValues.box_ids : "",
+            total: item.dataValues.yarn_weight,
+          };
+        }else{
+          rowValues = {
+            index: index + 1,
+            country: item.dataValues.country ? item.dataValues.country : "",
+            state: item.dataValues.state ? item.dataValues.state : "",
+            createdAt: item.dataValues.createdAt
+              ? item.dataValues.createdAt
+              : "",
+            date: item.dataValues.date ? item.dataValues.date : "",
+            no_of_days: item.dataValues.no_of_days ? Number(item.dataValues.no_of_days) : "",
+            spinner: item.dataValues.spinner ? item.dataValues.spinner : "",
+            buyer_id: item.dataValues.knitter ? item.dataValues.knitter : "",
+            invoice: item.dataValues.invoice_no ? item.dataValues.invoice_no : "",
+            lotNo: item.dataValues.batch_lot_no ? item.dataValues.batch_lot_no : "",
+            reelLot: item.dataValues.reel_lot_no ? item.dataValues.reel_lot_no : "",
+            count: item.dataValues.yarn_count.map((id: number) => yarnCountMap[id] || null).join(", "),
+            boxes: item.dataValues.no_of_boxes ? item.dataValues.no_of_boxes : "",
+            boxId: item.dataValues.box_ids ? item.dataValues.box_ids : "",
+            total: item.dataValues.yarn_weight,
+          };
+        }
 
       totals.boxes += Number(rowValues.boxes);
       totals.total += Number(rowValues.total);
@@ -8198,7 +8365,27 @@ const exportKnitterYarn = async (req: Request, res: Response) => {
       worksheet.addRow(Object.values(rowValues));
     }
 
-    const rowValues = {
+    let rowValues;
+    if (isNotReel === 'true') {
+     rowValues = {
+      index: "",
+      country: "",
+      state: "",
+      createdAt: "",
+      date: "",
+      no_of_days: "",
+      spinner: "",
+      buyer_id: "",
+      invoice: "",
+      lotNo: "",
+      count: "Total",
+      boxes: totals.boxes,
+      boxId: "",
+      total: totals.total,
+    };
+  }
+  else{
+    rowValues = {
       index: "",
       country: "",
       state: "",
@@ -8216,6 +8403,7 @@ const exportKnitterYarn = async (req: Request, res: Response) => {
       boxId: "",
       total: totals.total,
     };
+  }
 
     worksheet.addRow(Object.values(rowValues)).eachCell(cell => cell.font = { bold: true });
     // Auto-adjust column widths based on content
@@ -8427,6 +8615,7 @@ const exportKnitterYarnProcess = async (req: Request, res: Response) => {
   const searchTerm = req.query.search || "";
   const page = Number(req.query.page) || 1;
   const limit = Number(req.query.limit) || 10;
+  const isNotReel = req.query.isNotReel || false;
   const {
     knitterId,
     seasonId,
@@ -8512,28 +8701,53 @@ const exportKnitterYarnProcess = async (req: Request, res: Response) => {
     mergedCell.font = { bold: true };
     mergedCell.alignment = { horizontal: "center", vertical: "middle" }; */
     // Set bold font for header row
-    const headerRow = worksheet.addRow([
-      "Sr No.",
-      "Country",
-      "State",
-      "Date of Process",
-      "Date",
-      "No of Days",
-      "Fabric Production Start Date",
-      "Fabric Production End Date",
-      "Knitter Unit Name",
-      "Garment order reference no.",
-      "Brand reference no",
-      "No. of Rolls",
-      "Finished Batch/Lot No",
-      "Fabric REEL Lot No.",
-      "Fabric Type",
-      "Finished Fabric Net weight",
-      "Finished Fabric GSM ",
-      "Job details from garment",
-      "Total Yarn Utilized",
-      "Total Fabric Net weight",
-    ]);
+    let headerRow;
+    if (isNotReel === 'true') {
+      headerRow = worksheet.addRow([
+        "Sr No.",
+        "Country",
+        "State",
+        "Date of Process",
+        "Date",
+        "No of Days",
+        "Fabric Production Start Date",
+        "Fabric Production End Date",
+        "Knitter Unit Name",
+        "Garment order reference no.",
+        "Brand reference no",
+        "No. of Rolls",
+        "Finished Batch/Lot No",
+        "Fabric Type",
+        "Finished Fabric Net weight",
+        "Finished Fabric GSM ",
+        "Job details from garment",
+        "Total Yarn Utilized",
+        "Total Fabric Net weight",
+      ]);
+    }else{
+      headerRow = worksheet.addRow([
+        "Sr No.",
+        "Country",
+        "State",
+        "Date of Process",
+        "Date",
+        "No of Days",
+        "Fabric Production Start Date",
+        "Fabric Production End Date",
+        "Knitter Unit Name",
+        "Garment order reference no.",
+        "Brand reference no",
+        "No. of Rolls",
+        "Finished Batch/Lot No",
+        "Fabric REEL Lot No.",
+        "Fabric Type",
+        "Finished Fabric Net weight",
+        "Finished Fabric GSM ",
+        "Job details from garment",
+        "Total Yarn Utilized",
+        "Total Fabric Net weight",
+      ]);
+    }
     headerRow.font = { bold: true };
 
     let include = [
@@ -8618,7 +8832,37 @@ const exportKnitterYarnProcess = async (req: Request, res: Response) => {
 
     // Append data to worksheet
     for await (const [index, item] of result.entries()) {
-      const rowValues = {
+      let rowValues;
+      if (isNotReel === 'true') {
+       rowValues = {
+        index: index + 1,
+        country: item.knitter?.country?.county_name || "",
+        state: item.knitter?.state?.state_name || "",
+        accept_date: item.createdAt ? item.createdAt : "",
+        date: item.date ? item.date : "",
+        no_of_days: item.createdAt && item.date ? Math.floor(
+          (toDateOnly(item.createdAt) - toDateOnly(item.date)) /
+          (1000 * 60 * 60 * 24)
+        ) : "",
+        from_date: item.from_date ? item.from_date : "",
+        to_date: item.to_date ? item.to_date : "",
+        knitter: item.knitter ? item.knitter.name : "",
+        garmentOrderRef: item.garment_order_ref ? item.garment_order_ref : "",
+        brandOrderRef: item.brand_order_ref ? item.brand_order_ref : "",
+        noOfRolls: item.no_of_rolls ? item.no_of_rolls : "",
+        lotNo: item.batch_lot_no ? item.batch_lot_no : "",
+        fabricType: item.fabricType ? item.fabricType : "",
+        fabricWeight: item.fabricWeight ? item.fabricWeight : "",
+        fabricGsm: item.fabricGsm ? (item.fabricGsm) : "",
+        job_details_garment: item.job_details_garment
+          ? item.job_details_garment
+          : "",
+        total_yarn: item.total_yarn_qty ? item.total_yarn_qty : "",
+        netWeight: item.total_fabric_weight ? item.total_fabric_weight : 0,
+      };
+    }
+    else{
+      rowValues = {
         index: index + 1,
         country: item.knitter?.country?.county_name || "",
         state: item.knitter?.state?.state_name || "",
@@ -8645,6 +8889,7 @@ const exportKnitterYarnProcess = async (req: Request, res: Response) => {
         total_yarn: item.total_yarn_qty ? item.total_yarn_qty : "",
         netWeight: item.total_fabric_weight ? item.total_fabric_weight : 0,
       };
+    }
 
       totals.noOfRolls += Number(rowValues.noOfRolls);
       totals.fabricWeight += Number(rowValues.fabricWeight);
@@ -8655,7 +8900,32 @@ const exportKnitterYarnProcess = async (req: Request, res: Response) => {
       worksheet.addRow(Object.values(rowValues));
     }
 
-    const rowValues = {
+    let rowValues;
+    if (isNotReel === 'true') {
+      rowValues = {
+        index: "",
+        accept_date: "",
+        date: "",
+        no_of_days: "",
+        from_date: "",
+        to_date: "",
+        weaver: "",
+        country: "",
+        state: "",
+        garmentOrderRef: "",
+        brandOrderRef: "Total",
+        noOfRolls: totals.noOfRolls,
+        lotNo: "",
+        fabricType: "",
+        fabricWeight: totals.fabricWeight,
+        fabricGsm: "",
+        job_details_garment: "",
+        total_yarn: totals.total_yarn,
+        netWeight: totals.netWeight,
+    };
+    }
+    else{
+      rowValues = {
       index: "",
       accept_date: "",
       date: "",
@@ -8677,6 +8947,7 @@ const exportKnitterYarnProcess = async (req: Request, res: Response) => {
       total_yarn: totals.total_yarn,
       netWeight: totals.netWeight,
     };
+    } 
 
     worksheet.addRow(Object.values(rowValues)).eachCell(cell => cell.font = { bold: true });
 
@@ -9531,6 +9802,7 @@ const exportWeaverYarn = async (req: Request, res: Response) => {
   const searchTerm = req.query.search || "";
   const page = Number(req.query.page) || 1;
   const limit = Number(req.query.limit) || 10;
+  const isNotReel = req.query.isNotReel || false;
   const { weaverId, spinnerId, seasonId, programId, brandId, countryId, startDate, endDate }: any =
     req.query;
   const offset = (page - 1) * limit;
@@ -9615,7 +9887,9 @@ const exportWeaverYarn = async (req: Request, res: Response) => {
      mergedCell.font = { bold: true };
      mergedCell.alignment = { horizontal: "center", vertical: "middle" }; */
     // Set bold font for header row
-    const headerRow = worksheet.addRow([
+    let headerRow;
+    if (isNotReel === 'true') {
+      headerRow = worksheet.addRow([
       "Sr No.",
       "Country",
       "State",
@@ -9625,13 +9899,31 @@ const exportWeaverYarn = async (req: Request, res: Response) => {
       "Spinner Name",
       "Weaving Unit Name",
       "Invoice Number",
-      "Yarn Reel No",
       "Lot/Batch Number",
       "Yarn Count",
       "No of Boxes",
       "Box ID",
       "Net Weight(Kgs)",
     ]);
+    }else{
+      headerRow = worksheet.addRow([
+        "Sr No.",
+        "Country",
+        "State",
+        "Date of Transaction Receipt",
+        "Date",
+        "No of Days",
+        "Spinner Name",
+        "Weaving Unit Name",
+        "Invoice Number",
+        "Yarn Reel No",
+        "Lot/Batch Number",
+        "Yarn Count",
+        "No of Boxes",
+        "Box ID",
+        "Net Weight(Kgs)",
+      ]);
+    }
     headerRow.font = { bold: true };
     let include = [
       {
@@ -9785,48 +10077,90 @@ const exportWeaverYarn = async (req: Request, res: Response) => {
     };
     // Append data to worksheet
     for await (const [index, item] of rows.entries()) {
-
-      const rowValues = {
-        index: index + 1,
-        country: item.dataValues.country ? item.dataValues.country : "",
-        state: item.dataValues.state ? item.dataValues.state : "",
-        createdAt: item.dataValues.createdAt ? item.dataValues.createdAt : "",
-        date: item.dataValues.date ? item.dataValues.date : "",
-        no_of_days: item.dataValues.no_of_days ? Number(item.dataValues.no_of_days) : "",
-        spinner: item.dataValues.spinner ? item.dataValues.spinner : "",
-        buyer_id: item.dataValues.weaver ? item.dataValues.weaver : "",
-        invoice: item.dataValues.invoice_no ? item.dataValues.invoice_no : "",
-        reelLot: item.dataValues.reel_lot_no ? item.dataValues.reel_lot_no : "",
-        count: item.dataValues.yarn_count.map((id: number) => yarnCountMap[id] || null).join(", "),
-        lotNo: item.dataValues.batch_lot_no ? item.dataValues.batch_lot_no : "",
-        boxes: item.dataValues.no_of_boxes ? item.dataValues.no_of_boxes : "",
-        boxId: item.dataValues.box_ids ? item.dataValues.box_ids : "",
-        total: item.dataValues.yarn_weight,
-
-      };
+        let rowValues;
+        if (isNotReel === 'true') {
+          rowValues = {
+            index: index + 1,
+            country: item.dataValues.country ? item.dataValues.country : "",
+            state: item.dataValues.state ? item.dataValues.state : "",
+            createdAt: item.dataValues.createdAt ? item.dataValues.createdAt : "",
+            date: item.dataValues.date ? item.dataValues.date : "",
+            no_of_days: item.dataValues.no_of_days ? Number(item.dataValues.no_of_days) : "",
+            spinner: item.dataValues.spinner ? item.dataValues.spinner : "",
+            buyer_id: item.dataValues.weaver ? item.dataValues.weaver : "",
+            invoice: item.dataValues.invoice_no ? item.dataValues.invoice_no : "",
+            count: item.dataValues.yarn_count.map((id: number) => yarnCountMap[id] || null).join(", "),
+            lotNo: item.dataValues.batch_lot_no ? item.dataValues.batch_lot_no : "",
+            boxes: item.dataValues.no_of_boxes ? item.dataValues.no_of_boxes : "",
+            boxId: item.dataValues.box_ids ? item.dataValues.box_ids : "",
+            total: item.dataValues.yarn_weight,
+          };
+        }
+        else{
+          rowValues = {
+            index: index + 1,
+            country: item.dataValues.country ? item.dataValues.country : "",
+            state: item.dataValues.state ? item.dataValues.state : "",
+            createdAt: item.dataValues.createdAt ? item.dataValues.createdAt : "",
+            date: item.dataValues.date ? item.dataValues.date : "",
+            no_of_days: item.dataValues.no_of_days ? Number(item.dataValues.no_of_days) : "",
+            spinner: item.dataValues.spinner ? item.dataValues.spinner : "",
+            buyer_id: item.dataValues.weaver ? item.dataValues.weaver : "",
+            invoice: item.dataValues.invoice_no ? item.dataValues.invoice_no : "",
+            reelLot: item.dataValues.reel_lot_no ? item.dataValues.reel_lot_no : "",
+            count: item.dataValues.yarn_count.map((id: number) => yarnCountMap[id] || null).join(", "),
+            lotNo: item.dataValues.batch_lot_no ? item.dataValues.batch_lot_no : "",
+            boxes: item.dataValues.no_of_boxes ? item.dataValues.no_of_boxes : "",
+            boxId: item.dataValues.box_ids ? item.dataValues.box_ids : "",
+            total: item.dataValues.yarn_weight,
+          };
+        }
       totals.boxes += Number(rowValues.boxes);
       totals.total += Number(rowValues.total);
 
       worksheet.addRow(Object.values(rowValues));
     }
 
-    const rowValues = {
-      index: "",
-      country: "",
-      state: "",
-      createdAt: "",
-      date: "",
-      no_of_days: "",
-      spinner: "",
-      buyer_id: "",
-      invoice: "",
-      reelLot: "",
-      lotNo: "",
-      count: "Total",
-      boxes: totals.boxes,
-      boxId: "",
-      total: totals.total,
-    };
+    let rowValues;
+    if (isNotReel === 'true') {
+      rowValues = {
+        index: "",
+        country: "",
+        state: "",
+        createdAt: "",
+        date: "",
+        no_of_days: "",
+        spinner: "",
+        buyer_id: "",
+        invoice: "",
+        lotNo: "",
+        count: "Total",
+        boxes: totals.boxes,
+        boxId: "",
+        total: totals.total,
+      };
+
+    }
+    else{
+      rowValues = {
+        index: "",
+        country: "",
+        state: "",
+        createdAt: "",
+        date: "",
+        no_of_days: "",
+        spinner: "",
+        buyer_id: "",
+        invoice: "",
+        reelLot: "",
+        lotNo: "",
+        count: "Total",
+        boxes: totals.boxes,
+        boxId: "",
+        total: totals.total,
+      };
+    }
+
 
     worksheet.addRow(Object.values(rowValues)).eachCell(cell => cell.font = { bold: true });
     // Auto-adjust column widths based on content
@@ -10029,6 +10363,7 @@ const exportWeaverYarnProcess = async (req: Request, res: Response) => {
   const searchTerm = req.query.search || "";
   const page = Number(req.query.page) || 1;
   const limit = Number(req.query.limit) || 10;
+  const isNotReel = req.query.isNotReel || false;
   const { weaverId, seasonId, programId, brandId, countryId, fabricType, startDate, endDate }: any =
     req.query;
   const offset = (page - 1) * limit;
@@ -10108,28 +10443,55 @@ const exportWeaverYarnProcess = async (req: Request, res: Response) => {
      mergedCell.font = { bold: true };
      mergedCell.alignment = { horizontal: "center", vertical: "middle" };*/
     // Set bold font for header row
-    const headerRow = worksheet.addRow([
-      "Sr No.",
-      "Country",
-      "State",
-      "Date of Process",
-      "Date",
-      "No of Days",
-      "Fabric Production Start Date",
-      "Fabric Production End Date",
-      "Weaving Unit Name",
-      "Garment order reference no.",
-      "Brand reference no",
-      "No. of Rolls",
-      "Finished Batch/Lot No",
-      "Fabric REEL Lot No.",
-      "Fabric Type",
-      "Finished Fabric Net Length",
-      "Finished Fabric GSM ",
-      "Job details from garment",
-      "Total Yarn Utilized",
-      "Total Fabric Net Length",
-    ]);
+    let headerRow;
+      if (isNotReel === 'true') {
+      headerRow = worksheet.addRow([
+          "Sr No.",
+          "Country",
+          "State",
+          "Date of Process",
+          "Date",
+          "No of Days",
+          "Fabric Production Start Date",
+          "Fabric Production End Date",
+          "Weaving Unit Name",
+          "Garment order reference no.",
+          "Brand reference no",
+          "No. of Rolls",
+          "Finished Batch/Lot No",
+          "Fabric Type",
+          "Finished Fabric Net Length",
+          "Finished Fabric GSM ",
+          "Job details from garment",
+          "Total Yarn Utilized",
+          "Total Fabric Net Length",
+        ]);
+      }
+      else{
+        headerRow = worksheet.addRow([
+          "Sr No.",
+          "Country",
+          "State",
+          "Date of Process",
+          "Date",
+          "No of Days",
+          "Fabric Production Start Date",
+          "Fabric Production End Date",
+          "Weaving Unit Name",
+          "Garment order reference no.",
+          "Brand reference no",
+          "No. of Rolls",
+          "Finished Batch/Lot No",
+          "Fabric REEL Lot No.",
+          "Fabric Type",
+          "Finished Fabric Net Length",
+          "Finished Fabric GSM ",
+          "Job details from garment",
+          "Total Yarn Utilized",
+          "Total Fabric Net Length",
+        ]);
+
+      }
     headerRow.font = { bold: true };
 
     let include = [
@@ -10216,33 +10578,64 @@ const exportWeaverYarnProcess = async (req: Request, res: Response) => {
     };
     // Append data to worksheet
     for await (const [index, item] of result.entries()) {
-      const rowValues = {
-        index: index + 1,
-        country: item.weaver?.country?.county_name || "",
-        state: item.weaver?.state?.state_name || "",
-        accept_date: item.createdAt ? item.createdAt : "",
-        date: item.date ? item.date : "",
-        no_of_days: item.createdAt && item.date ? Math.floor(
-          (toDateOnly(item.createdAt) - toDateOnly(item.date)) /
-          (1000 * 60 * 60 * 24)
-        ) : "",
-        from_date: item.from_date ? item.from_date : "",
-        to_date: item.to_date ? item.to_date : "",
-        weaver: item.weaver ? item.weaver.name : "",
-        garmentOrderRef: item.garment_order_ref ? item.garment_order_ref : "",
-        brandOrderRef: item.brand_order_ref ? item.brand_order_ref : "",
-        noOfRolls: item.no_of_rolls ? item.no_of_rolls : "",
-        lotNo: item.batch_lot_no ? item.batch_lot_no : "",
-        reelLot: item.reel_lot_no ? item.reel_lot_no : "",
-        fabricType: item.fabricType ? item.fabricType : "",
-        fabricLength: item.fabricLength ? item.fabricLength : "",
-        fabricGsm: item.fabricGsm ? Number(item.fabricGsm) : 0,
-        job_details_garment: item.job_details_garment
-          ? item.job_details_garment
-          : "",
-        total_yarn: item.total_yarn_qty ? item.total_yarn_qty : "",
-        netLength: item.total_fabric_length ? item.total_fabric_length : "",
-      };
+      let rowValues;
+        if (isNotReel === 'true') {
+          rowValues = {
+            index: index + 1,
+            country: item.weaver?.country?.county_name || "",
+            state: item.weaver?.state?.state_name || "",
+            accept_date: item.createdAt ? item.createdAt : "",
+            date: item.date ? item.date : "",
+            no_of_days: item.createdAt && item.date ? Math.floor(
+              (toDateOnly(item.createdAt) - toDateOnly(item.date)) /
+              (1000 * 60 * 60 * 24)
+            ) : "",
+            from_date: item.from_date ? item.from_date : "",
+            to_date: item.to_date ? item.to_date : "",
+            weaver: item.weaver ? item.weaver.name : "",
+            garmentOrderRef: item.garment_order_ref ? item.garment_order_ref : "",
+            brandOrderRef: item.brand_order_ref ? item.brand_order_ref : "",
+            noOfRolls: item.no_of_rolls ? item.no_of_rolls : "",
+            lotNo: item.batch_lot_no ? item.batch_lot_no : "",
+            fabricType: item.fabricType ? item.fabricType : "",
+            fabricLength: item.fabricLength ? item.fabricLength : "",
+            fabricGsm: item.fabricGsm ? Number(item.fabricGsm) : 0,
+            job_details_garment: item.job_details_garment
+              ? item.job_details_garment
+              : "",
+            total_yarn: item.total_yarn_qty ? item.total_yarn_qty : "",
+            netLength: item.total_fabric_length ? item.total_fabric_length : "",
+          };
+        }
+        else{
+          rowValues = {
+            index: index + 1,
+            country: item.weaver?.country?.county_name || "",
+            state: item.weaver?.state?.state_name || "",
+            accept_date: item.createdAt ? item.createdAt : "",
+            date: item.date ? item.date : "",
+            no_of_days: item.createdAt && item.date ? Math.floor(
+              (toDateOnly(item.createdAt) - toDateOnly(item.date)) /
+              (1000 * 60 * 60 * 24)
+            ) : "",
+            from_date: item.from_date ? item.from_date : "",
+            to_date: item.to_date ? item.to_date : "",
+            weaver: item.weaver ? item.weaver.name : "",
+            garmentOrderRef: item.garment_order_ref ? item.garment_order_ref : "",
+            brandOrderRef: item.brand_order_ref ? item.brand_order_ref : "",
+            noOfRolls: item.no_of_rolls ? item.no_of_rolls : "",
+            lotNo: item.batch_lot_no ? item.batch_lot_no : "",
+            reelLot: item.reel_lot_no ? item.reel_lot_no : "",
+            fabricType: item.fabricType ? item.fabricType : "",
+            fabricLength: item.fabricLength ? item.fabricLength : "",
+            fabricGsm: item.fabricGsm ? Number(item.fabricGsm) : 0,
+            job_details_garment: item.job_details_garment
+              ? item.job_details_garment
+              : "",
+            total_yarn: item.total_yarn_qty ? item.total_yarn_qty : "",
+            netLength: item.total_fabric_length ? item.total_fabric_length : "",
+          };
+        }
 
       totals.noOfRolls += Number(rowValues.noOfRolls);
       totals.fabricLength += Number(rowValues.fabricLength);
@@ -10255,28 +10648,53 @@ const exportWeaverYarnProcess = async (req: Request, res: Response) => {
 
     }
 
-    const rowValues = {
-      index: "",
-      country: "",
-      state: "",
-      accept_date: "",
-      date: "",
-      no_of_days: "",
-      from_date: "",
-      to_date: "",
-      weaver: "",
-
-      garmentOrderRef: "",
-      brandOrderRef: "Total",
-      noOfRolls: totals.noOfRolls,
-      lotNo: "",
-      reelLot: "",
-      fabricType: "",
-      fabricLength: totals.fabricLength,
-      fabricGsm: totals.fabricGsm,
-      job_details_garment: "",
-      total_yarn: totals.total_yarn,
-      netLength: totals.netLength,
+    let rowValues;
+      if (isNotReel === 'true') {
+        rowValues = {
+         index: "",
+         country: "",
+         state: "",
+         accept_date: "",
+         date: "",
+         no_of_days: "",
+         from_date: "",
+         to_date: "",
+         weaver: "",
+         garmentOrderRef: "",
+         brandOrderRef: "Total",
+         noOfRolls: totals.noOfRolls,
+         lotNo: "",
+         fabricType: "",
+         fabricLength: totals.fabricLength,
+         fabricGsm: totals.fabricGsm,
+         job_details_garment: "",
+         total_yarn: totals.total_yarn,
+         netLength: totals.netLength,
+      }
+    }
+      else{  
+        rowValues = {
+         index: "",
+         country: "",
+         state: "",
+         accept_date: "",
+         date: "",
+         no_of_days: "",
+         from_date: "",
+         to_date: "",
+         weaver: "",
+         garmentOrderRef: "",
+         brandOrderRef: "Total",
+         noOfRolls: totals.noOfRolls,
+         lotNo: "",
+         reelLot: "",
+         fabricType: "",
+         fabricLength: totals.fabricLength,
+         fabricGsm: totals.fabricGsm,
+         job_details_garment: "",
+         total_yarn: totals.total_yarn,
+         netLength: totals.netLength,
+      }
     };
 
     worksheet.addRow(Object.values(rowValues)).eachCell(cell => cell.font = { bold: true });
@@ -11850,6 +12268,7 @@ const exportGarmentFabricProcess = async (req: Request, res: Response) => {
   const searchTerm = req.query.search || "";
   const page = Number(req.query.page) || 1;
   const limit = Number(req.query.limit) || 10;
+  const isNotReel = req.query.isNotReel || false;
   const { garmentId, seasonId, programId, brandId, countryId, startDate, endDate }: any = req.query;
   const offset = (page - 1) * limit;
   const whereCondition: any = {};
@@ -11918,28 +12337,55 @@ const exportGarmentFabricProcess = async (req: Request, res: Response) => {
     mergedCell.alignment = { horizontal: "center", vertical: "middle" };*/
     // Set bold font for header row
     // Set bold font for header row
-    const headerRow = worksheet.addRow([
-      "S No.",
-      "Country",
-      "State",
-      "Process Date",
-      "Date",
-      "No. of Days",
-      "Garment Production Start Date",
-      "Garment Production End Date",
-      "Season",
-      "Garment Processor Unit",
-      "Fabric Order Reference No.",
-      "Brand Order Reference No.",
-      "Factory Lot No.",
-      "REEL Lot No.",
-      "Garment Type",
-      "Style Mark No.",
-      "No. of Pieces",
-      "No. of Boxes",
-      "Total Fabric Weight(Kgs) - Knitted Fabric",
-      "Total Fabric Length(Mts) - Woven Fabric",
-    ]);
+    let headerRow;
+      if (isNotReel === 'true') {
+        headerRow = worksheet.addRow([
+          "S No.",
+          "Country",
+          "State",
+          "Process Date",
+          "Date",
+          "No. of Days",
+          "Garment Production Start Date",
+          "Garment Production End Date",
+          "Season",
+          "Garment Processor Unit",
+          "Fabric Order Reference No.",
+          "Brand Order Reference No.",
+          "Factory Lot No.",
+          "Garment Type",
+          "Style Mark No.",
+          "No. of Pieces",
+          "No. of Boxes",
+          "Total Fabric Weight(Kgs) - Knitted Fabric",
+          "Total Fabric Length(Mts) - Woven Fabric",
+        ]);
+      }
+      else{
+        headerRow = worksheet.addRow([
+          "S No.",
+          "Country",
+          "State",
+          "Process Date",
+          "Date",
+          "No. of Days",
+          "Garment Production Start Date",
+          "Garment Production End Date",
+          "Season",
+          "Garment Processor Unit",
+          "Fabric Order Reference No.",
+          "Brand Order Reference No.",
+          "Factory Lot No.",
+          "REEL Lot No.",
+          "Garment Type",
+          "Style Mark No.",
+          "No. of Pieces",
+          "No. of Boxes",
+          "Total Fabric Weight(Kgs) - Knitted Fabric",
+          "Total Fabric Length(Mts) - Woven Fabric",
+        ]);
+      }
+
     headerRow.font = { bold: true };
 
     let include = [
@@ -12029,35 +12475,67 @@ const exportGarmentFabricProcess = async (req: Request, res: Response) => {
       return date.getTime();
     };
     for await (const [index, item] of result.entries()) {
-      const rowValues = {
-        index: index + 1,
-        country_name: item.garment?.country?.county_name || "",
-        state_name: item.garment?.state?.state_name || "",
-        createdAt: item.createdAt ? item.createdAt : "",
-        date: item.date ? item.date : "",
-        no_of_days: item.createdAt && item.date ? Math.floor(
-          (toDateOnly(item.createdAt) - toDateOnly(item.date)) /
-          (1000 * 60 * 60 * 24)
-        ) : "",
-        from_date: item.from_date ? item.from_date : "",
-        to_date: item.to_date ? item.to_date : "",
-        season: item.season ? item.season.name : "",
-        garment: item.garment ? item.garment.name : "",
-        fabricOrderRef: item.fabric_order_ref ? item.fabric_order_ref : "",
-        brandOrderRef: item.brand_order_ref ? item.brand_order_ref : "",
-        lotNo: item.factory_lot_no ? item.factory_lot_no : "",
-        reelLotNo: item.reel_lot_no ? item.reel_lot_no : "",
-        garmentType: item.garmentType ? item.garmentType : "",
-        stylemarkNo: item.styleMarkNo ? item.styleMarkNo : "",
-        noOfPieces: item.noOfPieces ? item.noOfPieces : "",
-        noOfBoxes: item.noOfBoxes ? item.noOfBoxes : "",
-        total_fabric_weight: item.total_fabric_weight
-          ? item.total_fabric_weight
-          : "",
-        total_fabric_length: item.total_fabric_length
-          ? item.total_fabric_length
-          : "",
-      };
+      let rowValues;
+      if (isNotReel === 'true') {
+        rowValues = {
+          index: index + 1,
+          country_name: item.garment?.country?.county_name || "",
+          state_name: item.garment?.state?.state_name || "",
+          createdAt: item.createdAt ? item.createdAt : "",
+          date: item.date ? item.date : "",
+          no_of_days: item.createdAt && item.date ? Math.floor(
+            (toDateOnly(item.createdAt) - toDateOnly(item.date)) /
+            (1000 * 60 * 60 * 24)
+          ) : "",
+          from_date: item.from_date ? item.from_date : "",
+          to_date: item.to_date ? item.to_date : "",
+          season: item.season ? item.season.name : "",
+          garment: item.garment ? item.garment.name : "",
+          fabricOrderRef: item.fabric_order_ref ? item.fabric_order_ref : "",
+          brandOrderRef: item.brand_order_ref ? item.brand_order_ref : "",
+          lotNo: item.factory_lot_no ? item.factory_lot_no : "",
+          garmentType: item.garmentType ? item.garmentType : "",
+          stylemarkNo: item.styleMarkNo ? item.styleMarkNo : "",
+          noOfPieces: item.noOfPieces ? item.noOfPieces : "",
+          noOfBoxes: item.noOfBoxes ? item.noOfBoxes : "",
+          total_fabric_weight: item.total_fabric_weight
+            ? item.total_fabric_weight
+            : "",
+          total_fabric_length: item.total_fabric_length
+            ? item.total_fabric_length
+            : "",
+        };
+      }else{
+        rowValues = {
+          index: index + 1,
+          country_name: item.garment?.country?.county_name || "",
+          state_name: item.garment?.state?.state_name || "",
+          createdAt: item.createdAt ? item.createdAt : "",
+          date: item.date ? item.date : "",
+          no_of_days: item.createdAt && item.date ? Math.floor(
+            (toDateOnly(item.createdAt) - toDateOnly(item.date)) /
+            (1000 * 60 * 60 * 24)
+          ) : "",
+          from_date: item.from_date ? item.from_date : "",
+          to_date: item.to_date ? item.to_date : "",
+          season: item.season ? item.season.name : "",
+          garment: item.garment ? item.garment.name : "",
+          fabricOrderRef: item.fabric_order_ref ? item.fabric_order_ref : "",
+          brandOrderRef: item.brand_order_ref ? item.brand_order_ref : "",
+          lotNo: item.factory_lot_no ? item.factory_lot_no : "",
+          reelLotNo: item.reel_lot_no ? item.reel_lot_no : "",
+          garmentType: item.garmentType ? item.garmentType : "",
+          stylemarkNo: item.styleMarkNo ? item.styleMarkNo : "",
+          noOfPieces: item.noOfPieces ? item.noOfPieces : "",
+          noOfBoxes: item.noOfBoxes ? item.noOfBoxes : "",
+          total_fabric_weight: item.total_fabric_weight
+            ? item.total_fabric_weight
+            : "",
+          total_fabric_length: item.total_fabric_length
+            ? item.total_fabric_length
+            : "",
+        };
+      }
 
       totals.noOfPieces += Number(rowValues.noOfPieces);
       totals.noOfBoxes += Number(rowValues.noOfBoxes);
@@ -12066,28 +12544,56 @@ const exportGarmentFabricProcess = async (req: Request, res: Response) => {
 
       worksheet.addRow(Object.values(rowValues));
     }
-    const rowValues = {
-      index: "",
-      country_name: "",
-      state_name: "",
-      createdAt: "",
-      date: "",
-      no_of_days: "",
-      from_date: "",
-      to_date: "",
-      season: "",
-      garment: "",
-      fabricOrderRef: "",
-      brandOrderRef: "",
-      lotNo: "",
-      reelLotNo: "",
-      garmentType: "",
-      stylemarkNo: "Total",
-      noOfPieces: totals.noOfPieces,
-      noOfBoxes: totals.noOfBoxes,
-      total_fabric_weight: totals.total_fabric_weight,
-      total_fabric_length: totals.total_fabric_length,
-    };
+
+    let rowValues;
+
+      if (isNotReel === 'true') {
+        rowValues = {
+          index: "",
+          country_name: "",
+          state_name: "",
+          createdAt: "",
+          date: "",
+          no_of_days: "",
+          from_date: "",
+          to_date: "",
+          season: "",
+          garment: "",
+          fabricOrderRef: "",
+          brandOrderRef: "",
+          lotNo: "",
+          garmentType: "",
+          stylemarkNo: "Total",
+          noOfPieces: totals.noOfPieces,
+          noOfBoxes: totals.noOfBoxes,
+          total_fabric_weight: totals.total_fabric_weight,
+          total_fabric_length: totals.total_fabric_length,
+        };
+      }
+      else{
+        rowValues = {
+          index: "",
+          country_name: "",
+          state_name: "",
+          createdAt: "",
+          date: "",
+          no_of_days: "",
+          from_date: "",
+          to_date: "",
+          season: "",
+          garment: "",
+          fabricOrderRef: "",
+          brandOrderRef: "",
+          lotNo: "",
+          reelLotNo: "",
+          garmentType: "",
+          stylemarkNo: "Total",
+          noOfPieces: totals.noOfPieces,
+          noOfBoxes: totals.noOfBoxes,
+          total_fabric_weight: totals.total_fabric_weight,
+          total_fabric_length: totals.total_fabric_length,
+        };
+      }
 
     worksheet.addRow(Object.values(rowValues)).eachCell(cell => cell.font = { bold: true });
 
