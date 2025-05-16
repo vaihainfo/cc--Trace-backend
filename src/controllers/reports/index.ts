@@ -833,7 +833,7 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
   const searchTerm = req.query.search || "";
   const page = Number(req.query.page) || 1;
   const limit = Number(req.query.limit) || 10;
-  const isOrganic = req.query.isOrganic || false;
+  const isNotReel = req.query.isNotReel || false;
   const isBrand = req.query.isBrand || false;
   const isAdmin = req.query.isAdmin || false;
 
@@ -919,7 +919,7 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
       */
       // Set bold font for header row
       let headerRow;
-      if (isOrganic === 'true') {
+      if (isNotReel === 'true') {
         headerRow = worksheet.addRow([
           "Sr No.", "Country", "State", "Process Date", "Data Entry Date and Time", "No. of Days", "Lint Production Start Date", "Lint Production End Date", "Lint process Season choosen", "Ginner Name", "Heap Number", "Gin Lot No", "Gin Press No", "REEL Press Nos", "No of Bales", "Lint Quantity(Kgs)", "Programme", "Grey Out Status"
         ]);
@@ -1255,7 +1255,7 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
       // Append data to worksheet
       for await (const [index, item] of rows.entries()) {
         let rowValues;
-        if (isOrganic === 'true') {
+        if (isNotReel === 'true') {
           rowValues = {
             index: index + 1,
             country: item.country_name ? item.country_name : "",
@@ -1393,7 +1393,7 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
 
       let rowValues;
 
-      if (isOrganic === 'true') {
+      if (isNotReel === 'true') {
         rowValues = Object.values({
           index: "",
           country: "",
