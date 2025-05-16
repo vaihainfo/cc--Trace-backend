@@ -704,6 +704,7 @@ const exportGinHeapReport = async (req: Request, res: Response) => {
   const limit = Number(req.query.limit) || 10;
   const { ginnerId, seasonId, programId, brandId, startDate, endDate }: any =
     req.query;
+  const isReelProgram = req.query.isReelProgram === "true" ? true : false;
   const offset = (page - 1) * limit;
   const whereCondition: any = {};
   try {
@@ -774,20 +775,37 @@ const exportGinHeapReport = async (req: Request, res: Response) => {
     mergedCell.font = { bold: true };
     mergedCell.alignment = { horizontal: "center", vertical: "middle" };
     // Set bold font for header row
-    const headerRow = worksheet.addRow([
-      "Sr No.",
-      "From Date",
-      "To Date",
-      "Heap Stating Date",
-      "Heap Ending Date",
-      "Ginner heap no.",
-      "REEL heap no.",
-      "Ginner Name",
-      "Village Name",
-      "Quantity",
-      "Vehicle no.",
-    ]);
-    headerRow.font = { bold: true };
+    let headerRow;
+    if(isReelProgram){
+      headerRow = worksheet.addRow([
+        "Sr No.",
+        "From Date",
+        "To Date",
+        "Heap Stating Date",
+        "Heap Ending Date",
+        "Ginner heap no.",
+        "REEL heap no.",
+        "Ginner Name",
+        "Village Name",
+        "Quantity",
+        "Vehicle no.",
+      ]);
+      headerRow.font = { bold: true };
+    }else{
+      headerRow = worksheet.addRow([
+        "Sr No.",
+        "From Date",
+        "To Date",
+        "Heap Stating Date",
+        "Heap Ending Date",
+        "Ginner heap no.",
+        "Ginner Name",
+        "Village Name",
+        "Quantity",
+        "Vehicle no.",
+      ]);
+      headerRow.font = { bold: true };
+    }
 
     const { count, rows }: any = await GinHeap.findAndCountAll({
       where: whereCondition,
@@ -818,27 +836,49 @@ const exportGinHeapReport = async (req: Request, res: Response) => {
         }
         data.push(row);
       }
-      const rowValues = Object.values({
-        index: index + 1,
-        from_date: item.dataValues.from_date
+      let rowValues;
+      if(isReelProgram){
+        rowValues = Object.values({
+          index: index + 1,
+          from_date: item.dataValues.from_date
           ? item.dataValues.from_date
           : "",
-        to_date: item.dataValues.to_date
+          to_date: item.dataValues.to_date
           ? item.dataValues.to_date
           : "",
-        heap_starting_date: item.dataValues.heap_starting_date ? item.dataValues.heap_starting_date : "",
-        heap_ending_date: item.dataValues.heap_ending_date ? item.dataValues.heap_ending_date : "",
-        ginner_heap_no: item.dataValues.ginner_heap_no ? item.dataValues.ginner_heap_no : "",
-        reel_heap_no: item.dataValues.reel_heap_no
+          heap_starting_date: item.dataValues.heap_starting_date ? item.dataValues.heap_starting_date : "",
+          heap_ending_date: item.dataValues.heap_ending_date ? item.dataValues.heap_ending_date : "",
+          ginner_heap_no: item.dataValues.ginner_heap_no ? item.dataValues.ginner_heap_no : "",
+          reel_heap_no: item.dataValues.reel_heap_no
           ? item.dataValues.reel_heap_no
           : "",
           ginner_name: item.dataValues.ginner.name,
           village_name: item.dataValues.village_names,
-        heap_weight: item.dataValues.estimated_heap
+          heap_weight: item.dataValues.estimated_heap
           ? Number(item.dataValues.estimated_heap)
           : 0,
-        weighbridge_vehicle_no: item.dataValues.weighbridge_vehicle_no
-      });
+          weighbridge_vehicle_no: item.dataValues.weighbridge_vehicle_no
+        });
+      }else{
+        rowValues = Object.values({
+          index: index + 1,
+          from_date: item.dataValues.from_date
+          ? item.dataValues.from_date
+          : "",
+          to_date: item.dataValues.to_date
+          ? item.dataValues.to_date
+          : "",
+          heap_starting_date: item.dataValues.heap_starting_date ? item.dataValues.heap_starting_date : "",
+          heap_ending_date: item.dataValues.heap_ending_date ? item.dataValues.heap_ending_date : "",
+          ginner_heap_no: item.dataValues.ginner_heap_no ? item.dataValues.ginner_heap_no : "",
+          ginner_name: item.dataValues.ginner.name,
+          village_name: item.dataValues.village_names,
+          heap_weight: item.dataValues.estimated_heap
+          ? Number(item.dataValues.estimated_heap)
+          : 0,
+          weighbridge_vehicle_no: item.dataValues.weighbridge_vehicle_no
+        });
+      }
       worksheet.addRow(rowValues);
     }
     // Auto-adjust column widths based on content
@@ -872,6 +912,7 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
   const page = Number(req.query.page) || 1;
   const limit = Number(req.query.limit) || 10;
   const { ginnerId, seasonId, programId }: any = req.query;
+  const isReelProgram = req.query.isReelProgram === "true" ? true : false;
   const offset = (page - 1) * limit;
   const whereCondition: any = {};
   try {
@@ -924,26 +965,48 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
     mergedCell.font = { bold: true };
     mergedCell.alignment = { horizontal: "center", vertical: "middle" };
     // Set bold font for header row
-    const headerRow = worksheet.addRow([
-      "Sr No.",
-      "Created Date",
-      "Date",
-      "Lint Production Start Date",
-      "Lint Production End Date",
-      "Season",
-      "Gin Lot No",
-      "Gin Press No",
-      "REEL Lot No",
-      "Heap Number",
-      "Reel Press No",
-      "No of Bales",
-      "Lint Quantity(kgs)",
-      "Programme",
-      "Got",
-      "Total Seed Cotton Consumed(kgs)",
-      "Grey Out Status"
-    ]);
-    headerRow.font = { bold: true };
+    let headerRow;
+    if(isReelProgram) {
+      headerRow = worksheet.addRow([
+        "Sr No.",
+        "Created Date",
+        "Date",
+        "Lint Production Start Date",
+        "Lint Production End Date",
+        "Season",
+        "Gin Lot No",
+        "Gin Press No",
+        "REEL Lot No",
+        "Heap Number",
+        "Reel Press No",
+        "No of Bales",
+        "Lint Quantity(kgs)",
+        "Programme",
+        "Got",
+        "Total Seed Cotton Consumed(kgs)",
+        "Grey Out Status"
+      ]);
+      headerRow.font = { bold: true };
+    } else {
+      headerRow = worksheet.addRow([
+        "Sr No.",
+        "Created Date",
+        "Date",
+        "Lint Production Start Date",
+        "Lint Production End Date",
+        "Season",
+        "Gin Lot No",
+        "Gin Press No",
+        "Heap Number",
+        "No of Bales",
+        "Lint Quantity(kgs)",
+        "Programme",
+        "Got",
+        "Total Seed Cotton Consumed(kgs)",
+        "Grey Out Status"
+      ]);
+      headerRow.font = { bold: true };
+    }
     const gin = await GinProcess.findAll({
       where: whereCondition,
       include: include,
@@ -1024,7 +1087,10 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
               ? `0${item.dataValues.no_of_bales}`
               : item.dataValues.no_of_bales
           }`;
-      const rowValues = Object.values({
+      let rowValues;
+      if(isReelProgram)
+        {
+         rowValues = Object.values({
         index: index + 1,
         createdDate: item.createdAt ? item.createdAt : "",
         date: item.date ? item.date : "",
@@ -1044,6 +1110,27 @@ const exportGinnerProcess = async (req: Request, res: Response) => {
         // a: village.map((obj: any) => obj?.dataValues?.village?.village_name)?.toString() ?? '',
         greyout_status: item.greyout_status ? "Yes" : "No",
       });
+    }
+    else{
+      rowValues = Object.values({
+        index: index + 1,
+        createdDate: item.createdAt ? item.createdAt : "",
+        date: item.date ? item.date : "",
+        from: item.from_date ? item.from_date : "",
+        to: item.to_date ? item.to_date : "",
+        season: item.season ? item.season.name : "",
+        lot: item.lot_no ? item.lot_no : "",
+        gin_press_no: item.press_no !== "NaN-NaN" ? item.press_no : gin_press_no,
+        heap_number: item.heap_number ? item.heap_number : "",
+        no_of_bales: item.no_of_bales ? item.no_of_bales : "",
+        lint_quantity: lint_quantity ? lint_quantity : "",
+        program: item.program ? item.program.program_name : "",
+        gin_out_turn: item.gin_out_turn ? item.gin_out_turn : "",
+        total_qty: item.total_qty ? item.total_qty : "",
+        // a: village.map((obj: any) => obj?.dataValues?.village?.village_name)?.toString() ?? '',
+        greyout_status: item.greyout_status ? "Yes" : "No",
+      });
+    }
       worksheet.addRow(rowValues);
     }
     // Auto-adjust column widths based on content
@@ -2001,6 +2088,7 @@ const exportGinnerSales = async (req: Request, res: Response) => {
   const excelFilePath = path.join("./upload", "lint-sale.xlsx");
   const searchTerm = req.query.search || "";
   const { ginnerId, seasonId, programId }: any = req.query;
+  const isReelProgram = req.query.isReelProgram === "true" ? true : false;
   const whereCondition: any = {};
   try {
     if (searchTerm) {
@@ -2040,20 +2128,38 @@ const exportGinnerSales = async (req: Request, res: Response) => {
     mergedCell.font = { bold: true };
     mergedCell.alignment = { horizontal: "center", vertical: "middle" };
     // Set bold font for header row
-    const headerRow = worksheet.addRow([
-      "Sr No.",
-      "Date",
-      "Season",
-      "Invoice No",
-      "Sold To",
-      "No of Bales",
-      "Bale Lot",
-      "Bale/press No",
-      "REEL Lot No",
-      "Programme",
-      "Grey Out Status"
-    ]);
-    headerRow.font = { bold: true };
+    let headerRow;
+    if(isReelProgram){
+      headerRow = worksheet.addRow([
+        "Sr No.",
+        "Date",
+        "Season",
+        "Invoice No",
+        "Sold To",
+        "No of Bales",
+        "Bale Lot",
+        "Bale/press No",
+        "REEL Lot No",
+        "Programme",
+        "Grey Out Status"
+      ]);
+      headerRow.font = { bold: true };
+    }
+    else{
+      headerRow = worksheet.addRow([
+        "Sr No.",
+        "Date",
+        "Season",
+        "Invoice No",
+        "Sold To",
+        "No of Bales",
+        "Bale Lot",
+        "Bale/press No",
+        "Programme",
+        "Grey Out Status"
+      ]);
+      headerRow.font = { bold: true };
+    }
     let include = [
       {
         model: Ginner,
@@ -2082,19 +2188,36 @@ const exportGinnerSales = async (req: Request, res: Response) => {
     });
     // Append data to worksheet
     for await (const [index, item] of gin.entries()) {
-      const rowValues = Object.values({
-        index: index + 1,
-        date: item.date ? item.date : "",
-        season: item.season ? item.season.name : "",
-        invoice: item.invoice_no ? item.invoice_no : "",
-        buyer: item.buyerdata ? item.buyerdata.name : "",
-        no_of_bales: item.no_of_bales ? item.no_of_bales : "",
-        lot_no: item.lot_no ? item.lot_no : "",
-        press_no: item.press_no ? item.press_no : "",
-        reel_lot_no: item.reel_lot_no ? item.reel_lot_no : "",
-        program: item.program ? item.program.program_name : "",
-        grey_out_status: item.greyout_status ? "Yes" : "No",
-      });
+      let rowValues;
+      if(isReelProgram){
+        rowValues = Object.values({
+          index: index + 1,
+          date: item.date ? item.date : "",
+          season: item.season ? item.season.name : "",
+          invoice: item.invoice_no ? item.invoice_no : "",
+          buyer: item.buyerdata ? item.buyerdata.name : "",
+          no_of_bales: item.no_of_bales ? item.no_of_bales : "",
+          lot_no: item.lot_no ? item.lot_no : "",
+          press_no: item.press_no ? item.press_no : "",
+          reel_lot_no: item.reel_lot_no ? item.reel_lot_no : "",
+          program: item.program ? item.program.program_name : "",
+          grey_out_status: item.greyout_status ? "Yes" : "No",
+        });
+      }
+      else{
+        rowValues = Object.values({
+          index: index + 1,
+          date: item.date ? item.date : "",
+          season: item.season ? item.season.name : "",
+          invoice: item.invoice_no ? item.invoice_no : "",
+          buyer: item.buyerdata ? item.buyerdata.name : "",
+          no_of_bales: item.no_of_bales ? item.no_of_bales : "",
+          lot_no: item.lot_no ? item.lot_no : "",
+          press_no: item.press_no ? item.press_no : "",
+          program: item.program ? item.program.program_name : "",
+          grey_out_status: item.greyout_status ? "Yes" : "No",
+        });
+      }
       worksheet.addRow(rowValues);
     }
     // Auto-adjust column widths based on content

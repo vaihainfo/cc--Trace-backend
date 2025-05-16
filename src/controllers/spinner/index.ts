@@ -890,6 +890,7 @@ const exportSpinnerProcess = async (req: Request, res: Response) => {
   const page = Number(req.query.page) || 1;
   const limit = Number(req.query.limit) || 10;
   const { spinnerId, seasonId, programId }: any = req.query;
+  const isReelProgram = req.query.isReelProgram === "true" ? true : false;
   const offset = (page - 1) * limit;
   const whereCondition: any = {};
   try {
@@ -1572,6 +1573,7 @@ const exportSpinnerSale = async (req: Request, res: Response) => {
     yarnType,
     type,
   }: any = req.query;
+  const isReelProgram = req.query.isReelProgram === "true" ? true : false;
   const offset = (page - 1) * limit;
   const whereCondition: any = {};
   const yarnTypeArray = yarnType?.split(",")?.map((item: any) => item.trim());
@@ -1647,28 +1649,54 @@ const exportSpinnerSale = async (req: Request, res: Response) => {
     mergedCell.font = { bold: true };
     mergedCell.alignment = { horizontal: "center", vertical: "middle" };
     // Set bold font for header row
-    const headerRow = worksheet.addRow([
-      "Sr No.",
-      "Date",
-      "Season",
-      "Invoice No",
-      "Spin Lot No",
-      "Reel Lot No",
-      "Yarn Type",
-      "Yarn Count",
-      "No of Boxes",
-      "Buyer Name",
-      "Box ID",
-      "Blend",
-      "Blend Qty",
-      "Total weight (Kgs)",
-      "Price/Kg",
-      "Programme",
-      "Vehicle No",
-      "Transcation via trader",
-      "Agent Details",
-    ]);
-    headerRow.font = { bold: true };
+    let headerRow;
+    if(isReelProgram){
+      headerRow = worksheet.addRow([
+       "Sr No.",
+       "Date",
+       "Season",
+       "Invoice No",
+       "Spin Lot No",
+       "Reel Lot No",
+       "Yarn Type",
+       "Yarn Count",
+       "No of Boxes",
+       "Buyer Name",
+       "Box ID",
+       "Blend",
+       "Blend Qty",
+       "Total weight (Kgs)",
+       "Price/Kg",
+       "Programme",
+       "Vehicle No",
+       "Transcation via trader",
+       "Agent Details",
+     ]);
+     headerRow.font = { bold: true };
+    }
+    else{
+      headerRow = worksheet.addRow([
+        "Sr No.",
+        "Date",
+        "Season",
+        "Invoice No",
+        "Spin Lot No",
+        "Yarn Type",
+        "Yarn Count",
+        "No of Boxes",
+        "Buyer Name",
+        "Box ID",
+        "Blend",
+        "Blend Qty",
+        "Total weight (Kgs)",
+        "Price/Kg",
+        "Programme",
+        "Vehicle No",
+        "Transcation via trader",
+        "Agent Details",
+      ]);
+      headerRow.font = { bold: true };
+    }
     let include = [
       {
         model: Spinner,
@@ -1717,31 +1745,60 @@ const exportSpinnerSale = async (req: Request, res: Response) => {
       yarnTypeData =
         item?.yarn_type?.length > 0 ? item?.yarn_type.join(",") : "";
 
-      const rowValues = Object.values({
-        index: index + 1,
-        date: item.date ? item.date : "",
-        season: item.season ? item.season.name : "",
-        invoice: item.invoice_no ? item.invoice_no : "",
-        lotNo: item.batch_lot_no ? item.batch_lot_no : "",
-        reelLot: item.reel_lot_no ? item.reel_lot_no : "",
-        yarnType: yarnTypeData ? yarnTypeData : "",
-        count: yarnCount ? yarnCount : "",
-        boxes: item.no_of_boxes ? item.no_of_boxes : "",
-        buyer_id: item.knitter
+      let rowValues;
+      if(isReelProgram){   
+        rowValues = Object.values({
+          index: index + 1,
+          date: item.date ? item.date : "",
+          season: item.season ? item.season.name : "",
+          invoice: item.invoice_no ? item.invoice_no : "",
+          lotNo: item.batch_lot_no ? item.batch_lot_no : "",
+          reelLot: item.reel_lot_no ? item.reel_lot_no : "",
+          yarnType: yarnTypeData ? yarnTypeData : "",
+          count: yarnCount ? yarnCount : "",
+          boxes: item.no_of_boxes ? item.no_of_boxes : "",
+          buyer_id: item.knitter
           ? item.knitter.name
           : item.weaver
           ? item.weaver.name
           : item.processor_name,
-        boxId: item.box_ids ? item.box_ids : "",
-        blend: "",
-        blendqty: "",
-        total: item.total_qty,
-        price: item.price ? item.price : "",
-        program: item.program ? item.program.program_name : "",
-        vichle: item.vehicle_no ? item.vehicle_no : "",
-        transaction_via_trader: item.transaction_via_trader ? "Yes" : "No",
-        agent: item.transaction_agent ? item.transaction_agent : "",
-      });
+          boxId: item.box_ids ? item.box_ids : "",
+          blend: "",
+          blendqty: "",
+          total: item.total_qty,
+          price: item.price ? item.price : "",
+          program: item.program ? item.program.program_name : "",
+          vichle: item.vehicle_no ? item.vehicle_no : "",
+          transaction_via_trader: item.transaction_via_trader ? "Yes" : "No",
+          agent: item.transaction_agent ? item.transaction_agent : "",
+        });
+      }
+      else{
+         rowValues = Object.values({
+          index: index + 1,
+          date: item.date ? item.date : "",
+          season: item.season ? item.season.name : "",
+          invoice: item.invoice_no ? item.invoice_no : "",
+          lotNo: item.batch_lot_no ? item.batch_lot_no : "",
+          yarnType: yarnTypeData ? yarnTypeData : "",
+          count: yarnCount ? yarnCount : "",
+          boxes: item.no_of_boxes ? item.no_of_boxes : "",
+          buyer_id: item.knitter
+          ? item.knitter.name
+          : item.weaver
+          ? item.weaver.name
+          : item.processor_name,
+          boxId: item.box_ids ? item.box_ids : "",
+          blend: "",
+          blendqty: "",
+          total: item.total_qty,
+          price: item.price ? item.price : "",
+          program: item.program ? item.program.program_name : "",
+          vichle: item.vehicle_no ? item.vehicle_no : "",
+          transaction_via_trader: item.transaction_via_trader ? "Yes" : "No",
+          agent: item.transaction_agent ? item.transaction_agent : "",
+        });
+      }
       worksheet.addRow(rowValues);
     }
     // Auto-adjust column widths based on content
@@ -2822,6 +2879,7 @@ const exportSpinnerTransaction = async (req: Request, res: Response) => {
   const excelFilePath = path.join("./upload", "Spinner_transaction_list.xlsx");
   const searchTerm = req.query.search || "";
   const { ginnerId, filter, seasonId, programId, spinnerId }: any = req.query;
+  const isReelProgram = req.query.isReelProgram === "true" ? true : false;
   const whereCondition: any = [];
   try {
     if (searchTerm) {
@@ -2862,7 +2920,9 @@ const exportSpinnerTransaction = async (req: Request, res: Response) => {
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet("Sheet1");
     // Set bold font for header row
-    const headerRow = worksheet.addRow([
+    let headerRow;
+    if(isReelProgram){
+      headerRow = worksheet.addRow([
       "Sr No.",
       "Date",
       "Season",
@@ -2877,6 +2937,24 @@ const exportSpinnerTransaction = async (req: Request, res: Response) => {
       "Vehicle No",
     ]);
     headerRow.font = { bold: true };
+    }
+    else{
+      headerRow = worksheet.addRow([
+        "Sr No.",
+        "Date",
+        "Season",
+        "Ginner Name",
+        "Invoice No",
+        "Bale Lot",
+        "No of Bales",
+        "Received Lint Quantity (Kgs)",
+        "Accepted Lint Quantity (Kgs)",
+        "Programme",
+        "Vehicle No",
+      ]);
+      headerRow.font = { bold: true };
+    }
+   
 
     let dataQuery = `
                 WITH bale_details AS (
@@ -2940,7 +3018,9 @@ const exportSpinnerTransaction = async (req: Request, res: Response) => {
 
     // Append data to worksheet
     for await (const [index, item] of rows.entries()) {
-      const rowValues = Object.values({
+      let rowValues;
+      if(isReelProgram){
+        rowValues = Object.values({
         index: index + 1,
         date: item.date ? item.date : "",
         season: item.season_name ? item.season_name : "",
@@ -2958,8 +3038,29 @@ const exportSpinnerTransaction = async (req: Request, res: Response) => {
         program: item.program_name ? item.program_name : "",
         vehicle: item.vehicle_no ? item.vehicle_no : "",
       });
+      }
+      else{
+         rowValues = Object.values({
+        index: index + 1,
+        date: item.date ? item.date : "",
+        season: item.season_name ? item.season_name : "",
+        ginner: item.ginner_name ? item.ginner_name : "",
+        invoice: item.invoice_no ? item.invoice_no : "",
+        lot_no: item.lot_no ? item.lot_no : "",
+        no_of_bales: item.accepted_no_of_bales
+          ? item?.accepted_no_of_bales
+          : "",
+        receive_quantity: item?.received_total_qty
+          ? item?.received_total_qty
+          : "",
+        quantity: item?.accepted_total_qty ? item?.accepted_total_qty : "",
+        program: item.program_name ? item.program_name : "",
+        vehicle: item.vehicle_no ? item.vehicle_no : "",
+      });
+      }   
       worksheet.addRow(rowValues);
     }
+    
     // Auto-adjust column widths based on content
     worksheet.columns.forEach((column: any) => {
       let maxCellLength = 0;
