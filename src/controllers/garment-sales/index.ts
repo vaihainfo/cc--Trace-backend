@@ -1127,7 +1127,11 @@ const exportGarmentProcess = async (req: Request, res: Response) => {
     // Create the excel workbook file
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet("Sheet1");
-    worksheet.mergeCells("A1:Q1");
+    if (isNotReel === 'true') {
+    worksheet.mergeCells('A1:P1');
+    }else{
+    worksheet.mergeCells('A1:Q1');
+    }
     const mergedCell = worksheet.getCell("A1");
     mergedCell.value = "CottonConnect | Process";
     mergedCell.font = { bold: true };

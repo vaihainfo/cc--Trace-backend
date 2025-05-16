@@ -947,7 +947,12 @@ const exportKnitterProcess = async (req: Request, res: Response) => {
     // Create the excel workbook file
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet("Sheet1");
+    if (isNotReel === 'true') {
+    worksheet.mergeCells("A1:O1");
+    }
+    else{
     worksheet.mergeCells("A1:P1");
+    }
     const mergedCell = worksheet.getCell("A1");
     mergedCell.value = "CottonConnect | Process";
     mergedCell.font = { bold: true };
@@ -1827,7 +1832,11 @@ const exportKnitterTransactionList = async (req: Request, res: Response) => {
     const yarnTypeArray = yarnType?.split(',')?.map((item: any) => item.trim());
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet("Sheet1");
-    worksheet.mergeCells('A1:U1');
+    if (isNotReel === 'true') {
+    worksheet.mergeCells('A1:P1');
+    }else{
+    worksheet.mergeCells('A1:Q1');
+    }
     const mergedCell = worksheet.getCell('A1');
     mergedCell.value = 'CottonConnect | Cotton Transaction List';
     mergedCell.font = { bold: true };
