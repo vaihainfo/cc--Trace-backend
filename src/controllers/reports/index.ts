@@ -22566,6 +22566,7 @@ const exportConsolidatedTraceability = async (req: Request, res: Response) => {
   );
   const searchTerm = req.query.search || "";
   const whereCondition: any = {};
+  const isNotReel = req.query.isNotReel || false;
   const { garmentId, brandId, styleMarkNo, garmentType, startDate, endDate, seasonId }: any = req.query;
   let baseurl = process.env.BASE_URL;
   try {
@@ -22645,13 +22646,83 @@ const exportConsolidatedTraceability = async (req: Request, res: Response) => {
     // Create the excel workbook file
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet("Sheet1");
-    worksheet.mergeCells("A1:AQ1");
+    if (isNotReel === 'true') {
+      worksheet.mergeCells("A1:AO1");
+    }
+    else{
+      worksheet.mergeCells("A1:AQ1");
+    }
     const mergedCell = worksheet.getCell("A1");
     mergedCell.value = "CottonConnect | Consolidated Traceability Report";
     mergedCell.font = { bold: true };
     mergedCell.alignment = { horizontal: "center", vertical: "middle" };
     // Set bold font for header row
-    const headerRow = worksheet.addRow([
+    let headerRow;
+    if (isNotReel === 'true') {
+    headerRow = worksheet.addRow([
+      "S No.",
+      "Brand Name",
+      "QR Code",
+      "Date of dispatch",
+      "Garment unit Name",
+      "Invoice Number",
+      "Mark/Style No",
+      "Item Description",
+      "No. of Boxes/Cartons",
+      "No. of pieces",
+      "Dyeing Processor Name",
+      "Invoice No",
+      "Batch/Lot No",
+      "Dyed Fabric Qty",
+      "Finished Fabric Net weight",
+      "Printing Processor Name",
+      "Invoice No",
+      "Batch/Lot No",
+      "Printed Fabric Qty",
+      "Finished Fabric Net weight",
+      "Wahing Processor Name",
+      "Invoice No",
+      "Batch/Lot No",
+      "Washed Fabric Qty",
+      "Finished Fabric Net weight",
+      "Compacting Processor Name",
+      "Invoice No",
+      "Batch/Lot No",
+      "Compacted Fabric Qty",
+      "Finished Fabric Net weight",
+      "Date of fabric sale",
+      "Fabric processor Name",
+      "Invoice Number",
+      "Lot No",
+      "Fabric Type",
+      "Total Fabric Net Length(Mts)",
+      "Total Fabric Net Weight(Kgs)",
+      "Date of Yarn sale",
+      "Spinner Name",
+      "Invoice Number",
+      "Lot/batch Number",
+      "Yarn Type",
+      "Yarn Count",
+      "No. of boxes",
+      "Box Id",
+      "Net Weight",
+      "Date of lint sale",
+      "Invoice Number",
+      "Ginner Name",
+      "Bale Lot No",
+      "No. of Bales",
+      "Press/Bale No's",
+      "Total Qty.",
+      "Date of Sale",
+      "Farmer Group Name",
+      "Transaction Id",
+      "Village",
+      "State",
+      "Programme",
+    ]);
+    }
+    else{
+      headerRow = worksheet.addRow([
       "S No.",
       "Brand Name",
       "QR Code",
@@ -22714,6 +22785,7 @@ const exportConsolidatedTraceability = async (req: Request, res: Response) => {
       "State",
       "Programme",
     ]);
+    }
     headerRow.font = { bold: true };
 
     //fetch data with pagination
@@ -23796,7 +23868,9 @@ const exportConsolidatedTraceability = async (req: Request, res: Response) => {
         // transactions
       });
 
-      const rowValues = Object.values({
+      let rowValues;
+      if (isNotReel === 'true') {
+       rowValues = Object.values({
         index: index + 1,
         buyer: item.dataValues.buyer ? item.dataValues.buyer.brand_name : "",
         // qr: item.dataValues.qr ? process.env.BASE_URL + item.dataValues.qr : '',
@@ -23999,6 +24073,203 @@ const exportConsolidatedTraceability = async (req: Request, res: Response) => {
             ? obj.frmr_programs.join(", ")
             : "",
       });
+    }else{
+             rowValues = Object.values({
+        index: index + 1,
+        buyer: item.dataValues.buyer ? item.dataValues.buyer.brand_name : "",
+        // qr: item.dataValues.qr ? process.env.BASE_URL + item.dataValues.qr : '',
+        qr: item.dataValues.qr ? baseurl + item.dataValues.qr : "",
+        date: item.dataValues.date ? item.dataValues.date : "",
+        garment_name: item.dataValues.garment
+          ? item.dataValues.garment.name
+          : "",
+        invoice: item.dataValues.invoice_no ? item.dataValues.invoice_no : "",
+        stylemarkNo:
+          item.dataValues.style_mark_no &&
+            item.dataValues.style_mark_no.length > 0
+            ? item.dataValues.style_mark_no.join(", ")
+            : "",
+        garmentType:
+          item.dataValues.garment_type &&
+            item.dataValues.garment_type.length > 0
+            ? item.dataValues.garment_type.join(", ")
+            : "",
+        no_of_boxes: item.dataValues.total_no_of_boxes
+          ? item.dataValues.total_no_of_boxes
+          : 0,
+        no_of_pieces: item.dataValues.total_no_of_pieces
+          ? item.dataValues.total_no_of_pieces
+          : 0,
+        dying_processor_name:
+          obj.dying_processor_name && obj.dying_processor_name.length > 0
+            ? obj.dying_processor_name.join(", ")
+            : "",
+        dying_inv:
+          obj.dying_inv && obj.dying_inv.length > 0
+            ? obj.dying_inv.join(", ")
+            : "",
+        dying_batch_lot_no:
+          obj.dying_batch_lot_no && obj.dying_batch_lot_no.length > 0
+            ? obj.dying_batch_lot_no.join(", ")
+            : "",
+        dying_total_quantity: obj.dying_total_quantity ?? "",
+        dying_net_weight: obj.dying_net_weight ?? "",
+
+        washing_processor_name:
+          obj.washing_processor_name && obj.washing_processor_name.length > 0
+            ? obj.washing_processor_name.join(", ")
+            : "",
+        washing_inv:
+          obj.washing_inv && obj.washing_inv.length > 0
+            ? obj.washing_inv.join(", ")
+            : "",
+        washing_batch_lot_no:
+          obj.washing_batch_lot_no && obj.washing_batch_lot_no.length > 0
+            ? obj.washing_batch_lot_no.join(", ")
+            : "",
+        washing_total_quantity: obj.washing_total_quantity ?? "",
+        washing_net_weight: obj.washing_net_weight ?? "",
+
+        printing_processor_name:
+          obj.printing_processor_name && obj.printing_processor_name.length > 0
+            ? obj.printing_processor_name.join(", ")
+            : "",
+        printing_inv:
+          obj.printing_inv && obj.printing_inv.length > 0
+            ? obj.printing_inv.join(", ")
+            : "",
+        printing_batch_lot_no:
+          obj.printing_batch_lot_no && obj.printing_batch_lot_no.length > 0
+            ? obj.printing_batch_lot_no.join(", ")
+            : "",
+        printing_total_quantity: obj.printing_total_quantity ?? "",
+        printing_net_weight: obj.printing_net_weight ?? "",
+        compacting_processor_name:
+          obj.compacting_processor_name &&
+            obj.compacting_processor_name.length > 0
+            ? obj.compacting_processor_name.join(", ")
+            : "",
+        compacting_inv:
+          obj.compacting_inv && obj.compacting_inv.length > 0
+            ? obj.compacting_inv.join(", ")
+            : "",
+        compacting_batch_lot_no:
+          obj.compacting_batch_lot_no && obj.compacting_batch_lot_no.length > 0
+            ? obj.compacting_batch_lot_no.join(", ")
+            : "",
+        compacting_total_quantity: obj.compacting_total_quantity ?? "",
+        compacting_net_weight: obj.compacting_net_weight ?? "",
+        // fbrc_date: obj.fbrc_sale_date && obj.fbrc_sale_date.length > 0 ? obj.fbrc_sale_date.join(', ') : '',
+        fbrc_date:
+          obj.fbrc_sale_date && obj.fbrc_sale_date.length > 0
+            ? obj.fbrc_sale_date.join(", ")
+            : "",
+        fbrc_name:
+          obj.fbrc_name && obj.fbrc_name.length > 0
+            ? obj.fbrc_name.join(", ")
+            : "",
+        fbrc_invoice:
+          obj.fbrc_invoice_no && obj.fbrc_invoice_no.length > 0
+            ? obj.fbrc_invoice_no.join(", ")
+            : "",
+        fbrc_lot:
+          obj.fbrc_lot_no && obj.fbrc_lot_no.length > 0
+            ? obj.fbrc_lot_no.join(", ")
+            : "",
+        fbrc_type:
+          obj.fbrc_fabric_type && obj.fbrc_fabric_type.length > 0
+            ? obj.fbrc_fabric_type.join(", ")
+            : "",
+        // total_fabric_length: item.dataValues.total_fabric_length
+        //   ? item.dataValues.total_fabric_length
+        //   : 0,
+        // total_fabric_weight: item.dataValues.total_fabric_weight
+        //   ? item.dataValues.total_fabric_weight
+        // : 0,
+        fbrc_net_length: obj.fbrc_weave_total_length
+          ? obj.fbrc_weave_total_length
+          : 0,
+        fbrc_net_weight: obj.fbrc_knit_total_weight
+          ? obj.fbrc_knit_total_weight
+          : 0,
+        spnr_date:
+          obj.spnr_sale_date && obj.spnr_sale_date.length > 0
+            ? obj.spnr_sale_date.join(", ")
+            : "",
+        spnr_name:
+          obj.spnr_name && obj.spnr_name.length > 0
+            ? obj.spnr_name.join(", ")
+            : "",
+        spnr_invoice_no:
+          obj.spnr_invoice_no && obj.spnr_invoice_no.length > 0
+            ? obj.spnr_invoice_no.join(", ")
+            : "",
+        spnr_lot_no:
+          obj.spnr_lot_no && obj.spnr_lot_no.length > 0
+            ? obj.spnr_lot_no.join(", ")
+            : "",
+        spnr_yarn_type:
+          obj.spnr_yarn_type && obj.spnr_yarn_type.length > 0
+            ? obj.spnr_yarn_type.join(", ")
+            : "",
+        spnr_yarn_count:
+          obj.spnr_yarn_count && obj.spnr_yarn_count.length > 0
+            ? obj.spnr_yarn_count.join(", ")
+            : "",
+        spnr_no_of_boxes: obj.spnr_no_of_boxes ? obj.spnr_no_of_boxes : 0,
+        spnr_box_ids:
+          obj.spnr_box_ids && obj.spnr_box_ids.length > 0
+            ? obj.spnr_box_ids.join(", ")
+            : "",
+        fbrc_total_qty: obj.fbrc_total_qty ? obj.fbrc_total_qty : 0,
+        gnr_sale_date:
+          obj.gnr_sale_date && obj.gnr_sale_date.length > 0
+            ? obj.gnr_sale_date.join(", ")
+            : "",
+        gnr_invoice_no:
+          obj.gnr_invoice_no && obj.gnr_invoice_no.length > 0
+            ? obj.gnr_invoice_no.join(", ")
+            : "",
+        gnr_name:
+          obj.gnr_name && obj.gnr_name.length > 0
+            ? obj.gnr_name.join(", ")
+            : "",
+        gnr_lot_no:
+          obj.gnr_lot_no && obj.gnr_lot_no.length > 0
+            ? obj.gnr_lot_no.join(", ")
+            : "",
+        gnr_no_of_bales: obj.gnr_no_of_bales ? obj.gnr_no_of_bales : 0,
+        gnr_press_no:
+          obj.gnr_press_no && obj.gnr_press_no.length > 0
+            ? obj.gnr_press_no.join(", ")
+            : "",
+        gnr_total_qty: obj.gnr_total_qty ? obj.gnr_total_qty : 0,
+        frmr_sale_date:
+          obj.frmr_sale_date && obj.frmr_sale_date.length > 0
+            ? obj.frmr_sale_date.join(", ")
+            : "",
+        frmr_farm_group:
+          obj.frmr_farm_group && obj.frmr_farm_group.length > 0
+            ? obj.frmr_farm_group.join(", ")
+            : "",
+        frmr_transactions_id:
+          obj.frmr_transactions_id && obj.frmr_transactions_id.length > 0
+            ? obj.frmr_transactions_id.join(", ")
+            : "",
+        frmr_villages:
+          obj.frmr_villages && obj.frmr_villages.length > 0
+            ? obj.frmr_villages.join(", ")
+            : "",
+        frmr_states:
+          obj.frmr_states && obj.frmr_states.length > 0
+            ? obj.frmr_states.join(", ")
+            : "",
+        frmr_programs:
+          obj.frmr_programs && obj.frmr_programs.length > 0
+            ? obj.frmr_programs.join(", ")
+            : "",
+      });
+    }
       worksheet.addRow(rowValues);
     }
     // Set the width for the S No. column
@@ -24463,6 +24734,7 @@ const exportSpinnerBackwardTraceability = async (
     "spinner-backward-traceabilty-report.xlsx"
   );
   const searchTerm = req.query.search || "";
+  const isNotReel = req.query.isNotReel || false;
   const page = Number(req.query.page) || 1;
   const limit = Number(req.query.limit) || 10;
   const offset = (page - 1) * limit;
@@ -24593,13 +24865,31 @@ const exportSpinnerBackwardTraceability = async (
     // Create the excel workbook file
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet("Sheet1");
+    if (isNotReel === 'true') {
+    worksheet.mergeCells("A1:H1");
+    }
+    else{
     worksheet.mergeCells("A1:J1");
+    }
     const mergedCell = worksheet.getCell("A1");
     mergedCell.value = "CottonConnect | Spinner Backward Traceability Report";
     mergedCell.font = { bold: true };
     mergedCell.alignment = { horizontal: "center", vertical: "middle" };
     // Set bold font for header row
-    const headerRow = worksheet.addRow([
+    let headerRow;
+    if (isNotReel === 'true') {
+    headerRow = worksheet.addRow([
+      "S No.",
+      "Fabric Mill name",
+      "Spinner- Fabric Invoice No",
+      "Spinner Name",
+      "Ginner to Spinner Invoice",
+      "Ginner name",
+      "Villages",
+      "Farm Group",
+    ]);
+  }else{
+    headerRow = worksheet.addRow([
       "S No.",
       "Fabric Mill name",
       "Spinner- Fabric Invoice No",
@@ -24611,6 +24901,7 @@ const exportSpinnerBackwardTraceability = async (
       "Villages",
       "Farm Group",
     ]);
+  }
     headerRow.font = { bold: true };
 
     //fetch data with pagination
@@ -24906,7 +25197,37 @@ const exportSpinnerBackwardTraceability = async (
         ...obj,
       });
 
-      const rowValues = Object.values({
+      let rowValues;
+      if (isNotReel === 'true') {
+      rowValues = Object.values({
+        index: index + 1,
+        buyer: item.dataValues.knitter
+          ? item.dataValues.knitter.name
+          : item.dataValues.weaver.name,
+        invoice: item.dataValues.invoice_no ? item.dataValues.invoice_no : "",
+        spinner_name: item.dataValues.spinner
+          ? item.dataValues.spinner.name
+          : "",
+        gnr_invoice_no:
+          obj.gnr_invoice_no && obj.gnr_invoice_no.length > 0
+            ? obj.gnr_invoice_no.join(", ")
+            : "",
+        gnr_name:
+          obj.gnr_name && obj.gnr_name.length > 0
+            ? obj.gnr_name.join(", ")
+            : "",
+        frmr_villages:
+          obj.frmr_villages && obj.frmr_villages.length > 0
+            ? obj.frmr_villages.join(", ")
+            : "",
+        frmr_farm_group:
+          obj.frmr_farm_group && obj.frmr_farm_group.length > 0
+            ? obj.frmr_farm_group.join(", ")
+            : "",
+      });
+    }
+    else{
+      rowValues = Object.values({
         index: index + 1,
         buyer: item.dataValues.knitter
           ? item.dataValues.knitter.name
@@ -24937,6 +25258,7 @@ const exportSpinnerBackwardTraceability = async (
             ? obj.frmr_farm_group.join(", ")
             : "",
       });
+    }
       worksheet.addRow(rowValues);
     }
 
@@ -25947,6 +26269,7 @@ const exportSpinProcessBackwardfTraceabilty = async (req: Request, res: Response
   const searchTerm = req.query.search || "";
   const page = Number(req.query.page) || 1;
   const limit = Number(req.query.limit) || 10;
+  const isNotReel = req.query.isNotReel || false;
   const { exportType, spinnerId, seasonId, programId, brandId, countryId, stateId }: any = req.query;
   const offset = (page - 1) * limit;
   const whereConditions: any = [];
@@ -25998,13 +26321,35 @@ const exportSpinProcessBackwardfTraceabilty = async (req: Request, res: Response
       // Create the excel workbook file
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet("Sheet1");
-      worksheet.mergeCells("A1:M1");
+      if (isNotReel === 'true') {
+        worksheet.mergeCells("A1:K1");
+      }
+      else{
+        worksheet.mergeCells("A1:M1");
+      }
       const mergedCell = worksheet.getCell("A1");
       mergedCell.value = "CottonConnect | Spinner Process Backward Traceability Report";
       mergedCell.font = { bold: true };
       mergedCell.alignment = { horizontal: "center", vertical: "middle" };
       // Set bold font for header row
-      const headerRow = worksheet.addRow([
+      let headerRow;
+      if (isNotReel === 'true') {
+       headerRow = worksheet.addRow([
+        "S. No.",
+        "Spinner Name",
+        "Fabric Name",
+        "Invoice Number",
+        "Yarn Quantity Processed (Kgs)",
+        "Yarn Quantity Sold (Kgs)",
+        "Bale Lot No",
+        "Ginner to Spinner Invoice",
+        "Lint Consumed (Kgs)",
+        "Villages",
+        "Ginner Name"
+      ]);
+      }
+      else{
+        headerRow = worksheet.addRow([
         "S. No.",
         "Spinner Name",
         "Fabric Name",
@@ -26019,6 +26364,7 @@ const exportSpinProcessBackwardfTraceabilty = async (req: Request, res: Response
         "Villages",
         "Ginner Name"
       ]);
+      }
       headerRow.font = { bold: true };
 
       const rows: any = await sequelize.query(
@@ -26216,7 +26562,35 @@ const exportSpinProcessBackwardfTraceabilty = async (req: Request, res: Response
         let fbrc_name = [...new Set([...knitterName, ...weaverName, ...processorName])];
 
 
-        const rowValues = Object.values({
+        let rowValues;
+        if (isNotReel === 'true') {
+        rowValues = Object.values({
+          index: index + 1,
+          spinner: item?.spinner_name ? item.spinner_name : "",
+          fabric: fbrc_name && fbrc_name.length > 0
+            ? fbrc_name.join(", ")
+            : "",
+          spnr_invoice: item.spnr_invoice_no
+            ? item.spnr_invoice_no
+            : "",
+          total: item?.net_yarn_qty ? Number(item?.net_yarn_qty) : 0,
+          yarnSold: item.spnr_yarn_sold ? Number(item.spnr_yarn_sold) : 0,
+          ginLot: item?.gnr_lot_no
+            ? item?.gnr_lot_no
+            : "",
+          invoice: item?.gnr_invoice_no
+            ? item?.gnr_invoice_no
+            : "",
+          lintConsumed: item?.lint_consumed ? Number(item?.lint_consumed) : 0,
+          frmrVillages: item.village_names && item.village_names.length > 0
+            ? item.village_names.join(", ")
+            : "",
+          ginner: item?.gnr_name
+            ? item?.gnr_name
+            : "",
+        });
+        }else{
+         rowValues = Object.values({
           index: index + 1,
           spinner: item?.spinner_name ? item.spinner_name : "",
           fabric: fbrc_name && fbrc_name.length > 0
@@ -26244,7 +26618,8 @@ const exportSpinProcessBackwardfTraceabilty = async (req: Request, res: Response
           ginner: item?.gnr_name
             ? item?.gnr_name
             : "",
-        });
+        }); 
+        }
         worksheet.addRow(rowValues);
       }
 
