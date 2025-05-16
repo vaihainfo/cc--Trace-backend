@@ -591,6 +591,7 @@ const exportGinHeapReport = async (req: Request, res: Response) => {
   const searchTerm = req.query.search || "";
   const page = Number(req.query.page) || 1;
   const limit = Number(req.query.limit) || 10;
+  const isNotReel = req.query.isNotReel || false;
   const { exportType, ginnerId, seasonId, programId, brandId, startDate, endDate }: any =
     req.query;
   const offset = (page - 1) * limit;
@@ -687,21 +688,40 @@ const exportGinHeapReport = async (req: Request, res: Response) => {
       // mergedCell.font = { bold: true };
       // mergedCell.alignment = { horizontal: "center", vertical: "middle" };
       // Set bold font for header row
-      const headerRow = worksheet.addRow([
-        "Sr No.",
-        "Country",
-        "State",
-        "Created Date",
-        "Season",
-        "Gin heap no.",
-        "REEL heap no.",
-        "Ginner Name",
-        "Village Name",
-        "Heap Weight",
-        "Heap Stating Date",
-        "Heap Ending Date",
-        "Vehicle Registration Number",
-      ]);
+      let headerRow;
+      if (isNotReel === 'true') {
+        headerRow = worksheet.addRow([
+            "Sr No.",
+            "Country",
+            "State",
+            "Created Date",
+            "Season",
+            "Gin heap no.",
+            "Ginner Name",
+            "Village Name",
+            "Heap Weight",
+            "Heap Stating Date",
+            "Heap Ending Date",
+            "Vehicle Registration Number",
+          ]);
+        }
+        else{
+          headerRow = worksheet.addRow([
+            "Sr No.",
+            "Country",
+            "State",
+            "Created Date",
+            "Season",
+            "Gin heap no.",
+            "REEL heap no.",
+            "Ginner Name",
+            "Village Name",
+            "Heap Weight",
+            "Heap Stating Date",
+            "Heap Ending Date",
+            "Vehicle Registration Number",
+          ]);
+        }
       headerRow.font = { bold: true };
 
       const { count, rows }: any = await GinHeap.findAndCountAll({
@@ -735,36 +755,70 @@ const exportGinHeapReport = async (req: Request, res: Response) => {
 
         weightSum += item.dataValues.estimated_heap ? Number(item.dataValues.estimated_heap) : 0;
 
-        const rowValues = Object.values({
-          index: index + 1,
-          country: item.dataValues.ginner.country.county_name,
-          state: item.dataValues.ginner.state.state_name,
-          created_date: item.dataValues.createdAt
-            ? item.dataValues.createdAt
-            : "",
-          season: item.dataValues.season.name ? item.dataValues.season.name : "",
-          ginner_heap_no: item.dataValues.ginner_heap_no ? item.dataValues.ginner_heap_no : "",
-          reel_heap_no: item.dataValues.reel_heap_no
-            ? item.dataValues.reel_heap_no
-            : "",
-          ginner_name: item.dataValues.ginner.name,
-          village_name: item.dataValues.village_names,
-          heap_weight: item.dataValues.estimated_heap
-            ? Number(item.dataValues.estimated_heap)
-            : 0,
-          heap_starting_date: item.dataValues.heap_starting_date ? item.dataValues.heap_starting_date : "",
-          heap_ending_date: item.dataValues.heap_ending_date ? item.dataValues.heap_ending_date : "",
-          weighbridge_vehicle_no: item.dataValues.weighbridge_vehicle_no
-        });
+        let rowValues;
+        if (isNotReel === 'true') {
+          rowValues = Object.values({
+            index: index + 1,
+            country: item.dataValues.ginner.country.county_name,
+            state: item.dataValues.ginner.state.state_name,
+            created_date: item.dataValues.createdAt
+              ? item.dataValues.createdAt
+              : "",
+            season: item.dataValues.season.name ? item.dataValues.season.name : "",
+            ginner_heap_no: item.dataValues.ginner_heap_no ? item.dataValues.ginner_heap_no : "",
+            ginner_name: item.dataValues.ginner.name,
+            village_name: item.dataValues.village_names,
+            heap_weight: item.dataValues.estimated_heap
+              ? Number(item.dataValues.estimated_heap)
+              : 0,
+            heap_starting_date: item.dataValues.heap_starting_date ? item.dataValues.heap_starting_date : "",
+            heap_ending_date: item.dataValues.heap_ending_date ? item.dataValues.heap_ending_date : "",
+            weighbridge_vehicle_no: item.dataValues.weighbridge_vehicle_no
+          });
+        }
+        else{
+          rowValues = Object.values({
+            index: index + 1,
+            country: item.dataValues.ginner.country.county_name,
+            state: item.dataValues.ginner.state.state_name,
+            created_date: item.dataValues.createdAt
+              ? item.dataValues.createdAt
+              : "",
+            season: item.dataValues.season.name ? item.dataValues.season.name : "",
+            ginner_heap_no: item.dataValues.ginner_heap_no ? item.dataValues.ginner_heap_no : "",
+            reel_heap_no: item.dataValues.reel_heap_no
+              ? item.dataValues.reel_heap_no
+              : "",
+            ginner_name: item.dataValues.ginner.name,
+            village_name: item.dataValues.village_names,
+            heap_weight: item.dataValues.estimated_heap
+              ? Number(item.dataValues.estimated_heap)
+              : 0,
+            heap_starting_date: item.dataValues.heap_starting_date ? item.dataValues.heap_starting_date : "",
+            heap_ending_date: item.dataValues.heap_ending_date ? item.dataValues.heap_ending_date : "",
+            weighbridge_vehicle_no: item.dataValues.weighbridge_vehicle_no
+          });
+        }
         worksheet.addRow(rowValues);
       }
 
-      const rowValues = Object.values({
-        index: "", country: "", state: "", created_date: "", season: "", ginner_heap_no: "",
-        reel_heap_no: "", ginner_name: "", village_name: "Total",
-        heap_weight: Number(formatDecimal(weightSum)),
-        heap_starting_date: "", heap_ending_date: "", weighbridge_vehicle_no: ""
-      });
+      let rowValues;
+      if (isNotReel === 'true') {
+        rowValues = Object.values({
+       index: "", country: "", state: "", created_date: "", season: "", ginner_heap_no: "",
+        ginner_name: "", village_name: "Total",
+       heap_weight: Number(formatDecimal(weightSum)),
+       heap_starting_date: "", heap_ending_date: "", weighbridge_vehicle_no: ""
+     });
+      }
+      else{
+      rowValues = Object.values({
+       index: "", country: "", state: "", created_date: "", season: "", ginner_heap_no: "",
+       reel_heap_no: "", ginner_name: "", village_name: "Total",
+       heap_weight: Number(formatDecimal(weightSum)),
+       heap_starting_date: "", heap_ending_date: "", weighbridge_vehicle_no: ""
+     });
+      }
       worksheet.addRow(rowValues).eachCell((cell, colNumber) => { cell.font = { bold: true } });;
 
       const borderStyle = {
@@ -16979,6 +17033,7 @@ const exportSpinnerCottonStock = async (req: Request, res: Response) => {
   const page = Number(req.query.page) || 1;
   const limit = Number(req.query.limit) || 10;
   const offset = (page - 1) * limit;
+  const isNotReel = req.query.isNotReel || false;
   const { exportType, spinnerId, seasonId, programId, brandId, countryId, stateId }: any = req.query;
   const sqlCondition: any = [];
 
@@ -17068,22 +17123,42 @@ const exportSpinnerCottonStock = async (req: Request, res: Response) => {
       // mergedCell.font = { bold: true };
       // mergedCell.alignment = { horizontal: "center", vertical: "middle" };
       // Set bold font for header row
-      const headerRow = worksheet.addRow([
-        "Sr No.",
-        "Country",
-        "State",
-        "Created Date",
-        "Season",
-        "Ginner Name",
-        "Spinner Name",
-        "Reel Lot No",
-        "Invoice No",
-        "Bale Lot No",
-        "Total Lint Cotton Received (Kgs)",
-        "Total Lint Cotton in Stock (Kgs)",
-        "Lint Cotton Greyed Out after Verification (Kgs)",
-        "Total Lint Cotton Consumed (Kgs)",
-      ]);
+       let headerRow;
+      if (isNotReel === 'true') {
+        headerRow = worksheet.addRow([
+          "Sr No.",
+          "Country",
+          "State",
+          "Created Date",
+          "Season",
+          "Ginner Name",
+          "Spinner Name",
+          "Invoice No",
+          "Bale Lot No",
+          "Total Lint Cotton Received (Kgs)",
+          "Total Lint Cotton in Stock (Kgs)",
+          "Lint Cotton Greyed Out after Verification (Kgs)",
+          "Total Lint Cotton Consumed (Kgs)",
+        ]);
+      }
+      else{
+        headerRow = worksheet.addRow([
+          "Sr No.",
+          "Country",
+          "State",
+          "Created Date",
+          "Season",
+          "Ginner Name",
+          "Spinner Name",
+          "Reel Lot No",
+          "Invoice No",
+          "Bale Lot No",
+          "Total Lint Cotton Received (Kgs)",
+          "Total Lint Cotton in Stock (Kgs)",
+          "Lint Cotton Greyed Out after Verification (Kgs)",
+          "Total Lint Cotton Consumed (Kgs)",
+        ]);
+      }
       headerRow.font = { bold: true };
 
 
@@ -17181,23 +17256,44 @@ const exportSpinnerCottonStock = async (req: Request, res: Response) => {
 
 
       for await (const [index, spinner] of rows.entries()) {
-        const rowValues = {
-          index: index + 1,
-          country: spinner?.country ? spinner?.country : "",
-          state: spinner?.state ? spinner?.state : "",
-          date: spinner?.date ? moment(spinner.date).format('DD-MM-YYYY') : "",
-          season: spinner?.season_name ? spinner?.season_name : "",
-          ginner_names: spinner?.ginner_name ? spinner?.ginner_name
-            : "",
-          spinner: spinner?.spinner_name ? spinner?.spinner_name : "",
-          reel_lot_no: spinner?.reel_lot_no ? spinner?.reel_lot_no : "",
-          invoice_no: spinner?.invoice_no ? spinner?.invoice_no : "",
-          batch_lot_no: spinner?.lot_no ? spinner?.lot_no : "",
-          cotton_procured: spinner?.accepted_total_qty ? Number(formatDecimal(spinner?.accepted_total_qty)) : 0,
-          cotton_stock: spinner?.qty_stock ? Number(formatDecimal(spinner?.qty_stock)) : 0,
-          greyed_out_qty: spinner?.greyed_out_qty ? Number(formatDecimal(spinner?.greyed_out_qty)) : 0,
-          cotton_consumed: Number(spinner?.accepted_total_qty) > (Number(spinner?.qty_stock) + Number(spinner?.greyed_out_qty)) ? Number(formatDecimal(spinner?.accepted_total_qty)) - (Number(formatDecimal(spinner?.qty_stock)) + Number(formatDecimal(spinner?.greyed_out_qty))) : 0,
-        };
+        let rowValues;
+        if (isNotReel === 'true') {
+           rowValues = {
+            index: index + 1,
+            country: spinner?.country ? spinner?.country : "",
+            state: spinner?.state ? spinner?.state : "",
+            date: spinner?.date ? moment(spinner.date).format('DD-MM-YYYY') : "",
+            season: spinner?.season_name ? spinner?.season_name : "",
+            ginner_names: spinner?.ginner_name ? spinner?.ginner_name
+              : "",
+            spinner: spinner?.spinner_name ? spinner?.spinner_name : "",
+            invoice_no: spinner?.invoice_no ? spinner?.invoice_no : "",
+            batch_lot_no: spinner?.lot_no ? spinner?.lot_no : "",
+            cotton_procured: spinner?.accepted_total_qty ? Number(formatDecimal(spinner?.accepted_total_qty)) : 0,
+            cotton_stock: spinner?.qty_stock ? Number(formatDecimal(spinner?.qty_stock)) : 0,
+            greyed_out_qty: spinner?.greyed_out_qty ? Number(formatDecimal(spinner?.greyed_out_qty)) : 0,
+            cotton_consumed: Number(spinner?.accepted_total_qty) > (Number(spinner?.qty_stock) + Number(spinner?.greyed_out_qty)) ? Number(formatDecimal(spinner?.accepted_total_qty)) - (Number(formatDecimal(spinner?.qty_stock)) + Number(formatDecimal(spinner?.greyed_out_qty))) : 0,
+          };
+        }
+        else{
+          rowValues = {
+            index: index + 1,
+            country: spinner?.country ? spinner?.country : "",
+            state: spinner?.state ? spinner?.state : "",
+            date: spinner?.date ? moment(spinner.date).format('DD-MM-YYYY') : "",
+            season: spinner?.season_name ? spinner?.season_name : "",
+            ginner_names: spinner?.ginner_name ? spinner?.ginner_name
+              : "",
+            spinner: spinner?.spinner_name ? spinner?.spinner_name : "",
+            reel_lot_no: spinner?.reel_lot_no ? spinner?.reel_lot_no : "",
+            invoice_no: spinner?.invoice_no ? spinner?.invoice_no : "",
+            batch_lot_no: spinner?.lot_no ? spinner?.lot_no : "",
+            cotton_procured: spinner?.accepted_total_qty ? Number(formatDecimal(spinner?.accepted_total_qty)) : 0,
+            cotton_stock: spinner?.qty_stock ? Number(formatDecimal(spinner?.qty_stock)) : 0,
+            greyed_out_qty: spinner?.greyed_out_qty ? Number(formatDecimal(spinner?.greyed_out_qty)) : 0,
+            cotton_consumed: Number(spinner?.accepted_total_qty) > (Number(spinner?.qty_stock) + Number(spinner?.greyed_out_qty)) ? Number(formatDecimal(spinner?.accepted_total_qty)) - (Number(formatDecimal(spinner?.qty_stock)) + Number(formatDecimal(spinner?.greyed_out_qty))) : 0,
+          };
+        }
 
         totals.cotton_procured += Number(rowValues.cotton_procured);
         totals.cotton_stock += Number(rowValues.cotton_stock);
@@ -17208,7 +17304,9 @@ const exportSpinnerCottonStock = async (req: Request, res: Response) => {
       }
 
 
-      const rowValues = {
+       let rowValues;
+      if (isNotReel === 'true') {
+        rowValues = {
         index: "",
         country: "",
         state: "",
@@ -17216,7 +17314,6 @@ const exportSpinnerCottonStock = async (req: Request, res: Response) => {
         season: "",
         ginner_names: "",
         spinner: "",
-        reel_lot_no: "",
         invoice_no: "",
         batch_lot_no: "Total",
         cotton_procured: Number(formatDecimal(totals.cotton_procured)),
@@ -17224,6 +17321,25 @@ const exportSpinnerCottonStock = async (req: Request, res: Response) => {
         greyed_out_qty: Number(formatDecimal(totals.greyed_out_qty)),
         cotton_consumed: Number(formatDecimal(totals.cotton_consumed)),
       };
+      }
+      else{
+        rowValues = {
+          index: "",
+          country: "",
+          state: "",
+          date: "",
+          season: "",
+          ginner_names: "",
+          spinner: "",
+          reel_lot_no: "",
+          invoice_no: "",
+          batch_lot_no: "Total",
+          cotton_procured: Number(formatDecimal(totals.cotton_procured)),
+          cotton_stock: Number(formatDecimal(totals.cotton_stock)),
+          greyed_out_qty: Number(formatDecimal(totals.greyed_out_qty)),
+          cotton_consumed: Number(formatDecimal(totals.cotton_consumed)),
+        };
+      }
       worksheet.addRow(Object.values(rowValues)).eachCell(cell => cell.font = { bold: true });
 
       let borderStyle = {
