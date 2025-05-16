@@ -1092,6 +1092,7 @@ const exportGarmentProcess = async (req: Request, res: Response) => {
   try {
     const whereCondition: any = {};
     const searchTerm = req.query.search || "";
+    const isNotReel = req.query.isNotReel || false;
     if (searchTerm) {
       whereCondition[Op.or] = [
         { fabric_order_ref: { [Op.iLike]: `%${searchTerm}%` } }, // Search by order ref
@@ -1132,7 +1133,29 @@ const exportGarmentProcess = async (req: Request, res: Response) => {
     mergedCell.font = { bold: true };
     mergedCell.alignment = { horizontal: "center", vertical: "middle" };
     // Set bold font for header row
-    const headerRow = worksheet.addRow([
+
+    let headerRow;
+    if (isNotReel === 'true') {
+     headerRow = worksheet.addRow([
+      "Sr No.",
+      "Date",
+      "Garment Production Start Date",
+      "Garment Production End Date",
+      "Season",
+      "Brand Order Reference",
+      "Fabric Order Reference",
+      "Factory Lot No",
+      "Style/Mark No",
+      "Garment/Product Type",
+      "Color",
+      "Garment/Product Size",
+      "No of Pieces",
+      "No of Boxes",
+      "Total Fabric Length Utilized(Mts)",
+      "Total Fabric Weight Utilized(Kgs)",
+    ]);
+    }else{
+      headerRow = worksheet.addRow([
       "Sr No.",
       "Date",
       "Garment Production Start Date",
@@ -1151,6 +1174,7 @@ const exportGarmentProcess = async (req: Request, res: Response) => {
       "Total Fabric Length Utilized(Mts)",
       "Total Fabric Weight Utilized(Kgs)",
     ]);
+    }
     headerRow.font = { bold: true };
     let include = [
       {
@@ -1181,6 +1205,48 @@ const exportGarmentProcess = async (req: Request, res: Response) => {
     });
     // Append data to worksheet
     for await (const [index, item] of garment.entries()) {
+      let rowValues;
+      if (isNotReel === 'true') {
+      const rowValues = Object.values({
+        index: index + 1,
+        date: item.date ? item.date : "",
+        from_date: item.from_date ? item.from_date : "",
+        to_date: item.to_date ? item.to_date : "",
+        season: item.season ? item.season.name : "",
+        brandOrder: item.brand_order_ref ? item.brand_order_ref : "",
+        fabricOrder: item.fabric_order_ref ? item.fabric_order_ref : "",
+        factoryLotNo: item.factory_lot_no ? item.factory_lot_no : "",
+        mark:
+          item.style_mark_no && item.style_mark_no?.length > 0
+            ? item.style_mark_no?.join(",")
+            : "",
+        garment:
+          item.garment_type && item.garment_type?.length > 0
+            ? item.garment_type?.join(",")
+            : "",
+        color:
+          item.color && item.color?.length > 0 ? item.color?.join(",") : "",
+        garmentSize:
+          item.garment_size && item.garment_size?.length > 0
+            ? item.garment_size?.join(",")
+            : "",
+        no_of_pieces:
+          item.no_of_pieces && item.no_of_pieces?.length > 0
+            ? item.no_of_pieces?.join(",")
+            : "",
+        no_of_boxes:
+          item.no_of_boxes && item.no_of_boxes?.length > 0
+            ? item.no_of_boxes?.join(",")
+            : "",
+        totalFabricLength: item.total_fabric_length
+          ? item.total_fabric_length
+          : "",
+        totalFabricWeight: item.total_fabric_weight
+          ? item.total_fabric_weight
+          : "",
+      });
+      }
+      else{
       const rowValues = Object.values({
         index: index + 1,
         date: item.date ? item.date : "",
@@ -1220,6 +1286,7 @@ const exportGarmentProcess = async (req: Request, res: Response) => {
           ? item.total_fabric_weight
           : "",
       });
+      }
       worksheet.addRow(rowValues);
     }
     // Auto-adjust column widths based on content

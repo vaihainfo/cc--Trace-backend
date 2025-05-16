@@ -800,6 +800,7 @@ const exportWeaverSale = async (req: Request, res: Response) => {
 const exportWeaverProcess = async (req: Request, res: Response) => {
   const excelFilePath = path.join("./upload", "weaver-process.xlsx");
   const { weaverId, seasonId, programId }: any = req.query;
+  const isNotReel = req.query.isNotReel || false;
   try {
     if (!weaverId) {
       return res.sendError(res, "Need weaver Id")
@@ -847,10 +848,19 @@ const exportWeaverProcess = async (req: Request, res: Response) => {
     mergedCell.font = { bold: true };
     mergedCell.alignment = { horizontal: 'center', vertical: 'middle' };
     // Set bold font for header row
-    const headerRow = worksheet.addRow([
+    let headerRow;
+    if (isNotReel === 'true') {
+     headerRow = worksheet.addRow([
+      "Sr No.", "Date", "Fabric Production Start Date", "Fabric Production End Date", "Season", "Finished Batch Lot No", "Garment Order Reference", "Brand Order Reference", "Programme",
+      "Job Details from garment", "Knit Fabric Type", "Fabric Length in Mts", "Fabric GSM", "Total Finished Fabric Length in Mts", "Total Yarn Utilized"
+    ]);
+  }
+  else{
+    headerRow = worksheet.addRow([
       "Sr No.", "Date", "Fabric Production Start Date", "Fabric Production End Date", "Season", "Finished Batch Lot No", "Fabric Reel Lot No", "Garment Order Reference", "Brand Order Reference", "Programme",
       "Job Details from garment", "Knit Fabric Type", "Fabric Length in Mts", "Fabric GSM", "Total Finished Fabric Length in Mts", "Total Yarn Utilized"
     ]);
+  }
     headerRow.font = { bold: true };
     let include = [
       {
@@ -906,7 +916,28 @@ const exportWeaverProcess = async (req: Request, res: Response) => {
       fabricGSM = item?.fabric_gsm?.length > 0 ? item?.fabric_gsm.join(",") : "";
       fabricLength = item?.fabric_length?.length > 0 ? item?.fabric_length.join(",") : "";
 
-      const rowValues = Object.values({
+      let rowValues;
+      if (isNotReel === 'true') {
+      rowValues = Object.values({
+        index: index + 1,
+        date: item.date ? item.date : '',
+        from_date: item.from_date ? item.from_date : '',
+        to_date: item.to_date ? item.to_date : '',
+        season: item.season ? item.season.name : '',
+        lotNo: item.batch_lot_no ? item.batch_lot_no : '',
+        garment_order_ref: item.garment_order_ref ? item.garment_order_ref : '',
+        brand_order_ref: item.brand_order_ref ? item.brand_order_ref : '',
+        program: item.program ? item.program.program_name : '',
+        jobDetails: item.job_details_garment ? item.job_details_garment : '',
+        fabricType: fabricType,
+        fabricLength: fabricLength,
+        fabricGSM: fabricGSM,
+        totalLength: item.total_fabric_length,
+        totalYarn: item.total_yarn_qty,
+      });
+    }
+    else{
+      rowValues = Object.values({
         index: index + 1,
         date: item.date ? item.date : '',
         from_date: item.from_date ? item.from_date : '',
@@ -924,6 +955,7 @@ const exportWeaverProcess = async (req: Request, res: Response) => {
         totalLength: item.total_fabric_length,
         totalYarn: item.total_yarn_qty,
       });
+    }
       worksheet.addRow(rowValues);
     }
     // Auto-adjust column widths based on content
@@ -1752,6 +1784,7 @@ const exportWeaverTransactionList = async (req: Request, res: Response) => {
 
   try {
     const searchTerm = req.query.search || "";
+    const isNotReel = req.query.isNotReel || false;
     // Create the excel workbook file
     const { seasonId, weaverId, status, filter, programId, spinnerId, invoice, lotNo, yarnCount, yarnType, reelLotNo }: any = req.query;
     const yarnTypeArray = yarnType?.split(',')?.map((item: any) => item.trim());
@@ -1770,11 +1803,21 @@ const exportWeaverTransactionList = async (req: Request, res: Response) => {
     mergedCell.font = { bold: true };
     mergedCell.alignment = { horizontal: 'center', vertical: 'middle' };
     // Set bold font for header row
-    const headerRow = worksheet.addRow([
+    let headerRow;
+    if (isNotReel === 'true') {
+    headerRow = worksheet.addRow([
+      "Sr No.", 'Date', 'Season', 'Spinner Name', 'Order Reference', 'Invoice Number',
+      'Spin Lot No', 'Yarn Type', 'Yarn Count', 'No of Boxes', 'Box Id',
+      'Total Weight (Kgs)', 'Program', 'Vehicle No', 'Transaction Via Trader', 'Agent Details'
+    ]);
+    }
+    else{
+      headerRow = worksheet.addRow([
       "Sr No.", 'Date', 'Season', 'Spinner Name', 'Order Reference', 'Invoice Number',
       'Spin Lot No', 'Yarn REEL Lot No', 'Yarn Type', 'Yarn Count', 'No of Boxes', 'Box Id',
       'Total Weight (Kgs)', 'Program', 'Vehicle No', 'Transaction Via Trader', 'Agent Details'
     ]);
+    }
     headerRow.font = { bold: true };
     const whereCondition: any = {}
     if (status === 'Pending') {
@@ -1861,7 +1904,29 @@ const exportWeaverTransactionList = async (req: Request, res: Response) => {
     });
     // Append data to worksheet
     for await (const [index, item] of eaver.entries()) {
-      const rowValues = Object.values({
+      let rowValues;
+      if (isNotReel === 'true') {
+      rowValues = Object.values({
+        index: index + 1,
+        date: item.date ? item.date : '',
+        season: item.season ? item.season.name : item.season.name,
+        spinner_name: item.spinner ? item.spinner.name : item.spinner.name,
+        order_ref: item.order_ref ? item.order_ref : '',
+        invoice_no: item.invoice_no ? item.invoice_no : '',
+        batch_lot_no: item.batch_lot_no ? item.batch_lot_no : '',
+        yarn_type: item.yarn_type ? item.yarn_type.map((item: any) => item)?.join(',') : '',
+        yarn_count: item.yarn_count ? item.yarn_count.map((item: any) => item.yarnCount_name)?.join(',') : '',
+        no_of_boxes: item.no_of_boxes,
+        box_ids: item.box_ids,
+        total_qty: item.total_qty,
+        program: item.program?.program_name,
+        vehicle_no: item.vehicle_no ? item.vehicle_no : '',
+        transaction_via_trader: item.transaction_via_trader === true ? "Yes" : "No",
+        agent_details: item.agent_details ? item.agent_details : 'N/A',
+      });
+       }
+        else{
+         rowValues = Object.values({
         index: index + 1,
         date: item.date ? item.date : '',
         season: item.season ? item.season.name : item.season.name,
@@ -1879,7 +1944,8 @@ const exportWeaverTransactionList = async (req: Request, res: Response) => {
         vehicle_no: item.vehicle_no ? item.vehicle_no : '',
         transaction_via_trader: item.transaction_via_trader === true ? "Yes" : "No",
         agent_details: item.agent_details ? item.agent_details : 'N/A',
-      });
+      }); 
+        }
       worksheet.addRow(rowValues);
     }
     // Auto-adjust column widths based on content
