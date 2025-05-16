@@ -23870,6 +23870,202 @@ const exportConsolidatedTraceability = async (req: Request, res: Response) => {
 
       let rowValues;
       if (isNotReel === 'true') {
+rowValues = Object.values({
+        index: index + 1,
+        buyer: item.dataValues.buyer ? item.dataValues.buyer.brand_name : "",
+        // qr: item.dataValues.qr ? process.env.BASE_URL + item.dataValues.qr : '',
+        qr: item.dataValues.qr ? baseurl + item.dataValues.qr : "",
+        date: item.dataValues.date ? item.dataValues.date : "",
+        garment_name: item.dataValues.garment
+          ? item.dataValues.garment.name
+          : "",
+        invoice: item.dataValues.invoice_no ? item.dataValues.invoice_no : "",
+        stylemarkNo:
+          item.dataValues.style_mark_no &&
+            item.dataValues.style_mark_no.length > 0
+            ? item.dataValues.style_mark_no.join(", ")
+            : "",
+        garmentType:
+          item.dataValues.garment_type &&
+            item.dataValues.garment_type.length > 0
+            ? item.dataValues.garment_type.join(", ")
+            : "",
+        no_of_boxes: item.dataValues.total_no_of_boxes
+          ? item.dataValues.total_no_of_boxes
+          : 0,
+        no_of_pieces: item.dataValues.total_no_of_pieces
+          ? item.dataValues.total_no_of_pieces
+          : 0,
+        dying_processor_name:
+          obj.dying_processor_name && obj.dying_processor_name.length > 0
+            ? obj.dying_processor_name.join(", ")
+            : "",
+        dying_inv:
+          obj.dying_inv && obj.dying_inv.length > 0
+            ? obj.dying_inv.join(", ")
+            : "",
+        dying_batch_lot_no:
+          obj.dying_batch_lot_no && obj.dying_batch_lot_no.length > 0
+            ? obj.dying_batch_lot_no.join(", ")
+            : "",
+        dying_total_quantity: obj.dying_total_quantity ?? "",
+        dying_net_weight: obj.dying_net_weight ?? "",
+
+        washing_processor_name:
+          obj.washing_processor_name && obj.washing_processor_name.length > 0
+            ? obj.washing_processor_name.join(", ")
+            : "",
+        washing_inv:
+          obj.washing_inv && obj.washing_inv.length > 0
+            ? obj.washing_inv.join(", ")
+            : "",
+        washing_batch_lot_no:
+          obj.washing_batch_lot_no && obj.washing_batch_lot_no.length > 0
+            ? obj.washing_batch_lot_no.join(", ")
+            : "",
+        washing_total_quantity: obj.washing_total_quantity ?? "",
+        washing_net_weight: obj.washing_net_weight ?? "",
+
+        printing_processor_name:
+          obj.printing_processor_name && obj.printing_processor_name.length > 0
+            ? obj.printing_processor_name.join(", ")
+            : "",
+        printing_inv:
+          obj.printing_inv && obj.printing_inv.length > 0
+            ? obj.printing_inv.join(", ")
+            : "",
+        printing_batch_lot_no:
+          obj.printing_batch_lot_no && obj.printing_batch_lot_no.length > 0
+            ? obj.printing_batch_lot_no.join(", ")
+            : "",
+        printing_total_quantity: obj.printing_total_quantity ?? "",
+        printing_net_weight: obj.printing_net_weight ?? "",
+        compacting_processor_name:
+          obj.compacting_processor_name &&
+            obj.compacting_processor_name.length > 0
+            ? obj.compacting_processor_name.join(", ")
+            : "",
+        compacting_inv:
+          obj.compacting_inv && obj.compacting_inv.length > 0
+            ? obj.compacting_inv.join(", ")
+            : "",
+        compacting_batch_lot_no:
+          obj.compacting_batch_lot_no && obj.compacting_batch_lot_no.length > 0
+            ? obj.compacting_batch_lot_no.join(", ")
+            : "",
+        compacting_total_quantity: obj.compacting_total_quantity ?? "",
+        compacting_net_weight: obj.compacting_net_weight ?? "",
+        // fbrc_date: obj.fbrc_sale_date && obj.fbrc_sale_date.length > 0 ? obj.fbrc_sale_date.join(', ') : '',
+        fbrc_date:
+          obj.fbrc_sale_date && obj.fbrc_sale_date.length > 0
+            ? obj.fbrc_sale_date.join(", ")
+            : "",
+        fbrc_name:
+          obj.fbrc_name && obj.fbrc_name.length > 0
+            ? obj.fbrc_name.join(", ")
+            : "",
+        fbrc_invoice:
+          obj.fbrc_invoice_no && obj.fbrc_invoice_no.length > 0
+            ? obj.fbrc_invoice_no.join(", ")
+            : "",
+        fbrc_lot:
+          obj.fbrc_lot_no && obj.fbrc_lot_no.length > 0
+            ? obj.fbrc_lot_no.join(", ")
+            : "",
+        fbrc_type:
+          obj.fbrc_fabric_type && obj.fbrc_fabric_type.length > 0
+            ? obj.fbrc_fabric_type.join(", ")
+            : "",
+        // total_fabric_length: item.dataValues.total_fabric_length
+        //   ? item.dataValues.total_fabric_length
+        //   : 0,
+        // total_fabric_weight: item.dataValues.total_fabric_weight
+        //   ? item.dataValues.total_fabric_weight
+        // : 0,
+        fbrc_net_length: obj.fbrc_weave_total_length
+          ? obj.fbrc_weave_total_length
+          : 0,
+        fbrc_net_weight: obj.fbrc_knit_total_weight
+          ? obj.fbrc_knit_total_weight
+          : 0,
+        spnr_date:
+          obj.spnr_sale_date && obj.spnr_sale_date.length > 0
+            ? obj.spnr_sale_date.join(", ")
+            : "",
+        spnr_name:
+          obj.spnr_name && obj.spnr_name.length > 0
+            ? obj.spnr_name.join(", ")
+            : "",
+        spnr_invoice_no:
+          obj.spnr_invoice_no && obj.spnr_invoice_no.length > 0
+            ? obj.spnr_invoice_no.join(", ")
+            : "",
+        spnr_lot_no:
+          obj.spnr_lot_no && obj.spnr_lot_no.length > 0
+            ? obj.spnr_lot_no.join(", ")
+            : "",
+        spnr_yarn_type:
+          obj.spnr_yarn_type && obj.spnr_yarn_type.length > 0
+            ? obj.spnr_yarn_type.join(", ")
+            : "",
+        spnr_yarn_count:
+          obj.spnr_yarn_count && obj.spnr_yarn_count.length > 0
+            ? obj.spnr_yarn_count.join(", ")
+            : "",
+        spnr_no_of_boxes: obj.spnr_no_of_boxes ? obj.spnr_no_of_boxes : 0,
+        spnr_box_ids:
+          obj.spnr_box_ids && obj.spnr_box_ids.length > 0
+            ? obj.spnr_box_ids.join(", ")
+            : "",
+        fbrc_total_qty: obj.fbrc_total_qty ? obj.fbrc_total_qty : 0,
+        gnr_sale_date:
+          obj.gnr_sale_date && obj.gnr_sale_date.length > 0
+            ? obj.gnr_sale_date.join(", ")
+            : "",
+        gnr_invoice_no:
+          obj.gnr_invoice_no && obj.gnr_invoice_no.length > 0
+            ? obj.gnr_invoice_no.join(", ")
+            : "",
+        gnr_name:
+          obj.gnr_name && obj.gnr_name.length > 0
+            ? obj.gnr_name.join(", ")
+            : "",
+        gnr_lot_no:
+          obj.gnr_lot_no && obj.gnr_lot_no.length > 0
+            ? obj.gnr_lot_no.join(", ")
+            : "",
+        gnr_no_of_bales: obj.gnr_no_of_bales ? obj.gnr_no_of_bales : 0,
+        gnr_press_no:
+          obj.gnr_press_no && obj.gnr_press_no.length > 0
+            ? obj.gnr_press_no.join(", ")
+            : "",
+        gnr_total_qty: obj.gnr_total_qty ? obj.gnr_total_qty : 0,
+        frmr_sale_date:
+          obj.frmr_sale_date && obj.frmr_sale_date.length > 0
+            ? obj.frmr_sale_date.join(", ")
+            : "",
+        frmr_farm_group:
+          obj.frmr_farm_group && obj.frmr_farm_group.length > 0
+            ? obj.frmr_farm_group.join(", ")
+            : "",
+        frmr_transactions_id:
+          obj.frmr_transactions_id && obj.frmr_transactions_id.length > 0
+            ? obj.frmr_transactions_id.join(", ")
+            : "",
+        frmr_villages:
+          obj.frmr_villages && obj.frmr_villages.length > 0
+            ? obj.frmr_villages.join(", ")
+            : "",
+        frmr_states:
+          obj.frmr_states && obj.frmr_states.length > 0
+            ? obj.frmr_states.join(", ")
+            : "",
+        frmr_programs:
+          obj.frmr_programs && obj.frmr_programs.length > 0
+            ? obj.frmr_programs.join(", ")
+            : "",
+      });
+      }else{
        rowValues = Object.values({
         index: index + 1,
         buyer: item.dataValues.buyer ? item.dataValues.buyer.brand_name : "",
@@ -24037,202 +24233,6 @@ const exportConsolidatedTraceability = async (req: Request, res: Response) => {
         gnr_reel_lot_no:
           obj.gnr_reel_lot_no && obj.gnr_reel_lot_no.length > 0
             ? obj.gnr_reel_lot_no.join(", ")
-            : "",
-        gnr_lot_no:
-          obj.gnr_lot_no && obj.gnr_lot_no.length > 0
-            ? obj.gnr_lot_no.join(", ")
-            : "",
-        gnr_no_of_bales: obj.gnr_no_of_bales ? obj.gnr_no_of_bales : 0,
-        gnr_press_no:
-          obj.gnr_press_no && obj.gnr_press_no.length > 0
-            ? obj.gnr_press_no.join(", ")
-            : "",
-        gnr_total_qty: obj.gnr_total_qty ? obj.gnr_total_qty : 0,
-        frmr_sale_date:
-          obj.frmr_sale_date && obj.frmr_sale_date.length > 0
-            ? obj.frmr_sale_date.join(", ")
-            : "",
-        frmr_farm_group:
-          obj.frmr_farm_group && obj.frmr_farm_group.length > 0
-            ? obj.frmr_farm_group.join(", ")
-            : "",
-        frmr_transactions_id:
-          obj.frmr_transactions_id && obj.frmr_transactions_id.length > 0
-            ? obj.frmr_transactions_id.join(", ")
-            : "",
-        frmr_villages:
-          obj.frmr_villages && obj.frmr_villages.length > 0
-            ? obj.frmr_villages.join(", ")
-            : "",
-        frmr_states:
-          obj.frmr_states && obj.frmr_states.length > 0
-            ? obj.frmr_states.join(", ")
-            : "",
-        frmr_programs:
-          obj.frmr_programs && obj.frmr_programs.length > 0
-            ? obj.frmr_programs.join(", ")
-            : "",
-      });
-    }else{
-             rowValues = Object.values({
-        index: index + 1,
-        buyer: item.dataValues.buyer ? item.dataValues.buyer.brand_name : "",
-        // qr: item.dataValues.qr ? process.env.BASE_URL + item.dataValues.qr : '',
-        qr: item.dataValues.qr ? baseurl + item.dataValues.qr : "",
-        date: item.dataValues.date ? item.dataValues.date : "",
-        garment_name: item.dataValues.garment
-          ? item.dataValues.garment.name
-          : "",
-        invoice: item.dataValues.invoice_no ? item.dataValues.invoice_no : "",
-        stylemarkNo:
-          item.dataValues.style_mark_no &&
-            item.dataValues.style_mark_no.length > 0
-            ? item.dataValues.style_mark_no.join(", ")
-            : "",
-        garmentType:
-          item.dataValues.garment_type &&
-            item.dataValues.garment_type.length > 0
-            ? item.dataValues.garment_type.join(", ")
-            : "",
-        no_of_boxes: item.dataValues.total_no_of_boxes
-          ? item.dataValues.total_no_of_boxes
-          : 0,
-        no_of_pieces: item.dataValues.total_no_of_pieces
-          ? item.dataValues.total_no_of_pieces
-          : 0,
-        dying_processor_name:
-          obj.dying_processor_name && obj.dying_processor_name.length > 0
-            ? obj.dying_processor_name.join(", ")
-            : "",
-        dying_inv:
-          obj.dying_inv && obj.dying_inv.length > 0
-            ? obj.dying_inv.join(", ")
-            : "",
-        dying_batch_lot_no:
-          obj.dying_batch_lot_no && obj.dying_batch_lot_no.length > 0
-            ? obj.dying_batch_lot_no.join(", ")
-            : "",
-        dying_total_quantity: obj.dying_total_quantity ?? "",
-        dying_net_weight: obj.dying_net_weight ?? "",
-
-        washing_processor_name:
-          obj.washing_processor_name && obj.washing_processor_name.length > 0
-            ? obj.washing_processor_name.join(", ")
-            : "",
-        washing_inv:
-          obj.washing_inv && obj.washing_inv.length > 0
-            ? obj.washing_inv.join(", ")
-            : "",
-        washing_batch_lot_no:
-          obj.washing_batch_lot_no && obj.washing_batch_lot_no.length > 0
-            ? obj.washing_batch_lot_no.join(", ")
-            : "",
-        washing_total_quantity: obj.washing_total_quantity ?? "",
-        washing_net_weight: obj.washing_net_weight ?? "",
-
-        printing_processor_name:
-          obj.printing_processor_name && obj.printing_processor_name.length > 0
-            ? obj.printing_processor_name.join(", ")
-            : "",
-        printing_inv:
-          obj.printing_inv && obj.printing_inv.length > 0
-            ? obj.printing_inv.join(", ")
-            : "",
-        printing_batch_lot_no:
-          obj.printing_batch_lot_no && obj.printing_batch_lot_no.length > 0
-            ? obj.printing_batch_lot_no.join(", ")
-            : "",
-        printing_total_quantity: obj.printing_total_quantity ?? "",
-        printing_net_weight: obj.printing_net_weight ?? "",
-        compacting_processor_name:
-          obj.compacting_processor_name &&
-            obj.compacting_processor_name.length > 0
-            ? obj.compacting_processor_name.join(", ")
-            : "",
-        compacting_inv:
-          obj.compacting_inv && obj.compacting_inv.length > 0
-            ? obj.compacting_inv.join(", ")
-            : "",
-        compacting_batch_lot_no:
-          obj.compacting_batch_lot_no && obj.compacting_batch_lot_no.length > 0
-            ? obj.compacting_batch_lot_no.join(", ")
-            : "",
-        compacting_total_quantity: obj.compacting_total_quantity ?? "",
-        compacting_net_weight: obj.compacting_net_weight ?? "",
-        // fbrc_date: obj.fbrc_sale_date && obj.fbrc_sale_date.length > 0 ? obj.fbrc_sale_date.join(', ') : '',
-        fbrc_date:
-          obj.fbrc_sale_date && obj.fbrc_sale_date.length > 0
-            ? obj.fbrc_sale_date.join(", ")
-            : "",
-        fbrc_name:
-          obj.fbrc_name && obj.fbrc_name.length > 0
-            ? obj.fbrc_name.join(", ")
-            : "",
-        fbrc_invoice:
-          obj.fbrc_invoice_no && obj.fbrc_invoice_no.length > 0
-            ? obj.fbrc_invoice_no.join(", ")
-            : "",
-        fbrc_lot:
-          obj.fbrc_lot_no && obj.fbrc_lot_no.length > 0
-            ? obj.fbrc_lot_no.join(", ")
-            : "",
-        fbrc_type:
-          obj.fbrc_fabric_type && obj.fbrc_fabric_type.length > 0
-            ? obj.fbrc_fabric_type.join(", ")
-            : "",
-        // total_fabric_length: item.dataValues.total_fabric_length
-        //   ? item.dataValues.total_fabric_length
-        //   : 0,
-        // total_fabric_weight: item.dataValues.total_fabric_weight
-        //   ? item.dataValues.total_fabric_weight
-        // : 0,
-        fbrc_net_length: obj.fbrc_weave_total_length
-          ? obj.fbrc_weave_total_length
-          : 0,
-        fbrc_net_weight: obj.fbrc_knit_total_weight
-          ? obj.fbrc_knit_total_weight
-          : 0,
-        spnr_date:
-          obj.spnr_sale_date && obj.spnr_sale_date.length > 0
-            ? obj.spnr_sale_date.join(", ")
-            : "",
-        spnr_name:
-          obj.spnr_name && obj.spnr_name.length > 0
-            ? obj.spnr_name.join(", ")
-            : "",
-        spnr_invoice_no:
-          obj.spnr_invoice_no && obj.spnr_invoice_no.length > 0
-            ? obj.spnr_invoice_no.join(", ")
-            : "",
-        spnr_lot_no:
-          obj.spnr_lot_no && obj.spnr_lot_no.length > 0
-            ? obj.spnr_lot_no.join(", ")
-            : "",
-        spnr_yarn_type:
-          obj.spnr_yarn_type && obj.spnr_yarn_type.length > 0
-            ? obj.spnr_yarn_type.join(", ")
-            : "",
-        spnr_yarn_count:
-          obj.spnr_yarn_count && obj.spnr_yarn_count.length > 0
-            ? obj.spnr_yarn_count.join(", ")
-            : "",
-        spnr_no_of_boxes: obj.spnr_no_of_boxes ? obj.spnr_no_of_boxes : 0,
-        spnr_box_ids:
-          obj.spnr_box_ids && obj.spnr_box_ids.length > 0
-            ? obj.spnr_box_ids.join(", ")
-            : "",
-        fbrc_total_qty: obj.fbrc_total_qty ? obj.fbrc_total_qty : 0,
-        gnr_sale_date:
-          obj.gnr_sale_date && obj.gnr_sale_date.length > 0
-            ? obj.gnr_sale_date.join(", ")
-            : "",
-        gnr_invoice_no:
-          obj.gnr_invoice_no && obj.gnr_invoice_no.length > 0
-            ? obj.gnr_invoice_no.join(", ")
-            : "",
-        gnr_name:
-          obj.gnr_name && obj.gnr_name.length > 0
-            ? obj.gnr_name.join(", ")
             : "",
         gnr_lot_no:
           obj.gnr_lot_no && obj.gnr_lot_no.length > 0
