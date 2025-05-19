@@ -396,7 +396,7 @@ const getKnitterFabricRes = (yarnList: any) => {
     }[] = [];
 
     for (const yarn of yarnList) {
-        const fabricWeight = mtConversion(yarn.dataValues.fabricWeight);
+        const fabricWeight = (yarn.dataValues.fabricWeight);
         const fabricName = yarn.dataValues.fabricName ?? "";
 
         const fFabric = fabricList.find(fabric =>
@@ -1016,12 +1016,12 @@ const getGarmentCompareCountRes = async (
         };
         if (fProcessed) {
             data.seasonName = fProcessed.dataValues.seasonName;
-            data.fabricProcessed = mtConversion(fProcessed.dataValues.processed);
+            data.fabricProcessed = (fProcessed.dataValues.processed);
         }
 
         if (fSold) {
             data.seasonName = fSold.dataValues.seasonName;
-            data.fabricSold = mtConversion(fSold.dataValues.sold);
+            data.fabricSold = (fSold.dataValues.sold);
         }
 
         if (!data.seasonName) {
@@ -1187,10 +1187,10 @@ const getFabricGarmentMonthlyDataRes = (
             data.fabricProcessed = mtConversion(fFabricProcessed.dataValues.processed);
 
         if (fGarmentProcessed)
-            data.garmentProcessed = mtConversion(fGarmentProcessed.dataValues.processed);
+            data.garmentProcessed = (fGarmentProcessed.dataValues.processed);
 
         if (fGarmentSold)
-            data.garmentSold = mtConversion(fGarmentSold.dataValues.sold);
+            data.garmentSold = (fGarmentSold.dataValues.sold);
 
         res.month.push(getMonthName(month.month));
         res.fabricProcured.push(data.fabricProcured);
