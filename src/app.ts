@@ -106,6 +106,7 @@ import GinProcess from "./models/gin-process.model";
 import { setupAssociations } from "./models/associations";
 import YarnBlendRouter from './router/master/yarnblend';
 import logging from "./middleware/logging";
+import mastersheetRouter from './router/master-sheet/master-sheet';
 
 
 const app = express();
@@ -306,6 +307,7 @@ app.use("/dashboard/weaver", dashboardWeaverRouter)
 app.use("/dashboard/seed-cotton-pricing", dashboardSeedCottonPricingRouter)
 app.use("/dashboard/lint-pricing", dashboardLintPricingRouter)
 app.use("/dashboard/yarn-pricing", dashboardYarnPricingRouter)
+app.use("/master-sheet", mastersheetRouter);
 
 app.use("/lab-master", labMasterRouter);
 app.use("/seed-company", seedCompanyRouter);
