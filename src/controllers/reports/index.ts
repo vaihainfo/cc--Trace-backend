@@ -5955,6 +5955,7 @@ const fetchSpinnerYarnProcessPagination = async (
         spin_process.to_date,
         spin_process."createdAt",
         EXTRACT(DAY FROM (spin_process."createdAt" - spin_process.date)) AS no_of_days,
+        season.id AS season_id,
         season.name AS season_name,
         spinner.name AS spinner_name,
         spinner.country_id AS country_id,
@@ -5990,64 +5991,54 @@ const fetchSpinnerYarnProcessPagination = async (
     ),
     cotton_consumed_data AS (
       SELECT
-        ls.process_id,
+        spd.process_id,
         COALESCE(SUM(ls.qty_used), 0) AS cotton_consumed,
+        COALESCE(SUM(CASE WHEN gs.season_id = spd.season_id THEN ls.qty_used ELSE 0 END), 0) AS cotton_consumed_current_season,
+        COALESCE(SUM(CASE WHEN gs.season_id != spd.season_id THEN ls.qty_used ELSE 0 END), 0) AS cotton_consumed_other_seasons,
         STRING_AGG(DISTINCT s.name, ', ') AS seasons
-      FROM
-        lint_selections ls
-      LEFT JOIN
-        gin_sales gs ON ls.lint_id = gs.id
-      LEFT JOIN
-        seasons s ON gs.season_id = s.id
-      GROUP BY
-        process_id
+      FROM spin_process_data spd
+      LEFT JOIN lint_selections ls ON spd.process_id = ls.process_id
+      LEFT JOIN gin_sales gs ON ls.lint_id = gs.id
+      LEFT JOIN seasons s ON gs.season_id = s.id
+      GROUP BY spd.process_id
     ),
-     comber_consumed_data AS (
+    comber_consumed_data AS (
       SELECT
-        cs.process_id,
+        spd.process_id,
         COALESCE(SUM(cs.qty_used), 0) AS comber_consumed,
+        COALESCE(SUM(CASE WHEN spd.season_id = spd_season.season_id THEN cs.qty_used ELSE 0 END), 0) AS comber_consumed_current_season,
+        COALESCE(SUM(CASE WHEN spd.season_id != spd_season.season_id THEN cs.qty_used ELSE 0 END), 0) AS comber_consumed_other_seasons,
         STRING_AGG(DISTINCT s.name, ', ') AS seasons
-      FROM
-        comber_selections cs
-      LEFT JOIN
-        combernoil_generations cg ON cs.yarn_id = cg.id
-      LEFT JOIN
-        spin_processes sp ON cg.process_id = sp.id
-      LEFT JOIN
-        seasons s ON sp.season_id = s.id
-      GROUP BY
-        cs.process_id
+      FROM spin_process_data spd
+      LEFT JOIN comber_selections cs ON spd.process_id = cs.process_id
+      LEFT JOIN combernoil_generations cg ON cs.yarn_id = cg.id
+      LEFT JOIN spin_processes spd_season ON cg.process_id = spd_season.id
+      LEFT JOIN seasons s ON spd_season.season_id = s.id
+      GROUP BY spd.process_id
     ),
     yarn_sold_data AS (
       SELECT
-        spin_process_id,
-        COALESCE(SUM(qty_used), 0) AS yarn_sold
-      FROM
-        spin_process_yarn_selections
-      GROUP BY
-        spin_process_id
+        spd.process_id,
+        COALESCE(SUM(spys.qty_used), 0) AS yarn_sold
+      FROM spin_process_data spd
+      LEFT JOIN spin_process_yarn_selections spys ON spd.process_id = spys.spin_process_id
+      GROUP BY spd.process_id
     ),
     yarn_count_data AS (
       SELECT
-        spin_process.id AS process_id,
-        STRING_AGG(DISTINCT "yarn_count"."yarnCount_name", ',') AS yarncount
-      FROM
-        spin_processes spin_process
-      LEFT JOIN
-        yarn_counts yarn_count ON yarn_count.id = ANY(spin_process.yarn_count)
-      GROUP BY
-        spin_process.id
+        spd.process_id,
+        STRING_AGG(DISTINCT yc."yarnCount_name", ',') AS yarncount
+      FROM spin_process_data spd
+      LEFT JOIN yarn_counts yc ON yc.id = ANY(spd.yarn_count)
+      GROUP BY spd.process_id
     ),
     total_blend_data AS (
       SELECT
-        spin_process.id AS process_id,
+        spd.process_id,
         SUM(val) AS total_blend_qty
-      FROM
-        spin_processes spin_process
-      LEFT JOIN
-        LATERAL unnest(spin_process.cottonmix_qty) AS val ON true
-      GROUP BY
-        spin_process.id
+      FROM spin_process_data spd
+      LEFT JOIN LATERAL unnest(spd.cottonmix_qty) AS val ON true
+      GROUP BY spd.process_id
     )
     SELECT
       spd.*,
@@ -6058,6 +6049,11 @@ const fetchSpinnerYarnProcessPagination = async (
       ccd.seasons AS lint_consumed_seasons,
       COALESCE(ysd.yarn_sold, 0) AS yarn_sold,
       COALESCE(tbd.total_blend_qty, 0) AS total_blend_qty,
+      csd.seasons AS comber_consumed_seasons,
+      COALESCE(ccd.cotton_consumed_current_season, 0) AS cotton_consumed_current_season,
+      COALESCE(ccd.cotton_consumed_other_seasons, 0) AS cotton_consumed_other_seasons,
+      COALESCE(csd.comber_consumed_current_season, 0) AS comber_consumed_current_season,
+      COALESCE(csd.comber_consumed_other_seasons, 0) AS comber_consumed_other_seasons,
       ycd.yarncount
     FROM
       spin_process_data spd
@@ -6066,7 +6062,7 @@ const fetchSpinnerYarnProcessPagination = async (
     LEFT JOIN
       comber_consumed_data csd ON spd.process_id = csd.process_id
     LEFT JOIN
-      yarn_sold_data ysd ON spd.process_id = ysd.spin_process_id
+      yarn_sold_data ysd ON spd.process_id = ysd.process_id
     LEFT JOIN
       yarn_count_data ycd ON spd.process_id = ycd.process_id
     LEFT JOIN
