@@ -31,6 +31,7 @@ import GinnerAllocatedVillage from "../../models/ginner-allocated-vilage.model";
 import moment from "moment";
 import GinToGinSale from "../../models/gin-to-gin-sale.model";
 import Block from "../../models/block.model";
+import SpinnerPlaceLintOrderSales from "../../models/spinner-place-lint-order-sales.model";
 
 //create Ginner Process
 // const createGinnerProcess = async (req: Request, res: Response) => {
@@ -2360,8 +2361,18 @@ const createGinnerSales = async (req: Request, res: Response) => {
         { where: { id: bale.id }, transaction }
       );
     }
-
     await transaction.commit();
+
+    if(req.body.selectedLintOrders && req.body.selectedLintOrders.length > 0){
+      for await (let obj of req.body.selectedLintOrders) {  
+        await SpinnerPlaceLintOrderSales.create({
+          spinner_place_lint_order_id: obj.id,
+          quantity_used: obj.quantity, 
+          ginner_sale_id: ginSales.id
+        });
+      }
+    }
+
     res.sendSuccess(res, { ginSales });
   } catch (error: any) {
     console.error(error);
