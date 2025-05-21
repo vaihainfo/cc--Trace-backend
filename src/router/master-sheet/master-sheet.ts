@@ -3,7 +3,8 @@ import {
     fetchConsolidatedDetailsGinnerSpinnerPagination,
     exportConsolidatedDetailsGinnerSpinner,
     fetchSpinnerDetailsPagination,
-    exportSpinnerDetails
+    exportSpinnerDetails,
+    fetchConsolidatedDetailsFarmerGinnerPagination
 } from "../../controllers/master-sheet";
 import accessControl from "../../middleware/access-control";
 
@@ -16,5 +17,6 @@ router.get('/get-consolidated-ginner-spinner', fetchConsolidatedDetailsGinnerSpi
 router.get('/export-consolidated-ginner-spinner', exportConsolidatedDetailsGinnerSpinner);
 router.get('/get-spinner-details-sheet', fetchSpinnerDetailsPagination);
 router.get('/export-spinner-details', exportSpinnerDetails);
+router.get('/get-consolidated-farmer-ginner', fetchConsolidatedDetailsFarmerGinnerPagination);
 
 export default router;
