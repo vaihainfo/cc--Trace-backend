@@ -1464,7 +1464,10 @@ const fetchGinnerDetailsPagination = async (req: Request, res: Response) => {
             g.id,
             g.state_id,
             g.program_id,
-            g.name
+            g.name,
+            s.state_name AS state_name,
+            c.id AS country_id,
+            c.county_name AS country_name
           FROM
             ginners g
           JOIN states s ON g.state_id = s.id
@@ -1701,8 +1704,7 @@ const fetchGinnerDetailsPagination = async (req: Request, res: Response) => {
                   gv.ginner_id
             )
       SELECT
-        fg.id,
-        fg.name,
+        fg.*,
         COALESCE(ec.allocated_seed_cotton, 0) / 1000 AS allocated_seed_cotton_mt,
         COALESCE(pd.procurement_seed_cotton, 0) / 1000 AS procurement_seed_cotton_mt,
         COALESCE(psc.pending_seed_cotton, 0) / 1000 AS pending_seed_cotton_mt,
