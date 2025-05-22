@@ -1035,7 +1035,7 @@ const fetchConsolidatedDetailsFarmerGinnerPagination = async (req: Request, res:
 
     if (stateId) {
       const idArray = stateId.split(",").map((id: string) => parseInt(id, 10));
-      brandCondition.push(`g.id IN (${stateId})`);
+      brandCondition.push(`g.state_id IN (${stateId})`);
     }
 
     const whereConditionSql = whereCondition.length ? `${whereCondition.join(' AND ')}` : '1=1';
@@ -1054,6 +1054,7 @@ const fetchConsolidatedDetailsFarmerGinnerPagination = async (req: Request, res:
     JOIN states s ON g.state_id = s.id
     JOIN countries c ON g.country_id = c.id
     WHERE ${brandConditionSql}
+    GROUP BY s.id, g.state_id, g.country_id, c.id
     `;
 
     // Data query
