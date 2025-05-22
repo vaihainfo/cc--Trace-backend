@@ -1291,38 +1291,38 @@ const fetchConsolidatedDetailsFarmerGinnerPagination = async (req: Request, res:
                     AND ${baleSaleConditionSql}
               GROUP BY
                   g.state_id
---            ),
---           expected_cotton_data AS (
---               SELECT
---                 gv.state_id,
---                 COALESCE(SUM(CAST("farms"."total_estimated_cotton"AS DOUBLE PRECISION)), 0) AS allocated_seed_cotton
---                 FROM "ginner_allocated_villages" as gv
---               LEFT JOIN 
---                   states_data s ON "gv"."state_id" = s.id
---               LEFT JOIN 
---                   "farmers" AS "farmer" ON s.id = "farmer"."state_id" and "farmer"."brand_id" ="gv"."brand_id"
---               LEFT JOIN 
---                   "farms" as "farms" on farms.farmer_id = "farmer".id and farms.season_id = gv.season_id
---               LEFT JOIN 
---                   "seasons" AS "season" ON "gv"."season_id" = "season"."id"
---               WHERE
---                   ${seedAllocationConditionSql} 
---               GROUP BY
---                 gv.state_id
+            ),
+            expected_cotton_data AS (
+                SELECT
+                  gv.state_id,
+                  COALESCE(SUM(CAST("farms"."total_estimated_cotton"AS DOUBLE PRECISION)), 0) AS allocated_seed_cotton
+                  FROM "ginner_allocated_villages" as gv
+                LEFT JOIN 
+                    states_data s ON "gv"."state_id" = s.id
+                LEFT JOIN 
+                    "farmers" AS "farmer" ON gv.village_id = "farmer"."village_id" and "farmer"."brand_id" ="gv"."brand_id"
+                LEFT JOIN 
+                    "farms" as "farms" on farms.farmer_id = "farmer".id and farms.season_id = gv.season_id
+                LEFT JOIN 
+                    "seasons" AS "season" ON "gv"."season_id" = "season"."id"
+                WHERE
+                    ${seedAllocationConditionSql} 
+                GROUP BY
+                  gv.state_id
             )
       SELECT
         fg.id AS state_id,
         fg.state_name,
         fg.country_name,
-        -- COALESCE(ec.allocated_seed_cotton, 0) / 1000 AS allocated_seed_cotton_mt,
+        COALESCE(ec.allocated_seed_cotton, 0) / 1000 AS allocated_seed_cotton_mt,
         COALESCE(pd.procurement_seed_cotton, 0) / 1000 AS procurement_seed_cotton_mt,
         COALESCE(psc.pending_seed_cotton, 0) / 1000 AS pending_seed_cotton_mt,
         COALESCE(pd.seed_cotton_stock, 0) / 1000 AS procured_seed_cotton_stock_mt,
-        -- (COALESCE(ec.allocated_seed_cotton, 0) * 35/100) / 1000 AS allocated_lint_cotton_mt,
---       CAST(ROUND(
---             CAST((((COALESCE(ec.allocated_seed_cotton, 0) * 35/100) / 1000) - ((COALESCE(pd.procurement_seed_cotton, 0) * 35/100) / 1000)) AS NUMERIC), 
---             2
---         ) AS DOUBLE PRECISION) AS available_lint_cotton_farmer_mt,
+        (COALESCE(ec.allocated_seed_cotton, 0) * 35/100) / 1000 AS allocated_lint_cotton_mt,
+        CAST(ROUND(
+             CAST((((COALESCE(ec.allocated_seed_cotton, 0) * 35/100) / 1000) - ((COALESCE(pd.procurement_seed_cotton, 0) * 35/100) / 1000)) AS NUMERIC), 
+             2
+         ) AS DOUBLE PRECISION) AS available_lint_cotton_farmer_mt,
         (COALESCE(pd.procurement_seed_cotton, 0) * 35/100) / 1000 AS procured_lint_cotton_mt,
         COALESCE(gb.total_qty, 0) AS produced_lint_cotton_kgs,
         COALESCE(gb.total_qty, 0) / 1000 AS produced_lint_cotton_mt,
@@ -1346,7 +1346,7 @@ const fetchConsolidatedDetailsFarmerGinnerPagination = async (req: Request, res:
         LEFT JOIN gin_bale_data gb ON fg.id = gb.state_id
         LEFT JOIN pending_seed_cotton_data psc ON fg.id = psc.state_id
         LEFT JOIN gin_sales_data gs ON fg.id = gs.state_id
---        LEFT JOIN expected_cotton_data ec ON fg.id = ec.state_id
+        LEFT JOIN expected_cotton_data ec ON fg.id = ec.state_id
         LEFT JOIN gin_bale_greyout_data gbg ON fg.id = gbg.state_id
         LEFT JOIN gin_to_gin_sales_data gtg ON fg.id = gtg.state_id
         LEFT JOIN gin_to_gin_recieved_data gtgr ON fg.id = gtgr.state_id
