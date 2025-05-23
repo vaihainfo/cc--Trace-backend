@@ -64,6 +64,9 @@ import Country from "../../models/country.model";
 import GinHeap from "../../models/gin-heap.model";
 import GinToGinSale from "../../models/gin-to-gin-sale.model";
 import District from "../../models/district.model";
+import SpinnerYarnOrder from "../../models/spinner-yarn-order.model";
+import YarnOrderProcess from "../../models/yarn-order-process.model";
+import SpinnerYarnOrderSales from "../../models/spinner-yarn-order-sales.model";
 
 const fetchBaleProcess = async (req: Request, res: Response) => {
   const searchTerm = req.query.search || "";
@@ -27396,6 +27399,522 @@ const fetchDataEntryMonitorDashboardPagination = async (req: Request, res: Respo
   }
 };
 
+const fetchSpinnerYarnOrdersPagination = async (req: Request, res: Response) => {
+  const searchTerm = req.query.search || "";
+  const page = Number(req.query.page) || 1;
+  const limit = Number(req.query.limit) || 10;
+  const { spinnerId, seasonId, programId, brandId, countryId, startDate, endDate }: any = req.query;
+  const offset = (page - 1) * limit;
+  const whereCondition: any = {};
+  
+  try {
+   
+    if (searchTerm) {
+      whereCondition[Op.or] = [
+        { "$spinner.name$": { [Op.iLike]: `%${searchTerm}%` } },
+        { "$season.name$": { [Op.iLike]: `%${searchTerm}%` } },
+        { fabricMillOrderRefNumber: { [Op.iLike]: `%${searchTerm}%` } },
+        { spinnerInternalOrderNumber: { [Op.iLike]: `%${searchTerm}%` } },
+        { reel_yarn_order_number: { [Op.iLike]: `%${searchTerm}%` } },
+      ];
+    }
+    if (spinnerId) {
+      const idArray: number[] = spinnerId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.spinnerId = { [Op.in]: idArray };
+    }
+    if (brandId) {
+      const idArray: number[] = brandId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition["$spinner.brand$"] = { [Op.overlap]: idArray };
+    }
+
+    if (countryId) {
+      const idArray: number[] = countryId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition["$spinner.country_id$"] = { [Op.in]: idArray };
+    }
+
+    if (seasonId) {
+      const idArray: number[] = seasonId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.season_id = { [Op.in]: idArray };
+    }
+
+    if (startDate && endDate) {
+      const startOfDay = new Date(startDate);
+      startOfDay.setUTCHours(0, 0, 0, 0);
+      const endOfDay = new Date(endDate);
+      endOfDay.setUTCHours(23, 59, 59, 999);
+      whereCondition.date = { [Op.between]: [startOfDay, endOfDay] }
+    }
+
+    // Get base yarn orders
+    const { count, rows } = await SpinnerYarnOrder.findAndCountAll({
+      distinct: true, 
+      order: [["createdAt", "DESC"]],
+      include: [
+        {
+          model: SpinnerYarnOrderSales,
+          as: 'YarnOrderSales',
+          attributes: ['quantity_used']
+        },
+        {
+          model: YarnOrderProcess,
+          as: 'YarnOrderProcess',
+          attributes: ['id', 'name', 'address']
+        },
+        {
+          model: Spinner,
+          as : 'spinner',
+          required: true
+         
+        },
+        {
+          model: Season,
+          as : 'season',
+          attributes: ['id', 'name'],
+           required: true
+        },
+      ],
+      where: whereCondition,
+      offset: offset,
+      limit: limit,
+    });
+    // Get all buyer and process IDs
+    const mappedBuyers = rows
+      .filter((order: any) => order.buyerType === "Mapped" && order.buyerOption)
+      .map((order: any) => ({
+        id: order.buyerOption,
+        type: order.buyer_option_type
+      }));
+
+    const knitterIds = mappedBuyers
+      .filter((buyer: any) => buyer.type === "kniter")
+      .map((buyer: any) => buyer.id);
+
+    const weaverIds = mappedBuyers
+      .filter((buyer: any) => buyer.type === "weaver")
+      .map((buyer: any) => buyer.id);
+
+    const yarnBlendIds = rows
+      .filter((order: any) => order.yarnBlend)
+      .map((order: any) => order.yarnBlend);
+
+    const processIds = rows
+      .filter((order: any) => order.processId)
+      .map((order: any) => order.processId);
+    const yarnCountIds = rows
+      .filter((order: any) => order.yarnCount)
+      .map((order: any) => order.yarnCount);
+    // Get buyers and processes data
+    let weavers: any = [];
+    let processes: any = [];
+    let yarnBlends: any = [];
+    let yarnCounts: any = [];
+
+    // Fetch buyers based on their type
+    if (knitterIds.length > 0) {
+      const knitters = await Knitter.findAll({
+        where: { id: knitterIds },
+        attributes: ["id", "name"],
+      });
+      weavers.push(...knitters.map((a: any) => ({ id: a.id, name: a.name, type: 'kniter' })));
+    }
+
+    if (weaverIds.length > 0) {
+      const weaversList = await Weaver.findAll({
+        where: { id: weaverIds },
+        attributes: ["id", "name"],
+      });
+      weavers.push(...weaversList.map((a: any) => ({ id: a.id, name: a.name, type: 'weaver' })));
+    }
+
+    if(yarnBlendIds.length > 0){  
+      yarnBlends = await CottonMix.findAll({
+        where: { id: yarnBlendIds },
+        attributes: ["id", "cottonMix_name"],
+      });
+    }
+
+    if (processIds.length > 0) {
+      processes = await YarnOrderProcess.findAll({
+        where: { id: processIds },
+        attributes: ["id", "name"],
+      });
+    }
+
+    if (yarnCountIds.length > 0) {
+      yarnCounts = await YarnCount.findAll({
+        where: { id: yarnCountIds },
+        attributes: ["id", "yarnCount_name"],
+      });
+    }
+
+    // Create lookup maps
+    const weaverMap = new Map(weavers.map((w: any) => [w.id, w]));
+    const processMap = new Map(processes.map((p: any) => [p.id, p]));
+    const yarnBlendMap = new Map(yarnBlends.map((p: any) => [p.id, p]));
+    const yarnCountMap = new Map(yarnCounts.map((y: any) => [y.id, y]));
+
+    // Combine the data
+    const enrichedYarnOrders = rows.map((order: any) => {
+      const totalSales = order.YarnOrderSales?.reduce(
+        (sum: number, sale: any) => sum + (sale.quantity_used || 0),
+        0
+      ) || 0;
+
+      const availableQty = order.totalOrderQuantity - totalSales;
+
+      return {
+        ...order.toJSON(),
+        Weaver:
+          order.buyerType === "Mapped" && order.buyerOption
+            ? weaverMap.get(order.buyerOption)
+            : null,
+        YarnOrderProcess: order.processId
+          ? processMap.get(order.processId)
+          : null,
+        CottonMix: order.yarnBlend
+          ? yarnBlendMap.get(order.yarnBlend)
+          : null,
+        YarnCount: order.yarnCount
+          ? yarnCountMap.get(order.yarnCount)
+          : null,
+        availableQty,
+        totalSales
+      };
+    });
+    return res.sendPaginationSuccess(res, enrichedYarnOrders, count);
+   
+  }catch (error: any) {
+    console.log(error);
+    return res.sendError(res, error.message);
+  }
+};
+
+const exportSpinnerYarnOrders = async (req: Request, res: Response) => {
+
+  const excelFilePath = path.join("./upload", "excel-spinner-yarn-order.xlsx");
+
+  const searchTerm = req.query.search || "";
+  const page = Number(req.query.page) || 1;
+  const limit = Number(req.query.limit) || 10;
+  const { exportType,spinnerId, seasonId, brandId, countryId, startDate, endDate }: any = req.query;
+  const offset = (page - 1) * limit;
+  const whereCondition: any = {};
+  console.log('reqlog',req);
+  try {
+    if (exportType === "all") {
+      return res.status(200).send({
+        success: true,
+        messgage: "File successfully Generated",
+        data: process.env.BASE_URL + "spinner-yarn-order.xlsx",
+      });
+    } 
+    else{
+      if (searchTerm) {
+      whereCondition[Op.or] = [
+        { "$spinner.name$": { [Op.iLike]: `%${searchTerm}%` } },
+        { "$season.name$": { [Op.iLike]: `%${searchTerm}%` } },
+        { fabricMillOrderRefNumber: { [Op.iLike]: `%${searchTerm}%` } },
+        { spinnerInternalOrderNumber: { [Op.iLike]: `%${searchTerm}%` } },
+        { reel_yarn_order_number: { [Op.iLike]: `%${searchTerm}%` } },
+      ];
+    }
+    if (spinnerId) {
+      const idArray: number[] = spinnerId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.spinnerId = { [Op.in]: idArray };
+    }
+    if (brandId) {
+      const idArray: number[] = brandId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition["$spinner.brand$"] = { [Op.overlap]: idArray };
+    }
+
+    if (countryId) {
+      const idArray: number[] = countryId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition["$spinner.country_id$"] = { [Op.in]: idArray };
+    }
+
+    if (seasonId) {
+      const idArray: number[] = seasonId
+        .split(",")
+        .map((id: any) => parseInt(id, 10));
+      whereCondition.season_id = { [Op.in]: idArray };
+    }
+
+    if (startDate && endDate) {
+      const startOfDay = new Date(startDate);
+      startOfDay.setUTCHours(0, 0, 0, 0);
+      const endOfDay = new Date(endDate);
+      endOfDay.setUTCHours(23, 59, 59, 999);
+      whereCondition.date = { [Op.between]: [startOfDay, endOfDay] }
+    }
+
+    // Get base yarn orders
+    const  rows = await SpinnerYarnOrder.findAll({
+      distinct: true, 
+      order: [["createdAt", "DESC"]],
+      include: [
+        {
+          model: SpinnerYarnOrderSales,
+          as: 'YarnOrderSales',
+          attributes: ['quantity_used']
+        },
+        {
+          model: YarnOrderProcess,
+          as: 'YarnOrderProcess',
+          attributes: ['id', 'name', 'address']
+        },
+        {
+          model: Spinner,
+          as : 'spinner',
+          required: true
+         
+        },
+        {
+          model: Season,
+          as : 'season',
+          attributes: ['id', 'name'],
+           required: true
+        },
+      ],
+      where: whereCondition,
+      offset: offset,
+      limit: limit,
+    });
+    // Get all buyer and process IDs
+
+    const mappedBuyers = rows
+      .filter((order: any) => order.buyerType === "Mapped" && order.buyerOption)
+      .map((order: any) => ({
+        id: order.buyerOption,
+        type: order.buyer_option_type
+      }));
+
+    const knitterIds = mappedBuyers
+      .filter((buyer: any) => buyer.type === "kniter")
+      .map((buyer: any) => buyer.id);
+
+    const weaverIds = mappedBuyers
+      .filter((buyer: any) => buyer.type === "weaver")
+      .map((buyer: any) => buyer.id);
+
+    const yarnBlendIds = rows
+      .filter((order: any) => order.yarnBlend)
+      .map((order: any) => order.yarnBlend);
+
+    const processIds = rows
+      .filter((order: any) => order.processId)
+      .map((order: any) => order.processId);
+
+    const yarnCountIds = rows
+      .filter((order: any) => order.yarnCount)
+      .map((order: any) => order.yarnCount);
+      
+    // Get buyers and processes data
+    let weavers: any = [];
+    let processes: any = [];
+    let yarnBlends: any = [];
+    let yarnCounts: any = [];
+
+    // Fetch buyers based on their type
+    if (knitterIds.length > 0) {
+      const knitters = await Knitter.findAll({
+        where: { id: knitterIds },
+        attributes: ["id", "name"],
+      });
+      weavers.push(...knitters.map((a: any) => ({ id: a.id, name: a.name, type: 'kniter' })));
+    }
+
+    if (weaverIds.length > 0) {
+      const weaversList = await Weaver.findAll({
+        where: { id: weaverIds },
+        attributes: ["id", "name"],
+      });
+      weavers.push(...weaversList.map((a: any) => ({ id: a.id, name: a.name, type: 'weaver' })));
+    }
+
+    if(yarnBlendIds.length > 0){  
+      yarnBlends = await CottonMix.findAll({
+        where: { id: yarnBlendIds },
+        attributes: ["id", "cottonMix_name"],
+      });
+    }
+
+    if (processIds.length > 0) {
+      processes = await YarnOrderProcess.findAll({
+        where: { id: processIds },
+        attributes: ["id", "name"],
+      });
+    }
+
+    if (yarnCountIds.length > 0) {
+      yarnCounts = await YarnCount.findAll({
+        where: { id: yarnCountIds },
+        attributes: ["id", "yarnCount_name"],
+      });
+    }
+
+    // Create lookup maps
+    const weaverMap = new Map(weavers.map((w: any) => [w.id, w]));
+    const processMap = new Map(processes.map((p: any) => [p.id, p]));
+    const yarnBlendMap = new Map(yarnBlends.map((p: any) => [p.id, p]));
+    const yarnCountMap = new Map(yarnCounts.map((y: any) => [y.id, y]));
+
+        // Combine the data
+          
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet("Sheet1");
+
+      let headerRow;
+
+      headerRow = worksheet.addRow([
+          "Sr No.",
+          "Season",
+          "Spinner Name",
+          "Name of Fabric Mill",
+          "Date of Order Received",
+          "Date of Creation",
+          "Expected Date of Yarn Dispatch",
+          "Brand Order Reference Number",
+          "Fabric Mill Order Reference Number",
+          "Date Fabric Mill Placed Yarn Order",
+          "Spinner Internal Order Reference Number",
+          "Yarn Blend",
+          "Yarn Type",
+          "Yarn Count",
+          "Total Order Quantity (kgs)",
+          "Tentative Date of Order Completion",
+          "Agent Details",
+          "TraceBale REEL Yarn Order Number",
+          "Order Completion %",
+        ]);
+
+        let totals = {
+        total_quantity: 0,
+
+       };
+    
+      const formatDate = (dateString: any) => {
+        if (!dateString) return "";
+        const date = new Date(dateString);
+
+        const day = String(date.getDate()).padStart(2, '0');
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const year = date.getFullYear();
+
+        return `${day}-${month}-${year}`;
+      };
+
+      for await (const [index, item] of rows.entries()) {
+       
+       let rowValues;
+        const totalSales = item.YarnOrderSales?.reduce(
+            (sum: number, sale: any) => sum + (sale.quantity_used || 0),
+            0
+          ) || 0;
+          
+        const buyerName :any = item.buyerType === "Mapped" && item.buyerOption ? weaverMap.get(item.buyerOption) : item.processId
+          ? processMap.get(item.processId) : 'N/A';
+
+        const CottonMix :any = item.yarnBlend ? yarnBlendMap.get(item.yarnBlend) : 'N/A';
+
+        const YarnCount :any = item.yarnCount ? yarnCountMap.get(item.yarnCount) : 'N/A';
+
+        rowValues = {
+            index: index + 1,
+            season: item.season ? item.season?.name : "",
+            spinner: item.spinner ? item.spinner?.name : "",
+            Weaver: buyerName?.name,
+            orderReceivedDate: item.orderReceivedDate ? formatDate(item.orderReceivedDate) : "",
+            date: item.date ? formatDate(item.date) : "",
+            expectedYarnDispatchDate: item.expectedYarnDispatchDate ? formatDate(item.expectedYarnDispatchDate) : "",
+            brandOrderRefNumber: item.brandOrderRefNumber ? item.brandOrderRefNumber : "",
+            fabricMillOrderRefNumber: item.fabricMillOrderRefNumber ? item.fabricMillOrderRefNumber : "",
+            dateFabricMillPlacedOrder: item.dateFabricMillPlacedOrder ? formatDate(item.dateFabricMillPlacedOrder) : "",
+            spinnerInternalOrderNumber: item.spinnerInternalOrderNumber ? item.spinnerInternalOrderNumber : "",
+            CottonMix: CottonMix?.cottonMix_name,
+            yarnTypeSelect: item.yarnTypeSelect === "Other" ? item.yarnTypeOther : item.yarnTypeSelect,
+            YarnCount:  YarnCount?.yarnCount_name,
+            totalOrderQuantity: Number(item.totalOrderQuantity),
+            tentativeOrderCompletionDate: item.tentativeOrderCompletionDate,
+            agent_details:item?.agent_details,
+            reel_yarn_order_number: item.reel_yarn_order_number ? item.reel_yarn_order_number : "",
+            orderPercentange: totalSales > 0 
+            ? ((totalSales / item.totalOrderQuantity) * 100).toFixed(2)  + ' %' : 0 + ' %',
+          };
+            totals.total_quantity += Number(rowValues.totalOrderQuantity);
+       
+            worksheet.addRow(Object.values(rowValues));
+       
+        }
+        
+        let rowValues;
+        rowValues = {
+          index:"",
+          season:"",
+          spinner:"",
+          Weaver:"",
+          orderReceivedDate:"",
+          date:"",
+          expectedYarnDispatchDate:"",
+          brandOrderRefNumber:"",
+          fabricMillOrderRefNumber:"",
+          dateFabricMillPlacedOrder:"",
+          spinnerInternalOrderNumber:"",
+          CottonMix:"",
+          yarnTypeSelect:"",
+          YarnCount:"Totals",
+          totalOrderQuantity:Number(formatDecimal(totals.total_quantity)),
+          tentativeOrderCompletionDate:"",
+          agent_details:"",
+          reel_yarn_order_number:"",
+          orderPercentange:"",
+        };
+         worksheet.addRow(Object.values(rowValues)).eachCell(cell => cell.font = { bold: true });
+
+        let borderStyle = {
+          top: { style: "thin" },
+          left: { style: "thin" },
+          bottom: { style: "thin" },
+          right: { style: "thin" }
+        };
+        // Auto-adjust column widths based on content
+        worksheet.columns.forEach((column: any) => {
+          let maxCellLength = 0;
+          column.eachCell({ includeEmpty: true }, (cell: any) => {
+            const cellLength = (cell.value ? cell.value.toString() : "").length;
+            maxCellLength = Math.max(maxCellLength, cellLength);
+            cell.border = borderStyle;
+          });
+          column.width = Math.min(14, maxCellLength + 2); // Limit width to 30 characters
+        });
+
+        // Save the workbook
+        await workbook.xlsx.writeFile(excelFilePath);
+        res.status(200).send({
+          success: true,
+          messgage: "File successfully Generated",
+          data: process.env.BASE_URL + "excel-spinner-yarn-order.xlsx",
+        });
+     }
+  }catch (error: any) {
+    console.log(error);
+    return res.sendError(res, error.message);
+  }
+};
+
 
 export {
   fetchBaleProcess,
@@ -27470,6 +27989,8 @@ export {
   exportGinnerProcessGreyOutReport,
   exportSpinnerProcessGreyOutReport,
   fetchGinnerLintStockPagination,
-  exportGinnerLintStockReport
+  exportGinnerLintStockReport,
+  fetchSpinnerYarnOrdersPagination,
+  exportSpinnerYarnOrders
 };
 
