@@ -10,22 +10,18 @@ jobs:
   sync:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout source repository
+      - name: Checkout Repository
         uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.SYNC_TOKEN }}
+          fetch-depth: 0
 
-      - name: Push to destination repository
-        env:
-          PAT: ${{ secrets.SYNC_TOKEN }}
-        run: |
-          # Configure git
-          git config --global user.name "Sync Bot"
-          git config --global user.email "sync-bot@users.noreply.github.com"
-          
-          # Get all branches and tags
-          git fetch --prune --unshallow
-          
-          # Add destination as remote
-          git remote add destination https://$PAT@github.com/vaihainfo/cc--Trace-backend.git
-          
-          # Push development branch to destination
-          git push destination development:development
+      - name: Sync to Destination Repository
+        uses: wei/git-sync@v3
+        with:
+          source_repo: "https://github.com/vaihainfo/tracebalebackend.git"
+          source_branch: "development"
+          destination_repo: "https://github.com/vaihainfo/cc--Trace-backend.git"
+          destination_branch: "development"
+          ssh_private_key: ${{ secrets.SYNC_TOKEN }}
+
