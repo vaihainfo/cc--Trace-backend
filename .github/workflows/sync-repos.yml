@@ -10,18 +10,28 @@ jobs:
   sync:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Repository
+      - name: Checkout source repository
         uses: actions/checkout@v3
         with:
           token: ${{ secrets.SYNC_TOKEN }}
           fetch-depth: 0
 
-      - name: Sync to Destination Repository
-        uses: wei/git-sync@v3
-        with:
-          source_repo: "https://github.com/vaihainfo/tracebalebackend.git"
-          source_branch: "development"
-          destination_repo: "https://github.com/vaihainfo/cc--Trace-backend.git"
-          destination_branch: "development"
-          ssh_private_key: ${{ secrets.SYNC_TOKEN }}
-
+      - name: Sync repositories
+        run: |
+          # Configure git
+          git config --global user.name "GitHub Action"
+          git config --global user.email "action@github.com"
+          git config --global --add safe.directory /github/workspace
+          
+          # Add token to source URL
+          git remote set-url origin "https://${{ secrets.SYNC_TOKEN }}@github.com/vaihainfo/tracebalebackend.git"
+          
+          # Add destination repository
+          git remote add destination "https://${{ secrets.SYNC_TOKEN }}@github.com/vaihainfo/cc--Trace-backend.git"
+          
+          # Fetch all branches
+          git fetch origin
+          
+          # Push development branch to destination
+          git checkout development
+          git push -f destination development:development
