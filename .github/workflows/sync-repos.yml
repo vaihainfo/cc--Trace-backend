@@ -12,25 +12,20 @@ jobs:
     steps:
       - name: Checkout source repository
         uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
-          token: ${{ secrets.SYNC_TOKEN }}
-
-      - name: Configure Git
-        run: |
-          git config --global user.name "GitHub Actions Bot"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
 
       - name: Push to destination repository
+        env:
+          PAT: ${{ secrets.SYNC_TOKEN }}
         run: |
-          # Remove any existing destination remote
-          git remote remove destination || true
+          # Configure git
+          git config --global user.name "Sync Bot"
+          git config --global user.email "sync-bot@users.noreply.github.com"
           
-          # Add destination repository using the PAT
-          git remote add destination "https://${{ secrets.SYNC_TOKEN }}@github.com/vaihainfo/cc--Trace-backend.git"
+          # Get all branches and tags
+          git fetch --prune --unshallow
           
-          # Ensure we're on the development branch
-          git checkout development
+          # Add destination as remote
+          git remote add destination https://$PAT@github.com/vaihainfo/cc--Trace-backend.git
           
-          # Force push to destination development branch
-          git push destination development:development --force
+          # Push development branch to destination
+          git push destination development:development
