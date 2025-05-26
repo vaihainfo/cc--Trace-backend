@@ -91,7 +91,7 @@ const createSpinnerProcess = async (req: Request, res: Response) => {
         yarn_delivered: req.body.yarnDelivered,
         process_loss: req.body.processLoss,
         net_yarn: req.body.processNetYarnQty,
-      });
+      }, {transaction});
     }
 
     const data = {
@@ -1303,13 +1303,13 @@ const createSpinnerSales = async (req: Request, res: Response) => {
             spinner_yarn_order_id: obj.id,
             quantity_used: obj.quantity, 
             sale_id: spinSales.id
-          });
+          }, { transaction });
         }
       }
-
       if (spinSales) {
         await send_spin_mail(spinSales.id);
       }
+      await transaction.commit();
       res.sendSuccess(res, { spinSales });
     }
   } catch (error: any) {
