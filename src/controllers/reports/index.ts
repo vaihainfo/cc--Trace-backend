@@ -4443,7 +4443,7 @@ const exportGinnerSales = async (req: Request, res: Response) => {
             transporter_name: item.transporter_name ? item.transporter_name : '',
             program: item.program ? item.program : '',
             agentDetails: item.transaction_agent ? item.transaction_agent : 'NA',
-            status: item.status === 'Sold' ? 'Sold' : `Available [Stock : ${item.qty_stock ? item.qty_stock : 0}]`
+            status: item.status === 'Sold' ? 'Sold' : item.status === 'Rejected' ? 'Rejected' : `Available [Stock : ${item.qty_stock || 0}]`
           });
         }
 
