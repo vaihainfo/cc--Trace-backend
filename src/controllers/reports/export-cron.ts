@@ -6672,13 +6672,14 @@ const generateSpinnerYarnProcess = async () => {
           GROUP BY spd.process_id
         ),
         total_blend_data AS (
-          SELECT
+          SELECT 
             spd.process_id,
-            SUM(val) AS total_blend_qty,
+            SUM(uq.val) AS total_blend_qty,
             STRING_AGG(DISTINCT cm."cottonMix_name", ', ') AS cotton_mix_name
           FROM spin_process_data spd
-          LEFT JOIN LATERAL unnest(spd.cottonmix_qty) AS val ON true
-          LEFT JOIN cotton_mixes cm ON cm.id = ANY(spd.cottonmix_type)
+          LEFT JOIN LATERAL unnest(spd.cottonmix_qty) WITH ORDINALITY AS uq(val, idx) ON true
+          LEFT JOIN LATERAL unnest(spd.cottonmix_type) WITH ORDINALITY AS ut(type_id, idx) ON uq.idx = ut.idx
+          LEFT JOIN cotton_mixes cm ON cm.id = ut.type_id
           GROUP BY spd.process_id
         )
         SELECT
