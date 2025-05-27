@@ -214,10 +214,10 @@ const updateGinSalesGreyoutStatusData = async (req: Request, res: Response) => {
                 else {
                     const existingRecords = await GinnerSales.findAll({
                         where: {
-                            invoice_no: { [Op.iLike]: `${String(data.invoiceNo)}%` },
+                            invoice_no: { [Op.iLike]: `%${String(data.invoiceNo).trim()}%` },
                             ginner_id: ginner.id,
                             buyer: spinner.id,
-                            lot_no: { [Op.iLike]: `${String(data.lotNo)}%` },
+                            lot_no: { [Op.iLike]: `%${String(data.lotNo).trim()}%` },
                             greyout_status: false,
                             status: { [Op.in]: ["Sold", "Partially Accepted", "Partially Rejected"]  }
                         }
