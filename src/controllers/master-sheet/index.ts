@@ -64,6 +64,7 @@ import Country from "../../models/country.model";
 import GinHeap from "../../models/gin-heap.model";
 import GinToGinSale from "../../models/gin-to-gin-sale.model";
 import District from "../../models/district.model";
+import SpinSaleYarnSelected from "../../models/spin-sale-yarn-selected.model";
 import SpinYarn from "../../models/spin-yarn.model";
 import GinnerAllocatedVillage from "../../models/ginner-allocated-vilage.model";
 import CombernoilGeneration from "../../models/combernoil_generation.model";
