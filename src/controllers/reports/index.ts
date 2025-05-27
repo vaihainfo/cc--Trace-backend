@@ -19872,7 +19872,7 @@ const fetchPscpProcurementLiveTracker = async (req: Request, res: Response) => {
     let ginToGinSaleCondition: string[] = [];
 
     if (search) {
-      brandCondition.push(`(name ILIKE :searchTerm OR state_name ILIKE :searchTerm OR county_name ILIKE :searchTerm OR program_name ILIKE :searchTerm)`);
+      brandCondition.push(`(name ILIKE :searchTerm OR state_name ILIKE :searchTerm OR county_name ILIKE :searchTerm)`);
     }
 
     if (countryId) {
@@ -20626,7 +20626,7 @@ const exportPscpProcurementLiveTracker = async (
     } else {
 
       if (search) {
-        brandCondition.push(`(name ILIKE :searchTerm OR "s.state_name" ILIKE :searchTerm)`);
+        brandCondition.push(`(name ILIKE :searchTerm OR state_name ILIKE :searchTerm OR county_name ILIKE :searchTerm)`);
       }
 
       if (countryId) {
