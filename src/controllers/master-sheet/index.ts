@@ -64,7 +64,6 @@ import Country from "../../models/country.model";
 import GinHeap from "../../models/gin-heap.model";
 import GinToGinSale from "../../models/gin-to-gin-sale.model";
 import District from "../../models/district.model";
-import SpinSaleYarnSelected from "../../models/spin-sale-yarn-selected.model";
 import SpinYarn from "../../models/spin-yarn.model";
 import GinnerAllocatedVillage from "../../models/ginner-allocated-vilage.model";
 import CombernoilGeneration from "../../models/combernoil_generation.model";
@@ -1015,6 +1014,11 @@ const fetchConsolidatedDetailsFarmerGinnerPagination = async (req: Request, res:
       const idArray = brandId.split(",").map((id: string) => parseInt(id, 10));
       whereCondition.push(`t.brand_id IN (${brandId})`);
       brandCondition.push(`g.brand && ARRAY[${brandId}]`);
+
+      baleCondition.push(`g.brand && ARRAY[${brandId}]`);
+      baleSaleCondition.push(`g.brand && ARRAY[${brandId}]`);
+      seedAllocationCondition.push(`gv.brand_id IN (${brandId})`);
+      ginToGinSaleCondition.push(`g.brand && ARRAY[${brandId}]`);
     }
 
 
@@ -1022,6 +1026,11 @@ const fetchConsolidatedDetailsFarmerGinnerPagination = async (req: Request, res:
       const idArray = brandId.split(",").map((id: string) => parseInt(id, 10));
       whereCondition.push(`t.program_id IN (${programId})`);
       brandCondition.push(`g.program_id && ARRAY[${programId}]`);
+
+      baleCondition.push(`gp.program_id IN (${programId})`);
+      baleSaleCondition.push(`gp.program_id IN (${programId})`);
+      seedAllocationCondition.push(`gv.program_id IN (${programId})`);
+      ginToGinSaleCondition.push(`gs.program_id IN (${programId})`);
     }
 
     if (seasonId) {
