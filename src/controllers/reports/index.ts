@@ -14426,6 +14426,7 @@ const fetchGinnerSummaryPagination = async (req: Request, res: Response) => {
       const idArray: number[] = programId
         .split(",")
         .map((id: any) => parseInt(id, 10));
+      whereCondition.program_id = { [Op.overlap]: idArray };
       transactionWhere.program_id = { [Op.in]: idArray };
       ginBaleWhere["$ginprocess.program_id$"] = { [Op.in]: idArray };
       baleSelectionWhere["$sales.program_id$"] = { [Op.in]: idArray };
@@ -15667,6 +15668,7 @@ const exportGinnerSummary = async (req: Request, res: Response) => {
         const idArray: number[] = programId
           .split(",")
           .map((id: any) => parseInt(id, 10));
+        whereCondition.program_id = { [Op.overlap]: idArray };
         transactionWhere.program_id = { [Op.in]: idArray };
         ginBaleWhere["$ginprocess.program_id$"] = { [Op.in]: idArray };
         baleSelectionWhere["$sales.program_id$"] = { [Op.in]: idArray };
