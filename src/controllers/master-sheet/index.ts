@@ -1328,18 +1328,90 @@ const fetchConsolidatedDetailsFarmerGinnerPagination = async (req: Request, res:
         COALESCE(pd.procurement_seed_cotton, 0) / 1000 AS procurement_seed_cotton_mt,
         COALESCE(psc.pending_seed_cotton, 0) / 1000 AS pending_seed_cotton_mt,
         COALESCE(pd.seed_cotton_stock, 0) / 1000 AS procured_seed_cotton_stock_mt,
-        (COALESCE(ec.allocated_seed_cotton, 0) * 35/100) / 1000 AS allocated_lint_cotton_mt,
+        (
+          COALESCE(ec.allocated_seed_cotton, 0) *
+          CASE LOWER(fg.country_name)
+          WHEN 'india' THEN 35
+          WHEN 'pakistan' THEN 36
+          WHEN 'bangladesh' THEN 40
+          WHEN 'turkey' THEN 45
+          WHEN 'egypt' THEN 49
+          WHEN 'china' THEN 40
+          ELSE 35
+          END / 100.0
+        ) / 1000 AS allocated_lint_cotton_mt,  
+--         CAST(ROUND(
+--              CAST((((COALESCE(ec.allocated_seed_cotton, 0) * 35/100) / 1000) - ((COALESCE(pd.procurement_seed_cotton, 0) * 35/100) / 1000)) AS NUMERIC),
+--              2
+--          ) AS DOUBLE PRECISION) AS available_lint_cotton_farmer_mt,
         CAST(ROUND(
-             CAST((((COALESCE(ec.allocated_seed_cotton, 0) * 35/100) / 1000) - ((COALESCE(pd.procurement_seed_cotton, 0) * 35/100) / 1000)) AS NUMERIC), 
-             2
-         ) AS DOUBLE PRECISION) AS available_lint_cotton_farmer_mt,
-        (COALESCE(pd.procurement_seed_cotton, 0) * 35/100) / 1000 AS procured_lint_cotton_mt,
-        COALESCE(gb.total_qty, 0) AS produced_lint_cotton_kgs,
-        COALESCE(gb.total_qty, 0) / 1000 AS produced_lint_cotton_mt,
+          CAST((
+          (
+            COALESCE(ec.allocated_seed_cotton, 0) *
+            CASE LOWER(fg.country_name)
+            WHEN 'india' THEN 35
+            WHEN 'pakistan' THEN 36
+            WHEN 'bangladesh' THEN 40
+            WHEN 'turkey' THEN 45
+            WHEN 'egypt' THEN 49
+            WHEN 'china' THEN 40
+            ELSE 35
+            END / 100.0
+          ) / 1000
+          - 
+          (
+            COALESCE(pd.procurement_seed_cotton, 0) *
+            CASE LOWER(fg.country_name)
+            WHEN 'india' THEN 35
+            WHEN 'pakistan' THEN 36
+            WHEN 'bangladesh' THEN 40
+            WHEN 'turkey' THEN 45
+            WHEN 'egypt' THEN 49
+            WHEN 'china' THEN 40
+            ELSE 35
+            END / 100.0
+          ) / 1000
+          ) AS NUMERIC),
+          2
+        ) AS DOUBLE PRECISION) AS available_lint_cotton_farmer_mt,
+--         (COALESCE(pd.procurement_seed_cotton, 0) * 35/100) / 1000 AS procured_lint_cotton_mt,  
+        (
+          COALESCE(pd.procurement_seed_cotton, 0) *
+          CASE LOWER(fg.country_name)
+          WHEN 'india' THEN 35
+          WHEN 'pakistan' THEN 36
+          WHEN 'bangladesh' THEN 40
+          WHEN 'turkey' THEN 45
+          WHEN 'egypt' THEN 49
+          WHEN 'china' THEN 40
+          ELSE 35
+          END / 100.0
+        ) / 1000 AS procured_lint_cotton_mt,
+            COALESCE(gb.total_qty, 0) AS produced_lint_cotton_kgs,
+            COALESCE(gb.total_qty, 0) / 1000 AS produced_lint_cotton_mt,
+--         CAST(ROUND(
+--             CAST(((COALESCE(pd.procurement_seed_cotton, 0) * 35/100) / 1000) - (COALESCE(gb.total_qty, 0) / 1000) AS NUMERIC),
+--             2
+--             ) AS DOUBLE PRECISION) AS unprocessed_lint_cotton_mt,
         CAST(ROUND(
-            CAST(((COALESCE(pd.procurement_seed_cotton, 0) * 35/100) / 1000) - (COALESCE(gb.total_qty, 0) / 1000) AS NUMERIC), 
-            2
-            ) AS DOUBLE PRECISION) AS unprocessed_lint_cotton_mt,
+          CAST((
+          (
+            COALESCE(pd.procurement_seed_cotton, 0) *
+            CASE LOWER(fg.country_name)
+            WHEN 'india' THEN 35
+            WHEN 'pakistan' THEN 36
+            WHEN 'bangladesh' THEN 40
+            WHEN 'turkey' THEN 45
+            WHEN 'egypt' THEN 49
+            WHEN 'china' THEN 40
+            ELSE 35
+            END / 100.0
+          ) / 1000
+          -
+          (COALESCE(gb.total_qty, 0) / 1000)
+          ) AS NUMERIC),
+          2
+        ) AS DOUBLE PRECISION) AS unprocessed_lint_cotton_mt,
         COALESCE(gs.total_qty, 0) / 1000 AS total_lint_cotton_sold_mt,
         COALESCE(gbg.total_qty, 0) / 1000 AS greyout_qty,
         COALESCE(gtg.lint_qty, 0) / 1000 AS total_qty_lint_transfered,
@@ -1719,18 +1791,91 @@ const fetchGinnerDetailsPagination = async (req: Request, res: Response) => {
         COALESCE(pd.procurement_seed_cotton, 0) / 1000 AS procurement_seed_cotton_mt,
         COALESCE(psc.pending_seed_cotton, 0) / 1000 AS pending_seed_cotton_mt,
         COALESCE(pd.seed_cotton_stock, 0) / 1000 AS procured_seed_cotton_stock_mt,
-        (COALESCE(ec.allocated_seed_cotton, 0) * 35/100) / 1000 AS allocated_lint_cotton_mt,
+--        (COALESCE(ec.allocated_seed_cotton, 0) * 35/100) / 1000 AS allocated_lint_cotton_mt,
+        (
+          COALESCE(ec.allocated_seed_cotton, 0) *
+          CASE LOWER(fg.country_name)
+          WHEN 'india' THEN 35
+          WHEN 'pakistan' THEN 36
+          WHEN 'bangladesh' THEN 40
+          WHEN 'turkey' THEN 45
+          WHEN 'egypt' THEN 49
+          WHEN 'china' THEN 40
+          ELSE 35
+          END / 100.0
+        ) / 1000 AS allocated_lint_cotton_mt, 
+--         CAST(ROUND(
+--              CAST((((COALESCE(ec.allocated_seed_cotton, 0) * 35/100) / 1000) - ((COALESCE(pd.procurement_seed_cotton, 0) * 35/100) / 1000)) AS NUMERIC),
+--              2
+--          ) AS DOUBLE PRECISION) AS available_lint_cotton_farmer_mt,
         CAST(ROUND(
-            CAST((((COALESCE(ec.allocated_seed_cotton, 0) * 35/100) / 1000) - ((COALESCE(pd.procurement_seed_cotton, 0) * 35/100) / 1000)) AS NUMERIC),
-            2
+          CAST((
+          (
+            COALESCE(ec.allocated_seed_cotton, 0) *
+            CASE LOWER(fg.country_name)
+            WHEN 'india' THEN 35
+            WHEN 'pakistan' THEN 36
+            WHEN 'bangladesh' THEN 40
+            WHEN 'turkey' THEN 45
+            WHEN 'egypt' THEN 49
+            WHEN 'china' THEN 40
+            ELSE 35
+            END / 100.0
+          ) / 1000
+          - 
+          (
+            COALESCE(pd.procurement_seed_cotton, 0) *
+            CASE LOWER(fg.country_name)
+            WHEN 'india' THEN 35
+            WHEN 'pakistan' THEN 36
+            WHEN 'bangladesh' THEN 40
+            WHEN 'turkey' THEN 45
+            WHEN 'egypt' THEN 49
+            WHEN 'china' THEN 40
+            ELSE 35
+            END / 100.0
+          ) / 1000
+          ) AS NUMERIC),
+          2
         ) AS DOUBLE PRECISION) AS available_lint_cotton_farmer_mt,
-        (COALESCE(pd.procurement_seed_cotton, 0) * 35/100) / 1000 AS procured_lint_cotton_mt,
+--         (COALESCE(pd.procurement_seed_cotton, 0) * 35/100) / 1000 AS procured_lint_cotton_mt,  
+        (
+          COALESCE(pd.procurement_seed_cotton, 0) *
+          CASE LOWER(fg.country_name)
+          WHEN 'india' THEN 35
+          WHEN 'pakistan' THEN 36
+          WHEN 'bangladesh' THEN 40
+          WHEN 'turkey' THEN 45
+          WHEN 'egypt' THEN 49
+          WHEN 'china' THEN 40
+          ELSE 35
+          END / 100.0
+        ) / 1000 AS procured_lint_cotton_mt,
         COALESCE(gb.total_qty, 0) AS produced_lint_cotton_kgs,
         COALESCE(gb.total_qty, 0) / 1000 AS produced_lint_cotton_mt,
+--         CAST(ROUND(
+--             CAST(((COALESCE(pd.procurement_seed_cotton, 0) * 35/100) / 1000) - (COALESCE(gb.total_qty, 0) / 1000) AS NUMERIC),
+--             2
+--             ) AS DOUBLE PRECISION) AS unprocessed_lint_cotton_mt,
         CAST(ROUND(
-            CAST(((COALESCE(pd.procurement_seed_cotton, 0) * 35/100) / 1000) - (COALESCE(gb.total_qty, 0) / 1000) AS NUMERIC),
-            2
-            ) AS DOUBLE PRECISION) AS unprocessed_lint_cotton_mt,
+          CAST((
+          (
+            COALESCE(pd.procurement_seed_cotton, 0) *
+            CASE LOWER(fg.country_name)
+            WHEN 'india' THEN 35
+            WHEN 'pakistan' THEN 36
+            WHEN 'bangladesh' THEN 40
+            WHEN 'turkey' THEN 45
+            WHEN 'egypt' THEN 49
+            WHEN 'china' THEN 40
+            ELSE 35
+            END / 100.0
+          ) / 1000
+          -
+          (COALESCE(gb.total_qty, 0) / 1000)
+          ) AS NUMERIC),
+          2
+        ) AS DOUBLE PRECISION) AS unprocessed_lint_cotton_mt,
         COALESCE(gs.total_qty, 0) / 1000 AS total_lint_cotton_sold_mt,
         COALESCE(gbg.total_qty, 0) / 1000 AS greyout_qty,
         COALESCE(gtg.lint_qty, 0) / 1000 AS total_qty_lint_transfered,
