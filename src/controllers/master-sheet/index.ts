@@ -1014,7 +1014,7 @@ const fetchConsolidatedDetailsFarmerGinnerPagination = async (req: Request, res:
     if (brandId) {
       const idArray = brandId.split(",").map((id: string) => parseInt(id, 10));
       whereCondition.push(`t.brand_id IN (${brandId})`);
-      brandCondition.push(`g.brand && ARRAY[${brandId}]`);
+      // brandCondition.push(`g.brand && ARRAY[${brandId}]`);
 
       baleCondition.push(`g.brand && ARRAY[${brandId}]`);
       baleSaleCondition.push(`g.brand && ARRAY[${brandId}]`);
@@ -1026,7 +1026,7 @@ const fetchConsolidatedDetailsFarmerGinnerPagination = async (req: Request, res:
     if (programId) {
       const idArray = brandId.split(",").map((id: string) => parseInt(id, 10));
       whereCondition.push(`t.program_id IN (${programId})`);
-      brandCondition.push(`g.program_id && ARRAY[${programId}]`);
+      // brandCondition.push(`g.program_id && ARRAY[${programId}]`);
 
       baleCondition.push(`gp.program_id IN (${programId})`);
       baleSaleCondition.push(`gp.program_id IN (${programId})`);
