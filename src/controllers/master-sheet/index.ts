@@ -5366,7 +5366,6 @@ const fetchSummarySheetPagination = async (req: Request, res: Response) => {
                 ELSE ROUND(
                 (
                   (
-                  (
                     COALESCE(ec.allocated_seed_cotton, 0)
                     -
                     (
@@ -5380,8 +5379,7 @@ const fetchSummarySheetPagination = async (req: Request, res: Response) => {
                       WHEN 'china' THEN 40
                       ELSE 35
                     END / 100.0
-                    )
-                  ) / 1000.0
+                    ) / 1000.0
                   ) / COALESCE(NULLIF(ec.allocated_seed_cotton, 0), 1)
                 ) * 100
                 )::NUMERIC(10, 2)
