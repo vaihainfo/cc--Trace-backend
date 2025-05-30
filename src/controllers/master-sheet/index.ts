@@ -64,7 +64,7 @@ import Country from "../../models/country.model";
 import GinHeap from "../../models/gin-heap.model";
 import GinToGinSale from "../../models/gin-to-gin-sale.model";
 import District from "../../models/district.model";
-import SpinSaleYarnSelected from "../../models/spin-sale-yarn-selected.model";
+// import SpinSaleYarnSelected from "../../models/spin-sale-yarn-selected.model";
 import SpinYarn from "../../models/spin-yarn.model";
 import GinnerAllocatedVillage from "../../models/ginner-allocated-vilage.model";
 import CombernoilGeneration from "../../models/combernoil_generation.model";
@@ -2647,7 +2647,7 @@ const fetchConsolidatedDetailsFarmerGinnerPagination = async (req: Request, res:
   }
 };
 
-  const exportConsolidatedDetailsFarmerGinner = async (req: Request, res: Response) => {
+const exportConsolidatedDetailsFarmerGinner = async (req: Request, res: Response) => {
       const excelFilePath = path.join(
       "./upload",
       "excel-consolidated-farmer-ginner-report.xlsx"
@@ -2656,7 +2656,7 @@ const fetchConsolidatedDetailsFarmerGinnerPagination = async (req: Request, res:
     const searchTerm = req.query.search || "";
     const page = Number(req.query.page) || 1;
     const limit = Number(req.query.limit) || 10;
-    const {  seasonId, programId, brandId, countryId, stateId }: any =
+    const {exportType, seasonId, programId, brandId, countryId, stateId }: any =
       req.query;
     const offset = (page - 1) * limit;
     let whereCondition: string[] = [];
@@ -2666,66 +2666,84 @@ const fetchConsolidatedDetailsFarmerGinnerPagination = async (req: Request, res:
     let baleSaleCondition: string[] = [];
     let seedAllocationCondition: string[] = [];
     let ginToGinSaleCondition: string[] = [];
+ 
     try {
-      
+      if (exportType === "all") {
+      return res.status(200).send({
+        success: true,
+        messgage: "File successfully Generated",
+        data: process.env.BASE_URL + "consolidated-farmer-ginner-report.xlsx",
+      });
+
+    } else {
       if (searchTerm) {
-        brandCondition.push(`(s.state_name ILIKE '%${searchTerm}%')`);
-      }
+      brandCondition.push(`(s.state_name ILIKE '%${searchTerm}%')`);
+    }
 
-      if (countryId) {
-        const idArray = countryId.split(",").map((id: string) => parseInt(id, 10));
-        whereCondition.push(`t.country_id IN (${countryId})`);
-        brandCondition.push(`g.country_id IN (${countryId})`);
-      }
+    if (countryId) {
+      const idArray = countryId.split(",").map((id: string) => parseInt(id, 10));
+      whereCondition.push(`t.country_id IN (${countryId})`);
+      brandCondition.push(`g.country_id IN (${countryId})`);
+    }
 
-      if (brandId) {
-        const idArray = brandId.split(",").map((id: string) => parseInt(id, 10));
-        whereCondition.push(`t.brand_id IN (${brandId})`);
-        brandCondition.push(`g.brand && ARRAY[${brandId}]`);
-      }
+    if (brandId) {
+      const idArray = brandId.split(",").map((id: string) => parseInt(id, 10));
+      whereCondition.push(`t.brand_id IN (${brandId})`);
+      brandCondition.push(`g.brand && ARRAY[${brandId}]`);
+
+      baleCondition.push(`g.brand && ARRAY[${brandId}]`);
+      baleSaleCondition.push(`g.brand && ARRAY[${brandId}]`);
+      seedAllocationCondition.push(`gas.brand_id IN (${brandId})`);
+      ginToGinSaleCondition.push(`g.brand && ARRAY[${brandId}]`);
+    }
 
 
-      if (programId) {
-        const idArray = brandId.split(",").map((id: string) => parseInt(id, 10));
-        whereCondition.push(`t.program_id IN (${programId})`);
-        brandCondition.push(`g.program_id && ARRAY[${programId}]`);
-      }
+    if (programId) {
+      const idArray = brandId.split(",").map((id: string) => parseInt(id, 10));
+      whereCondition.push(`t.program_id IN (${programId})`);
+      brandCondition.push(`g.program_id && ARRAY[${programId}]`);
 
-      if (seasonId) {
-        const idArray = seasonId.split(",").map((id: string) => parseInt(id, 10));
-        seasonCondition.push(`season_id IN (${seasonId})`);
-        baleCondition.push(`gp.season_id IN (${seasonId})`);
-        baleSaleCondition.push(`gp.season_id IN (${seasonId})`);
-        seedAllocationCondition.push(`gv.season_id IN (${seasonId})`);
-        ginToGinSaleCondition.push(`gs.season_id IN (${seasonId})`);
-      }
+      baleCondition.push(`gp.program_id IN (${programId})`);
+      baleSaleCondition.push(`gp.program_id IN (${programId})`);
+      seedAllocationCondition.push(`gv.program_id IN (${programId})`);
+      ginToGinSaleCondition.push(`gs.program_id IN (${programId})`);
+    }
 
-      if (stateId) {
-        const idArray = stateId.split(",").map((id: string) => parseInt(id, 10));
-        brandCondition.push(`g.state_id IN (${stateId})`);
-      }
+    if (seasonId) {
+      const idArray = seasonId.split(",").map((id: string) => parseInt(id, 10));
+      seasonCondition.push(`season_id IN (${seasonId})`);
+      baleCondition.push(`gp.season_id IN (${seasonId})`);
+      baleSaleCondition.push(`gp.season_id IN (${seasonId})`);
+      seedAllocationCondition.push(`gas.season_id IN (${seasonId})`);
+      ginToGinSaleCondition.push(`gs.season_id IN (${seasonId})`);
+    }
 
-      const whereConditionSql = whereCondition.length ? `${whereCondition.join(' AND ')}` : '1=1';
-      const seasonConditionSql = seasonCondition.length ? `${seasonCondition.join(' AND ')}` : '1=1';
-      const brandConditionSql = brandCondition.length ? `${brandCondition.join(' AND ')}` : '1=1';
-      const baleConditionSql = baleCondition.length ? `${baleCondition.join(' AND ')}` : '1=1';
-      const baleSaleConditionSql = baleSaleCondition.length ? `${baleSaleCondition.join(' AND ')}` : '1=1';
-      const seedAllocationConditionSql = seedAllocationCondition.length ? `${seedAllocationCondition.join(' AND ')}` : '1=1';
-      const ginToGinSaleConditionSql = ginToGinSaleCondition.length ? `${ginToGinSaleCondition.join(' AND ')}` : '1=1';
+    if (stateId) {
+      const idArray = stateId.split(",").map((id: string) => parseInt(id, 10));
+      brandCondition.push(`g.state_id IN (${stateId})`);
+    }
+
+    const whereConditionSql = whereCondition.length ? `${whereCondition.join(' AND ')}` : '1=1';
+    const seasonConditionSql = seasonCondition.length ? `${seasonCondition.join(' AND ')}` : '1=1';
+    const brandConditionSql = brandCondition.length ? `${brandCondition.join(' AND ')}` : '1=1';
+    const baleConditionSql = baleCondition.length ? `${baleCondition.join(' AND ')}` : '1=1';
+    const baleSaleConditionSql = baleSaleCondition.length ? `${baleSaleCondition.join(' AND ')}` : '1=1';
+    const seedAllocationConditionSql = seedAllocationCondition.length ? `${seedAllocationCondition.join(' AND ')}` : '1=1';
+    const ginToGinSaleConditionSql = ginToGinSaleCondition.length ? `${ginToGinSaleCondition.join(' AND ')}` : '1=1';
 
       
   // Count query
-      const countQuery = `
-      SELECT COUNT(*) AS total_count
-      FROM ginners g
-      JOIN states s ON g.state_id = s.id
-      JOIN countries c ON g.country_id = c.id
-      WHERE ${brandConditionSql}
-      GROUP BY s.id, g.state_id, g.country_id, c.id
-      `;
+    const countQuery = `
+    SELECT COUNT(*) AS total_count
+    FROM ginners g
+    JOIN states s ON g.state_id = s.id
+    JOIN countries c ON g.country_id = c.id
+    WHERE ${brandConditionSql}
+    GROUP BY s.id, g.state_id, g.country_id, c.id
+    `;
 
       // Data query
-      const dataQuery = `
+   const dataQuery = `
     WITH
         states_data AS (
           SELECT
@@ -2959,62 +2977,55 @@ const fetchConsolidatedDetailsFarmerGinnerPagination = async (req: Request, res:
               GROUP BY
                   g.state_id
             ),
-            expected_cotton_data AS (
+            allocated_cotton_data AS (
                 SELECT
-                  gv.state_id,
-                  COALESCE(SUM(CAST("farms"."total_estimated_cotton"AS DOUBLE PRECISION)), 0) AS allocated_seed_cotton
-                  FROM "ginner_allocated_villages" as gv
+                  g.state_id,
+                  COALESCE(SUM(CAST("gas"."allocated_seed_cotton" AS DOUBLE PRECISION)), 0) AS allocated_seed_cotton
+                  FROM "gin_allocated_seed_cottons" as gas
+			          LEFT JOIN 
+                    ginners g ON "gas"."ginner_id" = g.id
                 LEFT JOIN 
-                    states_data s ON "gv"."state_id" = s.id
+                    states_data s ON "g"."state_id" = s.id
                 LEFT JOIN 
-                    "farmers" AS "farmer" ON gv.village_id = "farmer"."village_id" and "farmer"."brand_id" ="gv"."brand_id"
-                LEFT JOIN 
-                    "farms" as "farms" on farms.farmer_id = "farmer".id and farms.season_id = gv.season_id
-                LEFT JOIN 
-                    "seasons" AS "season" ON "gv"."season_id" = "season"."id"
+                    "seasons" AS "season" ON "gas"."season_id" = "season"."id"
                 WHERE
                     ${seedAllocationConditionSql} 
                 GROUP BY
-                  gv.state_id
+                  g.state_id
             )
+            -- expected_cotton_data AS (
+--                 SELECT
+--                   gv.state_id,
+--                   COALESCE(SUM(CAST("farms"."total_estimated_cotton"AS DOUBLE PRECISION)), 0) AS allocated_seed_cotton
+--                   FROM "ginner_allocated_villages" as gv
+--                 LEFT JOIN 
+--                     states_data s ON "gv"."state_id" = s.id
+--                 LEFT JOIN 
+--                     "farmers" AS "farmer" ON gv.village_id = "farmer"."village_id" and "farmer"."brand_id" ="gv"."brand_id"
+--                 LEFT JOIN 
+--                     "farms" as "farms" on farms.farmer_id = "farmer".id and farms.season_id = gv.season_id
+--                 LEFT JOIN 
+--                     "seasons" AS "season" ON "gv"."season_id" = "season"."id"
+--                 WHERE
+--                     ${seedAllocationConditionSql} 
+--                 GROUP BY
+--                   gv.state_id
+--             )
       SELECT
         fg.id AS state_id,
         fg.state_name,
         fg.country_name,
-        COALESCE(ec.allocated_seed_cotton, 0) / 1000 AS allocated_seed_cotton_mt,
+        COALESCE(ec.allocated_seed_cotton, 0) AS allocated_lint_cotton_mt,
         COALESCE(pd.procurement_seed_cotton, 0) / 1000 AS procurement_seed_cotton_mt,
         COALESCE(psc.pending_seed_cotton, 0) / 1000 AS pending_seed_cotton_mt,
         COALESCE(pd.seed_cotton_stock, 0) / 1000 AS procured_seed_cotton_stock_mt,
-        (
-          COALESCE(ec.allocated_seed_cotton, 0) *
-          CASE LOWER(fg.country_name)
-          WHEN 'india' THEN 35
-          WHEN 'pakistan' THEN 36
-          WHEN 'bangladesh' THEN 40
-          WHEN 'turkey' THEN 45
-          WHEN 'egypt' THEN 49
-          WHEN 'china' THEN 40
-          ELSE 35
-          END / 100.0
-        ) / 1000 AS allocated_lint_cotton_mt,  
 --         CAST(ROUND(
 --              CAST((((COALESCE(ec.allocated_seed_cotton, 0) * 35/100) / 1000) - ((COALESCE(pd.procurement_seed_cotton, 0) * 35/100) / 1000)) AS NUMERIC),
 --              2
 --          ) AS DOUBLE PRECISION) AS available_lint_cotton_farmer_mt,
         CAST(ROUND(
           CAST((
-          (
-            COALESCE(ec.allocated_seed_cotton, 0) *
-            CASE LOWER(fg.country_name)
-            WHEN 'india' THEN 35
-            WHEN 'pakistan' THEN 36
-            WHEN 'bangladesh' THEN 40
-            WHEN 'turkey' THEN 45
-            WHEN 'egypt' THEN 49
-            WHEN 'china' THEN 40
-            ELSE 35
-            END / 100.0
-          ) / 1000
+            COALESCE(ec.allocated_seed_cotton, 0)
           - 
           (
             COALESCE(pd.procurement_seed_cotton, 0) *
@@ -3077,7 +3088,11 @@ const fetchConsolidatedDetailsFarmerGinnerPagination = async (req: Request, res:
         CAST(ROUND(
             CAST((COALESCE(gb.total_qty, 0) / 1000 + COALESCE(gtgr.lint_qty, 0) / 1000) - (COALESCE(gs.total_qty, 0) / 1000 + COALESCE(gbg.total_qty, 0) / 1000 + COALESCE(gtg.lint_qty, 0) / 1000 + COALESCE(gtsg.total_qty, 0) / 1000) AS NUMERIC), 
             2
-        ) AS DOUBLE PRECISION) AS actual_lint_stock_mt
+        ) AS DOUBLE PRECISION) AS actual_lint_stock_mt,
+        CAST(ROUND(
+            CAST((COALESCE(gb.total_qty, 0) / 1000 + COALESCE(gtgr.lint_qty, 0) / 1000) - (COALESCE(gs.total_qty, 0) / 1000 + COALESCE(gbg.total_qty, 0) / 1000 + COALESCE(gtg.lint_qty, 0) / 1000) AS NUMERIC), 
+            2
+        ) AS DOUBLE PRECISION) AS total_lint_stock_mt
       FROM
         states_data fg
         LEFT JOIN procurement_data pd ON fg.id = pd.state_id
@@ -3085,7 +3100,7 @@ const fetchConsolidatedDetailsFarmerGinnerPagination = async (req: Request, res:
         LEFT JOIN gin_bale_data gb ON fg.id = gb.state_id
         LEFT JOIN pending_seed_cotton_data psc ON fg.id = psc.state_id
         LEFT JOIN gin_sales_data gs ON fg.id = gs.state_id
-        LEFT JOIN expected_cotton_data ec ON fg.id = ec.state_id
+        LEFT JOIN allocated_cotton_data ec ON fg.id = ec.state_id
         LEFT JOIN gin_bale_greyout_data gbg ON fg.id = gbg.state_id
         LEFT JOIN gin_to_gin_sales_data gtg ON fg.id = gtg.state_id
         LEFT JOIN gin_to_gin_recieved_data gtgr ON fg.id = gtgr.state_id
@@ -3109,19 +3124,22 @@ const fetchConsolidatedDetailsFarmerGinnerPagination = async (req: Request, res:
         
           headerRow = worksheet.addRow([
               "Sr No.",
-              "State",
-              "Allocated Seed Cotton(MT)",
-              "Procured seed cotton accepted by ginner(MT)",
-              "Seed cotton pending at ginner(MT)",
-              "Seed cotton stock at ginners (MT)",
-              "Total lint cotton allocated to ginners (MT)",
-              "Total lint cotton available at farmers (MT)",
-              "Total lint cotton procured by ginners (MT)",
-              "Total lint cotton produced (MT)",
-              "Total lint cotton unprocessed (MT)",
-              "Total lint cotton sold (MT)",
-              "Actual lint cotton stock at ginners (MT)",
-              "Lint cotton procured from other ginners (MT)"
+              "State/Region",
+              // "Allocated Seed Cotton(MT)",
+              // "Procured seed cotton accepted by ginner(MT)",
+              // "Seed cotton pending at ginner(MT)",
+              // "Seed cotton stock at ginners (MT)",
+              "Total lint cotton allocated to ginners by CC (MT)",
+              "Total lint cotton available at farmers to date (MT)",
+              "Total lint cotton procured by ginners to date (MT)",
+              "Total lint cotton processed/produced to date (MT)",
+              "Total lint cotton unprocessed/not produced to date (MT)",
+              "Total lint cotton sold to date (MT)",
+              "Total lint cotton stock at ginners (MT)",
+              "Lint cotton procured from other ginners (Ginner to Ginner transactions) to date (MT)",
+              "Total lint cotton leakage at farmers to date(MT)",
+              "Total lint cotton leakage at ginners to date(MT)",
+              "Remarks"
             ]);
           
         headerRow.font = { bold: true };
@@ -3138,18 +3156,20 @@ const fetchConsolidatedDetailsFarmerGinnerPagination = async (req: Request, res:
 
   const totalCount = countResult && countResult.length > 0 ? countResult.length : 0;       
         let totals = {
-        allocated_seed_cotton: 0,
-        procurement_seed_cotton_mt: 0,
-        pending_seed_cotton_mt: 0,
-        procured_seed_cotton_stock_mt: 0,
+        // allocated_seed_cotton: 0,
+        // procurement_seed_cotton_mt: 0,
+        // pending_seed_cotton_mt: 0,
+        // procured_seed_cotton_stock_mt: 0,
         allocated_lint_cotton_mt: 0,
         available_lint_cotton_farmer_mt: 0,
         procured_lint_cotton_mt: 0,
         produced_lint_cotton_mt: 0,
         unprocessed_lint_cotton_mt: 0,
         total_lint_cotton_sold_mt: 0,
-        actual_lint_stock_mt: 0,
+        total_lint_stock_mt: 0,
         total_qty_lint_received_mt: 0,
+        total_lint_leakage_at_farmers_mt: 0,
+        total_lint_leakage_at_ginners_mt: 0
       };
         // // Append data to worksheet
         for await (const [index, item] of rows.entries()) {
@@ -3158,32 +3178,36 @@ const fetchConsolidatedDetailsFarmerGinnerPagination = async (req: Request, res:
             rowValues = {
               index: index + 1,
               state: item.state_name,
-              allocated_seed_cotton: Number(formatDecimal(item.allocated_seed_cotton_mt)),
-              procurement_seed_cotton_mt: Number(formatDecimal(item.procurement_seed_cotton_mt)),
-              pending_seed_cotton_mt: Number(formatDecimal(item.pending_seed_cotton_mt)),
-              procured_seed_cotton_stock_mt: Number(formatDecimal(item.procured_seed_cotton_stock_mt)),
+              // allocated_seed_cotton: Number(formatDecimal(item.allocated_seed_cotton_mt)),
+              // procurement_seed_cotton_mt: Number(formatDecimal(item.procurement_seed_cotton_mt)),
+              // pending_seed_cotton_mt: Number(formatDecimal(item.pending_seed_cotton_mt)),
+              // procured_seed_cotton_stock_mt: Number(formatDecimal(item.procured_seed_cotton_stock_mt)),
               allocated_lint_cotton_mt: Number(formatDecimal(item.allocated_lint_cotton_mt)),
               available_lint_cotton_farmer_mt: Number(formatDecimal(item.available_lint_cotton_farmer_mt)),
               procured_lint_cotton_mt: Number(formatDecimal(item.procured_lint_cotton_mt)),
               produced_lint_cotton_mt: Number(formatDecimal(item.produced_lint_cotton_mt)),
               unprocessed_lint_cotton_mt: Number(formatDecimal(item.unprocessed_lint_cotton_mt)),
               total_lint_cotton_sold_mt: Number(formatDecimal(item.total_lint_cotton_sold_mt)),
-              actual_lint_stock_mt: Number(formatDecimal(item.actual_lint_stock_mt)),
+              total_lint_stock_mt: Number(formatDecimal(item.total_lint_stock_mt)),
               total_qty_lint_received_mt: Number(formatDecimal(item.total_qty_lint_received_mt)),
+              total_lint_leakage_at_farmers_mt: 0,
+              total_lint_leakage_at_ginners_mt: 0,
             };
 
-          totals.allocated_seed_cotton += item.allocated_seed_cotton_mt ? Number(item.allocated_seed_cotton_mt) : 0;
-          totals.procurement_seed_cotton_mt += item.procurement_seed_cotton_mt ? Number(item.procurement_seed_cotton_mt) : 0;
-          totals.pending_seed_cotton_mt += item.pending_seed_cotton_mt ? Number(item.pending_seed_cotton_mt) : 0;
-          totals.procured_seed_cotton_stock_mt += item.procured_seed_cotton_stock_mt ? Number(item.procured_seed_cotton_stock_mt) : 0;
+          // totals.allocated_seed_cotton += item.allocated_seed_cotton_mt ? Number(item.allocated_seed_cotton_mt) : 0;
+          // totals.procurement_seed_cotton_mt += item.procurement_seed_cotton_mt ? Number(item.procurement_seed_cotton_mt) : 0;
+          // totals.pending_seed_cotton_mt += item.pending_seed_cotton_mt ? Number(item.pending_seed_cotton_mt) : 0;
+          // totals.procured_seed_cotton_stock_mt += item.procured_seed_cotton_stock_mt ? Number(item.procured_seed_cotton_stock_mt) : 0;
           totals.allocated_lint_cotton_mt += item.allocated_lint_cotton_mt ? Number(item.allocated_lint_cotton_mt) : 0;
           totals.available_lint_cotton_farmer_mt += item.available_lint_cotton_farmer_mt ? Number(item.available_lint_cotton_farmer_mt) : 0;
           totals.procured_lint_cotton_mt += item.procured_lint_cotton_mt ? Number(item.procured_lint_cotton_mt) : 0;
           totals.produced_lint_cotton_mt += item.produced_lint_cotton_mt ? Number(item.produced_lint_cotton_mt) : 0;
           totals.unprocessed_lint_cotton_mt += item.unprocessed_lint_cotton_mt ? Number(item.unprocessed_lint_cotton_mt) : 0;
           totals.total_lint_cotton_sold_mt += item.total_lint_cotton_sold_mt ? Number(item.total_lint_cotton_sold_mt) : 0;
-          totals.actual_lint_stock_mt += item.actual_lint_stock_mt ? Number(item.actual_lint_stock_mt) : 0;
-          totals.total_qty_lint_received_mt += item.total_qty_lint_received_mt ? Number(item.total_qty_lint_received_mt) : 0;        
+          totals.total_lint_stock_mt += item.total_lint_stock_mt ? Number(item.total_lint_stock_mt) : 0;
+          totals.total_qty_lint_received_mt += item.total_qty_lint_received_mt ? Number(item.total_qty_lint_received_mt) : 0;
+          totals.total_lint_leakage_at_farmers_mt += item.total_lint_leakage_at_farmers_mt ? Number(item.total_lint_leakage_at_farmers_mt) : 0;
+          totals.total_lint_leakage_at_ginners_mt += item.total_lint_leakage_at_ginners_mt ? Number(item.total_lint_leakage_at_ginners_mt) : 0;        
           
           worksheet.addRow(Object.values(rowValues));
         }
@@ -3191,18 +3215,20 @@ const fetchConsolidatedDetailsFarmerGinnerPagination = async (req: Request, res:
         let rowValues = Object.values({
           index: "",
           state: "Total",
-          allocated_seed_cotton: Number(formatDecimal(totals.allocated_seed_cotton)),
-          procurement_seed_cotton_mt: Number(formatDecimal(totals.procurement_seed_cotton_mt)),
-          pending_seed_cotton_mt: Number(formatDecimal(totals.pending_seed_cotton_mt)),
-          procured_seed_cotton_stock_mt: Number(formatDecimal(totals.procured_seed_cotton_stock_mt)),
+          // allocated_seed_cotton: Number(formatDecimal(totals.allocated_seed_cotton)),
+          // procurement_seed_cotton_mt: Number(formatDecimal(totals.procurement_seed_cotton_mt)),
+          // pending_seed_cotton_mt: Number(formatDecimal(totals.pending_seed_cotton_mt)),
+          // procured_seed_cotton_stock_mt: Number(formatDecimal(totals.procured_seed_cotton_stock_mt)),
           allocated_lint_cotton_mt: Number(formatDecimal(totals.allocated_lint_cotton_mt)),
           available_lint_cotton_farmer_mt: Number(formatDecimal(totals.available_lint_cotton_farmer_mt)),
           procured_lint_cotton_mt: Number(formatDecimal(totals.procured_lint_cotton_mt)),
           produced_lint_cotton_mt: Number(formatDecimal(totals.produced_lint_cotton_mt)),
           unprocessed_lint_cotton_mt: Number(formatDecimal(totals.unprocessed_lint_cotton_mt)),
           total_lint_cotton_sold_mt: Number(formatDecimal(totals.total_lint_cotton_sold_mt)),
-          actual_lint_stock_mt: Number(formatDecimal(totals.actual_lint_stock_mt)),
+          total_lint_stock_mt: Number(formatDecimal(totals.total_lint_stock_mt)),
           total_qty_lint_received_mt: Number(formatDecimal(totals.total_qty_lint_received_mt)),
+          total_lint_leakage_at_farmers_mt: Number(formatDecimal(totals.total_lint_leakage_at_farmers_mt)),
+          total_lint_leakage_at_ginners_mt: Number(formatDecimal(totals.total_lint_leakage_at_ginners_mt)),
         });
 
         worksheet.addRow(rowValues).eachCell((cell, colNumber) => { cell.font = { bold: true } });
@@ -3232,9 +3258,8 @@ const fetchConsolidatedDetailsFarmerGinnerPagination = async (req: Request, res:
           messgage: "File successfully Generated",
           data: process.env.BASE_URL + "excel-consolidated-farmer-ginner-report.xlsx",
         });
-      
-
-    } catch (error: any) {
+       }
+      } catch (error: any) {
       console.log(error);
       return res.sendError(res, error.message, error);
     }
@@ -3709,7 +3734,7 @@ const exportGinnerDetails = async (req: Request, res: Response) => {
   const page = Number(req.query.page) || 1;
   const limit = Number(req.query.limit) || 10;
   const offset = (page - 1) * limit;
-  const { seasonId, programId, brandId, countryId, stateId, ginnerId }: any = req.query;
+  const {exportType, seasonId, programId, brandId, countryId, stateId, ginnerId }: any = req.query;
     let whereCondition: string[] = [];
     let seasonCondition: string[] = [];
     let brandCondition: string[] = [];
@@ -3718,9 +3743,15 @@ const exportGinnerDetails = async (req: Request, res: Response) => {
     let seedAllocationCondition: string[] = [];
     let ginToGinSaleCondition: string[] = [];
     try {
-      
+    
+    if (exportType === "all") {
+      return res.status(200).send({
+        success: true,
+        messgage: "File successfully Generated",
+        data: process.env.BASE_URL + "ginner-details-sheet.xlsx",
+      });
+  } else {
       // Filters
-
     if (searchTerm) {
       brandCondition.push(`(g.name ILIKE '%${searchTerm}%')`);
     }
@@ -3749,7 +3780,7 @@ const exportGinnerDetails = async (req: Request, res: Response) => {
       seasonCondition.push(`season_id IN (${seasonId})`);
       baleCondition.push(`gp.season_id IN (${seasonId})`);
       baleSaleCondition.push(`gp.season_id IN (${seasonId})`);
-      seedAllocationCondition.push(`gv.season_id IN (${seasonId})`);
+      seedAllocationCondition.push(`gas.season_id IN (${seasonId})`);
       ginToGinSaleCondition.push(`gs.season_id IN (${seasonId})`);
     }
 
@@ -3770,7 +3801,6 @@ const exportGinnerDetails = async (req: Request, res: Response) => {
     const baleSaleConditionSql = baleSaleCondition.length ? `${baleSaleCondition.join(' AND ')}` : '1=1';
     const seedAllocationConditionSql = seedAllocationCondition.length ? `${seedAllocationCondition.join(' AND ')}` : '1=1';
     const ginToGinSaleConditionSql = ginToGinSaleCondition.length ? `${ginToGinSaleCondition.join(' AND ')}` : '1=1';
-
       
   // Count query
     const countQuery = `
@@ -4010,61 +4040,53 @@ const exportGinnerDetails = async (req: Request, res: Response) => {
               GROUP BY
                   gs.ginner_id
             ),
-            expected_cotton_data AS (
+            allocated_cotton_data AS (
                 SELECT
-                  gv.ginner_id,
-                  COALESCE(SUM(CAST("farms"."total_estimated_cotton"AS DOUBLE PRECISION)), 0) AS allocated_seed_cotton
-                  FROM "ginner_allocated_villages" as gv
-                LEFT JOIN
-                    ginner_data g ON "gv"."ginner_id" = g.id
-                LEFT JOIN
-                    "farmers" AS "farmer" ON gv.village_id = "farmer"."village_id" and "farmer"."brand_id" ="gv"."brand_id"
-                LEFT JOIN
-                    "farms" as "farms" on farms.farmer_id = "farmer".id and farms.season_id = gv.season_id
-                LEFT JOIN
-                    "seasons" AS "season" ON "gv"."season_id" = "season"."id"
+                  gas.ginner_id,
+                  COALESCE(SUM(CAST("gas"."allocated_seed_cotton" AS DOUBLE PRECISION)), 0) AS allocated_seed_cotton
+                  FROM "gin_allocated_seed_cottons" as gas
+				        LEFT JOIN
+                    ginner_data g ON "gas"."ginner_id" = g.id
+                LEFT JOIN 
+                    states s ON "g"."state_id" = s.id
+                LEFT JOIN 
+                    "seasons" AS "season" ON "gas"."season_id" = "season"."id"
                 WHERE
                     ${seedAllocationConditionSql} 
                 GROUP BY
-                  gv.ginner_id
+                  gas.ginner_id
             )
+--             expected_cotton_data AS (
+--                 SELECT
+--                   gv.ginner_id,
+--                   COALESCE(SUM(CAST("farms"."total_estimated_cotton"AS DOUBLE PRECISION)), 0) AS allocated_seed_cotton
+--                   FROM "ginner_allocated_villages" as gv
+--                 LEFT JOIN
+--                     ginner_data g ON "gv"."ginner_id" = g.id
+--                 LEFT JOIN
+--                     "farmers" AS "farmer" ON gv.village_id = "farmer"."village_id" and "farmer"."brand_id" ="gv"."brand_id"
+--                 LEFT JOIN
+--                     "farms" as "farms" on farms.farmer_id = "farmer".id and farms.season_id = gv.season_id
+--                 LEFT JOIN
+--                     "seasons" AS "season" ON "gv"."season_id" = "season"."id"
+--                 WHERE
+--                     ${seedAllocationConditionSql} 
+--                 GROUP BY
+--                   gv.ginner_id
+--             )
       SELECT
         fg.*,
-        COALESCE(ec.allocated_seed_cotton, 0) / 1000 AS allocated_seed_cotton_mt,
+        COALESCE(ec.allocated_seed_cotton, 0) AS allocated_lint_cotton_mt,
         COALESCE(pd.procurement_seed_cotton, 0) / 1000 AS procurement_seed_cotton_mt,
         COALESCE(psc.pending_seed_cotton, 0) / 1000 AS pending_seed_cotton_mt,
         COALESCE(pd.seed_cotton_stock, 0) / 1000 AS procured_seed_cotton_stock_mt,
---        (COALESCE(ec.allocated_seed_cotton, 0) * 35/100) / 1000 AS allocated_lint_cotton_mt,
-        (
-          COALESCE(ec.allocated_seed_cotton, 0) *
-          CASE LOWER(fg.country_name)
-          WHEN 'india' THEN 35
-          WHEN 'pakistan' THEN 36
-          WHEN 'bangladesh' THEN 40
-          WHEN 'turkey' THEN 45
-          WHEN 'egypt' THEN 49
-          WHEN 'china' THEN 40
-          ELSE 35
-          END / 100.0
-        ) / 1000 AS allocated_lint_cotton_mt, 
 --         CAST(ROUND(
 --              CAST((((COALESCE(ec.allocated_seed_cotton, 0) * 35/100) / 1000) - ((COALESCE(pd.procurement_seed_cotton, 0) * 35/100) / 1000)) AS NUMERIC),
 --              2
 --          ) AS DOUBLE PRECISION) AS available_lint_cotton_farmer_mt,
         CAST(ROUND(
           CAST((
-          (
-            COALESCE(ec.allocated_seed_cotton, 0) *
-            CASE LOWER(fg.country_name)
-            WHEN 'india' THEN 35
-            WHEN 'pakistan' THEN 36
-            WHEN 'bangladesh' THEN 40
-            WHEN 'turkey' THEN 45
-            WHEN 'egypt' THEN 49
-            WHEN 'china' THEN 40
-            ELSE 35
-            END / 100.0
-          ) / 1000
+            COALESCE(ec.allocated_seed_cotton, 0)
           - 
           (
             COALESCE(pd.procurement_seed_cotton, 0) *
@@ -4127,7 +4149,11 @@ const exportGinnerDetails = async (req: Request, res: Response) => {
         CAST(ROUND(
             CAST((COALESCE(gb.total_qty, 0) / 1000 + COALESCE(gtgr.lint_qty, 0) / 1000) - (COALESCE(gs.total_qty, 0) / 1000 + COALESCE(gbg.total_qty, 0) / 1000 + COALESCE(gtg.lint_qty, 0) / 1000 + COALESCE(gtsg.total_qty, 0) / 1000) AS NUMERIC),
             2
-        ) AS DOUBLE PRECISION) AS actual_lint_stock_mt
+        ) AS DOUBLE PRECISION) AS actual_lint_stock_mt,
+        CAST(ROUND(
+            CAST((COALESCE(gb.total_qty, 0) / 1000 + COALESCE(gtgr.lint_qty, 0) / 1000) - (COALESCE(gs.total_qty, 0) / 1000 + COALESCE(gbg.total_qty, 0) / 1000 + COALESCE(gtg.lint_qty, 0) / 1000) AS NUMERIC),
+            2
+        ) AS DOUBLE PRECISION) AS total_lint_stock_mt
       FROM
         ginner_data fg
         LEFT JOIN procurement_data pd ON fg.id = pd.ginner_id
@@ -4135,7 +4161,7 @@ const exportGinnerDetails = async (req: Request, res: Response) => {
         LEFT JOIN gin_bale_data gb ON fg.id = gb.ginner_id
         LEFT JOIN pending_seed_cotton_data psc ON fg.id = psc.ginner_id
         LEFT JOIN gin_sales_data gs ON fg.id = gs.ginner_id
-        LEFT JOIN expected_cotton_data ec ON fg.id = ec.ginner_id
+        LEFT JOIN allocated_cotton_data ec ON fg.id = ec.ginner_id
         LEFT JOIN gin_bale_greyout_data gbg ON fg.id = gbg.ginner_id
         LEFT JOIN gin_to_gin_sales_data gtg ON fg.id = gtg.ginner_id
         LEFT JOIN gin_to_gin_recieved_data gtgr ON fg.id = gtgr.ginner_id
@@ -4161,15 +4187,18 @@ const exportGinnerDetails = async (req: Request, res: Response) => {
               "Sr No.",
               "Ginner Name",
               "State",
-              "Allocated Lint cotton (MT)",
-              "Procured seed cotton (MT)",
-              "Procured lint cotton (MT)",
-              "Lint cotton produced (MT)",
-              "Lint cotton unprocessed (MT)",
-              "Lint cotton sold (MT)",
-              "Actual Lint cotton in stock (MT)",
-              "Lint cotton procured from other ginners (MT)",
-              "Lint cotton greyed out quantity (MT)"
+              "Allocated Quantity as per produced amount (150,000 MT)",
+              "Seed cotton procured qty (MT) to date",
+              "Lint cotton procured qty (MT) to date",
+              "Lint cotton processed/produced qty to date (MT) ",
+              "Lint cotton unprocessed/not produced qty to date (MT)",
+              "Lint cotton sold to date (MT)",
+              "Lint cotton stock to date (MT)",
+              "Lint cotton procured from other ginners (Ginner to Ginner transactions) to date (MT)",
+              "Ginner rejected lint cotton qty (MT)",
+              "Carry forward stock  lint cotton from last seson (MT)",
+              "Lint cotton greyed out qty on TB to date (MT)",
+              "Remarks"
             ]);
           
         headerRow.font = { bold: true };
@@ -4196,6 +4225,8 @@ const exportGinnerDetails = async (req: Request, res: Response) => {
         total_lint_cotton_sold_mt: 0,
         actual_lint_stock_mt: 0,
         total_qty_lint_received_mt: 0,
+        total_qty_lint_rejected_mt: 0,
+        carry_forward_stock_lint_cotton_mt: 0,
         greyout_qty: 0
       };
         // // Append data to worksheet
@@ -4214,7 +4245,10 @@ const exportGinnerDetails = async (req: Request, res: Response) => {
               total_lint_cotton_sold_mt: Number(formatDecimal(item.total_lint_cotton_sold_mt)),
               actual_lint_stock_mt: Number(formatDecimal(item.actual_lint_stock_mt)),
               total_qty_lint_received_mt: Number(formatDecimal(item.total_qty_lint_received_mt)),
-              greyout_qty: Number(formatDecimal(item.greyout_qty))
+              total_qty_lint_rejected_mt: 0,
+              carry_forward_stock_lint_cotton_mt: 0,
+              greyout_qty: Number(formatDecimal(item.greyout_qty)),
+              remarks: ""
             };
 
           totals.allocated_lint_cotton_mt += item.allocated_lint_cotton_mt ? Number(item.allocated_lint_cotton_mt) : 0;
@@ -4224,7 +4258,9 @@ const exportGinnerDetails = async (req: Request, res: Response) => {
           totals.unprocessed_lint_cotton_mt += item.unprocessed_lint_cotton_mt ? Number(item.unprocessed_lint_cotton_mt) : 0;
           totals.total_lint_cotton_sold_mt += item.total_lint_cotton_sold_mt ? Number(item.total_lint_cotton_sold_mt) : 0;
           totals.actual_lint_stock_mt += item.actual_lint_stock_mt ? Number(item.actual_lint_stock_mt) : 0;
-          totals.total_qty_lint_received_mt += item.total_qty_lint_received_mt ? Number(item.total_qty_lint_received_mt) : 0; 
+          totals.total_qty_lint_received_mt += item.total_qty_lint_received_mt ? Number(item.total_qty_lint_received_mt) : 0;
+          totals.total_qty_lint_rejected_mt = 0,
+          totals.carry_forward_stock_lint_cotton_mt = 0, 
           totals.greyout_qty += item.greyout_qty ? Number(item.greyout_qty) : 0;        
           
           worksheet.addRow(Object.values(rowValues));
@@ -4242,6 +4278,8 @@ const exportGinnerDetails = async (req: Request, res: Response) => {
           total_lint_cotton_sold_mt: Number(formatDecimal(totals.total_lint_cotton_sold_mt)),
           actual_lint_stock_mt: Number(formatDecimal(totals.actual_lint_stock_mt)),
           total_qty_lint_received_mt: Number(formatDecimal(totals.total_qty_lint_received_mt)),
+          total_qty_lint_rejected_mt: 0,
+          carry_forward_stock_lint_cotton_mt: 0,
           greyout_qty: Number(formatDecimal(totals.greyout_qty)),
         });
 
@@ -4274,7 +4312,8 @@ const exportGinnerDetails = async (req: Request, res: Response) => {
         });
       
 
-    } catch (error: any) {
+    }
+   } catch (error: any) {
       console.log(error);
       return res.sendError(res, error.message, error);
     }
