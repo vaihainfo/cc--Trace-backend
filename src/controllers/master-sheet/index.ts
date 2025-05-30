@@ -2205,11 +2205,11 @@ const fetchConsolidatedDetailsFarmerGinnerPagination = async (req: Request, res:
     if (brandId) {
       const idArray = brandId.split(",").map((id: string) => parseInt(id, 10));
       whereCondition.push(`t.brand_id IN (${brandId})`);
-      // brandCondition.push(`g.brand && ARRAY[${brandId}]`);
+      brandCondition.push(`g.brand && ARRAY[${brandId}]`);
 
       baleCondition.push(`g.brand && ARRAY[${brandId}]`);
       baleSaleCondition.push(`g.brand && ARRAY[${brandId}]`);
-      seedAllocationCondition.push(`gv.brand_id IN (${brandId})`);
+      seedAllocationCondition.push(`gas.brand_id IN (${brandId})`);
       ginToGinSaleCondition.push(`g.brand && ARRAY[${brandId}]`);
     }
 
@@ -2217,7 +2217,7 @@ const fetchConsolidatedDetailsFarmerGinnerPagination = async (req: Request, res:
     if (programId) {
       const idArray = brandId.split(",").map((id: string) => parseInt(id, 10));
       whereCondition.push(`t.program_id IN (${programId})`);
-      // brandCondition.push(`g.program_id && ARRAY[${programId}]`);
+      brandCondition.push(`g.program_id && ARRAY[${programId}]`);
 
       baleCondition.push(`gp.program_id IN (${programId})`);
       baleSaleCondition.push(`gp.program_id IN (${programId})`);
@@ -2230,7 +2230,7 @@ const fetchConsolidatedDetailsFarmerGinnerPagination = async (req: Request, res:
       seasonCondition.push(`season_id IN (${seasonId})`);
       baleCondition.push(`gp.season_id IN (${seasonId})`);
       baleSaleCondition.push(`gp.season_id IN (${seasonId})`);
-      seedAllocationCondition.push(`gv.season_id IN (${seasonId})`);
+      seedAllocationCondition.push(`gas.season_id IN (${seasonId})`);
       ginToGinSaleCondition.push(`gs.season_id IN (${seasonId})`);
     }
 
@@ -2493,62 +2493,55 @@ const fetchConsolidatedDetailsFarmerGinnerPagination = async (req: Request, res:
               GROUP BY
                   g.state_id
             ),
-            expected_cotton_data AS (
+            allocated_cotton_data AS (
                 SELECT
-                  gv.state_id,
-                  COALESCE(SUM(CAST("farms"."total_estimated_cotton"AS DOUBLE PRECISION)), 0) AS allocated_seed_cotton
-                  FROM "ginner_allocated_villages" as gv
+                  g.state_id,
+                  COALESCE(SUM(CAST("gas"."allocated_seed_cotton" AS DOUBLE PRECISION)), 0) AS allocated_seed_cotton
+                  FROM "gin_allocated_seed_cottons" as gas
+			          LEFT JOIN 
+                    ginners g ON "gas"."ginner_id" = g.id
                 LEFT JOIN 
-                    states_data s ON "gv"."state_id" = s.id
+                    states_data s ON "g"."state_id" = s.id
                 LEFT JOIN 
-                    "farmers" AS "farmer" ON gv.village_id = "farmer"."village_id" and "farmer"."brand_id" ="gv"."brand_id"
-                LEFT JOIN 
-                    "farms" as "farms" on farms.farmer_id = "farmer".id and farms.season_id = gv.season_id
-                LEFT JOIN 
-                    "seasons" AS "season" ON "gv"."season_id" = "season"."id"
+                    "seasons" AS "season" ON "gas"."season_id" = "season"."id"
                 WHERE
                     ${seedAllocationConditionSql} 
                 GROUP BY
-                  gv.state_id
+                  g.state_id
             )
+            -- expected_cotton_data AS (
+--                 SELECT
+--                   gv.state_id,
+--                   COALESCE(SUM(CAST("farms"."total_estimated_cotton"AS DOUBLE PRECISION)), 0) AS allocated_seed_cotton
+--                   FROM "ginner_allocated_villages" as gv
+--                 LEFT JOIN 
+--                     states_data s ON "gv"."state_id" = s.id
+--                 LEFT JOIN 
+--                     "farmers" AS "farmer" ON gv.village_id = "farmer"."village_id" and "farmer"."brand_id" ="gv"."brand_id"
+--                 LEFT JOIN 
+--                     "farms" as "farms" on farms.farmer_id = "farmer".id and farms.season_id = gv.season_id
+--                 LEFT JOIN 
+--                     "seasons" AS "season" ON "gv"."season_id" = "season"."id"
+--                 WHERE
+--                     ${seedAllocationConditionSql} 
+--                 GROUP BY
+--                   gv.state_id
+--             )
       SELECT
         fg.id AS state_id,
         fg.state_name,
         fg.country_name,
-        COALESCE(ec.allocated_seed_cotton, 0) / 1000 AS allocated_seed_cotton_mt,
+        COALESCE(ec.allocated_seed_cotton, 0) / 1000 AS allocated_lint_cotton_mt,
         COALESCE(pd.procurement_seed_cotton, 0) / 1000 AS procurement_seed_cotton_mt,
         COALESCE(psc.pending_seed_cotton, 0) / 1000 AS pending_seed_cotton_mt,
         COALESCE(pd.seed_cotton_stock, 0) / 1000 AS procured_seed_cotton_stock_mt,
-        (
-          COALESCE(ec.allocated_seed_cotton, 0) *
-          CASE LOWER(fg.country_name)
-          WHEN 'india' THEN 35
-          WHEN 'pakistan' THEN 36
-          WHEN 'bangladesh' THEN 40
-          WHEN 'turkey' THEN 45
-          WHEN 'egypt' THEN 49
-          WHEN 'china' THEN 40
-          ELSE 35
-          END / 100.0
-        ) / 1000 AS allocated_lint_cotton_mt,  
 --         CAST(ROUND(
 --              CAST((((COALESCE(ec.allocated_seed_cotton, 0) * 35/100) / 1000) - ((COALESCE(pd.procurement_seed_cotton, 0) * 35/100) / 1000)) AS NUMERIC),
 --              2
 --          ) AS DOUBLE PRECISION) AS available_lint_cotton_farmer_mt,
         CAST(ROUND(
           CAST((
-          (
-            COALESCE(ec.allocated_seed_cotton, 0) *
-            CASE LOWER(fg.country_name)
-            WHEN 'india' THEN 35
-            WHEN 'pakistan' THEN 36
-            WHEN 'bangladesh' THEN 40
-            WHEN 'turkey' THEN 45
-            WHEN 'egypt' THEN 49
-            WHEN 'china' THEN 40
-            ELSE 35
-            END / 100.0
-          ) / 1000
+            COALESCE(ec.allocated_seed_cotton, 0) / 1000
           - 
           (
             COALESCE(pd.procurement_seed_cotton, 0) *
@@ -2611,7 +2604,11 @@ const fetchConsolidatedDetailsFarmerGinnerPagination = async (req: Request, res:
         CAST(ROUND(
             CAST((COALESCE(gb.total_qty, 0) / 1000 + COALESCE(gtgr.lint_qty, 0) / 1000) - (COALESCE(gs.total_qty, 0) / 1000 + COALESCE(gbg.total_qty, 0) / 1000 + COALESCE(gtg.lint_qty, 0) / 1000 + COALESCE(gtsg.total_qty, 0) / 1000) AS NUMERIC), 
             2
-        ) AS DOUBLE PRECISION) AS actual_lint_stock_mt
+        ) AS DOUBLE PRECISION) AS actual_lint_stock_mt,
+        CAST(ROUND(
+            CAST((COALESCE(gb.total_qty, 0) / 1000 + COALESCE(gtgr.lint_qty, 0) / 1000) - (COALESCE(gs.total_qty, 0) / 1000 + COALESCE(gbg.total_qty, 0) / 1000 + COALESCE(gtg.lint_qty, 0) / 1000) AS NUMERIC), 
+            2
+        ) AS DOUBLE PRECISION) AS total_lint_stock_mt
       FROM
         states_data fg
         LEFT JOIN procurement_data pd ON fg.id = pd.state_id
@@ -2619,7 +2616,7 @@ const fetchConsolidatedDetailsFarmerGinnerPagination = async (req: Request, res:
         LEFT JOIN gin_bale_data gb ON fg.id = gb.state_id
         LEFT JOIN pending_seed_cotton_data psc ON fg.id = psc.state_id
         LEFT JOIN gin_sales_data gs ON fg.id = gs.state_id
-        LEFT JOIN expected_cotton_data ec ON fg.id = ec.state_id
+        LEFT JOIN allocated_cotton_data ec ON fg.id = ec.state_id
         LEFT JOIN gin_bale_greyout_data gbg ON fg.id = gbg.state_id
         LEFT JOIN gin_to_gin_sales_data gtg ON fg.id = gtg.state_id
         LEFT JOIN gin_to_gin_recieved_data gtgr ON fg.id = gtgr.state_id
@@ -3289,7 +3286,7 @@ const fetchGinnerDetailsPagination = async (req: Request, res: Response) => {
       seasonCondition.push(`season_id IN (${seasonId})`);
       baleCondition.push(`gp.season_id IN (${seasonId})`);
       baleSaleCondition.push(`gp.season_id IN (${seasonId})`);
-      seedAllocationCondition.push(`gv.season_id IN (${seasonId})`);
+      seedAllocationCondition.push(`gas.season_id IN (${seasonId})`);
       ginToGinSaleCondition.push(`gs.season_id IN (${seasonId})`);
     }
 
@@ -3550,61 +3547,53 @@ const fetchGinnerDetailsPagination = async (req: Request, res: Response) => {
               GROUP BY
                   gs.ginner_id
             ),
-            expected_cotton_data AS (
+            allocated_cotton_data AS (
                 SELECT
-                  gv.ginner_id,
-                  COALESCE(SUM(CAST("farms"."total_estimated_cotton"AS DOUBLE PRECISION)), 0) AS allocated_seed_cotton
-                  FROM "ginner_allocated_villages" as gv
-                LEFT JOIN
-                    ginner_data g ON "gv"."ginner_id" = g.id
-                LEFT JOIN
-                    "farmers" AS "farmer" ON gv.village_id = "farmer"."village_id" and "farmer"."brand_id" ="gv"."brand_id"
-                LEFT JOIN
-                    "farms" as "farms" on farms.farmer_id = "farmer".id and farms.season_id = gv.season_id
-                LEFT JOIN
-                    "seasons" AS "season" ON "gv"."season_id" = "season"."id"
+                  gas.ginner_id,
+                  COALESCE(SUM(CAST("gas"."allocated_seed_cotton" AS DOUBLE PRECISION)), 0) AS allocated_seed_cotton
+                  FROM "gin_allocated_seed_cottons" as gas
+				        LEFT JOIN
+                    ginner_data g ON "gas"."ginner_id" = g.id
+                LEFT JOIN 
+                    states s ON "g"."state_id" = s.id
+                LEFT JOIN 
+                    "seasons" AS "season" ON "gas"."season_id" = "season"."id"
                 WHERE
                     ${seedAllocationConditionSql} 
                 GROUP BY
-                  gv.ginner_id
+                  gas.ginner_id
             )
+--             expected_cotton_data AS (
+--                 SELECT
+--                   gv.ginner_id,
+--                   COALESCE(SUM(CAST("farms"."total_estimated_cotton"AS DOUBLE PRECISION)), 0) AS allocated_seed_cotton
+--                   FROM "ginner_allocated_villages" as gv
+--                 LEFT JOIN
+--                     ginner_data g ON "gv"."ginner_id" = g.id
+--                 LEFT JOIN
+--                     "farmers" AS "farmer" ON gv.village_id = "farmer"."village_id" and "farmer"."brand_id" ="gv"."brand_id"
+--                 LEFT JOIN
+--                     "farms" as "farms" on farms.farmer_id = "farmer".id and farms.season_id = gv.season_id
+--                 LEFT JOIN
+--                     "seasons" AS "season" ON "gv"."season_id" = "season"."id"
+--                 WHERE
+--                     ${seedAllocationConditionSql} 
+--                 GROUP BY
+--                   gv.ginner_id
+--             )
       SELECT
         fg.*,
-        COALESCE(ec.allocated_seed_cotton, 0) / 1000 AS allocated_seed_cotton_mt,
+        COALESCE(ec.allocated_seed_cotton, 0) / 1000 AS allocated_lint_cotton_mt,
         COALESCE(pd.procurement_seed_cotton, 0) / 1000 AS procurement_seed_cotton_mt,
         COALESCE(psc.pending_seed_cotton, 0) / 1000 AS pending_seed_cotton_mt,
         COALESCE(pd.seed_cotton_stock, 0) / 1000 AS procured_seed_cotton_stock_mt,
---        (COALESCE(ec.allocated_seed_cotton, 0) * 35/100) / 1000 AS allocated_lint_cotton_mt,
-        (
-          COALESCE(ec.allocated_seed_cotton, 0) *
-          CASE LOWER(fg.country_name)
-          WHEN 'india' THEN 35
-          WHEN 'pakistan' THEN 36
-          WHEN 'bangladesh' THEN 40
-          WHEN 'turkey' THEN 45
-          WHEN 'egypt' THEN 49
-          WHEN 'china' THEN 40
-          ELSE 35
-          END / 100.0
-        ) / 1000 AS allocated_lint_cotton_mt, 
 --         CAST(ROUND(
 --              CAST((((COALESCE(ec.allocated_seed_cotton, 0) * 35/100) / 1000) - ((COALESCE(pd.procurement_seed_cotton, 0) * 35/100) / 1000)) AS NUMERIC),
 --              2
 --          ) AS DOUBLE PRECISION) AS available_lint_cotton_farmer_mt,
         CAST(ROUND(
           CAST((
-          (
-            COALESCE(ec.allocated_seed_cotton, 0) *
-            CASE LOWER(fg.country_name)
-            WHEN 'india' THEN 35
-            WHEN 'pakistan' THEN 36
-            WHEN 'bangladesh' THEN 40
-            WHEN 'turkey' THEN 45
-            WHEN 'egypt' THEN 49
-            WHEN 'china' THEN 40
-            ELSE 35
-            END / 100.0
-          ) / 1000
+            COALESCE(ec.allocated_seed_cotton, 0) / 1000
           - 
           (
             COALESCE(pd.procurement_seed_cotton, 0) *
@@ -3667,7 +3656,11 @@ const fetchGinnerDetailsPagination = async (req: Request, res: Response) => {
         CAST(ROUND(
             CAST((COALESCE(gb.total_qty, 0) / 1000 + COALESCE(gtgr.lint_qty, 0) / 1000) - (COALESCE(gs.total_qty, 0) / 1000 + COALESCE(gbg.total_qty, 0) / 1000 + COALESCE(gtg.lint_qty, 0) / 1000 + COALESCE(gtsg.total_qty, 0) / 1000) AS NUMERIC),
             2
-        ) AS DOUBLE PRECISION) AS actual_lint_stock_mt
+        ) AS DOUBLE PRECISION) AS actual_lint_stock_mt,
+        CAST(ROUND(
+            CAST((COALESCE(gb.total_qty, 0) / 1000 + COALESCE(gtgr.lint_qty, 0) / 1000) - (COALESCE(gs.total_qty, 0) / 1000 + COALESCE(gbg.total_qty, 0) / 1000 + COALESCE(gtg.lint_qty, 0) / 1000) AS NUMERIC),
+            2
+        ) AS DOUBLE PRECISION) AS total_lint_stock_mt
       FROM
         ginner_data fg
         LEFT JOIN procurement_data pd ON fg.id = pd.ginner_id
@@ -3675,7 +3668,7 @@ const fetchGinnerDetailsPagination = async (req: Request, res: Response) => {
         LEFT JOIN gin_bale_data gb ON fg.id = gb.ginner_id
         LEFT JOIN pending_seed_cotton_data psc ON fg.id = psc.ginner_id
         LEFT JOIN gin_sales_data gs ON fg.id = gs.ginner_id
-        LEFT JOIN expected_cotton_data ec ON fg.id = ec.ginner_id
+        LEFT JOIN allocated_cotton_data ec ON fg.id = ec.ginner_id
         LEFT JOIN gin_bale_greyout_data gbg ON fg.id = gbg.ginner_id
         LEFT JOIN gin_to_gin_sales_data gtg ON fg.id = gtg.ginner_id
         LEFT JOIN gin_to_gin_recieved_data gtgr ON fg.id = gtgr.ginner_id
