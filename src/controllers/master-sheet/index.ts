@@ -2531,7 +2531,7 @@ const fetchConsolidatedDetailsFarmerGinnerPagination = async (req: Request, res:
         fg.id AS state_id,
         fg.state_name,
         fg.country_name,
-        COALESCE(ec.allocated_seed_cotton, 0) / 1000 AS allocated_lint_cotton_mt,
+        COALESCE(ec.allocated_seed_cotton, 0) AS allocated_lint_cotton_mt,
         COALESCE(pd.procurement_seed_cotton, 0) / 1000 AS procurement_seed_cotton_mt,
         COALESCE(psc.pending_seed_cotton, 0) / 1000 AS pending_seed_cotton_mt,
         COALESCE(pd.seed_cotton_stock, 0) / 1000 AS procured_seed_cotton_stock_mt,
@@ -2541,7 +2541,7 @@ const fetchConsolidatedDetailsFarmerGinnerPagination = async (req: Request, res:
 --          ) AS DOUBLE PRECISION) AS available_lint_cotton_farmer_mt,
         CAST(ROUND(
           CAST((
-            COALESCE(ec.allocated_seed_cotton, 0) / 1000
+            COALESCE(ec.allocated_seed_cotton, 0)
           - 
           (
             COALESCE(pd.procurement_seed_cotton, 0) *
@@ -3583,7 +3583,7 @@ const fetchGinnerDetailsPagination = async (req: Request, res: Response) => {
 --             )
       SELECT
         fg.*,
-        COALESCE(ec.allocated_seed_cotton, 0) / 1000 AS allocated_lint_cotton_mt,
+        COALESCE(ec.allocated_seed_cotton, 0) AS allocated_lint_cotton_mt,
         COALESCE(pd.procurement_seed_cotton, 0) / 1000 AS procurement_seed_cotton_mt,
         COALESCE(psc.pending_seed_cotton, 0) / 1000 AS pending_seed_cotton_mt,
         COALESCE(pd.seed_cotton_stock, 0) / 1000 AS procured_seed_cotton_stock_mt,
@@ -3593,7 +3593,7 @@ const fetchGinnerDetailsPagination = async (req: Request, res: Response) => {
 --          ) AS DOUBLE PRECISION) AS available_lint_cotton_farmer_mt,
         CAST(ROUND(
           CAST((
-            COALESCE(ec.allocated_seed_cotton, 0) / 1000
+            COALESCE(ec.allocated_seed_cotton, 0)
           - 
           (
             COALESCE(pd.procurement_seed_cotton, 0) *
