@@ -4772,7 +4772,6 @@ const fetchSummarySheetPagination = async (req: Request, res: Response) => {
               ELSE ROUND(
               (
                 (
-                (
                   COALESCE(ec.allocated_seed_cotton, 0)
                   -
                   (
@@ -4786,8 +4785,7 @@ const fetchSummarySheetPagination = async (req: Request, res: Response) => {
                     WHEN 'china' THEN 40
                     ELSE 35
                   END / 100.0
-                  )
-                ) / 1000.0
+                  ) / 1000.0
                 ) / COALESCE(NULLIF(ec.allocated_seed_cotton, 0), 1)
               ) * 100
               )::NUMERIC(10, 2)
@@ -4812,10 +4810,10 @@ const fetchSummarySheetPagination = async (req: Request, res: Response) => {
           CASE
             WHEN COALESCE(ec.allocated_seed_cotton, 0) = 0 THEN 0
             ELSE ROUND(
-            (COALESCE(gb.total_qty, 0) / 1000.0 + COALESCE(gtgr.lint_qty, 0) / 1000.0)
+            ((COALESCE(gb.total_qty, 0) / 1000.0 + COALESCE(gtgr.lint_qty, 0) / 1000.0)
             -
             (COALESCE(gs.total_qty, 0) / 1000.0 + COALESCE(gbg.total_qty, 0) / 1000.0 + COALESCE(gtg.lint_qty, 0) / 1000.0)
-            / COALESCE(NULLIF(ec.allocated_seed_cotton, 0), 1) * 100
+            ) / COALESCE(NULLIF(ec.allocated_seed_cotton, 0), 1) * 100
             )::NUMERIC(10, 2)
           END AS total_lint_stock_percentage,
           COALESCE(slsd.lint_cotton_stock, 0) / 1000 AS spin_lint_cotton_stock_mt,
