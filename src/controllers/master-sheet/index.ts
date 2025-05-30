@@ -616,16 +616,18 @@ const exportConsolidatedDetailsGinnerSpinner = async (req: Request, res: Respons
     // Set bold font for header row
     const headerRow = worksheet.addRow([
       "S No.",
-      "State",
-      "Total lint cotton procured Accepted + Pending (MT)",
-      "Total lint cotton processed (MT)",
-      "Total yarn produced (MT)",
-      "Total yarn sold (MT)",
-      "Total lint cotton stock (MT)",
-      "Total yarn stock  (MT)",
-      "Total lint cotton quantity rejected by spinner (MT)",
-      "Total lint cotton greyed out (MT)",
-      "Total yarn greyed out (MT)",
+      "State/Region",
+      "Total lint cotton procured qty to date (MT) Accepted + Pending to accept on TB",
+      "Total lint cotton processed/produced qty to date (MT)",
+      "Total yarn produced qty to date (MT)",
+      "Total yarn sold qty to date (MT)",
+      "Total lint cotton stock qty to date (MT)",
+      "Total yarn stock qty to date (MT)",
+      "Total lint cotton qty rejected by spinner to date (MT)",
+      "Total yarn qty rejected by spinner to date (MT)",
+      "Total lint cotton greyed out qty on TB (MT)",
+      "Total yarn greyed out qty on TB to date (MT)",
+      "Remarks",
     ]);
     headerRow.font = { bold: true };
 
@@ -969,9 +971,11 @@ const exportConsolidatedDetailsGinnerSpinner = async (req: Request, res: Respons
         yarnSoldMT: yarnSoldMT,
         lintActualStockMT: lintActualStockMT,
         yarnStockMT: yarnStockMT,
-        lintCottonRejectedMT: lintCottonRejectedMT,
+        lintCottonRejectedMT: 0,
+        yarnRejectedMT: 0,
         lintGreyoutMT: lintGreyoutMT,
-        yarnGreyOutMT: yarnGreyOutMT
+        yarnGreyOutMT: yarnGreyOutMT,
+        remarks: ''
       });
     }
     let totals = {
@@ -982,6 +986,7 @@ const exportConsolidatedDetailsGinnerSpinner = async (req: Request, res: Respons
       lintActualStockMT: 0,
       yarnStockMT: 0,
       lintCottonRejectedMT: 0,
+      yarnRejectedMT: 0,
       lintGreyoutMT: 0,
       yarnGreyOutMT: 0,
     };
@@ -997,9 +1002,11 @@ const exportConsolidatedDetailsGinnerSpinner = async (req: Request, res: Respons
             yarnSoldMT: Number(item.yarnSoldMT),
             lintActualStockMT: Number(item.lintActualStockMT),
             yarnStockMT: Number(item.yarnStockMT),
-            lintCottonRejectedMT: Number(item.lintCottonRejectedMT),
+            lintCottonRejectedMT: 0,
+            yarnRejectedMT: 0,
             lintGreyoutMT: Number(item.lintGreyoutMT),
             yarnGreyOutMT: Number(item.yarnGreyOutMT),
+            remarks: '',
       };
       totals.totallintcottonprocuredAcceptedPendingMT += Number(rowValues.totallintcottonprocuredAcceptedPendingMT);
       totals.lintCottonConsumedMT += Number(rowValues.lintCottonConsumedMT);
@@ -1008,6 +1015,7 @@ const exportConsolidatedDetailsGinnerSpinner = async (req: Request, res: Respons
       totals.lintActualStockMT += Number(rowValues.lintActualStockMT);
       totals.yarnStockMT += Number(rowValues.yarnStockMT);
       totals.lintCottonRejectedMT += Number(rowValues.lintCottonRejectedMT);
+      totals.yarnRejectedMT += Number(rowValues.yarnRejectedMT);
       totals.lintGreyoutMT += Number(rowValues.lintGreyoutMT);
       totals.yarnGreyOutMT += Number(rowValues.yarnGreyOutMT);
      worksheet.addRow(Object.values(rowValues));
@@ -1023,8 +1031,10 @@ const exportConsolidatedDetailsGinnerSpinner = async (req: Request, res: Respons
       lintActualStockMT: totals.lintActualStockMT,
       yarnStockMT: totals.yarnStockMT,
       lintCottonRejectedMT: totals.lintCottonRejectedMT,
+      yarnRejectedMT: totals.yarnRejectedMT,
       lintGreyoutMT: totals.lintGreyoutMT,
-      yarnGreyOutMT: totals.yarnGreyOutMT
+      yarnGreyOutMT: totals.yarnGreyOutMT,
+      remarks: ""
     };
 
     worksheet.addRow(Object.values(rowValues)).eachCell(cell => cell.font = { bold: true });
@@ -1628,18 +1638,23 @@ const exportSpinnerDetails = async (req: Request, res: Response) => {
       "S No.",
       "Spinner Name",
       "State",
-      "Total lint cotton procured Accepted (MT)",
-      "Total lint cotton procured Pending (MT)",
-      "Total lint cotton procured Accepted + Pending (MT)",
-      "Total lint cotton processed (MT)",
-      "Total yarn produced (MT)",
-      "Total yarn sold (MT)",
-      "Total lint cotton stock (MT)",
-      "Total yarn stock qty (MT)",
-      "Total lint cotton quantity rejected by spinner (MT)",
-      "Mositure loss/weight shortage quantity of lint cotton during the acceptance of TB (Spinner Bale Receipt) (MT)",
-      "Total lint cotton greyed out (MT)",
-      "Total yarn greyed out (MT)",
+      "New/Existing",
+      "Total lint Cotton procured qty to date (MT) Accepted",
+      "Total lint Cotton procured  qty to date (MT) pending to accept",
+      "Total lint cotton procured qty to date (MT)",
+      "Total lint cotton processed/produced qty to date (MT)",
+      "Total yarn produced qty to date (MT)",
+      "Total yarn sold qty to date (MT)",
+      "Total lint cotton stock qty to date (MT)",
+      "Total yarn stock qty to date (MT)",
+      "Carry forward lint cotton stock qty from previous season (MT)",
+      "Carry forward yarn stock qty from previous season (MT)",
+      "Total lint cotton qty rejected by spinner to date (MT)",
+      "Total yarn qty rejected by spinner to date (MT)",
+      "Mositure loss/weight shortage qty of lint cotton during the acceptance of TB (Spinner Bale Receipt) (MT)",
+      "Total lint cotton greyed out qty on TB to date (MT)",
+      "Total yarn greyed out qty on TB to date (MT)",
+      "Remarks",
     ]);
     headerRow.font = { bold: true };
 
@@ -2092,6 +2107,7 @@ const exportSpinnerDetails = async (req: Request, res: Response) => {
           index: index + 1,
           spinner_name: item.name ? item.name : "",
           state: item.state.state_name,
+          neworexisting: '',
           lint_cotton_procured: obj.lintCottonProcuredMT ? Number(obj.lintCottonProcuredMT) : 0,
           lint_cotton_procured_pending: obj.lintCottonProcuredPendingMT ? Number(obj.lintCottonProcuredPendingMT) : 0,
           lint_cotton_procured_accepted_Pending: obj.lintCottonProcuredAcceptedandPendingMT ? Number(obj.lintCottonProcuredAcceptedandPendingMT) : 0,
@@ -2100,10 +2116,14 @@ const exportSpinnerDetails = async (req: Request, res: Response) => {
           yarn_sold: obj.yarnSoldMT ? Number(obj.yarnSoldMT) : 0,
           lint_actual_Stock: obj.lintActualStockMT ? Number(obj.lintActualStockMT) : 0,
           yarn_actual_stock: obj.yarnActualStockMT ? Number(obj.yarnActualStockMT) : 0,
-          lint_cotton_rejected: obj.lintCottonRejectedMT ? Number(obj.lintCottonRejectedMT) : 0,
-          moisture_loss: obj.moistureLosseMT ? Number(obj.moistureLosseMT) : 0,
+          carry_forward_lint_cotton_stock: 0,
+          carry_forward_yarn_stock: 0,
+          lint_cotton_rejected: 0,
+          yarn_qty_rejected: 0,
+          moisture_loss: 0,
           lintGreyoutMT: obj.lintGreyoutMT ? Number(obj.lintGreyoutMT) : 0,
           yarnGreyoutMT: obj.yarnGreyoutMT ? Number(obj.yarnGreyoutMT) : 0,
+          remarks: '',
         };
 
         totals.lint_cotton_procured += Number(rowVal.lint_cotton_procured);
@@ -2127,7 +2147,8 @@ const exportSpinnerDetails = async (req: Request, res: Response) => {
     const rowValues = {
       index: "",
       spinner: "",
-      state: "Total",
+      state: "",
+      neworexisting: "Total",
       lint_cotton_procured: totals.lint_cotton_procured,
       lint_cotton_procured_pending: totals.lint_cotton_procured_pending,
       lint_cotton_procured_accepted_Pending: totals.lint_cotton_procured_accepted_Pending,
@@ -2136,10 +2157,14 @@ const exportSpinnerDetails = async (req: Request, res: Response) => {
       yarn_sold: totals.yarn_sold,
       lint_actual_Stock: totals.lint_actual_Stock,
       yarn_actual_stock: totals.yarn_actual_stock,
-      lint_cotton_rejected: totals.lint_cotton_rejected,
-      moisture_loss: totals.moisture_loss,
+      carry_forward_lint_cotton_stock: 0,
+      carry_forward_yarn_stock: 0,
+      lint_cotton_rejected: 0,
+      yarn_qty_rejected: 0,
+      moisture_loss: 0,
       lintGreyoutMT: totals.lintGreyoutMT,
-      yarnGreyoutMT: totals.yarnGreyoutMT
+      yarnGreyoutMT: totals.yarnGreyoutMT,
+      remarks: ''
     };
 
     worksheet.addRow(Object.values(rowValues)).eachCell(cell => cell.font = { bold: true });
