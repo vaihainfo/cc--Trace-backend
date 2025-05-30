@@ -4727,6 +4727,27 @@ const fetchSummarySheetPagination = async (req: Request, res: Response) => {
               ELSE 35
               END / 100.0
             ) / 1000 AS procured_lint_cotton_mt,
+            CASE 
+            WHEN COALESCE(ec.allocated_seed_cotton, 0) = 0 THEN 0
+            ELSE ROUND(
+              CAST(
+                (
+                  (
+                  COALESCE(pd.procurement_seed_cotton, 0) *
+                  CASE LOWER(fg.country_name)
+                    WHEN 'india' THEN 35
+                    WHEN 'pakistan' THEN 36
+                    WHEN 'bangladesh' THEN 40
+                    WHEN 'turkey' THEN 45
+                    WHEN 'egypt' THEN 49
+                    WHEN 'china' THEN 40
+                    ELSE 35
+                  END / 100.0
+                  ) / 1000
+                ) / COALESCE(ec.allocated_seed_cotton, 1) * 100
+              AS NUMERIC), 2
+            )
+            END AS procured_lint_percentage,
             CAST(ROUND(
               CAST((
                 COALESCE(ec.allocated_seed_cotton, 0)
@@ -4746,8 +4767,33 @@ const fetchSummarySheetPagination = async (req: Request, res: Response) => {
               ) AS NUMERIC),
               2
             ) AS DOUBLE PRECISION) AS available_lint_cotton_farmer_mt,
-                COALESCE(gb.total_qty, 0) AS produced_lint_cotton_kgs,
-                COALESCE(gb.total_qty, 0) / 1000 AS produced_lint_cotton_mt,
+            CASE
+              WHEN COALESCE(ec.allocated_seed_cotton, 0) = 0 THEN 0
+              ELSE ROUND(
+              (
+                (
+                (
+                  COALESCE(ec.allocated_seed_cotton, 0)
+                  -
+                  (
+                  COALESCE(pd.procurement_seed_cotton, 0) *
+                  CASE LOWER(fg.country_name)
+                    WHEN 'india' THEN 35
+                    WHEN 'pakistan' THEN 36
+                    WHEN 'bangladesh' THEN 40
+                    WHEN 'turkey' THEN 45
+                    WHEN 'egypt' THEN 49
+                    WHEN 'china' THEN 40
+                    ELSE 35
+                  END / 100.0
+                  )
+                ) / 1000.0
+                ) / COALESCE(NULLIF(ec.allocated_seed_cotton, 0), 1)
+              ) * 100
+              )::NUMERIC(10, 2)
+            END AS available_lint_cotton_percentage,
+            COALESCE(gb.total_qty, 0) AS produced_lint_cotton_kgs,
+            COALESCE(gb.total_qty, 0) / 1000 AS produced_lint_cotton_mt,
             COALESCE(gs.total_qty, 0) / 1000 AS total_lint_cotton_sold_mt,
             COALESCE(gbg.total_qty, 0) / 1000 AS greyout_qty,
             COALESCE(gtg.lint_qty, 0) / 1000 AS total_qty_lint_transfered,
@@ -4755,16 +4801,39 @@ const fetchSummarySheetPagination = async (req: Request, res: Response) => {
             COALESCE(gtsg.total_qty, 0) / 1000 AS lint_qty_to_be_submitted,
             CAST(ROUND(
                 CAST((COALESCE(gb.total_qty, 0) / 1000 + COALESCE(gtgr.lint_qty, 0) / 1000) - (COALESCE(gs.total_qty, 0) / 1000 + COALESCE(gbg.total_qty, 0) / 1000 + COALESCE(gtg.lint_qty, 0) 
-    / 1000 + COALESCE(gtsg.total_qty, 0) / 1000) AS NUMERIC),
+                / 1000 + COALESCE(gtsg.total_qty, 0) / 1000) AS NUMERIC),
                 2
             ) AS DOUBLE PRECISION) AS actual_lint_stock_mt,
             CAST(ROUND(
                 CAST((COALESCE(gb.total_qty, 0) / 1000 + COALESCE(gtgr.lint_qty, 0) / 1000) - (COALESCE(gs.total_qty, 0) / 1000 + COALESCE(gbg.total_qty, 0) / 1000 + COALESCE(gtg.lint_qty, 0) 
-    / 1000) AS NUMERIC),
+                / 1000) AS NUMERIC),
                 2
             ) AS DOUBLE PRECISION) AS total_lint_stock_mt,
+          CASE
+            WHEN COALESCE(ec.allocated_seed_cotton, 0) = 0 THEN 0
+            ELSE ROUND(
+            (COALESCE(gb.total_qty, 0) / 1000.0 + COALESCE(gtgr.lint_qty, 0) / 1000.0)
+            -
+            (COALESCE(gs.total_qty, 0) / 1000.0 + COALESCE(gbg.total_qty, 0) / 1000.0 + COALESCE(gtg.lint_qty, 0) / 1000.0)
+            / COALESCE(NULLIF(ec.allocated_seed_cotton, 0), 1) * 100
+            )::NUMERIC(10, 2)
+          END AS total_lint_stock_percentage,
           COALESCE(slsd.lint_cotton_stock, 0) / 1000 AS spin_lint_cotton_stock_mt,
+          CASE
+            WHEN COALESCE(ec.allocated_seed_cotton, 0) = 0 THEN 0
+            ELSE ROUND(
+            (COALESCE(slsd.lint_cotton_stock, 0) / 1000.0)
+            / COALESCE(NULLIF(ec.allocated_seed_cotton, 0), 1) * 100
+            )::NUMERIC(10, 2)
+          END AS spin_lint_stock_percentage,
           COALESCE(sysd.yarn_stock, 0) / 1000 AS spin_yarn_cotton_stock_mt,
+          CASE
+            WHEN COALESCE(ec.allocated_seed_cotton, 0) = 0 THEN 0
+            ELSE ROUND(
+            (COALESCE(sysd.yarn_stock, 0) / 1000.0)
+            / COALESCE(NULLIF(ec.allocated_seed_cotton, 0), 1) * 100
+            )::NUMERIC(10, 2)
+          END AS spin_yarn_stock_percentage,
           COALESCE(slgd.lint_greyout, 0) / 1000 AS spin_lint_greyout_mt,
           COALESCE(sys.yarn_sold, 0) / 1000 AS spin_yarn_sold_mt,
           COALESCE(sygd.yarn_greyout, 0) / 1000 AS spin_yarn_greyout_mt
