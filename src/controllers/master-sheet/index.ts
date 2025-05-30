@@ -4280,6 +4280,537 @@ const exportGinnerDetails = async (req: Request, res: Response) => {
     }
   }
 
+
+const fetchSummarySheetPagination = async (req: Request, res: Response) => {
+  
+  const searchTerm = req.query.search || "";
+  const page = Number(req.query.page) || 1;
+  const limit = Number(req.query.limit) || 10;
+  const offset = (page - 1) * limit;
+  const { seasonId, programId, brandId, countryId, stateId }: any = req.query;
+    let whereCondition: string[] = [];
+    let seasonCondition: string[] = [];
+    let brandCondition: string[] = [];
+    let baleCondition: string[] = [];
+    let baleSaleCondition: string[] = [];
+    let seedAllocationCondition: string[] = [];
+    let ginToGinSaleCondition: string[] = [];
+    let spinLintCondition: string[] = [];
+    let spinYarnCondition: string[] = [];
+    let spinYarnSaleCondition: string[] = [];
+ 
+  try {
+
+    // Filters
+
+    if (searchTerm) {
+      brandCondition.push(`(s.state_name ILIKE '%${searchTerm}%')`);
+    }
+
+    if (countryId) {
+      const idArray = countryId.split(",").map((id: string) => parseInt(id, 10));
+      whereCondition.push(`g.country_id IN (${countryId})`);
+      brandCondition.push(`g.country_id IN (${countryId})`);
+    }
+
+    if (brandId) {
+      const idArray = brandId.split(",").map((id: string) => parseInt(id, 10));
+      whereCondition.push(`g.brand && ARRAY[${brandId}]`);
+      brandCondition.push(`g.brand && ARRAY[${brandId}]`);
+
+      baleCondition.push(`g.brand && ARRAY[${brandId}]`);
+      baleSaleCondition.push(`g.brand && ARRAY[${brandId}]`);
+      seedAllocationCondition.push(`gas.brand_id IN (${brandId})`);
+      ginToGinSaleCondition.push(`g.brand && ARRAY[${brandId}]`);
+      spinLintCondition.push(`s.brand && ARRAY[${brandId}]`);
+      spinYarnCondition.push(`s.brand && ARRAY[${brandId}]`);
+      spinYarnSaleCondition.push(`s.brand && ARRAY[${brandId}]`);
+    }
+
+
+    if (programId) {
+      const idArray = brandId.split(",").map((id: string) => parseInt(id, 10));
+      whereCondition.push(`g.program_id && ARRAY[${programId}]`);
+      brandCondition.push(`g.program_id && ARRAY[${programId}]`);
+
+      baleCondition.push(`gp.program_id IN (${programId})`);
+      baleSaleCondition.push(`gp.program_id IN (${programId})`);
+      seedAllocationCondition.push(`gv.program_id IN (${programId})`);
+      ginToGinSaleCondition.push(`gs.program_id IN (${programId})`);
+      spinLintCondition.push(`gs.program_id IN (${programId})`);
+      spinYarnCondition.push(`sp.program_id IN (${programId})`);
+      spinYarnSaleCondition.push(`ss.program_id IN (${programId})`);
+    }
+
+    if (seasonId) {
+      const idArray = seasonId.split(",").map((id: string) => parseInt(id, 10));
+      seasonCondition.push(`season_id IN (${seasonId})`);
+      baleCondition.push(`gp.season_id IN (${seasonId})`);
+      baleSaleCondition.push(`gp.season_id IN (${seasonId})`);
+      seedAllocationCondition.push(`gas.season_id IN (${seasonId})`);
+      ginToGinSaleCondition.push(`gs.season_id IN (${seasonId})`);
+      spinLintCondition.push(`gs.season_id IN (${seasonId})`);
+      spinYarnCondition.push(`sp.season_id IN (${seasonId})`);
+      spinYarnSaleCondition.push(`ss.season_id IN (${seasonId})`);
+    }
+
+    if (stateId) {
+      const idArray = stateId.split(",").map((id: string) => parseInt(id, 10));
+      brandCondition.push(`g.state_id IN (${stateId})`);
+    }
+
+    const whereConditionSql = whereCondition.length ? `${whereCondition.join(' AND ')}` : '1=1';
+    const seasonConditionSql = seasonCondition.length ? `${seasonCondition.join(' AND ')}` : '1=1';
+    const brandConditionSql = brandCondition.length ? `${brandCondition.join(' AND ')}` : '1=1';
+    const baleConditionSql = baleCondition.length ? `${baleCondition.join(' AND ')}` : '1=1';
+    const baleSaleConditionSql = baleSaleCondition.length ? `${baleSaleCondition.join(' AND ')}` : '1=1';
+    const seedAllocationConditionSql = seedAllocationCondition.length ? `${seedAllocationCondition.join(' AND ')}` : '1=1';
+    const ginToGinSaleConditionSql = ginToGinSaleCondition.length ? `${ginToGinSaleCondition.join(' AND ')}` : '1=1';
+    const spinLintConditionSql = spinLintCondition.length ? `${spinLintCondition.join(' AND ')}` : '1=1';
+    const spinYarnConditionSql = spinYarnCondition.length ? `${spinYarnCondition.join(' AND ')}` : '1=1';
+    const spinYarnSaleConditionSql = spinYarnSaleCondition.length ? `${spinYarnSaleCondition.join(' AND ')}` : '1=1';
+
+
+// Count query
+    const countQuery = `
+    SELECT COUNT(*) AS total_count
+    FROM ginners g
+    JOIN countries c ON g.country_id = c.id
+    WHERE ${brandConditionSql}
+    GROUP BY c.id, g.country_id
+    `;
+
+    // Data query
+    const dataQuery = `
+    WITH
+        countries_data AS (
+          SELECT
+			      c.id,
+            c.county_name AS country_name
+          FROM
+            ginners g
+          JOIN countries c ON g.country_id = c.id
+          WHERE ${brandConditionSql}
+          GROUP BY c.id, g.country_id
+        ),
+        procurement_data AS (
+          SELECT
+            t.country_id,
+            SUM(CAST(t.qty_purchased AS DOUBLE PRECISION)) AS procurement_seed_cotton,        
+            SUM(t.qty_stock) AS seed_cotton_stock
+          FROM
+            transactions t
+          JOIN ginners g ON t.mapped_ginner = g.id
+          JOIN countries_data c ON t."country_id" = c.id
+          WHERE
+            t.mapped_ginner IS NOT NULL
+            AND t.status = 'Sold'
+            AND ${seasonConditionSql}
+            AND ${whereConditionSql}
+          GROUP BY
+            t.country_id, c.id
+        ),
+        gin_process_data AS (
+         SELECT
+            g.country_id,
+            SUM(gp.no_of_bales) AS no_of_bales
+          FROM
+            gin_processes gp
+          JOIN ginners g ON gp.ginner_id = g.id
+          LEFT JOIN countries_data c ON "g"."country_id" = c.id
+          WHERE
+            gp.program_id = ANY (g.program_id)
+            AND ${seasonConditionSql}
+          GROUP BY
+            g.country_id
+        ),
+        gin_bale_data AS (
+          SELECT
+            g.country_id,
+            COALESCE(
+                SUM(
+                CASE
+                  WHEN gb.old_weight IS NOT NULL THEN CAST(gb.old_weight AS DOUBLE PRECISION)
+                  ELSE CAST(gb.weight AS DOUBLE PRECISION)
+                END
+                ), 0
+              ) AS total_qty
+            FROM
+              "gin-bales" gb
+            JOIN gin_processes gp ON gb.process_id = gp.id
+            JOIN ginners g ON gp.ginner_id = g.id
+            JOIN countries_data c ON "g"."country_id" = c.id
+            WHERE
+              gp.program_id = ANY (g.program_id)
+              AND ${baleConditionSql}
+            GROUP BY
+              g.country_id
+        ),
+        gin_bale_greyout_data AS (
+          SELECT
+            g.country_id,
+            COUNT(gb.id) AS no_of_bales,
+            COALESCE(
+                  SUM(
+                    CASE
+                      WHEN gb.old_weight IS NOT NULL THEN CAST(gb.old_weight AS DOUBLE PRECISION)
+                      ELSE CAST(gb.weight AS DOUBLE PRECISION)
+                    END
+                  ), 0
+              ) AS total_qty
+          FROM
+            "gin-bales" gb
+          JOIN gin_processes gp ON gb.process_id = gp.id
+		      JOIN ginners g ON gp.ginner_id = g.id
+          JOIN countries_data c ON "g"."country_id" = c.id
+          WHERE
+            gp.program_id = ANY (g.program_id) AND
+            gb.sold_status = FALSE AND (
+              (
+                gp.greyout_status = TRUE AND  
+                gb.is_all_rejected IS NULL
+              )
+              OR (
+                gp.scd_verified_status = TRUE AND
+                gb.scd_verified_status IS NOT TRUE
+              )
+              OR (
+                gp.scd_verified_status = FALSE AND
+                gb.scd_verified_status IS FALSE
+              )
+              )
+            AND ${baleConditionSql}
+          GROUP BY
+            g.country_id
+        ),
+        pending_seed_cotton_data AS (
+          SELECT
+            t.country_id,
+            SUM(CAST(t.qty_purchased AS DOUBLE PRECISION)) AS pending_seed_cotton
+          FROM
+            transactions t
+          JOIN ginners g ON t.mapped_ginner = g.id
+          JOIN countries_data c ON t."country_id" = c.id
+          WHERE
+            t.program_id = ANY (g.program_id)
+            AND t.status = 'Pending'
+            AND ${seasonConditionSql}
+            AND ${whereConditionSql}
+          GROUP BY
+            t.country_id
+        ),
+        gin_sales_data AS (
+          SELECT
+            g.country_id,
+            COUNT(gb.id) AS no_of_bales,
+            COALESCE(
+              SUM(
+              CASE
+                WHEN gb.old_weight IS NOT NULL THEN CAST(gb.old_weight AS DOUBLE PRECISION)
+                ELSE CAST(gb.weight AS DOUBLE PRECISION)
+              END
+              ), 0
+            ) AS total_qty
+          FROM
+            "gin-bales" gb
+          LEFT JOIN 
+            bale_selections bs ON gb.id = bs.bale_id
+          LEFT JOIN 
+            gin_sales gs ON gs.id = bs.sales_id
+          JOIN ginners g ON gs.ginner_id = g.id
+          LEFT JOIN gin_processes gp ON gb.process_id = gp.id
+          LEFT JOIN countries_data c ON "g"."country_id" = c.id
+          WHERE
+            gs.program_id = ANY (g.program_id)
+            AND gs.status in ('Pending', 'Pending for QR scanning', 'Partially Accepted', 'Partially Rejected','Sold')
+            AND gs.buyer_ginner IS NULL
+            AND ${baleSaleConditionSql}
+          GROUP BY
+            g.country_id
+            ),
+        gin_to_gin_sales_data AS (
+                SELECT
+                    g.country_id,
+                    COUNT(gb.id) AS no_of_bales,
+                    COALESCE(
+                      SUM(
+                        CASE
+                          WHEN gb.old_weight IS NOT NULL THEN CAST(gb.old_weight AS DOUBLE PRECISION)
+                          ELSE CAST(gb.weight AS DOUBLE PRECISION)
+                        END
+                      ), 0
+                    ) AS lint_qty
+                FROM
+                    "gin-bales" gb
+                LEFT JOIN 
+                  bale_selections bs ON gb.id = bs.bale_id
+                LEFT JOIN 
+                    gin_sales gs ON gs.id = bs.sales_id
+                JOIN ginners g ON gs.ginner_id = g.id
+                LEFT JOIN gin_processes gp ON gb.process_id = gp.id
+				        LEFT JOIN countries_data c ON "g"."country_id" = c.id 
+                WHERE
+                    gs.program_id = ANY (g.program_id)
+                    AND gs.status in ('Pending', 'Pending for QR scanning', 'Partially Accepted', 'Partially Rejected','Sold')
+                    AND gs.buyer_ginner IS NOT NULL
+                    AND gs.buyer_type = 'Ginner'
+                    AND ${baleSaleConditionSql}
+                GROUP BY
+                    g.country_id
+            ),
+        gin_to_gin_recieved_data AS (
+                SELECT 
+                  g.country_id AS country_id,
+                  COUNT(gb.id) AS no_of_bales,
+                  COALESCE(
+                    SUM(
+                      CAST(gb.weight AS DOUBLE PRECISION)
+                    ), 0
+                  ) AS lint_qty
+                FROM 
+                  gin_to_gin_sales gtg
+                JOIN
+                  gin_sales gs ON gtg.sales_id = gs.id
+                JOIN 
+                  "gin-bales" gb ON gtg.bale_id = gb.id
+                JOIN 
+                  ginners g ON gs.buyer_ginner = g.id
+                LEFT JOIN countries_data c ON "g"."country_id" = c.id 
+                WHERE
+                  gs.program_id = ANY (g.program_id)
+                  AND gs.status IN ('Sold', 'Partially Accepted', 'Partially Rejected')
+                  AND gtg.gin_accepted_status = true
+                  AND gs.buyer_type ='Ginner'
+                  AND ${ginToGinSaleConditionSql}
+                GROUP BY 
+                  g.country_id
+            ),
+            gin_to_be_submitted_data AS (
+              SELECT
+                g.country_id,
+                COUNT(gb.id) AS no_of_bales,
+                COALESCE(
+                  SUM(
+                  CASE
+                    WHEN gb.old_weight IS NOT NULL THEN CAST(gb.old_weight AS DOUBLE PRECISION)
+                    ELSE CAST(gb.weight AS DOUBLE PRECISION)
+                  END
+                  ), 0
+                ) AS total_qty
+              FROM
+                "gin-bales" gb
+              LEFT JOIN 
+                bale_selections bs ON gb.id = bs.bale_id
+              LEFT JOIN 
+                gin_sales gs ON gs.id = bs.sales_id
+              JOIN ginners g ON gs.ginner_id = g.id
+              LEFT JOIN gin_processes gp ON gb.process_id = gp.id
+              LEFT JOIN countries_data c ON "g"."country_id" = c.id
+              WHERE
+                    gs.program_id = ANY (g.program_id)
+                    AND gs.status in ('To be Submitted')
+                    AND ${baleSaleConditionSql}
+              GROUP BY
+                  g.country_id
+            ),
+            allocated_cotton_data AS (
+                SELECT
+                  g.country_id,
+                  COALESCE(SUM(CAST("gas"."allocated_seed_cotton" AS DOUBLE PRECISION)), 0) AS allocated_seed_cotton
+                  FROM "gin_allocated_seed_cottons" as gas
+			          LEFT JOIN 
+                    ginners g ON "gas"."ginner_id" = g.id
+                LEFT JOIN
+                    countries_data c ON "g"."country_id" = c.id
+                LEFT JOIN 
+                    "seasons" AS "season" ON "gas"."season_id" = "season"."id"
+                WHERE
+                    ${seedAllocationConditionSql} 
+                GROUP BY
+                  g.country_id
+            ),
+            spin_lint_stock_data AS (
+                SELECT
+                  s.country_id,
+                  COALESCE(SUM("gs"."qty_stock"), 0) AS "lint_cotton_stock"
+                FROM
+                  gin_sales gs
+                JOIN spinners s ON gs.buyer = s.id AND s.status = true
+                LEFT JOIN countries_data c ON "s"."country_id" = c.id
+                WHERE
+                  gs.status in ('Partially Accepted', 'Partially Rejected','Sold')
+                  AND gs.buyer_ginner IS NULL
+                  AND gs.greyout_status IS false
+                  AND ${spinLintConditionSql}
+                GROUP BY
+                  s.country_id
+                  ),
+            spin_yarn_stock_data AS (
+                SELECT
+                  s.country_id,
+                  COALESCE(SUM(sp."net_yarn_qty"), 0) AS "yarn_procured", 
+                  COALESCE(SUM(sp."qty_stock"), 0) AS "yarn_stock"
+                FROM
+                  spin_processes sp
+                JOIN spinners s ON sp.spinner_id = s.id AND s.status = true
+                LEFT JOIN countries_data c ON "s"."country_id" = c.id
+                WHERE
+                  sp.greyout_status IS false
+                  AND ${spinYarnConditionSql}
+                GROUP BY
+                  s.country_id
+                  ),
+            spin_yarn_sold_data AS (
+                SELECT
+                  s.country_id,
+                  COALESCE(SUM(ss."total_qty"), 0) AS "yarn_sold"
+                FROM
+                  spin_sales ss
+                JOIN spinners s ON ss.spinner_id = s.id AND s.status = true
+                LEFT JOIN countries_data c ON "s"."country_id" = c.id
+                WHERE
+                  ${spinYarnSaleConditionSql}
+                GROUP BY
+                  s.country_id
+                  ),
+            spin_lint_greyout_data AS (
+                SELECT
+                  s.country_id,
+                  COALESCE(SUM(
+                  CASE
+                    WHEN greyout_status = true THEN qty_stock
+                    WHEN greyout_status = false AND greyed_out_qty IS NOT NULL THEN greyed_out_qty
+                    ELSE 0
+                  END
+                  ), 0) AS "lint_greyout" 
+                FROM
+                  gin_sales gs
+                JOIN spinners s ON gs.buyer = s.id AND s.status = true
+                LEFT JOIN countries_data c ON "s"."country_id" = c.id
+                WHERE
+                  ("gs"."greyout_status" = true 
+                  OR ("gs"."greyout_status" = false AND "gs"."greyed_out_qty" > '0'))		
+                  AND gs.status in ('Partially Accepted', 'Partially Rejected','Sold')
+                  AND gs.buyer_ginner IS NULL
+                  AND ${spinLintConditionSql}
+                GROUP BY
+                  s.country_id
+                  ),
+            spin_yarn_greyout_data AS (
+                SELECT
+                  s.country_id,
+                  COALESCE(SUM(sp."qty_stock"), 0) AS "yarn_greyout"
+                FROM
+                  spin_processes sp
+                JOIN spinners s ON sp.spinner_id = s.id AND s.status = true
+                LEFT JOIN countries_data c ON "s"."country_id" = c.id
+                WHERE
+                  sp.greyout_status IS true
+                  AND ${spinYarnConditionSql}
+                GROUP BY
+                  s.country_id
+                  )
+        SELECT
+            fg.id AS country_id,
+            fg.country_name,
+            COALESCE(ec.allocated_seed_cotton, 0) AS allocated_lint_cotton_mt,
+            COALESCE(pd.procurement_seed_cotton, 0) / 1000 AS procurement_seed_cotton_mt,
+            (
+              COALESCE(pd.procurement_seed_cotton, 0) *
+              CASE LOWER(fg.country_name)
+              WHEN 'india' THEN 35
+              WHEN 'pakistan' THEN 36
+              WHEN 'bangladesh' THEN 40
+              WHEN 'turkey' THEN 45
+              WHEN 'egypt' THEN 49
+              WHEN 'china' THEN 40
+              ELSE 35
+              END / 100.0
+            ) / 1000 AS procured_lint_cotton_mt,
+            CAST(ROUND(
+              CAST((
+                COALESCE(ec.allocated_seed_cotton, 0)
+              -
+              (
+                COALESCE(pd.procurement_seed_cotton, 0) *
+                CASE LOWER(fg.country_name)
+                WHEN 'india' THEN 35
+                WHEN 'pakistan' THEN 36
+                WHEN 'bangladesh' THEN 40
+                WHEN 'turkey' THEN 45
+                WHEN 'egypt' THEN 49
+                WHEN 'china' THEN 40
+                ELSE 35
+                END / 100.0
+              ) / 1000
+              ) AS NUMERIC),
+              2
+            ) AS DOUBLE PRECISION) AS available_lint_cotton_farmer_mt,
+                COALESCE(gb.total_qty, 0) AS produced_lint_cotton_kgs,
+                COALESCE(gb.total_qty, 0) / 1000 AS produced_lint_cotton_mt,
+            COALESCE(gs.total_qty, 0) / 1000 AS total_lint_cotton_sold_mt,
+            COALESCE(gbg.total_qty, 0) / 1000 AS greyout_qty,
+            COALESCE(gtg.lint_qty, 0) / 1000 AS total_qty_lint_transfered,
+            COALESCE(gtgr.lint_qty, 0) / 1000 AS total_qty_lint_received_mt,
+            COALESCE(gtsg.total_qty, 0) / 1000 AS lint_qty_to_be_submitted,
+            CAST(ROUND(
+                CAST((COALESCE(gb.total_qty, 0) / 1000 + COALESCE(gtgr.lint_qty, 0) / 1000) - (COALESCE(gs.total_qty, 0) / 1000 + COALESCE(gbg.total_qty, 0) / 1000 + COALESCE(gtg.lint_qty, 0) 
+    / 1000 + COALESCE(gtsg.total_qty, 0) / 1000) AS NUMERIC),
+                2
+            ) AS DOUBLE PRECISION) AS actual_lint_stock_mt,
+            CAST(ROUND(
+                CAST((COALESCE(gb.total_qty, 0) / 1000 + COALESCE(gtgr.lint_qty, 0) / 1000) - (COALESCE(gs.total_qty, 0) / 1000 + COALESCE(gbg.total_qty, 0) / 1000 + COALESCE(gtg.lint_qty, 0) 
+    / 1000) AS NUMERIC),
+                2
+            ) AS DOUBLE PRECISION) AS total_lint_stock_mt,
+          COALESCE(slsd.lint_cotton_stock, 0) / 1000 AS spin_lint_cotton_stock_mt,
+          COALESCE(sysd.yarn_stock, 0) / 1000 AS spin_yarn_cotton_stock_mt,
+          COALESCE(slgd.lint_greyout, 0) / 1000 AS spin_lint_greyout_mt,
+          COALESCE(sys.yarn_sold, 0) / 1000 AS spin_yarn_sold_mt,
+          COALESCE(sygd.yarn_greyout, 0) / 1000 AS spin_yarn_greyout_mt
+      FROM
+        countries_data fg
+        LEFT JOIN procurement_data pd ON fg.id = pd.country_id
+        LEFT JOIN gin_process_data gp ON fg.id = gp.country_id
+        LEFT JOIN gin_bale_data gb ON fg.id = gb.country_id
+        LEFT JOIN pending_seed_cotton_data psc ON fg.id = psc.country_id
+        LEFT JOIN gin_sales_data gs ON fg.id = gs.country_id
+        LEFT JOIN allocated_cotton_data ec ON fg.id = ec.country_id
+        LEFT JOIN gin_bale_greyout_data gbg ON fg.id = gbg.country_id
+        LEFT JOIN gin_to_gin_sales_data gtg ON fg.id = gtg.country_id
+        LEFT JOIN gin_to_gin_recieved_data gtgr ON fg.id = gtgr.country_id
+        LEFT JOIN gin_to_be_submitted_data gtsg ON fg.id = gtsg.country_id
+        LEFT JOIN spin_lint_stock_data slsd ON fg.id = slsd.country_id
+        LEFT JOIN spin_yarn_stock_data sysd ON fg.id = sysd.country_id
+        LEFT JOIN spin_lint_greyout_data slgd ON fg.id = slgd.country_id
+        LEFT JOIN spin_yarn_sold_data sys ON fg.id = sys.country_id
+        LEFT JOIN spin_yarn_greyout_data sygd ON fg.id = sygd.country_id
+      ORDER BY
+        fg.country_name asc
+      LIMIT :limit OFFSET :offset
+    `;
+
+    // Execute the queries
+    const [countResult, rows] = await Promise.all([
+      sequelize.query(countQuery, {
+        type: sequelize.QueryTypes.SELECT,
+      }),
+      sequelize.query(dataQuery, {
+        replacements: { limit, offset },
+        type: sequelize.QueryTypes.SELECT,
+      })
+    ]);
+
+    const totalCount = countResult && countResult.length > 0 ? countResult.length : 0;
+
+    return res.sendPaginationSuccess(res, rows, totalCount);
+
+  } catch (error: any) {
+    // console.log(error)
+    return res.sendError(res, error.message, error);
+  }
+};
+
 export {
   exportLoad,
   fetchConsolidatedDetailsGinnerSpinnerPagination,
@@ -4289,6 +4820,7 @@ export {
   fetchConsolidatedDetailsFarmerGinnerPagination,
   exportConsolidatedDetailsFarmerGinner,
   fetchGinnerDetailsPagination,
-  exportGinnerDetails
+  exportGinnerDetails,
+  fetchSummarySheetPagination
 };
 
