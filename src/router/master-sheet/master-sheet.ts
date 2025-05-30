@@ -8,7 +8,8 @@ import {
     fetchConsolidatedDetailsFarmerGinnerPagination,
     exportConsolidatedDetailsFarmerGinner,
     fetchGinnerDetailsPagination,
-    exportGinnerDetails
+    exportGinnerDetails,
+    fetchSummarySheetPagination
 } from "../../controllers/master-sheet";
 import accessControl from "../../middleware/access-control";
 
@@ -26,5 +27,7 @@ router.get('/export-consolidated-farmer-ginner', exportConsolidatedDetailsFarmer
 router.get('/get-ginner-details-sheet', fetchGinnerDetailsPagination);
 router.get('/export-ginner-details-sheet', exportGinnerDetails);
 router.post("/check-export-load", exportLoad);
+
+router.get('/get-summary-sheet', fetchSummarySheetPagination);
 
 export default router;
