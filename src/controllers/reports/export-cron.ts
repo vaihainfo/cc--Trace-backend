@@ -8632,6 +8632,7 @@ const generateConsolidatedDetailsFarmerGinner = async () => {
           FROM
             transactions t
           JOIN states_data s ON t."state_id" = s.id
+          JOIN ginners g ON t.mapped_ginner = g.id
           WHERE
             t.mapped_ginner IS NOT NULL
             AND t.status = 'Sold'
@@ -8714,10 +8715,10 @@ const generateConsolidatedDetailsFarmerGinner = async () => {
             SUM(CAST(t.qty_purchased AS DOUBLE PRECISION)) AS pending_seed_cotton
           FROM
             transactions t
-          JOIN ginners ON t.mapped_ginner = ginners.id
-          JOIN states_data s ON t.state_id = s.id
-          WHERE
-            t.program_id = ANY (ginners.program_id)
+            JOIN ginners g ON t.mapped_ginner = g.id
+            JOIN states_data s ON t.state_id = s.id
+            WHERE
+              t.program_id = ANY (g.program_id)
             AND t.status = 'Pending'
           GROUP BY
             t.state_id
@@ -9503,7 +9504,7 @@ const generateGinnerDetails = async () => {
               "Sr No.",
               "Ginner Name",
               "State",
-              "Allocated Quantity as per produced amount (150,000 MT)",
+              "Allocated Quantity as per produced amount",
               "Seed cotton procured qty (MT) to date",
               "Lint cotton procured qty (MT) to date",
               "Lint cotton processed/produced qty to date (MT) ",
@@ -9526,7 +9527,7 @@ const generateGinnerDetails = async () => {
         produced_lint_cotton_mt: 0,
         unprocessed_lint_cotton_mt: 0,
         total_lint_cotton_sold_mt: 0,
-        actual_lint_stock_mt: 0,
+        total_lint_stock_mt: 0,
         total_qty_lint_received_mt: 0,
         total_qty_lint_rejected_mt: 0,
         carry_forward_stock_lint_cotton_mt: 0,
@@ -9546,7 +9547,7 @@ const generateGinnerDetails = async () => {
               produced_lint_cotton_mt: Number(formatDecimal(item.produced_lint_cotton_mt)),
               unprocessed_lint_cotton_mt: Number(formatDecimal(item.unprocessed_lint_cotton_mt)),
               total_lint_cotton_sold_mt: Number(formatDecimal(item.total_lint_cotton_sold_mt)),
-              actual_lint_stock_mt: Number(formatDecimal(item.actual_lint_stock_mt)),
+              total_lint_stock_mt: Number(formatDecimal(item.total_lint_stock_mt)),
               total_qty_lint_received_mt: Number(formatDecimal(item.total_qty_lint_received_mt)),
               total_qty_lint_rejected_mt: 0,
               carry_forward_stock_lint_cotton_mt: 0,
@@ -9560,7 +9561,7 @@ const generateGinnerDetails = async () => {
           totals.produced_lint_cotton_mt += item.produced_lint_cotton_mt ? Number(item.produced_lint_cotton_mt) : 0;
           totals.unprocessed_lint_cotton_mt += item.unprocessed_lint_cotton_mt ? Number(item.unprocessed_lint_cotton_mt) : 0;
           totals.total_lint_cotton_sold_mt += item.total_lint_cotton_sold_mt ? Number(item.total_lint_cotton_sold_mt) : 0;
-          totals.actual_lint_stock_mt += item.actual_lint_stock_mt ? Number(item.actual_lint_stock_mt) : 0;
+          totals.total_lint_stock_mt += item.total_lint_stock_mt ? Number(item.total_lint_stock_mt) : 0;
           totals.total_qty_lint_received_mt += item.total_qty_lint_received_mt ? Number(item.total_qty_lint_received_mt) : 0;
           totals.total_qty_lint_rejected_mt = 0,
           totals.carry_forward_stock_lint_cotton_mt = 0, 
@@ -9579,7 +9580,7 @@ const generateGinnerDetails = async () => {
           produced_lint_cotton_mt: Number(formatDecimal(totals.produced_lint_cotton_mt)),
           unprocessed_lint_cotton_mt: Number(formatDecimal(totals.unprocessed_lint_cotton_mt)),
           total_lint_cotton_sold_mt: Number(formatDecimal(totals.total_lint_cotton_sold_mt)),
-          actual_lint_stock_mt: Number(formatDecimal(totals.actual_lint_stock_mt)),
+          total_lint_stock_mt: Number(formatDecimal(totals.total_lint_stock_mt)),
           total_qty_lint_received_mt: Number(formatDecimal(totals.total_qty_lint_received_mt)),
           total_qty_lint_rejected_mt: 0,
           carry_forward_stock_lint_cotton_mt: 0,
