@@ -8627,18 +8627,18 @@ const generateConsolidatedDetailsFarmerGinner = async () => {
         ),
         procurement_data AS (
           SELECT
-            t.state_id,
+            g.state_id,
             SUM(CAST(t.qty_purchased AS DOUBLE PRECISION)) AS procurement_seed_cotton,
             SUM(t.qty_stock) AS seed_cotton_stock
           FROM
             transactions t
-          JOIN states_data s ON t."state_id" = s.id
           JOIN ginners g ON t.mapped_ginner = g.id
+          JOIN states_data s ON g."state_id" = s.id
           WHERE
             t.mapped_ginner IS NOT NULL
             AND t.status = 'Sold'
           GROUP BY
-            t.state_id, s.id
+            g.state_id, s.id
         ),
         gin_process_data AS (
           SELECT
@@ -8712,17 +8712,17 @@ const generateConsolidatedDetailsFarmerGinner = async () => {
         ),
         pending_seed_cotton_data AS (
           SELECT
-            t.state_id,
+            g.state_id,
             SUM(CAST(t.qty_purchased AS DOUBLE PRECISION)) AS pending_seed_cotton
           FROM
             transactions t
             JOIN ginners g ON t.mapped_ginner = g.id
-            JOIN states_data s ON t.state_id = s.id
+            JOIN states_data s ON g.state_id = s.id
             WHERE
               t.program_id = ANY (g.program_id)
             AND t.status = 'Pending'
           GROUP BY
-            t.state_id
+            g.state_id
         ),
         gin_sales_data AS (
           SELECT
