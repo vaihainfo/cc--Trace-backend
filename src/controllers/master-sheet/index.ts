@@ -5531,17 +5531,17 @@ const fetchSummarySheetPagination = async (req: Request, res: Response) => {
                 // 2️⃣ Top header row
         // Set top headers manually
         worksheet.getCell('A1').value = 'Region/Country';
-        worksheet.getCell('B1').value = 'Total PCP Lint Cotton Produced (Allocated) by Farmers';
-        worksheet.getCell('C1').value = 'Total PCP Lint Cotton Sold as Conventional (Farmer)';
-        worksheet.getCell('E1').value = 'Total PCP Lint Cotton Procured from the farmers';
-        worksheet.getCell('G1').value = 'Total PCP lint Cotton Stock with Farmers';
-        worksheet.getCell('I1').value = 'Total PCP Lint Cotton Stock with Ginners';
-        worksheet.getCell('K1').value = 'Total PCP Lint Cotton Stock with Spinners';
-        worksheet.getCell('M1').value = 'Total PCP Cotton Yarn Stock with Spinners';
-        worksheet.getCell('O1').value = 'Total PCP Cotton Lint Sale (Ginner to Spinners)';
-        worksheet.getCell('P1').value = 'Total PCP Cotton Yarn Sale (Spinner to Fabric Mills/Suppliers)';
-        worksheet.getCell('Q1').value = 'Total lint greyed out quantity (Ginner)';
-        worksheet.getCell('R1').value = 'Total lint greyed out quantity (Spinner)';
+        worksheet.getCell('B1').value = 'Total PCP lint cotton produced (allocated) by farmers';
+        worksheet.getCell('C1').value = 'Total PCP lint cotton sold as conventional (farmer)';
+        worksheet.getCell('E1').value = 'Total PCP lint cotton procured from the farmers';
+        worksheet.getCell('G1').value = 'Total PCP lint cotton stock with farmers';
+        worksheet.getCell('I1').value = 'Total PCP lint cotton stock with ginners';
+        worksheet.getCell('K1').value = 'Total PCP lint cotton stock with spinners';
+        worksheet.getCell('M1').value = 'Total PCP cotton yarn stock with spinners';
+        worksheet.getCell('O1').value = 'Total PCP cotton lint sale (ginner to spinners)';
+        worksheet.getCell('P1').value = 'Total PCP cotton yarn sale (spinner to fabric mills/suppliers)';
+        worksheet.getCell('Q1').value = 'Total lint greyed out quantity (ginner)';
+        worksheet.getCell('R1').value = 'Total lint greyed out quantity (spinner)';
         worksheet.getCell('T1').value = 'Remarks';
               // 3️⃣ Sub-header row
 
