@@ -9505,17 +9505,17 @@ const generateGinnerDetails = async () => {
               "Sr No.",
               "Ginner Name",
               "State",
-              "Allocated Quantity as per produced amount",
-              "Seed cotton procured qty (MT) to date",
-              "Lint cotton procured qty (MT) to date",
-              "Lint cotton processed/produced qty to date (MT) ",
-              "Lint cotton unprocessed/not produced qty to date (MT)",
+              "Allocated lint quantity as per produced amount",
+              "Seed cotton procured quantity (MT) to date",
+              "Lint cotton procured quantity (MT) to date",
+              "Lint cotton processed/produced quantity to date (MT)",
+              "Lint cotton unprocessed/not produced quantity to date (MT)",
               "Lint cotton sold to date (MT)",
               "Lint cotton stock to date (MT)",
               "Lint cotton procured from other ginners (Ginner to Ginner transactions) to date (MT)",
-              "Ginner rejected lint cotton qty (MT)",
-              "Carry forward stock  lint cotton from last seson (MT)",
-              "Lint cotton greyed out qty on TB to date (MT)",
+              "Ginner rejected lint cotton quantity (MT)",
+              "Carry forward stock  lint cotton from last season (MT)",
+              "Lint cotton greyed out quantity on TB to date (MT)",
               "Remarks"
         ]);
         headerRow.font = { bold: true };
@@ -9591,6 +9591,15 @@ const generateGinnerDetails = async () => {
        currentWorksheet.addRow(rowValues).eachCell((cell, colNumber) => { cell.font = { bold: true } });
 
       offset += batchSize;
+
+         const gotNote = "GOT (Ginning Out Turn) for calculation - India: 35%, Bangladesh: 40%, Pakistan: 36%, Turkey: 45%, Egypt: 49%, China: 40%";
+        const noteRow = currentWorksheet.addRow([gotNote]);
+        currentWorksheet.mergeCells(`A${noteRow.number}:O${noteRow.number}`);
+
+        const noteCell = currentWorksheet.getCell(`A${noteRow.number}`);
+        noteCell.font = { italic: true ,bold: true};
+        noteCell.alignment = { horizontal: 'left' };
+
       const borderStyle = {
         top: { style: "thin" },
         bottom: { style: "thin" },
