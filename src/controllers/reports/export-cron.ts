@@ -9591,6 +9591,15 @@ const generateGinnerDetails = async () => {
        currentWorksheet.addRow(rowValues).eachCell((cell, colNumber) => { cell.font = { bold: true } });
 
       offset += batchSize;
+
+         const gotNote = "GOT (Ginning Out Turn) for calculation - India: 35%, Bangladesh: 40%, Pakistan: 36%, Turkey: 45%, Egypt: 49%, China: 40%";
+        const noteRow = currentWorksheet.addRow([gotNote]);
+        currentWorksheet.mergeCells(`A${noteRow.number}:O${noteRow.number}`);
+
+        const noteCell = currentWorksheet.getCell(`A${noteRow.number}`);
+        noteCell.font = { italic: true ,bold: true};
+        noteCell.alignment = { horizontal: 'left' };
+
       const borderStyle = {
         top: { style: "thin" },
         bottom: { style: "thin" },
