@@ -4199,7 +4199,7 @@ const exportGinnerDetails = async (req: Request, res: Response) => {
               "Lint cotton procured from other ginners (Ginner to Ginner transactions) to date (MT)",
               "Ginner rejected lint cotton quantity (MT)",
               "Carry forward stock  lint cotton from last season (MT)",
-              "Lint cotton greyed out quantity on TB to date (MT)",
+              "Lint cotton greyed out quantity on Tracebale to date (MT)",
               "Remarks"
             ]);
           
