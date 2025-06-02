@@ -125,6 +125,7 @@ const exportReportsOnebyOne = async () => {
   await generateSpinnerYarnOrder();
   await generateConsolidatedDetailsFarmerGinner();
   await generateGinnerDetails();
+  await generateSummarySheet();
   
   console.log('Cron Job Completed to execute all reports.');
 }
@@ -9623,6 +9624,669 @@ const generateGinnerDetails = async () => {
   }
 
 
+}
+
+const generateSummarySheet = async () => {
+  const maxRowsPerWorksheet = 500000; 
+  
+    try {
+    const workbook = new ExcelJS.stream.xlsx.WorkbookWriter({
+      stream: fs.createWriteStream("./upload/summary-sheet-test.xlsx"),
+      useStyles: true,
+
+    });
+
+    const batchSize = 5000;
+    let worksheetIndex = 0;
+    let offset = 0;
+
+    let hasNextBatch = true;
+
+    while (hasNextBatch) {
+      const dataQuery = `
+      WITH
+          countries_data AS (
+            SELECT
+              c.id,
+              c.county_name AS country_name
+            FROM
+              ginners g
+            JOIN countries c ON g.country_id = c.id
+            GROUP BY c.id, g.country_id
+          ),
+          procurement_data AS (
+            SELECT
+              t.country_id,
+              SUM(CAST(t.qty_purchased AS DOUBLE PRECISION)) AS procurement_seed_cotton,        
+              SUM(t.qty_stock) AS seed_cotton_stock
+            FROM
+              transactions t
+            JOIN ginners g ON t.mapped_ginner = g.id
+            JOIN countries_data c ON t."country_id" = c.id
+            WHERE
+              t.mapped_ginner IS NOT NULL
+              AND t.status = 'Sold'
+            GROUP BY
+              t.country_id, c.id
+          ),
+          gin_process_data AS (
+          SELECT
+              g.country_id,
+              SUM(gp.no_of_bales) AS no_of_bales
+            FROM
+              gin_processes gp
+            JOIN ginners g ON gp.ginner_id = g.id
+            LEFT JOIN countries_data c ON "g"."country_id" = c.id
+            WHERE
+              gp.program_id = ANY (g.program_id)
+            GROUP BY
+              g.country_id
+          ),
+          gin_bale_data AS (
+            SELECT
+              g.country_id,
+              COALESCE(
+                  SUM(
+                  CASE
+                    WHEN gb.old_weight IS NOT NULL THEN CAST(gb.old_weight AS DOUBLE PRECISION)
+                    ELSE CAST(gb.weight AS DOUBLE PRECISION)
+                  END
+                  ), 0
+                ) AS total_qty
+              FROM
+                "gin-bales" gb
+              JOIN gin_processes gp ON gb.process_id = gp.id
+              JOIN ginners g ON gp.ginner_id = g.id
+              JOIN countries_data c ON "g"."country_id" = c.id
+              WHERE
+                gp.program_id = ANY (g.program_id)
+              GROUP BY
+                g.country_id
+          ),
+          gin_bale_greyout_data AS (
+            SELECT
+              g.country_id,
+              COUNT(gb.id) AS no_of_bales,
+              COALESCE(
+                    SUM(
+                      CASE
+                        WHEN gb.old_weight IS NOT NULL THEN CAST(gb.old_weight AS DOUBLE PRECISION)
+                        ELSE CAST(gb.weight AS DOUBLE PRECISION)
+                      END
+                    ), 0
+                ) AS total_qty
+            FROM
+              "gin-bales" gb
+            JOIN gin_processes gp ON gb.process_id = gp.id
+            JOIN ginners g ON gp.ginner_id = g.id
+            JOIN countries_data c ON "g"."country_id" = c.id
+            WHERE
+              gp.program_id = ANY (g.program_id) AND
+              gb.sold_status = FALSE AND (
+                (
+                  gp.greyout_status = TRUE AND  
+                  gb.is_all_rejected IS NULL
+                )
+                OR (
+                  gp.scd_verified_status = TRUE AND
+                  gb.scd_verified_status IS NOT TRUE
+                )
+                OR (
+                  gp.scd_verified_status = FALSE AND
+                  gb.scd_verified_status IS FALSE
+                )
+                )
+            GROUP BY
+              g.country_id
+          ),
+          pending_seed_cotton_data AS (
+            SELECT
+              t.country_id,
+              SUM(CAST(t.qty_purchased AS DOUBLE PRECISION)) AS pending_seed_cotton
+            FROM
+              transactions t
+            JOIN ginners g ON t.mapped_ginner = g.id
+            JOIN countries_data c ON t."country_id" = c.id
+            WHERE
+              t.program_id = ANY (g.program_id)
+              AND t.status = 'Pending'
+            GROUP BY
+              t.country_id
+          ),
+          gin_sales_data AS (
+            SELECT
+              g.country_id,
+              COUNT(gb.id) AS no_of_bales,
+              COALESCE(
+                SUM(
+                CASE
+                  WHEN gb.old_weight IS NOT NULL THEN CAST(gb.old_weight AS DOUBLE PRECISION)
+                  ELSE CAST(gb.weight AS DOUBLE PRECISION)
+                END
+                ), 0
+              ) AS total_qty
+            FROM
+              "gin-bales" gb
+            LEFT JOIN 
+              bale_selections bs ON gb.id = bs.bale_id
+            LEFT JOIN 
+              gin_sales gs ON gs.id = bs.sales_id
+            JOIN ginners g ON gs.ginner_id = g.id
+            LEFT JOIN gin_processes gp ON gb.process_id = gp.id
+            LEFT JOIN countries_data c ON "g"."country_id" = c.id
+            WHERE
+              gs.program_id = ANY (g.program_id)
+              AND gs.status in ('Pending', 'Pending for QR scanning', 'Partially Accepted', 'Partially Rejected','Sold')
+              AND gs.buyer_ginner IS NULL
+            GROUP BY
+              g.country_id
+              ),
+          gin_to_gin_sales_data AS (
+                  SELECT
+                      g.country_id,
+                      COUNT(gb.id) AS no_of_bales,
+                      COALESCE(
+                        SUM(
+                          CASE
+                            WHEN gb.old_weight IS NOT NULL THEN CAST(gb.old_weight AS DOUBLE PRECISION)
+                            ELSE CAST(gb.weight AS DOUBLE PRECISION)
+                          END
+                        ), 0
+                      ) AS lint_qty
+                  FROM
+                      "gin-bales" gb
+                  LEFT JOIN 
+                    bale_selections bs ON gb.id = bs.bale_id
+                  LEFT JOIN 
+                      gin_sales gs ON gs.id = bs.sales_id
+                  JOIN ginners g ON gs.ginner_id = g.id
+                  LEFT JOIN gin_processes gp ON gb.process_id = gp.id
+                  LEFT JOIN countries_data c ON "g"."country_id" = c.id 
+                  WHERE
+                      gs.program_id = ANY (g.program_id)
+                      AND gs.status in ('Pending', 'Pending for QR scanning', 'Partially Accepted', 'Partially Rejected','Sold')
+                      AND gs.buyer_ginner IS NOT NULL
+                      AND gs.buyer_type = 'Ginner'
+                  GROUP BY
+                      g.country_id
+              ),
+          gin_to_gin_recieved_data AS (
+                  SELECT 
+                    g.country_id AS country_id,
+                    COUNT(gb.id) AS no_of_bales,
+                    COALESCE(
+                      SUM(
+                        CAST(gb.weight AS DOUBLE PRECISION)
+                      ), 0
+                    ) AS lint_qty
+                  FROM 
+                    gin_to_gin_sales gtg
+                  JOIN
+                    gin_sales gs ON gtg.sales_id = gs.id
+                  JOIN 
+                    "gin-bales" gb ON gtg.bale_id = gb.id
+                  JOIN 
+                    ginners g ON gs.buyer_ginner = g.id
+                  LEFT JOIN countries_data c ON "g"."country_id" = c.id 
+                  WHERE
+                    gs.program_id = ANY (g.program_id)
+                    AND gs.status IN ('Sold', 'Partially Accepted', 'Partially Rejected')
+                    AND gtg.gin_accepted_status = true
+                    AND gs.buyer_type ='Ginner'
+                  GROUP BY 
+                    g.country_id
+              ),
+              gin_to_be_submitted_data AS (
+                SELECT
+                  g.country_id,
+                  COUNT(gb.id) AS no_of_bales,
+                  COALESCE(
+                    SUM(
+                    CASE
+                      WHEN gb.old_weight IS NOT NULL THEN CAST(gb.old_weight AS DOUBLE PRECISION)
+                      ELSE CAST(gb.weight AS DOUBLE PRECISION)
+                    END
+                    ), 0
+                  ) AS total_qty
+                FROM
+                  "gin-bales" gb
+                LEFT JOIN 
+                  bale_selections bs ON gb.id = bs.bale_id
+                LEFT JOIN 
+                  gin_sales gs ON gs.id = bs.sales_id
+                JOIN ginners g ON gs.ginner_id = g.id
+                LEFT JOIN gin_processes gp ON gb.process_id = gp.id
+                LEFT JOIN countries_data c ON "g"."country_id" = c.id
+                WHERE
+                      gs.program_id = ANY (g.program_id)
+                      AND gs.status in ('To be Submitted')
+                GROUP BY
+                    g.country_id
+              ),
+              allocated_cotton_data AS (
+                  SELECT
+                    g.country_id,
+                    COALESCE(SUM(CAST("gas"."allocated_seed_cotton" AS DOUBLE PRECISION)), 0) AS allocated_seed_cotton
+                    FROM "gin_allocated_seed_cottons" as gas
+                  LEFT JOIN 
+                      ginners g ON "gas"."ginner_id" = g.id
+                  LEFT JOIN
+                      countries_data c ON "g"."country_id" = c.id
+                  LEFT JOIN 
+                      "seasons" AS "season" ON "gas"."season_id" = "season"."id"
+                  GROUP BY
+                    g.country_id
+              ),
+              spin_lint_stock_data AS (
+                  SELECT
+                    s.country_id,
+                    COALESCE(SUM("gs"."qty_stock"), 0) AS "lint_cotton_stock"
+                  FROM
+                    gin_sales gs
+                  JOIN spinners s ON gs.buyer = s.id AND s.status = true
+                  LEFT JOIN countries_data c ON "s"."country_id" = c.id
+                  WHERE
+                    gs.status in ('Partially Accepted', 'Partially Rejected','Sold')
+                    AND gs.buyer_ginner IS NULL
+                    AND gs.greyout_status IS false
+                  GROUP BY
+                    s.country_id
+                    ),
+              spin_yarn_stock_data AS (
+                  SELECT
+                    s.country_id,
+                    COALESCE(SUM(sp."net_yarn_qty"), 0) AS "yarn_procured", 
+                    COALESCE(SUM(sp."qty_stock"), 0) AS "yarn_stock"
+                  FROM
+                    spin_processes sp
+                  JOIN spinners s ON sp.spinner_id = s.id AND s.status = true
+                  LEFT JOIN countries_data c ON "s"."country_id" = c.id
+                  WHERE
+                    sp.greyout_status IS false
+                  GROUP BY
+                    s.country_id
+                    ),
+              spin_yarn_sold_data AS (
+                  SELECT
+                    s.country_id,
+                    COALESCE(SUM(ss."total_qty"), 0) AS "yarn_sold"
+                  FROM
+                    spin_sales ss
+                  JOIN spinners s ON ss.spinner_id = s.id AND s.status = true
+                  LEFT JOIN countries_data c ON "s"."country_id" = c.id
+                  GROUP BY
+                    s.country_id
+                    ),
+              spin_lint_greyout_data AS (
+                  SELECT
+                    s.country_id,
+                    COALESCE(SUM(
+                    CASE
+                      WHEN greyout_status = true THEN qty_stock
+                      WHEN greyout_status = false AND greyed_out_qty IS NOT NULL THEN greyed_out_qty
+                      ELSE 0
+                    END
+                    ), 0) AS "lint_greyout" 
+                  FROM
+                    gin_sales gs
+                  JOIN spinners s ON gs.buyer = s.id AND s.status = true
+                  LEFT JOIN countries_data c ON "s"."country_id" = c.id
+                  WHERE
+                    ("gs"."greyout_status" = true 
+                    OR ("gs"."greyout_status" = false AND "gs"."greyed_out_qty" > '0'))		
+                    AND gs.status in ('Partially Accepted', 'Partially Rejected','Sold')
+                    AND gs.buyer_ginner IS NULL
+                  GROUP BY
+                    s.country_id
+                    ),
+              spin_yarn_greyout_data AS (
+                  SELECT
+                    s.country_id,
+                    COALESCE(SUM(sp."qty_stock"), 0) AS "yarn_greyout"
+                  FROM
+                    spin_processes sp
+                  JOIN spinners s ON sp.spinner_id = s.id AND s.status = true
+                  LEFT JOIN countries_data c ON "s"."country_id" = c.id
+                  WHERE
+                    sp.greyout_status IS true
+                  GROUP BY
+                    s.country_id
+                    )
+          SELECT
+              fg.id AS country_id,
+              fg.country_name,
+              COALESCE(ec.allocated_seed_cotton, 0) AS allocated_lint_cotton_mt,
+              COALESCE(pd.procurement_seed_cotton, 0) / 1000 AS procurement_seed_cotton_mt,
+              (
+                COALESCE(pd.procurement_seed_cotton, 0) *
+                CASE LOWER(fg.country_name)
+                WHEN 'india' THEN 35
+                WHEN 'pakistan' THEN 36
+                WHEN 'bangladesh' THEN 40
+                WHEN 'turkey' THEN 45
+                WHEN 'egypt' THEN 49
+                WHEN 'china' THEN 40
+                ELSE 35
+                END / 100.0
+              ) / 1000 AS procured_lint_cotton_mt,
+              CASE 
+              WHEN COALESCE(ec.allocated_seed_cotton, 0) = 0 THEN 0
+              ELSE ROUND(
+                CAST(
+                  (
+                    (
+                    COALESCE(pd.procurement_seed_cotton, 0) *
+                    CASE LOWER(fg.country_name)
+                      WHEN 'india' THEN 35
+                      WHEN 'pakistan' THEN 36
+                      WHEN 'bangladesh' THEN 40
+                      WHEN 'turkey' THEN 45
+                      WHEN 'egypt' THEN 49
+                      WHEN 'china' THEN 40
+                      ELSE 35
+                    END / 100.0
+                    ) / 1000
+                  ) / COALESCE(ec.allocated_seed_cotton, 1) * 100
+                AS NUMERIC), 2
+              )
+              END AS procured_lint_percentage,
+              CAST(ROUND(
+                CAST((
+                  COALESCE(ec.allocated_seed_cotton, 0)
+                -
+                (
+                  COALESCE(pd.procurement_seed_cotton, 0) *
+                  CASE LOWER(fg.country_name)
+                  WHEN 'india' THEN 35
+                  WHEN 'pakistan' THEN 36
+                  WHEN 'bangladesh' THEN 40
+                  WHEN 'turkey' THEN 45
+                  WHEN 'egypt' THEN 49
+                  WHEN 'china' THEN 40
+                  ELSE 35
+                  END / 100.0
+                ) / 1000
+                ) AS NUMERIC),
+                2
+              ) AS DOUBLE PRECISION) AS available_lint_cotton_farmer_mt,
+              CASE
+                WHEN COALESCE(ec.allocated_seed_cotton, 0) = 0 THEN 0
+                ELSE ROUND(
+                (
+                  (
+                    COALESCE(ec.allocated_seed_cotton, 0)
+                    -
+                    (
+                    COALESCE(pd.procurement_seed_cotton, 0) *
+                    CASE LOWER(fg.country_name)
+                      WHEN 'india' THEN 35
+                      WHEN 'pakistan' THEN 36
+                      WHEN 'bangladesh' THEN 40
+                      WHEN 'turkey' THEN 45
+                      WHEN 'egypt' THEN 49
+                      WHEN 'china' THEN 40
+                      ELSE 35
+                    END / 100.0
+                    ) / 1000.0
+                  ) / COALESCE(NULLIF(ec.allocated_seed_cotton, 0), 1)
+                ) * 100
+                )::NUMERIC(10, 2)
+              END AS available_lint_cotton_percentage,
+              COALESCE(gb.total_qty, 0) AS produced_lint_cotton_kgs,
+              COALESCE(gb.total_qty, 0) / 1000 AS produced_lint_cotton_mt,
+              COALESCE(gs.total_qty, 0) / 1000 AS total_lint_cotton_sold_mt,
+              COALESCE(gbg.total_qty, 0) / 1000 AS greyout_qty,
+              COALESCE(gtg.lint_qty, 0) / 1000 AS total_qty_lint_transfered,
+              COALESCE(gtgr.lint_qty, 0) / 1000 AS total_qty_lint_received_mt,
+              COALESCE(gtsg.total_qty, 0) / 1000 AS lint_qty_to_be_submitted,
+              CAST(ROUND(
+                  CAST((COALESCE(gb.total_qty, 0) / 1000 + COALESCE(gtgr.lint_qty, 0) / 1000) - (COALESCE(gs.total_qty, 0) / 1000 + COALESCE(gbg.total_qty, 0) / 1000 + COALESCE(gtg.lint_qty, 0) 
+                  / 1000 + COALESCE(gtsg.total_qty, 0) / 1000) AS NUMERIC),
+                  2
+              ) AS DOUBLE PRECISION) AS actual_lint_stock_mt,
+              CAST(ROUND(
+                  CAST((COALESCE(gb.total_qty, 0) / 1000 + COALESCE(gtgr.lint_qty, 0) / 1000) - (COALESCE(gs.total_qty, 0) / 1000 + COALESCE(gbg.total_qty, 0) / 1000 + COALESCE(gtg.lint_qty, 0) 
+                  / 1000) AS NUMERIC),
+                  2
+              ) AS DOUBLE PRECISION) AS total_lint_stock_mt,
+            CASE
+              WHEN COALESCE(ec.allocated_seed_cotton, 0) = 0 THEN 0
+              ELSE ROUND(
+              ((COALESCE(gb.total_qty, 0) / 1000.0 + COALESCE(gtgr.lint_qty, 0) / 1000.0)
+              -
+              (COALESCE(gs.total_qty, 0) / 1000.0 + COALESCE(gbg.total_qty, 0) / 1000.0 + COALESCE(gtg.lint_qty, 0) / 1000.0)
+              ) / COALESCE(NULLIF(ec.allocated_seed_cotton, 0), 1) * 100
+              )::NUMERIC(10, 2)
+            END AS total_lint_stock_percentage,
+            COALESCE(slsd.lint_cotton_stock, 0) / 1000 AS spin_lint_cotton_stock_mt,
+            CASE
+              WHEN COALESCE(ec.allocated_seed_cotton, 0) = 0 THEN 0
+              ELSE ROUND(
+              (COALESCE(slsd.lint_cotton_stock, 0) / 1000.0)
+              / COALESCE(NULLIF(ec.allocated_seed_cotton, 0), 1) * 100
+              )::NUMERIC(10, 2)
+            END AS spin_lint_stock_percentage,
+            COALESCE(sysd.yarn_stock, 0) / 1000 AS spin_yarn_cotton_stock_mt,
+            CASE
+              WHEN COALESCE(ec.allocated_seed_cotton, 0) = 0 THEN 0
+              ELSE ROUND(
+              (COALESCE(sysd.yarn_stock, 0) / 1000.0)
+              / COALESCE(NULLIF(ec.allocated_seed_cotton, 0), 1) * 100
+              )::NUMERIC(10, 2)
+            END AS spin_yarn_stock_percentage,
+            COALESCE(slgd.lint_greyout, 0) / 1000 AS spin_lint_greyout_mt,
+            COALESCE(sys.yarn_sold, 0) / 1000 AS spin_yarn_sold_mt,
+            COALESCE(sygd.yarn_greyout, 0) / 1000 AS spin_yarn_greyout_mt
+        FROM
+          countries_data fg
+          LEFT JOIN procurement_data pd ON fg.id = pd.country_id
+          LEFT JOIN gin_process_data gp ON fg.id = gp.country_id
+          LEFT JOIN gin_bale_data gb ON fg.id = gb.country_id
+          LEFT JOIN pending_seed_cotton_data psc ON fg.id = psc.country_id
+          LEFT JOIN gin_sales_data gs ON fg.id = gs.country_id
+          LEFT JOIN allocated_cotton_data ec ON fg.id = ec.country_id
+          LEFT JOIN gin_bale_greyout_data gbg ON fg.id = gbg.country_id
+          LEFT JOIN gin_to_gin_sales_data gtg ON fg.id = gtg.country_id
+          LEFT JOIN gin_to_gin_recieved_data gtgr ON fg.id = gtgr.country_id
+          LEFT JOIN gin_to_be_submitted_data gtsg ON fg.id = gtsg.country_id
+          LEFT JOIN spin_lint_stock_data slsd ON fg.id = slsd.country_id
+          LEFT JOIN spin_yarn_stock_data sysd ON fg.id = sysd.country_id
+          LEFT JOIN spin_lint_greyout_data slgd ON fg.id = slgd.country_id
+          LEFT JOIN spin_yarn_sold_data sys ON fg.id = sys.country_id
+          LEFT JOIN spin_yarn_greyout_data sygd ON fg.id = sygd.country_id
+        ORDER BY
+          fg.country_name asc
+        LIMIT :limit OFFSET :offset
+      `;
+
+       const [rows] = await Promise.all([
+        sequelize.query(dataQuery, {
+          replacements: { limit: batchSize, offset },
+          type: sequelize.QueryTypes.SELECT,
+        })
+      ]);
+
+
+       if (rows.length === 0) {
+        hasNextBatch = false;
+        break;
+      }
+
+      if (offset % maxRowsPerWorksheet === 0) {
+        worksheetIndex++;
+      }
+
+      let currentWorksheet = workbook.getWorksheet(`Sheet${worksheetIndex}`);
+      if (!currentWorksheet) {
+        currentWorksheet = workbook.addWorksheet(`Sheet${worksheetIndex}`);
+       
+        currentWorksheet.mergeCells('A1:A2'); // Region/Country
+        currentWorksheet.mergeCells('C1:D1'); // Sold
+        currentWorksheet.mergeCells('E1:F1'); // Procured
+        currentWorksheet.mergeCells('G1:H1'); // Farmer stock
+        currentWorksheet.mergeCells('I1:J1'); // Ginner stock
+        currentWorksheet.mergeCells('K1:L1'); // Spinner stock
+        currentWorksheet.mergeCells('M1:N1'); // Yarn stock
+        currentWorksheet.mergeCells('R1:S1'); // Greyed (Spinner)
+        currentWorksheet.mergeCells('T1:T2'); // Remarks
+                // 2️⃣ Top header row
+        // Set top headers manually
+        currentWorksheet.getCell('A1').value = 'Region/Country';
+        currentWorksheet.getCell('B1').value = 'Total PCP Lint Cotton Produced (Allocated) by Farmers';
+        currentWorksheet.getCell('C1').value = 'Total PCP Lint Cotton Sold as Conventional (Farmer)';
+        currentWorksheet.getCell('E1').value = 'Total PCP Lint Cotton Procured from the farmers';
+        currentWorksheet.getCell('G1').value = 'Total PCP lint Cotton Stock with Farmers';
+        currentWorksheet.getCell('I1').value = 'Total PCP Lint Cotton Stock with Ginners';
+        currentWorksheet.getCell('K1').value = 'Total PCP Lint Cotton Stock with Spinners';
+        currentWorksheet.getCell('M1').value = 'Total PCP Cotton Yarn Stock with Spinners';
+        currentWorksheet.getCell('O1').value = 'Total PCP Cotton Lint Sale (Ginner to Spinners)';
+        currentWorksheet.getCell('P1').value = 'Total PCP Cotton Yarn Sale (Spinner to Fabric Mills/Suppliers)';
+        currentWorksheet.getCell('Q1').value = 'Total lint greyed out quantity (Ginner)';
+        currentWorksheet.getCell('R1').value = 'Total lint greyed out quantity (Spinner)';
+        currentWorksheet.getCell('T1').value = 'Remarks';
+              // 3️⃣ Sub-header row
+
+        // 3️⃣ Sub-header row (row 2)
+        currentWorksheet.getCell('B2').value = 'Qty (MT)';
+        currentWorksheet.getCell('C2').value = 'Qty (MT)';
+        currentWorksheet.getCell('D2').value = '%';
+
+        currentWorksheet.getCell('E2').value = 'Qty (MT)';
+        currentWorksheet.getCell('F2').value = '%';
+
+        currentWorksheet.getCell('G2').value = 'Qty (MT)';
+        currentWorksheet.getCell('H2').value = '%';
+
+        currentWorksheet.getCell('I2').value = 'Qty (MT)';
+        currentWorksheet.getCell('J2').value = '%';
+
+        currentWorksheet.getCell('K2').value = 'Qty (MT)';
+        currentWorksheet.getCell('L2').value = '%';
+
+        currentWorksheet.getCell('M2').value = 'Qty (MT)';
+        currentWorksheet.getCell('N2').value = '%';
+
+        currentWorksheet.getCell('O2').value = 'Qty (MT)';
+        currentWorksheet.getCell('P2').value = 'Qty (MT)';
+        currentWorksheet.getCell('Q2').value = 'Qty (MT)';
+        currentWorksheet.getCell('R2').value = 'Lint';
+        currentWorksheet.getCell('S2').value = 'Yarn';
+
+        currentWorksheet.getRow(1).font = { bold: true };
+        currentWorksheet.getRow(2).font = { bold: true };
+      }
+
+      let totals = {
+        allocated_lint_cotton_mt: 0,
+        procured_lint_cotton_mt: 0,
+        available_lint_cotton_farmer_mt: 0,
+        total_lint_stock_mt: 0,
+        spin_lint_cotton_stock_mt: 0,
+        spin_yarn_cotton_stock_mt: 0,
+        total_lint_cotton_sold_mt: 0,
+        spin_yarn_sold_mt: 0,
+        greyout_qty: 0,
+        spin_lint_greyout_mt: 0,
+        spin_yarn_greyout_mt: 0,
+      };
+
+      // Append data to worksheet
+      for await (const [index, item] of rows.entries()) {
+        let rowValues;
+            rowValues = {
+              country_name: item.country_name,
+              allocated_lint_cotton_mt: Number(formatDecimal(item.allocated_lint_cotton_mt)),
+              conventianal_lint_cotton_mt: 0,
+              conventianal_lint_cotton_prct:0,
+              procured_lint_cotton_mt: Number(formatDecimal(item.procured_lint_cotton_mt)),
+              procured_lint_percentage: Number(formatDecimal(item.procured_lint_percentage)),
+              available_lint_cotton_farmer_mt: Number(formatDecimal(item.available_lint_cotton_farmer_mt)),
+              available_lint_cotton_percentage: Number(formatDecimal(item.available_lint_cotton_percentage)),
+              total_lint_stock_mt: Number(formatDecimal(item.total_lint_stock_mt)),
+              total_lint_stock_percentage: Number(formatDecimal(item.total_lint_stock_percentage)),
+              spin_lint_cotton_stock_mt: Number(formatDecimal(item.spin_lint_cotton_stock_mt)),
+              spin_lint_stock_percentage: Number(formatDecimal(item.spin_lint_stock_percentage)),
+              spin_yarn_cotton_stock_mt: Number(formatDecimal(item.spin_yarn_cotton_stock_mt)),
+              spin_yarn_stock_percentage: Number(formatDecimal(item.spin_yarn_stock_percentage)),
+              total_lint_cotton_sold_mt: Number(formatDecimal(item.total_lint_cotton_sold_mt)),
+              spin_yarn_sold_mt: Number(formatDecimal(item.spin_yarn_sold_mt)),
+              greyout_qty: Number(formatDecimal(item.greyout_qty)),
+              spin_lint_greyout_mt: Number(formatDecimal(item.spin_lint_greyout_mt)),
+              spin_yarn_greyout_mt: Number(formatDecimal(item.spin_yarn_greyout_mt)),
+              remarks: "",
+            };
+
+          totals.allocated_lint_cotton_mt += item.allocated_lint_cotton_mt ? Number(item.allocated_lint_cotton_mt) : 0;
+          totals.procured_lint_cotton_mt += item.procured_lint_cotton_mt ? Number(item.procured_lint_cotton_mt) : 0;
+          totals.available_lint_cotton_farmer_mt += item.available_lint_cotton_farmer_mt ? Number(item.available_lint_cotton_farmer_mt) : 0;
+          totals.total_lint_stock_mt += item.total_lint_stock_mt ? Number(item.total_lint_stock_mt) : 0;
+          totals.spin_lint_cotton_stock_mt += item.spin_lint_cotton_stock_mt ? Number(item.spin_lint_cotton_stock_mt) : 0;
+          totals.spin_yarn_cotton_stock_mt += item.spin_yarn_cotton_stock_mt ? Number(item.spin_yarn_cotton_stock_mt) : 0;
+          totals.total_lint_cotton_sold_mt += item.total_lint_cotton_sold_mt ? Number(item.total_lint_cotton_sold_mt) : 0;
+          totals.spin_yarn_sold_mt += item.spin_yarn_sold_mt ? Number(item.spin_yarn_sold_mt) : 0;
+          totals.greyout_qty += item.greyout_qty ? Number(item.greyout_qty) : 0;        
+          totals.spin_lint_greyout_mt += item.spin_lint_greyout_mt ? Number(item.spin_lint_greyout_mt) : 0;        
+          totals.spin_yarn_greyout_mt += item.spin_yarn_greyout_mt ? Number(item.spin_yarn_greyout_mt) : 0;        
+           
+          currentWorksheet.addRow(Object.values(rowValues));
+        }
+
+         let rowValues = Object.values({
+          country_name: "Total",
+          allocated_lint_cotton_mt: Number(formatDecimal(totals.allocated_lint_cotton_mt)),
+          conventianal_lint_cotton_mt: "",
+          conventianal_lint_cotton_prct:"",
+          procured_lint_cotton_mt: Number(formatDecimal(totals.procured_lint_cotton_mt)),
+          procured_lint_percentage: "",
+          available_lint_cotton_farmer_mt: Number(formatDecimal(totals.available_lint_cotton_farmer_mt)),
+          available_lint_cotton_percentage: "",
+          total_lint_stock_mt: Number(formatDecimal(totals.total_lint_stock_mt)),
+          total_lint_stock_percentage: "",
+          spin_lint_cotton_stock_mt: Number(formatDecimal(totals.spin_lint_cotton_stock_mt)),
+          spin_lint_stock_percentage: "",
+          spin_yarn_cotton_stock_mt: Number(formatDecimal(totals.spin_yarn_cotton_stock_mt)),
+          spin_yarn_stock_percentage: "",
+          total_lint_cotton_sold_mt: Number(formatDecimal(totals.total_lint_cotton_sold_mt)),
+          spin_yarn_sold_mt: Number(formatDecimal(totals.spin_yarn_sold_mt)),
+          greyout_qty: Number(formatDecimal(totals.greyout_qty)),
+          spin_lint_greyout_mt: Number(formatDecimal(totals.spin_lint_greyout_mt)),
+          spin_yarn_greyout_mt: Number(formatDecimal(totals.spin_yarn_greyout_mt)),
+        });
+     
+       currentWorksheet.addRow(rowValues).eachCell((cell, colNumber) => { cell.font = { bold: true } });
+
+      offset += batchSize;
+      const borderStyle = {
+        top: { style: "thin" },
+        bottom: { style: "thin" },
+        left: { style: "thin" },
+        right: { style: "thin" },
+      };
+      currentWorksheet.columns.forEach((column: any) => {
+        let maxCellLength = 0;
+        column.eachCell({ includeEmpty: true }, (cell: any) => {
+          const cellLength = (cell.value ? cell.value.toString() : '').length;
+          maxCellLength = Math.max(maxCellLength, cellLength);
+          cell.border = borderStyle;
+        });
+        column.width = Math.min(24, maxCellLength + 2);
+      });
+
+    }
+   
+    await workbook.commit()
+      .then(() => {
+        fs.renameSync("./upload/summary-sheet-test.xlsx", './upload/summary-sheet.xlsx');
+        console.log('Summary Sheet report generation completed.');
+      })
+      .catch(error => {
+        console.log('Failed generation?.');
+        throw error;
+      });
+
+  } catch (error: any) {
+    console.error("Error appending data:", error);
+  }
 }
 
 const formatDecimal = (value: string | number): string | number => {

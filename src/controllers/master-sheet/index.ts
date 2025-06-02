@@ -4929,7 +4929,7 @@ const fetchSummarySheetPagination = async (req: Request, res: Response) => {
     const searchTerm = req.query.search || "";
     const page = Number(req.query.page) || 1;
     const limit = Number(req.query.limit) || 10;
-    const {  seasonId, programId, brandId, countryId, stateId }: any =
+    const {  seasonId, programId, brandId, countryId, stateId, exportType }: any =
       req.query;
     const offset = (page - 1) * limit;
     let whereCondition: string[] = [];
@@ -4944,6 +4944,14 @@ const fetchSummarySheetPagination = async (req: Request, res: Response) => {
     let spinYarnSaleCondition: string[] = [];
     try {
       
+
+    if (exportType === "all") {
+      return res.status(200).send({
+        success: true,
+        messgage: "File successfully Generated",
+        data: process.env.BASE_URL + "summary-sheet.xlsx",
+      });
+    } else {
 
     if (searchTerm) {
       brandCondition.push(`(c.county_name ILIKE '%${searchTerm}%')`);
@@ -5668,6 +5676,7 @@ const fetchSummarySheetPagination = async (req: Request, res: Response) => {
           messgage: "File successfully Generated",
           data: process.env.BASE_URL + "excel-summary-sheet-report.xlsx",
         });
+    }
       
 
     } catch (error: any) {
