@@ -20,7 +20,7 @@ import KnitProcess from "../../models/knit-process.model";
 import KnitFabricSelection from "../../models/knit-fabric-selectiion.model";
 import SpinProcessYarnSelection from "../../models/spin-process-yarn-seletions.model";
 import SpinProcess from "../../models/spin-process.model";
-import { send_knitter_mail } from "../send-emails";
+import { send_knitter_mail, send_physical_knitter_mail } from "../send-emails";
 import KnitFabric from "../../models/knit_fabric.model";
 import { _getSpinnerProcessTracingChartData } from "../spinner/index";
 import { formatDataForSpinnerProcess, formatDataFromKnitter } from "../../util/tracing-chart-data-formatter";
@@ -124,7 +124,7 @@ const createKnitterProcess = async (req: Request, res: Response) => {
         }
       }
     }
-
+    
     if (req.body.enterPhysicalTraceability) {
       const physicalTraceabilityData = {
         date_sample_collection: req.body.dateSampleCollection,
@@ -152,6 +152,10 @@ const createKnitterProcess = async (req: Request, res: Response) => {
           sample_result: 0
         };
         await PhysicalTraceabilityDataKnitterSample.create(physicalTraceabilityDataKnitterSampleData);
+
+        if(physicalTraceabilityDataKnitter){
+                          await send_physical_knitter_mail(physicalTraceabilityDataKnitter.id);
+        }
 
         await Brand.update(
           { count: updatedCount },

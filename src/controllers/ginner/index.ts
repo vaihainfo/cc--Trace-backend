@@ -20,7 +20,7 @@ import CottonSelection from "../../models/cotton-selection.model";
 import heapSelection from "../../models/heap-selection.model";
 import sequelize from "../../util/dbConn";
 import Farmer from "../../models/farmer.model";
-import { send_gin_mail } from "../send-emails";
+import { send_gin_mail, send_physical_ginner_mail } from "../send-emails";
 import FarmGroup from "../../models/farm-group.model";
 import { formatDataForGinnerProcess } from "../../util/tracing-chart-data-formatter";
 import QualityParameter from "../../models/quality-parameter.model";
@@ -270,6 +270,7 @@ const createGinnerProcess = async (req: Request, res: Response) => {
     );
 
     // Create Bales
+    let totalBaleWeight = 0
     for (const bale of req.body.bales) {
       const baleData = {
         process_id: ginprocess.id,
@@ -280,6 +281,7 @@ const createGinnerProcess = async (req: Request, res: Response) => {
         strength: bale.strength,
         trash: bale.trash,
         color_grade: bale.colorGrade,
+        print:'false'
       };
       const createdBale = await GinBale.create(baleData, { transaction });
 
@@ -290,6 +292,7 @@ const createGinnerProcess = async (req: Request, res: Response) => {
         { qr: uniqueBaleFilename },
         { where: { id: createdBale.id }, transaction }
       );
+       totalBaleWeight+=bale.weight;
     }
 
     // Process Heaps
@@ -340,7 +343,8 @@ obj.village_id))],
         );
       }
     }
-
+    
+    let PhysicalTraceabilityDataId = 0;
     // Handle Physical Traceability (if applicable)
     if (req.body.enterPhysicalTraceability) {
       const physicalTraceabilityData = {
@@ -362,6 +366,9 @@ req.body.physicalTraceabilityPartnerId,
         physicalTraceabilityData,
         { transaction }
       );
+      if(physicalTraceability){
+        PhysicalTraceabilityDataId = physicalTraceability.id
+      }
 
       for (const item of req.body.weightAndBaleNumber) {
         const brand = await Brand.findOne({ where: { id:
@@ -375,13 +382,13 @@ req.body.brandId }, transaction });
             bale_no: item.baleNumber,
             original_sample_status: item.originalSampleStatus,
             code:
-`DNA${req.body.ginnerShortname}-${req.body.reelLotNno ||
-""}-${updatedCount}`,
+            `DNA${req.body.ginnerShortname}-${req.body.reelLotNno ||
+            ""}-${updatedCount}`,
             sample_result: 0,
           },
           { transaction }
         );
-
+               
         await Brand.update(
           { count: updatedCount },
           { where: { id: brand.id }, transaction }
@@ -391,8 +398,12 @@ req.body.brandId }, transaction });
 
     // Commit transaction
     await transaction.commit();
+  
+    if (PhysicalTraceabilityDataId > 0) {
+          await send_physical_ginner_mail(PhysicalTraceabilityDataId,totalBaleWeight);
+    }
 
-    return res.sendSuccess(res, { ginprocess });
+   return res.sendSuccess(res, { ginprocess });
   } catch (error: any) {
     // Rollback transaction in case of error
     await transaction.rollback();

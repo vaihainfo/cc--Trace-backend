@@ -19,12 +19,16 @@ import Spinner from "../../models/spinner.model";
 import GinSales from "../../models/gin-sales.model";
 import Weaver from "../../models/weaver.model";
 import Knitter from "../../models/knitter.model";
+import SpinProcess from "../../models/spin-process.model";
 import SpinSales from "../../models/spin-sales.model";
 import KnitSales from "../../models/knit-sales.model";
+import KnitProcess from "../../models/knit-process.model";
 import FabricType from "../../models/fabric-type.model";
 import Garment from "../../models/garment.model";
 import WeaverSales from "../../models/weaver-sales.model";
+import WeaverProcess from "../../models/weaver-process.model";
 import GarmentSales from "../../models/garment-sales.model";
+import GarmentProcess from "../../models/garment-process..model";
 import Village from "../../models/village.model";
 import State from "../../models/state.model";
 import District from "../../models/district.model";
@@ -39,6 +43,12 @@ import TicketTracker from "../../models/ticket-tracker.model";
 import CropGrade from "../../models/crop-grade.model";
 import Farm from "../../models/farm.model";
 import UserApp from "../../models/users-app.model";
+import PhysicalTraceabilityDataGinner from "../../models/physical-traceability-data-ginner.model";
+import PhysicalTraceabilityDataSpinner from "../../models/physical-traceability-data-spinner.model";
+import PhysicalTraceabilityDataKnitter from "../../models/physical-traceability-data-knitter.model";
+import PhysicalTraceabilityDataWeaver from "../../models/physical-traceability-data-weaver.model";
+import PhysicalTraceabilityDataGarment from "../../models/physical-traceability-data-garment.model";
+import PhysicalPartner from "../../models/physical-partner.model";
 
 
 export const sendGinnerBaleProcess = async (jobId?: number) => {
@@ -776,6 +786,255 @@ export const send_garment_mail = async (salesId: number) => {
     }
 };
 
+export const send_physical_ginner_mail = async (Id: number, Total_qty : number) => {
+    try {
+        let template = await EmailTemplate.findOne({ where: { template_name: { [Op.iLike]: 'Whenever ginner physical traceability happen' } } });
+        if (template) {
+            let process = await PhysicalTraceabilityDataGinner.findOne({
+                where: { id: Id}, include: [
+                    {
+                        model: Ginner,
+                        as: "ginner",
+                    },
+                    {
+                        model: GinProcess,
+                        as: "gin_process",
+                        
+                    },
+                    {
+                        model: PhysicalPartner,
+                        as: "physical_traceability_partner",
+                    },
+                  
+                ]
+            });
+
+            let physicalPartner =  process?.dataValues?.physical_traceability_partner ;
+            let ginProcessDetails = process?.dataValues?.gin_process;
+            const userEmail = await UserEmailAdresses(physicalPartner , physicalPartner.physicalPartnerUser_id );
+
+                      
+           
+            let adminEmail = await User.findAll({ where: { role: 1 }, attributes: ['email'] });
+           
+            const emailJob = await is_email_job_available(template.dataValues.id, physicalPartner?.brand, [physicalPartner?.country_id], physicalPartner?.program_id);
+            if (emailJob) {
+                let emails = await User.findAll({ where: { id: { [Op.in]: emailJob.dataValues?.user_ids } }, attributes: ['email'] });
+                emails = emails.map((obj: any) => obj.email);
+                adminEmail = adminEmail.map((obj: any) => obj.email);
+                let  to = userEmail ? userEmail : adminEmail;
+                //let to = buyer.email ? [buyer.email] : adminEmail
+                let ccEmails = [...adminEmail,...emails];
+                let body = get_physicaltracebility_init_email_subject(physicalPartner?.name, process?.dataValues?.ginner?.name,Total_qty,process?.dataValues?.healixa_lot_no, ginProcessDetails.lot_no)
+                let subject = 'TraceBale Data Entry Details for Physical Partner'
+                return sendEmail(body, to, subject, ccEmails);
+            }
+        }
+    } catch (error) {
+        console.log(error);
+        return false;
+    }
+};
+
+export const send_physical_spinner_mail = async (Id: number) => {
+    try {
+        let template = await EmailTemplate.findOne({ where: { template_name: { [Op.iLike]: 'Whenever spinner physical traceability happen' } } });
+        if (template) {
+            let process = await PhysicalTraceabilityDataSpinner.findOne({
+                where: { id: Id}, include: [
+                    {
+                        model: Spinner,
+                        as: "spinner",
+                    },
+                    {
+                        model: SpinProcess,
+                        as: "spin_process",
+                        
+                    },
+                    {
+                        model: PhysicalPartner,
+                        as: "physical_traceability_partner",
+                    },
+                  
+                ]
+            });
+
+            let physicalPartner =  process?.dataValues?.physical_traceability_partner ;
+            let spinProcessDetails = process?.dataValues?.spin_process;
+            const userEmail = await UserEmailAdresses(physicalPartner , physicalPartner.physicalPartnerUser_id );
+
+                    
+            let adminEmail = await User.findAll({ where: { role: 1 }, attributes: ['email'] });
+           
+            const emailJob = await is_email_job_available(template.dataValues.id, physicalPartner?.brand, [physicalPartner?.country_id], physicalPartner?.program_id);
+            if (emailJob) {
+                let emails = await User.findAll({ where: { id: { [Op.in]: emailJob.dataValues?.user_ids } }, attributes: ['email'] });
+                emails = emails.map((obj: any) => obj.email);
+                adminEmail = adminEmail.map((obj: any) => obj.email);
+                let  to = userEmail ? userEmail : adminEmail;
+                //let to = buyer.email ? [buyer.email] : adminEmail
+                let ccEmails = [...adminEmail,...emails];
+                let body = get_physicaltracebility_init_email_subject(physicalPartner?.name, process?.dataValues?.spinner?.name,spinProcessDetails.net_yarn_qty,process?.dataValues?.healixa_lot_no, spinProcessDetails.batch_lot_no)
+                let subject = 'TraceBale Data Entry Details for Physical Partner'
+                return sendEmail(body, to, subject, ccEmails);
+            }
+        }
+    } catch (error) {
+        console.log(error);
+        return false;
+    }
+};
+
+export const send_physical_knitter_mail = async (Id: number) => {
+    try {
+        let template = await EmailTemplate.findOne({ where: { template_name: { [Op.iLike]: 'Whenever knitter physical traceability happen' } } });
+        if (template) {
+            let process = await PhysicalTraceabilityDataKnitter.findOne({
+                where: { id: Id}, include: [
+                    {
+                        model: Knitter,
+                        as: "knitter",
+                    },
+                    {
+                        model: KnitProcess,
+                        as: "knit_process",
+                        
+                    },
+                    {
+                        model: PhysicalPartner,
+                        as: "physical_traceability_partner",
+                    },
+                  
+                ]
+            });
+
+            let physicalPartner =  process?.dataValues?.physical_traceability_partner ;
+            let knitProcessDetails = process?.dataValues?.knit_process;
+            const userEmail = await UserEmailAdresses(physicalPartner , physicalPartner.physicalPartnerUser_id );
+
+                      
+           
+            let adminEmail = await User.findAll({ where: { role: 1 }, attributes: ['email'] });
+           
+            const emailJob = await is_email_job_available(template.dataValues.id, physicalPartner?.brand, [physicalPartner?.country_id], physicalPartner?.program_id);
+            if (emailJob) {
+                let emails = await User.findAll({ where: { id: { [Op.in]: emailJob.dataValues?.user_ids } }, attributes: ['email'] });
+                emails = emails.map((obj: any) => obj.email);
+                adminEmail = adminEmail.map((obj: any) => obj.email);
+                let  to = userEmail ? userEmail : adminEmail;
+                //let to = buyer.email ? [buyer.email] : adminEmail
+                let ccEmails = [...adminEmail,...emails];
+                let body = get_physicaltracebility_init2_email_subject('knitter',physicalPartner?.name, process?.dataValues?.knitter?.name,knitProcessDetails.total_fabric_weight, knitProcessDetails.batch_lot_no)
+                let subject = 'TraceBale Data Entry Details for Physical Partner'
+                return sendEmail(body, to, subject, ccEmails);
+            }
+        }
+    } catch (error) {
+        console.log(error);
+        return false;
+    }
+};
+
+export const send_physical_weaver_mail = async (Id: number) => {
+    console.log('send_physical_weaver_mail',Id);
+    try {
+        let template = await EmailTemplate.findOne({ where: { template_name: { [Op.iLike]: 'Whenever weaver physical traceability happen'  } } });
+        if (template) {
+            let process = await PhysicalTraceabilityDataWeaver.findOne({
+                where: { id: Id}, include: [
+                    {
+                        model: Weaver,
+                        as: "weaver",
+                    },
+                    {
+                        model: WeaverProcess,
+                        as: "weav_process",
+                        
+                    },
+                    {
+                        model: PhysicalPartner,
+                        as: "physical_traceability_partner",
+                    },
+                  
+                ]
+            });
+
+            let physicalPartner =  process?.dataValues?.physical_traceability_partner ;
+            let weaveProcessDetails = process?.dataValues?.weav_process;
+            const userEmail = await UserEmailAdresses(physicalPartner , physicalPartner.physicalPartnerUser_id );
+
+                      
+           
+            let adminEmail = await User.findAll({ where: { role: 1 }, attributes: ['email'] });
+           
+            const emailJob = await is_email_job_available(template.dataValues.id, physicalPartner?.brand, [physicalPartner?.country_id], physicalPartner?.program_id);
+            if (emailJob) {
+                let emails = await User.findAll({ where: { id: { [Op.in]: emailJob.dataValues?.user_ids } }, attributes: ['email'] });
+                emails = emails.map((obj: any) => obj.email);
+                adminEmail = adminEmail.map((obj: any) => obj.email);
+                let  to = userEmail ? userEmail : adminEmail;
+                //let to = buyer.email ? [buyer.email] : adminEmail
+                let ccEmails = [...adminEmail,...emails];
+                let body = get_physicaltracebility_init2_email_subject('weaver',physicalPartner?.name, process?.dataValues?.weaver?.name,weaveProcessDetails.total_fabric_length, weaveProcessDetails.batch_lot_no)
+                let subject = 'TraceBale Data Entry Details for Physical Partner'
+                return sendEmail(body, to, subject, ccEmails);
+            }
+        }
+    } catch (error) {
+        console.log(error);
+        return false;
+    }
+};
+
+export const send_physical_garment_mail = async (Id: number) => {
+    try {
+        let template = await EmailTemplate.findOne({ where: { template_name: { [Op.iLike]: 'Whenever garment physical traceability happen' } } });
+        if (template) {
+            let process = await PhysicalTraceabilityDataGarment.findOne({
+                where: { id: Id}, include: [
+                    {
+                        model: Garment,
+                        as: "garment",
+                    },
+                    {
+                        model: GarmentProcess,
+                        as: "garm_process",
+                        
+                    },
+                    {
+                        model: PhysicalPartner,
+                        as: "physical_traceability_partner",
+                    },
+                  
+                ]
+            });
+
+            let physicalPartner =  process?.dataValues?.physical_traceability_partner ;
+            let garmentProcessDetails = process?.dataValues?.garm_process;
+            const userEmail = await UserEmailAdresses(physicalPartner , physicalPartner.physicalPartnerUser_id );
+
+                      
+           
+            let adminEmail = await User.findAll({ where: { role: 1 }, attributes: ['email'] });
+           
+            const emailJob = await is_email_job_available(template.dataValues.id, physicalPartner?.brand, [physicalPartner?.country_id], physicalPartner?.program_id);
+            if (emailJob) {
+                let emails = await User.findAll({ where: { id: { [Op.in]: emailJob.dataValues?.user_ids } }, attributes: ['email'] });
+                emails = emails.map((obj: any) => obj.email);
+                adminEmail = adminEmail.map((obj: any) => obj.email);
+                let  to = userEmail ? userEmail : adminEmail;
+                //let to = buyer.email ? [buyer.email] : adminEmail
+                let ccEmails = [...adminEmail,...emails];
+                let body = get_physicaltracebility_init2_email_subject('garment', physicalPartner?.name, process?.dataValues?.garment?.name,garmentProcessDetails.total_qty, garmentProcessDetails.factory_lot_no)
+                let subject = 'TraceBale Data Entry Details for Physical Partner'
+                return sendEmail(body, to, subject, ccEmails);
+            }
+        }
+    } catch (error) {
+        console.log(error);
+        return false;
+    }
+};
 export const processAndSentTicketReminder = async (jobId?: number) => {
     try{
     const emailJob = await EmailManagement.findOne({ where: { id: jobId }, include: [{
@@ -859,6 +1118,32 @@ function get_init_email_subject(buyer: any, seller: any, qty: any, product: any,
    // let body = ` <html> <body> Hi ${buyer}, <br/><br/>  ${add_mail_id_to_email(to, cc)}
     let body = ` <html> <body> Hi ${buyer}, <br/>
 		${seller} has sold ${qty} (Kgs/mts/no's) of ${product} vide Invoice no : ${invoice}. <br/><br/> Please accept through transaction Alert. <br/><br/> If you have any query, please contact noreply@cottonconnect.org ${add_admin_text(to)} </body> </html>`;
+    return body;
+}
+
+function get_physicaltracebility_init_email_subject(physicalPartner: any, processorName: any, totalqty: any, physicalTracebilityLotNo: any, lotNo: any) {
+   // let body = ` <html> <body> Hello All, <br/><br/>  ${add_mail_id_to_email(to, cc)}
+    let body = ` <html> <body style="font-family: Arial, sans-serif; font-size: 14px; color: #000;"> Hello All, <br/><br/>
+        Please note that the following details have been entered by the processor on TraceBale for Physical Partner <strong>${physicalPartner} </strong> <br/><br/>
+        Name of Processor :<strong>${processorName}</strong> <br/><br/>
+        Total Quantity: <strong>${totalqty} kg</strong> <br/><br/>
+        Haelixa Lot No.: <strong>${physicalTracebilityLotNo}</strong> <br/><br/>
+        Lot No.: <strong>${lotNo} </strong><br/><br/>
+		Thank you. </body> </html>`;
+    return body;
+}
+
+function get_physicaltracebility_init2_email_subject( processType : any, physicalPartner: any, processorName: any, totalqty: any, lotNo: any) {
+    
+    const unit = processType == 'knitter'? ' kg' : ' Mts';
+   
+    let body = `<html> <body  style="font-family: Arial, sans-serif; font-size: 14px; color: #000;"> Hello All, <br><br>
+        Please note that the following details have been entered by the processor on TraceBale for Physical Partner <strong>${physicalPartner}</strong> <br/><br/>
+        Name of Processor :<strong> ${processorName}</strong> <br/><br/>
+        Total Quantity:<strong> ${totalqty} ${unit} </strong><br/><br/>
+        Lot No.: <strong>${lotNo} </strong><br/><br/>
+		Thank you. <br/>
+        </body> </html>`;
     return body;
 }
 
