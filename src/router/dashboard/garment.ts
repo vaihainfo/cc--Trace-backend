@@ -9,6 +9,8 @@ router.use(accessControl);
 router.get('/fabric', Dashboard.getGarmentFabric);
 router.get('/fabric/inventory', Dashboard.getGarmentInventory);
 router.get('/fabric/compare', Dashboard.getFabricCompareCount);
+router.get('/fabric/knit/compare', Dashboard.getKnitFabricCompareCount);
+router.get('/fabric/weaver/compare', Dashboard.getWeaverFabricCompareCount);
 router.get('/garment/compare', Dashboard.getGarmentCompareCount);
 router.get('/fabric/garment/month/data', Dashboard.getFabricGarmentMonthlyData);
 router.get('/top/fabric/procured', Dashboard.getTopProcured);

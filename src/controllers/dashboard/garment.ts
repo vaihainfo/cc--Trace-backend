@@ -638,6 +638,52 @@ const getFabricCompareCount = async (
     }
 };
 
+const getKnitFabricCompareCount = async (
+    req: Request, res: Response
+) => {
+    try {
+        const reqData = await getQueryParams(req, res);
+        const where = getGarmentWhereQuery(reqData);
+        const procuredWhere = getGarmentProcuredWhereQuery(reqData);
+        const procuredList = await getKnitFabricProcuredData(procuredWhere);
+        const processedList = await getKnitFabricProcessedData(where);
+        const data = await getFabricCompareCountRes(
+            processedList,
+            procuredList,
+            reqData.season
+        );
+        return res.sendSuccess(res, data);
+    } catch (error: any) {
+        const code = error.errCode
+            ? error.errCode
+            : "ERR_INTERNAL_SERVER_ERROR";
+        return res.sendError(res, code);
+    }
+};
+
+const getWeaverFabricCompareCount = async (
+    req: Request, res: Response
+) => {
+    try {
+        const reqData = await getQueryParams(req, res);
+        const where = getGarmentWhereQuery(reqData);
+        const procuredWhere = getGarmentProcuredWhereQuery(reqData);
+        const procuredList = await getWeaverFabricProcuredData(procuredWhere);
+        const processedList = await getWeaverFabricProcessedData(where);
+        const data = await getFabricCompareCountRes(
+            processedList,
+            procuredList,
+            reqData.season
+        );
+        return res.sendSuccess(res, data);
+    } catch (error: any) {
+        const code = error.errCode
+            ? error.errCode
+            : "ERR_INTERNAL_SERVER_ERROR";
+        return res.sendError(res, code);
+    }
+};
+
 
 const getFabricCompareCountRes = async (
     fabricProcessedList: any[],
@@ -743,6 +789,58 @@ const getFabricProcuredData = async (
     return [
         ...weaverSalesData,
         ...knitSalesData,
+        ...dyingSalesData,
+        ...printingSalesData,
+        ...washingSalesData,
+        ...compactingSalesData
+    ];
+};
+
+const getKnitFabricProcuredData = async (
+    where: any
+) => {
+    const [
+        knitSalesData,
+        dyingSalesData,
+        printingSalesData,
+        washingSalesData,
+        compactingSalesData
+    ] = await Promise.all([
+        getFabricKnitterSalesBySeason(where),
+        getFabricDyingSalesBySeason(where),
+        getFabricPrintingSalesBySeason(where),
+        getFabricWashingSalesBySeason(where),
+        getFabricCompactingSalesBySeason(where),
+    ]);
+
+    return [
+        ...knitSalesData,
+        ...dyingSalesData,
+        ...printingSalesData,
+        ...washingSalesData,
+        ...compactingSalesData
+    ];
+};
+
+const getWeaverFabricProcuredData = async (
+    where: any
+) => {
+    const [
+        weaverSalesData,
+        dyingSalesData,
+        printingSalesData,
+        washingSalesData,
+        compactingSalesData
+    ] = await Promise.all([
+        getFabricWeaverSalesBySeason(where),
+        getFabricDyingSalesBySeason(where),
+        getFabricPrintingSalesBySeason(where),
+        getFabricWashingSalesBySeason(where),
+        getFabricCompactingSalesBySeason(where),
+    ]);
+
+    return [
+        ...weaverSalesData,
         ...dyingSalesData,
         ...printingSalesData,
         ...washingSalesData,
@@ -915,6 +1013,60 @@ const getFabricWeaverSalesBySeason = async (
 };
 
 const getFabricProcessedData = async (
+    where: any
+) => {
+    const result = await GarmentProcess.findAll({
+        attributes: [
+            [Sequelize.fn('SUM', Sequelize.col('fabric_length')), 'processed'],
+            [Sequelize.col('season.name'), 'seasonName'],
+            [Sequelize.col('season.id'), 'seasonId']
+        ],
+        include: [{
+            model: Season,
+            as: 'season',
+            attributes: []
+        }, {
+            model: Garment,
+            as: 'garment',
+            attributes: [],
+        }],
+        where,
+        order: [['seasonId', 'desc']],
+        limit: 3,
+        group: ['season.id']
+    });
+
+    return result;
+};
+
+const getKnitFabricProcessedData = async (
+    where: any
+) => {
+    const result = await GarmentProcess.findAll({
+        attributes: [
+            [Sequelize.fn('SUM', Sequelize.col('fabric_weight')), 'processed'],
+            [Sequelize.col('season.name'), 'seasonName'],
+            [Sequelize.col('season.id'), 'seasonId']
+        ],
+        include: [{
+            model: Season,
+            as: 'season',
+            attributes: []
+        }, {
+            model: Garment,
+            as: 'garment',
+            attributes: [],
+        }],
+        where,
+        order: [['seasonId', 'desc']],
+        limit: 3,
+        group: ['season.id']
+    });
+
+    return result;
+};
+
+const getWeaverFabricProcessedData = async (
     where: any
 ) => {
     const result = await GarmentProcess.findAll({
@@ -1542,6 +1694,8 @@ export {
     getGarmentFabric,
     getGarmentInventory,
     getFabricCompareCount,
+    getKnitFabricCompareCount,
+    getWeaverFabricCompareCount,
     getGarmentCompareCount,
     getFabricGarmentMonthlyData,
     getTopProcured
