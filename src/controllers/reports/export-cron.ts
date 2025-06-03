@@ -10178,8 +10178,8 @@ const generateSummarySheet = async () => {
         currentWorksheet.getCell('O2').value = 'Qty (MT)';
         currentWorksheet.getCell('P2').value = 'Qty (MT)';
         currentWorksheet.getCell('Q2').value = 'Qty (MT)';
-        currentWorksheet.getCell('R2').value = 'Lint';
-        currentWorksheet.getCell('S2').value = 'Yarn';
+        currentWorksheet.getCell('R2').value = 'Lint (MT)';
+        currentWorksheet.getCell('S2').value = 'Yarn (MT)';
 
         currentWorksheet.getRow(1).font = { bold: true };
         currentWorksheet.getRow(2).font = { bold: true };
