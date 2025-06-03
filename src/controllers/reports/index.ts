@@ -22688,6 +22688,7 @@ const exportConsolidatedTraceability = async (req: Request, res: Response) => {
       "S No.",
       "Brand Name",
       "QR Code",
+      "Season",
       "Date of dispatch",
       "Garment unit Name",
       "Invoice Number",
@@ -22751,6 +22752,7 @@ const exportConsolidatedTraceability = async (req: Request, res: Response) => {
       "S No.",
       "Brand Name",
       "QR Code",
+      "Season",
       "Date of dispatch",
       "Garment unit Name",
       "Invoice Number",
@@ -23900,6 +23902,7 @@ rowValues = Object.values({
         buyer: item.dataValues.buyer ? item.dataValues.buyer.brand_name : "",
         // qr: item.dataValues.qr ? process.env.BASE_URL + item.dataValues.qr : '',
         qr: item.dataValues.qr ? baseurl + item.dataValues.qr : "",
+        season: item.dataValues.season ? item.dataValues.season.name : "",
         date: item.dataValues.date ? item.dataValues.date : "",
         garment_name: item.dataValues.garment
           ? item.dataValues.garment.name
@@ -24096,6 +24099,7 @@ rowValues = Object.values({
         buyer: item.dataValues.buyer ? item.dataValues.buyer.brand_name : "",
         // qr: item.dataValues.qr ? process.env.BASE_URL + item.dataValues.qr : '',
         qr: item.dataValues.qr ? baseurl + item.dataValues.qr : "",
+        season: item.dataValues.season ? item.dataValues.season.name : "",
         date: item.dataValues.date ? item.dataValues.date : "",
         garment_name: item.dataValues.garment
           ? item.dataValues.garment.name
