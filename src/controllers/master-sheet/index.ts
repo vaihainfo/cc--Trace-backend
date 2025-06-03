@@ -5593,8 +5593,8 @@ const fetchSummarySheetPagination = async (req: Request, res: Response) => {
       worksheet.getCell('O2').value = 'Qty (MT)';
       worksheet.getCell('P2').value = 'Qty (MT)';
       worksheet.getCell('Q2').value = 'Qty (MT)';
-      worksheet.getCell('R2').value = 'Lint';
-      worksheet.getCell('S2').value = 'Yarn';
+      worksheet.getCell('R2').value = 'Lint (MT)';
+      worksheet.getCell('S2').value = 'Yarn (MT)';
 
       worksheet.getRow(1).font = { bold: true };
       worksheet.getRow(2).font = { bold: true };
