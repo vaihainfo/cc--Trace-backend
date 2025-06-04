@@ -10156,28 +10156,28 @@ const generateSummarySheet = async () => {
               // 3️⃣ Sub-header row
 
         // 3️⃣ Sub-header row (row 2)
-        currentWorksheet.getCell('B2').value = 'Qty (MT)';
-        currentWorksheet.getCell('C2').value = 'Qty (MT)';
+        currentWorksheet.getCell('B2').value = 'Quantity (MT)';
+        currentWorksheet.getCell('C2').value = 'Quantity (MT)';
         currentWorksheet.getCell('D2').value = '%';
 
-        currentWorksheet.getCell('E2').value = 'Qty (MT)';
+        currentWorksheet.getCell('E2').value = 'Quantity (MT)';
         currentWorksheet.getCell('F2').value = '%';
 
-        currentWorksheet.getCell('G2').value = 'Qty (MT)';
+        currentWorksheet.getCell('G2').value = 'Quantity (MT)';
         currentWorksheet.getCell('H2').value = '%';
 
-        currentWorksheet.getCell('I2').value = 'Qty (MT)';
+        currentWorksheet.getCell('I2').value = 'Quantity (MT)';
         currentWorksheet.getCell('J2').value = '%';
 
-        currentWorksheet.getCell('K2').value = 'Qty (MT)';
+        currentWorksheet.getCell('K2').value = 'Quantity (MT)';
         currentWorksheet.getCell('L2').value = '%';
 
-        currentWorksheet.getCell('M2').value = 'Qty (MT)';
+        currentWorksheet.getCell('M2').value = 'Quantity (MT)';
         currentWorksheet.getCell('N2').value = '%';
 
-        currentWorksheet.getCell('O2').value = 'Qty (MT)';
-        currentWorksheet.getCell('P2').value = 'Qty (MT)';
-        currentWorksheet.getCell('Q2').value = 'Qty (MT)';
+        currentWorksheet.getCell('O2').value = 'Quantity (MT)';
+        currentWorksheet.getCell('P2').value = 'Quantity (MT)';
+        currentWorksheet.getCell('Q2').value = 'Quantity (MT)';
         currentWorksheet.getCell('R2').value = 'Lint (MT)';
         currentWorksheet.getCell('S2').value = 'Yarn (MT)';
 

@@ -2246,7 +2246,7 @@ const fetchConsolidatedDetailsFarmerGinnerPagination = async (req: Request, res:
 
       baleCondition.push(`gp.program_id IN (${programId})`);
       baleSaleCondition.push(`gp.program_id IN (${programId})`);
-      seedAllocationCondition.push(`gv.program_id IN (${programId})`);
+      seedAllocationCondition.push(`gas.program_id IN (${programId})`);
       ginToGinSaleCondition.push(`gs.program_id IN (${programId})`);
     }
 
@@ -2732,7 +2732,7 @@ const exportConsolidatedDetailsFarmerGinner = async (req: Request, res: Response
 
       baleCondition.push(`gp.program_id IN (${programId})`);
       baleSaleCondition.push(`gp.program_id IN (${programId})`);
-      seedAllocationCondition.push(`gv.program_id IN (${programId})`);
+      seedAllocationCondition.push(`gas.program_id IN (${programId})`);
       ginToGinSaleCondition.push(`gs.program_id IN (${programId})`);
     }
 
@@ -4404,13 +4404,13 @@ const fetchSummarySheetPagination = async (req: Request, res: Response) => {
 
 
     if (programId) {
-      const idArray = brandId.split(",").map((id: string) => parseInt(id, 10));
+      const idArray = programId.split(",").map((id: string) => parseInt(id, 10));
       whereCondition.push(`g.program_id && ARRAY[${programId}]`);
       brandCondition.push(`g.program_id && ARRAY[${programId}]`);
 
       baleCondition.push(`gp.program_id IN (${programId})`);
       baleSaleCondition.push(`gp.program_id IN (${programId})`);
-      seedAllocationCondition.push(`gv.program_id IN (${programId})`);
+      seedAllocationCondition.push(`gas.program_id IN (${programId})`);
       ginToGinSaleCondition.push(`gs.program_id IN (${programId})`);
       spinLintCondition.push(`gs.program_id IN (${programId})`);
       spinYarnCondition.push(`sp.program_id IN (${programId})`);
@@ -5019,7 +5019,7 @@ const fetchSummarySheetPagination = async (req: Request, res: Response) => {
 
       baleCondition.push(`gp.program_id IN (${programId})`);
       baleSaleCondition.push(`gp.program_id IN (${programId})`);
-      seedAllocationCondition.push(`gv.program_id IN (${programId})`);
+      seedAllocationCondition.push(`gas.program_id IN (${programId})`);
       ginToGinSaleCondition.push(`gs.program_id IN (${programId})`);
       spinLintCondition.push(`gs.program_id IN (${programId})`);
       spinYarnCondition.push(`sp.program_id IN (${programId})`);
@@ -5571,28 +5571,28 @@ const fetchSummarySheetPagination = async (req: Request, res: Response) => {
               // 3️⃣ Sub-header row
 
       // 3️⃣ Sub-header row (row 2)
-      worksheet.getCell('B2').value = 'Qty (MT)';
-      worksheet.getCell('C2').value = 'Qty (MT)';
+      worksheet.getCell('B2').value = 'Quantity (MT)';
+      worksheet.getCell('C2').value = 'Quantity (MT)';
       worksheet.getCell('D2').value = '%';
 
-      worksheet.getCell('E2').value = 'Qty (MT)';
+      worksheet.getCell('E2').value = 'Quantity (MT)';
       worksheet.getCell('F2').value = '%';
 
-      worksheet.getCell('G2').value = 'Qty (MT)';
+      worksheet.getCell('G2').value = 'Quantity (MT)';
       worksheet.getCell('H2').value = '%';
 
-      worksheet.getCell('I2').value = 'Qty (MT)';
+      worksheet.getCell('I2').value = 'Quantity (MT)';
       worksheet.getCell('J2').value = '%';
 
-      worksheet.getCell('K2').value = 'Qty (MT)';
+      worksheet.getCell('K2').value = 'Quantity (MT)';
       worksheet.getCell('L2').value = '%';
 
-      worksheet.getCell('M2').value = 'Qty (MT)';
+      worksheet.getCell('M2').value = 'Quantity (MT)';
       worksheet.getCell('N2').value = '%';
 
-      worksheet.getCell('O2').value = 'Qty (MT)';
-      worksheet.getCell('P2').value = 'Qty (MT)';
-      worksheet.getCell('Q2').value = 'Qty (MT)';
+      worksheet.getCell('O2').value = 'Quantity (MT)';
+      worksheet.getCell('P2').value = 'Quantity (MT)';
+      worksheet.getCell('Q2').value = 'Quantity (MT)';
       worksheet.getCell('R2').value = 'Lint (MT)';
       worksheet.getCell('S2').value = 'Yarn (MT)';
 
