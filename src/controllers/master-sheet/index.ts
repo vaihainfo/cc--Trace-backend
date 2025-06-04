@@ -3401,10 +3401,7 @@ const fetchGinnerDetailsPagination = async (req: Request, res: Response) => {
       whereCondition.push(`t.brand_id IN (${brandId})`);
       brandCondition.push(`g.brand && ARRAY[${brandId}]`);
 
-      baleCondition.push(`g.brand && ARRAY[${brandId}]`);
-      baleSaleCondition.push(`g.brand && ARRAY[${brandId}]`);
       seedAllocationCondition.push(`gas.brand_id IN (${brandId})`);
-      ginToGinSaleCondition.push(`g.brand && ARRAY[${brandId}]`);
     }
 
 
@@ -3888,10 +3885,7 @@ const exportGinnerDetails = async (req: Request, res: Response) => {
       whereCondition.push(`t.brand_id IN (${brandId})`);
       brandCondition.push(`g.brand && ARRAY[${brandId}]`);
 
-      baleCondition.push(`g.brand && ARRAY[${brandId}]`);
-      baleSaleCondition.push(`g.brand && ARRAY[${brandId}]`);
       seedAllocationCondition.push(`gas.brand_id IN (${brandId})`);
-      ginToGinSaleCondition.push(`g.brand && ARRAY[${brandId}]`);
     }
 
 
