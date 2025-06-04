@@ -173,7 +173,16 @@ const fetchConsolidatedDetailsGinnerSpinnerPagination = async (req: Request, res
     }
 
     const spinners = await Spinner.findAll({
-      where: whereCondition,
+      where: {
+        [Op.and]: [
+          Sequelize.literal(`
+            NOT (
+              1 = ANY("spinners"."brand") AND LOWER("country"."county_name") = 'china'
+            )
+          `),
+          whereCondition
+        ],
+      },
       attributes: [
         [Sequelize.col("state.id"), "state_id"],
         [Sequelize.col("state.state_name"), "state_name"],
@@ -185,6 +194,11 @@ const fetchConsolidatedDetailsGinnerSpinnerPagination = async (req: Request, res
         {
           model: State,
           as: "state",
+          attributes: [],
+        },
+        {
+          model: Country,
+          as: "country",
           attributes: [],
         },
       ],
@@ -640,7 +654,16 @@ const exportConsolidatedDetailsGinnerSpinner = async (req: Request, res: Respons
     };
 
     const spinners = await Spinner.findAll({
-      where: whereCondition,
+      where: {
+        [Op.and]: [
+          Sequelize.literal(`
+            NOT (
+              1 = ANY("spinners"."brand") AND LOWER("country"."county_name") = 'china'
+            )
+          `),
+          whereCondition
+        ],
+      },
       attributes: [
         [Sequelize.col("state.id"), "state_id"],
         [Sequelize.col("state.state_name"), "state_name"],
@@ -652,6 +675,11 @@ const exportConsolidatedDetailsGinnerSpinner = async (req: Request, res: Respons
         {
           model: State,
           as: "state",
+          attributes: [],
+        },
+        {
+          model: Country,
+          as: "country",
           attributes: [],
         },
       ],
@@ -1124,7 +1152,16 @@ const fetchSpinnerDetailsPagination = async (req: Request, res: Response) => {
     }
 
     let { count, rows } = await Spinner.findAndCountAll({
-      where: whereCondition,
+      where: {
+        [Op.and]: [
+          Sequelize.literal(`
+            NOT (
+              1 = ANY("spinners"."brand") AND LOWER("country"."county_name") = 'china'
+            )
+          `),
+          whereCondition
+        ],
+      },
       attributes: ["id", "name", "address", "country_id", "state_id"],
       offset: offset,
       limit: limit,
@@ -1682,7 +1719,16 @@ const exportSpinnerDetails = async (req: Request, res: Response) => {
     };
 
     let { count, rows } = await Spinner.findAndCountAll({
-      where: whereCondition,
+      where: {
+        [Op.and]: [
+          Sequelize.literal(`
+            NOT (
+              1 = ANY("spinners"."brand") AND LOWER("country"."county_name") = 'china'
+            )
+          `),
+          whereCondition
+        ],
+      },
       attributes: ["id", "name", "address", "country_id", "state_id"],
       offset: offset,
       limit: limit,
