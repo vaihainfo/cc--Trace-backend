@@ -539,6 +539,11 @@ const fetchConsolidatedDetailsGinnerSpinnerPagination = async (req: Request, res
       const yarnGreyOutKG = parseFloat(yarnGreyOutRows[0]?.yarn_greyout || "0");
       const yarnGreyOutMT = convert_kg_to_mt(yarnGreyOutKG);
 
+      const yarnActualStockKG = Number(yarnStockKG) > Number(yarnGreyOutKG)
+        ? Number(yarnStockKG) - (Number(yarnGreyOutKG))
+        : 0;
+      const yarnActualStockMT = convert_kg_to_mt(yarnActualStockKG);
+
       const yarnSoldKG = parseFloat(yarnSoldRows[0]?.yarn_sold || "0");
       const yarnSoldMT = convert_kg_to_mt(yarnSoldKG);
 
@@ -552,6 +557,7 @@ const fetchConsolidatedDetailsGinnerSpinnerPagination = async (req: Request, res
         lintActualStockMT: lintActualStockMT,
         yarnProcuredMT: yarnProcuredMT,
         yarnStockMT: yarnStockMT,
+        yarnActualStockMT: yarnActualStockMT,
         yarnGreyoutMT: yarnGreyOutMT,
         yarnSoldMT: yarnSoldMT,
       });
@@ -1002,6 +1008,11 @@ const exportConsolidatedDetailsGinnerSpinner = async (req: Request, res: Respons
       const yarnGreyOutKG = parseFloat(yarnGreyOutRows[0]?.yarn_greyout || "0");
       const yarnGreyOutMT = convert_kg_to_mt(Number(yarnGreyOutKG));
 
+      const yarnActualStockKG = Number(yarnStockKG) > Number(yarnGreyOutKG)
+        ? Number(yarnStockKG) - (Number(yarnGreyOutKG))
+        : 0;
+      const yarnActualStockMT = convert_kg_to_mt(yarnActualStockKG);
+
       const yarnSoldKG = parseFloat(yarnSoldRows[0]?.yarn_sold || "0");
       const yarnSoldMT = convert_kg_to_mt(Number(yarnSoldKG));
 
@@ -1012,7 +1023,7 @@ const exportConsolidatedDetailsGinnerSpinner = async (req: Request, res: Respons
         yarnProcuredMT: yarnProcuredMT,
         yarnSoldMT: yarnSoldMT,
         lintActualStockMT: lintActualStockMT,
-        yarnStockMT: yarnStockMT,
+        yarnActualStockMT: yarnActualStockMT,
         lintCottonRejectedMT: 0,
         yarnRejectedMT: 0,
         lintGreyoutMT: lintGreyoutMT,
@@ -1026,7 +1037,7 @@ const exportConsolidatedDetailsGinnerSpinner = async (req: Request, res: Respons
       yarnProcuredMT: 0,
       yarnSoldMT: 0,
       lintActualStockMT: 0,
-      yarnStockMT: 0,
+      yarnActualStockMT: 0,
       lintCottonRejectedMT: 0,
       yarnRejectedMT: 0,
       lintGreyoutMT: 0,
@@ -1043,7 +1054,7 @@ const exportConsolidatedDetailsGinnerSpinner = async (req: Request, res: Respons
             yarnProcuredMT: Number(item.yarnProcuredMT),
             yarnSoldMT: Number(item.yarnSoldMT),
             lintActualStockMT: Number(item.lintActualStockMT),
-            yarnStockMT: Number(item.yarnStockMT),
+            yarnActualStockMT: Number(item.yarnActualStockMT),
             lintCottonRejectedMT: 0,
             yarnRejectedMT: 0,
             lintGreyoutMT: Number(item.lintGreyoutMT),
@@ -1055,7 +1066,7 @@ const exportConsolidatedDetailsGinnerSpinner = async (req: Request, res: Respons
       totals.yarnProcuredMT += Number(rowValues.yarnProcuredMT);
       totals.yarnSoldMT += Number(rowValues.yarnSoldMT);
       totals.lintActualStockMT += Number(rowValues.lintActualStockMT);
-      totals.yarnStockMT += Number(rowValues.yarnStockMT);
+      totals.yarnActualStockMT += Number(rowValues.yarnActualStockMT);
       totals.lintCottonRejectedMT += Number(rowValues.lintCottonRejectedMT);
       totals.yarnRejectedMT += Number(rowValues.yarnRejectedMT);
       totals.lintGreyoutMT += Number(rowValues.lintGreyoutMT);
@@ -1071,7 +1082,7 @@ const exportConsolidatedDetailsGinnerSpinner = async (req: Request, res: Respons
       yarnProcuredMT: totals.yarnProcuredMT,
       yarnSoldMT: totals.yarnSoldMT,
       lintActualStockMT: totals.lintActualStockMT,
-      yarnStockMT: totals.yarnStockMT,
+      yarnActualStockMT: totals.yarnActualStockMT,
       lintCottonRejectedMT: totals.lintCottonRejectedMT,
       yarnRejectedMT: totals.yarnRejectedMT,
       lintGreyoutMT: totals.lintGreyoutMT,
