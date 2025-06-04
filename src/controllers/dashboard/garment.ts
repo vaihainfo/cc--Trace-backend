@@ -801,24 +801,24 @@ const getKnitFabricProcuredData = async (
 ) => {
     const [
         knitSalesData,
-        dyingSalesData,
-        printingSalesData,
-        washingSalesData,
-        compactingSalesData
+        //dyingSalesData,
+        //printingSalesData,
+        //washingSalesData,
+        //compactingSalesData
     ] = await Promise.all([
         getFabricKnitterSalesBySeason(where),
-        getFabricDyingSalesBySeason(where),
-        getFabricPrintingSalesBySeason(where),
-        getFabricWashingSalesBySeason(where),
-        getFabricCompactingSalesBySeason(where),
+        //getFabricDyingSalesBySeason(where),
+        //getFabricPrintingSalesBySeason(where),
+        //getFabricWashingSalesBySeason(where),
+        //getFabricCompactingSalesBySeason(where),
     ]);
 
     return [
         ...knitSalesData,
-        ...dyingSalesData,
-        ...printingSalesData,
-        ...washingSalesData,
-        ...compactingSalesData
+        //...dyingSalesData,
+        //...printingSalesData,
+        //...washingSalesData,
+        //...compactingSalesData
     ];
 };
 
@@ -827,24 +827,24 @@ const getWeaverFabricProcuredData = async (
 ) => {
     const [
         weaverSalesData,
-        dyingSalesData,
-        printingSalesData,
-        washingSalesData,
-        compactingSalesData
+        //dyingSalesData,
+        //printingSalesData,
+        //washingSalesData,
+        //compactingSalesData
     ] = await Promise.all([
         getFabricWeaverSalesBySeason(where),
-        getFabricDyingSalesBySeason(where),
-        getFabricPrintingSalesBySeason(where),
-        getFabricWashingSalesBySeason(where),
-        getFabricCompactingSalesBySeason(where),
+        //getFabricDyingSalesBySeason(where),
+        //getFabricPrintingSalesBySeason(where),
+        //getFabricWashingSalesBySeason(where),
+        //getFabricCompactingSalesBySeason(where),
     ]);
 
     return [
         ...weaverSalesData,
-        ...dyingSalesData,
-        ...printingSalesData,
-        ...washingSalesData,
-        ...compactingSalesData
+        //...dyingSalesData,
+        //...printingSalesData,
+        //...washingSalesData,
+        //...compactingSalesData
     ];
 };
 
