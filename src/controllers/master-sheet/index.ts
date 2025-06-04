@@ -3400,6 +3400,11 @@ const fetchGinnerDetailsPagination = async (req: Request, res: Response) => {
       const idArray = brandId.split(",").map((id: string) => parseInt(id, 10));
       whereCondition.push(`t.brand_id IN (${brandId})`);
       brandCondition.push(`g.brand && ARRAY[${brandId}]`);
+
+      baleCondition.push(`g.brand && ARRAY[${brandId}]`);
+      baleSaleCondition.push(`g.brand && ARRAY[${brandId}]`);
+      seedAllocationCondition.push(`gas.brand_id IN (${brandId})`);
+      ginToGinSaleCondition.push(`g.brand && ARRAY[${brandId}]`);
     }
 
 
@@ -3407,6 +3412,11 @@ const fetchGinnerDetailsPagination = async (req: Request, res: Response) => {
       const idArray = brandId.split(",").map((id: string) => parseInt(id, 10));
       whereCondition.push(`t.program_id IN (${programId})`);
       brandCondition.push(`g.program_id && ARRAY[${programId}]`);
+
+      baleCondition.push(`gp.program_id IN (${programId})`);
+      baleSaleCondition.push(`gp.program_id IN (${programId})`);
+      seedAllocationCondition.push(`gas.program_id IN (${programId})`);
+      ginToGinSaleCondition.push(`gs.program_id IN (${programId})`);
     }
 
     if (seasonId) {
@@ -3877,6 +3887,11 @@ const exportGinnerDetails = async (req: Request, res: Response) => {
       const idArray = brandId.split(",").map((id: string) => parseInt(id, 10));
       whereCondition.push(`t.brand_id IN (${brandId})`);
       brandCondition.push(`g.brand && ARRAY[${brandId}]`);
+
+      baleCondition.push(`g.brand && ARRAY[${brandId}]`);
+      baleSaleCondition.push(`g.brand && ARRAY[${brandId}]`);
+      seedAllocationCondition.push(`gas.brand_id IN (${brandId})`);
+      ginToGinSaleCondition.push(`g.brand && ARRAY[${brandId}]`);
     }
 
 
@@ -3884,6 +3899,11 @@ const exportGinnerDetails = async (req: Request, res: Response) => {
       const idArray = brandId.split(",").map((id: string) => parseInt(id, 10));
       whereCondition.push(`t.program_id IN (${programId})`);
       brandCondition.push(`g.program_id && ARRAY[${programId}]`);
+
+      baleCondition.push(`gp.program_id IN (${programId})`);
+      baleSaleCondition.push(`gp.program_id IN (${programId})`);
+      seedAllocationCondition.push(`gas.program_id IN (${programId})`);
+      ginToGinSaleCondition.push(`gs.program_id IN (${programId})`);
     }
 
     if (seasonId) {
