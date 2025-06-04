@@ -29,7 +29,7 @@ import WeaverFabricSelection from "../../models/weaver-fabric-selection.model";
 import KnitProcess from "../../models/knit-process.model";
 import KnitFabricSelection from "../../models/knit-fabric-selectiion.model";
 import ProcessorList from "../../models/processor-list.model";
-import { send_garment_mail } from "../send-emails";
+import { send_garment_mail, send_physical_garment_mail } from "../send-emails";
 import GarmentFabricType from "../../models/garment_fabric_type.model";
 import moment from "moment";
 import Transaction from "../../models/transaction.model";
@@ -884,7 +884,10 @@ const createGarmentProcess = async (req: Request, res: Response) => {
           sample_result: 0
         };
         await PhysicalTraceabilityDataGarmentSample.create(physicalTraceabilityDataGarmentSampleData);
-
+        
+        if(physicalTraceabilityDataGarment){
+                  await send_physical_garment_mail(physicalTraceabilityDataGarment.id);
+        }
         await Brand.update(
           { count: updatedCount },
           { where: { id: brand.id } }

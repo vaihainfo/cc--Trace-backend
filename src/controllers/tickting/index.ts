@@ -8,6 +8,7 @@ import Ginner from "../../models/ginner.model";
 import Knitter from "../../models/knitter.model";
 import Weaver from "../../models/weaver.model";
 import Garment from "../../models/garment.model";
+import Season from "../../models/season.model";
 import * as ExcelJS from "exceljs";
 import * as path from "path";
 import sequelize from "../../util/dbConn";
@@ -711,11 +712,469 @@ const exportTicketList = async (req: Request, res: Response) => {
     }
 };
 
+const fetchTicketReport = async (req: Request, res: Response) => {
+    const searchTerm = req.query.search || '';
+    const page = Number(req.query.page) || 1;
+    const limit = Number(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+    const whereCondition: any = {}
+
+    const { status, processor, processSale, processorId, brandId, countryId, spinnerId }: any = req.query;
+
+    try {
+        if (status) {
+            const idArray: any[] = status
+                .split(",")
+                .map((id: any) => id);
+            whereCondition.status = { [Op.in]: idArray };
+        }
+
+        if (processor) {
+            const idArray: any[] = processor
+                .split(",")
+                .map((id: any) => id.toLowerCase());
+            whereCondition.processor_type = {
+                [Op.iLike]: { [Op.any]: idArray.map(id => `%${id}%`) }
+            };
+        }
+
+        if (brandId) {
+            const idArray = brandId.split(",").map((id: any) => parseInt(id, 10));
+
+            const [spinner, ginner, knitter, weaver, garment] = await Promise.all([
+                Spinner.findAll({ where: { brand: { [Op.overlap]: idArray } } }),
+                Ginner.findAll({ where: { brand: { [Op.overlap]: idArray } } }),
+                Knitter.findAll({ where: { brand: { [Op.overlap]: idArray } } }),
+                Weaver.findAll({ where: { brand: { [Op.overlap]: idArray } } }),
+                Garment.findAll({ where: { brand: { [Op.overlap]: idArray } } })
+            ]);
+
+            const processorConditions = [
+                { processor_type: { [Op.iLike]: 'spinner' }, process_id: { [Op.in]: spinner.map((spin: any) => spin.id) } },
+                { processor_type: { [Op.iLike]: 'ginner' }, process_id: { [Op.in]: ginner.map((gin: any) => gin.id) } },
+                { processor_type: { [Op.iLike]: 'knitter' }, process_id: { [Op.in]: knitter.map((knit: any) => knit.id) } },
+                { processor_type: { [Op.iLike]: 'weaver' }, process_id: { [Op.in]: weaver.map((weave: any) => weave.id) } },
+                { processor_type: { [Op.iLike]: 'garment' }, process_id: { [Op.in]: garment.map((gar: any) => gar.id) } }
+            ];
+
+            if (whereCondition[Op.or]) {
+                whereCondition[Op.and] = whereCondition[Op.and] || [];
+                whereCondition[Op.and].push({ [Op.or]: processorConditions });
+            } else {
+                whereCondition[Op.or] = processorConditions;
+            }
+        }
+
+        if (countryId) {
+            const idArray = countryId.split(",").map((id: any) => parseInt(id, 10));
+
+            const [spinner, ginner, knitter, weaver, garment] = await Promise.all([
+                Spinner.findAll({ where: { country_id: { [Op.in]: idArray } } }),
+                Ginner.findAll({ where: { country_id: { [Op.in]: idArray } } }),
+                Knitter.findAll({ where: { country_id: { [Op.in]: idArray } } }),
+                Weaver.findAll({ where: { country_id: { [Op.in]: idArray } } }),
+                Garment.findAll({ where: { country_id: { [Op.in]: idArray } } })
+            ]);
+
+            const processorConditions = [
+                { processor_type: { [Op.iLike]: 'spinner' }, process_id: { [Op.in]: spinner.map((spin: any) => spin.id) } },
+                { processor_type: { [Op.iLike]: 'ginner' }, process_id: { [Op.in]: ginner.map((gin: any) => gin.id) } },
+                { processor_type: { [Op.iLike]: 'knitter' }, process_id: { [Op.in]: knitter.map((knit: any) => knit.id) } },
+                { processor_type: { [Op.iLike]: 'weaver' }, process_id: { [Op.in]: weaver.map((weave: any) => weave.id) } },
+                { processor_type: { [Op.iLike]: 'garment' }, process_id: { [Op.in]: garment.map((gar: any) => gar.id) } }
+            ];
+
+            if (whereCondition[Op.or]) {
+                whereCondition[Op.and] = whereCondition[Op.and] || [];
+                whereCondition[Op.and].push({ [Op.or]: processorConditions });
+            } else {
+                whereCondition[Op.or] = processorConditions;
+            }
+        }
+        
+
+        if (processorId) {
+            const idArray: number[] = processorId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition.process_id = { [Op.in]: idArray };
+        }
+
+        if (processSale) {
+            whereCondition.process_or_sales = processSale;
+        }
+
+        if (searchTerm) {
+            const searchConditions = [
+                { processor_name: { [Op.iLike]: `%${searchTerm}%` } },
+                { processor_type: { [Op.iLike]: `%${searchTerm}%` } }
+            ];
+
+            if (whereCondition[Op.or]) {
+                whereCondition[Op.and] = whereCondition[Op.and] || [];
+                whereCondition[Op.and].push({ [Op.or]: searchConditions });
+            } else {
+                whereCondition[Op.or] = searchConditions;
+            }
+        }
+        const addProcessorFilter = (type: any, idArray: Array<number>) => {
+            if (idArray && idArray.length > 0) {
+                return {
+                    processor_type: { [Op.iLike]: type },
+                    process_id: { [Op.in]: idArray }
+                };
+            }
+            return null;
+        };
+
+        let proConditions = [];
+        if (spinnerId) {
+            proConditions.push(addProcessorFilter('spinner', spinnerId?.split(",").map((id: any) => parseInt(id, 10))));
+        }
+
+          // Filter out null values
+          const validProcessorFilters = proConditions.filter(filter => filter !== null);
+
+        if (validProcessorFilters.length > 0) {
+            if (whereCondition[Op.or]) {
+                whereCondition[Op.and] = whereCondition[Op.and] || [];
+                whereCondition[Op.and].push({ [Op.or]: validProcessorFilters });
+            } else {
+                whereCondition[Op.or] = validProcessorFilters;
+            }
+        }
+
+        const currentSeason = await Season.findOne({
+            where: {
+                from: { [Op.lte]: new Date() },
+                to: { [Op.gte]: new Date() }
+            }
+            });
+
+        if (!currentSeason) {
+        return res.sendError(res, "No active season found for the current date");
+        }
+        console.log(currentSeason.from, currentSeason.to);
+        whereCondition.date = {[Op.between]: [currentSeason.from, currentSeason.to]};
+        
+        const { count, rows } = await TicketTracker.findAndCountAll({
+            attributes: [
+                [Sequelize.fn('LOWER', Sequelize.col('processor_type')), 'processor_type'],
+                'process_id',
+                'processor_name',
+                [Sequelize.fn('COUNT', Sequelize.col('id')), 'total_tickets'],
+                [
+                    Sequelize.fn('SUM', Sequelize.literal(`CASE WHEN status = 'Resolved' THEN 1 ELSE 0 END`)),
+                    'resolved_tickets'
+                ],
+                [
+                    Sequelize.fn('SUM', Sequelize.literal(`CASE WHEN status = 'Pending' THEN 1 ELSE 0 END`)),
+                    'pending_tickets'
+                ],
+                [
+                    Sequelize.fn('SUM', Sequelize.literal(`CASE WHEN status = 'In Progress' THEN 1 ELSE 0 END`)),
+                    'inprogress_tickets'
+                ],
+                [
+                    Sequelize.fn('SUM', Sequelize.literal(`CASE WHEN status = 'Rejected' THEN 1 ELSE 0 END`)),
+                    'rejected_tickets'
+                ],
+                [
+                    Sequelize.fn('SUM', Sequelize.literal(`CASE WHEN status = 'Approved' THEN 1 ELSE 0 END`)),
+                    'approved_tickets'
+                ]
+            ],
+            where: whereCondition,
+            offset,
+            limit,
+            group: [
+                Sequelize.fn('LOWER', Sequelize.col('processor_type')),
+                'process_id',
+                'processor_name'
+            ],
+            order: [['processor_type', 'ASC']]
+        });
+        const resultWithSeason = rows.map((row: any) => ({
+        ...row.dataValues,
+        season: currentSeason.name
+        }));
+
+        return res.sendPaginationSuccess(res, resultWithSeason, count.length);
+
+    } catch (error: any) {
+        console.log(error)
+        return res.sendError(res, error.message);
+    }
+}
+
+const exportTicketReport = async (req: Request, res: Response) => {
+    const excelFilePath = path.join("./upload", "Ticket_report.xlsx");
+    
+  const page = Number(req.query.page) || 1;
+  const limit = Number(req.query.limit) || 10;
+
+    try {
+        // Create the excel workbook file
+        const {
+            brandId,
+            countryId,
+            status,
+            processor,
+            processorId,
+            processSale
+        }: any = req.query;
+  const offset = (page - 1) * limit;
+
+        const workbook = new ExcelJS.Workbook();
+        const worksheet = workbook.addWorksheet("Sheet1");
+        //worksheet.mergeCells('A1:U1');
+        //const mergedCell = worksheet.getCell('A1');
+        //mergedCell.value = 'CottonConnect | Ticketing Report';
+        //mergedCell.font = { bold: true };
+        //mergedCell.alignment = { horizontal: 'center', vertical: 'middle' };
+        // Set bold font for header row
+        const headerRow = worksheet.addRow([
+            'Sr No.', 'Season', 'Processor Name', 'Processor Type', 'Total tickets received',
+            'Total tickets resolved', 'Total tickets pending for approval', 'Total tickets in progress', 'Total tickets rejected', 'Total tickets approved'
+        ]);
+        headerRow.font = { bold: true };
+        const whereCondition: any = {}
+        if (status) {
+            const idArray: any[] = status
+                .split(",")
+                .map((id: any) => id);
+            whereCondition.status = { [Op.in]: idArray };
+        }
+
+        if (processor) {
+            const idArray: any[] = processor
+                .split(",")
+                .map((id: any) => id.toLowerCase());
+            whereCondition.processor_type = {
+                [Op.iLike]: { [Op.any]: idArray.map(id => `%${id}%`) }
+            };
+        }
+
+        if (brandId) {
+            const idArray = brandId.split(",").map((id: any) => parseInt(id, 10));
+
+            const [spinner, ginner, knitter, weaver, garment] = await Promise.all([
+                Spinner.findAll({ where: { brand: { [Op.overlap]: idArray } } }),
+                Ginner.findAll({ where: { brand: { [Op.overlap]: idArray } } }),
+                Knitter.findAll({ where: { brand: { [Op.overlap]: idArray } } }),
+                Weaver.findAll({ where: { brand: { [Op.overlap]: idArray } } }),
+                Garment.findAll({ where: { brand: { [Op.overlap]: idArray } } })
+            ]);
+
+            const processorConditions = [
+                { processor_type: { [Op.iLike]: 'spinner' }, process_id: { [Op.in]: spinner.map((spin: any) => spin.id) } },
+                { processor_type: { [Op.iLike]: 'ginner' }, process_id: { [Op.in]: ginner.map((gin: any) => gin.id) } },
+                { processor_type: { [Op.iLike]: 'knitter' }, process_id: { [Op.in]: knitter.map((knit: any) => knit.id) } },
+                { processor_type: { [Op.iLike]: 'weaver' }, process_id: { [Op.in]: weaver.map((weave: any) => weave.id) } },
+                { processor_type: { [Op.iLike]: 'garment' }, process_id: { [Op.in]: garment.map((gar: any) => gar.id) } }
+            ];
+
+            if (whereCondition[Op.or]) {
+                whereCondition[Op.and] = whereCondition[Op.and] || [];
+                whereCondition[Op.and].push({ [Op.or]: processorConditions });
+            } else {
+                whereCondition[Op.or] = processorConditions;
+            }
+        }
+
+        if (countryId) {
+            const idArray = countryId.split(",").map((id: any) => parseInt(id, 10));
+
+            const [spinner, ginner, knitter, weaver, garment] = await Promise.all([
+                Spinner.findAll({ where: { country_id: { [Op.in]: idArray } } }),
+                Ginner.findAll({ where: { country_id: { [Op.in]: idArray } } }),
+                Knitter.findAll({ where: { country_id: { [Op.in]: idArray } } }),
+                Weaver.findAll({ where: { country_id: { [Op.in]: idArray } } }),
+                Garment.findAll({ where: { country_id: { [Op.in]: idArray } } })
+            ]);
+
+            const processorConditions = [
+                { processor_type: { [Op.iLike]: 'spinner' }, process_id: { [Op.in]: spinner.map((spin: any) => spin.id) } },
+                { processor_type: { [Op.iLike]: 'ginner' }, process_id: { [Op.in]: ginner.map((gin: any) => gin.id) } },
+                { processor_type: { [Op.iLike]: 'knitter' }, process_id: { [Op.in]: knitter.map((knit: any) => knit.id) } },
+                { processor_type: { [Op.iLike]: 'weaver' }, process_id: { [Op.in]: weaver.map((weave: any) => weave.id) } },
+                { processor_type: { [Op.iLike]: 'garment' }, process_id: { [Op.in]: garment.map((gar: any) => gar.id) } }
+            ];
+
+            if (whereCondition[Op.or]) {
+                whereCondition[Op.and] = whereCondition[Op.and] || [];
+                whereCondition[Op.and].push({ [Op.or]: processorConditions });
+            } else {
+                whereCondition[Op.or] = processorConditions;
+            }
+        }
+
+        if (processorId) {
+            const idArray: number[] = processorId
+                .split(",")
+                .map((id: any) => parseInt(id, 10));
+            whereCondition.process_id = { [Op.in]: idArray };
+        }
+
+        if (processSale) {
+            whereCondition.process_or_sales = processSale;
+        }
+
+        let queryOptions: any = {
+            where: whereCondition,
+        };
+        queryOptions.order = [['date', 'desc']]
+        //const ticketList = await TicketTracker.findAll(queryOptions);
+
+        const currentSeason = await Season.findOne({
+            where: {
+                from: { [Op.lte]: new Date() },
+                to: { [Op.gte]: new Date() }
+            }
+            });
+
+        if (!currentSeason) {
+        return res.sendError(res, "No active season found for the current date");
+        }
+        console.log(currentSeason.from, currentSeason.to);
+        whereCondition.date = {[Op.between]: [currentSeason.from, currentSeason.to]};
+        
+        const ticketList = await TicketTracker.findAll({
+            attributes: [
+                [Sequelize.fn('LOWER', Sequelize.col('processor_type')), 'processor_type'],
+                'process_id',
+                'processor_name',
+                [Sequelize.fn('COUNT', Sequelize.col('id')), 'total_tickets'],
+                [
+                    Sequelize.fn('SUM', Sequelize.literal(`CASE WHEN status = 'Resolved' THEN 1 ELSE 0 END`)),
+                    'resolved_tickets'
+                ],
+                [
+                    Sequelize.fn('SUM', Sequelize.literal(`CASE WHEN status = 'Pending' THEN 1 ELSE 0 END`)),
+                    'pending_tickets'
+                ],
+                [
+                    Sequelize.fn('SUM', Sequelize.literal(`CASE WHEN status = 'In Progress' THEN 1 ELSE 0 END`)),
+                    'inprogress_tickets'
+                ],
+                [
+                    Sequelize.fn('SUM', Sequelize.literal(`CASE WHEN status = 'Rejected' THEN 1 ELSE 0 END`)),
+                    'rejected_tickets'
+                ],
+                [
+                    Sequelize.fn('SUM', Sequelize.literal(`CASE WHEN status = 'Approved' THEN 1 ELSE 0 END`)),
+                    'approved_tickets'
+                ]
+            ],
+            where: whereCondition,
+            offset,
+            limit,
+            group: [
+                Sequelize.fn('LOWER', Sequelize.col('processor_type')),
+                'process_id',
+                'processor_name'
+            ],
+            order: [['processor_type', 'ASC']]
+        });
+
+        let totals = {
+        total_tickets: 0,
+        resolved_tickets: 0,
+        pending_tickets: 0,
+        inprogress_tickets: 0,
+        rejected_tickets: 0,
+        approved_tickets: 0
+      };
+
+        let filteredData = [];
+            
+        for await (let row of ticketList) {
+            //if (row.dataValues?.id) {            
+                
+                filteredData.push({
+                    ...row.dataValues,
+                    season: currentSeason.name
+                });
+            //}
+        }
+        // Append data to worksheet
+        filteredData.forEach((item: any, index: number) => {
+            const rowValues = {
+                index: index + 1,
+                season: item.season,
+                processor_name: item.processor_name,
+                processor_type: item.processor_type,
+                total_tickets: Number(item.total_tickets),
+                resolved_tickets: Number(item.resolved_tickets),
+                pending_tickets: Number(item.pending_tickets),
+                inprogress_tickets: Number(item.inprogress_tickets),
+                rejected_tickets: Number(item.rejected_tickets),
+                approved_tickets: Number(item.approved_tickets),
+            };
+            
+            totals.total_tickets += item.total_tickets ? Number(item.total_tickets) : 0;
+            totals.resolved_tickets += item.resolved_tickets ? Number(item.resolved_tickets) : 0;
+            totals.pending_tickets += item.pending_tickets ? Number(item.pending_tickets) : 0;
+            totals.inprogress_tickets += item.inprogress_tickets ? Number(item.inprogress_tickets) : 0;
+            totals.rejected_tickets += item.rejected_tickets ? Number(item.rejected_tickets) : 0;
+            totals.approved_tickets += item.approved_tickets ? Number(item.approved_tickets) : 0;
+
+            worksheet.addRow(Object.values(rowValues));
+        });
+        let rowValues = Object.values({
+          index: "",
+          season: "",
+          processor_name: "",
+          processor_type: "Total",
+          total_tickets: Number(totals.total_tickets),
+          resolved_tickets: Number(totals.resolved_tickets),
+          pending_tickets: Number(totals.pending_tickets),
+          inprogress_tickets: Number(totals.inprogress_tickets),
+          rejected_tickets: Number(totals.rejected_tickets),
+          approved_tickets: Number(totals.approved_tickets),
+        });
+        
+        worksheet.addRow(rowValues).eachCell((cell, colNumber) => { cell.font = { bold: true } });;
+        
+        const borderStyle = {
+            top: { style: "thin" },
+            bottom: { style: "thin" },
+            left: { style: "thin" },
+            right: { style: "thin" },
+        };
+
+        // Auto-adjust column widths based on content
+        worksheet.columns.forEach((column: any) => {
+            let maxCellLength = 0;
+            column.eachCell({ includeEmpty: true }, (cell: any) => {
+            const cellLength = (cell.value ? cell.value.toString() : "").length;
+            maxCellLength = Math.max(maxCellLength, cellLength);
+            cell.border = borderStyle;
+            });
+            column.width = Math.min(14, maxCellLength + 2);
+        });
+
+        // Save the workbook
+        await workbook.xlsx.writeFile(excelFilePath);
+        res.status(200).send({
+            success: true,
+            messgage: "File successfully Generated",
+            data: process.env.BASE_URL + "Ticket_report.xlsx",
+        });
+    } catch (error: any) {
+        console.error("Error appending data:", error);
+        return res.sendError(res, error.message);
+
+    }
+};
+
 export {
     createTicketTracker,
     fetchTicketTracker,
     updateTicketTrackerStatus,
     fetchTicketTrackerStatus,
     countTicketTracker,
-    exportTicketList
+    exportTicketList,
+    fetchTicketReport,
+    exportTicketReport
 };

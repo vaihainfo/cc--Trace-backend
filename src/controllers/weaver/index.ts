@@ -20,7 +20,7 @@ import WeaverProcess from "../../models/weaver-process.model";
 import WeaverFabricSelection from "../../models/weaver-fabric-selection.model";
 import SpinProcess from "../../models/spin-process.model";
 import SpinProcessYarnSelection from "../../models/spin-process-yarn-seletions.model";
-import { send_weaver_mail } from "../send-emails";
+import { send_weaver_mail, send_physical_weaver_mail } from "../send-emails";
 import WeaverFabric from "../../models/weaver_fabric.model";
 import { _getSpinnerProcessTracingChartData } from "../spinner/index";
 import { formatDataFromWeaver } from "../../util/tracing-chart-data-formatter";
@@ -137,6 +137,10 @@ const createWeaverProcess = async (req: Request, res: Response) => {
         };
         await PhysicalTraceabilityDataWeaverSample.create(physicalTraceabilityDataWeaverSampleData);
 
+        if(physicalTraceabilityDataWeaver){
+           console.log('send_physical_weaver_mail',physicalTraceabilityDataWeaver.id);
+          await send_physical_weaver_mail(physicalTraceabilityDataWeaver.id);
+        }  
         await Brand.update(
           { count: updatedCount },
           { where: { id: brand.id } }

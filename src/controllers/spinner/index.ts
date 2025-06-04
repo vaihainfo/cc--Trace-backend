@@ -24,7 +24,7 @@ import Weaver from "../../models/weaver.model";
 import LintSelections from "../../models/lint-seletions.model";
 import SpinProcessYarnSelection from "../../models/spin-process-yarn-seletions.model";
 import ComberSelection from "../../models/comber-selection.model";
-import { send_spin_mail } from "../send-emails";
+import { send_spin_mail, send_physical_spinner_mail } from "../send-emails";
 import SpinYarn from "../../models/spin-yarn.model";
 import FarmGroup from "../../models/farm-group.model";
 import Village from "../../models/village.model";
@@ -213,6 +213,8 @@ const createSpinnerProcess = async (req: Request, res: Response) => {
       }
     }
 
+     let PhysicalTraceabilityDataId = 0;
+
         if (req.body.enterPhysicalTraceability) {
             const physicalTraceabilityData = {
                 date_sample_collection: req.body.dateSampleCollection,
@@ -225,6 +227,10 @@ const createSpinnerProcess = async (req: Request, res: Response) => {
                 spinner_id: req.body.spinnerId
             };
             const physicalTraceabilityDataSpinner = await PhysicalTraceabilityDataSpinner.create(physicalTraceabilityData, { transaction });
+
+             if(physicalTraceabilityDataSpinner){
+                PhysicalTraceabilityDataId = physicalTraceabilityDataSpinner.id
+              }
 
             for await (const weightAndCone of req.body.weightAndCone) {
                 let brand = await Brand.findOne({
@@ -251,6 +257,10 @@ const createSpinnerProcess = async (req: Request, res: Response) => {
         }
 
         await transaction.commit();
+
+      if (PhysicalTraceabilityDataId > 0) { 
+          await send_physical_spinner_mail(PhysicalTraceabilityDataId);
+       }
     res.sendSuccess(res, { spin });
   } catch (error: any) {
     console.log(error);
