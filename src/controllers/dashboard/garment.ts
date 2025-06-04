@@ -670,7 +670,7 @@ const getWeaverFabricCompareCount = async (
         const procuredWhere = getGarmentProcuredWhereQuery(reqData);
         const procuredList = await getWeaverFabricProcuredData(procuredWhere);
         const processedList = await getWeaverFabricProcessedData(where);
-        const data = await getFabricCompareCountRes(
+        const data = await getWeaverFabricCompareCountRes(
             processedList,
             procuredList,
             reqData.season
@@ -742,6 +742,86 @@ const getFabricCompareCountRes = async (
         if (fProcessed) {
             data.seasonName = fProcessed.dataValues.seasonName;
             data.fabricProcessed = mtConversion(fProcessed.dataValues.processed);
+        }
+
+        if (!data.seasonName) {
+            const fSeason = seasons.find((season: any) =>
+                season.id == sessionId
+            );
+            if (fSeason) {
+                data.seasonName = fSeason.name;
+            }
+        }
+
+        season.push(data.seasonName);
+        fabricProcessed.push(data.fabricProcessed);
+        fabricProcured.push(data.fabricProcured);
+    }
+
+    return {
+        season,
+        fabricProcessed,
+        fabricProcured
+    };
+};
+
+const getWeaverFabricCompareCountRes = async (
+    fabricProcessedList: any[],
+    fabricProcuredList: any[],
+    reqSeason: any
+) => {
+    let seasonIds: number[] = [];
+
+    fabricProcessedList.forEach((processed: any) => {
+        if (processed.dataValues.seasonId)
+            seasonIds.push(processed.dataValues.seasonId);
+    });
+
+    fabricProcuredList.forEach((procured: any) => {
+        if (!seasonIds.includes(procured.dataValues.seasonId))
+            seasonIds.push(procured.dataValues.seasonId);
+    });
+
+    const seasons = await Season.findAll({
+        limit: 3,
+        order: [
+            ["id", "DESC"],
+        ],
+    });
+    if (seasonIds.length != 3 && !reqSeason) {
+        for (const season of seasons) {
+            if (!seasonIds.includes(season.id))
+                seasonIds.push(season.id);
+        }
+    }
+    seasonIds = seasonIds.sort((a, b) => a - b).slice(-3);
+
+    let season: any = [];
+    let fabricProcessed: any = [];
+    let fabricProcured: any = [];
+
+    for (const sessionId of seasonIds) {
+        const fProcessed = fabricProcessedList.find((processed: any) =>
+            processed.dataValues.seasonId == sessionId
+        );
+        const fProcured = fabricProcuredList.filter((procured: any) =>
+            procured.dataValues.seasonId == sessionId
+        );
+        let data = {
+            seasonName: '',
+            fabricProcessed: 0,
+            fabricProcured: 0
+        };
+        if (fProcured.length) {
+            fProcured.forEach(procured => {
+                data.seasonName = procured.dataValues.seasonName;
+                data.fabricProcured += procured.dataValues.procured;
+            });
+        }
+
+        if (fProcessed) {
+            data.seasonName = fProcessed.dataValues.seasonName;
+            data.fabricProcessed = fProcessed.dataValues.processed;
         }
 
         if (!data.seasonName) {
