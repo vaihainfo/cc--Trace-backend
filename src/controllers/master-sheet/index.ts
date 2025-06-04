@@ -225,6 +225,11 @@ const fetchConsolidatedDetailsGinnerSpinnerPagination = async (req: Request, res
           as: "state",
           attributes: [],
         },
+        {
+          model: Country,
+          as: "country",
+          attributes: [],
+        },
       ],
       attributes: [[Sequelize.fn("COUNT", Sequelize.fn("DISTINCT", Sequelize.col("state.id"))), "total"]],
       raw: true,
