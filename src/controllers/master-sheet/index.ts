@@ -209,7 +209,16 @@ const fetchConsolidatedDetailsGinnerSpinnerPagination = async (req: Request, res
     });
 
     const countResult = await Spinner.findAll({
-      where: whereCondition,
+      where: {
+        [Op.and]: [
+          Sequelize.literal(`
+            NOT (
+              1 = ANY("spinners"."brand") AND LOWER("country"."county_name") = 'china'
+            )
+          `),
+          whereCondition
+        ],
+      },
       include: [
         {
           model: State,
