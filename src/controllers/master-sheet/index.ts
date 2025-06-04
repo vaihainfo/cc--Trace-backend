@@ -2279,7 +2279,11 @@ const fetchConsolidatedDetailsFarmerGinnerPagination = async (req: Request, res:
     FROM ginners g
     JOIN states s ON g.state_id = s.id
     JOIN countries c ON g.country_id = c.id
-    WHERE ${brandConditionSql}
+    WHERE
+      (
+        NOT (1 = ANY(g.brand) AND LOWER(c.county_name) = 'china') -- Exclude China if brand_id array contains 1 - Primark
+      )
+    AND ${brandConditionSql}
     GROUP BY s.id, g.state_id, g.country_id, c.id
     `;
 
@@ -2296,7 +2300,11 @@ const fetchConsolidatedDetailsFarmerGinnerPagination = async (req: Request, res:
             ginners g
           JOIN states s ON g.state_id = s.id
           JOIN countries c ON g.country_id = c.id
-          WHERE ${brandConditionSql}
+          WHERE
+            (
+              NOT (1 = ANY(g.brand) AND LOWER(c.county_name) = 'china') -- Exclude China if brand_id array contains 1 - Primark
+            )
+          AND ${brandConditionSql}
           GROUP BY s.id, g.state_id, g.country_id, c.id
         ),
         procurement_data AS (
@@ -2764,7 +2772,11 @@ const exportConsolidatedDetailsFarmerGinner = async (req: Request, res: Response
     FROM ginners g
     JOIN states s ON g.state_id = s.id
     JOIN countries c ON g.country_id = c.id
-    WHERE ${brandConditionSql}
+    WHERE
+      (
+        NOT (1 = ANY(g.brand) AND LOWER(c.county_name) = 'china') -- Exclude China if brand_id array contains 1 - Primark
+      )
+    AND ${brandConditionSql}
     GROUP BY s.id, g.state_id, g.country_id, c.id
     `;
 
@@ -2781,7 +2793,11 @@ const exportConsolidatedDetailsFarmerGinner = async (req: Request, res: Response
             ginners g
           JOIN states s ON g.state_id = s.id
           JOIN countries c ON g.country_id = c.id
-          WHERE ${brandConditionSql}
+          WHERE
+            (
+              NOT (1 = ANY(g.brand) AND LOWER(c.county_name) = 'china') -- Exclude China if brand_id array contains 1 - Primark
+            )
+          AND ${brandConditionSql}
           GROUP BY s.id, g.state_id, g.country_id, c.id
         ),
         procurement_data AS (
@@ -3367,7 +3383,11 @@ const fetchGinnerDetailsPagination = async (req: Request, res: Response) => {
     FROM ginners g
     JOIN states s ON g.state_id = s.id
     JOIN countries c ON g.country_id = c.id
-    WHERE ${brandConditionSql}
+    WHERE
+            (
+              NOT (1 = ANY(g.brand) AND LOWER(c.county_name) = 'china') -- Exclude China if brand_id array contains 1 - Primark
+            )
+          AND ${brandConditionSql}
     `;
 
     // Data query
@@ -3386,7 +3406,11 @@ const fetchGinnerDetailsPagination = async (req: Request, res: Response) => {
             ginners g
           JOIN states s ON g.state_id = s.id
           JOIN countries c ON g.country_id = c.id
-          WHERE ${brandConditionSql}
+          WHERE
+            (
+              NOT (1 = ANY(g.brand) AND LOWER(c.county_name) = 'china') -- Exclude China if brand_id array contains 1 - Primark
+            )
+          AND ${brandConditionSql}
         ),
         procurement_data AS (
           SELECT
@@ -3835,7 +3859,11 @@ const exportGinnerDetails = async (req: Request, res: Response) => {
     FROM ginners g
     JOIN states s ON g.state_id = s.id
     JOIN countries c ON g.country_id = c.id
-    WHERE ${brandConditionSql}
+    WHERE
+        (
+          NOT (1 = ANY(g.brand) AND LOWER(c.county_name) = 'china') -- Exclude China if brand_id array contains 1 - Primark
+        )
+      AND ${brandConditionSql}
     `;
 
     // Data query
@@ -3854,7 +3882,11 @@ const exportGinnerDetails = async (req: Request, res: Response) => {
             ginners g
           JOIN states s ON g.state_id = s.id
           JOIN countries c ON g.country_id = c.id
-          WHERE ${brandConditionSql}
+          WHERE
+              (
+                NOT (1 = ANY(g.brand) AND LOWER(c.county_name) = 'china') -- Exclude China if brand_id array contains 1 - Primark
+              )
+            AND ${brandConditionSql}
         ),
         procurement_data AS (
           SELECT
@@ -4451,7 +4483,11 @@ const fetchSummarySheetPagination = async (req: Request, res: Response) => {
     SELECT COUNT(*) AS total_count
     FROM ginners g
     JOIN countries c ON g.country_id = c.id
-    WHERE ${brandConditionSql}
+    WHERE
+      (
+        NOT (1 = ANY(g.brand) AND LOWER(c.county_name) = 'china') -- Exclude China if brand_id array contains 1 - Primark
+      )
+    AND ${brandConditionSql}
     GROUP BY c.id, g.country_id
     `;
 
@@ -4465,7 +4501,11 @@ const fetchSummarySheetPagination = async (req: Request, res: Response) => {
           FROM
             ginners g
           JOIN countries c ON g.country_id = c.id
-          WHERE ${brandConditionSql}
+          WHERE
+            (
+              NOT (1 = ANY(g.brand) AND LOWER(c.county_name) = 'china') -- Exclude China if brand_id array contains 1 - Primark
+            )
+          AND ${brandConditionSql}
           GROUP BY c.id, g.country_id
         ),
         procurement_data AS (
@@ -5065,7 +5105,11 @@ const fetchSummarySheetPagination = async (req: Request, res: Response) => {
             FROM
               ginners g
             JOIN countries c ON g.country_id = c.id
-            WHERE ${brandConditionSql}
+            WHERE
+              (
+                NOT (1 = ANY(g.brand) AND LOWER(c.county_name) = 'china') -- Exclude China if brand_id array contains 1 - Primark
+              )
+            AND ${brandConditionSql}
             GROUP BY c.id, g.country_id
           ),
           procurement_data AS (
