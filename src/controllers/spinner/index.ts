@@ -3313,7 +3313,7 @@ const chooseLint = async (req: Request, res: Response) => {
       // sqlCondition.push(`gs.season_id IN (${idArray.join(",")})`);
       // baleCondition.push(`gs.season_id IN (${idArray.join(",")})`);
     }else {
-      whereCondition["$season.name$"] = { [Op.gte]: "2022-23" };
+      whereCondition["$season.name$"] = { [Op.gte]: "2021-22" };
     }
 
     if (programId) {
