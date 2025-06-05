@@ -4331,7 +4331,7 @@ const exportGinnerDetails = async (req: Request, res: Response) => {
               "Sr No.",
               "Ginner Name",
               "State",
-              "Allocated lint quantity as per produced amount",
+              "Allocated lint quantity as per produced amount (MT)",
               "Seed cotton procured quantity (MT) to date",
               "Lint cotton procured quantity (MT) to date",
               "Lint cotton processed/produced quantity to date (MT)",
