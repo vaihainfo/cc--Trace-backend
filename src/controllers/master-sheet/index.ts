@@ -5695,7 +5695,7 @@ const fetchSummarySheetPagination = async (req: Request, res: Response) => {
         worksheet.getCell('O1').value = 'Total PCP cotton lint sale (ginner to spinners)';
         worksheet.getCell('P1').value = 'Total PCP cotton yarn sale (spinner to fabric mills/suppliers)';
         worksheet.getCell('Q1').value = 'Total lint greyed out quantity (ginner)';
-        worksheet.getCell('R1').value = 'Total lint greyed out quantity (spinner)';
+        worksheet.getCell('R1').value = 'Total greyed out quantity (spinner)';
         worksheet.getCell('T1').value = 'Remarks';
               // 3️⃣ Sub-header row
 

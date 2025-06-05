@@ -10151,7 +10151,7 @@ const generateSummarySheet = async () => {
         currentWorksheet.getCell('O1').value = 'Total PCP cotton lint sale (ginner to spinners)';
         currentWorksheet.getCell('P1').value = 'Total PCP cotton yarn sale (spinner to fabric mills/suppliers)';
         currentWorksheet.getCell('Q1').value = 'Total lint greyed out quantity (ginner)';
-        currentWorksheet.getCell('R1').value = 'Total lint greyed out quantity (spinner)';
+        currentWorksheet.getCell('R1').value = 'Total greyed out quantity (spinner)';
         currentWorksheet.getCell('T1').value = 'Remarks';
               // 3️⃣ Sub-header row
 
