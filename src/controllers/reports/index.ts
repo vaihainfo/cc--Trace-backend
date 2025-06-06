@@ -6013,9 +6013,9 @@ const fetchSpinnerYarnProcessPagination = async (
         COALESCE(SUM(CASE WHEN spd.season_id != spd_season.season_id THEN cs.qty_used ELSE 0 END), 0) AS comber_consumed_other_seasons,
         STRING_AGG(DISTINCT s.name, ', ') AS seasons
       FROM spin_process_data spd
-      LEFT JOIN comber_selections cs ON spd.process_id = cs.process_id
-      LEFT JOIN combernoil_generations cg ON cs.yarn_id = cg.id
-      LEFT JOIN spin_processes spd_season ON cg.process_id = spd_season.id
+      INNER JOIN comber_selections cs ON spd.process_id = cs.process_id
+      INNER JOIN combernoil_generations cg ON cs.yarn_id = cg.id
+      INNER JOIN spin_processes spd_season ON cg.process_id = spd_season.id
       LEFT JOIN seasons s ON spd_season.season_id = s.id
       GROUP BY spd.process_id
     ),
@@ -6410,9 +6410,9 @@ const exportSpinnerYarnProcess = async (req: Request, res: Response) => {
         COALESCE(SUM(CASE WHEN spd.season_id != spd_season.season_id THEN cs.qty_used ELSE 0 END), 0) AS comber_consumed_other_seasons,
         STRING_AGG(DISTINCT s.name, ', ') AS seasons
       FROM spin_process_data spd
-      LEFT JOIN comber_selections cs ON spd.process_id = cs.process_id
-      LEFT JOIN combernoil_generations cg ON cs.yarn_id = cg.id
-      LEFT JOIN spin_processes spd_season ON cg.process_id = spd_season.id
+      INNER JOIN comber_selections cs ON spd.process_id = cs.process_id
+      INNER JOIN combernoil_generations cg ON cs.yarn_id = cg.id
+      INNER JOIN spin_processes spd_season ON cg.process_id = spd_season.id
       LEFT JOIN seasons s ON spd_season.season_id = s.id
       GROUP BY spd.process_id
     ),
