@@ -573,19 +573,16 @@ const fetchConsolidatedDetailsGinnerSpinnerPagination = async (req: Request, res
 
 const exportConsolidatedDetailsGinnerSpinner = async (req: Request, res: Response) => { 
   
-  await ExportData.update({
-    consolidated_ginner_spinner_load: true
-  }, { where: { consolidated_ginner_spinner_load: false } })
-  res.send({ status: 200, message: "export file processing" })
   const excelFilePath = path.join(
-    "./upload",
-    "consolidated-ginner-spinner-report.xlsx"
-  );
+      "./upload",
+      "excel-consolidated-ginner-spinner-report.xlsx"
+    );
+
   const searchTerm = req.query.search || "";
   const page = Number(req.query.page) || 1;
   const limit = Number(req.query.limit) || 10;
   const offset = (page - 1) * limit;
-  const { seasonId, programId, brandId, countryId, stateId }: any = req.query;
+  const { exportType, seasonId, programId, brandId, countryId, stateId }: any = req.query;
   const whereCondition: any = {};
   const lintCondition: any = {};
   const baleCondition: any = {};
@@ -594,6 +591,14 @@ const exportConsolidatedDetailsGinnerSpinner = async (req: Request, res: Respons
   const spinProcessCondition: any = {};
 
   try {
+
+    if (exportType === "all") {
+      return res.status(200).send({
+        success: true,
+        messgage: "File successfully Generated",
+        data: process.env.BASE_URL + "consolidated-ginner-spinner-report.xlsx",
+      });
+  } else { 
 
     // Filters
     if (searchTerm) {
@@ -1106,20 +1111,20 @@ const exportConsolidatedDetailsGinnerSpinner = async (req: Request, res: Respons
     // Save the workbook
     await workbook.xlsx.writeFile(excelFilePath);    
     
-    await ExportData.update({
-      consolidated_ginner_spinner_load: false
-    }, { where: { consolidated_ginner_spinner_load: true } })
-  } catch (error: any) {
-    (async () => {
-      await ExportData.update({
-        consolidated_ginner_spinner_load: false
-      }, { where: { consolidated_ginner_spinner_load: true } })
-    })()
+    return res.status(200).send({
+      success: true,
+      messgage: "File successfully Generated",
+      data: process.env.BASE_URL + "excel-consolidated-ginner-spinner-report.xlsx",
+    });
+  }
+  } catch (error: any) {    
     console.log(error);
     return res.sendError(res, error.message, error);
   }
 
 };
+
+
 const fetchSpinnerDetailsPagination = async (req: Request, res: Response) => {
   const searchTerm = req.query.search || "";
   const page = Number(req.query.page) || 1;
@@ -1614,19 +1619,16 @@ const fetchSpinnerDetailsPagination = async (req: Request, res: Response) => {
 };
 const exportSpinnerDetails = async (req: Request, res: Response) => {
   
-  await ExportData.update({
-    spinner_details_load: true
-  }, { where: { spinner_details_load: false } })
-  res.send({ status: 200, message: "export file processing" })
   const excelFilePath = path.join(
-    "./upload",
-    "master-sheet-spinner-details.xlsx"
-  );
+      "./upload",
+      "excel-spinner-details-sheet.xlsx"
+    );
+
   const searchTerm = req.query.search || "";
   const page = Number(req.query.page) || 1;
   const limit = Number(req.query.limit) || 10;
   const offset = (page - 1) * limit;
-  const { spinnerId, seasonId, programId, brandId, countryId, stateId }: any = req.query;
+  const { exportType, spinnerId, seasonId, programId, brandId, countryId, stateId }: any = req.query;
   const whereCondition: any = {};
   const lintCondition: any = {};
   const baleCondition: any = {};
@@ -1636,6 +1638,13 @@ const exportSpinnerDetails = async (req: Request, res: Response) => {
 
   try {
 
+  if (exportType === "all") {
+      return res.status(200).send({
+        success: true,
+        messgage: "File successfully Generated",
+        data: process.env.BASE_URL + "spinner-details-sheet.xlsx",
+      });
+  } else {  
     // Filters
     if (searchTerm) {
       whereCondition[Op.or] = [
@@ -2254,20 +2263,19 @@ const exportSpinnerDetails = async (req: Request, res: Response) => {
     // Save the workbook
     await workbook.xlsx.writeFile(excelFilePath);    
     
-    await ExportData.update({
-      spinner_details_load: false
-    }, { where: { spinner_details_load: true } })
-  } catch (error: any) {
-    (async () => {
-      await ExportData.update({
-        spinner_details_load: false
-      }, { where: { spinner_details_load: true } })
-    })()
+    return res.status(200).send({
+      success: true,
+      messgage: "File successfully Generated",
+      data: process.env.BASE_URL + "excel-spinner-details-sheet.xlsx",
+    });
+
+  }
+  } catch (error: any) {    
     console.log(error);
     return res.sendError(res, error.message, error);
   }
 
-};
+}
 
 const fetchConsolidatedDetailsFarmerGinnerPagination = async (req: Request, res: Response) => {
   

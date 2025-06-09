@@ -126,6 +126,9 @@ const exportReportsOnebyOne = async () => {
   await generateConsolidatedDetailsFarmerGinner();
   await generateGinnerDetails();
   await generateSummarySheet();
+  await generateSpinnerDetails();
+  await generateConsolidatedDetailsGinnerSpinner();
+  
   
   console.log('Cron Job Completed to execute all reports.');
 }
@@ -10297,6 +10300,1049 @@ const generateSummarySheet = async () => {
     console.error("Error appending data:", error);
   }
 }
+
+const generateSpinnerDetails = async () => {
+  
+  try {
+    const workbook = new ExcelJS.stream.xlsx.WorkbookWriter({
+      stream: fs.createWriteStream("./upload/spinner-details-sheet-test.xlsx"),
+      useStyles: true,
+    });
+  
+    // Create the excel workbook file
+    //const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet("Sheet1");
+    //worksheet.mergeCells("A1:Q1");
+    // mergedCell = worksheet.getCell("A1");
+    //mergedCell.value = "CottonConnect | Consolidated Details Ginner Spinner Report";
+    //mergedCell.font = { bold: true };
+    //mergedCell.alignment = { horizontal: "center", vertical: "middle" };
+    // Set bold font for header row
+    // Set bold font for header row
+    const headerRow = worksheet.addRow([
+      "S No.",
+      "Spinner Name",
+      "State",
+      "New/Existing",
+      "Total lint Cotton procured quantity to date (MT) Accepted",
+      "Total lint Cotton procured quantity to date (MT) pending to accept",
+      "Total lint cotton procured quantity to date (MT)",
+      "Total lint cotton processed/produced quantity to date (MT)",
+      "Total yarn produced quantity to date (MT)",
+      "Total yarn sold quantity to date (MT)",
+      "Total lint cotton stock quantity to date (MT)",
+      "Total yarn stock quantity to date (MT)",
+      "Carry forward lint cotton stock quantity from previous season (MT)",
+      "Carry forward yarn stock quantity from previous season (MT)",
+      "Total lint cotton quantity rejected by spinner to date (MT)",
+      "Total yarn quantity rejected by spinner to date (MT)",
+      "Moisture loss/weight shortage quantity of lint cotton during the acceptance of TraceBale (Spinner Bale Receipt) (MT)",
+      "Total lint cotton greyed out quantity on TraceBale to date (MT)",
+      "Total yarn greyed out quantity on TraceBale to date (MT)",
+      "Remarks",
+    ]);
+    headerRow.font = { bold: true };
+
+    // Define a border style
+    const borderStyle = {
+      top: { style: "thin" },
+      bottom: { style: "thin" },
+      left: { style: "thin" },
+      right: { style: "thin" },
+    };
+
+    let totals = {
+      lint_cotton_procured: 0,
+      lint_cotton_procured_pending: 0,
+      lint_cotton_procured_accepted_Pending: 0,
+      lint_consumed: 0,
+      yarn_procured: 0,
+      yarn_sold: 0,
+      lint_actual_Stock: 0,
+      yarn_actual_stock: 0,
+      lint_cotton_rejected: 0,
+      moisture_loss: 0,
+      lintGreyoutMT: 0,
+      yarnGreyoutMT: 0,
+    };
+
+    const whereCondition: any = {};
+    whereCondition.status = true;
+
+    let { count, rows } = await Spinner.findAndCountAll({
+      where: {
+        [Op.and]: [
+          Sequelize.literal(`
+            NOT (
+              1 = ANY("spinners"."brand") AND LOWER("country"."county_name") = 'china'
+            )
+          `),
+          whereCondition
+        ],
+      },
+      attributes: ["id", "name", "address", "country_id", "state_id"],
+      //offset: offset,
+      //limit: limit,
+      include: [
+        {
+          model: Country,
+          as: "country",
+          attributes: ["id", "county_name"],
+        },
+        {
+          model: State,
+          as: "state",
+          attributes: ["id", "state_name"],
+        }
+      ],
+      order: [[Sequelize.literal('TRIM("name")'), "ASC"]],
+    });
+    
+    // Append data to worksheet
+      for await (const [index, item] of rows.entries()) {
+        let obj: any = {};
+        let wheree: any = {};       
+
+      let [
+        lint_cotton_procured,
+        lint_cotton_procured_pending,
+        lint_cotton_rejected,
+        moisture_loss_shortage_qty,
+        moisture_weight_gain,
+        lint_consumed,
+        lint_greyout,
+        lint_cotton_stock,
+        yarnProcured,
+        yarnGreyout,
+        yarnSold,
+      ] = await Promise.all([
+        BaleSelection.findOne({
+          attributes: [
+            [
+              sequelize.fn(
+                "COALESCE",
+                sequelize.fn(
+                  "SUM",
+                  Sequelize.literal(`
+                      CASE
+                        WHEN "bale"."accepted_weight" IS NOT NULL THEN "bale"."accepted_weight"
+                        ELSE CAST("bale"."weight" AS DOUBLE PRECISION)
+                      END
+                    `)
+                ),
+                0
+              ),
+              "lint_cotton_procured",
+            ]
+          ],
+          where: {
+            "$sales.buyer$": item.id,
+            "$sales.status$": { [Op.in]: ['Sold', 'Partially Accepted', 'Partially Rejected'] },
+            [Op.or]: [
+              { spinner_status: true },
+              { "$sales.status$": 'Sold' }
+            ]
+          },
+          include: [
+            {
+              model: GinBale,
+              as: "bale",
+              attributes: []
+            },
+            {
+              model: GinSales,
+              as: "sales",
+              attributes: []
+            },
+          ],
+          group: ["sales.buyer"],
+        }),
+        
+        BaleSelection.findOne({
+          attributes: [
+            [Sequelize.fn('COALESCE', Sequelize.fn('SUM', Sequelize.literal(
+              'CAST("bale"."weight" AS DOUBLE PRECISION)'
+            )), 0), 'lint_cotton_procured_pending']
+          ],
+          where: {
+            "$sales.buyer$": item.id,
+            "$sales.status$": { [Op.in]: ['Pending', 'Pending for QR scanning', 'Partially Accepted', 'Partially Rejected'] },
+            spinner_status: null,
+          },
+          include: [
+            {
+              model: GinBale,
+              as: "bale",
+              attributes: []
+            },
+            {
+              model: GinSales,
+              as: "sales",
+              attributes: []
+            },
+          ],
+          group: ["sales.buyer"],
+        }),
+        BaleSelection.findOne({
+          attributes: [
+            [Sequelize.fn('COALESCE', Sequelize.fn('SUM', Sequelize.literal(
+              'CAST("bale"."weight" AS DOUBLE PRECISION)'
+            )), 0), 'lint_cotton_rejected']
+          ],
+          where: {
+            "$sales.buyer$": item.id,
+            "$sales.status$": { [Op.in]: ['Rejected', 'Partially Rejected'] },
+          },
+          include: [
+            {
+              model: GinBale,
+              as: "bale",
+              attributes: []
+            },
+            {
+              model: GinSales,
+              as: "sales",
+              attributes: []
+            },
+          ],
+          group: ["sales.buyer"],
+        }),
+        BaleSelection.findOne({
+          attributes: [
+            [
+            Sequelize.fn('COALESCE',
+              Sequelize.fn('SUM', Sequelize.literal(`
+                CASE 
+                  WHEN "bale"."accepted_weight" < CAST("bale"."weight" AS DOUBLE PRECISION) 
+                  THEN CAST("bale"."weight" AS DOUBLE PRECISION) - "bale"."accepted_weight"
+                  ELSE 0 
+                END
+              `)),
+              0
+            ),
+            'moisture_loss_shortage_qty'
+          ]
+          ],
+          where: {
+            "$sales.buyer$": item.id,
+            "$sales.status$": { [Op.in]: ['Sold', 'Partially Accepted', 'Partially Rejected'] },
+            [Op.or]: [
+              { spinner_status: true },
+              { "$sales.status$": 'Sold' }
+            ]
+          },
+
+          include: [
+            {
+              model: GinBale,
+              as: "bale",
+              attributes: []
+            },
+            {
+              model: GinSales,
+              as: "sales",
+              attributes: []
+            },
+          ],
+          group: ["sales.buyer"],
+        }),
+        BaleSelection.findOne({
+          attributes: [
+            [
+            Sequelize.fn('COALESCE',
+              Sequelize.fn('SUM', Sequelize.literal(`
+                CASE 
+                  WHEN "bale"."accepted_weight" > CAST("bale"."weight" AS DOUBLE PRECISION) 
+                  THEN "bale"."accepted_weight" - CAST("bale"."weight" AS DOUBLE PRECISION)
+                  ELSE 0 
+                END
+              `)),
+              0
+            ),
+            'moisture_weight_gain'
+          ]
+          ],
+          where: {
+            "$sales.buyer$": item.id,
+            "$sales.status$": { [Op.in]: ['Sold', 'Partially Accepted', 'Partially Rejected'] },
+            [Op.or]: [
+              { spinner_status: true },
+              { "$sales.status$": 'Sold' }
+            ]
+          },
+
+          include: [
+            {
+              model: GinBale,
+              as: "bale",
+              attributes: []
+            },
+            {
+              model: GinSales,
+              as: "sales",
+              attributes: []
+            },
+          ],
+          group: ["sales.buyer"],
+        }),
+        LintSelections.findOne({
+          attributes: [
+            [
+              sequelize.fn(
+                "COALESCE",
+                sequelize.fn("SUM", sequelize.col("qty_used")),
+                0
+              ),
+              "lint_cotton_consumed",
+            ],
+          ],
+          include: [
+            {
+              model: SpinProcess,
+              as: "spinprocess",
+              attributes: [],
+            },
+            {
+              model: GinSales,
+              as: "ginsales",
+              attributes: [],
+            },
+          ],
+          where: {
+            "$spinprocess.spinner_id$": item.id,
+          },
+          group: ["spinprocess.spinner_id"],
+        }),
+        GinSales.findOne({
+          attributes: [
+            [
+              sequelize.fn(
+                "COALESCE",
+                sequelize.fn(
+                  "SUM",
+                  sequelize.literal(`
+                    CASE 
+                      WHEN greyout_status = true THEN qty_stock 
+                      WHEN greyout_status = false AND greyed_out_qty IS NOT NULL THEN greyed_out_qty 
+                      ELSE 0 
+                    END
+                  `)
+                ),
+                0
+              ),
+              "lint_greyout",
+            ],
+          ],
+          where: {
+            ...wheree,
+            buyer: item.id,
+            status: { [Op.in]: ['Sold', 'Partially Accepted', 'Partially Rejected'] },
+            [Op.or]: [
+              { greyout_status: true },
+              { greyout_status: false, greyed_out_qty: { [Op.gt]: 0 }, },
+            ],
+          },
+        }),
+        GinSales.findOne({
+          attributes: [
+            [
+              sequelize.fn(
+                "COALESCE",
+                sequelize.fn("SUM", sequelize.col("qty_stock")),
+                0
+              ),
+              "lint_cotton_stock",
+            ],
+          ],
+          where: {
+            ...wheree,
+            buyer: item.id,
+            status: { [Op.in]: ['Sold', 'Partially Accepted', 'Partially Rejected'] }
+          },
+        }),
+        SpinProcess.findOne({
+          attributes: [
+            [
+              sequelize.fn(
+                "COALESCE",
+                sequelize.fn("SUM", sequelize.col("net_yarn_qty")),
+                0
+              ),
+              "yarn_procured",
+            ],
+            [
+              sequelize.fn(
+                "COALESCE",
+                sequelize.fn("SUM", sequelize.col("qty_stock")),
+                0
+              ),
+              "yarn_stock",
+            ],
+          ],
+          where: {
+            ...wheree,
+            spinner_id: item.id,
+          },
+        }),
+        SpinProcess.findOne({
+          attributes: [
+            [
+              sequelize.fn(
+                "COALESCE",
+                sequelize.fn("SUM", sequelize.col("qty_stock")),
+                0
+              ),
+              "yarn_greyout",
+            ],
+          ],
+          where: {
+            ...wheree,
+            spinner_id: item.id,
+            greyout_status: true,
+          },
+        }),
+        SpinSales.findOne({
+          attributes: [
+            [
+              sequelize.fn(
+                "COALESCE",
+                sequelize.fn("SUM", sequelize.col("total_qty")),
+                0
+              ),
+              "yarn_sold",
+            ],
+          ],
+          where: {
+            ...wheree,
+            spinner_id: item.id,
+          },
+        }),
+      ]);
+
+      obj.lintCottonProcuredKG = lint_cotton_procured
+        ? lint_cotton_procured?.dataValues.lint_cotton_procured ?? 0
+        : 0;
+      obj.lintCottonProcuredPendingKG = lint_cotton_procured_pending
+        ? lint_cotton_procured_pending?.dataValues
+          .lint_cotton_procured_pending ?? 0
+        : 0;
+      obj.lintCottonRejectedKG = lint_cotton_rejected
+        ? lint_cotton_rejected?.dataValues
+          .lint_cotton_rejected ?? 0
+        : 0;
+      obj.moistureLosseKG = moisture_loss_shortage_qty
+        ? moisture_loss_shortage_qty?.dataValues
+          .moisture_loss_shortage_qty ?? 0
+        : 0;
+      obj.lintConsumedKG = lint_consumed
+        ? lint_consumed?.dataValues.lint_cotton_consumed ?? 0
+        : 0;
+
+      obj.lintStockKG = lint_cotton_stock
+        ? lint_cotton_stock?.dataValues.lint_cotton_stock ?? 0
+        : 0;
+
+      obj.lintGreyoutKg = lint_greyout?.dataValues.lint_greyout ?? 0;
+
+      obj.lintActualStockKg = Number(obj.lintStockKG) > Number(obj.lintGreyoutKg)
+        ? Number(obj.lintStockKG) - (Number(obj.lintGreyoutKg))
+        : 0;
+
+
+      obj.yarnProcuredKG = yarnProcured
+        ? yarnProcured?.dataValues.yarn_procured ?? 0
+        : 0;
+      obj.yarnSoldKG = yarnSold ? yarnSold.dataValues.yarn_sold ?? 0 : 0;
+      obj.yarnStockKG = yarnProcured
+        ? yarnProcured?.dataValues.yarn_stock ?? 0
+        : 0;
+
+      obj.yarnGreyoutKg = yarnGreyout?.dataValues.yarn_greyout ?? 0;
+
+      obj.yarnActualStockKg = Number(obj.yarnStockKG) > Number(obj.yarnGreyoutKg)
+        ? Number(obj.yarnStockKG) - (Number(obj.yarnGreyoutKg))
+        : 0;
+      obj.lintCottonProcuredMT = convert_kg_to_mt(obj.lintCottonProcuredKG);
+      obj.lintCottonProcuredPendingMT = convert_kg_to_mt(
+        obj.lintCottonProcuredPendingKG
+      );
+      obj.lintCottonProcuredAcceptedandPendingMT = Number(obj.lintCottonProcuredMT || 0) + Number(obj.lintCottonProcuredPendingMT || 0);
+      obj.lintCottonRejectedMT = convert_kg_to_mt(obj.lintCottonRejectedKG);
+      obj.moistureLosseMT = convert_kg_to_mt(obj.moistureLosseKG);
+      obj.lintConsumedMT = convert_kg_to_mt(obj.lintConsumedKG);
+      obj.lintStockMT = convert_kg_to_mt(obj.lintStockKG);
+      obj.lintGreyoutMT = convert_kg_to_mt(obj.lintGreyoutKg);
+      obj.lintActualStockMT = convert_kg_to_mt(obj.lintActualStockKg);
+      obj.yarnSoldMT = convert_kg_to_mt(obj.yarnSoldKG);
+      obj.yarnProcuredMT = convert_kg_to_mt(obj.yarnProcuredKG);
+      obj.yarnStockMT = convert_kg_to_mt(obj.yarnStockKG);
+      obj.yarnGreyoutMT = convert_kg_to_mt(obj.yarnGreyoutKg);
+      obj.yarnActualStockMT = convert_kg_to_mt(obj.yarnActualStockKg);
+
+      const rowVal = {
+          index: index + 1,
+          spinner_name: item.name ? item.name : "",
+          state: item.state.state_name,
+          neworexisting: '',
+          lint_cotton_procured: obj.lintCottonProcuredMT ? Number(obj.lintCottonProcuredMT) : 0,
+          lint_cotton_procured_pending: obj.lintCottonProcuredPendingMT ? Number(obj.lintCottonProcuredPendingMT) : 0,
+          lint_cotton_procured_accepted_Pending: obj.lintCottonProcuredAcceptedandPendingMT ? Number(obj.lintCottonProcuredAcceptedandPendingMT) : 0,
+          lint_consumed: obj.lintConsumedMT ? Number(obj.lintConsumedMT) : 0,
+          yarn_procured: obj.yarnProcuredMT ? Number(obj.yarnProcuredMT) : 0,
+          yarn_sold: obj.yarnSoldMT ? Number(obj.yarnSoldMT) : 0,
+          lint_actual_Stock: obj.lintActualStockMT ? Number(obj.lintActualStockMT) : 0,
+          yarn_actual_stock: obj.yarnActualStockMT ? Number(obj.yarnActualStockMT) : 0,
+          carry_forward_lint_cotton_stock: 0,
+          carry_forward_yarn_stock: 0,
+          lint_cotton_rejected: 0,
+          yarn_qty_rejected: 0,
+          moisture_loss: 0,
+          lintGreyoutMT: obj.lintGreyoutMT ? Number(obj.lintGreyoutMT) : 0,
+          yarnGreyoutMT: obj.yarnGreyoutMT ? Number(obj.yarnGreyoutMT) : 0,
+          remarks: '',
+        };
+
+        totals.lint_cotton_procured += Number(rowVal.lint_cotton_procured);
+        totals.lint_cotton_procured_pending += Number(rowVal.lint_cotton_procured_pending);
+        totals.lint_cotton_procured_accepted_Pending += Number(rowVal.lint_cotton_procured_accepted_Pending);
+        totals.lint_consumed += Number(rowVal.lint_consumed);
+        totals.yarn_procured += Number(rowVal.yarn_procured);
+        totals.yarn_sold += Number(rowVal.yarn_sold);
+        totals.lint_actual_Stock += Number(rowVal.lint_actual_Stock);
+        totals.yarn_actual_stock += Number(rowVal.yarn_actual_stock);
+        totals.lint_cotton_rejected += Number(rowVal.lint_cotton_rejected);
+        totals.moisture_loss += Number(rowVal.moisture_loss);
+        totals.lintGreyoutMT += Number(rowVal.lintGreyoutMT);
+        totals.yarnGreyoutMT += Number(rowVal.yarnGreyoutMT);
+
+        const rowValues = Object.values(rowVal);
+        worksheet.addRow(rowValues);
+        
+    }
+
+    const rowValues = {
+      index: "",
+      spinner: "",
+      state: "",
+      neworexisting: "Total",
+      lint_cotton_procured: totals.lint_cotton_procured,
+      lint_cotton_procured_pending: totals.lint_cotton_procured_pending,
+      lint_cotton_procured_accepted_Pending: totals.lint_cotton_procured_accepted_Pending,
+      lint_consumed: totals.lint_consumed,
+      yarn_procured: totals.yarn_procured,
+      yarn_sold: totals.yarn_sold,
+      lint_actual_Stock: totals.lint_actual_Stock,
+      yarn_actual_stock: totals.yarn_actual_stock,
+      carry_forward_lint_cotton_stock: 0,
+      carry_forward_yarn_stock: 0,
+      lint_cotton_rejected: 0,
+      yarn_qty_rejected: 0,
+      moisture_loss: 0,
+      lintGreyoutMT: totals.lintGreyoutMT,
+      yarnGreyoutMT: totals.yarnGreyoutMT,
+      remarks: ''
+    };
+
+    worksheet.addRow(Object.values(rowValues)).eachCell(cell => cell.font = { bold: true });
+
+    // Auto-adjust column widths based on content
+    worksheet.columns.forEach((column: any) => {
+      let maxCellLength = 0;
+      column.eachCell({ includeEmpty: true }, (cell: any) => {
+        const cellLength = (cell.value ? cell.value.toString() : "").length;
+        maxCellLength = Math.max(maxCellLength, cellLength);
+        cell.border = borderStyle;
+      });
+      column.width = Math.min(14, maxCellLength + 2); // Limit width to 30 characters
+    });
+
+
+    await workbook.commit()
+      .then(() => {
+        fs.renameSync("./upload/spinner-details-sheet-test.xlsx", './upload/spinner-details-sheet.xlsx');
+        console.log('spinner details sheet generation completed.');
+      })
+      .catch(error => {
+        console.log('Failed generation?.');
+        throw error;
+      });
+
+  
+  } catch (error: any) {    
+    console.error("Error appending data:", error);
+  }
+
+}
+
+const generateConsolidatedDetailsGinnerSpinner = async () => {
+  
+  try {
+    const workbook = new ExcelJS.stream.xlsx.WorkbookWriter({
+      stream: fs.createWriteStream("./upload/consolidated-ginner-spinner-report-test.xlsx"),
+      useStyles: true,
+    });
+  
+    // Create the excel workbook file
+    //const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet("Sheet1");
+    //worksheet.mergeCells("A1:Q1");
+    // mergedCell = worksheet.getCell("A1");
+    //mergedCell.value = "CottonConnect | Consolidated Details Ginner Spinner Report";
+    //mergedCell.font = { bold: true };
+    //mergedCell.alignment = { horizontal: "center", vertical: "middle" };
+    // Set bold font for header row
+    // Set bold font for header row
+    const headerRow = worksheet.addRow([
+      "S No.",
+      "State/Region",
+      "Total lint cotton procured quantity to date (MT) Accepted + Pending to accept on TraceBale",
+      "Total lint cotton processed/produced quantity to date (MT)",
+      "Total yarn produced quantity to date (MT)",
+      "Total yarn sold quantity to date (MT)",
+      "Total lint cotton stock quantity to date (MT)",
+      "Total yarn stock quantity to date (MT)",
+      "Total lint cotton quantity rejected by spinner to date (MT)",
+      "Total yarn quantity rejected by spinner to date (MT)",
+      "Total lint cotton greyed out quantity on TraceBale (MT)",
+      "Total yarn greyed out quantity on TraceBale to date (MT)",
+      "Remarks",
+
+    ]);
+    headerRow.font = { bold: true };
+
+    // Define a border style
+    const borderStyle = {
+      top: { style: "thin" },
+      bottom: { style: "thin" },
+      left: { style: "thin" },
+      right: { style: "thin" },
+    };
+
+    const whereCondition: any = {};
+    whereCondition.status = true;
+
+    const spinners = await Spinner.findAll({
+      where: {
+        [Op.and]: [
+          Sequelize.literal(`
+            NOT (
+              1 = ANY("spinners"."brand") AND LOWER("country"."county_name") = 'china'
+            )
+          `),
+          whereCondition
+        ],
+      },
+      attributes: [
+        [Sequelize.col("state.id"), "state_id"],
+        [Sequelize.col("state.state_name"), "state_name"],
+        [Sequelize.fn("ARRAY_AGG", Sequelize.col("spinners.id")), "spinner_ids"],
+      ],
+      //offset: offset,
+      //limit: limit,
+      include: [
+        {
+          model: State,
+          as: "state",
+          attributes: [],
+        },
+        {
+          model: Country,
+          as: "country",
+          attributes: [],
+        },
+      ],
+      group: ["state.id", "state.state_name"],
+      order: [["state_name", "ASC"]],
+      raw: true,
+      subQuery: false,
+    });
+
+    const rows = [];
+
+    for (const group of spinners) {
+      const stateName = group.state_name;
+      const spinnerIds = group.spinner_ids;
+
+      let wheree: any = {};
+      
+      const lintCottonProcuredRows = await BaleSelection.findAll({
+        attributes: [
+          [
+            Sequelize.fn(
+              "COALESCE",
+              Sequelize.fn(
+                "SUM",
+                Sequelize.literal(`
+                  CASE
+                    WHEN "bale"."accepted_weight" IS NOT NULL THEN "bale"."accepted_weight"
+                    ELSE CAST("bale"."weight" AS DOUBLE PRECISION)
+                  END
+                `)
+              ),
+              0
+            ),
+            "lint_cotton_procured",
+          ],
+        ],
+        include: [
+          {
+            model: GinBale,
+            as: "bale",
+            attributes: [],
+          },
+          {
+            model: GinSales,
+            as: "sales",
+            attributes: [],
+          },
+        ],
+        where: {
+          "$sales.buyer$": { [Op.in]: spinnerIds },
+          "$sales.status$": { [Op.in]: ['Sold', 'Partially Accepted', 'Partially Rejected'] },
+          [Op.or]: [
+            { spinner_status: true },
+            { "$sales.status$": 'Sold' }
+          ]
+        },
+        raw: true,
+      });
+
+      const lintCottonProcuredPendingRows = await BaleSelection.findAll({
+            attributes: [
+              [Sequelize.fn('COALESCE', Sequelize.fn('SUM', Sequelize.literal(
+                'CAST("bale"."weight" AS DOUBLE PRECISION)'
+              )), 0), 'lint_cotton_procured_pending']
+            ],
+            where: {
+              "$sales.buyer$":  { [Op.in]: spinnerIds },
+              "$sales.status$": { [Op.in]: ['Pending', 'Pending for QR scanning', 'Partially Accepted', 'Partially Rejected'] },
+              spinner_status: null,
+            },
+            include: [
+              {
+                model: GinBale,
+                as: "bale",
+                attributes: []
+              },
+              {
+                model: GinSales,
+                as: "sales",
+                attributes: []
+              },
+            ],
+            raw: true,
+          });
+
+      const lintCottonRejectedRows = await BaleSelection.findAll({
+            attributes: [
+              [Sequelize.fn('COALESCE', Sequelize.fn('SUM', Sequelize.literal(
+                'CAST("bale"."weight" AS DOUBLE PRECISION)'
+              )), 0), 'lint_cotton_rejected']
+            ],
+            where: {
+              "$sales.buyer$": { [Op.in]: spinnerIds },
+              "$sales.status$": { [Op.in]: ['Rejected', 'Partially Rejected'] },
+            },
+            include: [
+              {
+                model: GinBale,
+                as: "bale",
+                attributes: []
+              },
+              {
+                model: GinSales,
+                as: "sales",
+                attributes: []
+              },
+            ],
+            raw: true,
+          });
+
+      
+      const lintCottonConsumedRows = await LintSelections.findAll({
+            attributes: [
+              [
+                sequelize.fn(
+                  "COALESCE",
+                  sequelize.fn("SUM", sequelize.col("qty_used")),
+                  0
+                ),
+                "lint_cotton_consumed",
+              ],
+            ],
+            include: [
+              {
+                model: SpinProcess,
+                as: "spinprocess",
+                attributes: [],
+              },
+              {
+                model: GinSales,
+                as: "ginsales",
+                attributes: [],
+              },
+            ],
+            where: {
+              "$spinprocess.spinner_id$": { [Op.in]: spinnerIds },
+            },
+            raw: true,
+          });
+
+      const lintGreyoutRows = await GinSales.findAll({
+            attributes: [
+              [
+                sequelize.fn(
+                  "COALESCE",
+                  sequelize.fn(
+                    "SUM",
+                    sequelize.literal(`
+                      CASE 
+                        WHEN greyout_status = true THEN qty_stock 
+                        WHEN greyout_status = false AND greyed_out_qty IS NOT NULL THEN greyed_out_qty 
+                        ELSE 0 
+                      END
+                    `)
+                  ),
+                  0
+                ),
+                "lint_greyout",
+              ],
+            ],
+            where: {
+              ...wheree,
+              buyer: { [Op.in]: spinnerIds },
+              status: { [Op.in]: ['Sold', 'Partially Accepted', 'Partially Rejected'] },
+              [Op.or]: [
+                { greyout_status: true },
+                { greyout_status: false, greyed_out_qty: { [Op.gt]: 0 }, },
+              ],
+            },
+            raw: true,
+          });    
+      const lintCottonStockRows = await GinSales.findAll({
+            attributes: [
+              [
+                sequelize.fn(
+                  "COALESCE",
+                  sequelize.fn("SUM", sequelize.col("qty_stock")),
+                  0
+                ),
+                "lint_cotton_stock",
+              ],
+            ],
+            where: {
+              ...wheree,
+              buyer: { [Op.in]: spinnerIds },
+              status: { [Op.in]: ['Sold', 'Partially Accepted', 'Partially Rejected'] }
+            },
+            raw: true,
+          });
+
+      const yarnProcessRows = await SpinProcess.findAll({
+            attributes: [
+              [
+                sequelize.fn(
+                  "COALESCE",
+                  sequelize.fn("SUM", sequelize.col("net_yarn_qty")),
+                  0
+                ),
+                "yarn_procured",
+              ],
+              [
+                sequelize.fn(
+                  "COALESCE",
+                  sequelize.fn("SUM", sequelize.col("qty_stock")),
+                  0
+                ),
+                "yarn_stock",
+              ],
+            ],
+            where: {
+              ...wheree,
+              spinner_id: { [Op.in]: spinnerIds },
+            },
+            raw: true,
+          });
+
+      const yarnGreyOutRows = await SpinProcess.findAll({
+            attributes: [
+              [
+                sequelize.fn(
+                  "COALESCE",
+                  sequelize.fn("SUM", sequelize.col("qty_stock")),
+                  0
+                ),
+                "yarn_greyout",
+              ],
+            ],
+            where: {
+              ...wheree,
+              spinner_id: { [Op.in]: spinnerIds },
+              greyout_status: true,
+            },
+            raw: true,
+          });
+
+      const yarnSoldRows = await SpinSales.findAll({
+            attributes: [
+              [
+                sequelize.fn(
+                  "COALESCE",
+                  sequelize.fn("SUM", sequelize.col("total_qty")),
+                  0
+                ),
+                "yarn_sold",
+              ],
+            ],
+            where: {
+              ...wheree,
+              spinner_id: { [Op.in]: spinnerIds },
+            },
+            raw: true,
+        });
+
+      const totallintcottonprocuredAcceptedKG = parseFloat(lintCottonProcuredRows[0]?.lint_cotton_procured || "0");
+      const totallintcottonprocuredAcceptedMT = convert_kg_to_mt(totallintcottonprocuredAcceptedKG);
+
+      const totallintcottonprocuredPendingKG = parseFloat(lintCottonProcuredPendingRows[0]?.lint_cotton_procured_pending || "0");
+      const totallintcottonprocuredPendingMT = convert_kg_to_mt(totallintcottonprocuredPendingKG);
+
+      const totallintcottonprocuredAcceptedPendingMT = Number(totallintcottonprocuredAcceptedMT) + Number(totallintcottonprocuredPendingMT);
+
+      const lintCottonRejectedKG = parseFloat(lintCottonRejectedRows[0]?.lint_cotton_rejected || "0");
+      const lintCottonRejectedMT = convert_kg_to_mt(Number(lintCottonRejectedKG));
+
+      const lintCottonConsumedKG = parseFloat(lintCottonConsumedRows[0]?.lint_cotton_consumed || "0");
+      const lintCottonConsumedMT = convert_kg_to_mt(lintCottonConsumedKG);
+
+      const lintGreyoutKG = parseFloat(lintGreyoutRows[0]?.lint_greyout || "0");
+      const lintGreyoutMT = convert_kg_to_mt(Number(lintGreyoutKG));
+
+      const lintCottonStockKG = parseFloat(lintCottonStockRows[0]?.lint_cotton_stock || "0");
+      const lintCottonStockMT = convert_kg_to_mt(Number(lintCottonStockKG));
+
+      const lintActualStockKG = Number(lintCottonStockKG) > Number(lintGreyoutKG)
+          ? Number(lintCottonStockKG) - (Number(lintGreyoutKG))
+          : 0;
+      const lintActualStockMT = convert_kg_to_mt(Number(lintActualStockKG));
+
+      const yarnProcuredKG = parseFloat(yarnProcessRows[0]?.yarn_procured || "0");
+      const yarnProcuredMT = convert_kg_to_mt(Number(yarnProcuredKG));
+
+      const yarnStockKG = parseFloat(yarnProcessRows[0]?.yarn_stock || "0");
+      const yarnStockMT = convert_kg_to_mt(Number(yarnStockKG));
+
+      const yarnGreyOutKG = parseFloat(yarnGreyOutRows[0]?.yarn_greyout || "0");
+      const yarnGreyOutMT = convert_kg_to_mt(Number(yarnGreyOutKG));
+
+      const yarnSoldKG = parseFloat(yarnSoldRows[0]?.yarn_sold || "0");
+      const yarnSoldMT = convert_kg_to_mt(Number(yarnSoldKG));
+
+      rows.push({
+        State: stateName,
+        totallintcottonprocuredAcceptedPendingMT: totallintcottonprocuredAcceptedPendingMT,
+        lintCottonConsumedMT: lintCottonConsumedMT,
+        yarnProcuredMT: yarnProcuredMT,
+        yarnSoldMT: yarnSoldMT,
+        lintActualStockMT: lintActualStockMT,
+        yarnStockMT: yarnStockMT,
+        lintCottonRejectedMT: 0,
+        yarnRejectedMT: 0,
+        lintGreyoutMT: lintGreyoutMT,
+        yarnGreyOutMT: yarnGreyOutMT,
+        remarks: ''
+      });
+    }
+
+    let totals = {
+      totallintcottonprocuredAcceptedPendingMT: 0,
+      lintCottonConsumedMT: 0,
+      yarnProcuredMT: 0,
+      yarnSoldMT: 0,
+      lintActualStockMT: 0,
+      yarnStockMT: 0,
+      lintCottonRejectedMT: 0,
+      yarnRejectedMT: 0,
+      lintGreyoutMT: 0,
+      yarnGreyOutMT: 0,
+    };
+for await (const [index, item] of rows.entries()) {
+      let rowValues;
+      rowValues = {
+            index: index + 1,
+            state: item.State,
+            totallintcottonprocuredAcceptedPendingMT: item.totallintcottonprocuredAcceptedPendingMT,
+            lintCottonConsumedMT: Number(item.lintCottonConsumedMT),
+            yarnProcuredMT: Number(item.yarnProcuredMT),
+            yarnSoldMT: Number(item.yarnSoldMT),
+            lintActualStockMT: Number(item.lintActualStockMT),
+            yarnStockMT: Number(item.yarnStockMT),
+            lintCottonRejectedMT: 0,
+            yarnRejectedMT: 0,
+            lintGreyoutMT: Number(item.lintGreyoutMT),
+            yarnGreyOutMT: Number(item.yarnGreyOutMT),
+            remarks: '',
+      };
+      totals.totallintcottonprocuredAcceptedPendingMT += Number(rowValues.totallintcottonprocuredAcceptedPendingMT);
+      totals.lintCottonConsumedMT += Number(rowValues.lintCottonConsumedMT);
+      totals.yarnProcuredMT += Number(rowValues.yarnProcuredMT);
+      totals.yarnSoldMT += Number(rowValues.yarnSoldMT);
+      totals.lintActualStockMT += Number(rowValues.lintActualStockMT);
+      totals.yarnStockMT += Number(rowValues.yarnStockMT);
+      totals.lintCottonRejectedMT += Number(rowValues.lintCottonRejectedMT);
+      totals.yarnRejectedMT += Number(rowValues.yarnRejectedMT);
+      totals.lintGreyoutMT += Number(rowValues.lintGreyoutMT);
+      totals.yarnGreyOutMT += Number(rowValues.yarnGreyOutMT);
+     worksheet.addRow(Object.values(rowValues));
+    }
+    
+    const rowValues = {
+      index: "",
+      state: "Total",
+      totallintcottonprocuredAcceptedPendingMT: totals.totallintcottonprocuredAcceptedPendingMT,
+      lintCottonConsumedMT: totals.lintCottonConsumedMT,
+      yarnProcuredMT: totals.yarnProcuredMT,
+      yarnSoldMT: totals.yarnSoldMT,
+      lintActualStockMT: totals.lintActualStockMT,
+      yarnStockMT: totals.yarnStockMT,
+      lintCottonRejectedMT: totals.lintCottonRejectedMT,
+      yarnRejectedMT: totals.yarnRejectedMT,
+      lintGreyoutMT: totals.lintGreyoutMT,
+      yarnGreyOutMT: totals.yarnGreyOutMT,
+      remarks: ""
+    };
+    
+    worksheet.addRow(Object.values(rowValues)).eachCell(cell => cell.font = { bold: true });
+
+    // Auto-adjust column widths based on content
+    worksheet.columns.forEach((column: any) => {
+      let maxCellLength = 0;
+      column.eachCell({ includeEmpty: true }, (cell: any) => {
+        const cellLength = (cell.value ? cell.value.toString() : "").length;
+        maxCellLength = Math.max(maxCellLength, cellLength);
+        cell.border = borderStyle;
+      });
+      column.width = Math.min(14, maxCellLength + 2); // Limit width to 30 characters
+    });
+
+
+    await workbook.commit()
+      .then(() => {
+        fs.renameSync("./upload/consolidated-ginner-spinner-report-test.xlsx", './upload/consolidated-ginner-spinner-report.xlsx');
+        console.log('Consolidated Details Ginner to Spinner sheet generation completed.');
+      })
+      .catch(error => {
+        console.log('Failed generation?.');
+        throw error;
+      });
+
+  
+  } catch (error: any) {    
+    console.error("Error appending data:", error);
+  }
+
+}
+
 
 const formatDecimal = (value: string | number): string | number => {
   const numericValue = typeof value === "string" ? parseFloat(value) : value;
