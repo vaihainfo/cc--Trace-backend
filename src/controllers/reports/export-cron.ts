@@ -90,42 +90,42 @@ const exportReportsTameTaking = async () => {
 
 const exportReportsOnebyOne = async () => {
   //call all export reports one by one on every cron
-  // await generatePremiumValidationData();
+  await generatePremiumValidationData();
 
-  // await generateFaildReport("Farmer");
-  // await generateFaildReport("Procurement");
-  // // await generateExportFarmer();
+  await generateFaildReport("Farmer");
+  await generateFaildReport("Procurement");
+  // await generateExportFarmer();
 
-  // // Procurement Reports 
-  // await generatePscpCottonProcurement();
-  // await generatePscpProcurementLiveTracker();
+  // Procurement Reports 
+  await generatePscpCottonProcurement();
+  await generatePscpProcurementLiveTracker();
 
-  // await exportVillageSeedCottonAllocation();
+  await exportVillageSeedCottonAllocation();
 
-  // // //brand wise report
-  // await generateBrandWiseData();
+  // //brand wise report
+  await generateBrandWiseData();
 
-  // // // Ginner Reports 
-  // await generateGinnerSummary();
-  // await generatePendingGinnerSales();
-  // await generateGinnerCottonStock();
-  // await generateGinnerProcess();
-  // await generateGinnerLintCottonStock()
-  // //spinner Reports
-  // await generateSpinnerSummary();
-  // await generateSpinnerBale();
-  // await generateSpinnerYarnProcess();
-  // await generateSpinnerSale();
-  // await generatePendingSpinnerBale();
-  // await generateSpinnerLintCottonStock();
-  // await exportSpinnerGreyOutReport();
-  // await exportGinHeapReport();
-  // await exportGinnerProcessGreyOutReport();
-  // await exportSpinnerProcessGreyOutReport();
-  // await generateSpinnerYarnOrder();
-  // await generateConsolidatedDetailsFarmerGinner();
-  // await generateGinnerDetails();
-  // await generateSummarySheet();
+  // // Ginner Reports 
+  await generateGinnerSummary();
+  await generatePendingGinnerSales();
+  await generateGinnerCottonStock();
+  await generateGinnerProcess();
+  await generateGinnerLintCottonStock()
+  //spinner Reports
+  await generateSpinnerSummary();
+  await generateSpinnerBale();
+  await generateSpinnerYarnProcess();
+  await generateSpinnerSale();
+  await generatePendingSpinnerBale();
+  await generateSpinnerLintCottonStock();
+  await exportSpinnerGreyOutReport();
+  await exportGinHeapReport();
+  await exportGinnerProcessGreyOutReport();
+  await exportSpinnerProcessGreyOutReport();
+  await generateSpinnerYarnOrder();
+  await generateConsolidatedDetailsFarmerGinner();
+  await generateGinnerDetails();
+  await generateSummarySheet();
   await generateSpinnerDetails();
   await generateConsolidatedDetailsGinnerSpinner();
   
