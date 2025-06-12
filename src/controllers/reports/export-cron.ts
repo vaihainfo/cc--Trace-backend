@@ -6655,9 +6655,9 @@ const generateSpinnerYarnProcess = async () => {
             COALESCE(SUM(CASE WHEN spd.season_id != spd_season.season_id THEN cs.qty_used ELSE 0 END), 0) AS comber_consumed_other_seasons,
             STRING_AGG(DISTINCT s.name, ', ') AS seasons
           FROM spin_process_data spd
-          INNER JOIN comber_selections cs ON spd.process_id = cs.process_id
-          INNER JOIN combernoil_generations cg ON cs.yarn_id = cg.id
-          INNER JOIN spin_processes spd_season ON cg.process_id = spd_season.id
+          LEFT JOIN comber_selections cs ON spd.process_id = cs.process_id
+          LEFT JOIN combernoil_generations cg ON cs.yarn_id = cg.id
+          LEFT JOIN spin_processes spd_season ON cg.process_id = spd_season.id
           LEFT JOIN seasons s ON spd_season.season_id = s.id
           GROUP BY spd.process_id
         ),
@@ -6809,9 +6809,8 @@ const generateSpinnerYarnProcess = async () => {
           comber_consumed_current_season: item?.comber_consumed_current_season
             ? Number(item?.comber_consumed_current_season)
             : 0,
-          comber_consumed_other_seasons: item?.comber_consumed_other_seasons
-            ? Number(item?.comber_consumed_other_seasons)
-            : 0,
+          comber_consumed_other_seasons:  (item?.comber_consumed  && item?.comber_consumed > item?.comber_consumed_current_season )? Number(item?.comber_consumed - item?.comber_consumed_current_season)
+              : 0,
           total_lint_blend_consumed: item?.total_qty
             ? Number(item?.total_qty)
             : 0,
