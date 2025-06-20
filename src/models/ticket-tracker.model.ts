@@ -31,7 +31,7 @@ const TicketTracker = db.define('ticket_trackers', {
     type: DataTypes.STRING
   },
   style_mark_no: {
-    type: DataTypes.STRING
+    type: DataTypes.TEXT
   },
   comments: {
     type: DataTypes.TEXT
